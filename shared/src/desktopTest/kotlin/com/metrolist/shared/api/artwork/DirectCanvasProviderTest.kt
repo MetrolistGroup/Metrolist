@@ -13,8 +13,6 @@ import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.encodeToString
-import kotlinx.serialization.json.Json
-import meow.nyx.spotlib.SpotifySession
 import java.util.Base64
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -29,17 +27,30 @@ class DirectCanvasProviderTest {
             Base64.getUrlEncoder().withoutPadding().encodeToString("""{"iss":"AMPWebPlay","exp":4000000000}""".toByteArray()) +
             ".abcdefghijklmnop123456"
 
+    // Canvas lookups always fetch anonymous Spotify tokens before searching.
+    private fun anonymousTokenBody(host: String): String? =
+        when (host) {
+            "open.spotify.com" -> {
+                """{"accessToken":"anonymous-access","accessTokenExpirationTimestampMs":4000000000000,"isAnonymous":true}"""
+            }
+
+            "clienttoken.spotify.com" -> {
+                """{"granted_token":{"token":"anonymous-client"}}"""
+            }
+
+            else -> {
+                null
+            }
+        }
+
     @Test
     fun localSourcesPreferSpotifyAndCacheResults() =
         runBlocking {
             var searches = 0
-            val session =
-                Json.encodeToString(
-                    SpotifySession(mapOf("sp_dc" to "own-cookie"), "access", clientToken = "client"),
-                )
             val client =
                 HttpClient(
                     MockEngine { request ->
+                        anonymousTokenBody(request.url.host)?.let { return@MockEngine respond(it) }
                         val url = request.url.toString()
                         assertFalse(url.contains("lyprio"))
                         val body =
@@ -47,12 +58,12 @@ class DirectCanvasProviderTest {
                                 url.contains("api-partner.spotify.com") &&
                                     (request.body as TextContent).text.contains("searchTopResultsList") -> {
                                     searches++
-                                    assertEquals("Bearer access", request.headers[HttpHeaders.Authorization])
-                                    """{"data":{"searchV2":{"topResultsV2":{"itemsV2":[{"item":{"data":{"__typename":"Track","id":"song-id","name":"Song","artists":{"items":[{"profile":{"name":"Artist"}}]},"albumOfTrack":{"name":"Album"},"duration":{"totalMilliseconds":200000}}}}]}}}}"""
+                                    assertEquals("Bearer anonymous-access", request.headers[HttpHeaders.Authorization])
+                                    """{"data":{"searchV2":{"topResultsV2":{"itemsV2":[{"item":{"data":{"__typename":"Track","id":"0000000000000000000000","name":"Song","artists":{"items":[{"profile":{"name":"Artist"}}]},"albumOfTrack":{"name":"Album"},"duration":{"totalMilliseconds":200000}}}}]}}}}"""
                                 }
 
-                                url.contains("api-partner.spotify.com") -> {
-                                    """{"data":{"trackUnion":{"canvas":{"url":"https://canvaz.scdn.co/canvas.mp4"}}}}"""
+                                url.contains("spotify-canva.vercel.app") -> {
+                                    """{"canvasesList":[{"trackUri":"spotify:track:0000000000000000000000","canvasUrl":"https://canvaz.scdn.co/canvas.mp4"}]}"""
                                 }
 
                                 url == "https://music.apple.com/de/browse" -> {
@@ -79,59 +90,12 @@ class DirectCanvasProviderTest {
                     },
                 )
             client.use {
-                val provider = DirectCanvasProvider(client, { session }, { "DE" }, { "de-DE" }, now = { now })
+                val provider = DirectCanvasProvider(client, { "DE" }, { "de-DE" }, now = { now })
                 val result = provider.getCanvases("Song", "Artist", 200_000, "Album")
                 assertEquals("https://canvaz.scdn.co/canvas.mp4", result.spotify)
                 assertEquals("https://mvod.itunes.apple.com/art.m3u8", result.appleMusic)
                 assertEquals(result, provider.getCanvases("Song", "Artist", 200_000, "Album"))
                 assertEquals(1, searches)
-            }
-        }
-
-    @Test
-    fun spotifyOnlyLookupLeavesAppleArtworkToTheResolutionAwareService() =
-        runBlocking {
-            var appleRequests = 0
-            val session =
-                Json.encodeToString(
-                    SpotifySession(mapOf("sp_dc" to "own-cookie"), "access", clientToken = "client"),
-                )
-            val client =
-                HttpClient(
-                    MockEngine { request ->
-                        when {
-                            request.url.host == "api-partner.spotify.com" &&
-                                (request.body as TextContent).text.contains("searchTopResultsList") -> {
-                                respond(
-                                    """{"data":{"searchV2":{"topResultsV2":{"itemsV2":[{"item":{"data":{"__typename":"Track","id":"song-id","name":"Song","artists":{"items":[{"profile":{"name":"Artist"}}]},"albumOfTrack":{"name":"Album"},"duration":{"totalMilliseconds":200000}}}}]}}}}""",
-                                    HttpStatusCode.OK,
-                                    headersOf(HttpHeaders.ContentType, "application/json"),
-                                )
-                            }
-
-                            request.url.host == "api-partner.spotify.com" -> {
-                                respond(
-                                    """{"data":{"trackUnion":{"canvas":{"url":"https://canvaz.scdn.co/canvas.mp4"}}}}""",
-                                    HttpStatusCode.OK,
-                                    headersOf(HttpHeaders.ContentType, "application/json"),
-                                )
-                            }
-
-                            request.url.host.endsWith("apple.com") -> {
-                                appleRequests++
-                                respond("", HttpStatusCode.NotFound)
-                            }
-
-                            else -> {
-                                error("Unexpected URL ${request.url}")
-                            }
-                        }
-                    },
-                )
-            client.use {
-                val provider = DirectCanvasProvider(client, { session }, now = { now })
-                assertEquals("https://canvaz.scdn.co/canvas.mp4", provider.getSpotifyCanvas("Song", "Artist", 200_000, "Album"))
-                assertEquals(0, appleRequests)
             }
         }
 
@@ -183,12 +147,7 @@ class DirectCanvasProviderTest {
                 },
             ).use { client ->
                 val provider =
-                    DirectCanvasProvider(
-                        client,
-                        { "" },
-                        now = { now },
-                        saveSession = { error("Anonymous tokens must not become a saved login") },
-                    )
+                    DirectCanvasProvider(client, now = { now })
                 assertEquals("https://canvaz.scdn.co/canvas.mp4", provider.getSpotifyCanvas("Song", "Artist", 200_000))
                 assertEquals("https://canvaz.scdn.co/canvas.mp4", provider.getSpotifyCanvas("Song", "Artist", 200_000))
                 assertEquals("https://canvaz.scdn.co/canvas.mp4", provider.getSpotifyCanvas("Song", "Artist", 200_001))
@@ -201,7 +160,6 @@ class DirectCanvasProviderTest {
     @Test
     fun publicCanvasValidatesTrackAndUrlWithoutForwardingSpotifyCredentials() =
         runBlocking {
-            val session = Json.encodeToString(SpotifySession(mapOf("sp_t" to "device-cookie"), "access", Long.MAX_VALUE, "client"))
             val responses =
                 listOf(
                     Pair(
@@ -221,6 +179,7 @@ class DirectCanvasProviderTest {
                 var publicCalls = 0
                 HttpClient(
                     MockEngine { request ->
+                        anonymousTokenBody(request.url.host)?.let { return@MockEngine respond(it) }
                         when (request.url.host) {
                             "api-partner.spotify.com" -> {
                                 respond(
@@ -243,12 +202,7 @@ class DirectCanvasProviderTest {
                     },
                 ).use { client ->
                     val provider =
-                        DirectCanvasProvider(
-                            client,
-                            { session },
-                            now = { now },
-                            saveSession = { error("Do not save anonymous sessions") },
-                        )
+                        DirectCanvasProvider(client, now = { now })
                     assertNull(provider.getSpotifyCanvas("Song", "Artist", null))
                     assertNull(provider.getSpotifyCanvas("Song", "Artist", null))
                     assertEquals(1, publicCalls)
@@ -298,7 +252,6 @@ class DirectCanvasProviderTest {
                 val result =
                     DirectCanvasProvider(
                         client,
-                        { "" },
                         { "JP" },
                         { "ja-JP" },
                         now = { now },
@@ -311,67 +264,13 @@ class DirectCanvasProviderTest {
         }
 
     @Test
-    fun spotify401RefreshesOnlyOnceWithoutErasingImportLogin() =
-        runBlocking {
-            var searches = 0
-            var tokenRefreshes = 0
-            var session =
-                Json.encodeToString(
-                    SpotifySession(mapOf("sp_dc" to "own-cookie"), "stale", clientToken = "client"),
-                )
-            val client =
-                HttpClient(
-                    MockEngine { request ->
-                        val url = request.url.toString()
-                        when {
-                            url.contains("api-partner.spotify.com") -> {
-                                searches++
-                                respond("", HttpStatusCode.Unauthorized)
-                            }
-
-                            url.contains("open.spotify.com/api/token") -> {
-                                tokenRefreshes++
-                                respond("""{"accessToken":"fresh","accessTokenExpirationTimestampMs":4000000000000,"isAnonymous":false}""")
-                            }
-
-                            url.contains("clienttoken.spotify.com") -> {
-                                respond("""{"granted_token":{"token":"new-client"}}""")
-                            }
-
-                            url == "https://music.apple.com/jp/browse" -> {
-                                respond("")
-                            }
-
-                            else -> {
-                                error("Unexpected URL $url")
-                            }
-                        }
-                    },
-                )
-            client.use {
-                val provider =
-                    DirectCanvasProvider(client, { session }, { "JP" }, { "ja-JP" }, now = { now }, saveSession = { session = it })
-                assertEquals(DirectCanvasUrls(), provider.getCanvases("Song", "Artist", null))
-                assertEquals(DirectCanvasUrls(), provider.getCanvases("Song", "Artist", null))
-                assertEquals(2, searches)
-                assertEquals(1, tokenRefreshes)
-                val retained = Json.decodeFromString<SpotifySession>(session)
-                assertEquals("own-cookie", retained.cookies["sp_dc"])
-                assertEquals("fresh", retained.accessToken)
-            }
-        }
-
-    @Test
     fun independentSourcesStartBeforeEitherFinishes() =
         runBlocking {
             val spotifyStarted = CompletableDeferred<Unit>()
             val appleStarted = CompletableDeferred<Unit>()
-            val session =
-                Json.encodeToString(
-                    SpotifySession(mapOf("sp_dc" to "own-cookie"), "access", clientToken = "client"),
-                )
             HttpClient(
                 MockEngine { request ->
+                    anonymousTokenBody(request.url.host)?.let { return@MockEngine respond(it) }
                     if (request.url.host == "api-partner.spotify.com") {
                         spotifyStarted.complete(Unit)
                         appleStarted.await()
@@ -384,53 +283,10 @@ class DirectCanvasProviderTest {
                     }
                 },
             ).use { client ->
-                val provider = DirectCanvasProvider(client, { session }, { "JP" }, { "ja-JP" }, now = { now })
+                val provider = DirectCanvasProvider(client, { "JP" }, { "ja-JP" }, now = { now })
                 assertEquals(DirectCanvasUrls(), provider.getCanvases("Song", "Artist", null))
                 assertTrue(spotifyStarted.isCompleted)
                 assertTrue(appleStarted.isCompleted)
-            }
-        }
-
-    @Test
-    fun refreshedSpotifyTokensAreStoredForTheNextTrack() =
-        runBlocking {
-            var saved =
-                Json.encodeToString(SpotifySession(mapOf("sp_dc" to "own-cookie"), "expired", 1, "client"))
-            var refreshes = 0
-            val client =
-                HttpClient(
-                    MockEngine { request ->
-                        val url = request.url.toString()
-                        when {
-                            url.contains("open.spotify.com/api/token") -> {
-                                refreshes++
-                                respond(
-                                    """{"accessToken":"new-access","isAnonymous":false,"accessTokenExpirationTimestampMs":4000000000000}""",
-                                )
-                            }
-
-                            url.contains("api-partner.spotify.com") -> {
-                                assertEquals("Bearer new-access", request.headers[HttpHeaders.Authorization])
-                                respond("""{"data":{"searchV2":{"topResultsV2":{"itemsV2":[]}}}}""")
-                            }
-
-                            url == "https://music.apple.com/jp/browse" -> {
-                                respond("")
-                            }
-
-                            else -> {
-                                error("Unexpected URL $url")
-                            }
-                        }
-                    },
-                )
-            client.use {
-                val provider =
-                    DirectCanvasProvider(client, { saved }, { "JP" }, { "ja-JP" }, now = { now }, saveSession = { saved = it })
-                provider.getCanvases("One", "Artist", null)
-                provider.getCanvases("Two", "Artist", null)
-                assertEquals(1, refreshes)
-                assertEquals("new-access", Json.decodeFromString<SpotifySession>(saved).accessToken)
             }
         }
 
@@ -451,7 +307,6 @@ class DirectCanvasProviderTest {
                 val result =
                     DirectCanvasProvider(
                         client,
-                        { "" },
                         { "JP" },
                         { "ja-JP" },
                         now = { now },
@@ -510,7 +365,7 @@ class DirectCanvasProviderTest {
                     },
                 )
             client.use {
-                val provider = DirectCanvasProvider(client, { "" }, { "JP" }, { "ja-JP" }, now = { now })
+                val provider = DirectCanvasProvider(client, { "JP" }, { "ja-JP" }, now = { now })
                 val job = async { provider.getCanvases("Song", "Artist", null) }
                 started.await()
                 job.cancelAndJoin()

@@ -45,6 +45,7 @@ class HistoryLatestPlayIndexTest {
                     exec("ALTER TABLE lyrics DROP COLUMN stashedUserLyrics")
                     exec("ALTER TABLE lyrics DROP COLUMN stashedUserLyricsDraft")
                     exec("ALTER TABLE lyrics DROP COLUMN isLegacyProtected")
+                    exec("ALTER TABLE playlist DROP COLUMN remoteHeader")
                     val schema =
                         sequenceOf(Path.of("schemas"), Path.of("shared/schemas"))
                             .map { it.resolve("com.metrolist.shared.db.MusicDatabase/61.json") }

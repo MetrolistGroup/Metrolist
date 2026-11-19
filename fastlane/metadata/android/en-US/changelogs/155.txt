@@ -1,0 +1,7 @@
+v14.0.1
+Restored gapless playback.
+Recovered likes, albums, lyrics and downloads lost when upgrading from 13.x.
+Added an IzzyOnDroid build and opt-in nightly updates.
+Added 1440p music videos, podcast episode search and larger display density presets.
+Restored library sorting options; album auto-download is opt-in again.
+Fixed shuffle, playlist imports, casting, lyrics and scrobbling.

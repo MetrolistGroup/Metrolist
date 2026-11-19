@@ -35,6 +35,7 @@ import com.metrolist.android.playback.SongDownloadManager
 import com.metrolist.android.playlistimport.AndroidPlaylistImportNotifier
 import com.metrolist.android.quicksettings.MusicRecognizerTileService
 import com.metrolist.android.recognition.MusicRecognitionService
+import com.metrolist.android.scrobble.LastFmSessionNotification
 import com.metrolist.android.ui.GlobalPlaybackNetworkMonitor
 import com.metrolist.android.update.AppUpdateManager
 import com.metrolist.android.utils.CrashHandler
@@ -284,6 +285,7 @@ class App :
                 .build(),
         )
         AndroidPlaylistImportNotifier.ensureChannel(this)
+        LastFmSessionNotification.register(this)
 
         Timber.tag(TAG).d("App onCreate complete elapsed=%dms", SystemClock.elapsedRealtime() - appStart)
     }
@@ -363,7 +365,11 @@ class App :
         }
         get<CoroutineScope>().launch {
             MusicRecognitionService.status.collect {
-                TileService.requestListeningState(this@App, ComponentName(this@App, MusicRecognizerTileService::class.java))
+                try {
+                    TileService.requestListeningState(this@App, ComponentName(this@App, MusicRecognizerTileService::class.java))
+                } catch (_: IllegalArgumentException) {
+                    // Secondary profiles such as MIUI's Dual Apps (user 999) cannot host Quick Settings tiles.
+                }
             }
         }
         get<CoroutineScope>().launch {

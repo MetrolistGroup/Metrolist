@@ -210,6 +210,16 @@ class AutomotiveQueuePolicyTest {
         }
 
     @Test
+    fun offlineQueueSelectionKeepsTheActiveQueue() =
+        runBlocking {
+            val entries = songs.mapIndexed { index, song -> MusicQueueEntry(index.toLong(), song) }
+            assertEquals(3, offlineQueueEntryIndex(entries, 2) { it == "download" || it == "cache" })
+            assertEquals(1, offlineQueueEntryIndex(entries, 1) { it == "download" })
+            assertEquals(3, offlineQueueEntryIndex(entries, 4) { it == "cache" })
+            assertNull(offlineQueueEntryIndex(entries, 0) { false })
+        }
+
+    @Test
     fun onlineQueuesDoNotProbeLocalStorage() =
         runBlocking {
             val queue = AutomotiveSongResolution(songs, 2)

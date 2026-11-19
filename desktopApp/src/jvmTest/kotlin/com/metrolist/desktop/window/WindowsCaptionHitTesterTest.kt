@@ -88,6 +88,16 @@ class WindowsCaptionHitTesterTest {
     }
 
     @Test
+    fun dialogControlsOverTheExpandedPlayerCaptionStayClickable() {
+        val frame = frame()
+        val dialogButton = Rect(60f, 0f, 108f, 32f)
+        val overlay: (Float, Float) -> Boolean? = { x, y -> dialogButton.contains(x, y) }
+        assertEquals(HTCLIENT, frame.hitTest(80f, 16f, true, overlay) { _, _ -> false })
+        assertEquals(HTCAPTION, frame.hitTest(200f, 16f, true, overlay) { _, _ -> false })
+        assertEquals(HTCLOSE, frame.hitTest(980f, 16f, true, { _, _ -> true }) { _, _ -> true })
+    }
+
+    @Test
     fun captionBoundsExcludeTheContentAndHiddenCaption() {
         val frame = WindowsCaptionHitTester()
         assertEquals(HTCLIENT, frame.hitTest(0f, 0f, false) { _, _ -> error("Empty caption reached content") })

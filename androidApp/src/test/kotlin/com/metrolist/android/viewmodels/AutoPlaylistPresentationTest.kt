@@ -1,21 +1,33 @@
 package com.metrolist.android.viewmodels
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
+import androidx.compose.runtime.snapshots.Snapshot
 import com.metrolist.shared.db.entities.CachedAudioEntity
 import com.metrolist.shared.db.entities.PlaylistEntity
 import com.metrolist.shared.model.CollectionSort
 import com.metrolist.shared.model.PlaylistSongSort
 import com.metrolist.shared.model.SongItem
 import com.metrolist.shared.model.SortDirection
+import com.metrolist.shared.settings.Settings
 import com.metrolist.shared.viewmodels.DownloadPlaylistFilterState
+import com.russhwolf.settings.MapSettings
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class AutoPlaylistPresentationTest {
     private val songs =
         listOf(
@@ -38,6 +50,92 @@ class AutoPlaylistPresentationTest {
             topDirection = SortDirection.DESCENDING,
             reorder = false,
         )
+
+    @Test
+    fun runningPreparationObservesListeningTimeSelectionAndLaterTotals() =
+        runTest {
+            val dispatcher = StandardTestDispatcher(testScheduler)
+            for (type in listOf("liked", "uploaded")) {
+                val settings = Settings(MapSettings())
+                var sort by mutableStateOf(PlaylistSongSort.TITLE)
+                var times by mutableStateOf(mapOf("a" to 10L, "z" to 20L))
+                val readInput = {
+                    input.copy(type = type, playlistSort = sort).withSongSorting(
+                        locked = settings.playlistEditLock,
+                        listeningTimes = { times },
+                    )
+                }
+                val observed = mutableListOf<AutoPlaylistPresentationInput>()
+                var prepared = emptyList<SongItem>()
+                val job =
+                    launch {
+                        snapshotFlow(readInput).collectLatest { current ->
+                            observed += current
+                            prepared = prepareAutoPlaylistSongs(current, dispatcher)
+                        }
+                    }
+                try {
+                    runCurrent()
+                    assertTrue(observed.single().listeningTimes.isEmpty())
+                    assertEquals(listOf(songs[1], songs[2], songs[0]), prepared)
+
+                    sort = PlaylistSongSort.LISTENING_TIME
+                    Snapshot.sendApplyNotifications()
+                    runCurrent()
+                    assertEquals(times, observed.last().listeningTimes)
+                    assertEquals(listOf(songs[1], songs[2], songs[0]), prepared)
+
+                    times = mapOf("a" to 30L, "z" to 5L)
+                    Snapshot.sendApplyNotifications()
+                    runCurrent()
+                    assertEquals(times, observed.last().listeningTimes)
+                    assertEquals(songs, prepared)
+                } finally {
+                    job.cancelAndJoin()
+                }
+            }
+        }
+
+    @Test
+    fun runningPreparationObservesLockingAfterReopeningUnlockedLikedSongs() =
+        runTest {
+            val settings = Settings(MapSettings()).apply { playlistEditLock = false }
+            var sort by mutableStateOf(PlaylistSongSort.ORIGINAL)
+            val readInput = {
+                input.copy(playlistSort = sort).withSongSorting(
+                    locked = settings.playlistEditLock,
+                    listeningTimes = { emptyMap() },
+                )
+            }
+            val dispatcher = StandardTestDispatcher(testScheduler)
+            val observed = mutableListOf<AutoPlaylistPresentationInput>()
+            var prepared = emptyList<SongItem>()
+            val job =
+                launch {
+                    snapshotFlow(readInput).collectLatest { current ->
+                        observed += current
+                        prepared = prepareAutoPlaylistSongs(current, dispatcher)
+                    }
+                }
+            try {
+                runCurrent()
+                assertTrue(observed.single().reorder)
+                assertEquals(songs, prepared)
+
+                settings.playlistEditLock = true
+                Snapshot.sendApplyNotifications()
+                runCurrent()
+                assertEquals(false, observed.last().reorder)
+
+                sort = PlaylistSongSort.TITLE
+                Snapshot.sendApplyNotifications()
+                runCurrent()
+                assertEquals(false, observed.last().reorder)
+                assertEquals(listOf(songs[1], songs[2], songs[0]), prepared)
+            } finally {
+                job.cancelAndJoin()
+            }
+        }
 
     @Test
     fun likedSortingAndSearchPreserveDuplicatesAndManualOrder() =

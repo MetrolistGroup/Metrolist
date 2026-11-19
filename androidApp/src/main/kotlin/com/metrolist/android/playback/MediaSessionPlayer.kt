@@ -37,6 +37,7 @@ import com.metrolist.shared.cast.CastState
 import com.metrolist.shared.deviceconnect.DcPlaybackAction
 import com.metrolist.shared.deviceconnect.DcPlaybackCommand
 import com.metrolist.shared.model.SongItem
+import com.metrolist.shared.model.isLive
 import com.metrolist.shared.playback.MusicQueueEntry
 import com.metrolist.shared.playback.MusicQueueSnapshot
 import com.metrolist.shared.playback.PlaybackSeekSource
@@ -147,7 +148,9 @@ internal fun mediaSessionTimeline(
             val entry = entries[windowIndex]
             val song = entry.song
             val durationMs =
-                if (windowIndex == currentIndex && currentDurationMs > 0) {
+                if (song.isLive) {
+                    C.TIME_UNSET
+                } else if (windowIndex == currentIndex && currentDurationMs > 0) {
                     currentDurationMs
                 } else {
                     song.duration?.times(1000L) ?: C.TIME_UNSET
@@ -159,9 +162,9 @@ internal fun mediaSessionTimeline(
                 C.TIME_UNSET,
                 C.TIME_UNSET,
                 C.TIME_UNSET,
-                isSeekable,
-                false,
-                null,
+                isSeekable && !song.isLive,
+                song.isLive,
+                if (song.isLive) MediaItem.LiveConfiguration.Builder().build() else null,
                 0,
                 Util.msToUs(durationMs),
                 windowIndex,
@@ -180,7 +183,9 @@ internal fun mediaSessionTimeline(
             val entry = entries[periodIndex]
             val song = entry.song
             val durationMs =
-                if (periodIndex == currentIndex && currentDurationMs > 0) {
+                if (song.isLive) {
+                    C.TIME_UNSET
+                } else if (periodIndex == currentIndex && currentDurationMs > 0) {
                     currentDurationMs
                 } else {
                     song.duration?.times(1000L) ?: C.TIME_UNSET
@@ -457,6 +462,7 @@ class MediaSessionPlayer(
                 listeners.forEach {
                     it.onMediaItemTransition(getCurrentMediaItem(), Player.MEDIA_ITEM_TRANSITION_REASON_AUTO)
                     it.onMediaMetadataChanged(getMediaMetadata())
+                    it.onAvailableCommandsChanged(getAvailableCommands())
                 }
                 publishTimeline(Player.TIMELINE_CHANGE_REASON_SOURCE_UPDATE)
             }
@@ -668,7 +674,13 @@ class MediaSessionPlayer(
 
     override fun isLoading(): Boolean = false
 
-    override fun getDuration(): Long = remotePlaybackState?.value?.takeIf { it.isConnected }?.durationMs ?: musicPlayer.duration.value
+    override fun getDuration(): Long =
+        if (isCurrentMediaItemLive) {
+            C.TIME_UNSET
+        } else {
+            remotePlaybackState?.value?.takeIf { it.isConnected }?.durationMs
+                ?: musicPlayer.duration.value
+        }
 
     override fun getCurrentPosition(): Long =
         remotePlaybackState?.value?.takeIf { it.isConnected }?.positionMs ?: musicPlayer.getRealtimePositionMs()
@@ -886,7 +898,10 @@ class MediaSessionPlayer(
         if (interceptDeviceConnect(DcPlaybackCommand(DcPlaybackAction.PREVIOUS))) return
         val remoteState = remotePlaybackState?.value?.takeIf { it.isConnected }
         if (remoteState == null) {
-            musicPlayer.skipToPrevious()
+            musicPlayer.skipToPrevious(repeatAll = repeatMode.value == Player.REPEAT_MODE_ALL, resumePlayback = musicPlayer.wantsPlayback)
+        } else if (isCurrentMediaItemLive) {
+            val previousIndex = getPreviousMediaItemIndex()
+            if (previousIndex != C.INDEX_UNSET && previousIndex != getCurrentMediaItemIndex()) seekToPreviousMediaItem()
         } else if (shouldRestartCurrentItem(remoteState.positionMs, musicPlayer.currentMediaItemIndex.value)) {
             onRemoteSeek(0L)
         } else {
@@ -948,10 +963,6 @@ class MediaSessionPlayer(
             builder.addAll(
                 Player.COMMAND_PLAY_PAUSE,
                 Player.COMMAND_STOP,
-                Player.COMMAND_SEEK_TO_DEFAULT_POSITION,
-                Player.COMMAND_SEEK_IN_CURRENT_MEDIA_ITEM,
-                Player.COMMAND_SEEK_BACK,
-                Player.COMMAND_SEEK_FORWARD,
                 Player.COMMAND_SEEK_TO_NEXT,
                 Player.COMMAND_SEEK_TO_PREVIOUS,
                 Player.COMMAND_SEEK_TO_NEXT_MEDIA_ITEM,
@@ -963,20 +974,30 @@ class MediaSessionPlayer(
                 Player.COMMAND_PREPARE,
             )
         }
+        if (isCurrentMediaItemSeekable) {
+            builder.addAll(
+                Player.COMMAND_SEEK_TO_DEFAULT_POSITION,
+                Player.COMMAND_SEEK_IN_CURRENT_MEDIA_ITEM,
+                Player.COMMAND_SEEK_BACK,
+                Player.COMMAND_SEEK_FORWARD,
+            )
+        }
         return builder.build()
     }
 
     override fun isCommandAvailable(command: Int): Boolean = getAvailableCommands().contains(command)
 
-    override fun isCurrentMediaItemDynamic(): Boolean = false
+    override fun isCurrentMediaItemDynamic(): Boolean = isCurrentMediaItemLive
 
-    override fun isCurrentMediaItemLive(): Boolean = false
+    override fun isCurrentMediaItemLive(): Boolean = musicPlayer.currentSong.value?.isLive == true
 
-    override fun isCurrentMediaItemSeekable(): Boolean = !isPlaybackLockedProvider() && musicPlayer.currentSong.value != null
+    override fun isCurrentMediaItemSeekable(): Boolean =
+        !isPlaybackLockedProvider() && musicPlayer.currentSong.value != null && !isCurrentMediaItemLive
 
     override fun isPlayingAd(): Boolean = false
 
-    override fun isCurrentWindowSeekable(): Boolean = !isPlaybackLockedProvider() && musicPlayer.currentSong.value != null
+    override fun isCurrentWindowSeekable(): Boolean =
+        !isPlaybackLockedProvider() && musicPlayer.currentSong.value != null && !isCurrentMediaItemLive
 
     override fun getCurrentAdGroupIndex(): Int = -1
 
@@ -1369,11 +1390,11 @@ class MediaSessionPlayer(
 
     override fun getPreviousWindowIndex(): Int = getPreviousMediaItemIndex()
 
-    override fun isCurrentWindowDynamic(): Boolean = false
+    override fun isCurrentWindowDynamic(): Boolean = isCurrentMediaItemDynamic
 
-    override fun isCurrentWindowLive(): Boolean = false
+    override fun isCurrentWindowLive(): Boolean = isCurrentMediaItemLive
 
-    override fun getCurrentLiveOffset(): Long = 0L
+    override fun getCurrentLiveOffset(): Long = C.TIME_UNSET
 
     override fun mute() {
         volume = 0f

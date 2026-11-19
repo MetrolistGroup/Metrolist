@@ -115,6 +115,33 @@ class DesktopDatabaseMigrationTest {
         }
 
     @Test
+    fun version38MergesLegacySpeedDialTableIntoExistingOne() =
+        runBlocking<Unit> {
+            val directory = createTempDirectory("speed-dial-merge").toFile()
+            try {
+                val file = File(directory, "library.db")
+                createHistoricalLibrary(file.absolutePath, 38, JdbcSQLiteDriver())
+                JdbcSQLiteDriver().open(file.path).use { connection ->
+                    connection.execSQL("CREATE TABLE speed_dial_item AS SELECT * FROM speed_dial")
+                    connection.execSQL("UPDATE speed_dial_item SET title = 'Stale copy'")
+                    connection.execSQL(
+                        "INSERT INTO speed_dial_item SELECT 'legacy', secondaryId, title, subtitle, thumbnailUrl, type, " +
+                            "explicit, 5, createDate FROM speed_dial",
+                    )
+                }
+                val database = getDesktopDatabaseBuilder(file).build()
+                try {
+                    val current = historicalSpeedDialItem(38)
+                    assertEquals(listOf(current, current.copy(id = "legacy", index = 5)), database.speedDialDao().getAllOnce())
+                } finally {
+                    database.close()
+                }
+            } finally {
+                directory.deleteRecursively()
+            }
+        }
+
+    @Test
     fun booleanDefaultsMigrationPreservesRelationsAndNormalizesLegacyTextDefaults() =
         runBlocking<Unit> {
             val directory = createTempDirectory("database-boolean-defaults").toFile()

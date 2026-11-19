@@ -216,6 +216,7 @@ private class VerifyReleaseDistributableAction(
     private val appDirectory: File,
     private val desktopClasses: File,
     private val sharedClasses: File,
+    private val glyphmindLicenses: File,
     private val expectedSqlitePrefix: String,
     private val keptNativePrefixes: List<String>,
     private val expectedFfmpegPrefix: String,
@@ -257,12 +258,11 @@ private class VerifyReleaseDistributableAction(
             "Release distributable must not contain kotlin-reflect"
         }
         check(jars.none { it.name.startsWith("pinyin-") || it.name.startsWith("nlp-common-") || it.name.startsWith("heaven-") }) {
-            "Release distributable must use the in-tree Mandarin table"
+            "Release distributable must use glyphmind for Mandarin"
         }
 
         URLClassLoader(jars.map { it.toURI().toURL() }.toTypedArray(), ClassLoader.getPlatformClassLoader()).use { loader ->
             listOf(
-                "com.atilika.kuromoji.viterbi.ViterbiNode\$Type",
                 "javax.jmdns.ServiceInfo\$Fields",
             ).forEach { className ->
                 check(loader.loadClass(className).enumConstants?.isNotEmpty() == true) {
@@ -287,9 +287,18 @@ private class VerifyReleaseDistributableAction(
         check("kotlin/reflect/jvm/internal/ReflectionFactoryImpl.class" !in packagedEntries) {
             "Release distributable must not contain repackaged kotlin-reflect classes"
         }
-        check("romanization/mandarin.bin" in packagedEntries) {
-            "Release distributable is missing the Mandarin table"
+        check(packagedEntries.none { it == "romanization/mandarin.bin" || it.startsWith("com/atilika/kuromoji/") }) {
+            "Release distributable contains retired romanization assets"
         }
+        val resourcePrefix = "composeResources/com.metrolist.shared.generated.resources/files/licenses/glyphmind/"
+        val missingLicenses =
+            glyphmindLicenses
+                .walkTopDown()
+                .filter { it.isFile }
+                .map { it.relativeTo(glyphmindLicenses).invariantSeparatorsPath }
+                .filter { "$resourcePrefix$it" !in packagedEntries }
+                .toList()
+        check(missingLicenses.isEmpty()) { "Release distributable is missing glyphmind license resources: $missingLicenses" }
         if (requiredArm64WebView != null && requiredArm64WebView !in packagedEntries) {
             throw GradleException("Release distributable is missing the ARM64 WebView native library $requiredArm64WebView")
         }
@@ -379,6 +388,8 @@ val verifyReleaseDistributableJars =
         inputs.dir(appDirectory)
         inputs.dir(desktopClasses)
         inputs.dir(sharedClasses)
+        val glyphmindLicenses = project(":shared").layout.projectDirectory.dir("src/commonMain/composeResources/files/licenses/glyphmind")
+        inputs.dir(glyphmindLicenses)
 
         val expectedSqlitePrefix = "org/sqlite/native/$sqliteNativePath/"
         val nucleusPlatform = jnaPlatform.replace("x86-64", "x64")
@@ -413,6 +424,7 @@ val verifyReleaseDistributableJars =
                 appDirectory = appDirectory.get().asFile,
                 desktopClasses = desktopClasses.get().asFile,
                 sharedClasses = sharedClasses.get().asFile,
+                glyphmindLicenses = glyphmindLicenses.asFile,
                 expectedSqlitePrefix = expectedSqlitePrefix,
                 keptNativePrefixes = keptNativePrefixes,
                 expectedFfmpegPrefix = expectedFfmpegPrefix,

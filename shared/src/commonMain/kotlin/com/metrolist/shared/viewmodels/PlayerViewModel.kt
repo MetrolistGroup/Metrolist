@@ -609,22 +609,6 @@ class PlayerViewModel(
                 }
             }.launchIn(viewModelScope)
 
-        snapshotFlow { Settings.shared.spotifySession.isNotBlank() }
-            .distinctUntilChanged()
-            .drop(1)
-            .onEach {
-                animatedCoverFetch.invalidate()
-                _uiState.value =
-                    _uiState.value.copy(
-                        currentSong =
-                            _uiState.value.currentSong?.copy(
-                                spotifyAnimatedCoverUrl = null,
-                                canvasState = CanvasArtworkState.NOT_REQUESTED,
-                            ),
-                    )
-                playerConnection.currentSong.value?.let(::fetchAnimatedCover)
-            }.launchIn(viewModelScope)
-
         snapshotFlow { Settings.shared.youtubeCanvasQuality to Settings.shared.youtubeCanvasMode }
             .distinctUntilChanged()
             .onEach {

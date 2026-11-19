@@ -50,11 +50,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.metrolist.shared.generated.resources.Res
 import com.metrolist.shared.generated.resources.add_a_song
-import com.metrolist.shared.generated.resources.minutes_short
 import com.metrolist.shared.generated.resources.n_hidden_song
 import com.metrolist.shared.generated.resources.partial_song_count
 import com.metrolist.shared.generated.resources.search_no_results
-import com.metrolist.shared.generated.resources.seconds_short
 import com.metrolist.shared.generated.resources.song_count_with_hidden
 import com.metrolist.shared.model.PlaylistItem
 import com.metrolist.shared.model.SongItem
@@ -78,6 +76,7 @@ import com.metrolist.shared.ui.components.SongListItem
 import com.metrolist.shared.ui.components.mediumCollectionArtworkSize
 import com.metrolist.shared.ui.components.rememberItemPlayback
 import com.metrolist.shared.ui.components.rememberScrollingFabState
+import com.metrolist.shared.ui.components.totalDurationText
 import com.metrolist.shared.ui.haptics.HapticEvent
 import com.metrolist.shared.ui.haptics.rememberMetrolistHaptics
 import com.metrolist.shared.ui.menu.artworkMenuActions
@@ -101,6 +100,20 @@ data class PlaylistContentText(
     val songCount: @Composable (Int) -> String,
     val suggestions: String,
 )
+
+internal fun LazyListState.preparePlaylistSearch(
+    previousQuery: String,
+    query: String,
+    isWide: Boolean,
+    unfilteredState: LazyListState,
+) {
+    if (previousQuery.isNotBlank() || query.isBlank()) return
+    if (isWide) {
+        requestScrollToItem(0)
+    } else {
+        requestScrollToItem(unfilteredState.firstVisibleItemIndex, unfilteredState.firstVisibleItemScrollOffset)
+    }
+}
 
 @Composable
 fun PlaylistContent(
@@ -187,15 +200,8 @@ fun PlaylistContent(
         remember(durationSongs, hasMoreSongs, loadedSongCount) {
             playlistTotalDuration(durationSongs, hasMoreSongs, loadedSongCount)
         }
-    val durationText =
-        playlist?.durationText?.takeIf(String::isNotBlank) ?: duration?.let {
-            if (it < 60) {
-                pluralStringResource(Res.plurals.seconds_short, it.toInt(), it.toInt())
-            } else {
-                val minutes = (it / 60).toInt()
-                pluralStringResource(Res.plurals.minutes_short, minutes, minutes)
-            }
-        }
+    // YouTube's own text is only a fallback until every song has loaded and the total is known.
+    val durationText = duration?.let { totalDurationText(it) } ?: playlist?.durationText?.takeIf(String::isNotBlank)
     val songCountLabel = listOfNotNull(playlist?.viewCount, songCountWithHidden, durationText).joinToString(" • ")
 
     var internalSearchOpen by remember(playlist?.id) { mutableStateOf(searchQuery.isNotBlank()) }
@@ -288,10 +294,9 @@ fun PlaylistContent(
             BoxWithConstraints(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
                 val isWide = maxWidth >= 960.dp
                 val isMedium = maxWidth >= 600.dp && !isWide
-                LaunchedEffect(effectiveQuery.isNotBlank(), isWide) {
-                    if (effectiveQuery.isNotBlank() && !isWide) {
-                        searchListState.animateScrollToItem(listOfNotNull(header).size + 1)
-                    }
+                val updateSearchQuery: (String) -> Unit = { newQuery ->
+                    searchListState.preparePlaylistSearch(effectiveQuery, newQuery, isWide, listState)
+                    updateQuery(newQuery)
                 }
                 val leadingItems =
                     if (isWide) {
@@ -330,7 +335,7 @@ fun PlaylistContent(
                     } else {
                         160.dp
                     }
-                LaunchedEffect(isSearchOpen, isWide, loadingHeader) {
+                LaunchedEffect(isSearchOpen, activeListState, isWide, loadingHeader, displayedSongs.size) {
                     if (isSearchOpen && !isWide) {
                         activeListState.animateScrollToItem(listOfNotNull(header).size + 1)
                     }
@@ -434,7 +439,7 @@ fun PlaylistContent(
                                         onSearchToggle = toggleSearch.takeIf { searchEnabled && !reorderMode && searchOpen == null },
                                         isSearchOpen = isSearchOpen,
                                         query = effectiveQuery,
-                                        onQueryChange = updateQuery,
+                                        onQueryChange = updateSearchQuery,
                                         onClose = toggleSearch,
                                         orderControls = orderControls,
                                         aboveOrderControls = aboveOrderControls,
@@ -627,7 +632,7 @@ fun PlaylistContent(
                                             onSearchToggle = toggleSearch.takeIf { searchEnabled && !reorderMode && searchOpen == null },
                                             isSearchOpen = isSearchOpen,
                                             query = effectiveQuery,
-                                            onQueryChange = updateQuery,
+                                            onQueryChange = updateSearchQuery,
                                             onClose = toggleSearch,
                                             orderControls = orderControls,
                                             aboveOrderControls = aboveOrderControls,
@@ -722,7 +727,8 @@ fun PlaylistContent(
                             }
 
                             item {
-                                Spacer(Modifier.height(32.dp))
+                                // Keep the search row at the top even when results do not fill the viewport.
+                                Spacer(if (isSearchOpen) Modifier.fillParentMaxHeight() else Modifier.height(32.dp))
                             }
                         }
                         LazyListScrollbar(

@@ -23,4 +23,9 @@ internal actual fun historyDateRangeLabel(
     end: Long,
     locale: Locale,
     zone: String,
-): String = DateIntervalFormat.getInstance("yMMMd", locale).apply { timeZone = TimeZone.getTimeZone(zone) }.format(DateInterval(start, end))
+): String =
+    DateIntervalFormat
+        .getInstance("yMMMd", locale)
+        // The trimmed desktop ICU jar has no zone data, so ICU's own lookup falls back to GMT.
+        .apply { timeZone = TimeZone.getTimeZone(zone, TimeZone.TIMEZONE_JDK) }
+        .format(DateInterval(start, end))

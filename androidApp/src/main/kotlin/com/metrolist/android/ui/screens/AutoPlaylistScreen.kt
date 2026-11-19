@@ -60,6 +60,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -93,13 +94,13 @@ import com.metrolist.android.ui.menu.PlaylistMenu
 import com.metrolist.android.ui.menu.SongMenu
 import com.metrolist.android.viewmodels.AutoPlaylistPresentationInput
 import com.metrolist.android.viewmodels.prepareAutoPlaylistSongs
+import com.metrolist.android.viewmodels.withSongSorting
 import com.metrolist.shared.db.MusicDatabase
 import com.metrolist.shared.db.collectionPlayCounts
 import com.metrolist.shared.db.entities.CachedAudioEntity
 import com.metrolist.shared.db.entities.KIND_CACHE
 import com.metrolist.shared.db.entities.KIND_DOWNLOAD
 import com.metrolist.shared.db.entities.toSongItem
-import com.metrolist.shared.db.entities.withStoredDownloadMetadata
 import com.metrolist.shared.db.refreshUploadedSongs
 import com.metrolist.shared.db.synchronizeUploadedSongs
 import com.metrolist.shared.generated.resources.Res
@@ -133,16 +134,16 @@ import com.metrolist.shared.generated.resources.upload_failed
 import com.metrolist.shared.generated.resources.uploaded_playlist_name
 import com.metrolist.shared.generated.resources.uploaded_song_to_youtube_music
 import com.metrolist.shared.generated.resources.uploading
-import com.metrolist.shared.model.AlbumTiny
-import com.metrolist.shared.model.ArtistTiny
 import com.metrolist.shared.model.BuiltinPlaylist
 import com.metrolist.shared.model.CollectionSort
 import com.metrolist.shared.model.PlaylistItem
+import com.metrolist.shared.model.PlaylistSongSort
 import com.metrolist.shared.model.SongItem
 import com.metrolist.shared.model.SortDirection
 import com.metrolist.shared.model.TopPlaylistPeriod
 import com.metrolist.shared.model.defaultDirection
 import com.metrolist.shared.model.indexOfPlaylistOccurrence
+import com.metrolist.shared.model.isReordering
 import com.metrolist.shared.model.toSongItem
 import com.metrolist.shared.settings.BlockedContent
 import com.metrolist.shared.settings.HiddenLibraryItem
@@ -189,6 +190,8 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import org.jetbrains.compose.resources.getString
 import org.jetbrains.compose.resources.pluralStringResource
@@ -202,6 +205,7 @@ fun AutoPlaylistScreen(
     type: String,
     onBackClick: () -> Unit = {},
     onArtistClick: ((String) -> Unit)? = null,
+    onAlbumClick: ((String) -> Unit)? = null,
     onOpenDownloadQueue: () -> Unit = {},
 ) {
     val playerConnection = LocalPlayerConnection.current
@@ -238,7 +242,9 @@ fun AutoPlaylistScreen(
 
     var songs by remember { mutableStateOf<List<SongItem>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
-    var isUploading by remember { mutableStateOf(false) }
+    var pendingUploads by remember { mutableIntStateOf(0) }
+    val isUploading = pendingUploads > 0
+    val uploadQueue = remember { Mutex() }
     var showClearConfirmation by remember { mutableStateOf(false) }
     var showCollectionMenu by remember { mutableStateOf(false) }
     var showExportDialog by remember { mutableStateOf(false) }
@@ -305,7 +311,7 @@ fun AutoPlaylistScreen(
     }
     var topPeriod by remember { mutableStateOf(TopPlaylistPeriod.ALL_TIME) }
     var topDirection by remember { mutableStateOf(SortDirection.DESCENDING) }
-    var likedReorderMode by remember { mutableStateOf(false) }
+    val likedReorderMode = playlistSort.isReordering(Settings.shared.playlistEditLock, currentType == "liked")
     val addToPlaylist = LocalPlaylistAdder.current
     val selection = rememberSelectionState(currentType)
     val downloadFilter = rememberDownloadPlaylistFilter(database)
@@ -351,9 +357,11 @@ fun AutoPlaylistScreen(
             playlistSort = playlistSort,
             playlistDirection = playlistSortDirection,
             topDirection = topDirection,
-            reorder = likedReorderMode,
             likedSongRecency = if (isLikedCollection) SongLikeState.likedSongRecency else emptyList(),
             downloadFilter = downloadFilterState,
+        ).withSongSorting(
+            locked = Settings.shared.playlistEditLock,
+            listeningTimes = { SongMetadataState.listeningTimes },
         )
 
     var preparedSongs by remember(currentType) { mutableStateOf<List<SongItem>>(emptyList()) }
@@ -398,45 +406,49 @@ fun AutoPlaylistScreen(
     }
 
     val uploadLauncher =
-        rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
-            if (uri == null || isUploading) return@rememberLauncherForActivityResult
-            scope.launch {
-                isUploading = true
-                try {
-                    val result =
-                        withContext(Dispatchers.IO) {
-                            val fileName = context.displayName(uri) ?: uri.lastPathSegment?.substringAfterLast('/') ?: "upload"
-                            val contentLength = context.contentLength(uri) ?: 0L
-                            GlobalYouTubeRepository.instance.uploadSong(fileName, contentLength) {
-                                requireNotNull(context.contentResolver.openInputStream(uri)).toByteReadChannel(Dispatchers.IO)
-                            }
-                        }
-                    if (result.success) {
-                        Toast.makeText(context, getString(Res.string.uploaded_song_to_youtube_music), Toast.LENGTH_SHORT).show()
-                        if (currentType == "uploaded") {
-                            val knownIds = songs.mapTo(mutableSetOf()) { it.id }
-                            scope.launch {
-                                GlobalYouTubeRepository.instance.awaitProcessedUpload(knownIds) { processed ->
-                                    if (currentType == "uploaded") {
-                                        scope.launch { database.synchronizeUploadedSongs(processed) }
+        rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris: List<Uri> ->
+            pendingUploads += uris.size
+            // Picked files upload one at a time; picking again while uploading adds to the queue.
+            uris.forEach { uri ->
+                scope.launch {
+                    try {
+                        val result =
+                            uploadQueue.withLock {
+                                withContext(Dispatchers.IO) {
+                                    val fileName = context.displayName(uri) ?: uri.lastPathSegment?.substringAfterLast('/') ?: "upload"
+                                    val contentLength = context.contentLength(uri) ?: 0L
+                                    GlobalYouTubeRepository.instance.uploadSong(fileName, contentLength) {
+                                        requireNotNull(context.contentResolver.openInputStream(uri)).toByteReadChannel(Dispatchers.IO)
                                     }
                                 }
                             }
+                        if (result.success) {
+                            Toast.makeText(context, getString(Res.string.uploaded_song_to_youtube_music), Toast.LENGTH_SHORT).show()
+                            if (currentType == "uploaded") {
+                                val knownIds = songs.mapTo(mutableSetOf()) { it.id }
+                                scope.launch {
+                                    GlobalYouTubeRepository.instance.awaitProcessedUpload(knownIds) { processed ->
+                                        if (currentType == "uploaded") {
+                                            scope.launch { database.synchronizeUploadedSongs(processed) }
+                                        }
+                                    }
+                                }
+                            }
+                        } else {
+                            Toast
+                                .makeText(
+                                    context,
+                                    result.localizedErrorMessage(),
+                                    Toast.LENGTH_LONG,
+                                ).show()
                         }
-                    } else {
-                        Toast
-                            .makeText(
-                                context,
-                                result.localizedErrorMessage(),
-                                Toast.LENGTH_LONG,
-                            ).show()
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        Toast.makeText(context, getString(Res.string.upload_failed), Toast.LENGTH_LONG).show()
+                    } finally {
+                        pendingUploads--
                     }
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (e: Exception) {
-                    Toast.makeText(context, getString(Res.string.upload_failed), Toast.LENGTH_LONG).show()
-                } finally {
-                    isUploading = false
                 }
             }
         }
@@ -446,7 +458,6 @@ fun AutoPlaylistScreen(
         selection.exit()
         collectionQuery = ""
         collectionEntries = emptyList()
-        likedReorderMode = false
         when (currentType) {
             "liked" -> {
                 songs = BlockedContent.filterSongs(SongLikeState.likedSongs)
@@ -468,21 +479,7 @@ fun AutoPlaylistScreen(
                         withContext(Dispatchers.Default) {
                             BlockedContent.filterSongs(
                                 downloadedSongs.map { entry ->
-                                    SongItem(
-                                        id = entry.songId,
-                                        title = entry.title,
-                                        thumbnail = entry.thumbnailUrl,
-                                        artists =
-                                            entry.artist.split(",").mapNotNull { name ->
-                                                name.trim().takeIf { it.isNotBlank() && it != "Unknown" }?.let {
-                                                    ArtistTiny(
-                                                        id = null,
-                                                        name = it,
-                                                    )
-                                                }
-                                            },
-                                        album = entry.album?.let { AlbumTiny(id = null, name = it) },
-                                    ).withStoredDownloadMetadata(storedSongs[entry.songId])
+                                    entry.toSongItem(storedSongs[entry.songId])
                                 },
                             )
                         }
@@ -493,26 +490,16 @@ fun AutoPlaylistScreen(
 
             "cached" -> {
                 database.dao().cachedAudioByKind(KIND_CACHE).collectLatest { cachedSongs ->
+                    val storedSongs =
+                        withContext(Dispatchers.IO) {
+                            database.dao().getSongsByIds(cachedSongs.map { it.songId }).associateBy { it.id }
+                        }
                     collectionEntries = cachedSongs
                     songs =
                         withContext(Dispatchers.Default) {
                             BlockedContent.filterSongs(
                                 cachedSongs.map { entry ->
-                                    SongItem(
-                                        id = entry.songId,
-                                        title = entry.title,
-                                        thumbnail = entry.thumbnailUrl,
-                                        artists =
-                                            entry.artist.split(",").mapNotNull { name ->
-                                                name.trim().takeIf { it.isNotBlank() && it != "Unknown" }?.let {
-                                                    ArtistTiny(
-                                                        id = null,
-                                                        name = it,
-                                                    )
-                                                }
-                                            },
-                                        album = entry.album?.let { AlbumTiny(id = null, name = it) },
-                                    )
+                                    entry.toSongItem(storedSongs[entry.songId])
                                 },
                             )
                         }
@@ -680,7 +667,6 @@ fun AutoPlaylistScreen(
                             IconButton(
                                 modifier = Modifier.tvFocusHighlight(CircleShape).navigationPopupSource(),
                                 onClick = action,
-                                enabled = currentType != "uploaded" || !isUploading,
                                 shapes = IconButtonDefaults.shapes(),
                             ) {
                                 if (currentType == "uploaded" && isUploading) {
@@ -915,7 +901,7 @@ fun AutoPlaylistScreen(
                                         )
                                     },
                                     onReorderModeChange = {
-                                        likedReorderMode = it
+                                        Settings.shared.playlistEditLock = !it
                                     },
                                     modifier = Modifier.padding(vertical = 8.dp),
                                 )
@@ -947,6 +933,8 @@ fun AutoPlaylistScreen(
             onPlayNext = { playerConnection?.addToQueue(song, playNext = true) },
             onAddToQueue = { playerConnection?.addToQueue(song) },
             onLike = { SongLikeState.toggleLike(song) },
+            onGoToArtist = onArtistClick,
+            onGoToAlbum = song.album?.id?.let { albumId -> onAlbumClick?.let { open -> { open(albumId) } } },
             onRemove =
                 if (currentType == "cached") {
                     {

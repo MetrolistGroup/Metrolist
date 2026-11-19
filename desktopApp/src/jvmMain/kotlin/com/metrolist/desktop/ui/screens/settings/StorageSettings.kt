@@ -170,7 +170,7 @@ fun StorageSettingsScreen(
     var busy by remember { mutableStateOf(false) }
     var sliderRevision by remember { mutableIntStateOf(0) }
     val songLimits = remember { SongCacheLimitsMb.map(Int::toLong) }
-    val imageLimits = remember { listOf(0L, 128L, 256L, 512L, 1024L, 2048L, 4096L, 8192L) }
+    val imageLimits = remember(maxImageMb) { desktopImageCacheLimitOptions(maxImageMb) }
 
     suspend fun refreshUsage(scanDownloads: Boolean = true) {
         val knownDownloads = usage?.downloads

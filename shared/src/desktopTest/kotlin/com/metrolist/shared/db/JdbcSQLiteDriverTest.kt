@@ -1,10 +1,16 @@
 package com.metrolist.shared.db
 
+import androidx.sqlite.SQLITE_DATA_BLOB
+import androidx.sqlite.SQLITE_DATA_FLOAT
+import androidx.sqlite.SQLITE_DATA_INTEGER
+import androidx.sqlite.SQLITE_DATA_NULL
+import androidx.sqlite.SQLITE_DATA_TEXT
 import com.metrolist.shared.db.entities.PlaylistEntity
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import java.nio.file.Files
 import java.sql.DriverManager
+import java.sql.Types
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import kotlin.test.Test
@@ -114,6 +120,80 @@ class JdbcSQLiteDriverTest {
             Files.deleteIfExists(path)
         }
     }
+
+    @Test
+    fun rowTypesMatchObjectReadsForDeclaredAndExpressionColumns() {
+        val connection = JdbcSQLiteDriver().open(":memory:")
+        try {
+            DriverManager.getConnection("jdbc:sqlite::memory:").use { previous ->
+                for (sql in listOf(
+                    "CREATE TABLE sample (i INTEGER, r REAL, t TEXT, b BLOB, d DATE, flag BOOLEAN, value)",
+                    "INSERT INTO sample VALUES (42, 1.25, 'text', x'0001', 123, 1, NULL), " +
+                        "(NULL, NULL, NULL, NULL, NULL, NULL, NULL), " +
+                        "('text', x'01', 7, 2.5, 'date', 0, 'dynamic')",
+                )) {
+                    connection.prepare(sql).use { it.step() }
+                    previous.createStatement().use { it.execute(sql) }
+                }
+                val sql =
+                    "SELECT *, NULL AS n, 1 + 2 AS integer_expression, 1.5 * 2 AS float_expression, " +
+                        "'a' || 'b' AS text_expression, x'' AS blob_expression, CAST(NULL AS TEXT) AS null_text, " +
+                        "CAST(NULL AS INTEGER) AS null_integer, 9223372036854775807 AS large_integer FROM sample"
+                previous.prepareStatement(sql).use { old ->
+                    val metadata = old.metaData
+                    val count = metadata.columnCount
+                    val names = List(count) { metadata.getColumnName(it + 1) }
+                    val beforeTypes = List(count) { previousMetadataType(metadata.getColumnType(it + 1)) }
+                    connection.prepare(sql).use { lateMetadata ->
+                        assertTrue(lateMetadata.step())
+                        lateMetadata.reset()
+                        assertEquals(count, lateMetadata.getColumnCount())
+                        assertEquals(names, List(count, lateMetadata::getColumnName))
+                        assertEquals(beforeTypes, List(count, lateMetadata::getColumnType))
+                    }
+                    connection.prepare(sql).use { statement ->
+                        repeat(2) {
+                            assertEquals(count, statement.getColumnCount())
+                            assertEquals(names, List(count, statement::getColumnName))
+                            assertEquals(beforeTypes, List(count, statement::getColumnType))
+                            old.executeQuery().use { result ->
+                                while (result.next()) {
+                                    assertTrue(statement.step())
+                                    repeat(count) { index ->
+                                        val value = result.getObject(index + 1)
+                                        val type =
+                                            when (value) {
+                                                null -> SQLITE_DATA_NULL
+                                                is ByteArray -> SQLITE_DATA_BLOB
+                                                is Float, is Double -> SQLITE_DATA_FLOAT
+                                                is Number, is Boolean -> SQLITE_DATA_INTEGER
+                                                else -> SQLITE_DATA_TEXT
+                                            }
+                                        assertEquals(value == null, statement.isNull(index), names[index])
+                                        assertEquals(type, statement.getColumnType(index), names[index])
+                                        if (value is String) assertEquals(value, statement.getText(index))
+                                    }
+                                }
+                                assertFalse(statement.step())
+                            }
+                            statement.reset()
+                        }
+                    }
+                }
+            }
+        } finally {
+            connection.close()
+        }
+    }
+
+    private fun previousMetadataType(type: Int): Int =
+        when (type) {
+            Types.BLOB, Types.BINARY, Types.VARBINARY, Types.LONGVARBINARY -> SQLITE_DATA_BLOB
+            Types.FLOAT, Types.REAL, Types.DOUBLE, Types.NUMERIC, Types.DECIMAL -> SQLITE_DATA_FLOAT
+            Types.TINYINT, Types.SMALLINT, Types.INTEGER, Types.BIGINT, Types.BIT, Types.BOOLEAN -> SQLITE_DATA_INTEGER
+            Types.NULL -> SQLITE_DATA_NULL
+            else -> SQLITE_DATA_TEXT
+        }
 
     @Test
     fun opensRoomAndPersistsPlaylist() =

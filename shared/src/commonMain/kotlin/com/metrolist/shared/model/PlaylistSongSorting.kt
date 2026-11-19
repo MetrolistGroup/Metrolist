@@ -8,6 +8,7 @@ enum class PlaylistSongSort {
     DURATION,
     YEAR,
     ORIGINAL,
+    LISTENING_TIME,
 }
 
 enum class SortDirection {
@@ -17,10 +18,17 @@ enum class SortDirection {
 
 fun PlaylistSongSort.allowsReordering(): Boolean = this == PlaylistSongSort.ORIGINAL
 
+fun PlaylistSongSort.isReordering(
+    locked: Boolean,
+    editable: Boolean,
+    hasMore: Boolean = false,
+): Boolean = !locked && editable && !hasMore && allowsReordering()
+
 fun List<SongItem>.sortedForPlaylist(
     sort: PlaylistSongSort,
     direction: SortDirection,
     dateAddedOrder: SortDirection = SortDirection.ASCENDING,
+    listeningTimes: Map<String, Long> = emptyMap(),
 ): List<SongItem> {
     if (sort == PlaylistSongSort.ORIGINAL) return this
     if (sort == PlaylistSongSort.DATE_ADDED) {
@@ -42,6 +50,7 @@ fun List<SongItem>.sortedForPlaylist(
         PlaylistSongSort.ALBUM -> sortedForPlaylistBy(direction) { it.album?.name?.lowercase() }
         PlaylistSongSort.DURATION -> sortedForPlaylistBy(direction) { it.duration }
         PlaylistSongSort.YEAR -> sortedForPlaylistBy(direction) { it.year }
+        PlaylistSongSort.LISTENING_TIME -> sortedForPlaylistBy(direction) { listeningTimes[it.id] ?: 0L }
         PlaylistSongSort.ORIGINAL, PlaylistSongSort.DATE_ADDED -> this
     }
 }
@@ -60,6 +69,7 @@ fun List<SongItem>.sortedForLikedPlaylist(
     sort: PlaylistSongSort,
     direction: SortDirection,
     recency: List<String> = emptyList(),
+    listeningTimes: Map<String, Long> = emptyMap(),
 ): List<SongItem> {
     val songs =
         if (sort == PlaylistSongSort.DATE_ADDED && recency.isNotEmpty()) {
@@ -68,7 +78,7 @@ fun List<SongItem>.sortedForLikedPlaylist(
         } else {
             this
         }
-    return songs.sortedForPlaylist(sort, direction, dateAddedOrder = SortDirection.DESCENDING)
+    return songs.sortedForPlaylist(sort, direction, dateAddedOrder = SortDirection.DESCENDING, listeningTimes = listeningTimes)
 }
 
 private fun <T : Comparable<T>> compareNullable(

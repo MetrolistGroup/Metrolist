@@ -53,12 +53,37 @@ object HomeShelfBuilder {
 
             val userPlaylistIds = state.userPlaylists.map { it.id.removePrefix("VL") }.toSet()
             if (isVisible("speed_dial", text.speedDial)) {
+                // Speed Dial recommendations are drawn from the other shelves, so hiding a shelf must hide its items here too.
+                val hiddenItemIds =
+                    if (includeHidden) {
+                        emptySet()
+                    } else {
+                        buildSet {
+                            (state.data.orEmpty() + state.sections)
+                                .filter { it.hasTitle && !isVisible(it.visibilityKey, it.title) }
+                                .forEach { section -> section.items.mapTo(this, ::canonicalHomeItemId) }
+                            listOf(
+                                Triple("keep_listening", text.keepListening, state.keepListening),
+                                Triple("quick_picks", text.quickPicks, state.quickPicks),
+                                Triple("forgotten_favorites", text.forgottenFavorites, state.forgottenFavorites),
+                                Triple("new_releases", text.newReleases, state.newReleases),
+                                Triple("trending", text.charts, state.trending),
+                                Triple("album_charts", text.albumCharts, state.albumCharts),
+                                Triple("community_playlists", text.editorialPlaylists, state.communityPlaylist),
+                            ).filterNot { (key, title, _) -> isVisible(key, title) }
+                                .forEach { (_, _, items) -> items.mapTo(this, ::canonicalHomeItemId) }
+                        }
+                    }
                 val uniqueSpeedDial =
                     state.speedDialItems
                         .distinctBy(::canonicalHomeItemId)
                         .filter { item ->
                             val isPinned = item.id in state.speedDialPinnedIds
-                            isPinned || !(item is PlaylistItem && (item.isEditable || canonicalHomeItemId(item) in userPlaylistIds))
+                            isPinned ||
+                                (
+                                    !(item is PlaylistItem && (item.isEditable || canonicalHomeItemId(item) in userPlaylistIds)) &&
+                                        canonicalHomeItemId(item) !in hiddenItemIds
+                                )
                         }
                 if (uniqueSpeedDial.isNotEmpty()) {
                     text.speedDial

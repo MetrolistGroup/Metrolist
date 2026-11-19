@@ -2,6 +2,7 @@ package com.metrolist.android.playback
 
 import com.metrolist.android.widget.WidgetState
 import com.metrolist.shared.cast.CastState
+import com.metrolist.shared.model.ArtistTiny
 import com.metrolist.shared.model.SongItem
 import com.metrolist.shared.settings.displayName
 import kotlinx.coroutines.flow.Flow
@@ -32,10 +33,19 @@ internal fun playbackWidgetState(
     currentPosition: Long,
     idleTitle: String,
     idleArtist: String,
+    unknownArtist: String,
 ): WidgetState =
     WidgetState(
         title = song?.title ?: idleTitle,
-        artist = song?.artists?.joinToString { it.displayName } ?: idleArtist,
+        artist =
+            song?.let {
+                it.artists
+                    .map(ArtistTiny::displayName)
+                    .filter(String::isNotBlank)
+                    .joinToString()
+                    .ifEmpty { unknownArtist }
+            }
+                ?: idleArtist,
         artworkUri = song?.thumbnail,
         isPlaying = song != null && isPlaying,
         isLiked = song != null && isLiked,

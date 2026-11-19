@@ -7,10 +7,8 @@ package com.metrolist.shared.ui.components
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.snap
-import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
@@ -32,6 +30,7 @@ import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.withFrameMillis
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.MotionDurationScale
@@ -57,10 +56,12 @@ import com.metrolist.shared.generated.resources.queue_current_playing
 import com.metrolist.shared.settings.Settings
 import com.metrolist.shared.ui.icons.MetrolistIcons
 import com.metrolist.shared.ui.theme.rememberReducedMotion
+import com.metrolist.shared.ui.utils.settled
 import com.metrolist.shared.ui.utils.toPolygonShape
 import kotlinx.coroutines.flow.collectLatest
 import org.jetbrains.compose.resources.stringResource
 import kotlin.math.ceil
+import kotlin.time.Duration.Companion.milliseconds
 
 internal const val OVERLAY_SCRIM_ALPHA = 0.6f
 
@@ -104,7 +105,7 @@ fun animatedCurrentSongArtworkShape(
                         MaterialShapes.Cookie9Sided,
                     )
                 return Outline.Generic(
-                    morph.toPath(progress).apply { transform(Matrix().apply { scale(size.width, size.height) }) },
+                    morph.toPath(progress).apply { transform(Matrix().apply { scale(size.width, size.height) }) }.settled(),
                 )
             }
         }
@@ -140,12 +141,16 @@ internal fun rememberArtworkShapeRotation(
         }
         visualWork.collectLatest { visible ->
             if (!visible) return@collectLatest
+            // Stepped on the shared playback clock: a display-rate spin repaints the whole queue
+            // list, including its shader blur, on every frame.
+            val origin = withFrameMillis { it } - (angle.value % 360f / 360f * CURRENT_SONG_ARTWORK_ROTATION_CYCLE_MILLIS).toLong()
+            var frameMillis = 0L
             while (true) {
-                angle.animateTo(
-                    targetValue = angle.value + 360f,
-                    animationSpec = tween(CURRENT_SONG_ARTWORK_ROTATION_CYCLE_MILLIS.toInt(), easing = LinearEasing),
+                withPlaybackAnimationFrame(50.milliseconds) { frameMillis = it }
+                angle.snapTo(
+                    (frameMillis - origin).mod(CURRENT_SONG_ARTWORK_ROTATION_CYCLE_MILLIS) * 360f /
+                        CURRENT_SONG_ARTWORK_ROTATION_CYCLE_MILLIS,
                 )
-                angle.snapTo(angle.value % 360f)
             }
         }
     }

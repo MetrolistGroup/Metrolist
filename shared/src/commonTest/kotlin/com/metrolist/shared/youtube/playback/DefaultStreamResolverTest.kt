@@ -1824,6 +1824,38 @@ class DefaultStreamResolverTest {
             }
         }
 
+    @Test
+    fun staleLiveFlagFallsBackToNormalClientsWhenNoLiveManifestExists() =
+        runBlocking {
+            val song = SongItem("video", "Recording", null, emptyList(), null, musicVideoType = "MUSIC_VIDEO_TYPE_LIVE")
+            val extractor =
+                RecordingStreamExtractor(
+                    onExtract = { hints ->
+                        assertEquals(null, hints.playbackClientOverrideId)
+                        assertEquals(null, hints.isLive)
+                    },
+                )
+            val client =
+                HttpClient(MockEngine { respondOk("""{"playabilityStatus":{"status":"OK"},"videoDetails":{"lengthSeconds":"353"}}""") }) {
+                    install(ContentNegotiation) { json() }
+                }
+            val resolver = DefaultStreamResolver(extractor, InnerTube(client), networkStateFlow = null)
+            try {
+                val resource =
+                    resolver.resolve(
+                        song.id,
+                        ContentHints(isLive = true, playbackClientOverrideId = "ANDROID"),
+                        sourceSong = song,
+                    )
+                assertFalse(resource.isLive)
+                assertEquals("profile", resource.profileId)
+                assertEquals("video", extractor.lastVideoId)
+            } finally {
+                resolver.close()
+                client.close()
+            }
+        }
+
     private suspend fun withHlsResponse(
         details: String,
         extractor: StreamExtractor = RecordingStreamExtractor(profiles = emptyList()),
@@ -1923,6 +1955,9 @@ class DefaultStreamResolverTest {
                     resource.videoUrl,
                 )
                 assertEquals("https://manifest.googlevideo.com/api/manifest/hls_playlist/itag/93/playlist/index.m3u8", resource.url)
+                val audio = resolver.resolve("live-video", ContentHints(isLive = isLive, maxVideoHeight = maxVideoHeight))
+                assertEquals(resource.url, audio.url)
+                assertFalse(audio.hasVideo)
             } finally {
                 resolver.close()
                 innerTube.close()

@@ -159,7 +159,8 @@ fun LibraryScreen(
                 },
             )
         }
-    var isGridView by remember { mutableStateOf(LibraryState.libraryViewType == LibraryViewType.GRID) }
+    val gridFilter = selectedFilter?.let { LibraryFilterType.valueOf(it.name) } ?: LibraryFilterType.ALL
+    val isGridView = Settings.shared.libraryGridView(gridFilter, LibraryState.libraryViewType == LibraryViewType.GRID)
     var manualOrder by remember { mutableStateOf(Settings.shared.libraryManualOrder) }
     var searchQuery by remember { mutableStateOf("") }
     val activeLibraryGridState = rememberLibrarySearchScrollState(searchQuery, libraryGridState)
@@ -175,8 +176,7 @@ fun LibraryScreen(
     }
     var showNewPlaylistMenu by remember { mutableStateOf(false) }
     var createName by remember { mutableStateOf("") }
-    var playlistToRename by remember { mutableStateOf<PlaylistItem?>(null) }
-    var renameName by remember { mutableStateOf("") }
+    val renameDialog = remember { PlaylistRenameDialogState() }
     var playlistToDelete by remember { mutableStateOf<PlaylistItem?>(null) }
     var playlistDeleteFailed by remember { mutableStateOf(false) }
     var showHiddenItems by remember { mutableStateOf(false) }
@@ -215,8 +215,7 @@ fun LibraryScreen(
                         }
                 },
                 onGridViewChange = {
-                    isGridView = it
-                    LibraryState.updateLibraryViewType(if (it) LibraryViewType.GRID else LibraryViewType.LIST)
+                    Settings.shared.setLibraryGridView(gridFilter, it)
                 },
                 onManualOrderChange = {
                     manualOrder = it
@@ -335,8 +334,7 @@ fun LibraryScreen(
                                 onRename =
                                     item.takeIf { it.isEditable }?.let {
                                         {
-                                            renameName = it.title
-                                            playlistToRename = it
+                                            renameDialog.open(it)
                                         }
                                     },
                                 onDelete =
@@ -469,16 +467,17 @@ fun LibraryScreen(
             LibraryContentState.createPlaylist(name) { result -> result.onSuccess { PlaylistAlbumState.fetchPlaylistData(it) } }
         }
     }
-    PopupContent(playlistToRename) { playlist ->
+    PopupContent(renameDialog.playlist) {
         PlaylistNameDialog(
             title = stringResource(Res.string.rename_playlist_dialog_title),
             confirmActionLabel = stringResource(Res.string.playlist_rename_action),
-            value = renameName,
-            onValueChange = { renameName = it },
-            onDismiss = { playlistToRename = null },
+            value = renameDialog.name,
+            onValueChange = { renameDialog.name = it },
+            onDismiss = renameDialog::dismiss,
+            isSaving = renameDialog.isSaving,
+            error = if (renameDialog.failed) stringResource(Res.string.error_occurred) else null,
         ) {
-            LibraryContentState.renamePlaylist(playlist, renameName) {}
-            playlistToRename = null
+            renameDialog.submit(LibraryContentState::renamePlaylist)
         }
     }
     playlistToDelete?.let { playlist ->
@@ -577,14 +576,26 @@ internal fun PlaylistNameDialog(
     value: String,
     onValueChange: (String) -> Unit,
     onDismiss: () -> Unit,
+    isSaving: Boolean = false,
+    error: String? = null,
     onConfirm: () -> Unit,
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(title) },
-        text = { OutlinedTextField(value, onValueChange, label = { Text(stringResource(Res.string.playlist_name)) }, singleLine = true) },
+        text = {
+            OutlinedTextField(
+                value,
+                onValueChange,
+                enabled = !isSaving,
+                label = { Text(stringResource(Res.string.playlist_name)) },
+                singleLine = true,
+                isError = error != null,
+                supportingText = if (error != null) ({ Text(error) }) else null,
+            )
+        },
         confirmButton = {
-            TextButton(enabled = value.isNotBlank(), onClick = onConfirm, shapes = ButtonDefaults.shapes()) {
+            TextButton(enabled = !isSaving && value.isNotBlank(), onClick = onConfirm, shapes = ButtonDefaults.shapes()) {
                 Text(confirmActionLabel)
             }
         },

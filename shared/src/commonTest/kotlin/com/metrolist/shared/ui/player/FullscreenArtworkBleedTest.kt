@@ -52,6 +52,14 @@ class FullscreenArtworkBleedTest {
     }
 
     @Test
+    fun singleRowArtworkExtendsWithoutAnInvalidClampRange() {
+        val art = intArrayOf(0xFF334455.toInt(), 0xFF778899.toInt())
+
+        assertContentEquals(art + art + art, bleedCanvas(art, width = 2, artHeight = 1, height = 3))
+        assertContentEquals(art, bleedCanvas(art, width = 2, artHeight = 1, height = 1))
+    }
+
+    @Test
     fun belowTheCoverOnlyItsBottomRowsAreStretchedSoNothingLargeIsReflected() {
         val art = IntArray(width * artHeight) { 0xFF000000.toInt() or ((it / width) * 4 * 0x010101) }
         val canvas = bleedCanvas(art, width, artHeight, height)

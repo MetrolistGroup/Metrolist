@@ -334,8 +334,10 @@ fun SettingsScreen(
             add(SettingsPageId.BLOCKED_SONGS)
             add(SettingsPageId.STORAGE)
             add(SettingsPageId.BACKUP_RESTORE)
-            add(SettingsPageId.UPDATES)
-            add(SettingsPageId.UPDATE_DETAILS)
+            if (BuildConfig.UPDATER_ENABLED) {
+                add(SettingsPageId.UPDATES)
+                add(SettingsPageId.UPDATE_DETAILS)
+            }
             add(SettingsPageId.ABOUT)
             add(SettingsPageId.SUPPORTED_LINKS)
             if (SharedPreferences.shared.devtoolsUnlocked) {
@@ -354,6 +356,8 @@ fun SettingsScreen(
                     context.startActivity(intent)
                     return
                 } catch (_: ActivityNotFoundException) {
+                } catch (_: SecurityException) {
+                    // Some vendor settings apps do not export this screen.
                 }
             }
         }
@@ -361,9 +365,6 @@ fun SettingsScreen(
         if (fallback.resolveActivity(context.packageManager) != null) context.startActivity(fallback)
     }
 
-    var showSpotifyLogin by remember { mutableStateOf(false) }
-    var spotifyCookie by remember { mutableStateOf<String?>(null) }
-    var spotifyError by remember { mutableStateOf<String?>(null) }
     Box(Modifier.fillMaxSize()) {
         SharedSettingsScreen(
             host =
@@ -382,7 +383,6 @@ fun SettingsScreen(
                     rememberMetroEqProfilePicker = { onPicked -> rememberMetroEqProfilePicker(onPicked) },
                     onClose = onNavigateBack,
                     onOpenArtist = onNavigateToArtist,
-                    onSpotifySignIn = { showSpotifyLogin = true },
                     homeSections = settingsHomeSections(homeState),
                     onHomeSectionVisibilityChanged = SharedPreferences.shared::toggleHomeSectionVisibility,
                     bottomContentPadding = miniPlayerInset,
@@ -555,6 +555,14 @@ fun SettingsScreen(
                                 }
                             }
 
+                            SettingsChangeEffect.AUTO_DOWNLOAD_SAVED_COLLECTIONS -> {
+                                if (value == true) {
+                                    requireDownloadNotifications { SharedPreferences.shared.autoDownloadSavedCollections = true }
+                                } else {
+                                    SharedPreferences.shared.autoDownloadSavedCollections = false
+                                }
+                            }
+
                             SettingsChangeEffect.CONTENT,
                             SettingsChangeEffect.RESTART,
                             SettingsChangeEffect.PLAYBACK_SPEED,
@@ -566,32 +574,6 @@ fun SettingsScreen(
                 ),
             modifier = Modifier.fillMaxSize(),
         )
-        if (showSpotifyLogin) {
-            LaunchedEffect(spotifyCookie) {
-                val cookie = spotifyCookie ?: return@LaunchedEffect
-                try {
-                    androidSpotifyImportManager.authenticate(cookie)
-                    showSpotifyLogin = false
-                } catch (error: CancellationException) {
-                    throw error
-                } catch (_: Exception) {
-                    spotifyError = getString(Res.string.spotify_import_error_sign_in_failed)
-                } finally {
-                    spotifyCookie = null
-                }
-            }
-            SpotifyLoginScreen(
-                isAuthenticating = spotifyCookie != null,
-                authenticationError = spotifyError,
-                onClearAuthenticationError = { spotifyError = null },
-                onSessionCookie = { spotifyCookie = it },
-                onNavigateBack = {
-                    showSpotifyLogin = false
-                    spotifyCookie = null
-                    spotifyError = null
-                },
-            )
-        }
     }
 }
 

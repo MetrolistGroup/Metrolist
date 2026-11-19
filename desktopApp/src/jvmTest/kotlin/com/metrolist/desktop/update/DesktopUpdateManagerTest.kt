@@ -19,6 +19,7 @@ import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
+import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -73,7 +74,7 @@ class DesktopUpdateManagerTest {
     }
 
     @Test
-    fun releaseHistoryIncludesNotesAndDatesAndExcludesDraftsAndUnversionedTags() {
+    fun releaseHistoryIncludesNotesDatesAndTheNightlyAndExcludesDrafts() {
         val releases =
             DesktopUpdateManager.parseReleases(
                 """[
@@ -84,7 +85,8 @@ class DesktopUpdateManagerTest {
             {"tag_name":"v14.0.0-rc10","draft":false,"prerelease":true,"assets":[]}
         ]""",
             )
-        assertEquals(listOf("14.0.0-rc10", "14.0.0-rc8", "13.7.0"), releases.map { it.version })
+        assertEquals(listOf("14.0.0-rc10", "14.0.0-rc8", "13.7.0", "nightly"), releases.map { it.version })
+        assertTrue(releases.last().isNightly)
         assertEquals("## Fixes", releases[1].body)
         assertEquals("2026-11-01T12:00:00Z", releases[1].publishedAt)
         assertEquals("https://github.com/MetrolistGroup/Metrolist/releases/tag/v14.0.0-rc8", releases[1].url)
@@ -92,6 +94,29 @@ class DesktopUpdateManagerTest {
         assertFailsWith<Exception> {
             DesktopUpdateManager.parseReleases("""[{"tag_name":"v14.0.0","prerelease":false,"assets":[]}]""")
         }
+    }
+
+    @Test
+    fun nightlyLinksStraightToThisPlatformsPackage() {
+        val names =
+            listOf(
+                "Metrolist.apk",
+                "Metrolist-Desktop-linux-x64.AppImage",
+                "Metrolist-Desktop-windows.zip",
+                "Metrolist-Desktop-macos-arm64.dmg",
+            )
+        val nightly =
+            GitHubDesktopRelease(
+                "nightly",
+                draft = false,
+                prerelease = true,
+                assets = names.map { GitHubDesktopAsset(it, "uploaded", 1, "sha256:$it", "https://example.invalid/$it") },
+            )
+        val asset = assertNotNull(nightly.nightlyAsset)
+        assertTrue(asset.name.startsWith("Metrolist-Desktop-"))
+        assertEquals(asset.downloadUrl, nightly.url)
+        assertEquals("nightly:${asset.digest}", nightly.updateKey)
+        assertNull(nightly.copy(assets = emptyList()).nightlyAsset)
     }
 
     @Test

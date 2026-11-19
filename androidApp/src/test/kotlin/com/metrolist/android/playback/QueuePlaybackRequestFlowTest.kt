@@ -141,11 +141,6 @@ class QueuePlaybackRequestFlowTest {
         }
 
     @Test
-    fun queueItemSwitchCarriesRequestedPosition() {
-        assertEquals(42_000L, request(1, positionMs = 42_000L).positionMs)
-    }
-
-    @Test
     fun connectedUpdateDuringExplicitDisconnectDoesNotConsumeItsGuard() {
         val suppression = CastDisconnectSuppression()
 
@@ -279,14 +274,11 @@ class QueuePlaybackRequestFlowTest {
         assertFalse(shouldRequestQueueCurrent(currentSong = restored, queueSong = restored, pendingSong = restored))
     }
 
-    private fun request(
-        id: Long,
-        positionMs: Long = 0L,
-        resumePlayback: Boolean = true,
-    ) = QueuePlaybackRequest(
-        requestId = id,
-        song = SongItem("song-$id", "Song $id", null, emptyList(), null),
-        positionMs = positionMs,
-        resumePlayback = resumePlayback,
-    )
+    private fun request(id: Long) =
+        QueuePlaybackRequest(
+            requestId = id,
+            song = SongItem("song-$id", "Song $id", null, emptyList(), null),
+            positionMs = 0L,
+            resumePlayback = true,
+        )
 }

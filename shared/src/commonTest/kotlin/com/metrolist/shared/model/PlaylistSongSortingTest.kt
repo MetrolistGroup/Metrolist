@@ -7,6 +7,36 @@ import kotlin.test.assertEquals
 
 class PlaylistSongSortingTest {
     @Test
+    fun unlockedPlaylistsOnlyReorderEditableCompleteListsInPlaylistOrder() {
+        for (sort in PlaylistSongSort.entries) {
+            assertEquals(sort == PlaylistSongSort.ORIGINAL, sort.isReordering(locked = false, editable = true))
+            assertEquals(false, sort.isReordering(locked = true, editable = true))
+            assertEquals(false, sort.isReordering(locked = false, editable = false))
+            assertEquals(false, sort.isReordering(locked = false, editable = true, hasMore = true))
+        }
+    }
+
+    @Test
+    fun listeningTimeUsesLocalTotalsAndPreservesDuplicateOccurrencesAndTies() {
+        val first = SongItem("repeat", "First", null, emptyList(), null, playlistSetVideoId = "first")
+        val duplicate = first.copy(playlistSetVideoId = "second")
+        val more = first.copy(id = "more")
+        val unplayed = first.copy(id = "unplayed")
+        val tied = first.copy(id = "tied")
+        val songs = listOf(first, unplayed, more, duplicate, tied)
+        val times = mapOf("repeat" to 60_000L, "tied" to 60_000L, "more" to 120_000L)
+        assertEquals(
+            listOf(unplayed, first, duplicate, tied, more),
+            songs.sortedForPlaylist(PlaylistSongSort.LISTENING_TIME, SortDirection.ASCENDING, listeningTimes = times),
+        )
+        assertEquals(
+            listOf(more, first, duplicate, tied, unplayed),
+            songs.sortedForLikedPlaylist(PlaylistSongSort.LISTENING_TIME, SortDirection.DESCENDING, listeningTimes = times),
+        )
+        assertEquals(songs, songs.sortedForPlaylist(PlaylistSongSort.LISTENING_TIME, SortDirection.DESCENDING))
+    }
+
+    @Test
     fun bulkSearchSelectionPreservesIndicesOfRepeatedOccurrences() {
         val repeated = SongItem("repeat", "Match", null, emptyList(), null)
         val hidden = repeated.copy(id = "hidden", title = "Other")

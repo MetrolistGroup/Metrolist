@@ -17,7 +17,6 @@ import io.ktor.http.isSuccess
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import kotlinx.coroutines.withTimeout
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
@@ -30,7 +29,6 @@ import meow.nyx.spotlib.PlaylistMeta
 import org.jetbrains.compose.resources.getString
 import kotlin.io.encoding.Base64
 import kotlin.time.Clock
-import kotlin.time.Duration.Companion.milliseconds
 
 object AppleMusicPlaylistImporter {
     private const val UA = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
@@ -86,7 +84,7 @@ object AppleMusicPlaylistImporter {
             while (nextUrl != null && playlists.size < 500) {
                 val fullUrl = appleApiUrl(nextUrl)
                 val response =
-                    withTimeout(15_000.milliseconds) {
+                    withImportRequestTimeout {
                         httpClient.get(fullUrl) {
                             header("Authorization", "Bearer $devToken")
                             header("Music-User-Token", userToken)
@@ -94,11 +92,11 @@ object AppleMusicPlaylistImporter {
                             header("User-Agent", UA)
                         }
                     }
-                val body = response.bodyAsTextLimited(MAX_JSON_RESPONSE_BYTES) ?: break
-                if (!response.status.isSuccess()) break
+                if (!response.status.isSuccess()) throw ImportException(ImportErrorKey.IncompleteSource)
+                val body = response.bodyAsTextLimited(MAX_JSON_RESPONSE_BYTES) ?: throw ImportException(ImportErrorKey.IncompleteSource)
 
                 val root = json.parseToJsonElement(body).jsonObject
-                val dataArray = root["data"]?.jsonArray ?: break
+                val dataArray = root["data"] as? JsonArray ?: throw ImportException(ImportErrorKey.IncompleteSource)
                 for (item in dataArray) {
                     val id = item.jsonObject["id"]?.jsonPrimitive?.content ?: continue
                     val attrs = item.jsonObject["attributes"]?.jsonObject ?: continue
@@ -141,7 +139,7 @@ object AppleMusicPlaylistImporter {
             while (nextUrl != null && tracks.size < PlaylistImportManager.MAX_PLAYLIST_TRACKS) {
                 val fullUrl = appleApiUrl(nextUrl)
                 val response =
-                    withTimeout(15_000.milliseconds) {
+                    withImportRequestTimeout {
                         httpClient.get(fullUrl) {
                             header("Authorization", "Bearer $devToken")
                             header("Music-User-Token", userToken)
@@ -149,11 +147,11 @@ object AppleMusicPlaylistImporter {
                             header("User-Agent", UA)
                         }
                     }
-                val body = response.bodyAsTextLimited(MAX_JSON_RESPONSE_BYTES) ?: break
-                if (!response.status.isSuccess()) break
+                if (!response.status.isSuccess()) throw ImportException(ImportErrorKey.IncompleteSource)
+                val body = response.bodyAsTextLimited(MAX_JSON_RESPONSE_BYTES) ?: throw ImportException(ImportErrorKey.IncompleteSource)
 
                 val root = json.parseToJsonElement(body).jsonObject
-                val dataArray = root["data"]?.jsonArray ?: break
+                val dataArray = root["data"] as? JsonArray ?: throw ImportException(ImportErrorKey.IncompleteSource)
                 for (trackItem in dataArray) {
                     val attrs = trackItem.jsonObject["attributes"]?.jsonObject ?: continue
                     val trackName = attrs["name"]?.jsonPrimitive?.content?.trim() ?: continue
@@ -266,7 +264,7 @@ object AppleMusicPlaylistImporter {
     ): Result<ImportedPlaylistData> {
         val metaUrl = "https://api.music.apple.com/v1/catalog/$storefront/playlists/$playlistId"
         val metaResponse =
-            withTimeout(15_000.milliseconds) {
+            withImportRequestTimeout {
                 httpClient.get(metaUrl) {
                     header("Authorization", "Bearer $token")
                     header("Origin", "https://music.apple.com")
@@ -315,18 +313,18 @@ object AppleMusicPlaylistImporter {
         while (nextUrl != null && tracks.size < PlaylistImportManager.MAX_PLAYLIST_TRACKS) {
             val fullUrl = appleApiUrl(nextUrl)
             val response =
-                withTimeout(15_000.milliseconds) {
+                withImportRequestTimeout {
                     httpClient.get(fullUrl) {
                         header("Authorization", "Bearer $token")
                         header("Origin", "https://music.apple.com")
                         header("User-Agent", UA)
                     }
                 }
-            val body = response.bodyAsTextLimited(MAX_JSON_RESPONSE_BYTES) ?: break
-            if (!response.status.isSuccess()) break
+            if (!response.status.isSuccess()) throw ImportException(ImportErrorKey.IncompleteSource)
+            val body = response.bodyAsTextLimited(MAX_JSON_RESPONSE_BYTES) ?: throw ImportException(ImportErrorKey.IncompleteSource)
 
             val root = json.parseToJsonElement(body).jsonObject
-            val dataArray = root["data"]?.jsonArray ?: break
+            val dataArray = root["data"] as? JsonArray ?: throw ImportException(ImportErrorKey.IncompleteSource)
             for (trackItem in dataArray) {
                 val attrs = trackItem.jsonObject["attributes"]?.jsonObject ?: continue
                 val trackName = attrs["name"]?.jsonPrimitive?.content?.trim() ?: continue
@@ -366,7 +364,7 @@ object AppleMusicPlaylistImporter {
     ): Result<ImportedPlaylistData> {
         val metaUrl = "https://api.music.apple.com/v1/catalog/$storefront/albums/$albumId"
         val response =
-            withTimeout(15_000.milliseconds) {
+            withImportRequestTimeout {
                 httpClient.get(metaUrl) {
                     header("Authorization", "Bearer $token")
                     header("Origin", "https://music.apple.com")
@@ -387,28 +385,62 @@ object AppleMusicPlaylistImporter {
         val title = attrs?.get("name")?.jsonPrimitive?.content ?: fallbackTitles?.album ?: getString(Res.string.album)
         val albumArtist = attrs?.get("artistName")?.jsonPrimitive?.content ?: ""
 
-        val tracksArray =
+        val expectedCount =
+            attrs
+                ?.get("trackCount")
+                ?.jsonPrimitive
+                ?.contentOrNull
+                ?.toIntOrNull()
+        var page =
             albumItem["relationships"]
                 ?.jsonObject
                 ?.get("tracks")
-                ?.jsonObject
-                ?.get("data")
-                ?.jsonArray ?: JsonArray(emptyList())
-
+                ?.jsonObject ?: throw ImportException(ImportErrorKey.IncompleteSource)
         val tracks = mutableListOf<PlaylistImportManager.CsvTrack>()
-        for (trackItem in tracksArray) {
-            val trackAttrs = trackItem.jsonObject["attributes"]?.jsonObject ?: continue
-            val trackName = trackAttrs["name"]?.jsonPrimitive?.content?.trim() ?: continue
-            val trackArtist = trackAttrs["artistName"]?.jsonPrimitive?.content?.trim() ?: albumArtist
-            tracks +=
-                PlaylistImportManager.CsvTrack(
-                    title = trackName,
-                    artist = trackArtist,
-                    videoId = null,
-                )
+        val visited = mutableSetOf(Url(metaUrl).toString())
+        while (true) {
+            val items = page["data"] as? JsonArray ?: throw ImportException(ImportErrorKey.IncompleteSource)
+            val next = page["next"]?.jsonPrimitive?.contentOrNull
+            if (next?.isBlank() == true || items.size > PlaylistImportManager.MAX_PLAYLIST_TRACKS - tracks.size ||
+                (items.isEmpty() && (next != null || tracks.isNotEmpty()))
+            ) {
+                throw ImportException(ImportErrorKey.IncompleteSource)
+            }
+            for (trackItem in items) {
+                val trackAttrs =
+                    trackItem.jsonObject["attributes"]?.jsonObject
+                        ?: throw ImportException(ImportErrorKey.IncompleteSource)
+                val trackName =
+                    trackAttrs["name"]
+                        ?.jsonPrimitive
+                        ?.contentOrNull
+                        ?.trim()
+                        ?.takeIf(String::isNotEmpty)
+                        ?: throw ImportException(ImportErrorKey.IncompleteSource)
+                val trackArtist = trackAttrs["artistName"]?.jsonPrimitive?.contentOrNull?.trim() ?: albumArtist
+                tracks += PlaylistImportManager.CsvTrack(trackName, trackArtist, null)
+            }
+            if (expectedCount != null && tracks.size > expectedCount) throw ImportException(ImportErrorKey.IncompleteSource)
+            onProgress(tracks.size, expectedCount ?: tracks.size.takeIf { next == null })
+            if (next == null) break
+            if (tracks.size == PlaylistImportManager.MAX_PLAYLIST_TRACKS) throw ImportException(ImportErrorKey.IncompleteSource)
+            val nextUrl = Url(appleApiUrl(next)).toString()
+            if (!visited.add(nextUrl)) throw ImportException(ImportErrorKey.IncompleteSource)
+            val nextResponse =
+                withImportRequestTimeout {
+                    httpClient.get(nextUrl) {
+                        header("Authorization", "Bearer $token")
+                        header("Origin", "https://music.apple.com")
+                        header("User-Agent", UA)
+                    }
+                }
+            if (!nextResponse.status.isSuccess()) throw ImportException(ImportErrorKey.IncompleteSource)
+            val nextBody =
+                nextResponse.bodyAsTextLimited(MAX_JSON_RESPONSE_BYTES)
+                    ?: throw ImportException(ImportErrorKey.IncompleteSource)
+            page = json.parseToJsonElement(nextBody).jsonObject
         }
-
-        onProgress(tracks.size, tracks.size)
+        if (expectedCount != null && tracks.size != expectedCount) throw ImportException(ImportErrorKey.IncompleteSource)
 
         if (tracks.isEmpty()) {
             return Result.failure(IllegalStateException("No tracks found in this Apple Music album"))
@@ -433,7 +465,7 @@ object AppleMusicPlaylistImporter {
 
         return try {
             val browseHtml =
-                withTimeout(15_000.milliseconds) {
+                withImportRequestTimeout {
                     val response =
                         httpClient.get("https://music.apple.com/browse") {
                             header("User-Agent", UA)
@@ -446,7 +478,7 @@ object AppleMusicPlaylistImporter {
             val jsUrl = "https://music.apple.com$bundlePath"
 
             val js =
-                withTimeout(15_000.milliseconds) {
+                withImportRequestTimeout {
                     val response =
                         httpClient.get(jsUrl) {
                             header("User-Agent", UA)
@@ -477,6 +509,8 @@ object AppleMusicPlaylistImporter {
             jwt
         } catch (e: CancellationException) {
             throw e
+        } catch (error: ImportException) {
+            throw error
         } catch (_: Exception) {
             null
         }

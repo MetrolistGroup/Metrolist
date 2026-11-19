@@ -30,7 +30,14 @@ internal object WindowsAppIdentity {
             Advapi32Util.registrySetStringValue(WinReg.HKEY_CURRENT_USER, key, "IconUri", icon.absolutePath)
         }.onFailure { AppLogger.warning("WindowsAppIdentity", "Unable to register Windows app identity", it) }
         runCatching {
-            registerWindowsUriHandler(System.getProperty("jpackage.app-path")?.let(::File), displayName) { key, name, value ->
+            // Native images have no jpackage launcher property; their own executable is the launcher.
+            val launcher =
+                System.getProperty("jpackage.app-path") ?: ProcessHandle
+                    .current()
+                    .info()
+                    .command()
+                    .orElse(null)
+            registerWindowsUriHandler(launcher?.let(::File), displayName) { key, name, value ->
                 Advapi32Util.registryCreateKey(WinReg.HKEY_CURRENT_USER, key)
                 Advapi32Util.registrySetStringValue(WinReg.HKEY_CURRENT_USER, key, name, value)
             }

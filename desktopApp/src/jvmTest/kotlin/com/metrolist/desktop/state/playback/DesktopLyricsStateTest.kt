@@ -195,7 +195,7 @@ class DesktopLyricsStateTest {
         var response = "[00:01]あい"
         withLyricsState(
             fetch = { LyricsWithProvider(response, "LRCLIB") },
-            prepareJapaneseDictionary = {
+            prepareDictionaries = {
                 preparing.complete(Unit)
                 withContext(NonCancellable) { releaseDictionary.await() }
                 false
@@ -493,7 +493,7 @@ class DesktopLyricsStateTest {
     private fun withLyricsState(
         fetch: (suspend (LyricsProvider) -> LyricsWithProvider?)? = null,
         translationClient: LyricsTranslationClient? = null,
-        prepareJapaneseDictionary: suspend () -> Boolean = { error("Unexpected dictionary preparation") },
+        prepareDictionaries: suspend () -> Boolean = { error("Unexpected dictionary preparation") },
         block: suspend Fixture.() -> Unit,
     ) = runTest {
         Settings.replaceSharedForTest(
@@ -526,7 +526,7 @@ class DesktopLyricsStateTest {
                     fetcher,
                     translationClient ?: LyricsTranslationClient(client),
                     youtubeLyricsApi = null,
-                    prepareJapaneseDictionary = prepareJapaneseDictionary,
+                    prepareDictionaries = { _, _ -> prepareDictionaries() },
                 ),
             )
         try {

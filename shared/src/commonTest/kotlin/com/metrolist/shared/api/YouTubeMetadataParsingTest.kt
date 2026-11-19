@@ -11,6 +11,9 @@ class YouTubeMetadataParsingTest {
         assertEquals(3_723L, parseDurationSeconds("1:02:03"))
         assertNull(parseDurationSeconds("2024"))
         assertNull(parseDurationSeconds("3:75"))
+        assertEquals(222L, parseDurationSeconds("3.42"))
+        assertEquals(3_723L, parseDurationSeconds("1.02.03"))
+        assertNull(parseDurationSeconds("1.234"))
     }
 
     @Test

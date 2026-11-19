@@ -177,6 +177,31 @@ class BetterLyricsProviderTest {
     }
 
     @Test
+    fun aSecondTimedBackgroundVocalIsNotPromotedToLead() {
+        val ttml =
+            """
+            <tt xmlns="http://www.w3.org/ns/ttml" xmlns:ttm="http://www.w3.org/ns/ttml#metadata"><body><div>
+                <p begin="1s" end="5s">
+                    <span begin="1s" end="2s">Lead</span>
+                    <span ttm:role="x-bg" begin="2.5s" end="3.5s"><span begin="2.5s" end="3.5s">First echo</span></span>
+                    <span ttm:role="x-bg" begin="3.5s" end="4.5s"><span begin="3.5s" end="4.5s">Second echo</span></span>
+                </p>
+            </div></body></tt>
+            """.trimIndent()
+        val lines = MlxParser.parse(parseTtmlToMlx(ttml, "title", "artist", "test")).lines
+        val lead = lines.single { !it.isBackground }
+        assertEquals("Lead", lead.text)
+        val firstEcho = lead.words.orEmpty().single { it.isBackground }
+        assertEquals("First echo", firstEcho.text)
+        val echo = lines.single { it.isBackground }
+        assertEquals("Second echo", echo.text)
+        val word = echo.words.orEmpty().single()
+        assertTrue(word.isBackground)
+        assertEquals(3.5, word.startTime)
+        assertEquals(4.5, word.endTime)
+    }
+
+    @Test
     fun utf8ResponsePreservesGermanUmlautsThroughTtmlAndMlx() =
         runBlocking {
             val ttml =

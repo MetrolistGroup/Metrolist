@@ -26,6 +26,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
@@ -113,6 +114,8 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import org.jetbrains.compose.resources.getString
 import org.jetbrains.compose.resources.stringResource
@@ -277,7 +280,8 @@ private fun UploadedPlaylistScreen() {
     val fileFilterLabel = stringResource(Res.string.local_file)
     var songs by remember { mutableStateOf<List<SongItem>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
-    var isUploading by remember { mutableStateOf(false) }
+    var pendingUploads by remember { mutableIntStateOf(0) }
+    val uploadQueue = remember { Mutex() }
     var loadFailed by remember { mutableStateOf(false) }
 
     suspend fun refresh(force: Boolean = true) {
@@ -323,22 +327,26 @@ private fun UploadedPlaylistScreen() {
             } else {
                 null
             },
-        headerActionLabel = stringResource(if (isUploading) Res.string.uploading_action else Res.string.upload_action),
+        headerActionLabel = stringResource(if (pendingUploads > 0) Res.string.uploading_action else Res.string.upload_action),
         headerActionIcon = MetrolistIcons.Outlined.CloudUpload,
-        isHeaderActionLoading = isUploading,
+        isHeaderActionLoading = pendingUploads > 0,
         onHeaderAction = {
-            chooseUploadAudioFile(fileFilterLabel)?.let { file ->
+            val files = chooseUploadAudioFiles(fileFilterLabel)
+            pendingUploads += files.size
+            // Picked files upload one at a time; picking again while uploading adds to the queue.
+            files.forEach { file ->
                 scope.launch {
-                    isUploading = true
                     val result =
                         try {
-                            withContext(Dispatchers.IO) {
-                                GlobalYouTubeRepository.instance.uploadSong(file.name, file.length()) {
-                                    file.inputStream().toByteReadChannel(Dispatchers.IO)
+                            uploadQueue.withLock {
+                                withContext(Dispatchers.IO) {
+                                    GlobalYouTubeRepository.instance.uploadSong(file.name, file.length()) {
+                                        file.inputStream().toByteReadChannel(Dispatchers.IO)
+                                    }
                                 }
                             }
                         } finally {
-                            isUploading = false
+                            pendingUploads--
                         }
                     if (!result.success) {
                         AppState.snackbarHostState.showSnackbar(result.localizedErrorMessage())
@@ -425,7 +433,7 @@ private fun LocalPlaylistLayout(
             headerAction =
                 if (headerActionLabel != null && headerActionIcon != null && onHeaderAction != null) {
                     {
-                        TextButton(onClick = onHeaderAction, enabled = !isHeaderActionLoading, shapes = ButtonDefaults.shapes()) {
+                        TextButton(onClick = onHeaderAction, shapes = ButtonDefaults.shapes()) {
                             Icon(headerActionIcon, contentDescription = null, modifier = Modifier.size(18.dp))
                             Spacer(Modifier.width(6.dp))
                             Text(headerActionLabel)
@@ -509,10 +517,11 @@ private fun launchCollectionMutation(action: suspend () -> Unit) {
     }
 }
 
-private fun chooseUploadAudioFile(description: String): File? {
+private fun chooseUploadAudioFiles(description: String): List<File> {
     val chooser = JFileChooser()
+    chooser.isMultiSelectionEnabled = true
     chooser.fileFilter = FileNameExtensionFilter(description, *YouTubeRepository.SUPPORTED_UPLOAD_EXTENSIONS.toTypedArray())
-    return if (chooser.showOpenDialog(null) == JFileChooser.APPROVE_OPTION) chooser.selectedFile else null
+    return if (chooser.showOpenDialog(null) == JFileChooser.APPROVE_OPTION) chooser.selectedFiles.toList() else emptyList()
 }
 
 private fun CachedSongEntry.toSafeSongItem(): SongItem {

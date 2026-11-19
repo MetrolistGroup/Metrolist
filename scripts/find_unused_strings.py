@@ -130,20 +130,19 @@ def prune_xml(data: bytes, names: set[str]) -> bytes:
 
 
 def apply(root: Path, names: set[str]) -> list[str]:
-    changes = []
-    for path in sorted((root / CATALOG).glob("values*/strings.xml")):
-        original = path.read_bytes()
-        updated = prune_xml(original, names)
-        if original != updated:
-            changes.append((path, updated))
-    for path, updated in changes:
-        path.write_bytes(updated)
-    return [str(path.relative_to(root)) for path, _ in changes]
+    # Locale catalogs belong to Weblate; editing them here makes its rebase conflict.
+    path = root / CATALOG / "values/strings.xml"
+    original = path.read_bytes()
+    updated = prune_xml(original, names)
+    if original == updated:
+        return []
+    path.write_bytes(updated)
+    return [str(path.relative_to(root))]
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--apply", action="store_true", help="remove only unreferenced base keys from all catalogs")
+    parser.add_argument("--apply", action="store_true", help="remove unreferenced keys from the base catalog only")
     args = parser.parse_args()
     report = audit(ROOT)
     report["mode"] = "apply" if args.apply else "dry-run"

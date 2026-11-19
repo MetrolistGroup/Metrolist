@@ -65,6 +65,80 @@ class PlaylistImportCommonTest {
     }
 
     @Test
+    fun matchingKeepsArtistNamesThatContainCommas() {
+        val track = PlaylistImportManager.CsvTrack("See You Again (feat. Kali Uchis)", "Tyler, The Creator, Kali Uchis", null)
+        val song = SongItem("song", "See You Again (feat. Kali Uchis)", null, listOf(ArtistTiny(null, "Tyler, The Creator")), null, 181)
+
+        assertEquals(song, PlaylistImportManager.bestTrackMatch(track, listOf(song)))
+        assertEquals(null, PlaylistImportManager.bestTrackMatch(track, listOf(song.copy(artists = listOf(ArtistTiny(null, "MHD"))))))
+    }
+
+    @Test
+    fun matchingRejectsArtistNamePrefixes() {
+        val track = PlaylistImportManager.CsvTrack("Song", "Queens of the Stone Age", null)
+        val wrong = SongItem("wrong", "Song", null, listOf(ArtistTiny(null, "Queen")), null)
+        assertEquals(null, PlaylistImportManager.bestTrackMatch(track, listOf(wrong)))
+    }
+
+    @Test
+    fun matchingRejectsArtistNameSuffixes() {
+        val track = PlaylistImportManager.CsvTrack("Song", "Supertramp", null)
+        val wrong = SongItem("wrong", "Song", null, listOf(ArtistTiny(null, "Tramp")), null)
+        assertEquals(null, PlaylistImportManager.bestTrackMatch(track, listOf(wrong)))
+    }
+
+    @Test
+    fun matchingKeepsPunctuationSeparatedFullCredits() {
+        val track = PlaylistImportManager.CsvTrack("Song", "Artist one & Artist two", null)
+        val song = SongItem("song", "Song", null, listOf(ArtistTiny(null, "Artist one"), ArtistTiny(null, "Artist two")), null)
+        assertEquals(song, PlaylistImportManager.bestTrackMatch(track, listOf(song)))
+        val singleArtist = song.copy(artists = song.artists.take(1))
+        assertEquals(singleArtist, PlaylistImportManager.bestTrackMatch(track, listOf(singleArtist)))
+    }
+
+    @Test
+    fun matchingKeepsFeaturedArtistsAndOtherCollaborationSeparators() {
+        val song = SongItem("song", "Song", null, listOf(ArtistTiny(null, "Artist one")), null)
+        listOf("feat.", "featuring", "ft.", "and", "with", "vs.", "x", "+", "/", ";").forEach { separator ->
+            val track = PlaylistImportManager.CsvTrack("Song", "Artist one $separator Artist two", null)
+            assertEquals(song, PlaylistImportManager.bestTrackMatch(track, listOf(song)), separator)
+        }
+    }
+
+    @Test
+    fun matchingSkipsWrongArtistBeforeTheExactRecording() {
+        val track = PlaylistImportManager.CsvTrack("Song", "Queens of the Stone Age", null)
+        val wrong = SongItem("wrong", "Song", null, listOf(ArtistTiny(null, "Queen")), null)
+        val exact = wrong.copy(id = "exact", artists = listOf(ArtistTiny(null, track.artist)))
+        assertEquals(exact, PlaylistImportManager.bestTrackMatch(track, listOf(wrong, exact)))
+    }
+
+    @Test
+    fun matchingKeepsCommaNamesInTheMiddleOfSourceCredits() {
+        val track = PlaylistImportManager.CsvTrack("Song", "Guest, Tyler, The Creator, Other guest", null)
+        val song = SongItem("song", "Song", null, listOf(ArtistTiny(null, "Tyler, The Creator")), null)
+        assertEquals(song, PlaylistImportManager.bestTrackMatch(track, listOf(song)))
+    }
+
+    @Test
+    fun matchingIgnoresFeaturingCreditsButNotOtherTitleVariants() {
+        val track = PlaylistImportManager.CsvTrack("Starboy", "The Weeknd, Daft Punk", null)
+        val featured = SongItem("featured", "Starboy (feat. Daft Punk)", null, listOf(ArtistTiny(null, "The Weeknd")), null, 231)
+        val remix = featured.copy(id = "remix", title = "Starboy (Remix)")
+
+        assertEquals(featured, PlaylistImportManager.bestTrackMatch(track, listOf(remix, featured)))
+        assertEquals(null, PlaylistImportManager.bestTrackMatch(track, listOf(remix)))
+        assertEquals(
+            "featured",
+            PlaylistImportManager.bestTrackMatch(track.copy(title = "Starboy ft. Daft Punk"), listOf(featured.copy(title = "Starboy")))?.id,
+        )
+        assertEquals(
+            "featured",
+            PlaylistImportManager.bestTrackMatch(track, listOf(featured.copy(title = "Starboy [with Daft Punk]")))?.id,
+        )
+    }
+
+    @Test
     fun spotifyResolutionRetriesWithoutAlbumMetadataButKeepsOtherProvidersSinglePass() {
         val track = PlaylistImportManager.CsvTrack("Song", "Artist", null, album = "Spotify Album")
 

@@ -7,6 +7,8 @@ export MALLOC_ARENA_MAX="${MALLOC_ARENA_MAX:-4}"
 export MALLOC_MMAP_THRESHOLD_="${MALLOC_MMAP_THRESHOLD_:-131072}"
 
 install_desktop_entry() {
+    # AppImage managers (such as Gear Lever) signal that integration is already handled.
+    [ -z "${DESKTOPINTEGRATION:-}" ] || return 0
     # Package managers install their own desktop entries.
     [ -n "${APPIMAGE:-}" ] || return 0
     case "$APPIMAGE" in /*) ;; *) return 0 ;; esac

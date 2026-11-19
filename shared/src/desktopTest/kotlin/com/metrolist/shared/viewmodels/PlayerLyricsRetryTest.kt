@@ -291,7 +291,7 @@ class PlayerLyricsRetryTest {
     fun aTranslationCompletionCannotReplaceANewerSourceSelection() {
         val preparing = CompletableDeferred<Unit>()
         val release = CompletableDeferred<Unit>()
-        withLyricsPlayer(prepareJapaneseDictionary = {
+        withLyricsPlayer(prepareDictionaries = {
             preparing.complete(Unit)
             withContext(NonCancellable) { release.await() }
             false
@@ -358,7 +358,7 @@ class PlayerLyricsRetryTest {
         val release = CompletableDeferred<Unit>()
         withLyricsPlayer(
             audioResponse = { LyricsWithProvider("[00:01]あい\n[00:02]うえ", "LRCLIB") },
-            prepareJapaneseDictionary = {
+            prepareDictionaries = {
                 preparing.complete(Unit)
                 release.await()
                 false
@@ -404,7 +404,7 @@ class PlayerLyricsRetryTest {
                 releaseProvider.await()
                 LyricsWithProvider(replacement, "LRCLIB")
             },
-            prepareJapaneseDictionary = {
+            prepareDictionaries = {
                 if (preparationCalls.incrementAndGet() == 2) preparingAgain.complete(Unit)
                 preparing.complete(Unit)
                 releaseDictionary.await()
@@ -457,7 +457,7 @@ class PlayerLyricsRetryTest {
                 releaseProvider.await()
                 LyricsWithProvider(replacement, "LRCLIB")
             },
-            prepareJapaneseDictionary = {
+            prepareDictionaries = {
                 preparing.complete(Unit)
                 releaseDictionary.await()
                 false
@@ -504,7 +504,7 @@ class PlayerLyricsRetryTest {
         withLyricsPlayer(
             audioResponse = { LyricsWithProvider("[00:01]あい", "LRCLIB") },
             videoResponse = { LyricsWithProvider("[00:20]うえ", "SimpMusic", isUserSelected = true) },
-            prepareJapaneseDictionary = {
+            prepareDictionaries = {
                 val index = calls.getAndIncrement()
                 preparing.getOrNull(index)?.complete(Unit)
                 release.getOrNull(index)?.await()
@@ -550,7 +550,7 @@ class PlayerLyricsRetryTest {
         val release = CompletableDeferred<Unit>()
         withLyricsPlayer(
             audioResponse = { LyricsWithProvider("[00:01]あい", "LRCLIB") },
-            prepareJapaneseDictionary = {
+            prepareDictionaries = {
                 preparing.complete(Unit)
                 withContext(NonCancellable) { release.await() }
                 false
@@ -1411,7 +1411,7 @@ class PlayerLyricsRetryTest {
         onRepository: (LyricsRepository) -> Unit = {},
         translationClient: LyricsTranslationClient? = null,
         audioResponse: (suspend (LyricsProvider) -> LyricsWithProvider?)? = null,
-        prepareJapaneseDictionary: suspend () -> Boolean = { error("Unexpected dictionary preparation") },
+        prepareDictionaries: suspend () -> Boolean = { error("Unexpected dictionary preparation") },
         videoResponse: suspend () -> LyricsWithProvider = {
             val lyrics =
                 MlxBuilder()
@@ -1469,7 +1469,7 @@ class PlayerLyricsRetryTest {
                             fetcher,
                             translationClient ?: LyricsTranslationClient(client),
                             database.dao(),
-                            prepareJapaneseDictionary = prepareJapaneseDictionary,
+                            prepareDictionaries = { _, _ -> prepareDictionaries() },
                         ).also(onRepository),
                         AnimatedArtworkService(client),
                         MusicVideoResolver(

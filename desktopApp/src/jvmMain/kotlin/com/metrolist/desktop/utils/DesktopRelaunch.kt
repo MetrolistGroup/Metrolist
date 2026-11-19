@@ -51,6 +51,11 @@ internal fun desktopRestartCommand(
     return listOf(executable) + restartArguments
 }
 
+// Java passes an argument that is already wrapped in quotes through unchanged, and cmd /c strips only that
+// outer pair, so every app argument keeps its own quotes, including paths with spaces.
+internal fun windowsDelayedRestartCommand(appCommand: List<String>): List<String> =
+    listOf("cmd", "/c", "\"ping -n 2 127.0.0.1 >nul & start \"\" ${appCommand.joinToString(" ") { "\"$it\"" }}\"")
+
 internal fun ProcessBuilder.prepareDesktopRelaunch(): ProcessBuilder =
     apply {
         environment().remove("_JPACKAGE_LAUNCHER")

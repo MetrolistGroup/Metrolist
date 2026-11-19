@@ -353,7 +353,6 @@ internal fun SettingsUiRegistryBuilder.registerLyricsSettings(host: SharedSettin
                         if (selected.id != "OpenRouter") settings.lyricsOpenRouterOAuthSession = ""
                         if (selected.endpoint.isNotBlank()) settings.lyricsAiBaseUrl = selected.endpoint
                         settings.lyricsAiModel = selected.defaultModel
-                        settings.lyricsAiDetectorModel = ""
                         if (isDirectLyricsTranslationProvider(selected.id)) settings.lyricsAiTranslationMode = "Literal"
                         onSettingValueChanged()
                     }
@@ -424,25 +423,6 @@ internal fun SettingsUiRegistryBuilder.registerLyricsSettings(host: SharedSettin
                             allowBlank = false,
                             enabled = modelsReady,
                         ) { settings.lyricsAiModel = it }
-                    }
-                    if (settings.lyricsAiActivationMode == "Automatic") {
-                        custom(
-                            id = "detectorModel",
-                            title = stringResource(Res.string.ai_judge_detector_model),
-                            enabled = modelsReady,
-                            description = stringResource(Res.string.settings_detector_model_summary),
-                        ) {
-                            AiModelPicker(
-                                title = stringResource(Res.string.ai_judge_detector_model),
-                                description = stringResource(Res.string.settings_detector_model_summary),
-                                preset = preset,
-                                model = settings.lyricsAiDetectorModel,
-                                apiKey = modelKey,
-                                baseUrl = modelUrl,
-                                allowBlank = true,
-                                enabled = modelsReady,
-                            ) { settings.lyricsAiDetectorModel = it }
-                        }
                     }
                 }
             }

@@ -1021,12 +1021,6 @@
         <item quantity="many">%1$d minut</item>
         <item quantity="other">%1$d minut</item>
     </plurals>
-    <plurals name="minutes_short">
-        <item quantity="one">%1$d min</item>
-        <item quantity="few">%1$d min</item>
-        <item quantity="many">%1$d min</item>
-        <item quantity="other">%1$d min</item>
-    </plurals>
     <plurals name="n_track">
         <item quantity="one">%1$d utwór</item>
         <item quantity="few">%1$d utwory</item>
@@ -1062,12 +1056,6 @@
         <item quantity="few">Usunięto %1$d utwory z playlisty</item>
         <item quantity="many">Usunięto %1$d utworów z playlisty</item>
         <item quantity="other">Usunięto %1$d utworów z playlisty</item>
-    </plurals>
-    <plurals name="seconds_short">
-        <item quantity="one">%1$d s</item>
-        <item quantity="few">%1$d s</item>
-        <item quantity="many">%1$d s</item>
-        <item quantity="other">%1$d s</item>
     </plurals>
     <plurals name="song_count">
         <item quantity="one">%1$d utwór</item>
@@ -1225,7 +1213,6 @@
     <string name="ai_provider">Dostawca</string>
     <string name="ai_base_url">URL bazowy</string>
     <string name="ai_translation_model">Model tłumaczeniowy</string>
-    <string name="ai_judge_detector_model">Model detekcji</string>
     <string name="ai_target_language">Język docelowy</string>
     <string name="ai_deepl_formality">Formalność</string>
     <string name="ai_deepl_formality_default">Domyślny</string>
@@ -1966,7 +1953,7 @@
     <string name="density_slightly_compact">Nieco kompaktowa (85%)</string>
     <string name="density_compact">Kompaktowa (75%)</string>
     <string name="density_very_compact">Bardzo kompaktowa (65%)</string>
-    <string name="density_ultra_compact">Ultrakompaktowa (55%)</string>
+    <string name="density_ultra_compact">Ultra kompaktowa (55%)</string>
     <string name="loudness_level">Poziom głośności</string>
     <string name="loudness_level_aggressive">Agresywny (-7 dB)</string>
     <string name="loudness_level_loud">Głośny (-11 dB)</string>
@@ -2477,7 +2464,6 @@
     <string name="settings_translation_mode_summary">Tłumacz słowa lub zapisz ich wymowę w docelowym systemie pisma</string>
     <string name="settings_translation_provider_summary">Wybierz usługę tłumaczącą teksty</string>
     <string name="settings_translation_model_summary">Model do tłumaczenia lub transkrypcji tekstów</string>
-    <string name="settings_detector_model_summary">Model, który ocenia, czy tekst wymaga tłumaczenia</string>
     <string name="settings_translation_formality_summary">Wybierz formalny lub swobodny język tłumaczeń DeepL</string>
     <string name="settings_discord_advanced_summary">Pokaż szablony aktywności i własne przyciski z linkami</string>
     <string name="settings_discord_activity_type_summary">Wybierz, jak Discord opisuje Twoją aktywność muzyczną</string>
@@ -2573,4 +2559,5 @@
     <string name="lyrics_editor_invalid_timestamp">Nieprawidłowy znacznik czasu w wierszu %1$d. Użyj formatu [mm:ss.cc]. Twoja wersja robocza zostanie zachowana do momentu poprawienia błędu.</string>
     <string name="lyrics_editor_save_error">Nie udało się zapisać Twojego tekstu. Spróbuj ponownie przed opuszczeniem edytora.</string>
     <string name="lyrics_editor_limit_error">Ten tekst przekracza obsługiwany rozmiar. Twoja wersja robocza została zachowana. Skróć go przed wyeksportowaniem lub synchronizacją.</string>
+    <string name="density_extra_large">Bardzo duża (150%)</string>
 </resources>

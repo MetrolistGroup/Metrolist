@@ -42,7 +42,7 @@ class PlaylistAutoDownloadTest {
     @Test
     fun successfulLikeDownloadsFullMembershipDespiteSearchAndUnlikeDoesNotDownload() =
         withPlaylist { model, database ->
-            Settings.shared.autoDownloadOnLike = true
+            Settings.shared.autoDownloadSavedCollections = true
             model.presentationOptions.value = PlaylistPresentationOptions(query = "a")
             val batches = mutableListOf<List<String>>()
             checkNotNull(
@@ -63,7 +63,7 @@ class PlaylistAutoDownloadTest {
     @Test
     fun disabledSettingStillSavesLikeWithoutDownloading() =
         withPlaylist { model, database ->
-            Settings.shared.autoDownloadOnLike = false
+            Settings.shared.autoDownloadSavedCollections = false
             var downloaded = false
             checkNotNull(model.toggleFavorite { downloaded = true }).join()
             assertFalse(downloaded)
@@ -75,7 +75,7 @@ class PlaylistAutoDownloadTest {
     @Test
     fun failedBookmarkDoesNotDownloadOrPublishALike() =
         withPlaylist { model, database ->
-            Settings.shared.autoDownloadOnLike = true
+            Settings.shared.autoDownloadSavedCollections = true
             database.executeTestSql(
                 "CREATE TRIGGER reject_bookmark BEFORE UPDATE ON playlist BEGIN SELECT RAISE(ABORT, 'rejected'); END",
             )
@@ -90,7 +90,7 @@ class PlaylistAutoDownloadTest {
     @Test
     fun downloadFailurePreservesSuccessfulBookmarkAndReportsFailure() =
         withPlaylist { model, database ->
-            Settings.shared.autoDownloadOnLike = true
+            Settings.shared.autoDownloadSavedCollections = true
             checkNotNull(model.toggleFavorite { throw IllegalStateException("download failed") }).join()
             assertTrue(model.isFavorite.value)
             assertNotNull(database.dao().findPlaylistEntity("LPtest")?.bookmarkedAt)
@@ -100,7 +100,7 @@ class PlaylistAutoDownloadTest {
     @Test
     fun repeatedTapWhileDownloadIsStartingDoesNotStartAnotherBookmarkOrDownload() =
         withPlaylist { model, _ ->
-            Settings.shared.autoDownloadOnLike = true
+            Settings.shared.autoDownloadSavedCollections = true
             val downloadStarted = CompletableDeferred<Unit>()
             val finishDownload = CompletableDeferred<Unit>()
             val job =
@@ -123,7 +123,7 @@ class PlaylistAutoDownloadTest {
     @Test
     fun cancellationIsNotReportedAsADownloadFailure() =
         withPlaylist { model, _ ->
-            Settings.shared.autoDownloadOnLike = true
+            Settings.shared.autoDownloadSavedCollections = true
             val job = checkNotNull(model.toggleFavorite { throw CancellationException() })
             job.join()
             assertTrue(job.isCancelled)

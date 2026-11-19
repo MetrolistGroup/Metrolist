@@ -1140,7 +1140,6 @@
     <string name="settings_translation_mode_summary">Prekladať slová alebo prepísať ich výslovnosť do cieľového písma</string>
     <string name="settings_translation_provider_summary">Vyberte službu, ktorá prekladá texty</string>
     <string name="settings_translation_model_summary">Model na preklad alebo prepis textov</string>
-    <string name="settings_detector_model_summary">Model, ktorý rozhoduje, či texty potrebujú preklad</string>
     <string name="settings_translation_formality_summary">Vyberte formálny alebo neformálny jazyk prekladov DeepL</string>
     <string name="settings_discord_advanced_summary">Zobraziť šablóny aktivity a vlastné tlačidlá s odkazmi</string>
     <string name="settings_discord_activity_type_summary">Vyberte, ako Discord označuje vašu hudobnú aktivitu</string>

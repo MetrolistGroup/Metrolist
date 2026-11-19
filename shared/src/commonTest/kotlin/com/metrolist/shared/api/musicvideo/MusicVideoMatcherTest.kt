@@ -1,5 +1,6 @@
 package com.metrolist.shared.api.musicvideo
 
+import com.metrolist.shared.model.AlbumTiny
 import com.metrolist.shared.model.ArtistTiny
 import com.metrolist.shared.model.SongItem
 import kotlin.test.Test
@@ -7,6 +8,92 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNull
 
 class MusicVideoMatcherTest {
+    @Test
+    fun audioMatchingKeepsTheWholeUnicodeTitleAndRejectsArtistFragments() {
+        val video = song("VIDEO", "インソムニア - Eve MV", "Eve", "MUSIC_VIDEO_TYPE_OMV")
+        val unrelated = song("WRONG", "Eve", "Eve", "MUSIC_VIDEO_TYPE_ATV")
+        val track = song("TRACK", "インソムニア", "Eve", "MUSIC_VIDEO_TYPE_ATV")
+        assertNull(MusicVideoMatcher.findBestTrackMatch(video, listOf(unrelated)))
+        assertNull(MusicVideoMatcher.findBestTrackMatch(video, listOf(unrelated, track)))
+        assertEquals(track, MusicVideoMatcher.findBestTrackMatch(video.copy(title = "Eve - インソムニア MV"), listOf(unrelated, track)))
+
+        val markedTitle = video.copy(title = "की")
+        assertNull(MusicVideoMatcher.findBestTrackMatch(markedTitle, listOf(track.copy(title = "कु"))))
+        assertEquals(track.copy(title = "की"), MusicVideoMatcher.findBestTrackMatch(markedTitle, listOf(track.copy(title = "की"))))
+    }
+
+    @Test
+    fun audioMatchingRequiresAnExactArtistOrSharedArtistIdAndCompatibleDuration() {
+        val video = song("B4aCGFivM5o", "Set Me Free", "Hiroyuki ODA", "MUSIC_VIDEO_TYPE_UGC", 404L, "HIROYUKI")
+        val wrongArtist = song("xCcRE0vtW8g", "Set Me Free", "Oda", "MUSIC_VIDEO_TYPE_ATV", 299L, "ODA")
+        assertNull(MusicVideoMatcher.findBestTrackMatch(video, listOf(wrongArtist)))
+        assertNull(MusicVideoMatcher.findBestTrackMatch(video, listOf(wrongArtist.copy(duration = video.duration))))
+        assertNull(MusicVideoMatcher.findBestTrackMatch(video, listOf(wrongArtist.copy(artists = video.artists, duration = 435L))))
+        val track = wrongArtist.copy(artists = video.artists, duration = video.duration)
+        assertEquals(track, MusicVideoMatcher.findBestTrackMatch(video, listOf(wrongArtist, track)))
+        assertEquals(track, MusicVideoMatcher.findBestTrackMatch(video.copy(artists = listOf(ArtistTiny("HIROYUKI", "別名"))), listOf(track)))
+    }
+
+    @Test
+    fun audioSearchDoesNotReplaceAlternateVersions() {
+        for ((title, artist) in listOf("You Raise Me Up (Live)" to "Celtic Woman", "SO HOT (Live) [THEBLACKLABEL REMIX]" to "BLACKPINK")) {
+            val video = song("VIDEO", title, artist, "MUSIC_VIDEO_TYPE_OMV")
+            val track = video.copy(id = "TRACK", musicVideoType = "MUSIC_VIDEO_TYPE_ATV")
+            assertNull(MusicVideoMatcher.findBestTrackMatch(video, listOf(track)))
+            assertNull(MusicVideoMatcher.findBestTrackMatch(video, listOf(track.copy(title = title.substringBefore(" (")))))
+        }
+    }
+
+    @Test
+    fun audioMatchingAllowsMusicVideoSeventySecondsLongerThanItsTrack() {
+        val video = song("VIDEO", "Artist - Song (Official Music Video)", "Artist", "MUSIC_VIDEO_TYPE_OMV", 283L)
+        val track = song("TRACK", "Song", "Artist", "MUSIC_VIDEO_TYPE_ATV", 213L)
+        assertEquals(track, MusicVideoMatcher.findBestTrackMatch(video, listOf(track)))
+    }
+
+    @Test
+    fun audioMatchingUsesVideoDurationLimitsAndToleratesOnlyThirtyExtraSecondsOfAudio() {
+        val video = song("VIDEO", "Song", "Artist", "MUSIC_VIDEO_TYPE_OMV")
+        val track = song("TRACK", "Song", "Artist", "MUSIC_VIDEO_TYPE_ATV")
+        for ((videoDuration, trackDuration) in listOf(200L to 100L, 100L to 10L, 180L to 210L, null to 213L, 0L to 213L, 213L to 0L)) {
+            val candidate = track.copy(duration = trackDuration)
+            assertEquals(candidate, MusicVideoMatcher.findBestTrackMatch(video.copy(duration = videoDuration), listOf(candidate)))
+        }
+        for ((videoDuration, trackDuration) in listOf(201L to 100L, 101L to 10L, 180L to 211L)) {
+            assertNull(
+                MusicVideoMatcher.findBestTrackMatch(video.copy(duration = videoDuration), listOf(track.copy(duration = trackDuration))),
+            )
+        }
+    }
+
+    @Test
+    fun audioDuplicatesPreferArtistIdsThenAudioTypeThenDurationThenSearchOrder() {
+        val video = song("VIDEO", "Song", "Artist", "MUSIC_VIDEO_TYPE_OMV", 300L, "ARTIST")
+        val nameOnly = song("NAME", "Song", "Artist", "MUSIC_VIDEO_TYPE_ATV", 300L, "OTHER")
+        val generic = song("GENERIC", "Song", "Artist", duration = 300L, artistId = "ARTIST")
+        val album = song("ALBUM", "Song", "Artist", "MUSIC_VIDEO_TYPE_ATV", 230L, "ARTIST").copy(album = AlbumTiny("ALBUM", "Album"))
+        val single = album.copy(id = "SINGLE", duration = 240L, album = AlbumTiny("SINGLE", "Single"), isExplicit = true)
+        val unknownDuration = album.copy(id = "UNKNOWN", duration = null)
+        val clean = single.copy(id = "CLEAN", isExplicit = false)
+
+        assertEquals(generic, MusicVideoMatcher.findBestTrackMatch(video, listOf(nameOnly, generic)))
+        assertEquals(album, MusicVideoMatcher.findBestTrackMatch(video, listOf(generic, album)))
+        assertEquals(single, MusicVideoMatcher.findBestTrackMatch(video, listOf(nameOnly, generic, album, single, unknownDuration)))
+        assertEquals(single, MusicVideoMatcher.findBestTrackMatch(video, listOf(single, clean)))
+        assertEquals(clean, MusicVideoMatcher.findBestTrackMatch(video, listOf(clean, single)))
+    }
+
+    @Test
+    fun audioMatchingStripsOnlyArtistPrefixesAndPresentationDecorators() {
+        val video =
+            song("VIDEO", "The Skinner Brothers - Nothing on Me (Official Music Video)", "The Skinner Brothers", "MUSIC_VIDEO_TYPE_OMV")
+        val track = video.copy(id = "TRACK", title = "NOTHING ON ME", musicVideoType = "MUSIC_VIDEO_TYPE_ATV")
+        assertEquals(track, MusicVideoMatcher.findBestTrackMatch(video, listOf(track)))
+        assertNull(MusicVideoMatcher.findBestTrackMatch(video.copy(title = "Nothing on Me part 2"), listOf(track)))
+        assertNull(MusicVideoMatcher.findBestTrackMatch(video.copy(title = "Nothing on Me 2026"), listOf(track)))
+        assertNull(MusicVideoMatcher.findBestTrackMatch(video.copy(title = "Nothing on Me | Other song"), listOf(track)))
+    }
+
     @Test
     fun variantPatternsPreserveWordBoundariesAndExistingVariants() {
         assertEquals(false, MusicVideoMatcher.isDisqualifiedVariant("Song", "Song recovered"))

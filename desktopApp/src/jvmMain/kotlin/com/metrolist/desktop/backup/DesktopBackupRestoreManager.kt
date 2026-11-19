@@ -4,6 +4,7 @@ import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import com.metrolist.desktop.history.HistoryRepository
 import com.metrolist.desktop.utils.desktopRestartCommand
 import com.metrolist.desktop.utils.prepareDesktopRelaunch
+import com.metrolist.desktop.utils.windowsDelayedRestartCommand
 import com.metrolist.shared.backup.BACKUP_DATABASE_ENTRY
 import com.metrolist.shared.backup.BACKUP_MANIFEST_ENTRY
 import com.metrolist.shared.backup.BACKUP_SETTINGS_ENTRY
@@ -377,7 +378,7 @@ object DesktopBackupRestoreManager {
             val appCommand = desktopRestartCommand()
             val process =
                 if (System.getProperty("os.name").startsWith("Windows", ignoreCase = true)) {
-                    ProcessBuilder(listOf("cmd", "/c", "ping -n 2 127.0.0.1 >nul & start \"\"") + appCommand)
+                    ProcessBuilder(windowsDelayedRestartCommand(appCommand))
                 } else {
                     ProcessBuilder(
                         listOf(

@@ -27,10 +27,7 @@
 -keep class org.jetbrains.skiko.** { *; }
 -keep interface org.jetbrains.skiko.** { *; }
 -keep class androidx.compose.ui.awt.** { *; }
-# EnumMap reflects this method when Kuromoji initializes its dictionary map.
--keepclassmembers enum com.atilika.kuromoji.viterbi.ViterbiNode$Type {
-    public static **[] values();
-}
+
 
 # JmDNS uses EnumMap for DNS qualified-name fields.
 -keepclassmembers enum javax.jmdns.ServiceInfo$Fields {

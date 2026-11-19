@@ -30,6 +30,17 @@ class SleepTimerDefaultsTest {
     }
 
     @Test
+    fun durationEntryAcceptsLocalizedDecimalDigitsAndKeepsBounds() {
+        assertEquals(5_400_000L, sleepTimerDurationMs("١", "٣٠"))
+        assertEquals(900_000L, sleepTimerDurationMs("", "۱۵"))
+        assertEquals(3_660_000L, sleepTimerDurationMs("１", "0١"))
+        assertNull(sleepTimerDurationMs("٢٤", "٠٠"))
+        assertNull(sleepTimerDurationMs("০", "৬০"))
+        assertNull(sleepTimerDurationMs("٠٠٠", "١"))
+        assertNull(sleepTimerDurationMs("١", "٥٫٥"))
+    }
+
+    @Test
     fun savingDefaultsPersistsDurationAndBothOptionsWithoutStartingATimer() {
         val backing = MapSettings()
         val settings = Settings(backing)

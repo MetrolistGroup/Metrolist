@@ -5,7 +5,7 @@
 
   outputs = { self, nixpkgs }:
     let
-      systems = [ "x86_64-linux" "aarch64-linux" ];
+      systems = [ "x86_64-linux" "aarch64-linux" "aarch64-darwin" "x86_64-darwin" ];
       forSystems = nixpkgs.lib.genAttrs systems;
       releaseFile = ./packaging/release.json;
       release = if builtins.pathExists releaseFile then
@@ -16,7 +16,8 @@
       packages = forSystems (system:
         let
           pkgs = import nixpkgs { inherit system; };
-          metrolist = pkgs.callPackage ./packaging/nix/package.nix { inherit release; };
+          recipe = if pkgs.stdenv.hostPlatform.isDarwin then ./packaging/nix/darwin.nix else ./packaging/nix/package.nix;
+          metrolist = pkgs.callPackage recipe { inherit release; };
         in { inherit metrolist; default = metrolist; });
       apps = forSystems (system: {
         default = {

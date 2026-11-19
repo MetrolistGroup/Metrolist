@@ -22,4 +22,10 @@ class DesktopCaptionBarTest {
         assertFalse(shouldUseDesktopCaption(sdkInt = 35, captionHeight = 0, hasPointerDevice = true))
         assertFalse(shouldUseDesktopCaption(sdkInt = 34, captionHeight = 32, hasPointerDevice = true))
     }
+
+    @Test
+    fun fullscreenAppHandleBehindTheStatusBarKeepsTheAccountInTheAppBar() {
+        assertFalse(shouldUseDesktopCaption(sdkInt = 36, captionHeight = 48, hasPointerDevice = true, statusBarHeight = 48))
+        assertTrue(shouldUseDesktopCaption(sdkInt = 36, captionHeight = 48, hasPointerDevice = true, statusBarHeight = 0))
+    }
 }

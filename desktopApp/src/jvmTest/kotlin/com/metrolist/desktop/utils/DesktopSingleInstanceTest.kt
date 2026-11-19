@@ -26,6 +26,7 @@ class DesktopSingleInstanceTest {
                     delivered.countDown()
                 },
             )
+            owner.startRestoreWatcher()
             payloads
                 .map { payload ->
                     senders.submit { assertFalse(SingleInstanceLock(directory, "test").acquire(payload) {}) }
@@ -49,6 +50,7 @@ class DesktopSingleInstanceTest {
 
         try {
             assertTrue(owner.acquire { restoreRequested.countDown() })
+            owner.startRestoreWatcher()
             assertFalse(contender.acquire {})
             assertTrue(restoreRequested.await(5, TimeUnit.SECONDS))
         } finally {
@@ -73,10 +75,31 @@ class DesktopSingleInstanceTest {
                     payloadLatch.countDown()
                 },
             )
+            owner.startRestoreWatcher()
             val testUrl = "https://music.youtube.com/watch?v=dQw4w9WgXcQ"
             assertFalse(contender.acquire(testUrl) {})
             assertTrue(payloadLatch.await(5, TimeUnit.SECONDS))
             assertEquals(testUrl, receivedPayload)
+        } finally {
+            contender.release()
+            owner.release()
+            directory.toFile().deleteRecursively()
+        }
+    }
+
+    @Test
+    fun restoreRequestsWaitUntilWatcherStarts() {
+        val directory = Files.createTempDirectory("metrolist-single-instance-")
+        val received = CountDownLatch(1)
+        val owner = SingleInstanceLock(directory, "test")
+        val contender = SingleInstanceLock(directory, "test")
+
+        try {
+            assertTrue(owner.acquire { received.countDown() })
+            assertFalse(contender.acquire("pending") {})
+            assertFalse(received.await(100, TimeUnit.MILLISECONDS))
+            owner.startRestoreWatcher()
+            assertTrue(received.await(5, TimeUnit.SECONDS))
         } finally {
             contender.release()
             owner.release()

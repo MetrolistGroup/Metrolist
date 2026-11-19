@@ -3,6 +3,7 @@ package com.metrolist.shared.ui.player
 import com.metrolist.shared.viewmodels.PlayerViewModel.QueueItemUiModel
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNull
 import kotlin.test.assertSame
 
 class QueueDurationTest {
@@ -48,6 +49,43 @@ class QueueDurationTest {
         assertSame(incoming, reconcileReorderedTracks(original.reversed(), incoming, hasPendingReorder = true))
         assertSame(incoming, reconcileReorderedTracks(original, incoming, hasPendingReorder = false))
         assertSame(incoming, reconcileReorderedTracks(original.take(1), incoming, hasPendingReorder = true))
+    }
+
+    @Test
+    fun activeTrackUsesPlaybackDurationWhenCatalogDurationIsUnknown() {
+        for (catalogDuration in listOf(null, 0L, -1L)) {
+            val track = track("unknown", catalogDuration)
+            assertEquals("2:03", track.durationText(isActive = true, currentDuration = 123_000L))
+            assertEquals("--:--", track.durationText(isActive = true, currentDuration = 0L))
+            assertEquals("--:--", track.durationText(isActive = false, currentDuration = 123_000L))
+        }
+    }
+
+    @Test
+    fun knownCatalogDurationRemainsStable() {
+        val known = track("known", 60_000L)
+        assertEquals("1:00", known.durationText(isActive = true, currentDuration = 123_000L))
+        assertEquals("1:00", known.durationText(isActive = false, currentDuration = 123_000L))
+    }
+
+    @Test
+    fun queueTotalRemainsUnknownWhenAnInactiveTrackHasAnUnknownDuration() {
+        val known = QueueItemUiModel("known", "Known", "Artist", null, 90_000L)
+        for (unknownDuration in listOf(null, 0L, -1L)) {
+            val unknown = known.copy(id = "unknown", duration = unknownDuration)
+            assertNull(queueTotalDuration(listOf(unknown, known), listOf(2L, 3L), 1, 90_000L))
+        }
+    }
+
+    @Test
+    fun queueTotalUsesMeasuredDurationForActiveTrackAndExcludesSyntheticEntries() {
+        val active = QueueItemUiModel("active", "Active", "Artist", null, 0L)
+        val known = active.copy(id = "known", duration = 90_000L)
+        val synthetic = active.copy(id = "synthetic", duration = 10_000L, isSuggested = true)
+        val entries = listOf(active, known, synthetic)
+        val keys = listOf(2L, 3L, -1L)
+        assertEquals(213_000L, queueTotalDuration(entries, keys, 0, 123_000L))
+        assertNull(queueTotalDuration(entries, keys, 0, 0L))
     }
 
     private fun track(

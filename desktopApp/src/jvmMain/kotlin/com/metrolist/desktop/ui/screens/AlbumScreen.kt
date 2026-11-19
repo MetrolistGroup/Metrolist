@@ -58,9 +58,11 @@ import androidx.compose.ui.unit.dp
 import com.metrolist.desktop.state.app.AppState
 import com.metrolist.desktop.state.content.ArtistState
 import com.metrolist.desktop.state.content.HomeState
+import com.metrolist.desktop.state.content.LibraryState
 import com.metrolist.desktop.state.content.PlaylistAlbumState
 import com.metrolist.desktop.state.playback.PlayerState
 import com.metrolist.desktop.storage.DownloadManager
+import com.metrolist.desktop.storage.DownloadState
 import com.metrolist.desktop.ui.components.AlbumContextMenu
 import com.metrolist.desktop.ui.components.RetryableError
 import com.metrolist.desktop.ui.components.SongContextMenu
@@ -75,6 +77,7 @@ import com.metrolist.shared.model.AlbumItem
 import com.metrolist.shared.model.AlbumPage
 import com.metrolist.shared.model.SongItem
 import com.metrolist.shared.model.filterForPlaylistSearch
+import com.metrolist.shared.model.withDownloadsPlayable
 import com.metrolist.shared.state.AlbumLikeState
 import com.metrolist.shared.ui.components.CollectionHeaderNavigation
 import com.metrolist.shared.ui.components.CollectionPreviews
@@ -134,7 +137,8 @@ fun AlbumScreen(
     }
 
     val album = page.album
-    val songs = page.songs
+    val downloadedSongIds = LibraryState.downloadStates.filterValues { it == DownloadState.DOWNLOADED }.keys
+    val songs = remember(page.songs, downloadedSongIds) { page.songs.withDownloadsPlayable(downloadedSongIds) }
     val listState = if (loaded != null) HomeState.rememberListState("album_$albumId") else rememberLazyListState()
     val albumMenu = rememberCursorContextMenuState()
     val songMenu = rememberCursorContextMenuState()

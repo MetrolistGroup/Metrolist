@@ -33,7 +33,7 @@
     <string name="filter_downloaded">Descărcate</string>
     <string name="filter_all">Toate</string>
     <string name="filter_videos">Videoclipuri</string>
-    <string name="filter_community_playlists">Playlisturi comunitare</string>
+    <string name="filter_community_playlists">Playlisturi ale comunității</string>
     <string name="filter_featured_playlists">Playlisturi recomandate</string>
     <string name="other_versions">Alte versiuni</string>
     <string name="liked_songs">Melodii apreciate</string>
@@ -58,7 +58,7 @@
     <string name="completed_downloads">Descărcări finalizate</string>
     <string name="download_completion_summary">%1$d descărcate, %2$d eșuate</string>
     <plurals name="download_notification_progress">
-        <item quantity="one">Descărcate %1$d din %2$d melodie, %3$d eșuată</item>
+        <item quantity="one">Descărcat %1$d din %2$d melodie, %3$d eșuată</item>
         <item quantity="few">Descărcate %1$d din %2$d melodii, %3$d eșuate</item>
         <item quantity="other">Descărcate %1$d din %2$d de melodii, %3$d eșuate</item>
     </plurals>
@@ -998,11 +998,6 @@
         <item quantity="few">%1$d minute</item>
         <item quantity="other">%1$d de minute</item>
     </plurals>
-    <plurals name="minutes_short">
-        <item quantity="one">Un min</item>
-        <item quantity="few">%1$d min</item>
-        <item quantity="other">%1$d min</item>
-    </plurals>
     <plurals name="n_track">
         <item quantity="one">O piesă</item>
         <item quantity="few">%1$d piese</item>
@@ -1032,11 +1027,6 @@
         <item quantity="one">S-a eliminat %1$d melodie din playlist</item>
         <item quantity="few">S-au eliminat %1$d melodii din playlist</item>
         <item quantity="other">S-au eliminat %1$d de melodii din playlist</item>
-    </plurals>
-    <plurals name="seconds_short">
-        <item quantity="one">%1$d s</item>
-        <item quantity="few">%1$d s</item>
-        <item quantity="other">%1$d s</item>
     </plurals>
     <plurals name="song_count">
         <item quantity="one">O melodie</item>
@@ -1189,7 +1179,6 @@
     <string name="ai_provider">Furnizor</string>
     <string name="ai_base_url">URL de bază</string>
     <string name="ai_translation_model">Model de traducere</string>
-    <string name="ai_judge_detector_model">Model de detecție</string>
     <string name="ai_target_language">Limba țintă</string>
     <string name="ai_deepl_formality">Formalitate</string>
     <string name="ai_deepl_formality_default">Prestabilit</string>
@@ -1714,7 +1703,7 @@
     <string name="import_deezer_picker_title">Alege din biblioteca Deezer</string>
     <string name="import_deezer_picker_description">Selectează playlisturile pe care vrei să le imporți</string>
     <string name="import_deezer_selected_count">%1$d selectate</string>
-    <string name="deezer_login_failed">Autentificarea la Deezer a eșuat.</string>
+    <string name="deezer_login_failed">Autentificarea la Deezer a eșuat</string>
     <string name="import_connect_tidal_account">Autentifică-te folosind contul Tidal</string>
     <string name="import_tidal_session_sign_in">Autentifică-te folosind contul tău Tidal în fereastra de mai sus pentru a continua.</string>
     <string name="import_tidal_picker_title">Alege din biblioteca Tidal</string>
@@ -2450,7 +2439,6 @@
     <string name="settings_translation_mode_summary">Tradu cuvintele sau transcrie pronunția în sistemul de scriere țintă</string>
     <string name="settings_translation_provider_summary">Alege serviciul care traduce versurile</string>
     <string name="settings_translation_model_summary">Model pentru traducerea sau transcrierea versurilor</string>
-    <string name="settings_detector_model_summary">Model care decide dacă versurile trebuie traduse</string>
     <string name="settings_translation_formality_summary">Alege un limbaj formal sau informal pentru traducerile DeepL</string>
     <string name="settings_discord_advanced_summary">Afișează șabloanele de activitate și butoanele cu linkuri personalizate</string>
     <string name="settings_discord_activity_type_summary">Alege cum descrie Discord activitatea ta muzicală</string>
@@ -2615,4 +2603,19 @@
     <string name="devtools_render_backend_software">Software</string>
     <string name="devtools_render_backend_metal">Metal</string>
     <string name="devtools_render_backend">Backend randare</string>
+    <string name="devtools_render_backend_description">Modificările vor avea efect după o repornire. Suprascrierile API-ului de randare ale mediului și al JVM vor avea prioritate. Skiko poate reveni dacă backend-ul selectat nu poate fi inițializat.</string>
+    <string name="desktop_minimize_to_tray">Minimizează în bară</string>
+    <string name="desktop_minimize_to_tray_desc">Închiderea ferestrei va minimiza aplicația Metrolist în bară în loc să o închidă</string>
+    <string name="desktop_tray_toggle_on_click">Ascunde sau afișează la apăsarea pictogramei din bară</string>
+    <string name="desktop_tray_toggle_on_click_desc">Atunci când vei face clic-stânga pe pictograma din bară, fereastra aplicației Metrolist va fi deschisă sau închisă</string>
+    <string name="blocked_songs">Melodii blocate</string>
+    <string name="blocked_songs_desc">Restaurează melodiile pe care le-ai apreciat negativ sau blocat</string>
+    <string name="blocked_songs_empty">Nicio melodie blocată</string>
+    <string name="content_undo_hint">Poți anula acest lucru în %1$s.</string>
+    <string name="content_undo_path">%1$s &gt; %2$s &gt; %3$s</string>
+    <string name="account_keyring_required">Metrolist are nevoie de acces la keyring-ul sistemului pentru a-ți restaura contul. Deblochează keyring-ul. Metrolist va reîncerca automat.</string>
+    <string name="account_linux_keyring_required">Metrolist are nevoie de un keyring de sistem pentru a-ți restaura contul. Instalează libsecret-tools sau pachetul distribuției tale care furnizează secret-tool și asigură-te că keyring-ul tău rulează și este deblocat. Metrolist va reîncerca automat.</string>
+    <string name="density_massive">Masivă (200%)</string>
+    <string name="density_huge">Imensă (175%)</string>
+    <string name="density_extra_large">Foarte mare (150%)</string>
 </resources>

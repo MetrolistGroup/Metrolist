@@ -4,6 +4,7 @@ import com.metrolist.innertubex.InnerTube
 import com.metrolist.shared.api.YouTubeRepository
 import com.metrolist.shared.db.entities.PlaylistEntity
 import com.metrolist.shared.db.getDatabaseBuilder
+import com.metrolist.shared.model.AlbumTiny
 import com.metrolist.shared.model.ArtistTiny
 import com.metrolist.shared.model.SongItem
 import io.ktor.client.HttpClient
@@ -20,6 +21,97 @@ import org.junit.Test
 import java.nio.file.Files
 
 class ImportTrackMatchTest {
+    @Test
+    fun keepsAlbumVersionsSeparateWhenTitlesAndArtistsMatch() {
+        runBlocking {
+            val path = Files.createTempFile("import-album-match", ".db")
+            Files.deleteIfExists(path)
+            val client = HttpClient(MockEngine { error("Persisted matches must not need a network request") })
+            val database = getDatabaseBuilder(path.toFile()).build()
+            try {
+                val manager = PlaylistImportManager(database, YouTubeRepository(InnerTube(client)))
+                val tracks =
+                    listOf("Studio Album", "Live Album").map { album ->
+                        PlaylistImportManager.CsvTrack("Same title", "Same artist", null, album = album)
+                    }
+                val songs =
+                    tracks.mapIndexed { index, track ->
+                        SongItem(
+                            "video${index}123456",
+                            track.title,
+                            null,
+                            listOf(ArtistTiny(null, track.artist)),
+                            AlbumTiny("album$index", track.album),
+                        )
+                    }
+                val imported =
+                    manager
+                        .importResolvedTracks(
+                            "Versions",
+                            tracks.zip(songs),
+                            PlaylistImportManager.Destination.NewLocal,
+                            ImportSourceType.FILE_OR_TEXT,
+                        ).getOrThrow()
+                val resumed =
+                    manager.resolveImportTracks(
+                        tracks,
+                        PlaylistImportManager.Destination.EXISTING(imported.playlist),
+                        ImportSourceType.FILE_OR_TEXT,
+                    )
+                assertEquals(songs.map { it.id }, resumed.map { it.second.id })
+                assertEquals(
+                    2,
+                    database.importTrackMatchDao().importTrackMatches(imported.playlist.id, ImportSourceType.FILE_OR_TEXT.name).size,
+                )
+            } finally {
+                database.close()
+                client.close()
+                Files.deleteIfExists(path)
+            }
+        }
+    }
+
+    @Test
+    fun keepsExplicitVideoReferencesSeparateWhenTitlesAndArtistsMatch() {
+        runBlocking {
+            val path = Files.createTempFile("import-video-match", ".db")
+            Files.deleteIfExists(path)
+            val client = HttpClient(MockEngine { error("Persisted matches must not need a network request") })
+            val database = getDatabaseBuilder(path.toFile()).build()
+            try {
+                val manager = PlaylistImportManager(database, YouTubeRepository(InnerTube(client)))
+                val tracks =
+                    listOf("video123456", "video234567").map { videoId ->
+                        PlaylistImportManager.CsvTrack("Same title", "Same artist", videoId)
+                    }
+                val songs = tracks.map { SongItem(it.videoId!!, it.title, null, listOf(ArtistTiny(null, it.artist)), null) }
+                val imported =
+                    manager
+                        .importResolvedTracks(
+                            "Versions",
+                            tracks.zip(songs),
+                            PlaylistImportManager.Destination.NewLocal,
+                            ImportSourceType.FILE_OR_TEXT,
+                        ).getOrThrow()
+                val resumed =
+                    manager.resolveImportTracks(
+                        tracks,
+                        PlaylistImportManager.Destination.EXISTING(imported.playlist),
+                        ImportSourceType.FILE_OR_TEXT,
+                    )
+                assertEquals(songs.map { it.id }, resumed.map { it.second.id })
+                assertEquals(
+                    2,
+                    database.importTrackMatchDao().importTrackMatches(imported.playlist.id, ImportSourceType.FILE_OR_TEXT.name).size,
+                )
+            } finally {
+                database.close()
+                client.close()
+                Files.deleteIfExists(path)
+            }
+        }
+    }
+
     @Test
     fun reusesOnlyPersistedMatchesInTheSamePlaylistAndProvider() {
         runBlocking {

@@ -151,10 +151,12 @@ class MlxBuilder {
         agentId: String? = null,
         words: List<MlxWord>,
         backgroundWords: List<MlxWord>? = null,
+        isBackground: Boolean = false,
     ): MlxBuilder {
         if (words.isEmpty()) return this
 
         lyricLines.append(header(startMs, endMs, agentId))
+        if (isBackground) lyricLines.append("{bg}")
         appendWords(lyricLines, words)
 
         if (!backgroundWords.isNullOrEmpty()) {

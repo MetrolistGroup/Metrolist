@@ -1,5 +1,6 @@
 package com.metrolist.android.playback
 
+import androidx.media3.common.C
 import androidx.media3.common.Timeline
 import androidx.media3.common.util.UnstableApi
 import com.metrolist.shared.model.SongItem
@@ -14,6 +15,24 @@ import org.junit.Test
 
 @UnstableApi
 class MediaSessionTimelineTest {
+    @Test
+    fun liveQueueEntriesHaveUnknownDurationAndRecordedBroadcastsRemainSeekable() {
+        val live = SongItem("live", "Live", null, emptyList(), null, musicVideoType = "MUSIC_VIDEO_TYPE_LIVE")
+        val recorded = live.copy(id = "recorded", duration = 120)
+        val timeline = mediaSessionTimeline(listOf(MusicQueueEntry(1, live), MusicQueueEntry(2, recorded)), 0, 15_000L)
+        val liveWindow = timeline.getWindow(0, Timeline.Window())
+        assertTrue(liveWindow.isLive)
+        assertTrue(liveWindow.isDynamic)
+        assertFalse(liveWindow.isSeekable)
+        assertEquals(C.TIME_UNSET, liveWindow.durationUs)
+        assertEquals(C.TIME_UNSET, timeline.getPeriod(0, Timeline.Period()).durationUs)
+        val recordedWindow = timeline.getWindow(1, Timeline.Window())
+        assertFalse(recordedWindow.isLive)
+        assertFalse(recordedWindow.isDynamic)
+        assertTrue(recordedWindow.isSeekable)
+        assertEquals(120_000L, recordedWindow.durationMs)
+    }
+
     @Test
     fun `remote unmute restores last audible volume`() {
         val volume = RemoteVolumeTracker(0.4f)

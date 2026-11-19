@@ -916,10 +916,6 @@
         <item quantity="one">%1$d na minuto</item>
         <item quantity="other">%1$d na minuto</item>
     </plurals>
-    <plurals name="minutes_short">
-        <item quantity="one">%1$d min</item>
-        <item quantity="other">%1$d min</item>
-    </plurals>
     <plurals name="n_track">
         <item quantity="one">%1$d track</item>
         <item quantity="other">%1$d tracks</item>
@@ -943,10 +939,6 @@
     <plurals name="removed_songs_from_playlist">
         <item quantity="one">Inalis ang %1$d kanta mula sa playlist</item>
         <item quantity="other">Inalis ang %1$d kanta mula sa playlist</item>
-    </plurals>
-    <plurals name="seconds_short">
-        <item quantity="one">%1$d s</item>
-        <item quantity="other">%1$d s</item>
     </plurals>
     <plurals name="song_count">
         <item quantity="one">%1$d kanta</item>
@@ -1153,7 +1145,6 @@
     <string name="ai_provider">Provider</string>
     <string name="ai_base_url">Base URL</string>
     <string name="ai_translation_model">Modelo ng pagsasalin</string>
-    <string name="ai_judge_detector_model">Modelo ng judge/detector</string>
     <string name="ai_target_language">Target na wika</string>
     <string name="ai_deepl_formality">Pormalidad</string>
     <string name="ai_deepl_formality_more">Mas pormal</string>
@@ -1913,7 +1904,6 @@
     <string name="sponsorblock_skipped">Nilaktawan ang bahaging pampromosyon</string>
     <string name="episode_played">Napakinggan</string>
     <string name="lastfm_service_error">Hindi available ang pag-sign in sa Last.fm. Pakisubukan muli mamaya.</string>
-
     <string name="settings_appearance_overview">Tema, mga font, at hitsura ng player</string>
     <string name="settings_android_auto_overview">Mga playlist sa sasakyan at patutunguhan ng mabilisang pagdagdag</string>
     <string name="settings_about_overview">Mga nag-ambag, link ng komunidad, at lisensya</string>
@@ -1958,7 +1948,6 @@
     <string name="settings_translation_mode_summary">Isalin ang mga salita o isulat ang pagbigkas sa target na sistema ng pagsulat</string>
     <string name="settings_translation_provider_summary">Piliin ang serbisyong nagsasalin ng liriko</string>
     <string name="settings_translation_model_summary">Modelong nagsasalin o nagsusulat ng pagbigkas ng liriko</string>
-    <string name="settings_detector_model_summary">Modelong nagpapasiya kung kailangang isalin ang liriko</string>
     <string name="settings_translation_formality_summary">Pumili ng pormal o kaswal na wika para sa mga salin ng DeepL</string>
     <string name="settings_discord_advanced_summary">Ipakita ang mga template ng aktibidad at sariling button na may link</string>
     <string name="settings_discord_activity_type_summary">Piliin kung paano inilalarawan ng Discord ang iyong aktibidad sa musika</string>

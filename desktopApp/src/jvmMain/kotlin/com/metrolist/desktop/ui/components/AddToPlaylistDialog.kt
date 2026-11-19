@@ -53,6 +53,7 @@ import com.metrolist.shared.generated.resources.playlist_add_uncertain
 import com.metrolist.shared.generated.resources.playlist_create_action
 import com.metrolist.shared.generated.resources.sign_in
 import com.metrolist.shared.generated.resources.sign_in_to_add_playlists
+import com.metrolist.shared.model.exactSongCount
 import com.metrolist.shared.model.sortedForPlaylistPicker
 import com.metrolist.shared.settings.HiddenLibraryItem
 import com.metrolist.shared.settings.HiddenLibraryItems
@@ -80,6 +81,7 @@ fun AddToPlaylistDialog() {
             val hiddenKeys = HiddenLibraryItems.keys()
             PlayerState.userPlaylists.filterNot { HiddenLibraryItem.from(it).key in hiddenKeys }
         }
+    val songCounts = remember(playlists) { playlists.associate { it.id to it.exactSongCount } }
     val sort = Settings.shared.playlistPickerSort
     val direction = Settings.shared.playlistPickerSortDirection
     val librarySorting = Settings.shared.librarySorting(LibraryFilterType.PLAYLISTS)
@@ -92,7 +94,7 @@ fun AddToPlaylistDialog() {
                 name = { it.title },
                 addedAt = { it.libraryAddedAt },
                 lastUpdated = { it.libraryUpdatedAt },
-                songCount = { it.songCount?.toIntOrNull() },
+                songCount = { songCounts[it.id] },
                 id = { it.id },
                 librarySorting = librarySorting,
                 manualOrder = manualOrder,
@@ -142,7 +144,7 @@ fun AddToPlaylistDialog() {
                             id = playlist.id,
                             title = playlist.title,
                             artwork = libraryArtwork(playlist.id, playlist.thumbnail, playlist.customThumbnail),
-                            songCount = playlist.songCount?.toIntOrNull(),
+                            songCount = songCounts[playlist.id],
                             author = playlist.author,
                         )
                     },

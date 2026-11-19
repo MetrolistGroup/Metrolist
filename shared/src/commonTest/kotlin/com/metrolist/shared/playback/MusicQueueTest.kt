@@ -34,6 +34,46 @@ class MusicQueueTest {
     }
 
     @Test
+    fun legacyShuffleKeepsAutoplayOutsideTheCollectionAcrossRepeatedToggles() {
+        val duplicate = song("duplicate")
+        val explicit = listOf(song("first"), duplicate, duplicate, song("last"))
+        val generated =
+            listOf(
+                song("radio").copy(queueSourceTitle = QUEUE_SOURCE_RECOMMENDED),
+                song("mix").copy(queueSourceTitle = QUEUE_SOURCE_AUTO_MIX),
+            )
+        val queue = MusicQueue().apply { setQueue(explicit + generated, 2) }
+        val current =
+            queue.state.value.entries[2]
+                .key
+
+        repeat(10) {
+            queue.toggleShuffle(legacyShuffle = true)
+            assertEquals(
+                current,
+                queue.state.value.entries[queue.currentIndex.value]
+                    .key,
+            )
+            assertEquals(generated, queue.items.value.takeLast(generated.size))
+            assertEquals(
+                explicit.groupingBy { it }.eachCount(),
+                queue.items.value
+                    .take(explicit.size)
+                    .groupingBy { it }
+                    .eachCount(),
+            )
+            queue.toggleShuffle(legacyShuffle = true)
+            assertEquals(explicit + generated, queue.items.value)
+            assertEquals(2, queue.currentIndex.value)
+            assertEquals(
+                current,
+                queue.state.value.entries[2]
+                    .key,
+            )
+        }
+    }
+
+    @Test
     fun legacyShuffleRoundTripPreservesSelectionIncludingNoCurrentSong() {
         val songs = listOf(song("first"), song("second"), song("third"))
         for (index in -1..songs.lastIndex) {
@@ -816,6 +856,24 @@ class MusicQueueTest {
         queue.toggleShuffle()
         assertEquals(1, queue.currentIndex.value)
         assertEquals(listOf(0, 1), queue.snapshot().originalIndices)
+    }
+
+    @Test
+    fun shuffledQueueMixesLaterPagesIntoUpcomingSongs() {
+        val loaded = (0 until 50).map { song("loaded$it") }
+        val later = (0 until 50).map { song("later$it") }
+        val queue = MusicQueue().apply { setQueue(loaded, 10) }
+        queue.toggleShuffle()
+        val history = queue.items.value.take(queue.currentIndex.value + 1)
+
+        queue.appendPage(later)
+
+        val items = queue.items.value
+        assertEquals(history, items.take(history.size))
+        assertEquals((loaded + later).toSet(), items.toSet())
+        assertEquals(100, items.size)
+        val upcoming = items.drop(history.size)
+        assertTrue(upcoming.indexOfFirst { it in later } < upcoming.indexOfLast { it in loaded })
     }
 
     private fun song(id: String) = SongItem(id, id, null, emptyList(), null)

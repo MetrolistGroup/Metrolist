@@ -427,7 +427,8 @@ internal class AndroidQueueCoordinator(
                         val additions = BlockedContent.filterPlayableSongs(next.songs.drop(previous.songs.size))
                         appendPlaylistSongs(additions)
                     } while (playlistPage?.hasMore == true &&
-                        shouldLoadPlaylistPage(player.currentMediaItemIndex.value, player.songQueue.value.size)
+                        // Shuffle can only mix songs that are already loaded, so it loads the whole playlist.
+                        (player.isShuffleEnabled || shouldLoadPlaylistPage(player.currentMediaItemIndex.value, player.songQueue.value.size))
                     )
                 } catch (e: CancellationException) {
                     throw e
@@ -437,7 +438,10 @@ internal class AndroidQueueCoordinator(
             }
     }
 
-    fun playMix(seed: SongItem) {
+    fun playMix(
+        seed: SongItem,
+        startPlaying: Boolean,
+    ) {
         if (seed.isUnavailable || BlockedContent.isBlocked(seed)) return
         val title = context.getString(R.string.song_mix_title, seed.title)
         val current = player.currentSong.value?.takeIf { it.id == seed.id }
@@ -454,6 +458,8 @@ internal class AndroidQueueCoordinator(
                 ),
             )
         ) {
+            // The target keeps a retained seed's play state, so send the play intent separately.
+            if (startPlaying) AndroidDeviceConnect.intercept(DcPlaybackCommand(DcPlaybackAction.PLAY))
             return
         }
         _repeatMode.value = Player.REPEAT_MODE_OFF
@@ -471,11 +477,12 @@ internal class AndroidQueueCoordinator(
                         queue.toggleShuffle(legacyShuffle = Settings.shared.useLegacyShuffle)
                     }
                     player.restoreQueue(queue.snapshot())
+                    if (startPlaying && !castState().isConnected && !player.wantsPlayback) player.resume()
                 }
                 _shuffleModeEnabled.value = player.isShuffleEnabled
             }
         } else {
-            playQueue(songs = listOf(seed), queueTitle = title, finite = false, fromRemote = true)
+            playQueue(songs = listOf(seed), queueTitle = title, finite = false, fromRemote = true, startPlaying = startPlaying)
         }
         isRadioQueue = true
         radioQueuePlaylistId = "RDAMVM${seed.id}"
@@ -701,6 +708,9 @@ internal class AndroidQueueCoordinator(
                     onSave()
                 }
             }
+        }
+        scope.launch {
+            player.shuffleEnabled.collect { if (it) schedulePlaylistPage() }
         }
         scope.launch {
             combine(
@@ -951,6 +961,7 @@ internal class AndroidQueueCoordinator(
 
     suspend fun advanceQueueAfterCurrent(completedPlaybackInstanceId: Long? = null) {
         if (transitions.consumeCrossfadeCompletion(completedPlaybackInstanceId) || transitions.isCrossfading) return
+        if (completedPlaybackInstanceId != null && completedPlaybackInstanceId != player.currentPlaybackInstanceId) return
         if (AndroidDeviceConnect.manager.remote.isActive) {
             AndroidDeviceConnect.manager.remote.playbackEnded()
             return

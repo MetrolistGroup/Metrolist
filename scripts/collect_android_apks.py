@@ -7,8 +7,11 @@ import re
 import shutil
 from pathlib import Path
 
+APK_NAMES = {"debug": "metrolist-android-{version}-debug.apk", "release": "Metrolist.apk", "izzy": "Metrolist-izzy.apk"}
+
+
 def collect(apk_dir: Path, destination: Path, version: str, variant: str) -> None:
-    if variant not in {"debug", "release"} or not re.fullmatch(r"\d+\.\d+\.\d+(?:-[A-Za-z0-9][A-Za-z0-9._-]*)?(?:\+[0-9A-Za-z.-]+)?", version):
+    if variant not in APK_NAMES or not re.fullmatch(r"\d+\.\d+\.\d+(?:-[A-Za-z0-9][A-Za-z0-9._-]*)?(?:\+[0-9A-Za-z.-]+)?", version):
         raise ValueError("Invalid Android variant or version")
     metadata = json.loads((apk_dir / "output-metadata.json").read_text())
     if metadata["variantName"] != variant:
@@ -23,8 +26,7 @@ def collect(apk_dir: Path, destination: Path, version: str, variant: str) -> Non
     if source.parent != apk_dir.resolve() or source.suffix != ".apk" or not source.is_file():
         raise ValueError("Invalid or missing APK output")
     destination.mkdir(parents=True, exist_ok=True)
-    name = f"metrolist-android-{version}-debug.apk" if variant == "debug" else "Metrolist.apk"
-    shutil.copyfile(source, destination / name)
+    shutil.copyfile(source, destination / APK_NAMES[variant].format(version=version))
 
 
 if __name__ == "__main__":
@@ -32,6 +34,6 @@ if __name__ == "__main__":
     parser.add_argument("apk_dir", type=Path)
     parser.add_argument("destination", type=Path)
     parser.add_argument("version")
-    parser.add_argument("variant", choices=("debug", "release"))
+    parser.add_argument("variant", choices=tuple(APK_NAMES))
     args = parser.parse_args()
     collect(args.apk_dir, args.destination, args.version, args.variant)

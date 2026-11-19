@@ -501,12 +501,12 @@
     <string name="scrobble_max_delay_description">Máximo de segundos antes de forçar um scrobble</string>
     <string name="lastfm_connect_account">Conectar sua conta Last.fm</string>
     <string name="lastfm_enable_description">Scroblar faixas reproduzidas para sua conta Last.fm</string>
-    <string name="lastfm_now_playing_description">Mostra a faixa tocando atualmente no Last.fm</string>
+    <string name="lastfm_now_playing_description">Exibir a faixa tocando atualmente no Last.fm</string>
     <string name="lastfm_connect_title">Conectar Last.fm</string>
     <string name="lastfm_connect_description">Insira suas credenciais do Last.fm para habilitar o scrobbling</string>
     <string name="listenbrainz_connect_token">Conectar com um token de usuário do ListenBrainz</string>
-    <string name="listenbrainz_enable_description">Envie faixas reproduzidas ao ListenBrainz</string>
-    <string name="listenbrainz_now_playing_description">Mostra a faixa tocando atualmente no ListenBrainz</string>
+    <string name="listenbrainz_enable_description">Enviar faixas reproduzidas ao ListenBrainz</string>
+    <string name="listenbrainz_now_playing_description">Exibir a faixa tocando atualmente no ListenBrainz</string>
     <string name="listenbrainz_connect_title">Conectar ListenBrainz</string>
     <string name="listenbrainz_user_token">Token de usuário</string>
     <string name="restore_database_incompatible">Esse backup usa a versão %1$d do banco de dados, mas esse aplicativo suporta até a versão %2$d. Atualize o Metrolist e tente novamente.</string>
@@ -531,7 +531,7 @@
     <string name="hide_podcasts">Ocultar podcasts</string>
     <string name="hide_podcasts_desc">Oculte podcasts e episódios da navegação, pesquisa, e reprodução</string>
     <string name="hide_short_songs">Ocultar músicas curtas</string>
-    <string name="hide_short_songs_desc">Oculta prévias, áudios de Shorts e outras faixas abaixo de um limite de duração</string>
+    <string name="hide_short_songs_desc">Ocultar prévias, áudios de Shorts e outras faixas abaixo de um limite de duração</string>
     <string name="minimum_song_duration">Duração mínima da música</string>
     <string name="minimum_song_duration_desc">Oculte músicas com menos de %1$d segundos</string>
     <string name="block_ai_slop_artists">Bloquear artistas gerados por IA conhecidos</string>
@@ -633,7 +633,7 @@
     <string name="ai_system_prompt_label">Prompt de sistema</string>
     <string name="ai_translation_enable">Traduzir letras</string>
     <string name="ai_translation_enable_description">Mostra as letras no seu idioma abaixo das palavras originais</string>
-    <string name="ai_translation_for_track">Tradução por IA para essa faixa</string>
+    <string name="ai_translation_for_track">Tradução por IA para esta faixa</string>
     <string name="ai_translation_new_title">Nova tradução de letras por IA</string>
     <string name="ai_translation_new_desc">Criar uma nova tradução</string>
     <string name="ai_translation_mode_literal">Tradução</string>
@@ -717,7 +717,7 @@
     <string name="hidden_item_type_other">Outro</string>
     <string name="history_also_delete_from_youtube">Excluir também do YouTube</string>
     <string name="history_delete_item_title">Excluir item do histórico?</string>
-    <string name="history_deleting_message">A entrada do histórico está sendo removida.</string>
+    <string name="history_deleting_message">Removendo registro do histórico…</string>
     <string name="history_deleting_title">Excluindo item do histórico</string>
     <string name="history_empty">Nenhum histórico de reprodução</string>
     <string name="history_just_now">há pouco</string>
@@ -832,7 +832,7 @@
     <string name="removed_from_library">Removido da biblioteca</string>
     <string name="remove_dislike">Remover \u0027Não gostei\u0027</string>
     <string name="remove_from_device">Remover do dispositivo</string>
-    <string name="remove_from_favorites">Remover das Curtidas</string>
+    <string name="remove_from_favorites">Remover dos favoritos</string>
     <string name="remove_from_recent_question">Remover da aba recentes?</string>
     <string name="remove_from_saved_episodes">Remover dos episódios salvos</string>
     <string name="remove_from_speed_dial">Remover do Acesso Rápido</string>
@@ -979,22 +979,17 @@
     <plurals name="listen_together_add_tracks_to_queue">
         <item quantity="one">Adicione %1$d faixa à fila da sala ou substitua a fila atual.</item>
         <item quantity="many">Adicione %1$d de faixas à fila da sala ou substituir a fila atual.</item>
-        <item quantity="other">Adicione %1$d faixas à fila da sala ou substitua a fila atual.</item>
+        <item quantity="other">Adicionar %1$d faixas à fila da sala ou substituir a fila atual.</item>
     </plurals>
     <plurals name="listen_together_suggest_tracks_to_host">
-        <item quantity="one">Sugira %1$d faixa para o anfitrião. Apenas o anfitrião pode substituir a fila da sala.</item>
-        <item quantity="many">Sugira %1$d de faixas para o anfitrião. Apenas o anfitrião pode substituir a fila da sala.</item>
-        <item quantity="other">Sugira %1$d faixas para o anfitrião. Somente o anfitrião pode substituir a fila da sala.</item>
+        <item quantity="one">Sugerir %1$d faixa para o anfitrião. Apenas o anfitrião pode substituir a fila da sala.</item>
+        <item quantity="many">Sugerir %1$d de faixas para o anfitrião. Apenas o anfitrião pode substituir a fila da sala.</item>
+        <item quantity="other">Sugerir %1$d faixas para o anfitrião. Somente o anfitrião pode substituir a fila da sala.</item>
     </plurals>
     <plurals name="minutes">
         <item quantity="one">%1$d minuto</item>
         <item quantity="many">%1$d minutos</item>
         <item quantity="other">%1$d minutos</item>
-    </plurals>
-    <plurals name="minutes_short">
-        <item quantity="one">%1$d min</item>
-        <item quantity="many">%1$d de mins</item>
-        <item quantity="other">%1$d mins</item>
     </plurals>
     <plurals name="n_track">
         <item quantity="one">%1$d faixa</item>
@@ -1025,11 +1020,6 @@
         <item quantity="one">Foi removida %1$d música da playlist</item>
         <item quantity="many">Foram removidas %1$d músicas da playlist</item>
         <item quantity="other">Foram removidas %1$d músicas da playlist</item>
-    </plurals>
-    <plurals name="seconds_short">
-        <item quantity="one">%1$d segundo</item>
-        <item quantity="many">%1$d de segundos</item>
-        <item quantity="other">%1$d segundos</item>
     </plurals>
     <plurals name="song_count">
         <item quantity="one">%1$d música</item>
@@ -1123,7 +1113,7 @@
     <string name="add_to_queue_desc">Adicione ao final da sua lista</string>
     <string name="download_desc">Deixe disponível para reprodução offline</string>
     <string name="refetch_desc">Obtenha os metadados mais recentes do YouTube Music</string>
-    <string name="cache_size_warning_title">Limite de cache</string>
+    <string name="cache_size_warning_title">Reduzir o limite de cache?</string>
     <string name="cache_size_warning_message">O novo limite de cache é menor do que o uso atual (%1$s). O app pode remover alguns arquivos de %2$s para atender o novo limite. Deseja continuar?</string>
     <string name="lyrics_animation_style">Estilo de animação palavra por palavra</string>
     <string name="none">Nenhum</string>
@@ -1181,7 +1171,6 @@
     <string name="ai_provider">Provedor</string>
     <string name="ai_base_url">URL base</string>
     <string name="ai_translation_model">Modelo de tradução</string>
-    <string name="ai_judge_detector_model">Modelo de detector</string>
     <string name="ai_target_language">Idioma de destino</string>
     <string name="ai_deepl_formality">Formalidade</string>
     <string name="ai_deepl_formality_default">Padrão</string>
@@ -1228,7 +1217,7 @@
     <string name="onboarding_notification_downloads">Progresso do download</string>
     <string name="onboarding_notification_playback">Reprodução em segundo plano confiável</string>
     <string name="onboarding_step_of">Passo %1$d de %2$d</string>
-    <string name="onboarding_finish_title">Tudo pronto!</string>
+    <string name="onboarding_finish_title">Tudo pronto</string>
     <string name="onboarding_finish_description">Configuração concluída. Comece a ouvir, ou traga sua conta e dados primeiro.</string>
     <string name="finish">Finalizar</string>
     <string name="onboarding_restore_backup">Restaurar do backup</string>
@@ -1504,7 +1493,7 @@
     <string name="menu_show_album_in_library">Mostrar o álbum na biblioteca</string>
     <string name="menu_show_in_youtube_music">Mostrar no YouTube Music</string>
     <string name="menu_love_song">Adicionar às Curtidas</string>
-    <string name="menu_unlove_song">Remover das Curtidas</string>
+    <string name="menu_unlove_song">Remover das músicas curtidas</string>
     <string name="sign_in_to_add_playlists">Entre para adicionar às playlists</string>
     <string name="sign_in">Entrar</string>
     <string name="complete_sign_in">Login completo</string>
@@ -1688,7 +1677,7 @@
     <string name="tray_tooltip_playing">Reproduzindo: %1$s • %2$s</string>
     <string name="tray_tooltip_paused">Pausado: %1$s • %2$s</string>
     <string name="tray_next_track">Próxima faixa</string>
-    <string name="tray_previous_track">Faixa prévia</string>
+    <string name="tray_previous_track">Faixa anterior</string>
     <string name="tray_hide_window">Esconder janela</string>
     <string name="tray_show_window">Mostrar janela</string>
     <string name="tray_show_miniplayer">Mostrar o miniplayer</string>
@@ -1712,10 +1701,10 @@
     <string name="link_copied_to_clipboard">Link copiado para a área de transferência</string>
     <string name="playback_error_sabr_attestation">YouTube rejeitou a atestação de stream SABR.</string>
     <string name="playback_error_explicit_signed_in">Essa faixa explícita não é reproduzível com a sessão atual do YouTube.</string>
-    <string name="playback_error_explicit_sign_in">Entre no YouTube Music para reproduzir essa faixa explícita.</string>
+    <string name="playback_error_explicit_sign_in">Entre no YouTube Music para reproduzir esta faixa explícita.</string>
     <string name="playback_error_no_playable_stream">Nenhum stream de áudio reproduzível foi encontrado.</string>
     <string name="playback_error_track_unavailable">Essa faixa está indisponível.</string>
-    <string name="playback_error_age_restricted">Essa faixa tem uma restrição de idade.</string>
+    <string name="playback_error_age_restricted">Esra faixa tem uma restrição de idade.</string>
     <string name="playback_error_network">Não foi possível acessar o YouTube para obter os dados do stream.</string>
     <string name="playback_error_unknown_resolution">Erro desconhecido de resolução do stream.</string>
     <string name="playback_error_unknown">Erro de reprodução desconhecido.</string>
@@ -1809,7 +1798,7 @@
     <string name="shortcut_seek_backward_forward">Avançar pra trás / pra frente 5s</string>
     <string name="shortcut_jump_percent" formatted="false">Pular para 0% - 90%</string>
     <string name="shortcut_next_track">Próxima faixa</string>
-    <string name="shortcut_previous_track">Faixa prévia</string>
+    <string name="shortcut_previous_track">Faixa anterior</string>
     <string name="shortcut_cycle_repeat">Modo de repetição em ciclo</string>
     <string name="shortcut_volume_up_down">Volume pra cima / pra baixo 10%</string>
     <string name="shortcut_mute_unmute">Mutar / Desmutar</string>
@@ -1827,7 +1816,7 @@
     <string name="hide_lyrics">Esconder letras</string>
     <string name="hide_queue">Esconder a fila</string>
     <string name="lyrics_menu">Menu de letras</string>
-    <string name="manual_translate_this_track">Manual: traduzir essa faixa</string>
+    <string name="manual_translate_this_track">Manual: traduzir esta faixa</string>
     <string name="make_available_offline">Disponibilizar para reprodução offline</string>
     <string name="media_details">Detalhes da mídia</string>
     <string name="no_provider_results_found">Nenhum resultado do provedor foi encontrado</string>
@@ -2041,12 +2030,12 @@
     <string name="seek_seconds_addup">Pesquisa progressiva</string>
     <string name="seek_seconds_addup_desc">Aumente o tamanho dos pulos com cada pesquisa rápida</string>
     <string name="pause_music_when_media_is_muted">Pausar enquanto a media estiver mutada</string>
-    <string name="pause_music_when_media_is_muted_desc">Pause a reprodução quando o volume do dispositivo estiver mutado e continue quando for restaurado</string>
+    <string name="pause_music_when_media_is_muted_desc">Pausa a reprodução quando o volume do dispositivo estiver mutado. O app continua a reprodução ao restaurar o volume.</string>
     <string name="no_episode_description">Não há nenhuma descrição disponível para esse episódio.</string>
     <plurals name="episode_duration_hours">
-        <item quantity="one">%1$d hr</item>
-        <item quantity="many">%1$d hr</item>
-        <item quantity="other">%1$d hr</item>
+        <item quantity="one">%1$d h</item>
+        <item quantity="many">%1$d h</item>
+        <item quantity="other">%1$d h</item>
     </plurals>
     <plurals name="episode_duration_minutes">
         <item quantity="one">%1$d min</item>
@@ -2272,7 +2261,6 @@
     <string name="settings_translation_mode_summary">Traduza as palavras ou transcreva a pronúncia no sistema de escrita de destino</string>
     <string name="settings_translation_provider_summary">Escolha o serviço que traduz as letras</string>
     <string name="settings_translation_model_summary">Modelo para traduzir ou transcrever letras</string>
-    <string name="settings_detector_model_summary">Modelo que decide se as letras precisam de tradução</string>
     <string name="settings_translation_formality_summary">Escolha linguagem formal ou informal para traduções do DeepL</string>
     <string name="settings_discord_advanced_summary">Mostre modelos de atividade e botões com links personalizados</string>
     <string name="settings_discord_activity_type_summary">Escolha como o Discord descreve sua atividade musical</string>
@@ -2296,4 +2284,63 @@
     <string name="settings_player_layout_summary">Altere a disposição das capas e dos controles de reprodução</string>
     <string name="settings_filter_q_summary">Q controla a largura ou a ressonância do filtro selecionado</string>
     <string name="lyrics_song_artist">Artista da música</string>
+    <string name="yeah">Sim!</string>
+    <string name="together">Juntos</string>
+    <string name="current_version">Versão atual</string>
+    <string name="leave_room">Sair da sala</string>
+    <string name="charts">Paradas</string>
+    <string name="room_code">Código da sala</string>
+    <string name="create_room">Criar sala</string>
+    <string name="lyrics_capability_line_syllable">Linha e sílaba</string>
+    <string name="lyrics_capability_line_syllable_unsynced">Linha, sílaba e não-sincronizada</string>
+    <string name="lyrics_capability_line_unsynced">Linha e não-sincronizada</string>
+    <string name="lyrics_capability_line">Linha</string>
+    <string name="lyrics_capability_unsynced">Não-sincronizada</string>
+    <string name="lyrics_youtube_captions">Legendas do YouTube</string>
+    <string name="sleep_timer_hour">Hora</string>
+    <string name="sleep_timer_minute">Minuto</string>
+    <string name="sleep_timer_advanced_options">Opções avançadas</string>
+    <string name="sleep_timer_finish_current_song">Parar o temporizador ao final da música atual quando o temporizador terminar</string>
+    <string name="sleep_timer_set_default">Definir como padrão</string>
+    <string name="navigation">Navegação</string>
+    <string name="leave">Sair</string>
+    <string name="server">Servidor</string>
+    <string name="blocked_users">Usuários bloqueados</string>
+    <string name="auto_approve_suggestions">Aceitar automaticamente as sugestões de músicas</string>
+    <string name="suggest_track">Sugerir uma faixa</string>
+    <string name="reconnect">Reconectar</string>
+    <string name="all">Tudo</string>
+    <string name="errors">Erros</string>
+    <string name="apply">Aplicar</string>
+    <string name="max_delay">Atraso máximo: %1$ds</string>
+    <string name="settings_default">Padrão</string>
+    <string name="guest">Convidado</string>
+    <string name="genres">Gêneros</string>
+    <string name="video_id">ID do vídeo</string>
+    <string name="select">Selecionar</string>
+    <string name="settings_storage_used">%1$s utilizado</string>
+    <string name="recognize">Reconhecer</string>
+    <string name="genre">Gênero</string>
+    <string name="linear">Linear</string>
+    <string name="credits">Créditos</string>
+    <string name="slider">Controle deslizante</string>
+    <string name="album_charts">Álbuns em alta</string>
+    <string name="recap_playlists">Resumo de playlists</string>
+    <string name="done_editing">Edição concluída</string>
+    <string name="scrobble_login_failed">Falha no login</string>
+    <string name="equalizer_create_custom">Criar EQ personalizado</string>
+    <string name="equalizer_band_gain">%1$s Hz · %2$s dB</string>
+    <string name="api_key">Chave de API</string>
+    <string name="offset">Deslocamento</string>
+    <string name="add_to_bottom_of_queue">Adicionar ao final da fila</string>
+    <string name="add_to_top_of_queue">Adicionar ao topo da fila</string>
+    <string name="selected">Selecionado</string>
+    <string name="auto_playlist_liked_title">Curtidas</string>
+    <string name="auto_playlist_liked_subtitle">Músicas favoritas</string>
+    <string name="auto_playlist_downloaded_title">Baixados</string>
+    <string name="auto_playlist_downloaded_subtitle">Músicas offline</string>
+    <string name="auto_playlist_top_title">Meu top 100</string>
+    <string name="auto_playlist_top_subtitle">Suas músicas favoritas</string>
+    <string name="auto_playlist_cached_title">Em cache</string>
+    <string name="auto_playlist_cached_subtitle">Músicas em cache</string>
 </resources>

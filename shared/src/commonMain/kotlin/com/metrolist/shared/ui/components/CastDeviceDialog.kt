@@ -19,6 +19,8 @@ import com.metrolist.shared.generated.resources.cast_connection_failed
 import com.metrolist.shared.generated.resources.cast_discovery_failed
 import com.metrolist.shared.generated.resources.cast_no_media
 import com.metrolist.shared.generated.resources.cast_playback_failed
+import com.metrolist.shared.generated.resources.cast_stream_port_unavailable
+import com.metrolist.shared.generated.resources.cast_stream_unreachable
 import com.metrolist.shared.generated.resources.cast_unsupported_stream
 import com.metrolist.shared.generated.resources.dlna
 import com.metrolist.shared.generated.resources.fcast
@@ -91,4 +93,6 @@ internal val CastError.stringResource: StringResource
             CastError.UNSUPPORTED_STREAM -> Res.string.cast_unsupported_stream
             CastError.CONNECTION_FAILED -> Res.string.cast_connection_failed
             CastError.PLAYBACK_FAILED -> Res.string.cast_playback_failed
+            CastError.STREAM_PORT_UNAVAILABLE -> Res.string.cast_stream_port_unavailable
+            CastError.STREAM_UNREACHABLE -> Res.string.cast_stream_unreachable
         }

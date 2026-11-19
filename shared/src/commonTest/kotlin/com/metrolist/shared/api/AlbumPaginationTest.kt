@@ -49,7 +49,7 @@ class AlbumPaginationTest {
                             val body = Json.parseToJsonElement((request.body as TextContent).text).jsonObject
                             respond(
                                 if (body["browseId"]?.jsonPrimitive?.content == "MPREb_test") {
-                                    initial
+                                    if (empty) trackless else initial
                                 } else if (empty) {
                                     "{}"
                                 } else {
@@ -285,6 +285,10 @@ class AlbumPaginationTest {
         }
       }]}}}}
     }"""
+
+    private val trackless =
+        initial.substringBefore("\"contents\"") +
+            """"contents":{"twoColumnBrowseResultsRenderer":{"secondaryContents":{"sectionListRenderer":{"contents":[]}}}}}"""
 
     private val playlist = """{
       "contents":{"twoColumnBrowseResultsRenderer":{"secondaryContents":{"sectionListRenderer":{"contents":[{

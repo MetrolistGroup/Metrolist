@@ -3,10 +3,153 @@ package com.metrolist.shared.api.lyrics
 import com.metrolist.shared.model.AgentType
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 class LegacyLyricsTest {
+    private val pro =
+        """
+        [00:00.64]
+        <00:00.64>v1:<00:00.64>Li<00:00.841>ly <00:01.033>was <00:01.233>a <00:01.443>li<00:01.823>ttle <00:02.191>girl<00:02.932>
+        """.trimIndent()
+
+    private val advanced =
+        """
+        [03:06.30]{agent:v2}you got the good feelin'
+        <you:186.300171:186.384611|got:186.384611:186.61761800000002|the:186.61761800000002:186.718364|good:186.718364:186.94906400000002|fee:186.94906400000002:187.19684|lin':187.19684:187.545367>
+        [03:07.70]{agent:v1}Let's get it, let's get it
+        <Let's:187.698776:187.93201200000001|get:187.93201200000001:188.156681000000002|it,:188.15668100000002:188.60991900000002|let's:188.60991900000002:188.845089|get:188.845089:189.064296|it:189.064296:189.289883>
+        """.trimIndent()
+
+    @Test
+    fun proJoinsHeadersAndWordLinesAndRemovesTimedSingerPrefixes() {
+        val source = listOf("v1", "v2", "v1000", "bg").joinToString("\n") { pro.replace("v1:", "$it:") }
+        val document = MlxParser.parse(source)
+        assertEquals(4, document.lines.size)
+        assertEquals(listOf("v1", "v2", "v1000", "v1000"), document.lines.map { it.agent })
+        assertEquals(AgentType.GROUP, document.agents["v1000"]?.type)
+        for (line in document.lines) {
+            assertEquals(640L, line.time)
+            assertEquals(2932L, line.endTime)
+            assertEquals("Lily was a little girl", line.text)
+            val words = assertNotNull(line.words)
+            assertEquals(listOf("Li", "ly", "was", "a", "li", "ttle", "girl"), words.map { it.text })
+            assertEquals(listOf(0.64, 0.841, 1.033, 1.233, 1.443, 1.823, 2.191), words.map { it.startTime })
+            assertEquals(listOf(0.841, 1.033, 1.233, 1.443, 1.823, 2.191, 2.932), words.map { it.endTime })
+            assertEquals(listOf(false, true, true, true, false, true, false), words.map { it.hasTrailingSpace })
+        }
+        assertEquals(listOf(false, false, false, true), document.lines.map { it.isBackground })
+        assertTrue(
+            document.lines
+                .last()
+                .words!!
+                .all { it.isBackground },
+        )
+        assertEquals(document.lines, LyricsUtils.parseLyrics(source))
+        assertEquals(document.lines, MlxParser.parse(source.replace("]\n<", "]<")).lines)
+    }
+
+    @Test
+    fun advancedKeepsPunctuationFloatPrecisionAndAgents() {
+        val source = advanced + "\n" + advanced.replace("{agent:v2}", "{agent:v1000}").replace("{agent:v1}", "{agent:bg}")
+        val document = MlxParser.parse(source)
+        assertEquals(listOf("v2", "v1000", "v1", "v1000"), document.lines.map { it.agent })
+        assertEquals(AgentType.GROUP, document.agents["v1000"]?.type)
+        val line = document.lines[2]
+        assertEquals(187_700L, line.time)
+        assertEquals("Let's get it, let's get it", line.text)
+        val words = assertNotNull(line.words)
+        assertEquals(listOf("Let's", "get", "it,", "let's", "get", "it"), words.map { it.text })
+        assertEquals(187.698776, words.first().startTime)
+        assertEquals(187.93201200000001, words.first().endTime)
+        assertEquals(188.15668100000002, words[2].startTime)
+        assertEquals(189.289883, words.last().endTime)
+        assertEquals(
+            "lin'",
+            document.lines
+                .first()
+                .words!!
+                .last()
+                .text,
+        )
+        assertTrue(document.lines.last().isBackground)
+        assertTrue(
+            document.lines
+                .last()
+                .words!!
+                .all { it.isBackground },
+        )
+        assertEquals(document.lines, LyricsUtils.parseLyrics(source))
+    }
+
+    @Test
+    fun legacyEditorOpensPastesImportsAndSavesBothFormats() {
+        for (source in listOf(
+            pro,
+            advanced,
+            pro.replace("v1:", "v1000:"),
+            pro.replace("v1:", "bg:"),
+            advanced.replace("{agent:v1}", "{agent:bg}"),
+        )) {
+            val editor = LyricsEditor(source)
+            val opened = editor.current
+            assertTrue(opened.isValid, source)
+            editor.edit(opened.text, 0)
+            assertEquals(opened, editor.current)
+            assertFalse(editor.canUndo)
+
+            val pasted = LyricsEditor("")
+            pasted.edit(source, 0)
+            assertTrue(pasted.current.isValid, source)
+            assertEquals(opened.document, pasted.current.document)
+            assertEquals(LyricsUtils.parseLyrics(opened.json), LyricsUtils.parseLyrics(pasted.current.recoveryJson))
+            assertFalse(pasted.current.text.contains("{agent:"))
+            assertFalse(pasted.current.text.contains("v1000:"))
+            pasted.undo()
+            assertEquals("", pasted.current.text)
+            pasted.redo()
+            assertEquals(opened.document, pasted.current.document)
+
+            val imported = LyricsEditor("")
+            assertTrue(imported.import(source), source)
+            assertEquals(opened.document, imported.current.document)
+            imported.edit(
+                imported.current.text
+                    .replace("girl", "world")
+                    .replace("get", "sing"),
+                0,
+            )
+            assertTrue(imported.current.isValid)
+            assertEquals(opened.document["agents"], imported.current.document["agents"])
+            assertTrue(LyricsUtils.parseLyrics(imported.current.recoveryJson).isNotEmpty())
+        }
+    }
+
+    @Test
+    fun malformedLegacyPastesRetainTheRecoverableDocument() {
+        val invalid =
+            listOf(
+                pro.replace("<00:00.841>", "<00:99.841>"),
+                pro.replace("<00:00.841>", "<00:00.bad>"),
+                pro.replace("[00:00.64]", "[00:99.64]"),
+                "[00:01.00]\n<00:99.841>bad:1:2>",
+                advanced.replace("187.698776", "NaN"),
+                advanced.replace("187.93201200000001", "Infinity"),
+                advanced.replace("187.698776", "188.698776"),
+                advanced.replace("187.698776", "-187.698776"),
+                advanced.dropLast(1),
+            )
+        for (source in invalid) {
+            val editor = LyricsEditor(pro)
+            val original = editor.current
+            editor.edit(source, 0)
+            assertFalse(editor.current.isValid, source)
+            assertEquals(source, editor.current.text)
+            assertEquals(original.json, editor.current.recoveryJson)
+        }
+    }
+
     @Test
     fun plainCopyStripsBothFormatsAndKeepsBackgroundVocals() {
         for (text in listOf(

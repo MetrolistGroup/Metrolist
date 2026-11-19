@@ -97,7 +97,7 @@ class HistoryScreenState(
                     }
                 pageJob?.cancel()
                 entries = synced
-                hasMore = synced.size == pageSize
+                hasMore = !loadFailed && synced.size == pageSize
                 if (selectedIds.isNotEmpty()) selectedIds = selectedIds.intersect(readIds(query))
             }
         return requireNotNull(loadJob)
@@ -164,8 +164,14 @@ class HistoryScreenState(
         pageJob =
             scope.launch {
                 val next =
-                    withContext(Dispatchers.IO) {
-                        readPage(pageSize, offset, query, mode, direction)
+                    try {
+                        withContext(Dispatchers.IO) { readPage(pageSize, offset, query, mode, direction) }
+                    } catch (error: CancellationException) {
+                        throw error
+                    } catch (_: Exception) {
+                        loadFailed = true
+                        hasMore = false
+                        return@launch
                     }
                 entries = entries + next
                 hasMore = next.size == pageSize

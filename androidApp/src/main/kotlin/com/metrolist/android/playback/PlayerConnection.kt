@@ -1087,7 +1087,10 @@ class PlayerConnection(
     private fun skipToPreviousInternal(local: Boolean = false) {
         if (deferUntilConnected { skipToPreviousInternal(local) }) return
         val player = musicService?.player ?: return
-        player.skipToPrevious(if (local && !_castState.value.isConnected) localSongChangeStartsPlayback() else player.wantsPlayback)
+        player.skipToPrevious(
+            repeatAll = _repeatMode.value == Player.REPEAT_MODE_ALL,
+            resumePlayback = if (local && !_castState.value.isConnected) localSongChangeStartsPlayback() else player.wantsPlayback,
+        )
     }
 
     fun skipToQueueItem(index: Int) {
@@ -1221,7 +1224,7 @@ class PlayerConnection(
             listenTogetherPlaybackRequestsState.tryEmit(ListenTogetherPlaybackRequest(song = song))
             return
         }
-        musicService?.playMix(song)
+        musicService?.playMix(song, startPlaying = localSongChangeStartsPlayback())
     }
 
     override fun selectQueueChip(chipId: String) {
@@ -1268,6 +1271,18 @@ class PlayerConnection(
         song: SongItem,
         playNext: Boolean,
     ) = addToQueue(listOf(song), playNext)
+
+    fun addDownloadedAlbumToQueue(
+        songs: List<SongItem>,
+        downloadedSongIds: Set<String>,
+        playNext: Boolean = false,
+    ) {
+        if (deferUntilConnected { addDownloadedAlbumToQueue(songs, downloadedSongIds, playNext) }) return
+        val remotePlayback =
+            _castState.value.isConnected || AndroidListenTogetherManager.currentManager?.hasActiveOrPendingRoom == true ||
+                AndroidDeviceConnect.manager.remote.willStartRemotePlayback
+        addToQueue(downloadedAlbumQueueSongs(songs, downloadedSongIds, remotePlayback), playNext)
+    }
 
     fun addToQueue(
         songs: List<SongItem>,

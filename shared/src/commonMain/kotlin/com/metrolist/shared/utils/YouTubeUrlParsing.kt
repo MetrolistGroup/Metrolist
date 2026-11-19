@@ -14,7 +14,7 @@ fun normalizeMetrolistShareUrl(text: String): String {
         if (afterScheme.startsWith("open?", ignoreCase = true)) {
             val decoded =
                 runCatching {
-                    Url("https://metrolist.internal/?$afterScheme").parameters["url"]
+                    Url("https://metrolist.internal/?${afterScheme.substringAfter('?')}").parameters["url"]
                 }.getOrNull() ?: afterScheme.substringAfter("url=")
             return normalizeMetrolistShareUrl(decoded)
         }
@@ -49,7 +49,8 @@ fun normalizeMetrolistShareUrl(text: String): String {
 
             path == "/watch" -> {
                 val query = if (url.encodedQuery.isNotEmpty()) "?${url.encodedQuery}" else ""
-                return "https://music.youtube.com/watch$query"
+                val fragment = if (url.encodedFragment.isNotEmpty()) "#${url.encodedFragment}" else ""
+                return "https://music.youtube.com/watch$query$fragment"
             }
 
             path == "/playlist" -> {
@@ -194,7 +195,7 @@ fun parseYouTubeUrl(value: String): YouTubeUrlParser.ParsedUrl? {
 
 fun parseYouTubeStartPositionMs(value: String): Long {
     if (parseYouTubeUrl(value) !is YouTubeUrlParser.ParsedUrl.Video) return 0L
-    val text = value.trim()
+    val text = normalizeMetrolistShareUrl(value)
     val url = runCatching { Url(if (text.contains("://")) text else "https://$text") }.getOrNull() ?: return 0L
     val timestamp =
         url.parameters["t"] ?: url.parameters["start"]

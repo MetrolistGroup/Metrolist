@@ -66,7 +66,7 @@ class WidgetPlaybackStateTest {
 
     @Test
     fun dismissalClearsMetadataArtworkAndTransportEvenBeforePlayerFlowsReset() {
-        val state = playbackWidgetState(null, true, true, 200_000, 90_000, "Idle", "Choose music")
+        val state = playbackWidgetState(null, true, true, 200_000, 90_000, "Idle", "Choose music", "Unknown artist")
         assertEquals("Idle", state.title)
         assertEquals("Choose music", state.artist)
         assertNull(state.artworkUri)
@@ -79,7 +79,7 @@ class WidgetPlaybackStateTest {
     @Test
     fun pausingPreservesMetadataArtworkLikeAndProgress() {
         val song = SongItem("id", "Title", "artwork", listOf(ArtistTiny(null, "Artist")), null)
-        val state = playbackWidgetState(song, false, true, 200_000, 90_000, "Idle", "Choose music")
+        val state = playbackWidgetState(song, false, true, 200_000, 90_000, "Idle", "Choose music", "Unknown artist")
         assertEquals("Title", state.title)
         assertEquals("Artist", state.artist)
         assertEquals("artwork", state.artworkUri)
@@ -87,6 +87,29 @@ class WidgetPlaybackStateTest {
         assertEquals(true, state.isLiked)
         assertEquals(200_000L, state.duration)
         assertEquals(90_000L, state.currentPosition)
+    }
+
+    @Test
+    fun activeTrackWithoutArtistUsesUnknownArtistInsteadOfAnEmptySubtitle() {
+        val noArtists = SongItem("id", "Title", null, emptyList(), null)
+        for (song in listOf(noArtists, noArtists.copy(artists = listOf(ArtistTiny(null, " "), ArtistTiny(null, ""))))) {
+            val state = playbackWidgetState(song, true, false, 200_000, 90_000, "Idle", "Choose music", "Unknown artist")
+            assertEquals("Unknown artist", state.artist)
+        }
+    }
+
+    @Test
+    fun emptyArtistCreditsDoNotLeaveStraySeparators() {
+        val song =
+            SongItem(
+                "id",
+                "Title",
+                null,
+                listOf(ArtistTiny(null, "One"), ArtistTiny(null, ""), ArtistTiny(null, "Two")),
+                null,
+            )
+        val state = playbackWidgetState(song, true, false, 200_000, 90_000, "Idle", "Choose music", "Unknown artist")
+        assertEquals("One, Two", state.artist)
     }
 
     @OptIn(ExperimentalCoroutinesApi::class)

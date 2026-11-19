@@ -16,6 +16,8 @@ Pre-cache resolves upcoming tracks without taking playback ownership. Preserve q
 
 Restore download queues before accepting mutations or draining work. Retain completed files when a later transfer or metadata write fails. Preserve existing destinations during replacement and migration. Reconcile missing files without replacing complete remote playlist membership with an offline snapshot.
 
+Android song-mode playback, preloading and returning from video mode keep the selected recording when its downloaded audio is available. Streamed video audio in the playback cache can still resolve a studio counterpart online, with the cache retained as a fallback.
+
 Android and desktop downloaded collections can filter by a library playlist before search and sorting. Selection, playback and removal operate on visible results. Playlist download state uses stored membership, including entries the user has not opened in the current session.
 
 Remote playlist download refreshes store every page of unfiltered membership. Offline playlist pages read those stored entries. Failed and offline refreshes keep the previous membership.

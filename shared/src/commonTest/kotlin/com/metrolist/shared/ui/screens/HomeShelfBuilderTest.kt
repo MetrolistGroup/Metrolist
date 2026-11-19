@@ -213,6 +213,25 @@ class HomeShelfBuilderTest {
     }
 
     @Test
+    fun speedDialDropsRecommendationsFromHiddenShelvesButKeepsPins() {
+        val hidden = HomeSection("Hidden mixes", listOf(song("hidden-api")), browseId = "FEmusic_hidden")
+        Settings.shared.toggleHomeSectionVisibility("section:FEmusic_hidden:", false)
+        Settings.shared.toggleHomeSectionVisibility("quick_picks", false)
+        val shelf =
+            build(
+                HomeUiState(
+                    data = listOf(hidden),
+                    quickPicks = listOf(song("quick"), song("pinned")),
+                    speedDialItems = listOf(song("pinned"), song("quick"), song("hidden-api"), song("other")),
+                    speedDialPinnedIds = listOf("pinned"),
+                ),
+            ).first()
+
+        assertEquals(HomeShelfStyle.SPEED_DIAL, shelf.style)
+        assertEquals(listOf("pinned", "other"), shelf.items.map { it.id })
+    }
+
+    @Test
     fun sourceSongRowsDoNotReplaceTheSpeedDialProjection() {
         val section = HomeSection(text.speedDial, listOf(song("source")), isResponsiveList = true)
         val shelf = build(HomeUiState(data = listOf(section), speedDialItems = listOf(song("pinned")))).single()

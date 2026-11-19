@@ -20,7 +20,7 @@ class AudioOutputTest {
     @Test
     fun selectsSystemRoutesWithoutHardwareOrDiscardOutputs() {
         assertEquals(
-            listOf(systemDefault, pulse, null),
+            listOf(systemDefault, pulse),
             audioOutputMixers("Linux", null, listOf(loopback, pulse, mixer("Discard [null]"), hardware, systemDefault)),
         )
         assertEquals(listOf(null), audioOutputMixers("Linux", null, listOf(loopback, hardware)))
@@ -38,11 +38,11 @@ class AudioOutputTest {
             output,
             openAudioLine(format, 4_096, "Linux", null, { listOf(systemDefault) }, { _, _ ->
                 attempts++
-                if (attempts == 7) output else line(onClose = { closed++ }) { throw LineUnavailableException() }
+                if (attempts == 4) output else line(onClose = { closed++ }) { throw LineUnavailableException() }
             }, waits::add),
         )
-        assertEquals(7, attempts)
-        assertEquals(6, closed)
+        assertEquals(4, attempts)
+        assertEquals(3, closed)
         assertEquals(listOf(100L, 200L, 400L), waits)
     }
 
@@ -89,28 +89,34 @@ class AudioOutputTest {
     }
 
     @Test
-    fun fallsBackToJavaSoundAfterPreferredRoutesFail() {
-        val pipewire = mixer("ALSA playback [pipewire]")
-        val cases =
-            listOf(
-                listOf(loopback, pulse, hardware, pipewire, systemDefault) to listOf(systemDefault, pulse, pipewire, null),
-                listOf(hardware) to listOf(null),
-                emptyList<Mixer.Info>() to listOf(null),
-            )
-        for ((available, expected) in cases) {
-            for (failure in listOf(IllegalArgumentException(), LineUnavailableException())) {
-                val tried = mutableListOf<Mixer.Info?>()
-                val output = line { }
-                assertSame(
-                    output,
-                    openAudioLine(format, 4_096, "Linux", null, { available }, { mixer, _ ->
-                        tried += mixer
-                        if (mixer == null) output else line { throw failure }
-                    }, { error("Fallback must not wait") }),
-                )
-                assertEquals(expected, tried)
-            }
+    fun usesJavaSoundDefaultOnlyWhenNoSystemRouteIsListed() {
+        assertEquals(listOf(null), audioOutputMixers("Linux", null, emptyList()))
+        val tried = mutableListOf<Mixer.Info?>()
+        val output = line { }
+        assertSame(
+            output,
+            openAudioLine(format, 4_096, "Linux", null, { listOf(loopback, hardware) }, { mixer, _ ->
+                tried += mixer
+                assertEquals(null, mixer)
+                output
+            }, { error("Fallback must not wait") }),
+        )
+        assertEquals(listOf<Mixer.Info?>(null), tried)
+    }
+
+    @Test
+    fun doesNotBypassNamedSystemRoutesWhenTheyFail() {
+        val tried = mutableListOf<Mixer.Info?>()
+        assertFailsWith<LineUnavailableException> {
+            openAudioLine(format, 4_096, "Linux", null, { listOf(systemDefault, pulse, hardware) }, { mixer, _ ->
+                tried += mixer
+                throw LineUnavailableException()
+            }, {})
         }
+        assertEquals(
+            listOf<Mixer.Info?>(systemDefault, pulse, systemDefault, pulse, systemDefault, pulse, systemDefault, pulse),
+            tried,
+        )
     }
 
     @Test

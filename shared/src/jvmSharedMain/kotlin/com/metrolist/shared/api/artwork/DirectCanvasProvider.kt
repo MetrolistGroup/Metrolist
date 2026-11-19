@@ -44,7 +44,6 @@ import java.util.Locale
 
 class DirectCanvasProvider(
     client: HttpClient,
-    private val session: () -> String = { Settings.shared.spotifySession },
     private val country: () -> String = {
         Settings.shared.contentCountry.takeUnless { it == "SYSTEM" } ?: SystemLocale.current.country
     },
@@ -52,7 +51,6 @@ class DirectCanvasProvider(
         Settings.shared.contentLanguage.takeUnless { it == "SYSTEM" } ?: SystemLocale.current.toLanguageTag()
     },
     private val now: () -> Long = System::currentTimeMillis,
-    private val saveSession: (String) -> Unit = { Settings.shared.spotifySession = it },
 ) {
     private val http =
         HttpClient(client.engine) {
@@ -96,16 +94,15 @@ class DirectCanvasProvider(
         includeAppleMusic: Boolean,
     ): DirectCanvasUrls {
         if (title.isBlank() || artist.isBlank()) return DirectCanvasUrls()
-        val login = session()
         val storefront = country().lowercase(Locale.ROOT)
         val lang = language()
-        val key = listOf(title, artist, primaryArtist, duration, album, storefront, lang, login.isNotBlank(), includeAppleMusic)
+        val key = listOf(title, artist, primaryArtist, duration, album, storefront, lang, includeAppleMusic)
         // shortcut: One lock serializes cold lookups; use per-key jobs if artwork throughput becomes a problem.
         return mutex.withLock {
             cache[key]?.takeIf { it.second > now() }?.let { return@withLock it.first }
             val result =
                 coroutineScope {
-                    val spotify = async { attempt { spotify(title, artist, primaryArtist, album, duration, login) } }
+                    val spotify = async { attempt { spotify(title, artist, primaryArtist, album, duration) } }
                     val apple =
                         async {
                             if (includeAppleMusic) {
@@ -138,24 +135,18 @@ class DirectCanvasProvider(
         primaryArtist: String?,
         album: String?,
         duration: Long?,
-        login: String,
-    ): String? {
-        val stored = if (login.isBlank()) anonymousSpotifySession else json.decodeFromString<SpotifySession>(login)
+    ): String? =
+        // Canvas lookups never use the user's Spotify account; search runs anonymously.
         SpotifyClient
-            .create(SpotifyConfig(engine = http.engine, logLevel = LogLevel.NONE, allowAnonymous = !stored.hasLoginCookie))
+            .create(SpotifyConfig(engine = http.engine, logLevel = LogLevel.NONE, allowAnonymous = true))
             .use { client ->
-                client.attachSession(stored)
+                client.attachSession(anonymousSpotifySession)
                 try {
-                    return spotifyCanvas(client, title, artist, primaryArtist, album, duration)
+                    spotifyCanvas(client, title, artist, primaryArtist, album, duration)
                 } finally {
-                    if (!stored.hasLoginCookie) {
-                        anonymousSpotifySession = client.session
-                    } else if (client.session != stored && session() == login) {
-                        saveSession(json.encodeToString(client.session))
-                    }
+                    anonymousSpotifySession = client.session
                 }
             }
-    }
 
     private suspend fun spotifyCanvas(
         client: SpotifyClient,
@@ -221,17 +212,7 @@ class DirectCanvasProvider(
             ) {
                 continue
             }
-            val canvas =
-                if (client.session.hasLoginCookie) {
-                    client
-                        .canvasQuery("canvas", SPOTIFY_CANVAS_HASH, buildJsonObject { put("trackUri", "spotify:track:$id") })
-                        .obj("data")
-                        ?.obj("trackUnion")
-                        ?.obj("canvas")
-                        ?.text("url")
-                } else {
-                    publicSpotifyCanvas(id)
-                }
+            val canvas = publicSpotifyCanvas(id)
             if (trustedMedia(canvas, false)) {
                 YtLogger.d("Canvas", "Resolved Spotify Canvas")
                 return canvas
@@ -393,7 +374,6 @@ class DirectCanvasProvider(
             "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 " +
                 "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
         private const val SPOTIFY_SEARCH_HASH = "12d940b3f7381506a82ff5382eb59b0ed65118656e6bcdfbe4cebc528f75d29d"
-        private const val SPOTIFY_CANVAS_HASH = "575138ab27cd5c1b3e54da54d0a7cc8d85485402de26340c2145f0f6bb5e7a9f"
 
         internal fun trustedMedia(
             url: String?,

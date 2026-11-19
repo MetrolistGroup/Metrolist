@@ -2,7 +2,7 @@
 
 ## Requirements and download
 
-Release AppImages target x64 and ARM64 on glibc-based distributions. The packaging workflow builds on Ubuntu 24.04; that does not establish compatibility with every older distribution. Packages include Java and FFmpeg.
+Release AppImages target x64 and ARM64 on glibc-based distributions. The packaging workflow builds on Ubuntu 24.04; that does not establish compatibility with every older distribution. The x64 AppImage is a native executable that needs no Java; the ARM64 AppImage includes Java. Both include FFmpeg.
 
 Choose x64 for `uname -m` output `x86_64`, or ARM64 for `aarch64`. Get the matching package through [the download channels](README.md#get-the-package).
 
@@ -20,6 +20,14 @@ chmod u+x -- ./Metrolist.AppImage
 ```
 
 Substitute the downloaded filename. Check playback, sign-in and retained credentials after restart.
+
+If a tool such as Gear Lever already manages the launcher, Metrolist skips its own app-menu registration when launched with a nonempty `DESKTOPINTEGRATION` setting. To skip registration when launching manually, run:
+
+```sh
+DESKTOPINTEGRATION=1 ./Metrolist.AppImage
+```
+
+This does not remove launchers already present.
 
 On Arch Linux, install the community-maintained [`metrolist-desktop-bin`](https://aur.archlinux.org/packages/metrolist-desktop-bin) package, which wraps the x86_64 release AppImage, for example with `yay -S metrolist-desktop-bin`. Update it through your AUR helper instead of replacing the AppImage.
 
@@ -67,3 +75,16 @@ Back up, quit, then replace the AppImage with a verified download of the same ar
 ## Common problems
 
 For silent playback, check [ALSA routing](../desktop.md#linux-audio-setup). For blank login, check WebKitGTK and XWayland. For forgotten sign-in, check the unlocked Secret Service collection and [credential recovery](../desktop.md#credentials-and-settings-files). Use the [application log](../desktop.md#logs-and-profiling) to report remaining failures.
+
+### Sonos and DLNA with firewalld
+
+Discovery sends SSDP searches to `239.255.255.250:1900`. Speakers reply from UDP port 1900 to a temporary local UDP port. Allowing only incoming destination port 1900 does not allow these replies. Metrolist serves cast audio on TCP port `57643` for the entire session, including song changes. This applies to Google Cast and FCast too. The app reports an error if it cannot bind this port or if the receiver has not requested the stream after 15 seconds of requested playback. A missing request can indicate a firewall, routing or receiver problem.
+
+Check the Wi-Fi or Ethernet interface's zone with `firewall-cmd --get-active-zones`. For a speaker at `192.168.8.50` in the `public` zone, allow its discovery replies and audio requests:
+
+```sh
+sudo firewall-cmd --zone=public --add-rich-rule='rule family="ipv4" source address="192.168.8.50/32" source-port port="1900" protocol="udp" accept'
+sudo firewall-cmd --zone=public --add-rich-rule='rule family="ipv4" source address="192.168.8.50/32" port port="57643" protocol="tcp" accept'
+```
+
+Replace the example IP and zone with your speaker and network. Repeat for each speaker, including members of a Sonos group that fetch audio. Reopen the cast picker after changing the rules. Once discovery and playback work, repeat the same commands with `--permanent` to keep the rules after a restart. See the [firewalld rich rule reference](https://firewalld.org/documentation/man-pages/firewalld.richlanguage.html) for address and port matching. mDNS alone does not discover DLNA or Sonos devices in Metrolist.

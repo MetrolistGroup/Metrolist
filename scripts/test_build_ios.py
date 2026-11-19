@@ -40,7 +40,7 @@ def main():
         "PRODUCT_BUNDLE_IDENTIFIER": "com.metrolist.MetrolistApp",
         "CODE_SIGN_ENTITLEMENTS": "Configuration/iosApp.entitlements",
         "SWIFT_VERSION": "5.9",
-        "IPHONEOS_DEPLOYMENT_TARGET": "17.0",
+        "IPHONEOS_DEPLOYMENT_TARGET": "15.0",
         "SDKROOT": "iphoneos",
         "TARGETED_DEVICE_FAMILY": "1,2",
     }

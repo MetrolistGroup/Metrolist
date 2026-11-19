@@ -7,6 +7,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 class HistoryImportTest {
     private val now = Instant.parse("2026-10-04T12:00:00Z").toEpochMilli()
@@ -57,6 +58,7 @@ class HistoryImportTest {
         val afterTransition = Instant.parse("2026-03-29T22:30:00Z").toEpochMilli()
         val yesterday = assertNotNull(parseHistoryDate("Gestern", afterTransition, Locale.GERMAN, zone))
         assertEquals(Instant.parse("2026-03-28T23:00:00Z").toEpochMilli(), yesterday.startMs)
+        assertTrue("29" in yesterday.label, yesterday.label)
         assertEquals(yesterday, parseHistoryDate("vor 1 Tag", afterTransition, Locale.GERMAN, zone))
     }
 

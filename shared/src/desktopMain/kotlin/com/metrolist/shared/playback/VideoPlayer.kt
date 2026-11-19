@@ -35,6 +35,7 @@ import org.jetbrains.skia.Bitmap
 import org.jetbrains.skia.ColorAlphaType
 import org.jetbrains.skia.ColorSpace
 import org.jetbrains.skia.ColorType
+import org.jetbrains.skia.Image
 import org.jetbrains.skia.ImageInfo
 import java.io.InputStream
 import java.util.concurrent.TimeUnit
@@ -89,6 +90,12 @@ actual class VideoFrame(
     private val imageLock: Any = Any(),
 ) {
     private var closed = false
+    private val planeImages = ArrayList<Pair<Bitmap, Image>>(3)
+
+    /** Call inside [drawSafely]. Window repaints between decoded frames reuse this copy instead of copying the planes again. */
+    fun planeImage(bitmap: Bitmap): Image =
+        planeImages.firstOrNull { it.first === bitmap }?.second
+            ?: Image.makeFromBitmap(bitmap).also { planeImages += bitmap to it }
 
     fun drawSafely(block: VideoFrame.() -> Unit): Boolean =
         synchronized(imageLock) {
@@ -104,6 +111,9 @@ actual class VideoFrame(
         synchronized(imageLock) {
             if (closed) return
             closed = true
+            // Recorded pictures hold their own references to these images.
+            planeImages.forEach { it.second.close() }
+            planeImages.clear()
         }
     }
 }

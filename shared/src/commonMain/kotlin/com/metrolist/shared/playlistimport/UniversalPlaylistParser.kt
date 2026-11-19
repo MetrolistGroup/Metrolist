@@ -3,7 +3,9 @@ package com.metrolist.shared.playlistimport
 import io.ktor.http.Url
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonPrimitive
 
 object UniversalPlaylistParser {
@@ -41,7 +43,7 @@ object UniversalPlaylistParser {
 
         if (trimmed.startsWith("[") || trimmed.startsWith("{")) {
             val fromJson = parseJson(trimmed, resolveLocalReference)
-            if (fromJson.isNotEmpty()) return fromJson
+            if (fromJson != null) return fromJson
         }
 
         if (trimmed.startsWith("#EXTM3U", ignoreCase = true) || trimmed.contains("#EXTINF:", ignoreCase = true)) {
@@ -64,8 +66,13 @@ object UniversalPlaylistParser {
         source: String,
         resolveLocalReference: (String) -> String? = { null },
     ): ImportedPlaylistData {
+        val extension = fileName.substringAfterLast('.').lowercase()
         val trimmed = text.removePrefix("\uFEFF").trimStart()
-        val explicitCsv = fileName.substringAfterLast('.').lowercase() in setOf("csv", "tsv")
+        if (extension == "m3u" || extension == "m3u8") {
+            if (text.length > PlaylistImportManager.MAX_CSV_CHARACTERS) throw ImportException(ImportErrorKey.FileReadFailed)
+            return ImportedPlaylistData(title = title, source = source, tracks = parseM3u(trimmed, resolveLocalReference))
+        }
+        val explicitCsv = extension == "csv" || extension == "tsv"
         val structured =
             trimmed.startsWith("{") || trimmed.startsWith("[") || trimmed.startsWith("#EXTM3U", true) ||
                 trimmed.contains("#EXTINF:", true)
@@ -85,23 +92,32 @@ object UniversalPlaylistParser {
     private fun parseJson(
         text: String,
         resolveLocalReference: (String) -> String?,
-    ): List<PlaylistImportManager.CsvTrack> =
-        try {
-            val root = json.parseToJsonElement(text)
-            val items =
-                when (root) {
-                    is JsonArray -> root
-                    is JsonObject -> root["tracks"] ?: root["songs"] ?: root["items"] ?: root["data"]
-                    else -> null
-                } as? JsonArray ?: return emptyList()
+    ): List<PlaylistImportManager.CsvTrack>? {
+        val tracks =
+            try {
+                val root = json.parseToJsonElement(text)
+                val items =
+                    when (root) {
+                        is JsonArray -> root
+                        is JsonObject -> root["tracks"] ?: root["songs"] ?: root["items"] ?: root["data"]
+                        else -> null
+                    } as? JsonArray ?: return null
 
-            items
-                .mapNotNull { element ->
-                    (element as? JsonObject)?.let { extractTrackFromJsonObject(it, resolveLocalReference) }
-                }.take(PlaylistImportManager.MAX_PLAYLIST_TRACKS)
-        } catch (_: Exception) {
-            emptyList()
-        }
+                val tracks =
+                    items
+                        .asSequence()
+                        .mapNotNull { element ->
+                            (element as? JsonObject)?.let { extractTrackFromJsonObject(it, resolveLocalReference) }
+                        }.take(PlaylistImportManager.MAX_PLAYLIST_TRACKS + 1)
+                        .toList()
+                // Lenient JSON also accepts plain titles such as [Intro], which are not track objects.
+                if (tracks.isEmpty() && items.any { it !is JsonObject && it != JsonNull }) return null
+                tracks
+            } catch (_: Exception) {
+                return null
+            }
+        return tracks.checkTrackLimit()
+    }
 
     private fun extractTrackFromJsonObject(
         obj: JsonObject,
@@ -117,9 +133,9 @@ object UniversalPlaylistParser {
                             value
                                 .mapNotNull { item ->
                                     if (item is JsonObject) {
-                                        item["name"]?.let { runCatching { it.jsonPrimitive.content }.getOrNull() }
+                                        item["name"]?.let { runCatching { it.jsonPrimitive.contentOrNull }.getOrNull() }
                                     } else {
-                                        runCatching { item.jsonPrimitive.content }.getOrNull()
+                                        runCatching { item.jsonPrimitive.contentOrNull }.getOrNull()
                                     }
                                 }.takeIf(List<String>::isNotEmpty)
                                 ?.joinToString(", ")
@@ -130,7 +146,7 @@ object UniversalPlaylistParser {
                         }
 
                         else -> {
-                            runCatching { value.jsonPrimitive.content.trim() }.getOrNull()?.takeIf(String::isNotBlank)
+                            runCatching { value.jsonPrimitive.contentOrNull?.trim() }.getOrNull()?.takeIf(String::isNotBlank)
                         }
                     }
                 }.orEmpty()
@@ -158,7 +174,7 @@ object UniversalPlaylistParser {
     ): String? =
         keys.firstNotNullOfOrNull { key ->
             obj[key]
-                ?.let { runCatching { it.jsonPrimitive.content.trim() }.getOrNull() }
+                ?.let { runCatching { it.jsonPrimitive.contentOrNull?.trim() }.getOrNull() }
                 ?.takeIf(String::isNotBlank)
         }
 
@@ -180,7 +196,10 @@ object UniversalPlaylistParser {
             val videoId = extractVideoId(trimmed)
             val directReference = if (videoId == null) resolveDirectReference(trimmed, resolveLocalReference) else null
             val fallbackTitle = referenceTitle(trimmed)
-            val suppliedInfo = pendingInfo?.let(::splitArtistAndTitle)
+            val suppliedInfo =
+                pendingInfo?.let { label ->
+                    splitArtistAndTitleOn(label, " - ") ?: splitArtistAndTitle(label)
+                }
             val (artist, title) = suppliedInfo ?: ("" to fallbackTitle)
             pendingInfo = null
             if (title.isNotBlank() || videoId != null || directReference != null) {
@@ -194,7 +213,7 @@ object UniversalPlaylistParser {
                         customTitle = suppliedInfo?.second?.takeIf(String::isNotBlank),
                     )
             }
-            if (results.size >= PlaylistImportManager.MAX_PLAYLIST_TRACKS) break
+            if (results.size > PlaylistImportManager.MAX_PLAYLIST_TRACKS) throw ImportException(ImportErrorKey.TooManyTracks)
         }
         return results
     }
@@ -212,7 +231,6 @@ object UniversalPlaylistParser {
             .lineSequence()
             .map(String::trim)
             .filter { it.isNotBlank() && !it.startsWith("#") && !it.startsWith("//") }
-            .take(PlaylistImportManager.MAX_PLAYLIST_TRACKS)
             .mapNotNull { line ->
                 val cleaned = numberingRegex.replace(line, "").trim()
                 if (cleaned.isBlank()) return@mapNotNull null
@@ -232,7 +250,14 @@ object UniversalPlaylistParser {
                     directReference?.second == true,
                     customTitle = title.takeIf { videoId == null && directReference == null && it.isNotBlank() },
                 )
-            }.toList()
+            }.take(PlaylistImportManager.MAX_PLAYLIST_TRACKS + 1)
+            .toList()
+            .checkTrackLimit()
+
+    private fun List<PlaylistImportManager.CsvTrack>.checkTrackLimit(): List<PlaylistImportManager.CsvTrack> {
+        if (size > PlaylistImportManager.MAX_PLAYLIST_TRACKS) throw ImportException(ImportErrorKey.TooManyTracks)
+        return this
+    }
 
     private fun resolveDirectReference(
         value: String,
@@ -272,13 +297,19 @@ object UniversalPlaylistParser {
             if (title.isNotBlank() && artist.isNotBlank()) return artist to title
         }
         for (separator in listOf(" - ", " – ", " — ", " : ", " | ")) {
-            val index = trimmed.indexOf(separator)
-            if (index > 0 && index + separator.length < trimmed.length) {
-                return trimmed.substring(0, index).trim().trim('"', '\'', '“', '”') to
-                    trimmed.substring(index + separator.length).trim().trim('"', '\'', '“', '”')
-            }
+            splitArtistAndTitleOn(trimmed, separator)?.let { return it }
         }
         return "" to trimmed.trim('"', '\'', '“', '”')
+    }
+
+    private fun splitArtistAndTitleOn(
+        line: String,
+        separator: String,
+    ): Pair<String, String>? {
+        val index = line.indexOf(separator)
+        if (index <= 0 || index + separator.length >= line.length) return null
+        return line.substring(0, index).trim().trim('"', '\'', '“', '”') to
+            line.substring(index + separator.length).trim().trim('"', '\'', '“', '”')
     }
 
     internal fun extractVideoId(input: String): String? {

@@ -6,7 +6,12 @@ import androidx.media3.common.Player
 import androidx.room3.Room
 import androidx.sqlite.driver.AndroidSQLiteDriver
 import com.metrolist.shared.api.musicvideo.MusicVideoResolver
+import com.metrolist.shared.cast.CastConnectionStatus
+import com.metrolist.shared.cast.CastDevice
+import com.metrolist.shared.cast.CastProtocol
+import com.metrolist.shared.cast.CastState
 import com.metrolist.shared.db.MusicDatabase
+import com.metrolist.shared.model.MUSIC_VIDEO_TYPE_LIVE
 import com.metrolist.shared.model.RadioQueuePage
 import com.metrolist.shared.model.SearchResultPage
 import com.metrolist.shared.model.SongItem
@@ -23,6 +28,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.robolectric.Robolectric
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
 import org.robolectric.annotation.Config
@@ -47,18 +53,41 @@ class AndroidRadioRepeatTest {
     fun ordinaryQueuePlaybackPreservesRepeat() = checkRepeatModes(startRadio = false)
 
     @Test
-    fun currentSongRadioRetainsPlaybackWithoutRequestingOrSeekingAudio() = checkRepeatModes(startRadio = true, currentSongId = "seed")
+    fun currentSongRadioRetainsAudioAndStartsWhenRequested() = checkRepeatModes(startRadio = true, currentSongId = "seed")
+
+    @Test
+    fun currentSongRadioCanKeepPausedPlaybackPaused() = checkRepeatModes(startRadio = true, currentSongId = "seed", startPlaying = false)
+
+    @Test
+    fun playingLiveCurrentSongRadioDoesNotSeekToDefaultPosition() =
+        checkRepeatModes(startRadio = true, currentSongId = "seed", currentPlaybackRequested = true, liveSong = true)
+
+    @Test
+    fun currentSongRadioWhileCastingLeavesTheLocalPlayerAlone() =
+        checkRepeatModes(startRadio = true, currentSongId = "seed", casting = true)
 
     @Test
     fun differentSongRadioStartsFromZero() = checkRepeatModes(startRadio = true, currentSongId = "other")
 
     @Test
+    fun radioForDifferentSongCanKeepPausedPlaybackPaused() =
+        checkRepeatModes(startRadio = true, currentSongId = "other", startPlaying = false)
+
+    @Test
     fun queuePlaybackCanPreparePaused() = checkRepeatModes(startRadio = false, startPlaying = false)
+
+    @Test
+    fun oldCompletionCannotAdvanceOrRepeatTheNewCurrentPlayback() =
+        checkRepeatModes(startRadio = false, currentSongId = "seed", completedPlaybackInstanceId = 41L)
 
     private fun checkRepeatModes(
         startRadio: Boolean,
         currentSongId: String? = null,
         startPlaying: Boolean = true,
+        completedPlaybackInstanceId: Long? = null,
+        currentPlaybackRequested: Boolean = false,
+        liveSong: Boolean = false,
+        casting: Boolean = false,
     ) {
         runTest {
             Settings.replaceSharedForTest(Settings(MapSettings()))
@@ -85,21 +114,39 @@ class AndroidRadioRepeatTest {
                     val queue = MusicQueue()
                     val seed = SongItem("seed", "Seed", null, emptyList(), null)
                     val recommendation = seed.copy(id = "recommendation")
-                    currentSongId?.let { queue.setQueue(listOf(seed.copy(id = "previous"), seed.copy(id = it), seed.copy(id = "next")), 1) }
+                    currentSongId?.let {
+                        queue.setQueue(
+                            listOf(
+                                seed.copy(id = "previous"),
+                                seed.copy(id = it, musicVideoType = if (liveSong) MUSIC_VIDEO_TYPE_LIVE else null),
+                                seed.copy(id = "next"),
+                            ),
+                            1,
+                        )
+                    }
                     var playbackRequests = 0
                     var queueRestores = 0
+                    var resumeRequests = 0
                     val player =
                         Proxy.newProxyInstance(
                             AndroidPlaybackPlayer::class.java.classLoader,
                             arrayOf(AndroidPlaybackPlayer::class.java),
                         ) { _, method, args ->
                             when (method.name) {
+                                "getCurrentPlaybackInstanceId" -> {
+                                    42L
+                                }
+
                                 "getCurrentSong" -> {
                                     MutableStateFlow(queue.currentItem())
                                 }
 
                                 "isReady" -> {
                                     currentSongId != null
+                                }
+
+                                "getWantsPlayback" -> {
+                                    currentPlaybackRequested
                                 }
 
                                 "getPlaybackTransitionPending" -> {
@@ -113,6 +160,10 @@ class AndroidRadioRepeatTest {
                                 "restoreQueue" -> {
                                     queueRestores++
                                     queue.restore(args!![0] as MusicQueueSnapshot)
+                                }
+
+                                "resume" -> {
+                                    resumeRequests++
                                 }
 
                                 "isShuffleEnabled" -> {
@@ -152,7 +203,26 @@ class AndroidRadioRepeatTest {
                                 }
                             }
                         } as AndroidPlaybackPlayer
-                    val coordinator = AndroidQueueCoordinator(context, player, backgroundScope, repeat, MutableStateFlow(false), {}, {})
+                    val coordinator =
+                        AndroidQueueCoordinator(
+                            context,
+                            player,
+                            backgroundScope,
+                            repeat,
+                            MutableStateFlow(false),
+                            {},
+                            {},
+                            castState = {
+                                if (casting) {
+                                    CastState(
+                                        CastConnectionStatus.CONNECTED,
+                                        CastDevice("receiver", "Receiver", CastProtocol.FCAST, "host", 46899),
+                                    )
+                                } else {
+                                    CastState()
+                                }
+                            },
+                        )
                     coordinator.transitions =
                         AndroidQueueTransitions(
                             player,
@@ -165,11 +235,30 @@ class AndroidRadioRepeatTest {
                             {},
                             episodeResumePosition = { _, _ -> 0L },
                         )
+                    if (completedPlaybackInstanceId != null) {
+                        val selected = queue.currentIndex.value
+                        coordinator.advanceQueueAfterCurrent(completedPlaybackInstanceId)
+                        val service = Robolectric.buildService(MusicService::class.java).get()
+                        ReflectionHelpers.setField(service, "player", player)
+                        ReflectionHelpers.setField(service, "transitions", coordinator.transitions)
+                        val completion =
+                            MusicService::class.java
+                                .getDeclaredMethod("handlePlaybackCompletion", Long::class.javaObjectType, Continuation::class.java)
+                                .apply { isAccessible = true }
+                        suspendCoroutineUninterceptedOrReturn<Unit> { continuation ->
+                            completion.invoke(service, completedPlaybackInstanceId, continuation)
+                        }
+                        assertEquals(selected, queue.currentIndex.value)
+                        assertEquals(0, playbackRequests)
+                        assertEquals(0, queueRestores)
+                        continue
+                    }
                     if (startRadio) {
-                        coordinator.playMix(seed)
+                        coordinator.playMix(seed, startPlaying)
                         val retained = currentSongId == seed.id
                         assertEquals(if (retained) 0 else 1, playbackRequests)
                         assertEquals(if (retained) 1 else 0, queueRestores)
+                        assertEquals(if (retained && startPlaying && !currentPlaybackRequested && !casting) 1 else 0, resumeRequests)
                         assertEquals(0, queue.currentIndex.value)
                         val appended =
                             suspendCoroutineUninterceptedOrReturn<Boolean> { continuation ->

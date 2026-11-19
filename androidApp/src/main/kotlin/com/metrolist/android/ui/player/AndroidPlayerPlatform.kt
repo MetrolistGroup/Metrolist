@@ -67,6 +67,7 @@ import com.metrolist.shared.settings.Settings
 import com.metrolist.shared.settings.displayName
 import com.metrolist.shared.state.SongLikeState
 import com.metrolist.shared.ui.LocalIsTv
+import com.metrolist.shared.ui.components.PlayerMenuAction
 import com.metrolist.shared.ui.components.PopupContent
 import com.metrolist.shared.ui.components.lyrics.LyricsShareDialog
 import com.metrolist.shared.ui.player.PlayerArtworkCrossfade
@@ -296,6 +297,7 @@ class AndroidPlayerPlatform(
         onNavigateToArtist: (String) -> Unit,
         onNavigateToListenTogether: () -> Unit,
         onShowSongDetails: () -> Unit,
+        extraActions: List<PlayerMenuAction>,
     ) {
         val volume by playerConnection.volume.collectAsState()
         val playbackSpeed by playerConnection.playbackSpeedFlow.collectAsState()
@@ -313,6 +315,7 @@ class AndroidPlayerPlatform(
             onNavigateToArtist = onNavigateToArtist,
             onNavigateToListenTogether = onNavigateToListenTogether,
             onShowSongDetails = onShowSongDetails,
+            extraActions = extraActions,
         )
     }
 

@@ -101,7 +101,6 @@ internal fun CanvasContentOrderSetting(
     platform: SettingsPlatform,
     canvasEnabled: Boolean,
     animatedCoversEnabled: Boolean,
-    onSpotifySignIn: (() -> Unit)?,
 ) {
     val settings = Settings.shared
     val contentOrder = CanvasContentSource.parseOrder(settings.canvasContentOrder)
@@ -143,15 +142,6 @@ internal fun CanvasContentOrderSetting(
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = if (sourceEnabled) 1f else 0.38f),
                     )
-                    if (source == CanvasContentSource.SPOTIFY_CANVAS && settings.spotifySession.isBlank()) {
-                        if (onSpotifySignIn != null) {
-                            TextButton(onClick = onSpotifySignIn, enabled = sourceEnabled, shapes = ButtonDefaults.shapes()) {
-                                Text(stringResource(Res.string.spotify_sign_in))
-                            }
-                        } else {
-                            Text(stringResource(Res.string.spotify_session_sign_in), style = MaterialTheme.typography.bodySmall)
-                        }
-                    }
                 }
                 IconButton(
                     onClick = {

@@ -78,7 +78,6 @@ import com.metrolist.shared.generated.resources.retry
 import com.metrolist.shared.generated.resources.stored_remove_selected_message
 import com.metrolist.shared.generated.resources.stored_remove_selected_title
 import com.metrolist.shared.model.AlbumItem
-import com.metrolist.shared.model.ArtistTiny
 import com.metrolist.shared.model.BuiltinPlaylist
 import com.metrolist.shared.model.CollectionMeta
 import com.metrolist.shared.model.CollectionSort
@@ -91,6 +90,7 @@ import com.metrolist.shared.model.YTItem
 import com.metrolist.shared.model.defaultDirection
 import com.metrolist.shared.model.filterForPlaylistSearch
 import com.metrolist.shared.model.indexOfPlaylistOccurrence
+import com.metrolist.shared.model.isReordering
 import com.metrolist.shared.model.playlistOccurrenceKey
 import com.metrolist.shared.model.presentCollection
 import com.metrolist.shared.model.sortedForLikedPlaylist
@@ -240,7 +240,8 @@ internal fun MobileLibrary(
         Settings.shared.libraryFilter = LibraryFilterType.ALL
     }
 
-    var isGridView by remember { mutableStateOf(Settings.shared.libraryGridView) }
+    val gridFilter = selectedFilter?.let { LibraryFilterType.valueOf(it.name) } ?: LibraryFilterType.ALL
+    val isGridView = Settings.shared.libraryGridView(gridFilter)
     var manualOrder by remember { mutableStateOf(Settings.shared.libraryManualOrder) }
     val autoPlaylists = libraryAutoPlaylists()
 
@@ -309,8 +310,7 @@ internal fun MobileLibrary(
                         }
                 },
                 onGridViewChange = {
-                    isGridView = it
-                    Settings.shared.libraryGridView = it
+                    Settings.shared.setLibraryGridView(gridFilter, it)
                 },
                 onManualOrderChange = {
                     manualOrder = it
@@ -472,7 +472,7 @@ internal fun MobileSongCollectionScreen(
         )
     val playlistSort = playlistSorting.sort
     val playlistSortDirection = playlistSorting.direction
-    var playlistReorderMode by remember(type, localPlaylistId) { mutableStateOf(false) }
+    val playlistReorderMode = playlistSort.isReordering(Settings.shared.playlistEditLock, localPlaylistId != null || type == "liked")
     val selection = rememberSelectionState(localPlaylistId ?: type)
     LaunchedEffect(downloadFilterState) { selection.exit() }
     var selectionQuery by remember(localPlaylistId ?: type) { mutableStateOf("") }
@@ -531,22 +531,11 @@ internal fun MobileSongCollectionScreen(
 
                             "downloaded" -> {
                                 database.dao().cachedAudioByKind(KIND_DOWNLOAD).collect { entries ->
+                                    val storedSongs = database.dao().getSongsByIds(entries.map { it.songId }).associateBy { it.id }
                                     collectionEntries = entries
                                     loadedSongs =
                                         entries.filter(::isAvailableDownload).map { entry ->
-                                            SongItem(
-                                                id = entry.songId,
-                                                title = entry.title,
-                                                thumbnail = entry.thumbnailUrl,
-                                                artists =
-                                                    entry.artist.split(",").mapNotNull { name ->
-                                                        name.trim().takeIf { it.isNotBlank() && it != "Unknown" }?.let {
-                                                            ArtistTiny(id = null, name = it)
-                                                        }
-                                                    },
-                                                album = null,
-                                                duration = null,
-                                            )
+                                            entry.toSongItem(storedSongs[entry.songId])
                                         }
                                     isLoading = false
                                 }
@@ -566,22 +555,11 @@ internal fun MobileSongCollectionScreen(
 
                             "cached" -> {
                                 database.dao().cachedAudioByKind(KIND_CACHE).collect { entries ->
+                                    val storedSongs = database.dao().getSongsByIds(entries.map { it.songId }).associateBy { it.id }
                                     collectionEntries = entries
                                     loadedSongs =
                                         entries.map { entry ->
-                                            SongItem(
-                                                id = entry.songId,
-                                                title = entry.title,
-                                                thumbnail = entry.thumbnailUrl,
-                                                artists =
-                                                    entry.artist.split(",").mapNotNull { name ->
-                                                        name.trim().takeIf { it.isNotBlank() && it != "Unknown" }?.let {
-                                                            ArtistTiny(id = null, name = it)
-                                                        }
-                                                    },
-                                                album = null,
-                                                duration = null,
-                                            )
+                                            entry.toSongItem(storedSongs[entry.songId])
                                         }
                                     isLoading = false
                                 }
@@ -636,6 +614,7 @@ internal fun MobileSongCollectionScreen(
     }
 
     val likedSongRecency = SongLikeState.likedSongRecency
+    val listeningTimes = if (playlistSort == PlaylistSongSort.LISTENING_TIME) SongMetadataState.listeningTimes else emptyMap()
     val playlistEntries = remember(playlistReorder.entries, blocked) { playlistReorder.entries.filterNot { blocked.isBlocked(it.first) } }
     val baseSongs =
         remember(localPlaylistId, playlistEntries, loadedSongs, blocked) {
@@ -645,6 +624,7 @@ internal fun MobileSongCollectionScreen(
         remember(
             baseSongs,
             likedSongRecency,
+            listeningTimes,
             isLikedCollection,
             isTopCollection,
             topDirection,
@@ -669,9 +649,9 @@ internal fun MobileSongCollectionScreen(
             } else if (isTopCollection) {
                 baseSongs.sortedForTopPlaylist(topDirection)
             } else if (localPlaylistId != null && !playlistReorderMode) {
-                baseSongs.sortedForPlaylist(playlistSort, playlistSortDirection)
+                baseSongs.sortedForPlaylist(playlistSort, playlistSortDirection, listeningTimes = listeningTimes)
             } else if (isLikedCollection && !playlistReorderMode) {
-                baseSongs.sortedForLikedPlaylist(playlistSort, playlistSortDirection, likedSongRecency)
+                baseSongs.sortedForLikedPlaylist(playlistSort, playlistSortDirection, likedSongRecency, listeningTimes)
             } else {
                 baseSongs
             }
@@ -983,7 +963,7 @@ internal fun MobileSongCollectionScreen(
                                     )
                                 },
                                 onReorderModeChange = {
-                                    playlistReorderMode = it
+                                    Settings.shared.playlistEditLock = !it
                                 },
                                 modifier = Modifier.padding(vertical = 8.dp),
                             )

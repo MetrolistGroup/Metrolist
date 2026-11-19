@@ -335,7 +335,7 @@ class MusicVideoResolver(
                         YtLogger.w(TAG, "counterpart track metadata failed type=${e::class.simpleName ?: "unknown"}")
                         null
                     }
-                if (song != null && song.id != video.id) {
+                if (song != null && song.id == counterpart.targetVideoId && MusicVideoMatcher.hasSameAudioVariant(video, song)) {
                     return MusicTrackResult.Found(
                         song = song,
                         positionMap = counterpart.positionMap,

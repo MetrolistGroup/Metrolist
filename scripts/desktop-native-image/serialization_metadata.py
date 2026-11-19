@@ -1,4 +1,4 @@
-"""Derive kotlinx.serialization JVM lookup metadata from class files, without loading them."""
+"""Derive kotlinx.serialization and protobuf-javalite JVM lookup metadata from class files, without loading them."""
 
 from dataclasses import dataclass
 import io
@@ -11,6 +11,7 @@ SERIALIZER = 'Lkotlinx/serialization/KSerializer;'
 SERIALIZABLE = 'Lkotlinx/serialization/Serializable;'
 POLYMORPHIC = 'Lkotlinx/serialization/Polymorphic;'
 NAMED_COMPANION = 'Lkotlinx/serialization/internal/NamedCompanion;'
+PROTOBUF_LITE_MESSAGE = 'com/google/protobuf/GeneratedMessageLite'
 MANIFEST = 'metrolist-serialization-types.tsv'
 
 
@@ -34,6 +35,7 @@ class ClassFile:
     fields: list
     methods: list
     annotations: dict
+    parent: str = None
 
 
 def read_class(data):
@@ -61,7 +63,8 @@ def read_class(data):
         index += 1
     reader.take(2)
     name = pool[pool[reader.number(2)]]
-    reader.take(2)
+    parent_index = reader.number(2)
+    parent = pool[pool[parent_index]] if parent_index else None
     reader.take(2 * reader.number(2))
 
     def attributes():
@@ -109,7 +112,7 @@ def read_class(data):
         for _ in range(values.number(2)):
             descriptor, arguments = annotation()
             annotations[descriptor] = arguments
-    return ClassFile(name, fields, methods, annotations)
+    return ClassFile(name, fields, methods, annotations, parent)
 
 
 def scan_classpath(classpath):
@@ -157,7 +160,7 @@ def generate(classpath, output):
                 for _, descriptor, _ in found]
         return max((descriptor.split(')')[0].count(SERIALIZER) for _, descriptor, _ in found), default=0)
 
-    # Platform.kt in kotlinx-serialization-core-jvm 1.12.0 checks the default
+    # Platform.kt in kotlinx-serialization-core-jvm 1.13.0 checks the default
     # companion, objects, named companions / $$serializer, then polymorphic annotations.
     for name, clazz in sorted(classes.items()):
         companions = [(member, classes[descriptor[1:-1]])
@@ -188,6 +191,10 @@ def generate(classpath, output):
         if polymorphic:
             entry(name)['allDeclaredFields'] = True
         types[name] = arity
+    # protobuf-javalite finds message fields by name and allocates default instances through Unsafe.
+    for name, clazz in sorted(classes.items()):
+        if clazz.parent == PROTOBUF_LITE_MESSAGE:
+            entry(name).update({'allDeclaredFields': True, 'unsafeAllocated': True})
     output.mkdir(parents=True, exist_ok=True)
     metadata = {'reflection': [entries[name] for name in sorted(entries)], 'resources': [{'glob': MANIFEST}]}
     (output / 'reachability-metadata.json').write_text(json.dumps(metadata, indent=2) + '\n', encoding='utf-8')

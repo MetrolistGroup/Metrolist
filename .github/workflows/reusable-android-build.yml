@@ -78,8 +78,8 @@ on:
 jobs:
   build:
     name: APK
-    runs-on: ${{ inputs.variant == 'release' && 'blacksmith-8vcpu-ubuntu-2604' || 'blacksmith-4vcpu-ubuntu-2604' }}
-    timeout-minutes: 15
+    runs-on: blacksmith-8vcpu-ubuntu-2604
+    timeout-minutes: 20
     steps:
       - name: Check out repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -107,7 +107,7 @@ jobs:
           LYPRIO_HMAC_KEY: ${{ secrets.LYPRIO_HMAC_KEY }}
         run: |
           set -euo pipefail
-          if [[ "$BUILD_VARIANT" != "debug" && "$BUILD_VARIANT" != "release" ]]; then
+          if [[ "$BUILD_VARIANT" != "debug" && "$BUILD_VARIANT" != "release" && "$BUILD_VARIANT" != "izzy" ]]; then
             echo "Unsupported Android variant: $BUILD_VARIANT" >&2
             exit 1
           fi
@@ -132,9 +132,11 @@ jobs:
           if [[ "$UPLOAD_SENTRY" == "true" ]]; then
             test -n "$SENTRY_AUTH_TOKEN" || { echo "SENTRY_AUTH_TOKEN is required when Sentry upload is enabled" >&2; exit 1; }
           fi
-          if [[ "$BUILD_VARIANT" == "release" ]]; then
+          if [[ "$BUILD_VARIANT" != "debug" ]]; then
             test -n "$LASTFM_API_KEY" || { echo "LASTFM_API_KEY is required for release builds" >&2; exit 1; }
             test -n "$LASTFM_SECRET" || { echo "LASTFM_SECRET is required for release builds" >&2; exit 1; }
+          fi
+          if [[ "$BUILD_VARIANT" == "release" ]]; then
             test -n "$LYPRIO_BASE_URL" || { echo "LYPRIO_BASE_URL is required for release builds" >&2; exit 1; }
             test -n "$LYPRIO_HMAC_KEY" || { echo "LYPRIO_HMAC_KEY is required for release builds" >&2; exit 1; }
           fi
@@ -160,7 +162,7 @@ jobs:
           packages: platform-tools
 
       - name: Prepare Android signing
-        if: inputs.variant == 'release'
+        if: inputs.variant != 'debug'
         id: signing
         uses: ./.github/actions/prepare-android-signing
         env:
@@ -170,7 +172,7 @@ jobs:
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
 
       - name: Require Android signing
-        if: inputs.variant == 'release' && inputs.require-signing && steps.signing.outputs.signing_available != 'true'
+        if: inputs.variant != 'debug' && inputs.require-signing && steps.signing.outputs.signing_available != 'true'
         shell: bash
         run: |
           echo "Android release signing credentials are required" >&2
@@ -197,12 +199,13 @@ jobs:
           if [[ "$VERIFICATION_ONLY" == "true" ]]; then
             extra_args+=(-Pmetrolist.sourceRevision=)
           fi
-          if [[ "$BUILD_VARIANT" == "release" ]]; then
-            tasks=(":androidApp:assembleRelease")
+          if [[ "$BUILD_VARIANT" != "debug" ]]; then
+            build_type="${BUILD_VARIANT^}"
+            tasks=(":androidApp:assemble$build_type")
             # Matches persist-configuration-cache above: keep credentials out of the entry.
             extra_args=(--no-configuration-cache)
             # Keep lint tasks registered for verification; skip release analysis after debug lint passes.
-            extra_args+=(-x :androidApp:lintVitalRelease)
+            extra_args+=(-x ":androidApp:lintVital$build_type")
           else
             tasks=(
               ":androidApp:lintDebug"
@@ -214,7 +217,10 @@ jobs:
               tasks+=(':androidApp:assembleDebug')
             fi
           fi
-          ./gradlew "${tasks[@]}" --no-daemon "${extra_args[@]}"
+          # gradle.properties caps local builds at 4 workers and 4 GiB; the CI runner has 8 vCPUs.
+          ./gradlew "${tasks[@]}" --no-daemon --max-workers="$(nproc)" \
+            "-Dorg.gradle.jvmargs=-Xmx8g -XX:MaxMetaspaceSize=1g -XX:+UseParallelGC -Dfile.encoding=UTF-8" \
+            "${extra_args[@]}"
 
       - name: Upload lint report
         if: failure() && inputs.variant == 'debug'
@@ -241,7 +247,7 @@ jobs:
           fi
 
       - name: Verify APK signature
-        if: inputs.variant == 'release' && inputs.require-signing
+        if: inputs.variant != 'debug' && inputs.require-signing
         shell: bash
         run: |
           set -euo pipefail

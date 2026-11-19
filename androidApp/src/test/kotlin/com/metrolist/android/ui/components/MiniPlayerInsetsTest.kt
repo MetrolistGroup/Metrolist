@@ -7,6 +7,28 @@ import org.junit.Test
 
 class MiniPlayerInsetsTest {
     @Test
+    fun importCardAndTopInsetDoNotMoveThePlayerAboveAttachedNavigation() {
+        val availableHeight = 800.dp
+        for (systemInset in listOf(24.dp, 48.dp)) {
+            for (barHeight in listOf(56.dp, 80.dp)) {
+                val navigationHeight = barHeight + systemInset
+                for (topInset in listOf(0.dp, 24.dp, 48.dp)) {
+                    for (cardHeight in listOf(0.dp, 64.dp, 112.dp)) {
+                        val scaffoldHeight = availableHeight - navigationHeight - topInset - cardHeight
+                        val outerContentHeight = topInset + cardHeight + scaffoldHeight
+                        val navigationInset = calculateNavigationContentInset(availableHeight, outerContentHeight)
+                        val player = calculateMiniPlayerInsets(systemInset, navigationInset, true, 64.dp, 8.dp)
+
+                        assertEquals(navigationHeight, navigationInset)
+                        assertEquals(navigationHeight + 8.dp, player.bottomOffset)
+                        assertEquals(72.dp, player.contentBottomInset)
+                    }
+                }
+            }
+        }
+    }
+
+    @Test
     fun detailPagesReserveTheSystemBarForEveryPlayerStyle() {
         for (systemInset in listOf(24.dp, 48.dp)) {
             for (spacing in listOf(0.dp, 8.dp)) {
