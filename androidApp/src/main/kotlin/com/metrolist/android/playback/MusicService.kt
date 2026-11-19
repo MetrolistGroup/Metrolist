@@ -22,6 +22,7 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.core.app.NotificationChannelCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.app.ServiceCompat
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.ProcessLifecycleOwner
 import androidx.media3.common.C
@@ -29,6 +30,7 @@ import androidx.media3.common.MediaItem
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.common.Rating
+import androidx.media3.common.util.UnstableApi
 import androidx.media3.session.CommandButton
 import androidx.media3.session.DefaultMediaNotificationProvider
 import androidx.media3.session.LibraryResult
@@ -269,6 +271,8 @@ class MusicService :
     private val binder = MusicBinder()
     private val serviceScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
     private val taskRemoved = MutableStateFlow(false)
+    private val listenTogetherForegroundRequired = MutableStateFlow(false)
+    private val mainHandler = Handler(Looper.getMainLooper())
     private var mediaNotificationProvider: PromotedMediaNotificationProvider? = null
     private var foregroundStartCleanupJob: Job? = null
     private val playbackBenchmark: PlaybackBenchmarkRunner by inject()
@@ -421,6 +425,11 @@ class MusicService :
                     },
             )
         setMediaNotificationProvider(checkNotNull(mediaNotificationProvider))
+        mediaNotificationProvider?.notificationUpdatedListener = { notification ->
+            mainHandler.post {
+                if (listenTogetherForegroundRequired.value) promotePlaybackServiceStart(notification)
+            }
+        }
 
         castManager =
             JvmCastManager(
@@ -572,6 +581,7 @@ class MusicService :
 
         running.value = true
         observeServiceLifetime()
+        observeListenTogetherForegroundDemand()
         Timber.tag(TAG).d("MusicService created backend=Media3")
     }
 
@@ -604,6 +614,33 @@ class MusicService :
                 pauseAllPlayersAndStopSelf()
             }
         }
+    }
+
+    private fun observeListenTogetherForegroundDemand() {
+        serviceScope.launch {
+            var previous = false
+            AndroidListenTogetherManager.foregroundRequired.collect { required ->
+                listenTogetherForegroundRequired.value = required
+                if (required != previous) {
+                    if (required) {
+                        promoteRoomForeground()
+                    } else {
+                        // Return ownership to Media3 once the room no longer needs the service awake.
+                        triggerNotificationUpdate()
+                    }
+                    previous = required
+                }
+            }
+        }
+    }
+
+    private fun promoteRoomForeground() {
+        setupNotificationChannel()
+        val notification =
+            mediaNotificationProvider?.latestNotification?.takeIf {
+                media3Player?.playbackState != Player.STATE_IDLE
+            }
+        promotePlaybackServiceStart(notification)
     }
 
     private fun observeAndroidAutoConnection() {
@@ -2177,6 +2214,36 @@ class MusicService :
             .setSessionCommand(MediaSessionConstants.CommandToggleStartRadio)
             .setEnabled(player.currentSong.value != null)
             .build()
+
+    @UnstableApi
+    override fun onUpdateNotificationAsync(
+        session: MediaSession,
+        startInForegroundRequired: Boolean,
+    ): ListenableFuture<Void?> {
+        val roomForegroundRequired = listenTogetherForegroundRequired.value
+        val future =
+            super.onUpdateNotificationAsync(
+                session,
+                shouldKeepPlaybackServiceInForeground(roomForegroundRequired, startInForegroundRequired),
+            )
+        if (roomForegroundRequired) {
+            future.addListener(
+                {
+                    // Media3 can remove or detach the notification while the player is idle. A room
+                    // still needs an active foreground notification to keep its keepalives running.
+                    if (listenTogetherForegroundRequired.value) {
+                        val notification =
+                            mediaNotificationProvider?.latestNotification?.takeIf {
+                                session.player.playbackState != Player.STATE_IDLE
+                            }
+                        promotePlaybackServiceStart(notification)
+                    }
+                },
+                ContextCompat.getMainExecutor(this),
+            )
+        }
+        return future
+    }
 
     internal suspend fun promoteWidgetPlayback(): Boolean {
         val session = mediaSession ?: return false

@@ -66,6 +66,9 @@ object AndroidListenTogetherManager {
     private val _playbackRequired = MutableStateFlow(false)
     val playbackRequired: StateFlow<Boolean> = _playbackRequired.asStateFlow()
 
+    // A room needs foreground ownership even when the local player is paused or idle.
+    val foregroundRequired: StateFlow<Boolean> = _playbackRequired.asStateFlow()
+
     private var managerObserverJob: Job? = null
     private var notifications: ListenTogetherNotifications? = null
 

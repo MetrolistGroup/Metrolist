@@ -15,6 +15,11 @@ internal fun roomNeedsPlaybackService(
     inRoom || requestPending || connection == ListenTogetherConnectionState.CONNECTING ||
         connection == ListenTogetherConnectionState.RECONNECTING
 
+internal fun shouldKeepPlaybackServiceInForeground(
+    roomForegroundRequired: Boolean,
+    startInForegroundRequired: Boolean,
+): Boolean = roomForegroundRequired || startInForegroundRequired
+
 internal suspend fun observePlaybackServiceLifetime(
     taskRemoved: Flow<Boolean>,
     playbackRequired: Flow<Boolean>,
