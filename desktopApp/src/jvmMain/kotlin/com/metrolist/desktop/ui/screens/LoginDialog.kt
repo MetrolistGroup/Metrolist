@@ -2,6 +2,7 @@
 
 package com.metrolist.desktop.ui.screens
 
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
@@ -791,12 +792,16 @@ private fun WebViewPromptWindow(
                         Column(Modifier.fillMaxWidth().heightIn(max = 420.dp).verticalScrollWithDrag(rememberScrollState())) {
                             text()
                         }
-                        FlowRow(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
-                            verticalArrangement = Arrangement.spacedBy(8.dp),
+                        Row(
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .heightIn(min = 48.dp),
+                            horizontalArrangement = Arrangement.End,
+                            verticalAlignment = Alignment.CenterVertically,
                         ) {
                             dismissButton()
+                            Spacer(Modifier.width(8.dp))
                             confirmButton()
                         }
                     }
