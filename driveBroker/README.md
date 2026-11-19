@@ -1,0 +1,11 @@
+# Google Drive token broker
+
+The broker exchanges Google authorization codes, stores Google refresh tokens encrypted with AES-256-GCM in PostgreSQL, and issues revocable opaque session tokens to Metrolist clients. It does not receive or store backup archives; clients upload directly to Drive with short-lived access tokens and the `drive.file` scope.
+
+Configure a Google Cloud project with the Drive API and OAuth consent screen. Register Android, iOS, desktop and web OAuth clients, and allow the `openid`, `email` and `https://www.googleapis.com/auth/drive.file` scopes. Android requests a server authorization code for the web client through Google Sign-In. iOS uses its native OAuth client with PKCE. Desktop uses the installed-app client with loopback redirects and PKCE.
+
+The service requires `DATABASE_URL`, `DATABASE_USER`, `DATABASE_PASSWORD`, `DRIVE_REFRESH_TOKEN_ENCRYPTION_KEY` (base64 encoded 32-byte key), `GOOGLE_WEB_CLIENT_ID`, `GOOGLE_WEB_CLIENT_SECRET`, `GOOGLE_ANDROID_CLIENT_ID`, `GOOGLE_IOS_CLIENT_ID` and `GOOGLE_DESKTOP_CLIENT_ID`. `PORT` defaults to 8080. Keep secrets in the deployment secret manager, terminate TLS at the ingress, restrict ingress to HTTPS, cap request bodies, rate-limit authentication routes, and never enable request-body or authorization-header logging.
+
+Build and run with `./gradlew :driveBroker:installDist` or build the included Docker image. Flyway applies the PostgreSQL schema at startup. `/healthz` is a liveness endpoint; `/v1/config` exposes public OAuth client IDs. Authenticated routes are `POST /v1/auth/exchange`, `POST /v1/auth/access-token` and `DELETE /v1/auth/session`.
+
+Build configuration must provide the deployed broker HTTPS URL through the Android Gradle property `metrolist.driveBrokerUrl`, the desktop environment variable `METROLIST_DRIVE_BROKER_URL`, and the iOS `METROLIST_DRIVE_BROKER_URL` setting in `Config.xcconfig`. iOS must also set `GOOGLE_IOS_CLIENT_ID_SCHEME` to the reverse client ID URL scheme. Android OAuth registration must include the application ID and signing certificate fingerprints. Drive controls are hidden when a platform has no broker URL configured.

@@ -65,6 +65,8 @@ This produces an unsigned `dist/Metrolist.ipa`. It needs signing or a sideloadin
 
 See [AGENTS.md](../AGENTS.md#modules) for modules and source sets. Put reusable logic in `shared`; keep platform APIs and native lifecycle handling in their platform source sets. Desktop Kotlin is under `desktopApp/src/jvmMain/kotlin/`, but its resources belong in `desktopApp/src/desktopMain/resources/`. The iOS Swift host is under `iosApp/`; its shared Compose entry point is `shared/src/iosMain/kotlin/com/metrolist/shared/MainViewController.kt`.
 
+The Google Drive OAuth token broker is a standalone JVM service in `driveBroker/`; see its [deployment and configuration guide](../driveBroker/README.md).
+
 | Change | Start here |
 | --- | --- |
 | Screens and components | `androidApp/src/main/kotlin/com/metrolist/android/ui/`, `desktopApp/src/jvmMain/kotlin/com/metrolist/desktop/ui/`, and `shared/src/commonMain/kotlin/com/metrolist/shared/ui/` |

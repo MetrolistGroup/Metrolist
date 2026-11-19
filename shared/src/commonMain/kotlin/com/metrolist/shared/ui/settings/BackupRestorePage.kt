@@ -24,6 +24,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -33,14 +34,19 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
+import com.metrolist.shared.backup.AutoBackupDestination
 import com.metrolist.shared.backup.AutoBackupFrequency
 import com.metrolist.shared.backup.BackupValidationException
 import com.metrolist.shared.backup.BackupValidationFailure
+import com.metrolist.shared.backup.DriveAccountConnectionState
 import com.metrolist.shared.generated.resources.Res
 import com.metrolist.shared.generated.resources.automatic_backup
 import com.metrolist.shared.generated.resources.automatic_backup_daily
 import com.metrolist.shared.generated.resources.automatic_backup_description
+import com.metrolist.shared.generated.resources.automatic_backup_destination
 import com.metrolist.shared.generated.resources.automatic_backup_frequency
+import com.metrolist.shared.generated.resources.automatic_backup_google_drive
+import com.metrolist.shared.generated.resources.automatic_backup_local
 import com.metrolist.shared.generated.resources.automatic_backup_location
 import com.metrolist.shared.generated.resources.automatic_backup_monthly
 import com.metrolist.shared.generated.resources.automatic_backup_weekly
@@ -58,6 +64,10 @@ import com.metrolist.shared.generated.resources.backup_unsupported_format
 import com.metrolist.shared.generated.resources.cancel
 import com.metrolist.shared.generated.resources.create_backup
 import com.metrolist.shared.generated.resources.create_backup_countdown
+import com.metrolist.shared.generated.resources.drive_account_connected
+import com.metrolist.shared.generated.resources.drive_account_disconnected
+import com.metrolist.shared.generated.resources.drive_connect
+import com.metrolist.shared.generated.resources.drive_disconnect
 import com.metrolist.shared.generated.resources.foreign_import_desc
 import com.metrolist.shared.generated.resources.foreign_import_title
 import com.metrolist.shared.generated.resources.restore_backup
@@ -87,9 +97,13 @@ fun BackupRestorePage(
     failure: Throwable? = null,
     onAutoBackupSettingsChanged: () -> Unit = {},
     foreignImportStatus: String? = null,
+    driveAvailable: Boolean = false,
+    onConnectDrive: () -> Unit = {},
+    onDisconnectDrive: () -> Unit = {},
 ) {
     val settings = Settings.shared
     val autoBackupFrequency = AutoBackupFrequency.fromSetting(settings.autoBackupFrequency)
+    val driveConnected by DriveAccountConnectionState.connected.collectAsState()
     var showBackupWarning by remember { mutableStateOf(false) }
     var showRestoreWarning by remember { mutableStateOf(false) }
     var warningSeconds by remember { mutableIntStateOf(5) }
@@ -156,6 +170,53 @@ fun BackupRestorePage(
                     )
                 }
             }
+        }
+        if (driveAvailable) {
+            Text(stringResource(Res.string.automatic_backup_destination), style = MaterialTheme.typography.titleSmall)
+            listOf(AutoBackupDestination.LOCAL, AutoBackupDestination.GOOGLE_DRIVE).forEach { destination ->
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    RadioButton(
+                        selected = AutoBackupDestination.fromSetting(settings.autoBackupDestination) == destination,
+                        onClick = {
+                            settings.autoBackupDestination = destination.name
+                            onAutoBackupSettingsChanged()
+                        },
+                        enabled = settings.autoBackupEnabled && (destination == AutoBackupDestination.LOCAL || driveConnected),
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        stringResource(
+                            if (destination == AutoBackupDestination.LOCAL) {
+                                Res.string.automatic_backup_local
+                            } else {
+                                Res.string.automatic_backup_google_drive
+                            },
+                        ),
+                    )
+                }
+            }
+            Button(
+                onClick = {
+                    if (driveConnected) {
+                        onDisconnectDrive()
+                    } else {
+                        onConnectDrive()
+                    }
+                },
+                modifier = Modifier.fillMaxWidth(),
+                shapes = ButtonDefaults.shapes(),
+            ) {
+                Text(stringResource(if (driveConnected) Res.string.drive_disconnect else Res.string.drive_connect))
+            }
+            Text(
+                stringResource(
+                    if (driveConnected) Res.string.drive_account_connected else Res.string.drive_account_disconnected,
+                ),
+                style = MaterialTheme.typography.bodySmall,
+            )
         }
         Button(
             onClick = { showBackupWarning = true },

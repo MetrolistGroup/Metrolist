@@ -43,11 +43,17 @@ import coil3.SingletonImageLoader
 import coil3.annotation.ExperimentalCoilApi
 import coil3.network.DeDupeConcurrentRequestStrategy
 import coil3.network.ktor3.KtorNetworkFetcherFactory
+import com.metrolist.shared.backup.AutoBackupDestination
 import com.metrolist.shared.backup.BackupArchiveLimits
+import com.metrolist.shared.backup.DriveAccountConnectionState
+import com.metrolist.shared.backup.DriveTokenBrokerClient
 import com.metrolist.shared.backup.IosBackupRestoreManager
 import com.metrolist.shared.backup.defaultBackupFilename
 import com.metrolist.shared.backup.foreignImportMessage
+import com.metrolist.shared.backup.handleIosDriveOAuthCallback
+import com.metrolist.shared.backup.isIosDriveBrokerConfigured
 import com.metrolist.shared.backup.notifyIosAutomaticBackupSettingsChanged
+import com.metrolist.shared.backup.startIosDriveSignIn
 import com.metrolist.shared.crash.IosCrashRecovery
 import com.metrolist.shared.db.MusicDatabase
 import com.metrolist.shared.discord.IosDiscordPresenceEffect
@@ -131,6 +137,7 @@ import okio.Path.Companion.toPath
 import org.jetbrains.compose.resources.getString
 import org.jetbrains.compose.resources.stringResource
 import org.koin.mp.KoinPlatform
+import platform.Foundation.NSBundle
 import platform.Foundation.NSCachesDirectory
 import platform.Foundation.NSDate
 import platform.Foundation.NSDateFormatter
@@ -165,7 +172,32 @@ private val oauthCallbackUrlChannel = Channel<String>(Channel.BUFFERED)
 private val oauthCallbackUrls = oauthCallbackUrlChannel.receiveAsFlow()
 
 fun handleOpenUrl(url: String) {
+    if (handleIosDriveOAuthCallback(url)) return
     oauthCallbackUrlChannel.trySend(url)
+}
+
+fun disconnectIosDriveAccount() {
+    CoroutineScope(SupervisorJob() + Dispatchers.Main).launch {
+        val settings = Settings.shared
+        val brokerUrl = NSBundle.mainBundle.infoDictionary?.get("DriveBrokerUrl") as? String
+        if (settings.driveBrokerSession.isNotBlank() && brokerUrl?.startsWith("https://") == true) {
+            val broker = DriveTokenBrokerClient(brokerUrl)
+            val revoked =
+                try {
+                    runCatching { broker.revoke(settings.driveBrokerSession) }.isSuccess
+                } finally {
+                    broker.close()
+                }
+            if (!revoked) return@launch
+        }
+        settings.driveBrokerSession = ""
+        DriveAccountConnectionState.update("")
+        if (AutoBackupDestination.fromSetting(settings.autoBackupDestination) == AutoBackupDestination.GOOGLE_DRIVE) {
+            settings.autoBackupDestination = AutoBackupDestination.LOCAL.name
+        }
+        settings.flush()
+        notifyIosAutomaticBackupSettingsChanged()
+    }
 }
 
 @OptIn(ExperimentalForeignApi::class)
@@ -599,6 +631,9 @@ fun MetrolistIOSApp() {
                                             failure = backupFailure,
                                             onAutoBackupSettingsChanged = ::notifyIosAutomaticBackupSettingsChanged,
                                             foreignImportStatus = foreignImportStatus,
+                                            driveAvailable = isIosDriveBrokerConfigured(),
+                                            onConnectDrive = ::startIosDriveSignIn,
+                                            onDisconnectDrive = ::disconnectIosDriveAccount,
                                         )
                                         Text(
                                             stringResource(Res.string.playlist_imports_title),

@@ -1,11 +1,14 @@
 package com.metrolist.desktop.backup
 
 import com.metrolist.desktop.utils.AppLogger
+import com.metrolist.shared.backup.AutoBackupDestination
 import com.metrolist.shared.backup.AutoBackupFrequency
+import com.metrolist.shared.backup.GoogleDriveBackupClient
 import com.metrolist.shared.backup.defaultBackupFilename
 import com.metrolist.shared.backup.isAutoBackupDue
 import com.metrolist.shared.settings.Settings
 import com.metrolist.shared.utils.XdgUtils
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -13,6 +16,8 @@ import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.io.files.Path
+import kotlinx.io.files.SystemFileSystem
 import java.io.File
 import kotlin.concurrent.withLock
 
@@ -35,6 +40,7 @@ object DesktopAutomaticBackupScheduler {
         if (!settings.autoBackupEnabled) return
 
         val frequency = AutoBackupFrequency.fromSetting(settings.autoBackupFrequency)
+        val destination = AutoBackupDestination.fromSetting(settings.autoBackupDestination)
         job =
             activeScope.launch {
                 previousJob?.join()
@@ -43,7 +49,7 @@ object DesktopAutomaticBackupScheduler {
                         delay(CREDENTIAL_RECOVERY_POLL_MILLIS)
                         continue
                     }
-                    if (pruningPending) {
+                    if (pruningPending && destination == AutoBackupDestination.LOCAL) {
                         val directory = File(XdgUtils.getXdgDataHome(), "metrolist/automatic-backups")
                         val pruneResult = withContext(Dispatchers.IO) { runCatching { pruneBackups(directory) } }
                         pruningPending = pruneResult.isFailure
@@ -56,13 +62,23 @@ object DesktopAutomaticBackupScheduler {
                     }
                     val now = System.currentTimeMillis()
                     if (isAutoBackupDue(settings.autoBackupLastSuccessEpochMillis, now, frequency)) {
-                        val directory = File(XdgUtils.getXdgDataHome(), "metrolist/automatic-backups")
-                        val destination = File(directory, "${defaultBackupFilename(BACKUP_FILENAME_PREFIX)}.zip")
+                        val directory =
+                            when (destination) {
+                                AutoBackupDestination.LOCAL -> File(XdgUtils.getXdgDataHome(), "metrolist/automatic-backups")
+                                AutoBackupDestination.GOOGLE_DRIVE -> File(XdgUtils.getXdgCacheHome(), "metrolist/automatic-backups")
+                            }
+                        val backupFile = File(directory, "${defaultBackupFilename(BACKUP_FILENAME_PREFIX)}.zip")
                         val result =
                             withContext(Dispatchers.IO + NonCancellable) {
-                                DesktopBackupRestoreManager.backup(destination).onSuccess {
+                                runCatching {
+                                    DesktopBackupRestoreManager.backup(backupFile).getOrThrow()
+                                    if (destination == AutoBackupDestination.GOOGLE_DRIVE) {
+                                        uploadAndDelete(backupFile, settings.driveBrokerSession)
+                                    }
                                     settings.autoBackupLastSuccessEpochMillis = System.currentTimeMillis()
-                                    pruningPending = true
+                                    if (destination == AutoBackupDestination.LOCAL) {
+                                        pruningPending = true
+                                    }
                                     runCatching { settings.flush() }
                                         .onFailure { error ->
                                             AppLogger.warning("AutomaticBackup", "Could not persist automatic backup time", error)
@@ -70,13 +86,17 @@ object DesktopAutomaticBackupScheduler {
                                 }
                             }
                         if (result.isSuccess) {
-                            val pruneResult = withContext(Dispatchers.IO) { runCatching { pruneBackups(directory) } }
-                            pruningPending = pruneResult.isFailure
-                            if (pruningPending) {
-                                AppLogger.warning(
-                                    "AutomaticBackup",
-                                    "Could not prune automatic backups: ${pruneResult.exceptionOrNull()?.message ?: "Unknown error"}",
-                                )
+                            if (destination == AutoBackupDestination.LOCAL) {
+                                val pruneResult = withContext(Dispatchers.IO) { runCatching { pruneBackups(directory) } }
+                                pruningPending = pruneResult.isFailure
+                                if (pruningPending) {
+                                    AppLogger.warning(
+                                        "AutomaticBackup",
+                                        "Could not prune automatic backups: ${pruneResult.exceptionOrNull()?.message ?: "Unknown error"}",
+                                    )
+                                }
+                            } else {
+                                directory.listFiles { file -> file.isFile }?.forEach { it.delete() }
                             }
                         } else {
                             AppLogger.warning(
@@ -113,8 +133,34 @@ object DesktopAutomaticBackupScheduler {
                 .forEach { check(it.delete()) { "Could not remove expired automatic backup" } }
         }
 
+    private suspend fun uploadAndDelete(
+        backupFile: File,
+        sessionToken: String,
+    ) {
+        val brokerUrl =
+            System.getenv(DRIVE_BROKER_URL_ENV)?.takeIf(String::isNotBlank)
+                ?: error("Google Drive broker is not configured")
+        check(brokerUrl.startsWith("https://")) { "Google Drive broker must use HTTPS" }
+        check(sessionToken.isNotBlank()) { "Google Drive account is not connected" }
+        try {
+            val driveClient = GoogleDriveBackupClient(brokerUrl)
+            try {
+                driveClient.uploadBackup(
+                    sessionToken,
+                    backupFile.name,
+                    backupFile.length(),
+                ) { SystemFileSystem.source(Path(backupFile.absolutePath)) }
+            } finally {
+                driveClient.close()
+            }
+        } finally {
+            check(!backupFile.exists() || backupFile.delete()) { "Could not remove temporary backup archive" }
+        }
+    }
+
     private const val BACKUP_FILENAME_PREFIX = "metrolist-backup"
     private const val CREDENTIAL_RECOVERY_POLL_MILLIS = 1_000L
     private const val FAILURE_RETRY_MILLIS = 5 * 60 * 1_000L
     private const val MAX_RETAINED_BACKUPS = 10
+    private const val DRIVE_BROKER_URL_ENV = "METROLIST_DRIVE_BROKER_URL"
 }

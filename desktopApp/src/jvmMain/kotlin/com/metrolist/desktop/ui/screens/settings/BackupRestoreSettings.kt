@@ -51,6 +51,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.DialogProperties
 import com.metrolist.desktop.backup.DesktopAutomaticBackupScheduler
 import com.metrolist.desktop.backup.DesktopBackupRestoreManager
+import com.metrolist.desktop.backup.DesktopDriveSignIn
 import com.metrolist.desktop.spotifyimport.DesktopAmazonMusicImportFlow
 import com.metrolist.desktop.spotifyimport.DesktopAppleMusicImportFlow
 import com.metrolist.desktop.spotifyimport.DesktopDeezerImportFlow
@@ -61,6 +62,7 @@ import com.metrolist.desktop.state.content.LibraryContentState
 import com.metrolist.desktop.state.playback.validatedLocalMediaUrl
 import com.metrolist.desktop.utils.pickDesktopFile
 import com.metrolist.desktop.utils.saveDesktopFile
+import com.metrolist.shared.backup.AutoBackupDestination
 import com.metrolist.shared.backup.AutoBackupFrequency
 import com.metrolist.shared.backup.defaultBackupFilename
 import com.metrolist.shared.backup.foreignImportMessage
@@ -75,7 +77,10 @@ import com.metrolist.shared.generated.resources.app_data
 import com.metrolist.shared.generated.resources.automatic_backup
 import com.metrolist.shared.generated.resources.automatic_backup_daily
 import com.metrolist.shared.generated.resources.automatic_backup_description
+import com.metrolist.shared.generated.resources.automatic_backup_destination
 import com.metrolist.shared.generated.resources.automatic_backup_frequency
+import com.metrolist.shared.generated.resources.automatic_backup_google_drive
+import com.metrolist.shared.generated.resources.automatic_backup_local
 import com.metrolist.shared.generated.resources.automatic_backup_location
 import com.metrolist.shared.generated.resources.automatic_backup_monthly
 import com.metrolist.shared.generated.resources.automatic_backup_restore
@@ -99,6 +104,11 @@ import com.metrolist.shared.generated.resources.create_backup
 import com.metrolist.shared.generated.resources.create_backup_countdown
 import com.metrolist.shared.generated.resources.create_backup_desc
 import com.metrolist.shared.generated.resources.create_backup_dialog_title
+import com.metrolist.shared.generated.resources.drive_account_connected
+import com.metrolist.shared.generated.resources.drive_account_disconnected
+import com.metrolist.shared.generated.resources.drive_connect
+import com.metrolist.shared.generated.resources.drive_connect_failed
+import com.metrolist.shared.generated.resources.drive_disconnect
 import com.metrolist.shared.generated.resources.foreign_import_desc
 import com.metrolist.shared.generated.resources.foreign_import_title
 import com.metrolist.shared.generated.resources.import_action_choose_file
@@ -381,6 +391,7 @@ fun BackupRestoreSettingsScreen(colorScheme: ColorScheme) {
     var showAutomaticBackupPicker by remember { mutableStateOf(false) }
     var isRestoring by remember { mutableStateOf(false) }
     var status by remember { mutableStateOf<String?>(null) }
+    var driveAccountConnected by remember { mutableStateOf(appSettings.driveBrokerSession.isNotBlank()) }
 
     var showSpotifyAccountFlow by remember { mutableStateOf(false) }
     var showSpotifyProviderDialog by remember { mutableStateOf(false) }
@@ -676,6 +687,83 @@ fun BackupRestoreSettingsScreen(colorScheme: ColorScheme) {
                                 DesktopAutomaticBackupScheduler.schedule()
                             },
                         ),
+                        if (DesktopDriveSignIn.isConfigured()) {
+                            Material3SettingsItem(
+                                title = { Text(stringResource(Res.string.automatic_backup_destination)) },
+                                description = {
+                                    Text(
+                                        stringResource(
+                                            if (AutoBackupDestination.fromSetting(appSettings.autoBackupDestination) ==
+                                                AutoBackupDestination.LOCAL
+                                            ) {
+                                                Res.string.automatic_backup_local
+                                            } else {
+                                                Res.string.automatic_backup_google_drive
+                                            },
+                                        ),
+                                    )
+                                },
+                                enabled = appSettings.autoBackupEnabled && driveAccountConnected,
+                                onClick = {
+                                    appSettings.autoBackupDestination =
+                                        if (AutoBackupDestination.fromSetting(appSettings.autoBackupDestination) ==
+                                            AutoBackupDestination.LOCAL
+                                        ) {
+                                            AutoBackupDestination.GOOGLE_DRIVE.name
+                                        } else {
+                                            AutoBackupDestination.LOCAL.name
+                                        }
+                                    DesktopAutomaticBackupScheduler.schedule()
+                                },
+                            )
+                        } else {
+                            null
+                        },
+                        if (DesktopDriveSignIn.isConfigured()) {
+                            Material3SettingsItem(
+                                title = {
+                                    Text(
+                                        stringResource(
+                                            if (driveAccountConnected) Res.string.drive_disconnect else Res.string.drive_connect,
+                                        ),
+                                    )
+                                },
+                                description = {
+                                    Text(
+                                        stringResource(
+                                            if (driveAccountConnected) {
+                                                Res.string.drive_account_connected
+                                            } else {
+                                                Res.string.drive_account_disconnected
+                                            },
+                                        ),
+                                    )
+                                },
+                                onClick = {
+                                    scope.launch {
+                                        runCatching {
+                                            if (driveAccountConnected) {
+                                                DesktopDriveSignIn.disconnect()
+                                                if (AutoBackupDestination.fromSetting(appSettings.autoBackupDestination) ==
+                                                    AutoBackupDestination.GOOGLE_DRIVE
+                                                ) {
+                                                    appSettings.autoBackupDestination = AutoBackupDestination.LOCAL.name
+                                                }
+                                                driveAccountConnected = false
+                                            } else {
+                                                DesktopDriveSignIn.connect()
+                                                driveAccountConnected = true
+                                            }
+                                            DesktopAutomaticBackupScheduler.schedule()
+                                        }.onFailure {
+                                            status = getString(Res.string.drive_connect_failed)
+                                        }
+                                    }
+                                },
+                            )
+                        } else {
+                            null
+                        },
                         Material3SettingsItem(
                             title = { Text(stringResource(Res.string.create_backup)) },
                             description = { Text(stringResource(Res.string.create_backup_desc)) },
@@ -734,7 +822,7 @@ fun BackupRestoreSettingsScreen(colorScheme: ColorScheme) {
                                 }
                             },
                         ),
-                    ),
+                    ).filterNotNull(),
             )
 
             Material3SettingsGroup(

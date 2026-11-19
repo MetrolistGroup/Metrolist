@@ -12,6 +12,9 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.withLock
+import kotlinx.io.files.FileSystem
+import kotlinx.io.files.Path
+import platform.Foundation.NSCachesDirectory
 import platform.Foundation.NSDate
 import platform.Foundation.NSDocumentDirectory
 import platform.Foundation.NSFileManager
@@ -65,7 +68,25 @@ fun createIosAutomaticBackup(completion: (Boolean) -> Unit) {
                     return@launch
                 }
                 val fileManager = NSFileManager.defaultManager
-                val backupDirectory = automaticBackupDirectory()
+                val destinationType = AutoBackupDestination.fromSetting(Settings.shared.autoBackupDestination)
+                val backupBasePath =
+                    when (destinationType) {
+                        AutoBackupDestination.LOCAL -> {
+                            (fileManager.URLsForDirectory(NSDocumentDirectory, NSUserDomainMask).firstOrNull() as? NSURL)?.path
+                        }
+
+                        AutoBackupDestination.GOOGLE_DRIVE -> {
+                            (fileManager.URLsForDirectory(NSCachesDirectory, NSUserDomainMask).firstOrNull() as? NSURL)?.path
+                        }
+                    }
+                val backupDirectory =
+                    backupBasePath?.plus(
+                        if (destinationType == AutoBackupDestination.LOCAL) {
+                            "/Metrolist/Automatic Backups"
+                        } else {
+                            "/Metrolist/Automatic Backup Upload"
+                        },
+                    )
                 val destination = backupDirectory?.plus("/${defaultBackupFilename(BACKUP_FILENAME_PREFIX)}.zip")
                 val succeeded =
                     runCatching {
@@ -78,46 +99,83 @@ fun createIosAutomaticBackup(completion: (Boolean) -> Unit) {
                                     error = null,
                                 ),
                         )
-                        check(
-                            NSURL.fileURLWithPath(backupDirectory).setResourceValue(
-                                true,
-                                NSURLIsExcludedFromBackupKey,
-                                error = null,
-                            ),
-                        )
+                        if (destinationType == AutoBackupDestination.LOCAL) {
+                            check(NSURL.fileURLWithPath(backupDirectory).setResourceValue(true, NSURLIsExcludedFromBackupKey, error = null))
+                        }
                         check(destination != null)
-                        if (isAutoBackupDue(
+                        val isDue =
+                            isAutoBackupDue(
                                 Settings.shared.autoBackupLastSuccessEpochMillis,
                                 (NSDate().timeIntervalSince1970 * 1000).toLong(),
                                 AutoBackupFrequency.fromSetting(Settings.shared.autoBackupFrequency),
                             )
-                        ) {
-                            IosBackupRestoreManager().backup(destination).getOrThrow()
+                        if (isDue) {
+                            when (destinationType) {
+                                AutoBackupDestination.LOCAL -> {
+                                    IosBackupRestoreManager().backup(destination).getOrThrow()
+                                }
+
+                                AutoBackupDestination.GOOGLE_DRIVE -> {
+                                    try {
+                                        IosBackupRestoreManager().backup(destination).getOrThrow()
+                                        val brokerUrl = iosDriveBrokerUrl()
+                                        val session = Settings.shared.driveBrokerSession
+                                        check(brokerUrl.startsWith("https://") && session.isNotBlank())
+                                        val archivePath = Path(destination)
+                                        val archiveSize = checkNotNull(FileSystem.SYSTEM.metadataOrNull(archivePath)).size
+                                        val driveClient = GoogleDriveBackupClient(brokerUrl)
+                                        try {
+                                            driveClient.uploadBackup(
+                                                session,
+                                                destination.substringAfterLast('/'),
+                                                archiveSize,
+                                            ) { FileSystem.SYSTEM.source(archivePath) }
+                                        } finally {
+                                            driveClient.close()
+                                        }
+                                    } finally {
+                                        if (fileManager.fileExistsAtPath(destination)) {
+                                            check(fileManager.removeItemAtPath(destination, error = null))
+                                        }
+                                    }
+                                }
+                            }
                             Settings.shared.autoBackupLastSuccessEpochMillis = (NSDate().timeIntervalSince1970 * 1000).toLong()
                             Settings.shared.flush()
                         }
-                        iosBackupOperationMutex.withLock {
+                        if (destinationType == AutoBackupDestination.LOCAL) {
+                            iosBackupOperationMutex.withLock {
+                                val entries =
+                                    fileManager
+                                        .contentsOfDirectoryAtPath(backupDirectory, error = null)
+                                        .orEmpty()
+                                        .filterIsInstance<String>()
+                                entries
+                                    .filter { it.endsWith(".tmp") }
+                                    .forEach { filename -> check(fileManager.removeItemAtPath("$backupDirectory/$filename", error = null)) }
+                                val files = entries.filter { it.endsWith(".zip") }
+                                files
+                                    .map { filename ->
+                                        val path = "$backupDirectory/$filename"
+                                        val modifiedAt =
+                                            (fileManager.attributesOfItemAtPath(path, error = null)?.get(NSFileModificationDate) as? NSDate)
+                                                ?.timeIntervalSince1970 ?: 0.0
+                                        filename to modifiedAt
+                                    }.sortedByDescending { it.second }
+                                    .drop(MAX_RETAINED_BACKUPS)
+                                    .forEach { (filename, _) ->
+                                        check(fileManager.removeItemAtPath("$backupDirectory/$filename", error = null))
+                                    }
+                            }
+                        } else {
                             val entries =
                                 fileManager
                                     .contentsOfDirectoryAtPath(backupDirectory, error = null)
                                     .orEmpty()
                                     .filterIsInstance<String>()
-                            entries
-                                .filter { it.endsWith(".tmp") }
-                                .forEach { filename -> check(fileManager.removeItemAtPath("$backupDirectory/$filename", error = null)) }
-                            val files = entries.filter { it.endsWith(".zip") }
-                            files
-                                .map { filename ->
-                                    val path = "$backupDirectory/$filename"
-                                    val modifiedAt =
-                                        (fileManager.attributesOfItemAtPath(path, error = null)?.get(NSFileModificationDate) as? NSDate)
-                                            ?.timeIntervalSince1970 ?: 0.0
-                                    filename to modifiedAt
-                                }.sortedByDescending { it.second }
-                                .drop(MAX_RETAINED_BACKUPS)
-                                .forEach { (filename, _) ->
-                                    check(fileManager.removeItemAtPath("$backupDirectory/$filename", error = null))
-                                }
+                            entries.forEach { filename ->
+                                fileManager.removeItemAtPath("$backupDirectory/$filename", error = null)
+                            }
                         }
                         true
                     }.getOrDefault(false)
@@ -129,6 +187,13 @@ fun createIosAutomaticBackup(completion: (Boolean) -> Unit) {
     activeAutomaticBackup = backupJob
     backupJob.start()
 }
+
+private fun iosDriveBrokerUrl(): String =
+    (
+        platform.Foundation.NSBundle.mainBundle.infoDictionary
+            ?.get("DriveBrokerUrl") as? String
+    )?.takeIf(String::isNotBlank)
+        ?: error("Google Drive broker is not configured")
 
 fun cancelIosAutomaticBackup() {
     activeAutomaticBackup?.cancel()

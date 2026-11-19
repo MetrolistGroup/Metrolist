@@ -6,6 +6,9 @@
 PRODUCT_NAME = Metrolist
 PRODUCT_BUNDLE_IDENTIFIER = com.metrolist.MetrolistApp
 METROLIST_APP_GROUP_ID = group.com.metrolist.MetrolistApp
+METROLIST_DRIVE_BROKER_URL =
+// Set this to the reverse URL scheme for the registered Google iOS OAuth client.
+GOOGLE_IOS_CLIENT_ID_SCHEME =
 CODE_SIGN_ENTITLEMENTS = Configuration/iosApp.entitlements
 INFOPLIST_PREPROCESS = YES
 INFOPLIST_PREFIX_HEADER = $(DERIVED_FILE_DIR)/MetrolistVersion.h

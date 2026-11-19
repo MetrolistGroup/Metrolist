@@ -12,6 +12,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import com.metrolist.shared.api.lyrics.AiProviderPresets
 import com.metrolist.shared.auth.hasSupportedYouTubeAuthCookie
+import com.metrolist.shared.backup.AutoBackupDestination
 import com.metrolist.shared.backup.AutoBackupFrequency
 import com.metrolist.shared.constants.ActiveLyricsTextPositionKey
 import com.metrolist.shared.constants.AiSlopBlocklistCacheKey
@@ -38,6 +39,7 @@ import com.metrolist.shared.constants.AppleMusicArtistVideosKey
 import com.metrolist.shared.constants.ArtistNameAliasesJsonKey
 import com.metrolist.shared.constants.AudioBoostDbKey
 import com.metrolist.shared.constants.AudioTrackPlaybackParamsKey
+import com.metrolist.shared.constants.AutoBackupDestinationKey
 import com.metrolist.shared.constants.AutoBackupEnabledKey
 import com.metrolist.shared.constants.AutoBackupFrequencyKey
 import com.metrolist.shared.constants.AutoBackupLastSuccessEpochKey
@@ -76,6 +78,9 @@ import com.metrolist.shared.constants.DiscordPendingAuthSessionKey
 import com.metrolist.shared.constants.DownloadQueueJsonKey
 import com.metrolist.shared.constants.DownloadedCollectionSortDirectionKey
 import com.metrolist.shared.constants.DownloadedCollectionSortKey
+import com.metrolist.shared.constants.DriveBrokerSessionKey
+import com.metrolist.shared.constants.DriveOAuthStateKey
+import com.metrolist.shared.constants.DriveOAuthVerifierKey
 import com.metrolist.shared.constants.EnableHapticFeedbackKey
 import com.metrolist.shared.constants.EnableLandscapeScalingKey
 import com.metrolist.shared.constants.EqualizerActiveProfileIdKey
@@ -296,7 +301,11 @@ class Settings(
 
     var autoBackupEnabled by preference(AutoBackupEnabledKey, false)
     var autoBackupFrequency by preference(AutoBackupFrequencyKey, AutoBackupFrequency.WEEKLY.name)
+    var autoBackupDestination by preference(AutoBackupDestinationKey, AutoBackupDestination.LOCAL.name)
     var autoBackupLastSuccessEpochMillis by preference(AutoBackupLastSuccessEpochKey, 0L)
+    var driveBrokerSession by preference(DriveBrokerSessionKey, "")
+    var driveOAuthState by preference(DriveOAuthStateKey, "")
+    var driveOAuthVerifier by preference(DriveOAuthVerifierKey, "")
 
     var artistNameAliasesJson by preference(ArtistNameAliasesJsonKey, "{}")
     var playbackClientStatsJson by preference(PlaybackClientStatsJsonKey, "{}")
@@ -1389,6 +1398,7 @@ class Settings(
                     "spotifySession",
                     LyricsOpenRouterOAuthSessionKey,
                     DiscordPendingAuthSessionKey,
+                    DriveBrokerSessionKey,
                 )
         private val nonPortableKeys =
             secureSettingsKeys +
@@ -1429,6 +1439,7 @@ class Settings(
                     LastFmPhotoCacheJsonKey,
                     AutoBackupEnabledKey,
                     AutoBackupFrequencyKey,
+                    AutoBackupDestinationKey,
                     AutoBackupLastSuccessEpochKey,
                 )
         private val backupExcludedKeys = nonPortableKeys - backupCredentialKeys

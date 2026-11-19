@@ -9,9 +9,17 @@ enum class AutoBackupFrequency(
     ;
 
     companion object {
-        fun fromSetting(value: String): AutoBackupFrequency =
-            entries.firstOrNull { it.name == value }
-                ?: error("Unsupported automatic backup frequency")
+        fun fromSetting(value: String): AutoBackupFrequency = entries.firstOrNull { it.name == value } ?: WEEKLY
+    }
+}
+
+enum class AutoBackupDestination {
+    LOCAL,
+    GOOGLE_DRIVE,
+    ;
+
+    companion object {
+        fun fromSetting(value: String): AutoBackupDestination = entries.firstOrNull { it.name == value } ?: LOCAL
     }
 }
 
