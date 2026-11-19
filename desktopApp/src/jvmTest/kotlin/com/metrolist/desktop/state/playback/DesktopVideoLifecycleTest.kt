@@ -74,6 +74,33 @@ class DesktopVideoLifecycleTest {
     }
 
     @Test
+    fun fractionalRequestedVolumeSurvivesLocalRouting() =
+        runTest {
+            val player = MusicPlayer()
+            var requested = 0.009f
+            val video =
+                DesktopVideoLifecycle(
+                    this,
+                    player,
+                    MusicQueue(),
+                    status = { DesktopVideoPlaybackStatus(null, 0L, { false }, false, requested, true, videoVisible = true) },
+                    onUnavailable = {},
+                    fetchSource = { _, _ -> null },
+                )
+            try {
+                for (level in listOf(0.009f, 0.0125f, 0.019f, 1f, 0f)) {
+                    requested = level
+                    video.updateVideoAudioRouting()
+                    assertEquals(level, player.volume.value)
+                    assertEquals(level, player.outputVolume)
+                }
+            } finally {
+                video.close()
+                player.release()
+            }
+        }
+
+    @Test
     fun hidingCancelsVideoResolutionWithoutClearingSelectionOrReportingFailure() =
         runTest {
             val previousViewer = UiState.showVideoViewer
