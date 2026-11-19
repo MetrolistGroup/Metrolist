@@ -139,9 +139,10 @@ class CsvPlaylistTest {
     fun preservesPunctuationInHeaderlessM3uLocalPaths() {
         val path = "Music/One, Two; Three.mp3"
         val resolved = "file:///library/one-two-three.mp3"
-        val data = UniversalPlaylistParser.prepareFile(path, "playlist.M3U", "Playlist", "File") {
-            if (it == path) resolved else null
-        }
+        val data =
+            UniversalPlaylistParser.prepareFile(path, "playlist.M3U", "Playlist", "File") {
+                if (it == path) resolved else null
+            }
 
         assertNull(data.csv)
         val track = data.tracks.single()
