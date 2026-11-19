@@ -92,6 +92,7 @@ fun StatsScreen() {
         artistLookupGeneration++
         artistThumbnails.clear()
         artistIds.clear()
+        var refreshArtistLookups = false
         try {
             val (sinceMs, untilMs) = period.epochRange(dateRange, mode = mode)
             val snapshot = withContext(Dispatchers.IO) { HistoryRepository.getStatisticsSnapshot(sinceMs, untilMs) }
@@ -102,7 +103,7 @@ fun StatsScreen() {
             topSongs = songs
             songItems = snapshot.songItems.associateBy { it.id }
             topArtists = artists
-            artistLookupGeneration++
+            refreshArtistLookups = true
             artistFallbacks =
                 topArtists.associate { artist ->
                     artist.name to snapshot.songs.firstOrNull { it.artists.contains(artist.name) }?.thumbnailUrl
@@ -119,9 +120,10 @@ fun StatsScreen() {
             throw error
         } catch (error: Exception) {
             loadFailed = true
-            artistLookupGeneration++
+            refreshArtistLookups = true
         } finally {
             isLoading = false
+            if (refreshArtistLookups) artistLookupGeneration++
         }
     }
 
