@@ -88,19 +88,29 @@ class IosAudioDownloadManagerTest {
                         val storedSong = checkNotNull(database.dao().getSongById(song.id)).song
                         assertEquals(expectedDuration.toInt(), storedSong.duration)
                         assertEquals(storedDuration != null, storedSong.liked)
-                        val initialAccess = checkNotNull(database.dao().cachedAudio(song.id)).lastAccessedAt
+                        val cached = checkNotNull(database.dao().cachedAudio(song.id))
+                        database.dao().upsert(cached.copy(lastAccessedAt = 0L))
                         assertEquals(expectedDuration, manager.getCachedPlaybackResource(song)?.durationSeconds)
                         assertEquals(201L, manager.getCachedPlaybackResource(song.copy(duration = 201L))?.durationSeconds)
-                        val latestAccess =
+                        val latestAccess: Long =
                             withTimeout(5_000L) {
                                 while (true) {
                                     val access = checkNotNull(database.dao().cachedAudio(song.id)).lastAccessedAt
-                                    if (access > initialAccess) return@withTimeout access
+                                    if (access > 0L) break
                                     delay(10L)
                                 }
+                                checkNotNull(database.dao().cachedAudio(song.id)).lastAccessedAt
                             }
-                        database.dao().updateCachedAudioLastAccessed(song.id, latestAccess - 1L)
-                        assertEquals(latestAccess, database.dao().cachedAudio(song.id)?.lastAccessedAt)
+                        val staleCheckSongId = "${song.id}-stale-check"
+                        database.dao().upsert(
+                            cached.copy(
+                                songId = staleCheckSongId,
+                                filePath = "${cached.filePath}-stale-check",
+                                lastAccessedAt = latestAccess,
+                            ),
+                        )
+                        database.dao().updateCachedAudioLastAccessed(staleCheckSongId, latestAccess - 1L)
+                        assertEquals(latestAccess, database.dao().cachedAudio(staleCheckSongId)?.lastAccessedAt)
                     }
                 }
             } finally {
