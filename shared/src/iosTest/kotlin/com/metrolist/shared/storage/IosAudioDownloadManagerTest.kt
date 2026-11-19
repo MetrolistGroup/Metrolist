@@ -93,13 +93,15 @@ class IosAudioDownloadManagerTest {
                         assertEquals(expectedDuration, manager.getCachedPlaybackResource(song)?.durationSeconds)
                         assertEquals(201L, manager.getCachedPlaybackResource(song.copy(duration = 201L))?.durationSeconds)
                         val latestAccess: Long =
-                            withTimeout(5_000L) {
-                                while (true) {
-                                    val access = checkNotNull(database.dao().cachedAudio(song.id)).lastAccessedAt
-                                    if (access > 0L) break
-                                    delay(10L)
+                            withContext(Dispatchers.Default) {
+                                withTimeout(5_000L) {
+                                    while (true) {
+                                        val access = checkNotNull(database.dao().cachedAudio(song.id)).lastAccessedAt
+                                        if (access > 0L) break
+                                        delay(10L)
+                                    }
+                                    checkNotNull(database.dao().cachedAudio(song.id)).lastAccessedAt
                                 }
-                                checkNotNull(database.dao().cachedAudio(song.id)).lastAccessedAt
                             }
                         val staleCheckSongId = "${song.id}-stale-check"
                         database.dao().upsert(
