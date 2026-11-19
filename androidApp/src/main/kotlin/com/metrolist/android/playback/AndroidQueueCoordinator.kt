@@ -460,13 +460,18 @@ internal class AndroidQueueCoordinator(
         val preserveCurrent = current != null && (remote != null || player.isReady) && !player.playbackTransitionPending.value
         if (preserveCurrent) {
             replaceQueueSession(listOf(requireNotNull(current)), 0, title, finite = false) {
-                val queue = MusicQueue().apply { setQueue(listOf(current)) }
-                if (Settings.shared.persistentShuffleAcrossQueues &&
-                    player.isShuffleEnabled
-                ) {
-                    queue.toggleShuffle(legacyShuffle = Settings.shared.useLegacyShuffle)
+                if (remote != null) {
+                    val state = player.queueState.value
+                    player.removeQueueItems(state.entries.indices.filterTo(mutableSetOf()) { it != state.currentIndex })
+                } else {
+                    val queue = MusicQueue().apply { setQueue(listOf(current)) }
+                    if (Settings.shared.persistentShuffleAcrossQueues &&
+                        player.isShuffleEnabled
+                    ) {
+                        queue.toggleShuffle(legacyShuffle = Settings.shared.useLegacyShuffle)
+                    }
+                    player.restoreQueue(queue.snapshot())
                 }
-                player.restoreQueue(queue.snapshot())
                 _shuffleModeEnabled.value = player.isShuffleEnabled
             }
         } else {

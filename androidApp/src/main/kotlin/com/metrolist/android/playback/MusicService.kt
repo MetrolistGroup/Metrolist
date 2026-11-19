@@ -289,6 +289,7 @@ class MusicService :
     private val automotiveRootBrowsableOnly = ConcurrentHashMap<MediaSession.ControllerInfo, Boolean>()
     private val automotivePlaybackRequestGate =
         AutomotivePlaybackRequestGate { songs, startIndex, queueTitle, shuffleModeEnabled, playlistPage, songPlaybackMode, replacement ->
+            val radioSeed = songs.getOrNull(startIndex)?.takeIf { songPlaybackMode == AutomotiveSongPlaybackMode.RADIO }
             val shuffleEnabled =
                 newQueueShuffleEnabled(
                     requestedShuffle = shuffleModeEnabled,
@@ -300,8 +301,8 @@ class MusicService :
                         DcPlaybackAction.REPLACE_QUEUE,
                         songs = songs,
                         index = startIndex,
-                        title = queueTitle,
-                        finite = true,
+                        title = radioSeed?.let { getString(R.string.song_mix_title, it.title) } ?: queueTitle,
+                        finite = radioSeed == null,
                         enabled = shuffleEnabled,
                         preserveHistory = shuffleModeEnabled != true,
                     ),
