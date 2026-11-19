@@ -92,27 +92,32 @@ object UniversalPlaylistParser {
     private fun parseJson(
         text: String,
         resolveLocalReference: (String) -> String?,
-    ): List<PlaylistImportManager.CsvTrack>? =
-        try {
-            val root = json.parseToJsonElement(text)
-            val items =
-                when (root) {
-                    is JsonArray -> root
-                    is JsonObject -> root["tracks"] ?: root["songs"] ?: root["items"] ?: root["data"]
-                    else -> null
-                } as? JsonArray ?: return null
+    ): List<PlaylistImportManager.CsvTrack>? {
+        val tracks =
+            try {
+                val root = json.parseToJsonElement(text)
+                val items =
+                    when (root) {
+                        is JsonArray -> root
+                        is JsonObject -> root["tracks"] ?: root["songs"] ?: root["items"] ?: root["data"]
+                        else -> null
+                    } as? JsonArray ?: return null
 
-            val tracks =
-                items
-                    .mapNotNull { element ->
-                        (element as? JsonObject)?.let { extractTrackFromJsonObject(it, resolveLocalReference) }
-                    }.take(PlaylistImportManager.MAX_PLAYLIST_TRACKS)
-            // Lenient JSON also accepts plain titles such as [Intro], which are not track objects.
-            if (tracks.isEmpty() && items.any { it !is JsonObject && it != JsonNull }) return null
-            tracks
-        } catch (_: Exception) {
-            null
-        }
+                val tracks =
+                    items
+                        .asSequence()
+                        .mapNotNull { element ->
+                            (element as? JsonObject)?.let { extractTrackFromJsonObject(it, resolveLocalReference) }
+                        }.take(PlaylistImportManager.MAX_PLAYLIST_TRACKS + 1)
+                        .toList()
+                // Lenient JSON also accepts plain titles such as [Intro], which are not track objects.
+                if (tracks.isEmpty() && items.any { it !is JsonObject && it != JsonNull }) return null
+                tracks
+            } catch (_: Exception) {
+                return null
+            }
+        return tracks.checkTrackLimit()
+    }
 
     private fun extractTrackFromJsonObject(
         obj: JsonObject,
@@ -208,7 +213,7 @@ object UniversalPlaylistParser {
                         customTitle = suppliedInfo?.second?.takeIf(String::isNotBlank),
                     )
             }
-            if (results.size >= PlaylistImportManager.MAX_PLAYLIST_TRACKS) break
+            if (results.size > PlaylistImportManager.MAX_PLAYLIST_TRACKS) throw ImportException(ImportErrorKey.TooManyTracks)
         }
         return results
     }
@@ -226,7 +231,6 @@ object UniversalPlaylistParser {
             .lineSequence()
             .map(String::trim)
             .filter { it.isNotBlank() && !it.startsWith("#") && !it.startsWith("//") }
-            .take(PlaylistImportManager.MAX_PLAYLIST_TRACKS)
             .mapNotNull { line ->
                 val cleaned = numberingRegex.replace(line, "").trim()
                 if (cleaned.isBlank()) return@mapNotNull null
@@ -246,7 +250,14 @@ object UniversalPlaylistParser {
                     directReference?.second == true,
                     customTitle = title.takeIf { videoId == null && directReference == null && it.isNotBlank() },
                 )
-            }.toList()
+            }.take(PlaylistImportManager.MAX_PLAYLIST_TRACKS + 1)
+            .toList()
+            .checkTrackLimit()
+
+    private fun List<PlaylistImportManager.CsvTrack>.checkTrackLimit(): List<PlaylistImportManager.CsvTrack> {
+        if (size > PlaylistImportManager.MAX_PLAYLIST_TRACKS) throw ImportException(ImportErrorKey.TooManyTracks)
+        return this
+    }
 
     private fun resolveDirectReference(
         value: String,
