@@ -899,7 +899,7 @@
     <string name="move_down">Sposta in basso</string>
     <string name="profiles">Profili</string>
     <string name="statistics_top_artists">Artisti più ascoltati</string>
-    <string name="statistics_top_tracks">Tracce più ascoltate</string>
+    <string name="statistics_top_tracks">Brani più ascoltati</string>
     <string name="stored_clear_collection">Cancella collezione</string>
     <string name="title">Titolo</string>
     <string name="new_label">Nuovo</string>
@@ -914,7 +914,7 @@
     <string name="menu_switch_account">Cambia account…</string>
     <string name="onboarding_migration_complete_title">Il tuo account è stato importato</string>
     <string name="top_results">Risultati principali</string>
-    <string name="tracks">Tracce</string>
+    <string name="tracks">Brani</string>
     <string name="theme_mode_light">Chiaro</string>
     <string name="stored_remove_all_downloads_title">Rimuovere tutti i download?</string>
     <string name="stored_remove_all_message">Questo rimuove i file audio salvati da questo dispositivo.</string>
@@ -976,7 +976,7 @@
     <string name="statistics_top_albums">Album più ascoltati</string>
     <string name="statistics_time">Tempo</string>
     <string name="song">Brano</string>
-    <string name="track">Traccia</string>
+    <string name="track">Brano</string>
     <string name="library_empty">La tua libreria è vuota</string>
     <string name="upload">Carica</string>
     <string name="repeat">Ripeti</string>
@@ -1009,7 +1009,7 @@
         <item quantity="many">%1$d ore fa</item>
         <item quantity="other">%1$d ore fa</item>
     </plurals>
-    <string name="music_video_not_found">Nessun video musicale disponibile per questa traccia.</string>
+    <string name="music_video_not_found">Nessun video musicale disponibile per questo brano.</string>
     <string name="video">Video</string>
     <string name="grid_view">Griglia</string>
     <string name="list_view">Lista</string>
@@ -1043,7 +1043,7 @@
     <string name="playlist_reorder">Riordina</string>
     <string name="startup_error_title">Errore di avvio di Metrolist</string>
     <string name="lyrics_show_translations">Traduzioni</string>
-    <string name="top_tracks">Tracce più ascoltate</string>
+    <string name="top_tracks">Brani principali</string>
     <plurals name="history_days_ago">
         <item quantity="one">%1$dg fa</item>
         <item quantity="many">%1$dg fa</item>
@@ -1071,14 +1071,14 @@
         <item quantity="other">%1$s volte</item>
     </plurals>
     <plurals name="listen_together_add_tracks_to_queue">
-        <item quantity="one">Aggiungi %1$d traccia alla coda o sostituisci quella attuale.</item>
-        <item quantity="many">Aggiungi %1$d tracce alla coda o sostituisci quella attuale.</item>
-        <item quantity="other">Aggiungi %1$d tracce alla coda o sostituisci quella attuale.</item>
+        <item quantity="one">Aggiungi %1$d brano alla coda della stanza o sostituisci la coda corrente.</item>
+        <item quantity="many">Aggiungi %1$d brani alla coda della stanza o sostituisci la coda corrente.</item>
+        <item quantity="other">Aggiungi %1$d brani alla coda della stanza o sostituisci la coda corrente.</item>
     </plurals>
     <plurals name="listen_together_suggest_tracks_to_host">
-        <item quantity="one">Consiglia %1$d traccia all'host. Solo l'host può rimpiazzare la coda della stanza.</item>
-        <item quantity="many">Consiglia %1$d tracce all'host. Solo l'host può rimpiazzare la coda della stanza.</item>
-        <item quantity="other">Consiglia %1$d tracce all'host. Solo l'host può rimpiazzare la coda della stanza.</item>
+        <item quantity="one">Suggerisci %1$d brano all'host. Solo l'host può sostituire la coda della stanza.</item>
+        <item quantity="many">Suggerisci %1$d brani all'host. Solo l'host può sostituire la coda della stanza.</item>
+        <item quantity="other">Suggerisci %1$d brani all'host. Solo l'host può sostituire la coda della stanza.</item>
     </plurals>
     <plurals name="minutes">
         <item quantity="one">%1$d minuto</item>
@@ -1086,9 +1086,9 @@
         <item quantity="other">%1$d minuti</item>
     </plurals>
     <plurals name="n_track">
-        <item quantity="one">%1$d traccia</item>
-        <item quantity="many">%1$d tracce</item>
-        <item quantity="other">%1$d tracce</item>
+        <item quantity="one">%1$d brano</item>
+        <item quantity="many">%1$d brani</item>
+        <item quantity="other">%1$d brani</item>
     </plurals>
     <plurals name="queued_downloads">
         <item quantity="one">%1$d download in coda</item>
@@ -1116,9 +1116,9 @@
         <item quantity="other">Rimossi %1$d brani dalla playlist</item>
     </plurals>
     <plurals name="statistics_tracks">
-        <item quantity="one">%1$d traccia</item>
-        <item quantity="many">%1$d tracce</item>
-        <item quantity="other">%1$d tracce</item>
+        <item quantity="one">%1$d brano</item>
+        <item quantity="many">%1$d brani</item>
+        <item quantity="other">%1$d brani</item>
     </plurals>
     <plurals name="stored_remove_selected_title">
         <item quantity="one">Rimuovere %1$d brano da questo dispositivo?</item>
@@ -1139,8 +1139,8 @@
     </plurals>
     <string name="seek_duration_description">Secondi da saltare con i tasti freccia</string>
     <string name="gradient">Gradiente</string>
-    <string name="prevent_duplicate_tracks_in_queue">Evita tracce duplicate in coda</string>
-    <string name="prevent_duplicate_tracks_in_queue_desc">Se un brano è già in coda, rimuovi la vecchia voce quando lo aggiungi di nuovo</string>
+    <string name="prevent_duplicate_tracks_in_queue">Evita brani duplicati nella coda</string>
+    <string name="prevent_duplicate_tracks_in_queue_desc">Quando aggiungi un brano già presente nella coda, rimuovi la voce precedente</string>
     <string name="seek_duration">Intervallo di scorrimento</string>
     <string name="skip_silence_desc">Avanza rapidamente attraverso le parti silenziose dei brani</string>
     <string name="token_login_title">Token di accesso</string>
@@ -1516,7 +1516,7 @@
     <string name="close_video_fullscreen">Chiudi video a schermo intero</string>
     <string name="thumbnail">Miniatura</string>
     <string name="miniplayer">Mini lettore</string>
-    <string name="no_track_playing">Non in riproduzione</string>
+    <string name="no_track_playing">Nessun brano in riproduzione</string>
     <string name="enter_focus_mode">Entra in modalità concentrazione</string>
     <string name="close_miniplayer">Chiudi mini lettore</string>
     <string name="exit_focus_mode">Esci dalla modalità concentrazione</string>
@@ -1527,7 +1527,7 @@
     <string name="search_shortcuts">Cerca scorciatoie…</string>
     <string name="no_shortcuts_matching">Nessuna scorciatoia per %1$s</string>
     <string name="or">oppure</string>
-    <string name="no_lyrics_for_this_track">Nessun testo per questa traccia</string>
+    <string name="no_lyrics_for_this_track">Nessun testo per questo brano</string>
     <string name="shortcuts_playback">Riproduzione</string>
     <string name="shortcuts_volume">Volume</string>
     <string name="shortcuts_music_video">Video musicale</string>
@@ -1535,8 +1535,8 @@
     <string name="shortcut_play_pause">Riproduci / pausa</string>
     <string name="shortcut_seek_backward_forward">Vai indietro / avanti 5s</string>
     <string name="shortcut_jump_percent" formatted="false">Salta a 0\u0025 - 90\u0025</string>
-    <string name="shortcut_next_track">Traccia successiva</string>
-    <string name="shortcut_previous_track">Traccia precedente</string>
+    <string name="shortcut_next_track">Brano successivo</string>
+    <string name="shortcut_previous_track">Brano precedente</string>
     <string name="shortcut_toggle_shuffle">Attiva/disattiva casuale</string>
     <string name="shortcut_cycle_repeat">Alterna modalità ripetizione</string>
     <string name="shortcut_volume_up_down">Volume su / giù 10\u0025</string>
@@ -1562,12 +1562,12 @@
     <string name="hide_lyrics">Nascondi testo</string>
     <string name="hide_queue">Nascondi coda</string>
     <string name="lyrics_menu">Menù testi</string>
-    <string name="manual_translate_this_track">Manuale: traduci questa traccia</string>
+    <string name="manual_translate_this_track">Manuale: traduci questo brano</string>
     <string name="make_available_offline">Rendilo disponibile per la riproduzione offline</string>
     <string name="media_details">Dettagli media</string>
     <string name="no_provider_results_found">Nessun provider trovato</string>
     <string name="remove_from_saved_podcasts">Rimuovi dai podcast salvati</string>
-    <string name="romanize_track">Romanizza traccia</string>
+    <string name="romanize_track">Romanizza brano</string>
     <string name="save_podcast">Salva podcast</string>
     <string name="select_to_cancel">Seleziona per annullare</string>
     <string name="show_interval_indicator">Indicatore intervallo</string>
@@ -1660,8 +1660,8 @@
     <string name="tray_tooltip_paused">In pausa: %1$s • %2$s</string>
     <string name="tray_pause">Pausa</string>
     <string name="tray_play">Riproduci</string>
-    <string name="tray_next_track">Traccia successiva</string>
-    <string name="tray_previous_track">Traccia precedente</string>
+    <string name="tray_next_track">Brano successivo</string>
+    <string name="tray_previous_track">Brano precedente</string>
     <string name="tray_hide_window">Nascondi finestra</string>
     <string name="tray_show_window">Mostra finestra</string>
     <string name="tray_show_miniplayer">Mostra mini lettore</string>
@@ -1684,16 +1684,16 @@
     <string name="link_copied_to_clipboard">Link copiato negli appunti</string>
     <string name="downloaded">Scaricati</string>
     <string name="playback_error_sabr_attestation">YouTube ha rifiutato l\u0027attestazione SABR dello stream.</string>
-    <string name="playback_error_explicit_signed_in">Questa traccia esplicita non è disponibile con la sessione attuale di YouTube.</string>
-    <string name="playback_error_explicit_sign_in">Accedi a YouTube Music per riprodurre questa traccia esplicita.</string>
+    <string name="playback_error_explicit_signed_in">Questo brano con contenuti espliciti non è riproducibile con la sessione YouTube corrente.</string>
+    <string name="playback_error_explicit_sign_in">Accedi a YouTube Music per riprodurre questo brano con contenuti espliciti.</string>
     <string name="playback_error_no_playable_stream">Nessun flusso audio riproducibile trovato.</string>
-    <string name="playback_error_track_unavailable">Questa traccia non è disponibile.</string>
-    <string name="playback_error_age_restricted">Questa traccia ha limiti di età.</string>
+    <string name="playback_error_track_unavailable">Questo brano non è disponibile.</string>
+    <string name="playback_error_age_restricted">Questa brano è soggetto a limiti di età.</string>
     <string name="playback_error_no_music_video">Nessun video musicale corrispondente trovato.</string>
     <string name="playback_error_network">Impossibile connettersi a YouTube per recuperare i dati streaming.</string>
     <string name="playback_error_unknown_resolution">Errore sconosciuto di risoluzione dello streaming.</string>
     <string name="playback_error_unknown">Errore di riproduzione sconosciuto.</string>
-    <string name="playback_error_track_not_found">Impossibile trovare la traccia richiesta.</string>
+    <string name="playback_error_track_not_found">Impossibile trovare il brano richiesto.</string>
     <string name="playback_error_unable_to_play_link">Impossibile riprodurre il link richiesto.</string>
     <string name="could_not_download_update_manager">Impossibile scaricare il manager degli aggiornamenti</string>
     <string name="update_not_published_stable">L\u0027aggiornamento selezionato non è una versione stabile rilasciata</string>
@@ -1739,9 +1739,9 @@
     <string name="import_amazon_selected_count">%1$d selezionate</string>
     <string name="import_notifier_title">Sto importando le playlist</string>
     <string name="import_status_fetching_metadata">Recupero i metadati delle playlist…</string>
-    <string name="import_status_fetching_tracks">Sto caricando le tracce: %1$d / %2$s…</string>
-    <string name="import_status_matching_tracks_short">Sto abbinando la traccia %1$d di %2$d…</string>
-    <string name="import_status_saving_tracks">Sto salvando nella libreria: %1$d / %2$d…</string>
+    <string name="import_status_fetching_tracks">Sto caricando i brani: %1$d / %2$s…</string>
+    <string name="import_status_matching_tracks_short">Abbinamento di %1$d di %2$d…</string>
+    <string name="import_status_saving_tracks">Salvataggio nella libreria: %1$d / %2$d…</string>
     <string name="import_status_completed">Importazione completata</string>
     <string name="import_notification_channel_name">Importazione playlist</string>
     <string name="import_notification_channel_desc">Mostra l\u0027avanzamento e i risultati dell\u0027importazione delle playlist</string>
@@ -1750,7 +1750,7 @@
     <string name="import_notification_partial">%1$d brani importati in "%2$s" (%3$d non sono stati trovati)</string>
     <string name="import_error_empty_playlist">La playlist non ha brani importabili.</string>
     <string name="import_error_details_title">Dettagli ed errori nell'importazione</string>
-    <string name="import_error_details_summary">Impossibile caricare o abbinare %1$d tracce:</string>
+    <string name="import_error_details_summary">Impossibile caricare o abbinare %1$d brani:</string>
     <string name="import_duplicate_playlist_title">La playlist esiste già</string>
     <string name="import_duplicate_playlist_message">Una playlist nominata "%1$s" con %2$d brani esiste già. Importare comunque?</string>
     <string name="import_duplicate_playlist_import_anyway">Importa comunque</string>
@@ -1758,15 +1758,15 @@
     <string name="import_action_start">Inizia importazione</string>
     <string name="import_action_choose_file">Scegli file</string>
     <string name="import_cancel">Annulla importazione</string>
-    <string name="import_tracks_found">%1$d tracce trovate</string>
+    <string name="import_tracks_found">%1$d brani trovati</string>
     <string name="import_destination_favorites">Preferiti</string>
     <string name="import_error_empty_input">L\u0027input non può essere vuoto</string>
     <string name="import_error_youtube_dedicated_flow">Le playlist di YouTube devono essere importate nella sezione dedicata</string>
     <string name="import_error_invalid_youtube_url">URL della playlist di YouTube non valido</string>
-    <string name="import_error_no_tracks_recognized">Nessuna traccia è stata riconosciuta dal link o testo fornito</string>
+    <string name="import_error_no_tracks_recognized">Impossibile riconoscere alcun brano dal testo o dal link fornito</string>
     <string name="import_default_imported_playlist_title">Playlist importata</string>
-    <string name="import_error_no_tracks_to_import">Nessuna traccia da importare</string>
-    <string name="import_error_no_library_matches">Non è stato possibile abbinare alcuna traccia della libreria musicale</string>
+    <string name="import_error_no_tracks_to_import">Nessun brano da importare</string>
+    <string name="import_error_no_library_matches">Impossibile abbinare alcun brano alla libreria musicale</string>
     <string name="video_viewer">Visualizzatore video</string>
     <string name="subtitles">Sottotitoli</string>
     <string name="open_miniplayer">Apri mini lettore</string>
