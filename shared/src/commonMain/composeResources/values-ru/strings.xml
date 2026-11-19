@@ -2632,7 +2632,7 @@
     <string name="channel_switch_recovery_hint">Не удалось загрузить ваши каналы YouTube. Войдите заново, чтобы обновить сессию, а затем выберите канал.</string>
     <string name="channel_switch_browse_hint">Откройте меню с аватаром на странице YouTube Music, выберите свой канал, а затем выберите %1$s.</string>
     <string name="lyrics_curated_by">(прислано %1$s)</string>
-    <string name="hidden_home_items_desc">Отображать и от-скрывать исполнителей и подкасты, скрытые на главной странице. Вручную закреплённые элементы "Быстрого набора" остаются видимыми.</string>
+    <string name="hidden_home_items_desc">Отображать скрытых на главной странице исполнителей и подкасты и отменять их скрытие. Вручную закреплённые элементы Быстрого выбора остаются видимыми.</string>
     <string name="active_lyrics_alignment">Выравнивание текущей строки текста песни</string>
     <string name="desktop_minimize_to_tray">Сворачивать в трей</string>
     <string name="desktop_minimize_to_tray_desc">При закрытии окна Metrolist будет сворачиваться в трей вместо завершения работы</string>
@@ -2691,4 +2691,7 @@
     <string name="support_prompt_message">Помогите развитию Metrolist, поддержав его разработчиков. Нажмите на любого из них, чтобы открыть страницу поддержки.</string>
     <string name="support_prompt_never_show">Больше не показывать</string>
     <string name="updates_force_install">Всё равно установить</string>
+    <string name="lastfm_session_expired_title">Сеанс Last.fm истёк</string>
+    <string name="lastfm_session_expired">Войти в Last.fm снова</string>
+    <string name="lastfm_session_expired_description">Текущий сеанс Last.fm больше не действителен. Прослушивания сохраняются и будут отправлены после входа.</string>
 </resources>
