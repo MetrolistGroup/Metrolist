@@ -2508,6 +2508,7 @@
     <string name="share_podcast">Share podcast</string>
     <!-- Translators: Imperative action label for share song in the multiple app screens. -->
     <string name="share_song">Share song</string>
+    <!-- Translators: Button label for sharing selected lyrics as a vertical story card. -->
     <string name="share_song_to_story">Share to story</string>
     <!-- Translators: Imperative action label for shuffle artist in the search. -->
     <!-- Translators: Imperative action label for shuffle playlist in the search. -->

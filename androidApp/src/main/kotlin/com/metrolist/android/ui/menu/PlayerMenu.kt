@@ -86,7 +86,6 @@ import com.metrolist.shared.generated.resources.queued_song
 import com.metrolist.shared.generated.resources.remove_download
 import com.metrolist.shared.generated.resources.removed_dislike
 import com.metrolist.shared.generated.resources.removed_download
-import com.metrolist.shared.generated.resources.share_song_to_story
 import com.metrolist.shared.generated.resources.song_details
 import com.metrolist.shared.generated.resources.suggested_to_host
 import com.metrolist.shared.generated.resources.system_equalizer_unavailable
@@ -188,7 +187,6 @@ fun PlayerMenu(
 
     val addToPlaylist = LocalPlaylistAdder.current
     val isTv = LocalIsTv.current
-    val shareStoryTitle = stringResource(Res.string.share_song_to_story)
     val menuSheetState = rememberModalSheetState()
     var showPlaybackSpeed by remember { mutableStateOf(false) }
     var showEqualizer by remember { mutableStateOf(false) }
@@ -308,19 +306,8 @@ fun PlayerMenu(
                                 )
                             }
 
-                            val storyAction =
-                                currentSong?.takeUnless { isTv }?.let {
-                                    PlayerMenuAction(
-                                        icon = MetrolistIcons.Outlined.Share,
-                                        title = shareStoryTitle,
-                                        onClick = {
-                                            playerViewModel.shareSongToStory()
-                                            onDismiss()
-                                        },
-                                    )
-                                }
-                            if (extraActions.isNotEmpty() || storyAction != null) {
-                                item { PlayerMenuActionGroup(actions = extraActions + listOfNotNull(storyAction)) }
+                            if (extraActions.isNotEmpty()) {
+                                item { PlayerMenuActionGroup(actions = extraActions) }
                             }
 
                             item {

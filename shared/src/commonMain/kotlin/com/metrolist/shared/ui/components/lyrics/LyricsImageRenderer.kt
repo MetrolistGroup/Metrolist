@@ -16,6 +16,7 @@ import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.drawscope.CanvasDrawScope
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.clipPath
@@ -70,18 +71,18 @@ private fun DrawScope.drawCover(
 }
 
 internal fun prepareLyricsArtwork(image: ImageBitmap): Pair<List<Color>, ImageBitmap> {
-    val sample = ImageBitmap(64, 64)
-    CanvasDrawScope().draw(Density(1f), LayoutDirection.Ltr, Canvas(sample), Size(64f, 64f)) {
+    val sample = ImageBitmap(128, 128)
+    CanvasDrawScope().draw(Density(1f), LayoutDirection.Ltr, Canvas(sample), Size(128f, 128f)) {
         drawRect(Color.Black)
-        drawCover(image, Offset.Zero, 64f)
+        drawCover(image, Offset.Zero, 128f)
     }
-    val pixels = IntArray(64 * 64)
+    val pixels = IntArray(128 * 128)
     sample.readPixels(pixels)
     val palette = lyricsArtworkPalette(pixels)
-    val blurred = blurLyricsArtwork(pixels, 64, 64, 6)
-    CanvasDrawScope().draw(Density(1f), LayoutDirection.Ltr, Canvas(sample), Size(64f, 64f)) {
+    val blurred = blurLyricsArtwork(pixels, 128, 128, 12)
+    CanvasDrawScope().draw(Density(1f), LayoutDirection.Ltr, Canvas(sample), Size(128f, 128f)) {
         blurred.forEachIndexed { index, pixel ->
-            drawRect(Color(pixel), Offset((index % 64).toFloat(), (index / 64).toFloat()), Size(1f, 1f))
+            drawRect(Color(pixel), Offset((index % 128).toFloat(), (index / 128).toFloat()), Size(1f, 1f))
         }
     }
     return palette to sample
@@ -100,17 +101,24 @@ internal fun renderLyricsImage(
     logo: Painter,
     layoutDirection: LayoutDirection,
     sizePx: Int = 2160,
+    story: Boolean = false,
 ): ImageBitmap {
-    val bitmap = ImageBitmap(sizePx, sizePx)
+    val bitmap = ImageBitmap(sizePx, if (story) sizePx * 16 / 9 else sizePx)
     val scale = sizePx / 340f
     val density = Density(scale, fontScale = 1f)
-    val layout = lyricsImageLayout(style.contentScale)
+    val layout = lyricsImageLayout(style.contentScale, story)
     val contentScale = layout.contentScale
     val padding = layout.padding * scale
     val width = layout.lyricsWidth * scale
     val lyricsTop = layout.lyricsTop * scale
     val lyricsHeight = layout.lyricsHeight * scale
-    val textStyle = TextStyle(color = style.textColor, fontWeight = FontWeight.Bold, textAlign = style.alignment)
+    val textStyle =
+        TextStyle(
+            color = style.textColor,
+            fontWeight = FontWeight.Bold,
+            textAlign = style.alignment,
+            shadow = if (story) Shadow(Color.Black.copy(alpha = 0.55f), Offset(0f, 2f * scale), 4f * scale) else null,
+        )
 
     fun lyricsText(size: Float) =
         buildAnnotatedString {
@@ -134,8 +142,11 @@ internal fun renderLyricsImage(
         )
     val fit = fitLyricsImageText(lyricsHeight, style.textScale) { measureLyrics(it).size.height.toFloat() }
     val lyricsLayout = measureLyrics(fit.fontSize)
-    CanvasDrawScope().draw(density, layoutDirection, Canvas(bitmap), Size(sizePx.toFloat(), sizePx.toFloat())) {
-        val path = Path().apply { addRoundRect(RoundRect(0f, 0f, size.width, size.height, CornerRadius(20 * scale))) }
+    CanvasDrawScope().draw(density, layoutDirection, Canvas(bitmap), Size(bitmap.width.toFloat(), bitmap.height.toFloat())) {
+        val path =
+            Path().apply {
+                addRoundRect(RoundRect(0f, 0f, size.width, size.height, CornerRadius(if (story) 0f else 20 * scale)))
+            }
         clipPath(path) {
             drawRect(style.backgroundColor)
             when (style.background) {
@@ -143,17 +154,57 @@ internal fun renderLyricsImage(
 
                 LyricsImageBackground.BLUR -> {
                     if (blurredArtwork != null) {
-                        drawCover(blurredArtwork, Offset.Zero, size.width)
-                        drawRect(Color.Black.copy(alpha = 0.3f))
+                        if (story) {
+                            drawImage(
+                                blurredArtwork,
+                                srcOffset = IntOffset((blurredArtwork.width - blurredArtwork.height * 9 / 16) / 2, 0),
+                                srcSize = IntSize(blurredArtwork.height * 9 / 16, blurredArtwork.height),
+                                dstSize = IntSize(size.width.toInt(), size.height.toInt()),
+                                filterQuality = FilterQuality.Medium,
+                            )
+                        } else {
+                            drawCover(blurredArtwork, Offset.Zero, size.width)
+                        }
+                        if (story) {
+                            drawRect(
+                                Brush.verticalGradient(
+                                    listOf(
+                                        Color.Black.copy(alpha = 0.2f),
+                                        Color.Black.copy(alpha = 0.48f),
+                                        Color.Black.copy(alpha = 0.64f),
+                                        Color.Black.copy(alpha = 0.24f),
+                                    ),
+                                ),
+                            )
+                        } else {
+                            drawRect(Color.Black.copy(alpha = 0.3f))
+                        }
                     }
                 }
 
                 LyricsImageBackground.GRADIENT -> {
                     val colors = palette.firstOrNull()?.let(::getGradientColors) ?: listOf(style.backgroundColor, style.backgroundColor)
                     drawRect(Brush.linearGradient(colors))
+                    if (story) drawRect(Color.Black.copy(alpha = 0.16f))
                 }
             }
-            artwork?.let { drawCover(it, Offset(padding, padding), layout.artworkSize * scale) }
+            artwork?.let {
+                val topLeft = Offset(layout.artworkX * scale, layout.artworkTop * scale)
+                val artworkSide = layout.artworkSize * scale
+                val artworkClip =
+                    Path().apply {
+                        addRoundRect(
+                            RoundRect(
+                                topLeft.x,
+                                topLeft.y,
+                                topLeft.x + artworkSide,
+                                topLeft.y + artworkSide,
+                                CornerRadius(18 * scale),
+                            ),
+                        )
+                    }
+                clipPath(artworkClip) { drawCover(it, topLeft, artworkSide) }
+            }
 
             fun label(
                 text: String,
@@ -162,23 +213,34 @@ internal fun renderLyricsImage(
                 fontSize: Float,
                 color: Color,
                 maxWidth: Float,
+                centered: Boolean = false,
             ) {
                 val layout =
                     textMeasurer.measure(
                         text,
-                        style = TextStyle(color = color, fontSize = fontSize.sp, fontWeight = FontWeight.Bold),
+                        style =
+                            TextStyle(
+                                color = color,
+                                fontSize = fontSize.sp,
+                                fontWeight = FontWeight.Bold,
+                                textAlign = if (centered) TextAlign.Center else TextAlign.Start,
+                            ),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
-                        constraints = Constraints(maxWidth = (maxWidth * scale).toInt()),
+                        constraints =
+                            Constraints(
+                                minWidth = if (centered) (maxWidth * scale).toInt() else 0,
+                                maxWidth = (maxWidth * scale).toInt(),
+                            ),
                         density = density,
                         layoutDirection = layoutDirection,
                     )
                 drawText(layout, topLeft = Offset(x * scale, y * scale))
             }
-            val headerX = layout.padding + if (artwork == null) 0f else 80f * contentScale
-            val headerWidth = 340f - layout.padding - headerX
-            label(title, headerX, 34f * contentScale, 20f * contentScale, style.textColor, headerWidth)
-            label(artist, headerX, 63f * contentScale, 16f * contentScale, style.secondaryColor, headerWidth)
+            val headerX = if (story || artwork == null) layout.padding else layout.padding + 80f * contentScale
+            val headerWidth = if (story) layout.lyricsWidth else 340f - layout.padding - headerX
+            label(title, headerX, layout.titleTop, 20f * contentScale, style.textColor, headerWidth, centered = story)
+            label(artist, headerX, layout.artistTop, 16f * contentScale, style.secondaryColor, headerWidth, centered = story)
             val textX =
                 padding +
                     when (style.alignment) {

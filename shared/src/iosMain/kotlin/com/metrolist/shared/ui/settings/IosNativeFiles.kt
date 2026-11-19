@@ -24,18 +24,15 @@ import kotlinx.cinterop.value
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
-import org.jetbrains.skia.Bitmap
 import org.jetbrains.skia.EncodedImageFormat
 import org.jetbrains.skia.Image
 import org.jetbrains.skia.impl.use
 import platform.CoreGraphics.CGRectMake
-import platform.CoreGraphics.CGSizeMake
 import platform.Foundation.NSData
 import platform.Foundation.NSError
 import platform.Foundation.NSFileHandle
 import platform.Foundation.NSFileManager
 import platform.Foundation.NSFileSize
-import platform.Foundation.NSString
 import platform.Foundation.NSTemporaryDirectory
 import platform.Foundation.NSURL
 import platform.Foundation.NSUUID
@@ -45,18 +42,10 @@ import platform.Foundation.fileHandleForReadingAtPath
 import platform.Foundation.fileHandleForWritingAtPath
 import platform.Foundation.writeData
 import platform.Foundation.writeToFile
-import platform.UIKit.NSFontAttributeName
-import platform.UIKit.NSForegroundColorAttributeName
 import platform.UIKit.UIActivityViewController
-import platform.UIKit.UIColor
 import platform.UIKit.UIDocumentPickerDelegateProtocol
 import platform.UIKit.UIDocumentPickerMode.UIDocumentPickerModeImport
 import platform.UIKit.UIDocumentPickerViewController
-import platform.UIKit.UIFont
-import platform.UIKit.UIGraphicsImageRenderer
-import platform.UIKit.UIGraphicsImageRendererFormat
-import platform.UIKit.UIImage
-import platform.UIKit.UIRectFill
 import platform.UIKit.UIViewController
 import platform.UIKit.popoverPresentationController
 import platform.darwin.NSObject
@@ -218,58 +207,6 @@ internal object IosNativeFiles {
         text: String,
     ) {
         val activity = UIActivityViewController(listOf(text), applicationActivities = null)
-        anchorShareSheet(activity, presenter)
-        presenter.presentViewController(activity, animated = true, completion = null)
-    }
-
-    fun shareSongStory(
-        presenter: UIViewController,
-        title: String,
-        artist: String,
-        songUrl: String,
-        artwork: Bitmap?,
-    ) {
-        val encodedArtwork = artwork?.let { Image.makeFromBitmap(it).encodeToData(EncodedImageFormat.PNG)?.bytes }
-        val nativeArtwork =
-            encodedArtwork?.let { bytes ->
-                bytes.usePinned { UIImage.imageWithData(NSData.create(it.addressOf(0), bytes.size.toULong())) }
-            }
-        val rendererFormat = UIGraphicsImageRendererFormat().apply { scale = 1.0 }
-        val renderer = UIGraphicsImageRenderer(CGSizeMake(1080.0, 1920.0), rendererFormat)
-        val card =
-            renderer.PNGData {
-                UIColor.colorWithRed(0.11, 0.08, 0.14, 1.0).setFill()
-                UIRectFill(CGRectMake(0.0, 0.0, 1080.0, 1920.0))
-
-                val artworkRect = CGRectMake(92.0, 260.0, 896.0, 896.0)
-                nativeArtwork?.drawInRect(artworkRect)
-                val titleAttributes =
-                    mapOf(
-                        NSFontAttributeName to UIFont.boldSystemFontOfSize(58.0),
-                        NSForegroundColorAttributeName to UIColor.whiteColor,
-                    )
-                val artistAttributes =
-                    mapOf(
-                        NSFontAttributeName to UIFont.systemFontOfSize(38.0),
-                        NSForegroundColorAttributeName to UIColor.colorWithWhite(1.0, 0.82),
-                    )
-                (title as NSString).drawInRect(CGRectMake(92.0, 1240.0, 896.0, 150.0), withAttributes = titleAttributes)
-                (artist as NSString).drawInRect(CGRectMake(92.0, 1420.0, 896.0, 120.0), withAttributes = artistAttributes)
-                (songUrl as NSString).drawInRect(
-                    CGRectMake(92.0, 1740.0, 896.0, 80.0),
-                    withAttributes =
-                        mapOf(
-                            NSFontAttributeName to UIFont.systemFontOfSize(24.0),
-                            NSForegroundColorAttributeName to UIColor.colorWithWhite(1.0, 0.65),
-                        ),
-                )
-            }
-        val cardImage = UIImage.imageWithData(card)
-        if (cardImage == null) {
-            shareText(presenter, songUrl)
-            return
-        }
-        val activity = UIActivityViewController(listOf(cardImage, songUrl), applicationActivities = null)
         anchorShareSheet(activity, presenter)
         presenter.presentViewController(activity, animated = true, completion = null)
     }

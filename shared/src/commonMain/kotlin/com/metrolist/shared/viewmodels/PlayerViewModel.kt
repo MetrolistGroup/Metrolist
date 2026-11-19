@@ -132,8 +132,6 @@ interface PlayerPlatformServices {
 
     fun shareText(text: String)
 
-    suspend fun shareSongToStory(song: SongItem) {}
-
     fun copyText(text: String) {}
 
     /** Returns null on platforms without a Spotify client. */
@@ -1262,11 +1260,6 @@ class PlayerViewModel(
 
     fun shareSong(song: SongItem) {
         platform.shareText(ShareUrls.song(song.id))
-    }
-
-    fun shareSongToStory() {
-        val song = _uiState.value.currentSong ?: return
-        viewModelScope.launch { platform.shareSongToStory(song.toSongItem()) }
     }
 
     fun copySongLink(): String? {

@@ -75,16 +75,24 @@ internal fun blurLyricsArtwork(
 
 internal data class LyricsImageLayout(
     val contentScale: Float,
+    val story: Boolean = false,
 ) {
     val padding = 28f * contentScale
-    val artworkSize = 64f * contentScale
-    val lyricsTop = 110f * contentScale
-    val footerTop = 340f - 72f * contentScale
+    val artworkSize = (if (story) 164f else 64f) * contentScale
+    val artworkX = if (story) (340f - artworkSize) / 2f else padding
+    val artworkTop = if (story) 48f * contentScale else padding
+    val titleTop = if (story) 232f * contentScale else 34f * contentScale
+    val artistTop = if (story) 260f * contentScale else 63f * contentScale
+    val lyricsTop = if (story) 312f * contentScale else 110f * contentScale
+    val footerTop = if (story) 548f else 340f - 72f * contentScale
     val lyricsWidth = 340f - 2f * padding
-    val lyricsHeight = footerTop - 12f * contentScale - lyricsTop
+    val lyricsHeight = footerTop - (if (story) 12f else 12f * contentScale) - lyricsTop
 }
 
-internal fun lyricsImageLayout(contentScale: Float): LyricsImageLayout = LyricsImageLayout(contentScale.coerceIn(0.6f, 1.35f))
+internal fun lyricsImageLayout(
+    contentScale: Float,
+    story: Boolean = false,
+): LyricsImageLayout = LyricsImageLayout(contentScale.coerceIn(0.6f, 1.35f), story)
 
 internal data class LyricsTextFit(
     val fontSize: Float,

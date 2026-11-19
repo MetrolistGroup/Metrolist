@@ -10,12 +10,10 @@ import com.metrolist.shared.model.SongItem
 import com.metrolist.shared.ui.settings.IosNativeFiles
 import com.metrolist.shared.ui.theme.ThemeColorExtractor
 import com.metrolist.shared.ui.theme.getGradientColors
-import com.metrolist.shared.utils.ShareUrls
 import com.metrolist.shared.utils.artworkColors
 import com.metrolist.shared.viewmodels.PlayerArtworkColors
 import com.metrolist.shared.viewmodels.PlayerPlatformServices
 import com.metrolist.shared.youtube.extraction.models.toContentHints
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import platform.UIKit.UIViewController
@@ -40,28 +38,6 @@ internal class IosPlayerPlatformServices(
 
     override fun shareText(text: String) {
         IosNativeFiles.shareText(presenter, text)
-    }
-
-    override suspend fun shareSongToStory(song: SongItem) {
-        val context = PlatformContext.INSTANCE
-        val artwork =
-            song.thumbnail?.let { url ->
-                try {
-                    val request = ImageRequest.Builder(context).data(url).build()
-                    ((SingletonImageLoader.get(context).execute(request) as? SuccessResult)?.image as? BitmapImage)?.bitmap
-                } catch (error: CancellationException) {
-                    throw error
-                } catch (_: Exception) {
-                    null
-                }
-            }
-        IosNativeFiles.shareSongStory(
-            presenter = presenter,
-            title = song.title,
-            artist = song.artists.joinToString(", ") { it.name },
-            songUrl = ShareUrls.song(song.id),
-            artwork = artwork,
-        )
     }
 
     override fun copyText(text: String) {

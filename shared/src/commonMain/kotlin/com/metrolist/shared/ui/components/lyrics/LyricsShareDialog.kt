@@ -114,6 +114,7 @@ fun LyricsShareDialog(
     artist: String,
     artworkUrl: String?,
     exportLabel: String,
+    storyMode: Boolean = false,
     onExport: suspend (ImageBitmap) -> Boolean,
     onShareText: (String) -> Unit,
     onDismiss: () -> Unit,
@@ -121,7 +122,7 @@ fun LyricsShareDialog(
     var busy by remember { mutableStateOf(false) }
     var failed by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
-    val shareText = stringResource(Res.string.lyrics_share_text, text, title, artist, ShareUrls.song(songId))
+    val shareText = if (storyMode) null else stringResource(Res.string.lyrics_share_text, text, title, artist, ShareUrls.song(songId))
     var style by remember {
         mutableStateOf(
             decodeLyricsImageStyle(
@@ -132,7 +133,13 @@ fun LyricsShareDialog(
                         "RIGHT" -> TextAlign.Right
                         else -> TextAlign.Center
                     },
-            ),
+            ).let { style ->
+                if (storyMode && Settings.shared.lyricsShareImageStyle.isBlank()) {
+                    style.copy(background = if (artworkUrl == null) LyricsImageBackground.GRADIENT else LyricsImageBackground.BLUR)
+                } else {
+                    style
+                }
+            },
         )
     }
     val latestStyle by rememberUpdatedState(style)
@@ -177,8 +184,8 @@ fun LyricsShareDialog(
     val logo = painterResource(Res.drawable.logo)
     val appName = stringResource(Res.string.app_name)
     val direction = LocalLayoutDirection.current
-    var bitmap by remember(text, style, artwork) { mutableStateOf<ImageBitmap?>(null) }
-    LaunchedEffect(text, title, artist, appName, style, artwork, blurredArtwork, palette, loadingArtwork, direction) {
+    var bitmap by remember(text, style, artwork, storyMode) { mutableStateOf<ImageBitmap?>(null) }
+    LaunchedEffect(text, title, artist, appName, style, artwork, blurredArtwork, palette, loadingArtwork, direction, storyMode) {
         if (!loadingArtwork) {
             delay(80)
             failed = false
@@ -199,6 +206,7 @@ fun LyricsShareDialog(
                                 logo,
                                 direction,
                                 sizePx = 540,
+                                story = storyMode,
                             )
                         }
                     }
@@ -235,7 +243,10 @@ fun LyricsShareDialog(
                     ) {
                         item {
                             Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                                Box(Modifier.widthIn(max = 420.dp).fillMaxWidth().aspectRatio(1f), contentAlignment = Alignment.Center) {
+                                Box(
+                                    Modifier.widthIn(max = 420.dp).fillMaxWidth().aspectRatio(if (storyMode) 9f / 16f else 1f),
+                                    contentAlignment = Alignment.Center,
+                                ) {
                                     bitmap?.let { Image(it, stringResource(Res.string.preview), Modifier.fillMaxWidth()) }
                                     if (bitmap == null && !failed) ContainedLoadingIndicator()
                                 }
@@ -348,14 +359,16 @@ fun LyricsShareDialog(
                         onClick = onDismiss,
                         shapes = ButtonDefaults.shapes(),
                     ) { Text(stringResource(Res.string.cancel)) }
-                    Button(
-                        enabled = !busy,
-                        onClick = {
-                            onShareText(shareText)
-                            onDismiss()
-                        },
-                        shapes = ButtonDefaults.shapes(),
-                    ) { Text(stringResource(Res.string.share_as_text)) }
+                    if (!storyMode) {
+                        Button(
+                            enabled = !busy,
+                            onClick = {
+                                shareText?.let(onShareText)
+                                onDismiss()
+                            },
+                            shapes = ButtonDefaults.shapes(),
+                        ) { Text(stringResource(Res.string.share_as_text)) }
+                    }
                     Button(
                         enabled = bitmap != null && !busy,
                         onClick = {
@@ -378,6 +391,7 @@ fun LyricsShareDialog(
                                                     measurer,
                                                     logo,
                                                     direction,
+                                                    story = storyMode,
                                                 )
                                             }
                                         }

@@ -30,7 +30,6 @@ import com.metrolist.shared.generated.resources.equalizer
 import com.metrolist.shared.generated.resources.listen_together
 import com.metrolist.shared.generated.resources.playback_pitch
 import com.metrolist.shared.generated.resources.playback_speed
-import com.metrolist.shared.generated.resources.share_song_to_story
 import com.metrolist.shared.generated.resources.sleep_timer
 import com.metrolist.shared.generated.resources.tempo_and_pitch
 import com.metrolist.shared.generated.resources.unavailable
@@ -285,14 +284,6 @@ internal class MobilePlayerPlatform(
                     additionalActions =
                         extraActions +
                             listOfNotNull(
-                                PlayerMenuAction(
-                                    icon = MetrolistIcons.Outlined.Share,
-                                    title = stringResource(Res.string.share_song_to_story),
-                                    onClick = {
-                                        viewModel.shareSongToStory()
-                                        onDismiss()
-                                    },
-                                ),
                                 equalizerMenuAction(
                                     onOpen = {
                                         scope.launch {
