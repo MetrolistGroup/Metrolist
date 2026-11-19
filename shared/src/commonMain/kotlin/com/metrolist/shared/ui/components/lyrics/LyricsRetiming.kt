@@ -193,7 +193,7 @@ internal fun buildLyricsTimelineItems(
                                     .isNotBlank()
                         } == true
 
-                val mainWordsSource = words?.takeIf { it.isNotEmpty() } ?: romanWords.orEmpty()
+                val mainWordsSource = words?.filterNot { it.isBackground }?.takeIf { it.isNotEmpty() } ?: romanWords.orEmpty()
                 val mainWordsFiltered =
                     mainWordsSource.filter { !it.isBackground && !it.isLineTimed && it.endTime > it.startTime }
                 val ranges = LongArray(mainWordsFiltered.size * 2)

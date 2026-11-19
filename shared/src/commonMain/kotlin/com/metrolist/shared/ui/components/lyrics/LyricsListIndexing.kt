@@ -59,8 +59,11 @@ internal fun mergeBackgroundLyricsEntries(lyrics: List<LyricsEntry>): List<Lyric
                         .takeIf { it.isNotEmpty() },
                 endTime = listOfNotNull(main.endTime, backgroundEndTime).maxOrNull(),
                 backgroundText =
-                    listOfNotNull(main.backgroundText?.takeIf(String::isNotBlank), backgroundText)
-                        .joinToString(" ")
+                    listOfNotNull(
+                        main.backgroundText?.takeIf(String::isNotBlank),
+                        background.backgroundText?.takeIf(String::isNotBlank),
+                        backgroundText,
+                    ).joinToString(" ")
                         .takeIf(String::isNotBlank),
                 backgroundTranslatedText =
                     listOfNotNull(

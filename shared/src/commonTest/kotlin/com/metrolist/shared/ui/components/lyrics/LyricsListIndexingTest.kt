@@ -46,4 +46,32 @@ class LyricsListIndexingTest {
         assertEquals(null, displayLyrics[1].words)
         assertEquals("Way I'm touching your body", lines.last().entry.text)
     }
+
+    @Test
+    fun backgroundEntryTextAndRomanizedMainTimingArePreserved() {
+        val lyrics =
+            listOf(
+                LyricsEntry(
+                    time = 1_000,
+                    text = "Main lyric",
+                    romanizedWords = listOf(WordTimestamp("Main", 1.0, 2.0)),
+                ),
+                LyricsEntry(
+                    time = 1_500,
+                    text = "(background)",
+                    isBackground = true,
+                    words = listOf(WordTimestamp("background", 1.5, 2.5, isBackground = true)),
+                    backgroundText = "existing background",
+                ),
+            )
+
+        val merged = mergeBackgroundLyricsEntries(lyrics)
+        val items = buildLyricsListItems(merged)
+        val timeline = buildLyricsTimelineItems(items, merged)
+        val mainTimeline = timeline.first { !it.isGap }
+
+        assertEquals("existing background", merged.first().backgroundText)
+        assertTrue(mainTimeline.hasActiveMainVocals(1_500))
+        assertEquals("Main lyric (existing background background)", selectedLyricsText(merged, setOf(0)))
+    }
 }

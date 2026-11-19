@@ -1641,7 +1641,7 @@ fun LyricsView(
                             onClick = {
                                 onShareSelection?.invoke(
                                     selectedLyricsText(
-                                        lyrics,
+                                        displayLyrics,
                                         selectedIndices,
                                     ),
                                 )

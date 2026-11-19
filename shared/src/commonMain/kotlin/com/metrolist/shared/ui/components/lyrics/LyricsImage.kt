@@ -30,7 +30,23 @@ internal fun toggleLyricsShareLine(
 internal fun selectedLyricsText(
     lyrics: List<LyricsEntry>,
     selected: Set<Int>,
-): String = selected.sorted().mapNotNull { lyrics.getOrNull(it)?.text?.takeIf(String::isNotBlank) }.joinToString("\n")
+): String =
+    selected
+        .sorted()
+        .mapNotNull { index ->
+            lyrics.getOrNull(index)?.let { entry ->
+                val mainText = entry.text.takeIf(String::isNotBlank)
+                val backgroundText =
+                    listOfNotNull(
+                        entry.backgroundText?.takeIf(String::isNotBlank),
+                        entry.words
+                            ?.filter { it.isBackground }
+                            ?.joinToString("") { it.text }
+                            ?.takeIf(String::isNotBlank),
+                    ).joinToString(" ").trim().removeSurrounding("(", ")").takeIf(String::isNotBlank)
+                listOfNotNull(mainText, backgroundText?.let { "($it)" }).joinToString(" ").takeIf(String::isNotBlank)
+            }
+        }.joinToString("\n")
 
 internal fun lyricsArtworkPalette(pixels: IntArray): List<Color> =
     QuantizerCelebi
