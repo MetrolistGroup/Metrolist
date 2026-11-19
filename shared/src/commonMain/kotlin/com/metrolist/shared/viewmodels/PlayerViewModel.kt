@@ -1246,6 +1246,7 @@ class PlayerViewModel(
             _uiState.value.copy(
                 isQueueVisible = visible,
                 isLyricsVisible = if (visible) false else _uiState.value.isLyricsVisible,
+                isLyricsExpanded = if (visible) false else _uiState.value.isLyricsExpanded,
             )
     }
 
