@@ -2632,4 +2632,13 @@
         <item quantity="many">%1$d giorni</item>
         <item quantity="other">%1$d giorni</item>
     </plurals>
+    <string name="support_prompt_title">Ti piace l'app?</string>
+    <string name="support_prompt_message">Sostieni lo sviluppo di Metrolist supportando gli sviluppatori dietro il progetto. Tocca uno di loro per aprire la loro pagina di supporto.</string>
+    <string name="support_prompt_never_show">Non mostrarmelo più</string>
+    <string name="account_downloading_nightly_update">Scarica aggiornamento nightly</string>
+    <string name="account_nightly_update_available">Nuova nightly disponibile</string>
+    <string name="lastfm_session_expired_title">Sessione Last.fm scaduta</string>
+    <string name="lastfm_session_expired">Accedi di nuovo a Last.fm</string>
+    <string name="lastfm_session_expired_description">Il tuo login a Last.fm non è più valido. Le riproduzioni verranno salvate e mandate una volta fatto l'accesso.</string>
+    <string name="tray_hide_miniplayer">Nascondi miniplayer</string>
 </resources>
