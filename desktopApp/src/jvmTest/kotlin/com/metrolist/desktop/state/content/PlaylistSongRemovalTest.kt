@@ -1,5 +1,7 @@
 package com.metrolist.desktop.state.content
 
+import com.metrolist.shared.api.playlistSongs
+import com.metrolist.shared.model.EpisodeItem
 import com.metrolist.shared.model.PlaylistItem
 import com.metrolist.shared.model.SongItem
 import com.metrolist.shared.model.YTItem
@@ -28,5 +30,19 @@ class PlaylistSongRemovalTest {
             mapOf("first" to listOf(second, local, playlist), "second" to listOf(second, otherLocal)),
             sections.removePlaylistSongs(listOf(first.copy(playlistSetVideoId = null), first)),
         )
+    }
+
+    @Test
+    fun removalMatchesTheSelectedEpisodeOccurrenceFromPlaylistRows() {
+        val first = EpisodeItem("episode", "Episode", null, playlistSetVideoId = "first")
+        val second = first.copy(playlistSetVideoId = "second")
+        val song = SongItem("song", "Song", null, emptyList(), null, playlistSetVideoId = "song")
+        val sections: Map<String, List<YTItem>> = mapOf("Tracks" to listOf(first, song, second))
+
+        val selectedRow = sections.playlistSongs().last()
+        assertEquals("second", selectedRow.playlistSetVideoId)
+        val after = sections.removePlaylistSongs(listOf(selectedRow))
+        assertEquals(listOf(first, song), after["Tracks"])
+        assertEquals(listOf("first", "song"), after.playlistSongs().map { it.playlistSetVideoId })
     }
 }

@@ -1,5 +1,6 @@
 package com.metrolist.desktop.state.content
 
+import com.metrolist.shared.model.EpisodeItem
 import com.metrolist.shared.model.SongItem
 import com.metrolist.shared.model.YTItem
 
@@ -25,8 +26,12 @@ internal fun Map<String, List<YTItem>>.removePlaylistSongs(songs: List<SongItem>
     }
     return mapValues { (_, items) ->
         items.filter { item ->
-            if (item !is SongItem) return@filter true
-            val occurrence = item.playlistLocalMappingId?.let { "local:$it" } ?: item.playlistSetVideoId
+            val occurrence =
+                when (item) {
+                    is SongItem -> item.playlistLocalMappingId?.let { "local:$it" } ?: item.playlistSetVideoId
+                    is EpisodeItem -> item.playlistSetVideoId
+                    else -> return@filter true
+                }
             val match =
                 if (occurrence == null) {
                     bySong[item.id].next()
