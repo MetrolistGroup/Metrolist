@@ -187,7 +187,7 @@ fun StatsScreen() {
                             rankedTitle = "${index + 1}. ${item.name}",
                             subtitle = statisticsPlayCountDuration(item.playCount, item.playTimeMs),
                             thumbnailUrl =
-                                item.thumbnailUrl ?: artistThumbnails[statisticsArtistItemId(index, item.name)]
+                                artistThumbnails[statisticsArtistItemId(index, item.name)] ?: item.thumbnailUrl
                                     ?: artistFallbacks[item.name],
                             circularArtwork = true,
                         )
