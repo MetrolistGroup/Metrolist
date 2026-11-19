@@ -70,8 +70,58 @@ class LyricsListIndexingTest {
         val timeline = buildLyricsTimelineItems(items, merged)
         val mainTimeline = timeline.first { !it.isGap }
 
-        assertEquals("existing background", merged.first().backgroundText)
+        assertEquals("background existing background", merged.first().backgroundText)
         assertTrue(mainTimeline.hasActiveMainVocals(1_500))
-        assertEquals("Main lyric (existing background background)", selectedLyricsText(merged, setOf(0)))
+        assertEquals("Main lyric (background existing background)", selectedLyricsText(merged, setOf(0)))
+        assertTrue(
+            merged
+                .first()
+                .romanizedWords
+                .orEmpty()
+                .any { it.isBackground && it.text == "background" },
+        )
+    }
+
+    @Test
+    fun textOnlyBackgroundIsRenderedAlongsideExistingTimedBackgroundWords() {
+        val lyrics =
+            listOf(
+                LyricsEntry(
+                    time = 1_000,
+                    text = "Main lyric",
+                    words = listOf(WordTimestamp("old vocal", 1.0, 2.0, isBackground = true)),
+                ),
+                LyricsEntry(time = 1_500, text = "new vocal", isBackground = true),
+            )
+
+        val merged = mergeBackgroundLyricsEntries(lyrics).first()
+
+        assertEquals("old vocal new vocal", merged.words.orEmpty().backgroundText())
+        assertEquals("old vocal new vocal", merged.backgroundText)
+    }
+
+    @Test
+    fun selectedLyricsTextDeduplicatesBackgroundAndPreservesTokenSpacing() {
+        val lyrics =
+            listOf(
+                LyricsEntry(
+                    time = 1_000,
+                    text = "Lead",
+                    words = listOf(WordTimestamp("Echo", 1.0, 2.0, hasTrailingSpace = false, isBackground = true)),
+                    backgroundText = "(Echo)",
+                ),
+                LyricsEntry(
+                    time = 2_000,
+                    text = "Main",
+                    words =
+                        listOf(
+                            WordTimestamp("But", 2.0, 2.2, hasTrailingSpace = true, isBackground = true),
+                            WordTimestamp("we", 2.2, 2.4, hasTrailingSpace = true, isBackground = true),
+                            WordTimestamp("care", 2.4, 2.6, hasTrailingSpace = false, isBackground = true),
+                        ),
+                ),
+            )
+
+        assertEquals("Lead (Echo)\nMain (But we care)", selectedLyricsText(lyrics, setOf(0, 1)))
     }
 }

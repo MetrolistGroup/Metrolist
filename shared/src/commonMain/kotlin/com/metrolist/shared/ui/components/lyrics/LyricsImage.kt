@@ -38,12 +38,14 @@ internal fun selectedLyricsText(
                 val mainText = entry.text.takeIf(String::isNotBlank)
                 val backgroundText =
                     listOfNotNull(
-                        entry.backgroundText?.takeIf(String::isNotBlank),
-                        entry.words
-                            ?.filter { it.isBackground }
-                            ?.joinToString("") { it.text }
-                            ?.takeIf(String::isNotBlank),
-                    ).joinToString(" ").trim().removeSurrounding("(", ")").takeIf(String::isNotBlank)
+                        entry.backgroundText
+                            ?.takeIf(String::isNotBlank)
+                            ?.trim()
+                            ?.removeSurrounding("(", ")"),
+                        entry.words?.backgroundText(),
+                    ).distinctBy(::normalizeBackgroundText)
+                        .joinToString(" ")
+                        .takeIf(String::isNotBlank)
                 listOfNotNull(mainText, backgroundText?.let { "($it)" }).joinToString(" ").takeIf(String::isNotBlank)
             }
         }.joinToString("\n")

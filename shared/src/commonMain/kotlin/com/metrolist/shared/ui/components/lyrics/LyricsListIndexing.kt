@@ -6,6 +6,7 @@
 package com.metrolist.shared.ui.components.lyrics
 
 import com.metrolist.shared.model.LyricsEntry
+import com.metrolist.shared.model.WordTimestamp
 
 sealed interface LyricsListItem {
     data class Line(
@@ -29,6 +30,36 @@ internal const val LYRICS_GAP_MIN_MS = 7000L
 internal const val LYRICS_GAP_START_LAG_MS = 310L
 internal const val LYRICS_GAP_END_LEAD_MS = 800L
 
+private fun WordTimestamp.asBackground() = copy(isBackground = true)
+
+internal fun List<WordTimestamp>.backgroundText(): String? =
+    filter(WordTimestamp::isBackground)
+        .joinToString("") { it.text + if (it.hasTrailingSpace) " " else "" }
+        .trim()
+        .takeIf(String::isNotBlank)
+
+internal fun normalizeBackgroundText(text: String): String =
+    text
+        .trim()
+        .removeSurrounding("(", ")")
+        .filterNot(Char::isWhitespace)
+        .lowercase()
+
+private fun textBackgroundWord(
+    text: String?,
+    entry: LyricsEntry,
+): WordTimestamp? =
+    text?.takeIf(String::isNotBlank)?.let {
+        WordTimestamp(
+            text = it.trim().removeSurrounding("(", ")"),
+            startTime = entry.time / 1000.0,
+            endTime = (entry.endTime ?: entry.time) / 1000.0,
+            hasTrailingSpace = false,
+            isBackground = true,
+            isLineTimed = true,
+        )
+    }
+
 internal fun mergeBackgroundLyricsEntries(lyrics: List<LyricsEntry>): List<LyricsEntry> {
     if (lyrics.none(LyricsEntry::isBackground)) return lyrics
     val displayLines = lyrics.toMutableList()
@@ -36,13 +67,56 @@ internal fun mergeBackgroundLyricsEntries(lyrics: List<LyricsEntry>): List<Lyric
         if (!background.isBackground) return@forEachIndexed
         val mainIndex = (index - 1 downTo 0).firstOrNull { !lyrics[it].isBackground } ?: return@forEachIndexed
         val main = displayLines[mainIndex]
-        val backgroundWords = background.words.orEmpty().map { it.copy(isBackground = true) }
-        val backgroundText =
-            if (backgroundWords.isEmpty()) {
-                background.text
+        val mainBackgroundWords = main.words.orEmpty().filter(WordTimestamp::isBackground)
+        val mainWordBackgroundText = mainBackgroundWords.backgroundText()
+        val mainTextBackgroundWord =
+            main.backgroundText
+                ?.takeIf {
+                    mainWordBackgroundText == null ||
+                        normalizeBackgroundText(it) != normalizeBackgroundText(mainWordBackgroundText)
+                }?.let { textBackgroundWord(it, main) }
+        val backgroundWords = background.words.orEmpty().map(WordTimestamp::asBackground)
+        val sourceBackgroundText =
+            background.backgroundText?.takeIf(String::isNotBlank)
+                ?: background.text
                     .trim()
                     .removeSurrounding("(", ")")
-                    .takeIf(String::isNotBlank)
+                    .takeIf { backgroundWords.isEmpty() && it.isNotBlank() }
+        val wordBackgroundText = backgroundWords.backgroundText()
+        val distinctBackgroundText =
+            sourceBackgroundText?.takeIf {
+                wordBackgroundText == null ||
+                    normalizeBackgroundText(it) != normalizeBackgroundText(wordBackgroundText)
+            }
+        val incomingTextBackgroundWord =
+            textBackgroundWord(distinctBackgroundText ?: sourceBackgroundText?.takeIf { wordBackgroundText == null }, background)
+        val incomingBackgroundWords = backgroundWords + listOfNotNull(incomingTextBackgroundWord)
+        val incomingRomanizedWords = background.romanizedWords?.map(WordTimestamp::asBackground)?.takeIf { it.isNotEmpty() }
+        val romanizedIncomingWords =
+            if (incomingRomanizedWords != null) {
+                val romanizedText = incomingRomanizedWords.backgroundText()
+                incomingRomanizedWords +
+                    listOfNotNull(
+                        incomingTextBackgroundWord?.takeUnless {
+                            romanizedText != null && normalizeBackgroundText(it.text) == normalizeBackgroundText(romanizedText)
+                        },
+                    )
+            } else {
+                incomingBackgroundWords
+            }
+        val existingRomanizedWords = main.romanizedWords.orEmpty()
+        val existingRawBackgroundWords = mainBackgroundWords + listOfNotNull(mainTextBackgroundWord)
+        val romanizedBackgroundWords =
+            existingRawBackgroundWords.filterNot { raw ->
+                existingRomanizedWords.any { roman ->
+                    roman.isBackground && roman.startTime == raw.startTime && roman.endTime == raw.endTime
+                }
+            } + romanizedIncomingWords
+        val mergedWords = main.words.orEmpty() + listOfNotNull(mainTextBackgroundWord) + incomingBackgroundWords
+        val mergedRomanizedWords =
+            if (main.romanizedWords != null || incomingRomanizedWords != null) {
+                existingRomanizedWords.filterNot(WordTimestamp::isBackground) + existingRomanizedWords.filter(WordTimestamp::isBackground) +
+                    romanizedBackgroundWords
             } else {
                 null
             }
@@ -53,18 +127,10 @@ internal fun mergeBackgroundLyricsEntries(lyrics: List<LyricsEntry>): List<Lyric
             ).takeIf { it != Long.MIN_VALUE }
         displayLines[mainIndex] =
             main.copy(
-                words = (main.words.orEmpty() + backgroundWords).takeIf { it.isNotEmpty() },
-                romanizedWords =
-                    (main.romanizedWords.orEmpty() + background.romanizedWords.orEmpty().map { it.copy(isBackground = true) })
-                        .takeIf { it.isNotEmpty() },
+                words = mergedWords.takeIf { it.isNotEmpty() },
+                romanizedWords = mergedRomanizedWords,
                 endTime = listOfNotNull(main.endTime, backgroundEndTime).maxOrNull(),
-                backgroundText =
-                    listOfNotNull(
-                        main.backgroundText?.takeIf(String::isNotBlank),
-                        background.backgroundText?.takeIf(String::isNotBlank),
-                        backgroundText,
-                    ).joinToString(" ")
-                        .takeIf(String::isNotBlank),
+                backgroundText = mergedWords.backgroundText(),
                 backgroundTranslatedText =
                     listOfNotNull(
                         main.backgroundTranslatedText?.takeIf(String::isNotBlank),
