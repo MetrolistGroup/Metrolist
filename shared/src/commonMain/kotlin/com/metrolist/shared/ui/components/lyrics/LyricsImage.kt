@@ -86,7 +86,6 @@ internal data class LyricsImageLayout(
     val lyricsTop = if (story) 138f * contentScale else 110f * contentScale
     val footerTop = if (story) 544f else 340f - 72f * contentScale
     val cardTop = if (story) 30f else 0f
-    val cardBottom = if (story) 586f else 0f
     val lyricsWidth = 340f - 2f * padding
     val lyricsHeight = footerTop - (if (story) 10f else 12f * contentScale) - lyricsTop
 }

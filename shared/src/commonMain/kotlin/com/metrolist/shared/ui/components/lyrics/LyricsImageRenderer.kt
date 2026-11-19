@@ -118,7 +118,6 @@ internal fun renderLyricsImage(
     val textWidth = width - 2 * lyricsInsetX
     val textHeight = lyricsHeight - 2 * lyricsInsetY
     val textLeft = padding + lyricsInsetX
-    val textTop = lyricsTop + lyricsInsetY
     val textStyle =
         TextStyle(
             color = style.textColor,
@@ -149,6 +148,19 @@ internal fun renderLyricsImage(
         )
     val fit = fitLyricsImageText(textHeight, style.textScale) { measureLyrics(it).size.height.toFloat() }
     val lyricsLayout = measureLyrics(fit.fontSize)
+    val renderedLyricsHeight = lyricsLayout.size.height * fit.drawScale
+    val footerTop =
+        if (story) {
+            minOf(layout.footerTop, layout.lyricsTop + 12f * contentScale + renderedLyricsHeight / scale + 18f * contentScale)
+        } else {
+            layout.footerTop
+        }
+    val cardBottom = if (story) footerTop + 34f * contentScale else 0f
+    val cardHeight = if (story) cardBottom - layout.cardTop else 0f
+    val verticalOffset = if (story) ((340f * 16f / 9f - cardHeight) / 2f) - layout.cardTop else 0f
+    val verticalOffsetPx = verticalOffset * scale
+    val textTop = lyricsTop + lyricsInsetY + verticalOffsetPx
+    val textClipHeight = if (story) renderedLyricsHeight else textHeight
     CanvasDrawScope().draw(density, layoutDirection, Canvas(bitmap), Size(bitmap.width.toFloat(), bitmap.height.toFloat())) {
         val path =
             Path().apply {
@@ -196,24 +208,24 @@ internal fun renderLyricsImage(
                 }
             }
             if (story) {
-                val cardTop = layout.cardTop * scale
-                val cardHeight = (layout.cardBottom - layout.cardTop) * scale
+                val cardTop = (layout.cardTop + verticalOffset) * scale
+                val cardHeightPx = cardHeight * scale
                 drawRoundRect(
                     Color.Black.copy(alpha = 0.4f),
                     topLeft = Offset(padding, cardTop),
-                    size = Size(width, cardHeight),
+                    size = Size(width, cardHeightPx),
                     cornerRadius = CornerRadius(28f * scale),
                 )
                 drawRoundRect(
                     Color.White.copy(alpha = 0.16f),
                     topLeft = Offset(padding, cardTop),
-                    size = Size(width, cardHeight),
+                    size = Size(width, cardHeightPx),
                     cornerRadius = CornerRadius(28f * scale),
                     style = Stroke(width = scale),
                 )
             }
             artwork?.let {
-                val topLeft = Offset(layout.artworkX * scale, layout.artworkTop * scale)
+                val topLeft = Offset(layout.artworkX * scale, (layout.artworkTop + verticalOffset) * scale)
                 val artworkSide = layout.artworkSize * scale
                 val artworkClip =
                     Path().apply {
@@ -237,7 +249,6 @@ internal fun renderLyricsImage(
                 fontSize: Float,
                 color: Color,
                 maxWidth: Float,
-                centered: Boolean = false,
             ) {
                 val layout =
                     textMeasurer.measure(
@@ -247,13 +258,13 @@ internal fun renderLyricsImage(
                                 color = color,
                                 fontSize = fontSize.sp,
                                 fontWeight = FontWeight.Bold,
-                                textAlign = if (centered) TextAlign.Center else TextAlign.Start,
+                                textAlign = TextAlign.Start,
                             ),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                         constraints =
                             Constraints(
-                                minWidth = if (centered) (maxWidth * scale).toInt() else 0,
+                                minWidth = 0,
                                 maxWidth = (maxWidth * scale).toInt(),
                             ),
                         density = density,
@@ -279,8 +290,8 @@ internal fun renderLyricsImage(
                 } else {
                     340f - layout.padding - headerX
                 }
-            label(title, headerX, layout.titleTop, 20f * contentScale, style.textColor, headerWidth, centered = story)
-            label(artist, headerX, layout.artistTop, 16f * contentScale, style.secondaryColor, headerWidth, centered = story)
+            label(title, headerX, layout.titleTop + verticalOffset, 20f * contentScale, style.textColor, headerWidth)
+            label(artist, headerX, layout.artistTop + verticalOffset, 16f * contentScale, style.secondaryColor, headerWidth)
             val textX =
                 textLeft +
                     when (style.alignment) {
@@ -288,7 +299,7 @@ internal fun renderLyricsImage(
                         TextAlign.Right -> textWidth * (1f - fit.drawScale)
                         else -> textWidth * (1f - fit.drawScale) / 2f
                     }
-            clipRect(textLeft, textTop, textLeft + textWidth, textTop + textHeight) {
+            clipRect(textLeft, textTop, textLeft + textWidth, textTop + textClipHeight) {
                 translate(textX, textTop) {
                     scale(fit.drawScale, pivot = Offset.Zero) { drawText(lyricsLayout) }
                 }
@@ -296,16 +307,23 @@ internal fun renderLyricsImage(
             val footerScale = scale * contentScale
             drawCircle(
                 style.secondaryColor,
-                radius = 11 * footerScale,
-                center = Offset(padding + 18 * footerScale, layout.footerTop * scale + 14 * footerScale),
+                radius = 10 * footerScale,
+                center =
+                    Offset(
+                        padding + 24f * footerScale,
+                        (footerTop + verticalOffset) * scale + 14 * footerScale,
+                    ),
             )
-            translate(padding + 8 * footerScale, layout.footerTop * scale + 4 * footerScale) {
+            translate(
+                padding + 14f * footerScale,
+                (footerTop + verticalOffset) * scale + 4 * footerScale,
+            ) {
                 with(logo) { draw(Size(20 * footerScale, 20 * footerScale), colorFilter = ColorFilter.tint(style.backgroundColor)) }
             }
             label(
                 appName,
-                layout.padding + 44f * contentScale,
-                layout.footerTop + 8f * contentScale,
+                layout.padding + 48f * contentScale,
+                footerTop + verticalOffset + 8f * contentScale,
                 12f * contentScale,
                 style.secondaryColor,
                 layout.lyricsWidth - 62f * contentScale,
