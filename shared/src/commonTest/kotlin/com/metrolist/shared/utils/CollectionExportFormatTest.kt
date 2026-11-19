@@ -79,6 +79,18 @@ class CollectionExportFormatTest {
     }
 
     @Test
+    fun m3uRoundTripPreservesTitlesContainingBy() {
+        val source = song.copy(id = "abcdefghijk", title = "Stand by Me", artists = listOf(ArtistTiny(null, "Ben E. King")))
+        val exported = CollectionExportFormat.M3U.render(listOf(source))
+        val prepared = UniversalPlaylistParser.prepareFile(exported, "playlist.m3u", "Playlist", "File")
+        val track = UniversalPlaylistParser.importableTracks(prepared.tracks).single()
+
+        assertEquals("Stand by Me", track.title)
+        assertEquals("Stand by Me", track.customTitle)
+        assertEquals("Ben E. King", track.artist)
+    }
+
+    @Test
     fun mixedExportsPreserveLocalUrisAndRemoteUrls() {
         val local = song.copy(id = "file:///music/song.flac", isLocal = true)
         for (format in CollectionExportFormat.entries) {

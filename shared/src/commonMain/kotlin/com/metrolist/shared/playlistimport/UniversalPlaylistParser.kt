@@ -191,7 +191,10 @@ object UniversalPlaylistParser {
             val videoId = extractVideoId(trimmed)
             val directReference = if (videoId == null) resolveDirectReference(trimmed, resolveLocalReference) else null
             val fallbackTitle = referenceTitle(trimmed)
-            val suppliedInfo = pendingInfo?.let(::splitArtistAndTitle)
+            val suppliedInfo =
+                pendingInfo?.let { label ->
+                    splitArtistAndTitleOn(label, " - ") ?: splitArtistAndTitle(label)
+                }
             val (artist, title) = suppliedInfo ?: ("" to fallbackTitle)
             pendingInfo = null
             if (title.isNotBlank() || videoId != null || directReference != null) {
@@ -283,13 +286,19 @@ object UniversalPlaylistParser {
             if (title.isNotBlank() && artist.isNotBlank()) return artist to title
         }
         for (separator in listOf(" - ", " – ", " — ", " : ", " | ")) {
-            val index = trimmed.indexOf(separator)
-            if (index > 0 && index + separator.length < trimmed.length) {
-                return trimmed.substring(0, index).trim().trim('"', '\'', '“', '”') to
-                    trimmed.substring(index + separator.length).trim().trim('"', '\'', '“', '”')
-            }
+            splitArtistAndTitleOn(trimmed, separator)?.let { return it }
         }
         return "" to trimmed.trim('"', '\'', '“', '”')
+    }
+
+    private fun splitArtistAndTitleOn(
+        line: String,
+        separator: String,
+    ): Pair<String, String>? {
+        val index = line.indexOf(separator)
+        if (index <= 0 || index + separator.length >= line.length) return null
+        return line.substring(0, index).trim().trim('"', '\'', '“', '”') to
+            line.substring(index + separator.length).trim().trim('"', '\'', '“', '”')
     }
 
     internal fun extractVideoId(input: String): String? {
