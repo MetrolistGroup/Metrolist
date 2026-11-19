@@ -65,7 +65,7 @@
     <string name="add_to_playlist">添加到播放列表</string>
     <string name="view_artist">查看艺人</string>
     <string name="view_song_info">查看歌曲信息</string>
-    <string name="view_album">浏览专辑</string>
+    <string name="view_album">查看专辑</string>
     <string name="refetch">刷新</string>
     <string name="share">分享</string>
     <string name="delete">删除</string>
@@ -93,7 +93,7 @@
     <string name="song_artists">歌曲艺人</string>
     <string name="save">保存</string>
     <string name="edit_playlist">编辑播放列表</string>
-    <string name="create_playlist">新建播放列表</string>
+    <string name="create_playlist">创建播放列表</string>
     <string name="error_playlist_name_empty">播放列表名称不能为空。</string>
     <string name="duplicates">重复项</string>
     <string name="add_anyway">仍要添加</string>
@@ -107,7 +107,7 @@
         <item quantity="other">%1$d 周</item>
     </plurals>
     <plurals name="n_month">
-        <item quantity="other">%1$d 月</item>
+        <item quantity="other">%1$d 个月</item>
     </plurals>
     <plurals name="n_year">
         <item quantity="other">%1$d 年</item>
@@ -159,8 +159,8 @@
     <string name="auto_skip_next_on_error_desc">发生错误后继续播放</string>
     <string name="stop_music_on_task_clear">从最近任务中移除应用时停止播放</string>
     <string name="storage">储存</string>
-    <string name="music_video_quality_desc" tools:ignore="MissingTranslation">音乐视频默认分辨率</string>
-    <string name="music_video_quality_auto" tools:ignore="MissingTranslation">自动（推荐）</string>
+    <string name="music_video_quality_desc" tools:ignore="MissingTranslation">音乐视频的默认分辨率</string>
+    <string name="music_video_quality_auto" tools:ignore="MissingTranslation">自动</string>
     <string name="music_video_resolution" tools:ignore="MissingTranslation">视频分辨率</string>
     <string name="music_video_resolution_desc" tools:ignore="MissingTranslation">更改此音乐视频的分辨率</string>
     <string name="music_video_resolution_current" tools:ignore="MissingTranslation">正在播放</string>
@@ -413,7 +413,7 @@
     <string name="import_error_file_read_failed">无法读取播放列表文件。请重新选择并授予文件访问权限。</string>
     <string name="lyrics_source_preference">歌词来源偏好</string>
     <string name="auto_load_more_desc">电台和混合待播列表接近末尾时，自动添加相似歌曲</string>
-    <string name="music_video_quality" tools:ignore="MissingTranslation">音乐视频质量</string>
+    <string name="music_video_quality" tools:ignore="MissingTranslation">音乐视频画质</string>
     <string name="animated_cover_resolution">动态封面质量</string>
     <string name="animated_cover_resolution_low">低 (360p)</string>
     <string name="animated_cover_resolution_medium">中等 (720p)</string>
@@ -795,4 +795,5 @@
     <string name="edit_playlist_cover">编辑播放列表封面</string>
     <string name="edit_playlist_cover_note">您的账号必须绑定电话号码并在 YouTube Music 上完成验证才能更改播放列表封面</string>
     <string name="discord_state">状态</string>
+    <string name="settings_reset_to_default">重置为默认设置</string>
 </resources>
