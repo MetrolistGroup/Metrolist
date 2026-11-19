@@ -894,7 +894,9 @@ fun PlayerScreen(
                 )
 
             fun openQueueSheet() {
-                viewModel.setLyricsVisible(false)
+                if (!useLandscapeLayout && uiState.isLyricsExpanded) {
+                    viewModel.setLyricsVisible(false)
+                }
                 queueSheetState.expandSoft()
             }
 
