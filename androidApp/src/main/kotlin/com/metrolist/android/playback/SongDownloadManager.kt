@@ -747,7 +747,7 @@ internal fun mergeDownloadQueue(
     val requests = queue.toMutableList()
     val indexes = mutableMapOf<String, Int>()
     requests.forEachIndexed { index, request -> indexes.putIfAbsent(request.song.id, index) }
-    songs.filterNot { it.isUnavailable }.forEach { song ->
+    songs.filterNot { it.isUnavailable || it.isLocal }.forEach { song ->
         val index = indexes[song.id]
         val request = DownloadRequest(song = song, enqueuedAt = enqueuedAt)
         if (index == null) {
