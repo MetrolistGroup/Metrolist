@@ -749,8 +749,9 @@ fun PlayerScreen(
             } else {
                 when (playerBackground) {
                     PlayerBackgroundStyle.BLURRED_ARTWORK,
-                    PlayerBackgroundStyle.LIQUID,
                     -> if (currentSong?.displayThumbnail != null) Color.White else MaterialTheme.colorScheme.onSurface
+
+                    PlayerBackgroundStyle.LIQUID -> if (MaterialTheme.colorScheme.surface.luminance() >= 0.5f) Color.Black else Color.White
 
                     PlayerBackgroundStyle.GRADIENT,
                     PlayerBackgroundStyle.ANIMATED_GRADIENT,
