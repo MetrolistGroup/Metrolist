@@ -8,6 +8,7 @@
 package com.metrolist.shared.ui.components.lyrics
 
 import com.metrolist.shared.model.LyricsEntry
+import com.metrolist.shared.model.WordTimestamp
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.roundToLong
@@ -141,8 +142,9 @@ internal fun buildLyricsTimelineItems(
                 val startMs = entry.timelineStartMs()
                 val wordsEndMs =
                     max(
-                        words?.maxOfOrNull { (it.endTime * 1000.0).roundToLong() } ?: Long.MIN_VALUE,
-                        romanWords?.maxOfOrNull { (it.endTime * 1000.0).roundToLong() } ?: Long.MIN_VALUE,
+                        words?.filterNot(WordTimestamp::isLineTimed)?.maxOfOrNull { (it.endTime * 1000.0).roundToLong() } ?: Long.MIN_VALUE,
+                        romanWords?.filterNot(WordTimestamp::isLineTimed)?.maxOfOrNull { (it.endTime * 1000.0).roundToLong() }
+                            ?: Long.MIN_VALUE,
                     )
                 val explicitEndMs =
                     when {

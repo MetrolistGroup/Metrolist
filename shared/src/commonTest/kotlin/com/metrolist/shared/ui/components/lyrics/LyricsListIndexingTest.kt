@@ -89,7 +89,7 @@ class LyricsListIndexingTest {
                 LyricsEntry(
                     time = 1_000,
                     text = "Main lyric",
-                    words = listOf(WordTimestamp("old vocal", 1.0, 2.0, isBackground = true)),
+                    words = listOf(WordTimestamp("old vocal", 1.0, 2.0, hasTrailingSpace = false, isBackground = true)),
                 ),
                 LyricsEntry(time = 1_500, text = "new vocal", isBackground = true),
             )
@@ -123,5 +123,65 @@ class LyricsListIndexingTest {
             )
 
         assertEquals("Lead (Echo)\nMain (But we care)", selectedLyricsText(lyrics, setOf(0, 1)))
+    }
+
+    @Test
+    fun nestedBackgroundEntryKeepsBothVocalTextsAndTheirOrder() {
+        val lyrics =
+            listOf(
+                LyricsEntry(time = 1_000, text = "Main line"),
+                LyricsEntry(
+                    time = 1_500,
+                    text = "Lead vocal",
+                    isBackground = true,
+                    backgroundText = "Echo vocal",
+                    words =
+                        listOf(
+                            WordTimestamp("Echo vocal", 1.5, 1.5, hasTrailingSpace = false, isBackground = true, isLineTimed = true),
+                        ),
+                ),
+            )
+
+        val merged = mergeBackgroundLyricsEntries(lyrics).first()
+
+        assertEquals("Lead vocal Echo vocal", merged.words.orEmpty().backgroundText())
+        assertEquals("Main line (Lead vocal Echo vocal)", selectedLyricsText(listOf(merged), setOf(0)))
+    }
+
+    @Test
+    fun leadingBackgroundRowIsSharedOnlyOnce() {
+        val background =
+            LyricsEntry(
+                time = 1_000,
+                text = "(Echo)",
+                isBackground = true,
+                words = listOf(WordTimestamp("Echo", 1.0, 2.0, hasTrailingSpace = false, isBackground = true)),
+            )
+
+        assertEquals("(Echo)", selectedLyricsText(listOf(background), setOf(0)))
+    }
+
+    @Test
+    fun syntheticTextBackgroundDoesNotShortenMainLineTiming() {
+        val lyrics =
+            listOf(
+                LyricsEntry(time = 1_000, text = "Main line"),
+                LyricsEntry(
+                    time = 1_500,
+                    endTime = 1_500,
+                    text = "background",
+                    isBackground = true,
+                    words =
+                        listOf(
+                            WordTimestamp("background", 1.5, 1.5, hasTrailingSpace = false, isBackground = true, isLineTimed = true),
+                        ),
+                ),
+                LyricsEntry(time = 6_000, text = "Next line"),
+            )
+        val merged = mergeBackgroundLyricsEntries(lyrics)
+        val items = buildLyricsListItems(merged)
+        val mainTimeline = buildLyricsTimelineItems(items, merged).first { it.lineIndex == 0 }
+
+        assertEquals(6_000L, mainTimeline.endTimeMs)
     }
 }

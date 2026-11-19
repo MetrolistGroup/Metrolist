@@ -35,9 +35,13 @@ internal fun selectedLyricsText(
         .sorted()
         .mapNotNull { index ->
             lyrics.getOrNull(index)?.let { entry ->
-                val mainText = entry.text.takeIf(String::isNotBlank)
+                val mainText = entry.text.takeIf { !entry.isBackground && it.isNotBlank() }
                 val backgroundText =
                     listOfNotNull(
+                        entry.text
+                            .takeIf { entry.isBackground && it.isNotBlank() }
+                            ?.trim()
+                            ?.removeSurrounding("(", ")"),
                         entry.backgroundText
                             ?.takeIf(String::isNotBlank)
                             ?.trim()

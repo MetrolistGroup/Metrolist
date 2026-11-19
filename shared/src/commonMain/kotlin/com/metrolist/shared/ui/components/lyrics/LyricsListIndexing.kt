@@ -32,6 +32,15 @@ internal const val LYRICS_GAP_END_LEAD_MS = 800L
 
 private fun WordTimestamp.asBackground() = copy(isBackground = true)
 
+private fun List<WordTimestamp>.withBackgroundPhraseBoundary(): List<WordTimestamp> {
+    val lastBackground = indexOfLast(WordTimestamp::isBackground)
+    return if (lastBackground >= 0 && !this[lastBackground].hasTrailingSpace) {
+        toMutableList().also { it[lastBackground] = it[lastBackground].copy(hasTrailingSpace = true) }
+    } else {
+        this
+    }
+}
+
 internal fun List<WordTimestamp>.backgroundText(): String? =
     filter(WordTimestamp::isBackground)
         .joinToString("") { it.text + if (it.hasTrailingSpace) " " else "" }
@@ -42,7 +51,8 @@ internal fun normalizeBackgroundText(text: String): String =
     text
         .trim()
         .removeSurrounding("(", ")")
-        .filterNot(Char::isWhitespace)
+        .trim()
+        .replace(Regex("\\s+"), " ")
         .lowercase()
 
 private fun textBackgroundWord(
@@ -54,7 +64,7 @@ private fun textBackgroundWord(
             text = it.trim().removeSurrounding("(", ")"),
             startTime = entry.time / 1000.0,
             endTime = (entry.endTime ?: entry.time) / 1000.0,
-            hasTrailingSpace = false,
+            hasTrailingSpace = true,
             isBackground = true,
             isLineTimed = true,
         )
@@ -76,54 +86,84 @@ internal fun mergeBackgroundLyricsEntries(lyrics: List<LyricsEntry>): List<Lyric
                         normalizeBackgroundText(it) != normalizeBackgroundText(mainWordBackgroundText)
                 }?.let { textBackgroundWord(it, main) }
         val backgroundWords = background.words.orEmpty().map(WordTimestamp::asBackground)
-        val sourceBackgroundText =
-            background.backgroundText?.takeIf(String::isNotBlank)
-                ?: background.text
+        val wordBackgroundText = backgroundWords.backgroundText()
+        val sourceBackgroundTexts =
+            listOfNotNull(
+                background.text
                     .trim()
                     .removeSurrounding("(", ")")
-                    .takeIf { backgroundWords.isEmpty() && it.isNotBlank() }
-        val wordBackgroundText = backgroundWords.backgroundText()
-        val distinctBackgroundText =
-            sourceBackgroundText?.takeIf {
-                wordBackgroundText == null ||
-                    normalizeBackgroundText(it) != normalizeBackgroundText(wordBackgroundText)
+                    .takeIf(String::isNotBlank),
+                background.backgroundText?.takeIf(String::isNotBlank),
+            ).distinctBy(::normalizeBackgroundText)
+        val representedSourceTextIndex =
+            sourceBackgroundTexts.indexOfFirst { source ->
+                wordBackgroundText?.let { normalizeBackgroundText(source) == normalizeBackgroundText(it) } == true
             }
-        val incomingTextBackgroundWord =
-            textBackgroundWord(distinctBackgroundText ?: sourceBackgroundText?.takeIf { wordBackgroundText == null }, background)
-        val incomingBackgroundWords = backgroundWords + listOfNotNull(incomingTextBackgroundWord)
+        val allSourceTextsRepresented =
+            wordBackgroundText != null &&
+                normalizeBackgroundText(wordBackgroundText) == normalizeBackgroundText(sourceBackgroundTexts.joinToString(" "))
+        val incomingTextBackgroundWords =
+            sourceBackgroundTexts
+                .filterNot { source ->
+                    allSourceTextsRepresented ||
+                        wordBackgroundText?.let { normalizeBackgroundText(source) == normalizeBackgroundText(it) } == true
+                }.mapNotNull { textBackgroundWord(it, background) }
+        val incomingBackgroundWords =
+            when {
+                backgroundWords.isEmpty() -> {
+                    incomingTextBackgroundWords.withBackgroundPhraseBoundary()
+                }
+
+                representedSourceTextIndex > 0 -> {
+                    incomingTextBackgroundWords.withBackgroundPhraseBoundary() + backgroundWords.withBackgroundPhraseBoundary()
+                }
+
+                else -> {
+                    backgroundWords.withBackgroundPhraseBoundary() + incomingTextBackgroundWords.withBackgroundPhraseBoundary()
+                }
+            }
         val incomingRomanizedWords = background.romanizedWords?.map(WordTimestamp::asBackground)?.takeIf { it.isNotEmpty() }
         val romanizedIncomingWords =
             if (incomingRomanizedWords != null) {
                 val romanizedText = incomingRomanizedWords.backgroundText()
-                incomingRomanizedWords +
-                    listOfNotNull(
-                        incomingTextBackgroundWord?.takeUnless {
+                incomingRomanizedWords.withBackgroundPhraseBoundary() +
+                    incomingTextBackgroundWords
+                        .filterNot {
                             romanizedText != null && normalizeBackgroundText(it.text) == normalizeBackgroundText(romanizedText)
-                        },
-                    )
+                        }.withBackgroundPhraseBoundary()
             } else {
                 incomingBackgroundWords
             }
         val existingRomanizedWords = main.romanizedWords.orEmpty()
         val existingRawBackgroundWords = mainBackgroundWords + listOfNotNull(mainTextBackgroundWord)
-        val romanizedBackgroundWords =
-            existingRawBackgroundWords.filterNot { raw ->
-                existingRomanizedWords.any { roman ->
-                    roman.isBackground && roman.startTime == raw.startTime && roman.endTime == raw.endTime
-                }
-            } + romanizedIncomingWords
-        val mergedWords = main.words.orEmpty() + listOfNotNull(mainTextBackgroundWord) + incomingBackgroundWords
+        val mainWordsWithBoundary =
+            if (mainTextBackgroundWord != null || incomingBackgroundWords.isNotEmpty()) {
+                main.words.orEmpty().withBackgroundPhraseBoundary()
+            } else {
+                main.words.orEmpty()
+            }
+        val mergedWords =
+            mainWordsWithBoundary + listOfNotNull(mainTextBackgroundWord?.copy(hasTrailingSpace = true)) + incomingBackgroundWords
         val mergedRomanizedWords =
             if (main.romanizedWords != null || incomingRomanizedWords != null) {
-                existingRomanizedWords.filterNot(WordTimestamp::isBackground) + existingRomanizedWords.filter(WordTimestamp::isBackground) +
-                    romanizedBackgroundWords
+                (
+                    existingRomanizedWords.filterNot(WordTimestamp::isBackground) +
+                        existingRomanizedWords.filter(WordTimestamp::isBackground) +
+                        existingRawBackgroundWords.filterNot { raw ->
+                            existingRomanizedWords.any { roman ->
+                                roman.isBackground && roman.startTime == raw.startTime && roman.endTime == raw.endTime
+                            }
+                        } + listOfNotNull(mainTextBackgroundWord?.copy(hasTrailingSpace = true))
+                ).withBackgroundPhraseBoundary() + romanizedIncomingWords.withBackgroundPhraseBoundary()
             } else {
                 null
             }
+        val timedWordEndTime =
+            backgroundWords.filterNot(WordTimestamp::isLineTimed).maxOfOrNull { (it.endTime * 1000.0).toLong() }
         val backgroundEndTime =
             maxOf(
-                background.endTime ?: Long.MIN_VALUE,
-                backgroundWords.maxOfOrNull { (it.endTime * 1000.0).toLong() } ?: Long.MIN_VALUE,
+                background.endTime?.takeIf { it > background.time || timedWordEndTime != null } ?: Long.MIN_VALUE,
+                timedWordEndTime ?: Long.MIN_VALUE,
             ).takeIf { it != Long.MIN_VALUE }
         displayLines[mainIndex] =
             main.copy(
