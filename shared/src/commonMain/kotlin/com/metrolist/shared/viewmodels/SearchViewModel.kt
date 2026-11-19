@@ -660,7 +660,7 @@ fun queryChangeState(
         query = query,
         isQuerySubmitted = false,
         isSearching = false,
-        searchSuggestions = state.searchSuggestions.takeIf { query == state.query && query.length >= 2 },
+        searchSuggestions = state.searchSuggestions.takeIf { query.length >= 2 },
         searchFailed = false,
         loadMoreFailed = false,
     )
