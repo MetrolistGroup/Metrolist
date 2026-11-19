@@ -640,8 +640,8 @@
     <string name="ai_translation_trigger_automatic_description">Rileva la lingua e traduci solo se necessario</string>
     <string name="album">Album</string>
     <string name="album_link">Link album</string>
-    <string name="album_load_error">Errore caricamento album</string>
-    <string name="album_no_songs">Non ci sono brani in questo album</string>
+    <string name="album_load_error">Impossibile caricare l'album</string>
+    <string name="album_no_songs">Nessun brano in questo album</string>
     <string name="already_in_playlist_name">Già presente in %1$s</string>
     <string name="animated_gradient">Gradiente animato</string>
     <string name="artist">Artista</string>
@@ -1176,8 +1176,8 @@
     <string name="beta_tag">[BETA]</string>
     <string name="crossfade">Dissolvenza</string>
     <string name="crossfade_duration">Durata dissolvenza</string>
-    <string name="crossfade_gapless">Disabilita per gli album ad ascolto continuo</string>
-    <string name="crossfade_gapless_desc">Disabilita la dissolvenza incrociata per gli album senza interruzioni</string>
+    <string name="crossfade_gapless">Disabilita per gli album senza pause</string>
+    <string name="crossfade_gapless_desc">Non applicare la dissolvenza incrociata se l'album è senza pause</string>
     <string name="lyrics_romanize_title">Romanizzazione</string>
     <string name="lyrics_offset">Offset del testo</string>
     <string name="settings_ai_lyrics_translation">Traduzione testi con IA</string>
