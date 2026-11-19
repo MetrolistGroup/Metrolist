@@ -144,7 +144,21 @@ interface PlaybackController {
 
     fun playNext(songs: List<SongItem>)
 
+    fun playNextAtGeneration(
+        expectedGeneration: Long,
+        songs: List<SongItem>,
+    ) {
+        if (explicitPlaybackGeneration == expectedGeneration) playNext(songs)
+    }
+
     fun addToQueue(songs: List<SongItem>)
+
+    fun addToQueueAtGeneration(
+        expectedGeneration: Long,
+        songs: List<SongItem>,
+    ) {
+        if (explicitPlaybackGeneration == expectedGeneration) addToQueue(songs)
+    }
 
     fun playQueueIndex(index: Int) {
         val snapshot = state.value

@@ -205,6 +205,7 @@ import org.koin.core.context.GlobalContext
 import com.metrolist.shared.db.entities.toSongItem as localSongItem
 
 private val sharedMenuPlayState = PendingCollectionPlayState()
+private val sharedMenuQueueState = PendingCollectionPlayState()
 
 @Composable
 fun SongContextMenu(
@@ -259,6 +260,7 @@ fun SongContextMenu(
             downloadProgress = ((LibraryState.downloadProgress[song.id] ?: 0f) * 100).toInt(),
             onPlay = {
                 sharedMenuPlayState.cancel()
+                sharedMenuQueueState.cancel()
                 onPlaybackAction()
                 playback.play(song)
             },
@@ -269,6 +271,7 @@ fun SongContextMenu(
             onDislike = { PlayerState.toggleDislike(song) },
             onStartRadio = {
                 sharedMenuPlayState.cancel()
+                sharedMenuQueueState.cancel()
                 onPlaybackAction()
                 playback.startRadio(song)
             },
@@ -278,8 +281,14 @@ fun SongContextMenu(
             },
             onShare = { shareSong(song) },
             onSuggestToHost = { suggestToHost(song) },
-            onPlayNext = { playback.playNext(listOf(song)) },
-            onAddToQueue = { playback.addToQueue(listOf(song)) },
+            onPlayNext = {
+                sharedMenuQueueState.cancel()
+                playback.playNext(listOf(song))
+            },
+            onAddToQueue = {
+                sharedMenuQueueState.cancel()
+                playback.addToQueue(listOf(song))
+            },
             onTogglePin = {
                 if (isPinned) HomeState.unpinSpeedDialItem(song.id) else HomeState.pinSpeedDialItem(song)
             },
@@ -333,12 +342,6 @@ fun AlbumContextMenu(
     MediaContextMenu(expanded = expanded, offset = offset, onDismiss = onDismiss) {
         val playback = LocalPlaybackController.current
         val isPinned = album.id in HomeState.uiState.speedDialPinnedIds
-        val playbackActions =
-            MediaMenuPlaybackActions(
-                album,
-                playback,
-                withSongs = { action -> withMediaSongs(album, songs, action) },
-            )
         albumMediaMenuModel(
             album = album,
             isFavorite = isFavorite,
@@ -348,8 +351,8 @@ fun AlbumContextMenu(
             onPlay = { launchTrackedMenuPlayback(album, songs, playback, invoke = MediaMenuPlaybackActions::play) },
             onShuffle = { launchTrackedMenuPlayback(album, songs, playback, invoke = MediaMenuPlaybackActions::shuffle) },
             onShare = { AppState.copyToClipboard(ShareUrls.album(album.id)) },
-            onPlayNext = playbackActions::playNext,
-            onAddToQueue = playbackActions::addToQueue,
+            onPlayNext = { launchTrackedMenuQueueAction(album, songs, playback, MediaMenuPlaybackActions::playNext) },
+            onAddToQueue = { launchTrackedMenuQueueAction(album, songs, playback, MediaMenuPlaybackActions::addToQueue) },
             onAddToPlaylist = { withMediaSongs(album, songs) { PlayerState.showAddToPlaylistSongs = it } },
             onTogglePin = {
                 if (isPinned) HomeState.unpinSpeedDialItem(album.id) else HomeState.pinSpeedDialItem(album)
@@ -378,12 +381,6 @@ fun ArtistContextMenu(
         val playback = LocalPlaybackController.current
         val isPinned = artist.id in HomeState.uiState.speedDialPinnedIds
         val isBlocked = BlockedContent.isArtistBlocked(artist.id)
-        val playbackActions =
-            MediaMenuPlaybackActions(
-                artist,
-                playback,
-                withSongs = { action -> withMediaSongs(artist, emptyList(), action) },
-            )
         artistMediaMenuModel(
             artist = artist,
             onDismiss = onDismiss,
@@ -393,8 +390,8 @@ fun ArtistContextMenu(
             onPlay = { launchTrackedMenuPlayback(artist, emptyList(), playback, invoke = MediaMenuPlaybackActions::play) },
             onShuffle = { launchTrackedMenuPlayback(artist, emptyList(), playback, invoke = MediaMenuPlaybackActions::shuffle) },
             onShare = { AppState.copyToClipboard(ShareUrls.artist(artist.id)) },
-            onPlayNext = playbackActions::playNext,
-            onAddToQueue = playbackActions::addToQueue,
+            onPlayNext = { launchTrackedMenuQueueAction(artist, emptyList(), playback, MediaMenuPlaybackActions::playNext) },
+            onAddToQueue = { launchTrackedMenuQueueAction(artist, emptyList(), playback, MediaMenuPlaybackActions::addToQueue) },
             onTogglePin = {
                 if (isPinned) HomeState.unpinSpeedDialItem(artist.id) else HomeState.pinSpeedDialItem(artist)
             },
@@ -492,12 +489,6 @@ fun PlaylistContextMenu(
             }
         val downloadProgress =
             loadedSongs?.let { playlistDownloadProgress(it, LibraryState.downloadStates, LibraryState.downloadProgress) } ?: 0
-        val playbackActions =
-            MediaMenuPlaybackActions(
-                playlist,
-                playback,
-                withSongs = { action -> withMediaSongs(playlist, actionSongs, action) },
-            )
         playlistMediaMenuModel(
             playlist = playlist,
             isFavorite = isFavorite,
@@ -533,8 +524,12 @@ fun PlaylistContextMenu(
                 } else {
                     { AppState.copyToClipboard(ShareUrls.playlist(playlist.id)) }
                 },
-            onPlayNext = playbackActions::playNext,
-            onAddToQueue = playbackActions::addToQueue,
+            onPlayNext = {
+                launchTrackedMenuQueueAction(playlist, actionSongs, playback, MediaMenuPlaybackActions::playNext)
+            },
+            onAddToQueue = {
+                launchTrackedMenuQueueAction(playlist, actionSongs, playback, MediaMenuPlaybackActions::addToQueue)
+            },
             onTogglePin = {
                 if (isPinned) HomeState.unpinSpeedDialItem(playlist.id) else HomeState.pinSpeedDialItem(playlist)
             },
@@ -653,12 +648,6 @@ fun PodcastContextMenu(
     MediaContextMenu(expanded = expanded, offset = offset, onDismiss = onDismiss) {
         val playback = LocalPlaybackController.current
         val isPinned = podcast.id in HomeState.uiState.speedDialPinnedIds
-        val playbackActions =
-            MediaMenuPlaybackActions(
-                podcast,
-                playback,
-                withSongs = { action -> withMediaSongs(podcast, songs, action) },
-            )
         podcastMediaMenuModel(
             podcast = podcast,
             onDismiss = onDismiss,
@@ -670,8 +659,12 @@ fun PodcastContextMenu(
                 launchTrackedMenuPlayback(podcast, songs, playback, invoke = MediaMenuPlaybackActions::playOldestFirst)
             },
             onShare = { AppState.copyToClipboard(ShareUrls.podcast(podcast.id)) },
-            onPlayNext = playbackActions::playNext,
-            onAddToQueue = playbackActions::addToQueue,
+            onPlayNext = {
+                launchTrackedMenuQueueAction(podcast, songs, playback, MediaMenuPlaybackActions::playNext)
+            },
+            onAddToQueue = {
+                launchTrackedMenuQueueAction(podcast, songs, playback, MediaMenuPlaybackActions::addToQueue)
+            },
             onTogglePin = {
                 if (isPinned) HomeState.unpinSpeedDialItem(podcast.id) else HomeState.pinSpeedDialItem(podcast)
             },
@@ -722,6 +715,7 @@ fun EpisodeContextMenu(
                             !isGuest && !episode.isUnavailable,
                     ) {
                         sharedMenuPlayState.cancel()
+                        sharedMenuQueueState.cancel()
                         PlayerState.playTrack(song)
                         onDismiss()
                     },
@@ -754,6 +748,7 @@ fun EpisodeContextMenu(
                                 stringResource(Res.string.play_next),
                                 enabled = !episode.isUnavailable,
                             ) {
+                                sharedMenuQueueState.cancel()
                                 PlayerState.playNext(song)
                                 onDismiss()
                             },
@@ -762,6 +757,7 @@ fun EpisodeContextMenu(
                                 stringResource(Res.string.add_to_queue),
                                 enabled = !episode.isUnavailable,
                             ) {
+                                sharedMenuQueueState.cancel()
                                 PlayerState.addToQueue(song)
                                 onDismiss()
                             },
@@ -943,20 +939,19 @@ private class ReservedPlaybackController(
         queueTitle: String?,
         songsOnly: Boolean,
     ) = delegate.shuffleQueueAtGeneration(expectedGeneration, songs, queueTitle, songsOnly)
+
+    override fun playNext(songs: List<SongItem>) = delegate.playNextAtGeneration(expectedGeneration, songs)
+
+    override fun addToQueue(songs: List<SongItem>) = delegate.addToQueueAtGeneration(expectedGeneration, songs)
 }
 
-private fun launchTrackedMenuPlayback(
+private fun launchGuardedMediaActions(
     item: YTItem,
     existingSongs: List<SongItem>,
     playback: PlaybackController,
-    pendingPlayState: PendingCollectionPlayState? = null,
-    onPlaybackAction: () -> Unit = {},
+    expectedGeneration: Long,
     invoke: MediaMenuPlaybackActions.() -> Unit,
-) {
-    val expectedGeneration = playback.reserveExplicitPlaybackGeneration()
-    onPlaybackAction()
-    sharedMenuPlayState.cancel()
-    pendingPlayState?.cancel()
+): Job? {
     var launched: Job? = null
     val reservedPlayback = ReservedPlaybackController(playback, expectedGeneration)
     val guardedActions =
@@ -973,8 +968,38 @@ private fun launchTrackedMenuPlayback(
             },
         )
     guardedActions.invoke()
+    return launched
+}
+
+private fun launchTrackedMenuPlayback(
+    item: YTItem,
+    existingSongs: List<SongItem>,
+    playback: PlaybackController,
+    pendingPlayState: PendingCollectionPlayState? = null,
+    onPlaybackAction: () -> Unit = {},
+    invoke: MediaMenuPlaybackActions.() -> Unit,
+) {
+    val expectedGeneration = playback.reserveExplicitPlaybackGeneration()
+    onPlaybackAction()
+    sharedMenuPlayState.cancel()
+    sharedMenuQueueState.cancel()
+    pendingPlayState?.cancel()
+    val launched = launchGuardedMediaActions(item, existingSongs, playback, expectedGeneration, invoke)
     sharedMenuPlayState.track(launched)
     pendingPlayState?.track(launched)
+}
+
+private fun launchTrackedMenuQueueAction(
+    item: YTItem,
+    existingSongs: List<SongItem>,
+    playback: PlaybackController,
+    invoke: MediaMenuPlaybackActions.() -> Unit,
+) {
+    val expectedGeneration = playback.reserveExplicitPlaybackGeneration()
+    sharedMenuPlayState.cancel()
+    sharedMenuQueueState.cancel()
+    val launched = launchGuardedMediaActions(item, existingSongs, playback, expectedGeneration, invoke)
+    sharedMenuQueueState.track(launched)
 }
 
 private fun withMediaSongs(

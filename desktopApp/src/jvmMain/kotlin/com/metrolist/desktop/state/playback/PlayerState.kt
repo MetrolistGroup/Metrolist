@@ -3442,9 +3442,12 @@ object PlayerState {
         skipPrevious(fromListenTogether = true)
     }
 
-    fun addToQueue(songs: List<SongItem>) {
+    fun addToQueue(
+        songs: List<SongItem>,
+        advanceGeneration: Boolean = true,
+    ) {
         val filteredSongs = BlockedContent.filterPlayableSongs(songs)
-        if (!isListenTogetherGuest() && filteredSongs.isNotEmpty()) {
+        if (advanceGeneration && !isListenTogetherGuest() && filteredSongs.isNotEmpty()) {
             _explicitPlaybackGeneration.incrementAndGet()
         }
         if (deviceConnect.intercept(DcPlaybackCommand(DcPlaybackAction.ADD, songs = filteredSongs))) return
@@ -3553,9 +3556,12 @@ object PlayerState {
 
     fun fetchRelated(videoId: String) = related.fetch(videoId)
 
-    fun playNext(songs: List<SongItem>) {
+    fun playNext(
+        songs: List<SongItem>,
+        advanceGeneration: Boolean = true,
+    ) {
         val filteredSongs = BlockedContent.filterPlayableSongs(songs)
-        if (!isListenTogetherGuest() && filteredSongs.isNotEmpty()) {
+        if (advanceGeneration && !isListenTogetherGuest() && filteredSongs.isNotEmpty()) {
             _explicitPlaybackGeneration.incrementAndGet()
         }
         if (deviceConnect.intercept(DcPlaybackCommand(DcPlaybackAction.PLAY_NEXT, songs = filteredSongs))) return
@@ -3837,33 +3843,48 @@ object PlayerState {
                             ?: withContext(Dispatchers.IO) { GlobalYouTubeRepository.instance.getSongMetadata(videoId) }
                             ?: recommendations.await().firstOrNull { it.id == videoId }
                             ?: run {
-                                if (isCurrentPlaybackTransition(generation)) {
+                                if (isCurrentPlaybackTransition(generation) && explicitPlaybackGeneration == expectedGeneration) {
                                     reportPlayerError(getString(Res.string.playback_error_track_not_found))
                                 }
                                 return@launch
                             }
-                    if (!isCurrentPlaybackTransition(generation) || isSongBlocked(target)) return@launch
-                    if (isCurrentPlaybackTransition(generation)) {
+                    if (!isCurrentPlaybackTransition(generation) ||
+                        explicitPlaybackGeneration != expectedGeneration ||
+                        isSongBlocked(target)
+                    ) {
+                        return@launch
+                    }
+                    if (isCurrentPlaybackTransition(generation) && explicitPlaybackGeneration == expectedGeneration) {
                         replaceQueue(listOf(target), 0)
                         if (playCastTrack(target, generation, true)) {
                             val songs = recommendations.await()
-                            if (Settings.shared.autoLoadMore) appendRadioRecommendations(songs, generation)
+                            if (Settings.shared.autoLoadMore && explicitPlaybackGeneration == expectedGeneration) {
+                                appendRadioRecommendations(songs, generation)
+                            }
                             return@launch
                         }
                         val resource = withContext(Dispatchers.IO) { fetchPlaybackResource(target, showError = false) }
-                        if (resource != null && isCurrentPlaybackTransition(generation)) {
+                        if (resource != null &&
+                            isCurrentPlaybackTransition(generation) &&
+                            explicitPlaybackGeneration == expectedGeneration
+                        ) {
                             withContext(Dispatchers.IO) { player.play(target, resource) }
                             onTrackPlaybackStarted(target, resource, generation)
-                        } else if (resource == null && isCurrentPlaybackTransition(generation)) {
+                        } else if (resource == null &&
+                            isCurrentPlaybackTransition(generation) &&
+                            explicitPlaybackGeneration == expectedGeneration
+                        ) {
                             reportPlayerError(getString(Res.string.playback_error_unable_to_play_link))
                         }
                     }
                     val songs = recommendations.await()
-                    if (Settings.shared.autoLoadMore) appendRadioRecommendations(songs, generation)
+                    if (Settings.shared.autoLoadMore && explicitPlaybackGeneration == expectedGeneration) {
+                        appendRadioRecommendations(songs, generation)
+                    }
                 } catch (error: CancellationException) {
                     throw error
                 } catch (_: Exception) {
-                    if (isCurrentPlaybackTransition(generation)) {
+                    if (isCurrentPlaybackTransition(generation) && explicitPlaybackGeneration == expectedGeneration) {
                         reportPlayerError(getString(Res.string.playback_error_unable_to_play_link))
                     }
                 }

@@ -124,7 +124,23 @@ class DesktopPlaybackController(
 
     override fun playNext(songs: List<SongItem>) = PlayerState.playNext(songs)
 
+    override fun playNextAtGeneration(
+        expectedGeneration: Long,
+        songs: List<SongItem>,
+    ) {
+        if (explicitPlaybackGeneration != expectedGeneration) return
+        PlayerState.playNext(songs, advanceGeneration = false)
+    }
+
     override fun addToQueue(songs: List<SongItem>) = PlayerState.addToQueue(songs)
+
+    override fun addToQueueAtGeneration(
+        expectedGeneration: Long,
+        songs: List<SongItem>,
+    ) {
+        if (explicitPlaybackGeneration != expectedGeneration) return
+        PlayerState.addToQueue(songs, advanceGeneration = false)
+    }
 
     override fun reorderQueue(order: List<Int>) = PlayerState.reorderQueue(order)
 

@@ -19,6 +19,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -106,7 +107,12 @@ class PendingCollectionPlayState {
 }
 
 @Composable
-fun rememberPendingCollectionPlayState(key: Any?): PendingCollectionPlayState = remember(key) { PendingCollectionPlayState() }
+fun rememberPendingCollectionPlayState(key: Any?): PendingCollectionPlayState =
+    remember(key) { PendingCollectionPlayState() }.also { state ->
+        DisposableEffect(state) {
+            onDispose { state.cancel() }
+        }
+    }
 
 @Composable
 fun StoredPlaylistContent(

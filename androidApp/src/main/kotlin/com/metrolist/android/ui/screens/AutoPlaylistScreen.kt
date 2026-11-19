@@ -61,6 +61,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -358,6 +359,7 @@ fun AutoPlaylistScreen(
     val savedCachedOrder by rememberUpdatedState(decodedCachedOrder)
     var pendingCachedOrder by remember(currentType) { mutableStateOf<List<String>?>(null) }
     var pendingCachedSongs by remember(currentType) { mutableStateOf<List<SongItem>?>(null) }
+    var playbackRequestGeneration by remember(currentType) { mutableIntStateOf(0) }
     val uncommittedCachedOrder =
         remember {
             object {
@@ -663,8 +665,14 @@ fun AutoPlaylistScreen(
         SongSelectionControls(
             selectedCount = selectedSongs.size,
             selectedSongs = selectedSongs,
-            onPlay = { playerConnection?.playQueue(selectedSongs, 0, autoPlaylistTitle(currentType), finite = true) },
-            onShuffle = { playerConnection?.shuffleQueue(selectedSongs, autoPlaylistTitle(currentType), finite = true) },
+            onPlay = {
+                playbackRequestGeneration++
+                playerConnection?.playQueue(selectedSongs, 0, autoPlaylistTitle(currentType), finite = true)
+            },
+            onShuffle = {
+                playbackRequestGeneration++
+                playerConnection?.shuffleQueue(selectedSongs, autoPlaylistTitle(currentType), finite = true)
+            },
             allSelected = selection.allSelected(displayedSongIds),
             onDone = selection::exit,
             onSelectAll = { selection.toggleAll(displayedSongIds) },
@@ -836,6 +844,7 @@ fun AutoPlaylistScreen(
                     downloadedSongIds = downloadedSongIds,
                     text = playlistContentText(useTrackCount = currentType in setOf("podcasts", "SE")),
                     onPlayAll = {
+                        playbackRequestGeneration++
                         if (displayedSongs.isNotEmpty()) {
                             playerConnection?.playQueue(
                                 displayedSongs,
@@ -846,6 +855,7 @@ fun AutoPlaylistScreen(
                         }
                     },
                     onShuffle = {
+                        playbackRequestGeneration++
                         if (displayedSongs.isNotEmpty()) {
                             playerConnection?.shuffleQueue(displayedSongs, autoPlaylistTitle(currentType), finite = true)
                         }
@@ -854,6 +864,7 @@ fun AutoPlaylistScreen(
                         if (selection.active) {
                             selection.toggle(displayedSongs[index].id)
                         } else {
+                            val requestGeneration = ++playbackRequestGeneration
                             val committed = if (currentType == "cached") commitPendingCachedOrder() else null
                             val song = displayedSongs[index]
                             val input =
@@ -863,6 +874,7 @@ fun AutoPlaylistScreen(
                             val title = autoPlaylistTitle(currentType)
                             scope.launch {
                                 val queue = prepareAutoPlaylistSongs(input)
+                                if (playbackRequestGeneration != requestGeneration) return@launch
                                 val target = queue.indexOfPlaylistOccurrence(song)
                                 if (target >= 0) playerConnection?.playQueue(queue, target, title, finite = true)
                             }
@@ -1106,7 +1118,10 @@ fun AutoPlaylistScreen(
             song = song,
             isLiked = SongLikeState.isLiked(song.id),
             onDismiss = { selectedMenuSong = null },
-            onStartRadio = { playerConnection?.startRadio(song) },
+            onStartRadio = {
+                playbackRequestGeneration++
+                playerConnection?.startRadio(song)
+            },
             onPlayNext = { playerConnection?.addToQueue(song, playNext = true) },
             onAddToQueue = { playerConnection?.addToQueue(song) },
             onLike = { SongLikeState.toggleLike(song) },
@@ -1135,10 +1150,16 @@ fun AutoPlaylistScreen(
     if (showCollectionMenu) {
         val title = autoPlaylistTitle(currentType)
 
-        fun launchCollectionAction(action: (List<SongItem>) -> Unit) {
+        fun launchCollectionAction(
+            isPlayback: Boolean = false,
+            action: (List<SongItem>) -> Unit,
+        ) {
+            if (isPlayback) playbackRequestGeneration++
             if (currentType == "cached") {
+                val requestGeneration = playbackRequestGeneration
                 scope.launch {
                     val queue = orderedCachedSongs()
+                    if (isPlayback && playbackRequestGeneration != requestGeneration) return@launch
                     if (queue.isNotEmpty()) action(queue)
                 }
             } else {
@@ -1152,8 +1173,16 @@ fun AutoPlaylistScreen(
                     ?: PlaylistItem(id = "auto:$currentType", title = title, thumbnail = null),
             fallbackIcon = MetrolistIcons.Filled.Favorite,
             onDismiss = { showCollectionMenu = false },
-            onPlay = { launchCollectionAction { playerConnection?.playQueue(it, queueTitle = title, finite = true) } },
-            onShuffle = { launchCollectionAction { playerConnection?.shuffleQueue(it, queueTitle = title, finite = true) } },
+            onPlay = {
+                launchCollectionAction(isPlayback = true) {
+                    playerConnection?.playQueue(it, queueTitle = title, finite = true)
+                }
+            },
+            onShuffle = {
+                launchCollectionAction(isPlayback = true) {
+                    playerConnection?.shuffleQueue(it, queueTitle = title, finite = true)
+                }
+            },
             onPlayNext = { launchCollectionAction { playerConnection?.addToQueue(it, playNext = true) } },
             onAddToQueue = { launchCollectionAction { playerConnection?.addToQueue(it) } },
             onHideFromLibrary = {
