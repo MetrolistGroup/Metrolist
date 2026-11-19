@@ -893,6 +893,11 @@ fun PlayerScreen(
                     isDismissible = false,
                 )
 
+            fun openQueueSheet() {
+                viewModel.setLyricsVisible(false)
+                queueSheetState.expandSoft()
+            }
+
             LaunchedEffect(useLandscapeLayout, uiState.isLyricsExpanded) {
                 if (useLandscapeLayout && uiState.isLyricsExpanded) {
                     viewModel.setLyricsExpanded(false)
@@ -1273,7 +1278,7 @@ fun PlayerScreen(
                                     sleepTimerState = sleepTimerState,
                                     onShowSleepTimer = { showSleepTimerDialog = true },
                                     onShowLyricsMenu = { showLyricsMenu = true },
-                                    onOpenQueue = { queueSheetState.expandSoft() },
+                                    onOpenQueue = ::openQueueSheet,
                                     onShowPlayerMenu = { showPlayerMenu = true },
                                     onIsLyricsVisibleChange = { visible -> viewModel.setLyricsVisible(visible) },
                                     onShareSong = { shareDisplayedSong() },
@@ -1320,7 +1325,7 @@ fun PlayerScreen(
                                     sleepTimerState = sleepTimerState,
                                     onShowSleepTimer = { showSleepTimerDialog = true },
                                     onShowLyricsMenu = { showLyricsMenu = true },
-                                    onOpenQueue = { queueSheetState.expandSoft() },
+                                    onOpenQueue = ::openQueueSheet,
                                     onShowPlayerMenu = { showPlayerMenu = true },
                                     onIsLyricsVisibleChange = { visible -> viewModel.setLyricsVisible(visible) },
                                     onShareSong = { shareDisplayedSong() },
@@ -2319,7 +2324,7 @@ fun PlayerScreen(
                                             lyricsText = stringResource(Res.string.lyrics),
                                             onQueueClick = {
                                                 hapticManager.perform(HapticEvent.PRESS)
-                                                queueSheetState.expandSoft()
+                                                openQueueSheet()
                                             },
                                             onLyricsClick = {
                                                 hapticManager.toggle(!uiState.isLyricsVisible)
@@ -2337,7 +2342,7 @@ fun PlayerScreen(
                                             repeatMode = repeatMode,
                                             onToggleRepeat = viewModel::toggleRepeat,
                                             navigationBarBottomPadding = navigationBarBottomPadding,
-                                            onOpenQueue = { queueSheetState.expandSoft() },
+                                            onOpenQueue = ::openQueueSheet,
                                             onShowPlayerMenu = { showPlayerMenu = true },
                                             isLyricsVisible = uiState.isLyricsVisible,
                                             onIsLyricsVisibleChange = { visible -> viewModel.setLyricsVisible(visible) },
