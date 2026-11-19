@@ -330,9 +330,10 @@ fun LyricsView(
                 }
             }
 
+    val displayLyrics = remember(lyrics) { mergeBackgroundLyricsEntries(lyrics) }
     val processedItems =
-        remember(lyrics, provider, validSongwriters, lyricsActiveByRealTiming) {
-            buildLyricsListItems(lyrics, provider, validSongwriters, activeByRealTiming = lyricsActiveByRealTiming)
+        remember(displayLyrics, provider, validSongwriters, lyricsActiveByRealTiming) {
+            buildLyricsListItems(displayLyrics, provider, validSongwriters, activeByRealTiming = lyricsActiveByRealTiming)
         }
 
     val lyricsItemIndex =
@@ -341,8 +342,8 @@ fun LyricsView(
         }
 
     val timelineItems =
-        remember(processedItems, lyrics) {
-            buildLyricsTimelineItems(processedItems, lyrics)
+        remember(processedItems, displayLyrics) {
+            buildLyricsTimelineItems(processedItems, displayLyrics)
         }
 
     val lineEndTimesByIndex =
