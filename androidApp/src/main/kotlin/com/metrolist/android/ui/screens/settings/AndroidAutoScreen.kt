@@ -19,6 +19,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -76,7 +77,6 @@ import com.metrolist.shared.settings.getAutomotivePinnedPlaylists
 import com.metrolist.shared.settings.setAutomotivePinnedPlaylists
 import com.metrolist.shared.state.GlobalYouTubeRepository
 import com.metrolist.shared.ui.components.AlertDialog
-import com.metrolist.shared.ui.components.ContainedLoadingIndicator
 import com.metrolist.shared.ui.components.PopupVisibility
 import com.metrolist.shared.ui.components.libraryArtwork
 import com.metrolist.shared.ui.tv.tvFocusHighlight
@@ -276,14 +276,10 @@ private fun PinnedPlaylistDialog(
                     ) { Text(stringResource(Res.string.retry)) }
                 }
                 if (loading) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth().padding(vertical = 24.dp),
-                        horizontalArrangement = Arrangement.Center,
-                    ) {
-                        ContainedLoadingIndicator()
-                    }
-                } else if (playlists.isEmpty()) {
-                    Text(stringResource(Res.string.android_auto_no_playlists))
+                    LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+                }
+                if (playlists.isEmpty()) {
+                    if (!loading) Text(stringResource(Res.string.android_auto_no_playlists))
                 } else {
                     LazyColumn(
                         modifier = Modifier.fillMaxWidth().heightIn(max = 440.dp),
