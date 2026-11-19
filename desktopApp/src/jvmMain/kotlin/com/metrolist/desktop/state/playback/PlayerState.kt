@@ -1086,11 +1086,12 @@ object PlayerState {
         song: SongItem,
         resource: PlaybackResource,
         generation: Long,
+        startedPlaying: Boolean = true,
     ) {
         if (deviceConnect.isActive && !deviceConnect.isFollowing) {
-            syncSession.setPlaying(true)
+            syncSession.setPlaying(startedPlaying)
             syncSession.setReady(true)
-            desiredPlayback.value = true
+            desiredPlayback.value = startedPlaying
             deviceConnect.localStateChanged(trackChanged = true)
         }
         if (resource.hasVideo) {
@@ -1100,7 +1101,7 @@ object PlayerState {
                 if (song.isVideoSong || UiState.showVideoViewer || UiState.showVideoFullscreen || isVideoActive) {
                     LyricsState.retimeCurrentLyricsIfPossible()
                 }
-                if (UiState.showVideoViewer || UiState.showVideoFullscreen || isVideoActive) {
+                if (startedPlaying && (UiState.showVideoViewer || UiState.showVideoFullscreen || isVideoActive)) {
                     startVideo()
                 }
             }
@@ -2876,12 +2877,15 @@ object PlayerState {
         shuffleModeEnabled: Boolean? = null,
         expectedReplacementGeneration: Long? = null,
     ) {
-        fun isAllowedByReplacement(): Boolean =
-            expectedReplacementGeneration == null || playbackReplacementGeneration == expectedReplacementGeneration
-
         cancelCrossfadeForManualAction()
         val restorePosition = pendingResumePosition?.takeIf { list?.isEmpty() == true && it.first == track.id }
         val generation = beginPlaybackTransition(resumePosition = restorePosition, preserveCast = true)
+        val expectedSleepTimerGeneration = _sleepTimerExpiryGeneration.get()
+
+        fun isAllowedByReplacement(): Boolean =
+            (expectedReplacementGeneration == null || playbackReplacementGeneration == expectedReplacementGeneration) &&
+                _sleepTimerExpiryGeneration.get() == expectedSleepTimerGeneration
+
         desiredPlayback.value = !startPaused
         playbackTransitionJob =
             scope.launch {
@@ -2961,10 +2965,10 @@ object PlayerState {
                                 isCurrentPlaybackTransition(generation) && isAllowedByReplacement()
                             }
                         }
-                    if (played) {
+                    if (played && isCurrentPlaybackTransition(generation) && isAllowedByReplacement()) {
                         attachBackgroundVideoResource(playableTrack, generation)
                         Logger.i("PlayerState", "Started local playback")
-                    } else if (isCurrentPlaybackTransition(generation)) {
+                    } else if (!played && isCurrentPlaybackTransition(generation)) {
                         video.setResolving(false)
                     }
                 } else if (cachedResource != null) {
@@ -2975,10 +2979,10 @@ object PlayerState {
                                 isCurrentPlaybackTransition(generation) && isAllowedByReplacement()
                             }
                         }
-                    if (played) {
+                    if (played && isCurrentPlaybackTransition(generation) && isAllowedByReplacement()) {
                         attachBackgroundVideoResource(playableTrack, generation)
                         Logger.i("PlayerState", "Started cached playback")
-                    } else if (isCurrentPlaybackTransition(generation)) {
+                    } else if (!played && isCurrentPlaybackTransition(generation)) {
                         video.setResolving(false)
                     }
                 } else {
@@ -3005,7 +3009,7 @@ object PlayerState {
                                     isCurrentPlaybackTransition(generation) && isAllowedByReplacement()
                                 }
                             }
-                        if (played) {
+                        if (played && isCurrentPlaybackTransition(generation) && isAllowedByReplacement()) {
                             onTrackPlaybackStarted(liveTrack, resource, generation)
                             Logger.i("PlayerState", "Started playback")
                         }
@@ -3608,6 +3612,8 @@ object PlayerState {
                     startSleepTimer(0L, stopAfterCurrentSong = true, fadeOut = fadeOut)
                 } else {
                     if (castManager.state.value.isConnected) {
+                        _sleepTimerExpiryGeneration.incrementAndGet()
+                        playbackTransitions.setPlaying(false)
                         castManager.pause()
                     } else {
                         setPlaybackPlaying(false, fromSleepTimer = true)
@@ -3937,7 +3943,6 @@ object PlayerState {
             }
             return
         }
-        desiredPlayback.value = true
         initialRecommendationsGeneration = generation
         playbackTransitionJob =
             scope.launch {
@@ -3980,20 +3985,17 @@ object PlayerState {
                             ?: recommendations.await().firstOrNull { it.id == videoId }
                             ?: run {
                                 if (isCurrentPlayFromIdRequest()) {
-                                    desiredPlayback.value = false
                                     reportPlayerError(getString(Res.string.playback_error_track_not_found))
                                 }
                                 return@launch
                             }
-                    if (!isCurrentPlayFromIdRequest()) return@launch
-                    if (isSongBlocked(target)) {
-                        desiredPlayback.value = false
+                    if (!isCurrentPlayFromIdRequest() || isSongBlocked(target)) {
                         return@launch
                     }
                     if (castManager.state.value.isConnected) {
                         replaceQueue(listOf(target), 0)
                         queueReplaced = true
-                        val shouldStartCast = playbackTransitions.playbackIntent(desiredPlayback.value)
+                        val shouldStartCast = playbackTransitions.playbackIntent(true)
                         if (playCastTrack(
                                 target,
                                 generation,
@@ -4001,6 +4003,9 @@ object PlayerState {
                                 canCommit = ::canCommitPlayFromIdPlayback,
                             )
                         ) {
+                            if (canCommitPlayFromIdPlayback()) {
+                                desiredPlayback.value = playbackTransitions.playbackIntent(true)
+                            }
                             val songs = recommendations.await()
                             if (Settings.shared.autoLoadMore && canCommitPlayFromIdPlayback()) {
                                 appendRadioRecommendations(songs, generation)
@@ -4019,7 +4024,7 @@ object PlayerState {
                             queueReplaced = true
                         }
                         val pendingTransitionId = player.beginPendingPlayback(target)
-                        val shouldStartLocal = playbackTransitions.playbackIntent(desiredPlayback.value)
+                        val shouldStartLocal = playbackTransitions.playbackIntent(true)
                         val played =
                             withContext(Dispatchers.IO) {
                                 player.playPending(
@@ -4032,18 +4037,17 @@ object PlayerState {
                                 }
                             }
                         if (played && canCommitPlayFromIdPlayback()) {
-                            val keepPlaying = playbackTransitions.playbackIntent(desiredPlayback.value)
-                            onTrackPlaybackStarted(target, resource, generation)
+                            val keepPlaying = playbackTransitions.playbackIntent(true)
+                            desiredPlayback.value = keepPlaying
                             if (!keepPlaying) {
-                                desiredPlayback.value = false
                                 player.setPlaying(false)
                                 video.pause()
                             }
+                            onTrackPlaybackStarted(target, resource, generation, startedPlaying = keepPlaying)
                         } else if (!played && canCommitPlayFromIdPlayback()) {
                             video.setResolving(false)
                         }
                     } else {
-                        desiredPlayback.value = false
                         reportPlayerError(getString(Res.string.playback_error_unable_to_play_link))
                         return@launch
                     }
@@ -4057,7 +4061,6 @@ object PlayerState {
                     val canReportError =
                         if (queueReplaced) canCommitPlayFromIdPlayback() else isCurrentPlayFromIdRequest()
                     if (canReportError) {
-                        desiredPlayback.value = false
                         reportPlayerError(getString(Res.string.playback_error_unable_to_play_link))
                     }
                 }
