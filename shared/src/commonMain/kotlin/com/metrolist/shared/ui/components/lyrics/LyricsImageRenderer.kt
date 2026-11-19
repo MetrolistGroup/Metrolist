@@ -16,10 +16,8 @@ import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.drawscope.CanvasDrawScope
 import androidx.compose.ui.graphics.drawscope.DrawScope
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.graphics.drawscope.scale
@@ -103,6 +101,10 @@ internal fun renderLyricsImage(
     layoutDirection: LayoutDirection,
     sizePx: Int = 2160,
     story: Boolean = false,
+    storyBackgroundColor: Color = style.backgroundColor,
+    storyCardColor: Color = style.backgroundColor,
+    storyTextColor: Color = style.textColor,
+    storySecondaryColor: Color = style.secondaryColor,
 ): ImageBitmap {
     val bitmap = ImageBitmap(sizePx, if (story) sizePx * 16 / 9 else sizePx)
     val scale = sizePx / 340f
@@ -120,10 +122,9 @@ internal fun renderLyricsImage(
     val textLeft = padding + lyricsInsetX
     val textStyle =
         TextStyle(
-            color = style.textColor,
+            color = if (story) storyTextColor else style.textColor,
             fontWeight = FontWeight.Bold,
             textAlign = style.alignment,
-            shadow = if (story) Shadow(Color.Black.copy(alpha = 0.55f), Offset(0f, 2f * scale), 4f * scale) else null,
         )
 
     fun lyricsText(size: Float) =
@@ -167,61 +168,30 @@ internal fun renderLyricsImage(
                 addRoundRect(RoundRect(0f, 0f, size.width, size.height, CornerRadius(if (story) 0f else 20 * scale)))
             }
         clipPath(path) {
-            drawRect(style.backgroundColor)
-            when (style.background) {
-                LyricsImageBackground.SOLID -> {}
+            drawRect(if (story) storyBackgroundColor else style.backgroundColor)
+            if (!story) {
+                when (style.background) {
+                    LyricsImageBackground.SOLID -> {}
 
-                LyricsImageBackground.BLUR -> {
-                    if (blurredArtwork != null) {
-                        if (story) {
-                            drawImage(
-                                blurredArtwork,
-                                srcOffset = IntOffset((blurredArtwork.width - blurredArtwork.height * 9 / 16) / 2, 0),
-                                srcSize = IntSize(blurredArtwork.height * 9 / 16, blurredArtwork.height),
-                                dstSize = IntSize(size.width.toInt(), size.height.toInt()),
-                                filterQuality = FilterQuality.Medium,
-                            )
-                        } else {
-                            drawCover(blurredArtwork, Offset.Zero, size.width)
-                        }
-                        if (story) {
-                            drawRect(
-                                Brush.verticalGradient(
-                                    listOf(
-                                        Color.Black.copy(alpha = 0.2f),
-                                        Color.Black.copy(alpha = 0.48f),
-                                        Color.Black.copy(alpha = 0.64f),
-                                        Color.Black.copy(alpha = 0.24f),
-                                    ),
-                                ),
-                            )
-                        } else {
-                            drawRect(Color.Black.copy(alpha = 0.3f))
-                        }
+                    LyricsImageBackground.BLUR -> {
+                        blurredArtwork?.let { drawCover(it, Offset.Zero, size.width) }
+                        drawRect(Color.Black.copy(alpha = 0.3f))
                     }
-                }
 
-                LyricsImageBackground.GRADIENT -> {
-                    val colors = palette.firstOrNull()?.let(::getGradientColors) ?: listOf(style.backgroundColor, style.backgroundColor)
-                    drawRect(Brush.linearGradient(colors))
-                    if (story) drawRect(Color.Black.copy(alpha = 0.16f))
+                    LyricsImageBackground.GRADIENT -> {
+                        val colors = palette.firstOrNull()?.let(::getGradientColors) ?: listOf(style.backgroundColor, style.backgroundColor)
+                        drawRect(Brush.linearGradient(colors))
+                    }
                 }
             }
             if (story) {
                 val cardTop = (layout.cardTop + verticalOffset) * scale
                 val cardHeightPx = cardHeight * scale
                 drawRoundRect(
-                    Color.Black.copy(alpha = 0.4f),
+                    storyCardColor,
                     topLeft = Offset(padding, cardTop),
                     size = Size(width, cardHeightPx),
                     cornerRadius = CornerRadius(28f * scale),
-                )
-                drawRoundRect(
-                    Color.White.copy(alpha = 0.16f),
-                    topLeft = Offset(padding, cardTop),
-                    size = Size(width, cardHeightPx),
-                    cornerRadius = CornerRadius(28f * scale),
-                    style = Stroke(width = scale),
                 )
             }
             artwork?.let {
@@ -290,8 +260,22 @@ internal fun renderLyricsImage(
                 } else {
                     340f - layout.padding - headerX
                 }
-            label(title, headerX, layout.titleTop + verticalOffset, 20f * contentScale, style.textColor, headerWidth)
-            label(artist, headerX, layout.artistTop + verticalOffset, 16f * contentScale, style.secondaryColor, headerWidth)
+            label(
+                title,
+                headerX,
+                layout.titleTop + verticalOffset,
+                20f * contentScale,
+                if (story) storyTextColor else style.textColor,
+                headerWidth,
+            )
+            label(
+                artist,
+                headerX,
+                layout.artistTop + verticalOffset,
+                16f * contentScale,
+                if (story) storySecondaryColor else style.secondaryColor,
+                headerWidth,
+            )
             val textX =
                 textLeft +
                     when (style.alignment) {
@@ -306,7 +290,7 @@ internal fun renderLyricsImage(
             }
             val footerScale = scale * contentScale
             drawCircle(
-                style.secondaryColor,
+                if (story) storySecondaryColor else style.secondaryColor,
                 radius = 10 * footerScale,
                 center =
                     Offset(
@@ -318,14 +302,19 @@ internal fun renderLyricsImage(
                 padding + 14f * footerScale,
                 (footerTop + verticalOffset) * scale + 4 * footerScale,
             ) {
-                with(logo) { draw(Size(20 * footerScale, 20 * footerScale), colorFilter = ColorFilter.tint(style.backgroundColor)) }
+                with(logo) {
+                    draw(
+                        Size(20 * footerScale, 20 * footerScale),
+                        colorFilter = ColorFilter.tint(if (story) storyCardColor else style.backgroundColor),
+                    )
+                }
             }
             label(
                 appName,
                 layout.padding + 48f * contentScale,
                 footerTop + verticalOffset + 8f * contentScale,
                 12f * contentScale,
-                style.secondaryColor,
+                if (story) storySecondaryColor else style.secondaryColor,
                 layout.lyricsWidth - 62f * contentScale,
             )
         }
