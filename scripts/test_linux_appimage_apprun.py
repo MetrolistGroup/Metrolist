@@ -2,6 +2,7 @@
 
 import os
 from pathlib import Path
+import shlex
 import shutil
 import subprocess
 import tempfile
@@ -36,6 +37,7 @@ class AppRunTest(unittest.TestCase):
             'TEST_LAUNCH_LOG': str(self.log),
         }
         self.env.pop('APPDIR', None)
+        self.env.pop('DESKTOPINTEGRATION', None)
 
     def launch(self):
         result = subprocess.run(['sh', str(self.app / 'AppRun'), 'argument with spaces'],
@@ -85,6 +87,59 @@ class AppRunTest(unittest.TestCase):
         self.env['APPIMAGE'] = str(moved)
         self.launch()
         self.assertIn(f'Exec=env "{moved}" %u\n', entry.read_text())
+
+    def test_gear_lever_managed_launcher_does_not_register_an_extra_entry(self):
+        if not shutil.which('gio'):
+            self.skipTest('gio is needed to exercise the desktop launcher')
+        applications = self.data / 'applications'
+        applications.mkdir(parents=True)
+        managed_image = self.root / 'managed applications' / 'metrolist.appimage'
+        managed_image.parent.mkdir()
+        managed_image.write_text('#!/bin/sh\nexec sh "$TEST_APPRUN" "$@"\n')
+        managed_image.chmod(0o755)
+        self.env.update(APPIMAGE=str(managed_image), TEST_APPRUN=str(self.app / 'AppRun'))
+        existing = applications / 'metrolist.desktop'
+        source = ('[Desktop Entry]\nType=Application\nName=Metrolist\n'
+                  f'TryExec={managed_image}\n'
+                  f'Exec=env DESKTOPINTEGRATION=1 {shlex.quote(str(managed_image))} %u\n'
+                  'X-AppImage-Name=Metrolist\n')
+        existing.write_text(source)
+
+        result = subprocess.run(['gio', 'launch', str(existing), 'metrolist://test/'],
+                                env=self.env, capture_output=True, text=True, timeout=5)
+        self.assertEqual(0, result.returncode, result.stderr)
+        deadline = time.monotonic() + 2
+        while not self.log.exists() and time.monotonic() < deadline:
+            time.sleep(0.01)
+        self.assertEqual('metrolist://test/\n', self.log.read_text())
+        self.assertEqual([existing], list(applications.iterdir()))
+        self.assertEqual(source, existing.read_text())
+        self.assertFalse((self.data / 'icons').exists())
+
+    def test_opt_out_leaves_external_launcher_and_launches_app(self):
+        applications = self.data / 'applications'
+        applications.mkdir(parents=True)
+        existing = applications / 'gearlever-metrolist.desktop'
+        content = b'externally managed entry'
+        existing.write_bytes(content)
+
+        self.env['DESKTOPINTEGRATION'] = '1'
+        self.assertEqual('', self.launch().stderr)
+        self.assertEqual([existing], list(applications.iterdir()))
+        self.assertEqual(content, existing.read_bytes())
+        self.assertFalse((self.data / 'icons').exists())
+
+    def test_opt_out_does_not_remove_existing_metrolist_entry(self):
+        applications = self.data / 'applications'
+        applications.mkdir(parents=True)
+        existing = applications / 'Metrolist.desktop'
+        content = b'X-Metrolist-AppImage=true\n'
+        existing.write_bytes(content)
+
+        self.env['DESKTOPINTEGRATION'] = 'appimaged'
+        self.launch()
+        self.assertEqual(content, existing.read_bytes())
+        self.assertFalse((self.data / 'icons').exists())
 
     def test_failed_registration_does_not_block_launch(self):
         self.data.write_text('not a directory')

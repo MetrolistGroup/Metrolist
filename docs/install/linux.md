@@ -21,6 +21,14 @@ chmod u+x -- ./Metrolist.AppImage
 
 Substitute the downloaded filename. Check playback, sign-in and retained credentials after restart.
 
+If a tool such as Gear Lever already manages the launcher, Metrolist skips its own app-menu registration when launched with a nonempty `DESKTOPINTEGRATION` setting. To skip registration when launching manually, run:
+
+```sh
+DESKTOPINTEGRATION=1 ./Metrolist.AppImage
+```
+
+This does not remove launchers already present.
+
 On Arch Linux, install the community-maintained [`metrolist-desktop-bin`](https://aur.archlinux.org/packages/metrolist-desktop-bin) package, which wraps the x86_64 release AppImage, for example with `yay -S metrolist-desktop-bin`. Update it through your AUR helper instead of replacing the AppImage.
 
 ## Homebrew
