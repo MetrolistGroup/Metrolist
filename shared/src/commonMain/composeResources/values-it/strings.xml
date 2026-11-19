@@ -2641,4 +2641,5 @@
     <string name="lastfm_session_expired">Accedi di nuovo a Last.fm</string>
     <string name="lastfm_session_expired_description">Il tuo login a Last.fm non è più valido. Le riproduzioni verranno salvate e mandate una volta fatto l'accesso.</string>
     <string name="tray_hide_miniplayer">Nascondi miniplayer</string>
+    <string name="updates_force_install">Installa comunque</string>
 </resources>
