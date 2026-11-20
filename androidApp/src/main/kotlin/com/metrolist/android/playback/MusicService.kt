@@ -645,15 +645,27 @@ class MusicService :
     }
 
     private fun handleDeviceVolumeChanged() {
+        fun ownsLocalPlayback() =
+            !castManager.state.value.isConnected &&
+                !AndroidDeviceConnect.manager.remote.isFollowing &&
+                !AndroidListenTogetherManager.isGuestPlaybackLocked
+
         val muted =
             audioManager.getStreamVolume(AudioManager.STREAM_MUSIC) == 0 ||
                 audioManager.isStreamMute(AudioManager.STREAM_MUSIC)
         pauseOnMute.onVolumeChanged(
             muted = muted,
             enabled = Settings.shared.pauseOnMute,
-            playing = player.isPlaying.value,
+            playing =
+                playbackActiveForDeviceMute(
+                    isPlaying = player.isPlaying.value,
+                    wantsPlayback = player.wantsPlayback,
+                    playbackState = player.playbackState,
+                    hasSong = player.currentSong.value != null,
+                    isLocalPlayback = ::ownsLocalPlayback,
+                ),
             pause = player::pause,
-            resume = { if (!castManager.state.value.isConnected) player.resume() },
+            resume = { if (ownsLocalPlayback()) player.resume() },
         )
     }
 
