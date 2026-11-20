@@ -8,6 +8,7 @@ import androidx.compose.runtime.snapshots.Snapshot
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
+import androidx.media3.common.Player
 import androidx.room3.Room
 import androidx.sqlite.driver.AndroidSQLiteDriver
 import coil3.ImageLoader
@@ -42,6 +43,8 @@ import com.metrolist.shared.settings.Settings
 import com.metrolist.shared.settings.setAutomotivePinnedPlaylists
 import com.metrolist.shared.state.SongLikeState
 import com.metrolist.shared.utils.bucketedArtworkUrl
+import com.metrolist.shared.youtube.playback.PlaybackNetworkState
+import com.metrolist.shared.youtube.playback.PlaybackNetworkStateStore
 import com.russhwolf.settings.MapSettings
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.mock.MockEngine
@@ -57,6 +60,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
@@ -80,6 +84,7 @@ import org.robolectric.annotation.Config
 import org.robolectric.util.ReflectionHelpers
 import java.io.File
 import java.io.IOException
+import java.lang.reflect.Proxy
 import java.nio.file.Files
 import kotlin.random.Random
 
@@ -982,6 +987,47 @@ class AutomotiveBrowseTest {
             Settings.shared.dataSyncId = "another-account"
             assertTrue(library.children(parent, 0, 100).isEmpty())
             assertEquals(null, library.resolveSongQueue(refreshed.first()))
+        }
+
+    @Test
+    fun offlineLastLoadedTrackDoesNotConsumeNextForPlaylistContinuation() =
+        runBlocking {
+            val previousNetwork = PlaybackNetworkStateStore.current
+            try {
+                PlaybackNetworkStateStore.publish(PlaybackNetworkState("playlist-test", connected = true))
+                client.close()
+                client =
+                    HttpClient(
+                        MockEngine {
+                            respond(
+                                playlistResponse(listOf("first-track", "last-loaded-track"), continuation = "next"),
+                                headers = headersOf(HttpHeaders.ContentType, "application/json"),
+                            )
+                        },
+                    ) { install(ContentNegotiation) { json(Json { ignoreUnknownKeys = true }) } }
+                val page = YouTubeRepository(InnerTube(client)).getPlaylistPlaybackPage("PLremote")
+                assertTrue(page.hasMore)
+                val repeat = MutableStateFlow(Player.REPEAT_MODE_ALL)
+                val playback =
+                    Proxy.newProxyInstance(
+                        AndroidPlaybackPlayer::class.java.classLoader,
+                        arrayOf(AndroidPlaybackPlayer::class.java),
+                    ) { _, method, _ ->
+                        when (method.name) {
+                            "getCurrentMediaItemIndex" -> MutableStateFlow(page.songs.lastIndex)
+                            "getSongQueue" -> MutableStateFlow(page.songs)
+                            else -> error("Unexpected player call: ${method.name}")
+                        }
+                    } as AndroidPlaybackPlayer
+                val coordinator = AndroidQueueCoordinator(context, playback, this, repeat, MutableStateFlow(false), {}, {})
+                ReflectionHelpers.getField<MutableStateFlow<PlaylistPage?>>(coordinator, "_playlistPage").value = page
+                PlaybackNetworkStateStore.publish(PlaybackNetworkState("playlist-test", connected = false))
+
+                assertFalse(coordinator.extendPlaylistBeforeSkip())
+                assertTrue(coordinator.playlistPageState.value!!.hasMore)
+            } finally {
+                PlaybackNetworkStateStore.publish(previousNetwork)
+            }
         }
 
     @Test
