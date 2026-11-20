@@ -420,7 +420,25 @@ private fun WindowsAccountContent(
                                         },
                                         navigate = { url ->
                                             if (url == completedSignInUrl) {
-                                                failed = true
+                                                scope.launch {
+                                                    val resolved = authData.dataSyncId.isNotBlank() &&
+                                                        authManager.validateAndSaveCredentials(
+                                                            authData.cookie,
+                                                            authData.visitorData,
+                                                            authData.dataSyncId,
+                                                            authData.authUser,
+                                                        )
+                                                    if (resolved) {
+                                                        onAuthDataExtracted(
+                                                            authData.cookie,
+                                                            authData.visitorData,
+                                                            authData.dataSyncId,
+                                                            authData.authUser,
+                                                        )
+                                                    } else {
+                                                        failed = true
+                                                    }
+                                                }
                                             } else {
                                                 loginUrl = url
                                                 needsLogin = true
