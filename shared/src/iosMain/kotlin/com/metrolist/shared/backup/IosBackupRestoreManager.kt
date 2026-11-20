@@ -18,6 +18,8 @@ import kotlinx.cinterop.toKString
 import kotlinx.cinterop.usePinned
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.first
@@ -129,7 +131,9 @@ class IosBackupRestoreManager(
             }
         }
 
-    private fun backupLocked(destinationPath: String): Result<Unit> {
+    private suspend fun backupLocked(destinationPath: String): Result<Unit> {
+        val coroutineContext = currentCoroutineContext()
+        val checkActive = { coroutineContext.ensureActive() }
         val fileManager = NSFileManager.defaultManager
         val snapshotPath = temporaryPath("backup-snapshot")
         val archivePath = "$destinationPath.${NSUUID().UUIDString}.tmp"
@@ -141,13 +145,17 @@ class IosBackupRestoreManager(
                     .map(::resolveFilePath)
                     .toSet()
             check(destination !in protectedPaths) { "Backup destination cannot replace the live database or its sidecars" }
+            checkActive()
             snapshotDatabase(databasePath, snapshotPath)
+            checkActive()
             val version = databaseVersion(snapshotPath)
+            checkActive()
             val settingsBytes = json.encodeToString(PortableSettings.serializer(), settings.exportBackupSettings()).encodeToByteArray()
             check(settingsBytes.size <= BackupArchiveLimits.SETTINGS_BYTES) { "Backup settings are too large" }
             check(fileManager.createFileAtPath(archivePath, contents = null, attributes = null)) { "Could not create backup archive" }
             IosFileOutputStream(archivePath).use { output ->
                 ZipOutputStream(output).use { zip ->
+                    checkActive()
                     zip.writeEntry(
                         BACKUP_MANIFEST_ENTRY,
                         json
@@ -157,8 +165,11 @@ class IosBackupRestoreManager(
                             ).encodeToByteArray(),
                     )
                     zip.writeEntry(BACKUP_SETTINGS_ENTRY, settingsBytes)
+                    checkActive()
                     zip.putNextEntry(ZipEntry(BACKUP_DATABASE_ENTRY))
-                    IosFileInputStream(snapshotPath).use { input -> input.copyTo(zip, BackupArchiveLimits.DATABASE_BYTES) }
+                    IosFileInputStream(snapshotPath).use { input ->
+                        input.copyTo(zip, BackupArchiveLimits.DATABASE_BYTES, checkActive)
+                    }
                     zip.closeEntry()
                 }
             }
@@ -848,10 +859,12 @@ private fun ZipOutputStream.writeEntry(
 private fun InputStream.copyTo(
     output: OutputStream,
     limit: Long,
+    checkActive: () -> Unit = {},
 ): Long {
     val buffer = ByteArray(64 * 1024)
     var total = 0L
     while (true) {
+        checkActive()
         val count = read(buffer)
         if (count < 0) return total
         check(count > 0) { "Backup entry read made no progress" }
