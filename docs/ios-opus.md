@@ -28,6 +28,6 @@ See [platform audio paths](audio-processing.md#equalizer-and-gain) for tap suppo
 
 ## Verification
 
-Run shared parser/remux tests, including `WebmOpusTest` and `OpusMp4DecodeTest`, and the macOS [iOS checks](checks.md#platform-checks). Decode the fixture through AVFoundation and compare pre-skip, padding and peaks before integer conversion.
+Run shared parser/remux tests, including `WebmOpusTest`, and the macOS [iOS checks](checks.md#platform-checks). Decode the fixture through AVFoundation and compare pre-skip, padding and peaks before integer conversion.
 
 On iOS, check uncached Opus, AAC fallback, seeking, crossfades, track cancellation and offline priority. Bluetooth crackling and native decoder behavior require a device capture. Linux cannot compile or run the iOS targets with this configuration.

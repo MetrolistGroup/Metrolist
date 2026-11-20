@@ -110,4 +110,4 @@ For signed-out runs, use `-DinnerTubeSignedOut=true`. Upload probes need a new f
 
 ## Backend verification
 
-Run affected [platform checks](checks.md#platform-checks). Relevant suites include `SabrInputStreamTest`, `SabrPlaybackStreamsTest`, `SabrAudioFetchTest`, `DefaultStreamResolverTest` and the repository/parser tests beside changed code. Fixture sources and limits are in [test fixtures](test-fixtures.md).
+Run affected [platform checks](checks.md#platform-checks). Relevant suites are the parser tests beside changed code. Fixture sources and limits are in [test fixtures](test-fixtures.md).
