@@ -744,7 +744,10 @@ fun PlayerScreen(
             !uiState.isLyricsVisible
     val textBackgroundColor by animateColorAsState(
         targetValue =
-            if (isCanvasBackdropVisible) {
+            if (
+                isCanvasBackdropVisible ||
+                    (usesFullscreenThumbnail && currentSong?.displayThumbnail != null && !showVideoSurface && !uiState.isLyricsVisible)
+            ) {
                 Color.White
             } else {
                 when (playerBackground) {
