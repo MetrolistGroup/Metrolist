@@ -89,7 +89,15 @@ internal fun mergeBackgroundLyricsEntries(lyrics: List<LyricsEntry>): List<Lyric
                     listOfNotNull(it.backgroundText?.takeIf(String::isNotBlank), it.words?.backgroundText())
                         .joinToString(" ").takeIf(String::isNotBlank)
                 }
-            if (sourceBackground != null && nextMainBackground != null &&
+            val backgroundEnd = background.endTime?.takeIf { it > background.time } ?: background.time + 4000L
+            val nextMainStart = nextMain?.time
+            val nextMainEnd =
+                nextMain?.let { main ->
+                    main.endTime?.takeIf { it > main.time } ?: main.time + 4000L
+                }
+            val overlapsNextMain =
+                nextMainStart != null && nextMainEnd != null && background.time < nextMainEnd && nextMainStart < backgroundEnd
+            if (overlapsNextMain && sourceBackground != null && nextMainBackground != null &&
                 normalizeBackgroundText(sourceBackground) == normalizeBackgroundText(nextMainBackground)
             ) {
                 displayLines[index] =
@@ -157,10 +165,6 @@ internal fun mergeBackgroundLyricsEntries(lyrics: List<LyricsEntry>): List<Lyric
             if (incomingRomanizedWords != null) {
                 val romanizedText = incomingRomanizedWords.backgroundText()
                 incomingRomanizedWords.withBackgroundPhraseBoundary() +
-                    incomingTextBackgroundWords
-                        .filterNot {
-                            romanizedText != null && normalizeBackgroundText(it.text) == normalizeBackgroundText(romanizedText)
-                        }.withBackgroundPhraseBoundary() +
                     listOfNotNull(
                         incomingRomanizedTextWord?.takeUnless { word ->
                             romanizedText != null && normalizeBackgroundText(word.text) == normalizeBackgroundText(romanizedText)
@@ -199,10 +203,13 @@ internal fun mergeBackgroundLyricsEntries(lyrics: List<LyricsEntry>): List<Lyric
                 null
             }
         val timedWordEndTime =
-            backgroundWords.filterNot(WordTimestamp::isLineTimed).maxOfOrNull { (it.endTime * 1000.0).toLong() }
+            backgroundWords.filter { !it.isLineTimed && it.endTime > it.startTime }
+                .maxOfOrNull { (it.endTime * 1000.0).toLong() }
+        val nextMainEndTime = lyrics.drop(index + 1).firstOrNull { !it.isBackground }?.time?.takeIf { it > background.time }
         val backgroundFallbackEndTime =
             background.endTime?.takeIf { it > background.time }
                 ?: timedWordEndTime?.takeIf { it > background.time }
+                ?: nextMainEndTime
                 ?: background.time + 4000L
         val backgroundEndTime =
             maxOf(
