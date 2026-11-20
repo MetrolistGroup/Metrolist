@@ -2245,7 +2245,7 @@ fun PlayerScreen(
                                 }
 
                                 playerControlsTransition.AnimatedVisibility(
-                                    visible = { (expanded, minimalUi) -> !expanded && !minimalUi },
+                                    visible = { (_, minimalUi) -> !minimalUi },
                                     enter = canvasControlsEnter,
                                     exit = canvasControlsExit,
                                 ) {
