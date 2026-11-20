@@ -285,7 +285,7 @@ private fun handleAwtKeyEvent(
         ctrl = event.isControlDown,
         meta = event.isMetaDown,
         shift = event.isShiftDown,
-        keyCode = ShortcutKeyCode.Awt(event.keyCode, event.keyChar),
+        keyCode = ShortcutKeyCode.Awt(event.keyCode, normalizeControlCharacter(event.keyChar, event.isControlDown)),
         suppressUnmodified = editableInputActive || modalActive,
         modalActive = modalActive,
         onRefresh = onRefresh,
@@ -767,6 +767,16 @@ internal fun keyCodeMatches(
                 keyCode.code == awtKeyCode
             }
         }
+    }
+
+internal fun normalizeControlCharacter(
+    character: Char,
+    controlDown: Boolean,
+): Char =
+    if (controlDown && character.code in 1..26) {
+        (character.code + 'A'.code - 1).toChar()
+    } else {
+        character
     }
 
 private fun ShortcutKeyCode.isAwtCode(expectedCode: Int): Boolean = (this as? ShortcutKeyCode.Awt)?.code == expectedCode

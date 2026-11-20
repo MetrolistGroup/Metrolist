@@ -19,4 +19,21 @@ class ShortcutKeyMatchingTest {
         assertTrue(keyCodeMatches(ShortcutKeyCode.Awt(AwtKeyEvent.VK_SLASH, '?'), Key.Slash, AwtKeyEvent.VK_SLASH))
         assertFalse(keyCodeMatches(ShortcutKeyCode.Awt(AwtKeyEvent.VK_1, '!'), Key.Slash, AwtKeyEvent.VK_SLASH))
     }
+
+    @Test
+    fun controlModifiedLetterEventsMatchTheirLetter() {
+        val shortcuts =
+            listOf(
+                Triple('\u000B', Key.K, AwtKeyEvent.VK_K),
+                Triple('\u0006', Key.F, AwtKeyEvent.VK_F),
+                Triple('\u000C', Key.L, AwtKeyEvent.VK_L),
+            )
+
+        shortcuts.forEach { (controlCharacter, key, keyCode) ->
+            val normalizedCharacter = normalizeControlCharacter(controlCharacter, controlDown = true)
+            assertTrue(keyCodeMatches(ShortcutKeyCode.Awt(AwtKeyEvent.VK_UNDEFINED, normalizedCharacter), key, keyCode))
+        }
+
+        assertFalse(keyCodeMatches(ShortcutKeyCode.Awt(AwtKeyEvent.VK_UNDEFINED, '\u000B'), Key.K, AwtKeyEvent.VK_K))
+    }
 }
