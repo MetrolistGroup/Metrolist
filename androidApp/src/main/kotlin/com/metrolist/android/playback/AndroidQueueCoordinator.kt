@@ -455,7 +455,6 @@ internal class AndroidQueueCoordinator(
             if (startPlaying) AndroidDeviceConnect.intercept(DcPlaybackCommand(DcPlaybackAction.PLAY))
             return
         }
-        _repeatMode.value = Player.REPEAT_MODE_OFF
         val preserveCurrent = current != null && player.isReady && !player.playbackTransitionPending.value
         if (preserveCurrent) {
             replaceQueueSession(listOf(requireNotNull(current)), 0, title, finite = false) {
