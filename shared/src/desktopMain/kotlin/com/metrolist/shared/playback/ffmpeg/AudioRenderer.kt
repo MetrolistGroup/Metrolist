@@ -498,6 +498,9 @@ class AudioRenderer internal constructor(
             pendingOutputChunks.clear()
             pendingOutputChunkOffset = 0
             pendingOutputBaseFrame = lineFrame
+            replayOutputChunks = emptyList()
+            replayOutputChunkIndex = 0
+            replayOutputChunkOffset = 0
             positionSpeed = playbackSpeed
             positionClock.reset(mediaMs, lineFrame, playbackSpeed)
             silenceSkipper.reset()
@@ -546,6 +549,9 @@ class AudioRenderer internal constructor(
             pendingOutputChunks.clear()
             pendingOutputChunkOffset = 0
             pendingOutputBaseFrame = writtenFrameCount
+            replayOutputChunks = emptyList()
+            replayOutputChunkIndex = 0
+            replayOutputChunkOffset = 0
             tempoProcessor?.close()
             tempoProcessor = null
             equalizer.reset()
@@ -593,6 +599,19 @@ class AudioRenderer internal constructor(
             }
         for (chunk in pending) {
             if (!shouldContinue() || !writeOutput(chunk.data, generation, chunk.playbackSpeed)) return false
+        }
+        while (true) {
+            val replayPending =
+                synchronized(safeLock) {
+                    if (closed || generation != outputGeneration || !shouldContinue()) return false
+                    reopenOutputLineIfClosed()
+                    replayOutputChunkIndex < replayOutputChunks.size
+                }
+            if (!replayPending) break
+            val written = synchronized(safeLock) { writePendingReplayOutput() }
+            if (written == 0) {
+                synchronized(safeLock) { safeLock.wait(10L) }
+            }
         }
         val drainTimeoutMs =
             synchronized(safeLock) {
