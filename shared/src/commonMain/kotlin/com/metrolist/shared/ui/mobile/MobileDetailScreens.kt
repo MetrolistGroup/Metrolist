@@ -344,10 +344,10 @@ internal fun MobileArtistScreen(
             operationError = null
             loader.load()
         },
-        onItemClick = { item ->
+        onItemClick = { sectionTitle, item ->
             if (item is SongItem) {
                 scope.launch {
-                    val songs = fullArtistShelfQueue(item, sections, page?.sectionBrowseIds.orEmpty())
+                    val songs = fullArtistShelfQueue(item, sectionTitle, sections, page?.sectionBrowseIds.orEmpty())
                     playbackController.play(songs.first { it.id == item.id }, songs)
                 }
             } else {
