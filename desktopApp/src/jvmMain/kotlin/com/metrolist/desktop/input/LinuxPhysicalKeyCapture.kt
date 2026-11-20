@@ -24,6 +24,8 @@ internal class LinuxPhysicalKeyCapture : PlatformPhysicalKeyCapture {
 
     private var restartOnExit = false
 
+    @Volatile private var recordApi: XTestRecord? = null
+
     override val isAvailable: Boolean get() = available
 
     override fun setEnabled(enabled: Boolean) {
@@ -84,7 +86,8 @@ internal class LinuxPhysicalKeyCapture : PlatformPhysicalKeyCapture {
         var range: Pointer? = null
         try {
             val x11 = X11.INSTANCE
-            val xtst = XTestRecord.INSTANCE
+            val xtst = Native.load("Xtst", XTestRecord::class.java)
+            recordApi = xtst
             val activeEventDisplay = x11.XOpenDisplay(null) ?: return
             eventDisplay = activeEventDisplay
             val activeControlDisplay = x11.XOpenDisplay(null) ?: return
@@ -124,17 +127,18 @@ internal class LinuxPhysicalKeyCapture : PlatformPhysicalKeyCapture {
             val activeContext = context
             eventDisplay?.let { display ->
                 activeContext?.let { recordContext ->
-                    runCatching { XTestRecord.INSTANCE.XRecordDisableContext(display, recordContext) }
+                    runCatching { recordApi?.XRecordDisableContext(display, recordContext) }
                 }
             }
             controlDisplay?.let { display ->
                 activeContext?.let { recordContext ->
-                    runCatching { XTestRecord.INSTANCE.XRecordFreeContext(display, recordContext) }
+                    runCatching { recordApi?.XRecordFreeContext(display, recordContext) }
                 }
             }
             range?.let { runCatching { X11.INSTANCE.XFree(it) } }
             eventDisplay?.let { runCatching { X11.INSTANCE.XCloseDisplay(it) } }
             controlDisplay?.let { runCatching { X11.INSTANCE.XCloseDisplay(it) } }
+            recordApi = null
         }
     }
 
@@ -157,7 +161,7 @@ internal class LinuxPhysicalKeyCapture : PlatformPhysicalKeyCapture {
                         pending.record(linuxPhysicalPositionForX11KeyCode(xKeyCode))
                     }
                 } finally {
-                    XTestRecord.INSTANCE.XRecordFreeData(dataPointer)
+                    recordApi?.XRecordFreeData(dataPointer)
                 }
             }
         }
@@ -247,7 +251,4 @@ private interface XTestRecord : Library {
 
     fun XRecordFreeData(data: Pointer)
 
-    companion object {
-        val INSTANCE: XTestRecord = Native.load("Xtst", XTestRecord::class.java)
-    }
 }
