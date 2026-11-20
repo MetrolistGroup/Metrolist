@@ -236,6 +236,7 @@ fun PlaylistContent(
             }
         }
     val displayedSongs = remember(songs, displayedIndices) { displayedIndices?.map(songs::get) ?: songs }
+    val preferQueueItemIdState = rememberUpdatedState(currentQueueItemId != null && displayedSongs.any { it.id == currentQueueItemId })
     val songKeys = preparedSongKeys ?: remember(displayedSongs) { displayedSongs.playlistLazyItemKeys() }
     val effectiveSuggestions = suggestions.takeIf { effectiveQuery.isBlank() }.orEmpty()
 
@@ -490,6 +491,7 @@ fun PlaylistContent(
                                                     itemKey = songKeys[index],
                                                     currentSongId = currentSongIdState,
                                                     currentQueueItemId = currentQueueItemIdState,
+                                                    preferQueueItemId = preferQueueItemIdState,
                                                     isPlaying = isPlayingState,
                                                     isDownloaded = song.id in downloadedSongIds,
                                                     onTrackClick = onTrackClick,
@@ -678,6 +680,7 @@ fun PlaylistContent(
                                         modifier = itemModifier.padding(horizontal = CollectionHeaderHorizontalPadding),
                                         currentSongId = currentSongIdState,
                                         currentQueueItemId = currentQueueItemIdState,
+                                        preferQueueItemId = preferQueueItemIdState,
                                         isPlaying = isPlayingState,
                                         isDownloaded = song.id in downloadedSongIds,
                                         onTrackClick = onTrackClick,
@@ -775,6 +778,7 @@ private fun LazyItemScope.PlaylistSongItem(
     container: @Composable (@Composable () -> Unit) -> Unit,
     currentSongId: State<String?>,
     currentQueueItemId: State<String?>,
+    preferQueueItemId: State<Boolean>,
     isPlaying: State<Boolean>,
     isDownloaded: Boolean,
     onClick: () -> Unit,
@@ -789,7 +793,7 @@ private fun LazyItemScope.PlaylistSongItem(
     onMoveToTop: (() -> Unit)? = null,
     onMoveToBottom: (() -> Unit)? = null,
 ) {
-    val playback by rememberItemPlayback(song.id, currentSongId, isPlaying, currentQueueItemId)
+    val playback by rememberItemPlayback(song.id, currentSongId, isPlaying, currentQueueItemId, preferQueueItemId)
     val haptics = rememberMetrolistHaptics()
     if (reorderableState == null) {
         container {
@@ -873,6 +877,7 @@ private fun LazyItemScope.PlaylistSongItemRow(
     modifier: Modifier = Modifier,
     currentSongId: State<String?>,
     currentQueueItemId: State<String?>,
+    preferQueueItemId: State<Boolean>,
     isPlaying: State<Boolean>,
     isDownloaded: Boolean,
     onTrackClick: (SongItem, Int) -> Unit,
@@ -886,7 +891,7 @@ private fun LazyItemScope.PlaylistSongItemRow(
     onMove: (Int, Int) -> Unit,
     isSelected: Boolean,
 ) {
-    val playback by rememberItemPlayback(song.id, currentSongId, isPlaying, currentQueueItemId)
+    val playback by rememberItemPlayback(song.id, currentSongId, isPlaying, currentQueueItemId, preferQueueItemId)
     PlaylistSongItem(
         song = song,
         key = itemKey,
@@ -905,6 +910,7 @@ private fun LazyItemScope.PlaylistSongItemRow(
         },
         currentSongId = currentSongId,
         currentQueueItemId = currentQueueItemId,
+        preferQueueItemId = preferQueueItemId,
         isPlaying = isPlaying,
         isDownloaded = isDownloaded,
         onClick = { onTrackClick(song, sourceIndex) },
