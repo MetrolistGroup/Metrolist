@@ -11,6 +11,9 @@ fun AccountsListResponse.Account.selectionDataSyncId(currentDataSyncId: String):
         ?: dataSyncId?.let(::sanitizeDataSyncId)?.takeIf(String::isNotBlank)
         ?: pageId?.takeIf(String::isNotBlank)
 
+fun AccountsListResponse.Account.isSelectableForLogin(currentDataSyncId: String): Boolean =
+    selectionDataSyncId(currentDataSyncId) != null || !signinUrl.isNullOrBlank()
+
 fun singleAccountDataSyncId(
     currentDataSyncId: String,
     accounts: List<AccountsListResponse.Account>,

@@ -49,6 +49,7 @@ import com.metrolist.innertubex.models.response.AccountsListResponse
 import com.metrolist.shared.auth.AccountDiscoveryAction
 import com.metrolist.shared.auth.AuthManager
 import com.metrolist.shared.auth.accountDiscoveryAction
+import com.metrolist.shared.auth.isSelectableForLogin
 import com.metrolist.shared.auth.selectionDataSyncId
 import com.metrolist.shared.auth.singleAccountDataSyncId
 import com.metrolist.shared.generated.resources.Res
@@ -293,7 +294,9 @@ private fun WindowsAccountContent(
             failed = false
             try {
                 accounts = authManager.fetchAccounts(authData.cookie, authData.visitorData, authData.dataSyncId, authData.authUser)
-                selectedAccount = accounts.firstOrNull { it.isSelected } ?: accounts.firstOrNull()
+                selectedAccount =
+                    accounts.firstOrNull { it.isSelected && it.isSelectableForLogin(authData.dataSyncId) }
+                        ?: accounts.firstOrNull { it.isSelectableForLogin(authData.dataSyncId) }
                 failed = accounts.isEmpty()
                 if (accountDiscoveryAction(accounts.size, isSwitchingChannel) == AccountDiscoveryAction.COMPLETE_LOGIN) {
                     val candidate = authData.copy(dataSyncId = singleAccountDataSyncId(authData.dataSyncId, accounts))
@@ -352,7 +355,11 @@ private fun WindowsAccountContent(
             Text(stringResource(Res.string.channel_switch_recovery_hint))
         }
         Column(Modifier.fillMaxWidth().weight(1f).verticalScrollWithDrag(rememberScrollState())) {
-            AccountPickerList(accounts, selectedAccount, onAccountSelected = { if (!busy) selectedAccount = it })
+            AccountPickerList(
+                accounts.filter { it.isSelectableForLogin(authData.dataSyncId) },
+                selectedAccount,
+                onAccountSelected = { if (!busy) selectedAccount = it },
+            )
         }
         FlowRow(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -371,7 +378,7 @@ private fun WindowsAccountContent(
                 enabled =
                     !busy &&
                         (selectedAccount != null ||
-                            (accounts.isEmpty() && authData.cookie.isNotBlank() && authData.dataSyncId.isNotBlank())),
+                            (!isSwitchingChannel && accounts.isEmpty() && authData.cookie.isNotBlank() && authData.dataSyncId.isNotBlank())),
                 onClick = {
                     val selected = selectedAccount
                     scope.launch {
@@ -765,7 +772,11 @@ private fun WebViewContent(
                 text = {
                     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                         Text(stringResource(Res.string.account_picker_subtitle))
-                        AccountPickerList(accounts, selectedAccount, onAccountSelected = { selectedAccount = it })
+                        AccountPickerList(
+                            accounts.filter { it.isSelectableForLogin(authData.dataSyncId) },
+                            selectedAccount,
+                            onAccountSelected = { selectedAccount = it },
+                        )
                     }
                 },
                 confirmButton = {
