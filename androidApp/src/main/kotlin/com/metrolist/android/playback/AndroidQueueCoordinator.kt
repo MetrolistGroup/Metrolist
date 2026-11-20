@@ -189,7 +189,8 @@ internal class AndroidQueueCoordinator(
             pendingRestorePositionMs = restoredPosition.takeIf { it > 0L }
             restoredSongId = restoredSongs.getOrNull(restoredQueue.currentIndex)?.id
             isRadioQueue = state.radioQueue || restoredMix
-            radioQueueContinuation = state.radioQueueContinuation
+            // A persisted continuation's recommendations mode is not stored, so after a
+            // restart its mode is unknown: discard it and let autoplay fetch a fresh page.
             radioQueuePlaylistId = state.radioQueuePlaylistId
             radioQueueParams = state.radioQueueParams
             queueChipsState.value =
