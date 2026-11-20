@@ -159,6 +159,7 @@ internal class AndroidQueueCoordinator(
             radioQueueContinuation = radioQueueContinuation,
             radioQueuePlaylistId = radioQueuePlaylistId,
             radioQueueParams = radioQueueParams,
+            recommendationLocked = recommendationLockedSessionId == queueSessionId,
         )
     }
 
@@ -186,6 +187,7 @@ internal class AndroidQueueCoordinator(
             val restoredPosition = state.currentPosition
             pendingRestorePositionMs = restoredPosition.takeIf { it > 0L }
             restoredSongId = restoredSongs.getOrNull(restoredQueue.currentIndex)?.id
+            recommendationLockedSessionId = queueSessionId.takeIf { state.recommendationLocked }
             isRadioQueue = state.radioQueue || restoredMix
             radioQueueContinuation = state.radioQueueContinuation
             radioQueuePlaylistId = state.radioQueuePlaylistId
