@@ -196,7 +196,7 @@ fun SleepTimerDialog(
                                 stringResource(Res.string.sleep_timer_hour),
                                 23,
                                 Modifier.weight(1f),
-                                resetSignal = resetSignal,
+                                resetSignal = { resetSignal },
                             )
                             Text(
                                 stringResource(Res.string.sleep_timer_separator),
@@ -210,7 +210,7 @@ fun SleepTimerDialog(
                                 59,
                                 Modifier.weight(1f),
                                 last = true,
-                                resetSignal = resetSignal,
+                                resetSignal = { resetSignal },
                             )
                         }
                         if (allowEndOfSong) {
@@ -309,12 +309,12 @@ fun SleepTimerDialog(
                     if (!state.isActive) {
                         OutlinedButton(
                             onClick = {
+                                resetSignal++
                                 val saved = Settings.shared.sleepTimerDefaults
                                 hours = (saved.durationMinutes / 60).toString().padStart(2, '0')
                                 minutes = (saved.durationMinutes % 60).toString().padStart(2, '0')
                                 finishCurrentSong = saved.finishCurrentSong
                                 fadeOut = saved.fadeOut
-                                resetSignal++
                             },
                             modifier = Modifier.tvFocusHighlight(CircleShape),
                             shapes = ButtonDefaults.shapes(),
@@ -397,13 +397,14 @@ private fun DurationField(
     maximum: Int,
     modifier: Modifier,
     last: Boolean = false,
-    resetSignal: Int = 0,
+    resetSignal: () -> Int = { 0 },
 ) {
     val focusManager = LocalFocusManager.current
     val hapticFeedback = LocalHapticFeedback.current
     val coroutineScope = rememberCoroutineScope()
+    val currentResetSignal = resetSignal()
     var latestValue by remember { mutableStateOf(value) }
-    var lastResetSignal by remember { mutableIntStateOf(resetSignal) }
+    var lastResetSignal by remember { mutableIntStateOf(currentResetSignal) }
     val currentOnValueChange by rememberUpdatedState(onValueChange)
     var input by remember { mutableStateOf(TextFieldValue(value)) }
     var isFocused by remember { mutableStateOf(false) }
@@ -411,8 +412,8 @@ private fun DurationField(
     var flingJob by remember { mutableStateOf<Job?>(null) }
 
     SideEffect {
-        if (resetSignal != lastResetSignal) {
-            lastResetSignal = resetSignal
+        if (currentResetSignal != lastResetSignal) {
+            lastResetSignal = currentResetSignal
             flingJob?.cancel()
             flingJob = null
         }
@@ -477,11 +478,16 @@ private fun DurationField(
                             val startOffset = accumulatedDrag
                             accumulatedDrag = 0f
                             if (abs(velocityY) > stepPx * 3f) {
+                                val flingResetSignal = resetSignal()
                                 flingJob =
                                     coroutineScope.launch {
                                         var lastAnimValue = startOffset
                                         var carry = startOffset
                                         Animatable(startOffset).animateDecay(velocityY, decay) {
+                                            if (resetSignal() != flingResetSignal) {
+                                                flingJob?.cancel()
+                                                return@animateDecay
+                                            }
                                             val delta = this.value - lastAnimValue
                                             lastAnimValue = this.value
                                             carry += delta
