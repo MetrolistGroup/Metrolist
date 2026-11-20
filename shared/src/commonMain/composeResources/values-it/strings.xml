@@ -590,7 +590,7 @@
     <string name="updates_retry">Riprova</string>
     <string name="updates_available_title">Metrolist %1$s è disponibile</string>
     <string name="updates_available_message">Tocca Aggiorna per scaricare l\u0027aggiornamento e proseguire con l\u0027installazione.</string>
-    <string name="updates_changelog_preview">Cosa c'è di nuovo</string>
+    <string name="updates_changelog_preview">Novità</string>
     <string name="updates_pending_parenthetical">(aggiornamento in attesa)</string>
     <string name="update_pending">Aggiornamento in attesa</string>
     <string name="updates_action">Aggiorna</string>
@@ -902,7 +902,7 @@
     <string name="statistics_top_tracks">Brani più ascoltati</string>
     <string name="stored_clear_collection">Cancella collezione</string>
     <string name="title">Titolo</string>
-    <string name="new_label">Nuovo</string>
+    <string name="new_label">Novità</string>
     <string name="onboarding_account_picture">Foto profilo di %1$s</string>
     <string name="account_logout_confirm">Vuoi disconnetterti?</string>
     <plurals name="song_count">
@@ -1005,14 +1005,14 @@
     <string name="unlike">Non mi piace</string>
     <string name="history_empty">Cronologia d\u0027ascolto vuota</string>
     <plurals name="history_hours_ago">
-        <item quantity="one">%1$d ora fa</item>
-        <item quantity="many">%1$d ore fa</item>
-        <item quantity="other">%1$d ore fa</item>
+        <item quantity="one">%1$d h fa</item>
+        <item quantity="many">%1$d h fa</item>
+        <item quantity="other">%1$d h fa</item>
     </plurals>
     <string name="music_video_not_found">Nessun video musicale disponibile per questo brano.</string>
     <string name="video">Video</string>
     <string name="grid_view">Griglia</string>
-    <string name="list_view">Lista</string>
+    <string name="list_view">Elenco</string>
     <string name="account_sign_in">Accedi</string>
     <string name="suggest">Suggerisci</string>
     <string name="new_playlist">Nuova playlist</string>
@@ -1045,9 +1045,9 @@
     <string name="lyrics_show_translations">Traduzioni</string>
     <string name="top_tracks">Brani principali</string>
     <plurals name="history_days_ago">
-        <item quantity="one">%1$dg fa</item>
-        <item quantity="many">%1$dg fa</item>
-        <item quantity="other">%1$dg fa</item>
+        <item quantity="one">%1$d g fa</item>
+        <item quantity="many">%1$d g fa</item>
+        <item quantity="other">%1$d g fa</item>
     </plurals>
     <plurals name="history_delete_items_title">
         <item quantity="one">Eliminare %1$d elemento dalla cronologia?</item>
@@ -1055,9 +1055,9 @@
         <item quantity="other">Eliminare %1$d elementi dalla cronologia?</item>
     </plurals>
     <plurals name="history_minutes_ago">
-        <item quantity="one">%1$dm fa</item>
-        <item quantity="many">%1$dm fa</item>
-        <item quantity="other">%1$dm fa</item>
+        <item quantity="one">%1$d min fa</item>
+        <item quantity="many">%1$d min fa</item>
+        <item quantity="other">%1$d min fa</item>
     </plurals>
     <string name="history_duration">Durata cronologia</string>
     <string name="recognition_history">Cronologia brani riconosciuti</string>
@@ -1096,9 +1096,9 @@
         <item quantity="other">%1$d download in coda</item>
     </plurals>
     <plurals name="queued_songs">
-        <item quantity="one">%1$d brano in coda su %2$d</item>
-        <item quantity="many">%1$d brani in coda su %2$d</item>
-        <item quantity="other">%1$d brani in coda su %2$d</item>
+        <item quantity="one">%1$d di %2$d brani in coda</item>
+        <item quantity="many">%1$d di %2$d brani in coda</item>
+        <item quantity="other">%1$d di %2$d brani in coda</item>
     </plurals>
     <plurals name="removed_downloads">
         <item quantity="one">Rimosso %1$d download</item>
@@ -1283,7 +1283,7 @@
     <string name="onboarding_privacy_policy">Leggi la nostra informativa sulla privacy</string>
     <string name="onboarding_notification_downloads">Avanzamento download</string>
     <string name="onboarding_notification_playback">Riproduzione in background affidabile</string>
-    <string name="onboarding_step_of">Passo %1$d di %2$d</string>
+    <string name="onboarding_step_of">Passaggio %1$d di %2$d</string>
     <string name="onboarding_finish_title">È tutto pronto</string>
     <string name="finish">Fine</string>
     <string name="onboarding_restore_backup">Ripristina da backup</string>
@@ -1318,7 +1318,7 @@
     <string name="spotify_import_picker_title">Scegli le playlist di Spotify</string>
     <string name="spotify_import_picker_description">Scegli una playlist per aggiungerla ad una destinazione, oppure diverse per crearle separatamente.</string>
     <string name="spotify_import_playlist_label">Playlist Spotify</string>
-    <string name="spotify_import_review">Controlla (%1$d)</string>
+    <string name="spotify_import_review">Rivedi (%1$d)</string>
     <string name="spotify_import_limit_warning">L\u0027importazione da Spotify è limitata ai primi 5.000 brani per ciascuna playlist.</string>
     <string name="spotify_import_choose_destination">Scegli destinazione</string>
     <string name="spotify_import_destination_description">Crea una playlist sincronizzata con YouTube Music o aggiungi questi brani ad una che puoi modificare.</string>
@@ -1332,14 +1332,14 @@
     <string name="spotify_import_error_no_matched_songs">Impossibile trovare brani corrispondenti per questa playlist.</string>
     <string name="spotify_import_error_import_failed">Importazione playlist da Spotify non riuscita.</string>
     <plurals name="spotify_import_skipped_playlists">
-        <item quantity="one">Saltata %1$d playlist di Spotify priva di brani importabili.</item>
-        <item quantity="many">Saltate %1$d playlist di Spotify prive di brani importabili.</item>
-        <item quantity="other">Saltate %1$d playlist di Spotify prive di brani importabili.</item>
+        <item quantity="one">Ignorata %1$d playlist di Spotify senza brani importabili.</item>
+        <item quantity="many">Ignorate %1$d playlist di Spotify senza brani importabili.</item>
+        <item quantity="other">Ignorate %1$d playlist di Spotify senza brani importabili.</item>
     </plurals>
     <string name="spotify_import_imported_all">Importate %1$d playlist di Spotify con %2$d brani.</string>
-    <string name="spotify_import_imported_partial">Importate %1$d su %2$d playlist con %3$d brani. %4$d non riuscite.</string>
+    <string name="spotify_import_imported_partial">Importate %1$d playlist su %2$d con %3$d brani. %4$d non riuscite.</string>
     <string name="spotify_import_imported_none">Impossibile importare le playlist di Spotify selezionate.</string>
-    <string name="spotify_import_canceled">Importazione da Spotify annullata dopo %1$d su %2$d playlist.</string>
+    <string name="spotify_import_canceled">Importazione da Spotify annullata dopo %1$d di %2$d playlist.</string>
     <string name="spotify_import_all_already_in_destination">Tutti i brani corrispondenti sono già presenti nella playlist di destinazione.</string>
     <string name="spotify_import_alert_title">Importa da Spotify</string>
     <string name="settings_localization">Lingua e area geografica</string>
@@ -1499,7 +1499,7 @@
     <string name="restore_from_backup">Ripristina da un backup</string>
     <string name="onboarding_backup_picker_title">Ripristina un backup di Metrolist</string>
     <string name="onboarding_backup_picker_error">Impossibile aprire il selezionatore di backup: %1$s</string>
-    <string name="onboarding_backup_restore_failed">Errore nel ripristino: %1$s</string>
+    <string name="onboarding_backup_restore_failed">Ripristino non riuscito: %1$s</string>
     <string name="edit_sidebar">Modifica barra laterale</string>
     <string name="exit_fullscreen">Esci da schermo intero</string>
     <string name="fullscreen">Schermo intero</string>
@@ -1525,7 +1525,7 @@
     <string name="keyboard_shortcuts">Scorciatoie da tastiera</string>
     <string name="press_x_or_esc_to_dismiss">Premi %1$s` o Esc per chiudere</string>
     <string name="search_shortcuts">Cerca scorciatoie…</string>
-    <string name="no_shortcuts_matching">Nessuna scorciatoia per %1$s</string>
+    <string name="no_shortcuts_matching">Nessuna scorciatoia corrispondente a %1$s</string>
     <string name="or">oppure</string>
     <string name="no_lyrics_for_this_track">Nessun testo per questo brano</string>
     <string name="shortcuts_playback">Riproduzione</string>
@@ -1592,7 +1592,7 @@
     <string name="backup_picker_title">Ripristina backup Metrolist</string>
     <string name="create_backup_dialog_title">Crea backup Metrolist</string>
     <string name="backup_created">Backup creato</string>
-    <string name="backup_failed">Backup fallito: %1$s</string>
+    <string name="backup_failed">Backup non riuscito: %1$s</string>
     <string name="could_not_open_file_picker">Impossibile aprire il selettore di file: %1$s</string>
     <string name="listen_together_how_it_works">Come funziona</string>
     <string name="listen_together_how_it_works_body">Ascolta la musica in contemporanea con i tuoi amici. L'host controlla la riproduzione e gli ospiti la seguono automaticamente.</string>
@@ -1609,19 +1609,19 @@
     <string name="update_failed">Aggiornamento non riuscito</string>
     <string name="listenbrainz_connect_failed">Connessione non riuscita</string>
     <string name="webview_cleanup_failed">Impossibile rimuovere il profilo d'accesso WebView.</string>
-    <string name="signin_cleanup_failed">Pulizia sessione di accesso non riuscita.</string>
-    <string name="login_window_closed_or_failed">La finestra d'accesso è stata chiusa o non è riuscita a caricarsi.</string>
+    <string name="signin_cleanup_failed">Pulizia della sessione di accesso non riuscita.</string>
+    <string name="login_window_closed_or_failed">Finestra d'accesso chiusa o accesso non riuscito.</string>
     <string name="login_helper_not_found">Errore: Assistente non trovato. Ricerca effettuata nelle risorse e nei percorsi di fallback.</string>
-    <string name="login_helper_failed">Errore dell'assistente: %1$s</string>
-    <string name="failed_to_load_logs">Errore caricamento log: %1$s</string>
-    <string name="failed_to_export_logs">Errore nell'esportazione dei log</string>
+    <string name="login_helper_failed">Errore del modulo di accesso: %1$s</string>
+    <string name="failed_to_load_logs">Impossibile caricare i log: %1$s</string>
+    <string name="failed_to_export_logs">Impossibile esportare i log</string>
     <string name="apple_music_login_failed">Accesso ad Apple Music non riuscito</string>
     <string name="deezer_login_failed">Accesso a Deezer non riuscito</string>
     <string name="tidal_login_failed">Accesso a Tidal non riuscito</string>
     <string name="amazon_music_login_failed">Accesso ad Amazon Music non riuscito</string>
     <string name="import_status_failed">Importazione non riuscita</string>
-    <string name="import_notification_failed">Errore nell'importare %1$s: %2$s</string>
-    <string name="import_error_load_failed">Errore caricamento playlist: %1$s</string>
+    <string name="import_notification_failed">Impossibile importare "%1$s": %2$s</string>
+    <string name="import_error_load_failed">Impossibile caricare la playlist: %1$s</string>
     <string name="import_error_generic">Importazione non riuscita</string>
     <string name="update_available">Aggiornamento disponibile</string>
     <string name="monthly_audience_short">ascoltatori mensili</string>
@@ -1679,7 +1679,7 @@
     <string name="default_app_storage">Archiviazione app predefinita</string>
     <string name="select_download_directory">Seleziona il percorso di download</string>
     <string name="change_folder">Cambia cartella</string>
-    <string name="cached_resolutions">Video in cache: %1$d</string>
+    <string name="cached_resolutions">Risoluzioni in cache: %1$d</string>
     <string name="pinned">Fissato</string>
     <string name="link_copied_to_clipboard">Link copiato negli appunti</string>
     <string name="downloaded">Scaricati</string>
@@ -1732,22 +1732,22 @@
     <string name="import_tidal_picker_title">Scegli dalla libreria di Tidal</string>
     <string name="import_amazon_picker_title">Scegli dalla libreria di Amazon Music</string>
     <string name="import_deezer_picker_description">Scegli le playlist che vuoi importare</string>
-    <string name="import_deezer_selected_count">%1$d selezionate</string>
+    <string name="import_deezer_selected_count">%1$d selezionati</string>
     <string name="import_tidal_picker_description">Scegli le playlist che vuoi importare</string>
-    <string name="import_tidal_selected_count">%1$d selezionate</string>
+    <string name="import_tidal_selected_count">%1$d selezionati</string>
     <string name="import_amazon_picker_description">Scegli le playlist che vuoi importare</string>
-    <string name="import_amazon_selected_count">%1$d selezionate</string>
+    <string name="import_amazon_selected_count">%1$d selezionati</string>
     <string name="import_notifier_title">Sto importando le playlist</string>
     <string name="import_status_fetching_metadata">Recupero i metadati delle playlist…</string>
-    <string name="import_status_fetching_tracks">Sto caricando i brani: %1$d / %2$s…</string>
-    <string name="import_status_matching_tracks_short">Abbinamento di %1$d di %2$d…</string>
+    <string name="import_status_fetching_tracks">Caricamento brani: %1$d / %2$s…</string>
+    <string name="import_status_matching_tracks_short">Abbinamento: %1$d di %2$d…</string>
     <string name="import_status_saving_tracks">Salvataggio nella libreria: %1$d / %2$d…</string>
     <string name="import_status_completed">Importazione completata</string>
     <string name="import_notification_channel_name">Importazione playlist</string>
     <string name="import_notification_channel_desc">Mostra l\u0027avanzamento e i risultati dell\u0027importazione delle playlist</string>
     <string name="import_notification_in_progress">Sto importando "%1$s"</string>
     <string name="import_notification_success">Importati %1$d brani in "%2$s"</string>
-    <string name="import_notification_partial">%1$d brani importati in %2$s (%3$d non sono stati trovati)</string>
+    <string name="import_notification_partial">Importati %1$d brani in "%2$s" (%3$d non sono stati trovati)</string>
     <string name="import_error_empty_playlist">La playlist non ha brani importabili.</string>
     <string name="import_error_details_title">Dettagli ed errori nell'importazione</string>
     <string name="import_error_details_summary">Impossibile caricare o abbinare %1$d brani:</string>
@@ -1882,7 +1882,7 @@
     <string name="background_color">Colore sfondo</string>
     <string name="text_color">Colore testo</string>
     <string name="secondary_text_color">Colore testo secondario</string>
-    <string name="lyrics_share_artwork_failed">Impossibile caricare la copertina. Puoi comunque condividere con un colore di sfondo.</string>
+    <string name="lyrics_share_artwork_failed">Impossibile caricare la copertina. Puoi comunque condividere con uno sfondo a tinta unita.</string>
     <string name="lyrics_share_failed">Impossibile creare o esportare l'immagine. Riprova.</string>
     <string name="lyrics_share_color">%1$s: #%2$s</string>
     <string name="lyrics_share_save_image">Salva PNG</string>
@@ -1912,10 +1912,10 @@
     <string name="loudness_level_loud">Forte (-11 dB)</string>
     <string name="loudness_level_balanced">Bilanciato (-14 dB)</string>
     <string name="loudness_level_quiet">Tenue (-19 dB)</string>
-    <string name="lyrics_share_limit">Puoi selezionare fino a %1$d linee.</string>
+    <string name="lyrics_share_limit">Puoi selezionare fino a %1$d righe.</string>
     <string name="lyrics_share_selected_count">%1$d / %2$d selezionate</string>
     <string name="lyrics_share_text_size">Dimensione testo: %1$d%</string>
-    <string name="lyrics_share_content_scale">Dimensione contenuti: %1$d%</string>
+    <string name="lyrics_share_content_scale">Scala contenuti: %1$d%</string>
     <string name="lyrics_share_auto_fit">Ripristina adattamento automatico</string>
     <string name="lyrics_share_scroll_options">Scorri in basso l\u0027anteprima per personalizzare la tua immagine.</string>
     <plurals name="download_queue_pending">
@@ -1987,7 +1987,7 @@
     <string name="lyrics_offset_decrease">−%1$d ms</string>
     <string name="lyrics_offset_increase">+%1$d ms</string>
     <string name="milliseconds_unit">ms</string>
-    <string name="playlist_add_progress">%1$d di %2$d brani elaborati</string>
+    <string name="playlist_add_progress">Elaborati %1$d di %2$d brani</string>
     <string name="playlist_add_stopped">%1$d brani completati o già presenti; %2$d restano non confermati. Le aggiunte completate sono state mantenute.</string>
     <string name="playlist_add_uncertain">L'ultima richiesta potrebbe essere andata a buon fine. Controlla la playlist prima di riprovare.</string>
     <string name="upload_sign_in_required">Accedi a YouTube Music prima di caricare brani.</string>
@@ -2079,7 +2079,7 @@
     <string name="recap_playlists">Playlist di recap</string>
     <string name="settings_default">Predefinito</string>
     <string name="apply">Applica</string>
-    <string name="max_delay">Ritardo Massimo: %1$d</string>
+    <string name="max_delay">Ritardo massimo: %1$ds</string>
     <string name="server">Server</string>
     <string name="auto_approve_suggestions">Approva automaticamente i brani suggeriti</string>
     <string name="leave">Abbandona</string>
@@ -2235,7 +2235,7 @@
     <string name="top_period_past_week">Ultima settimana</string>
     <string name="top_period_past_month">Ultimo mese</string>
     <string name="top_period_past_year">Ultimo anno</string>
-    <string name="new_badge">Novità</string>
+    <string name="new_badge">Nuovo</string>
     <string name="metroeq_q_value">Q: %1$s</string>
     <string name="metroeq_frequency_value">%1$s Hz</string>
     <string name="sponsorblock_podcasts">SponsorBlock (podcast)</string>
@@ -2331,7 +2331,7 @@
     <string name="queue_select_hint">Selezione multipla: premi OK per selezionare i brani. Premi Destra o tieni premuto OK per aprire le azioni.</string>
     <string name="device_connect_direct_title">Connettiti con indirizzo IP</string>
     <string name="device_connect_direct_address">Indirizzo IP e porta</string>
-    <string name="device_connect_direct_hint">Questo dispositivo ascolta sulla porta %1$d. Immetti l'IP della LAN o VPN dell'altro dispositivo e la sua porta di ascolto come IPv4:porta o [IPv6]:porta. Confronta il codice di accoppiamento su entrambi i dispositivi.</string>
+    <string name="device_connect_direct_hint">Questo dispositivo è in ascolto sulla porta %1$d. Inserisci l'indirizzo IP LAN o VPN dell'altro dispositivo e la relativa porta di ascolto nel formato IPv4:porta o [IPv6]:porta. Confronta il codice di associazione su entrambi i dispositivi.</string>
     <string name="device_connect_direct_failed">Impossibile connettersi o completare l'abbinamento. Controlla l'indirizzo, porta di ascolto, accesso alla VPN e l'approvazione dell'abbinamento, quindi prova di nuovo.</string>
     <string name="device_connect_default_device">Dispositivo di riproduzione predefinito</string>
     <string name="device_connect_default_device_description">Inizia la riproduzione su questo dispositivo abbinato quando connesso. Scegli Nessuno per cancellare il predefinito.</string>
@@ -2425,7 +2425,7 @@
     <string name="lyrics_editor_export">Esporta/Copia come MLX JSON</string>
     <string name="lyrics_editor_import">Importa/Incolla come JSON o LRC</string>
     <string name="lyrics_editor_import_error">Impossibile importare questi versi. Usa MLX V2 JSON o LRC.</string>
-    <string name="lyrics_editor_invalid_timestamp">Timestamp non valido sul verso %1$d. Usa [mm:ss.cc]. La tua bozza viene mantenuta fino alla correzione.</string>
+    <string name="lyrics_editor_invalid_timestamp">Timestamp non valido alla riga %1$d. Usa il formato [mm:ss.cc]. La bozza verrà conservata finchè non verrà corretto.</string>
     <string name="lyrics_editor_save_error">Impossibile salvare i tuoi versi. Riprova prima di lasciare l'editor.</string>
     <string name="lyrics_editor_limit_error">I versi superano la dimensione supportata. La tua bozza è stata conservata. Accorciali prima di esportare o sincronizzare.</string>
     <string name="mini_player_cookie_artwork">Copertina a forma di biscotto</string>
@@ -2530,7 +2530,7 @@
     <string name="prefer_word_synced_lyrics_description">Cerca i tempi per parola nelle fonti abilitate prima di usare testi sincronizzati per riga o non sincronizzati</string>
     <string name="discord_continue_in_browser">Continua ad accedere su Discord dal tuo browser. Torna su Metrolist quando hai finito.</string>
     <string name="discord_open_browser_again">Apri di nuovo</string>
-    <string name="discord_browser_open_failed">Impossibile aprire il browser. Riprova.</string>
+    <string name="discord_browser_open_failed">Impossibile aprire il browser. Prova ad aprirlo di nuovo.</string>
     <string name="channel_switch_recovery_hint">Impossibile caricare i tuoi canali YouTube. Accedi di nuovo per aggiornare la tua sessione, quindi scegli un canale.</string>
     <string name="channel_switch_sign_in_again">Accedi di nuovo</string>
     <string name="channel_switch_browse_hint">Apri il menù dalla foto profilo sulla pagina di YouTube Music e scegli il canale, quindi seleziona %1$s.</string>
@@ -2540,7 +2540,7 @@
     <string name="ai_translation_failed">Traduzione con IA non riuscita</string>
     <string name="ai_setup_title">Imposta la traduzione testi con IA</string>
     <string name="ai_setup_description">Crea un account OpenRouter, accedi e scegli un modello gratuito.</string>
-    <string name="ai_setup_step">Passo %1$d di %2$d</string>
+    <string name="ai_setup_step">Passaggio %1$d di %2$d</string>
     <string name="ai_setup_account">Crea un account OpenRouter</string>
     <string name="ai_setup_account_description">OpenRouter collega Metrolist a modelli di IA che traducono i testi delle canzoni.</string>
     <string name="ai_setup_limits">I modelli gratuiti consentono fino a %1$d richieste al minuto e %2$d al giorno, oppure %4$d al giorno dopo aver acquistato almeno %3$d crediti.</string>
