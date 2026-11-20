@@ -11,6 +11,7 @@ import androidx.compose.runtime.setValue
 import com.metrolist.desktop.state.app.AppState
 import com.metrolist.desktop.state.app.DesktopNavigation
 import com.metrolist.desktop.state.playback.PlayerState
+import com.metrolist.desktop.storage.DownloadManager
 import com.metrolist.innertubex.InnerTube
 import com.metrolist.innertubex.InnerTubeHttpException
 import com.metrolist.shared.api.PlaylistNotFoundException
@@ -42,6 +43,7 @@ import com.metrolist.shared.playlist.setStoredPlaylistCover
 import com.metrolist.shared.playlist.updateStoredPlaylist
 import com.metrolist.shared.playlist.uploadStoredPlaylistCover
 import com.metrolist.shared.settings.BlockedContent
+import com.metrolist.shared.settings.Settings
 import com.metrolist.shared.state.GlobalYouTube
 import com.metrolist.shared.state.GlobalYouTubeRepository
 import com.metrolist.shared.ui.navigation.Screen
@@ -332,6 +334,9 @@ object PlaylistAlbumState {
                 if (result.isSuccess) {
                     isPlaylistBookmarked = bookmarked
                     LibraryContentState.fetchLibraryData()
+                    if (bookmarked && Settings.shared.autoDownloadSavedCollections) {
+                        withCompletePlaylist { songs -> DownloadManager.downloadPlaylist(id, songs) }
+                    }
                 } else {
                     AppState.snackbarHostState.showSnackbar(getString(Res.string.error_occurred))
                 }

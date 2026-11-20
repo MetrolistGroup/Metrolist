@@ -22,6 +22,8 @@ Android and desktop downloaded collections can filter by a library playlist befo
 
 Remote playlist download refreshes store every page of unfiltered membership. Offline playlist pages read those stored entries. Failed and offline refreshes keep the previous membership.
 
+When **Auto download saved albums and playlists** is enabled, saving an album or remote playlist on Android or desktop queues its available songs. Turning the setting off affects later saves only; it does not remove existing downloads.
+
 ## Android v13 recovery
 
 v13.7.0 stored downloads in `files/download` with no eviction and streamed audio in `files/exoplayer` with the configured LRU limit. Both caches used `StandaloneDatabaseProvider` and `databases/exoplayer_internal.db`. `MediaItemExt` and `DownloadUtil` used the song ID as the custom cache key. The download index can also map a custom key back to its request ID. Recovery uses that mapping rather than guessing IDs from suffixes or URLs.
