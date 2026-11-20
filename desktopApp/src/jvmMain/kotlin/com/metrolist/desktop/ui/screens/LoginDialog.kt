@@ -282,6 +282,7 @@ private fun WindowsAccountContent(
     var failed by remember { mutableStateOf(false) }
     var needsLogin by remember { mutableStateOf(!authManager.isLoggedIn) }
     var loginUrl by remember { mutableStateOf<String?>(null) }
+    var completedSignInUrl by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(authData, needsLogin) {
         if (!needsLogin) {
@@ -313,6 +314,7 @@ private fun WindowsAccountContent(
                 selectedAccount = null
                 failed = false
                 busy = true
+                completedSignInUrl = loginUrl
                 loginUrl = null
                 needsLogin = false
             },
@@ -398,8 +400,12 @@ private fun WindowsAccountContent(
                                             }
                                         },
                                         navigate = { url ->
-                                            loginUrl = url
-                                            needsLogin = true
+                                            if (url == completedSignInUrl) {
+                                                failed = true
+                                            } else {
+                                                loginUrl = url
+                                                needsLogin = true
+                                            }
                                         },
                                     )
                                 if (!handled) failed = true
