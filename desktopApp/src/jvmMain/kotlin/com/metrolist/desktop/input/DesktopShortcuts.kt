@@ -142,7 +142,13 @@ private fun installGlobalShortcutDispatcher(
 ): AutoCloseable {
     val keyboardFocusManager = KeyboardFocusManager.getCurrentKeyboardFocusManager()
     val pressed = ShortcutPressTracker()
-    val physicalKeyCapture = if (OsUtil.isWindows) WindowsPhysicalKeyCapture() else null
+    val physicalKeyCapture: PlatformPhysicalKeyCapture? =
+        when {
+            OsUtil.isWindows -> WindowsPhysicalKeyCapture()
+            OsUtil.isMac -> MacOsPhysicalKeyCapture()
+            OsUtil.isLinux -> LinuxPhysicalKeyCapture()
+            else -> null
+        }
 
     fun updatePhysicalKeyCapture() {
         physicalKeyCapture?.setEnabled(keyboardFocusManager.activeWindow != null)

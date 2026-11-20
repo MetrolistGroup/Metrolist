@@ -72,7 +72,7 @@ internal class WindowsPhysicalKeyCaptureBuffer(
     }
 }
 
-internal class WindowsPhysicalKeyCapture : AutoCloseable {
+internal class WindowsPhysicalKeyCapture : PlatformPhysicalKeyCapture {
     private val pendingKeyCaptures = WindowsPhysicalKeyCaptureBuffer()
     private val lifecycleLock = ReentrantLock()
 
@@ -84,11 +84,11 @@ internal class WindowsPhysicalKeyCapture : AutoCloseable {
 
     @Volatile private var hookThread: Thread? = null
 
-    val isAvailable: Boolean get() = hook != null
+    override val isAvailable: Boolean get() = hook != null
 
     private val procedure = WindowsPhysicalKeyHookProcedure(this)
 
-    fun setEnabled(enabled: Boolean) {
+    override fun setEnabled(enabled: Boolean) {
         if (enabled) {
             val ready =
                 lifecycleLock.withLock {
@@ -181,7 +181,7 @@ internal class WindowsPhysicalKeyCapture : AutoCloseable {
         return User32.INSTANCE.CallNextHookEx(hook, code, message, data)
     }
 
-    fun consume(awtKeyCode: Int): PhysicalKeyPosition? = pendingKeyCaptures.consume(awtKeyCode)
+    override fun consume(awtKeyCode: Int): PhysicalKeyPosition? = pendingKeyCaptures.consume(awtKeyCode)
 
     override fun close() = setEnabled(false)
 

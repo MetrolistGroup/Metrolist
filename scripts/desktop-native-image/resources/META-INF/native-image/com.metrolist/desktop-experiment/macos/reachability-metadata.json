@@ -1,6 +1,40 @@
 {
   "reflection": [
     {
+      "type": "com.metrolist.desktop.input.MacEventTapCallback",
+      "jniAccessible": true,
+      "allDeclaredMethods": true
+    },
+    {
+      "type": "com.metrolist.desktop.input.MacOsPhysicalKeyCapture$callback$1",
+      "jniAccessible": true,
+      "allDeclaredMethods": true
+    },
+    {
+      "type": "com.metrolist.desktop.input.MacCoreGraphics",
+      "jniAccessible": true,
+      "allDeclaredMethods": true
+    },
+    {
+      "type": {
+        "proxy": [
+          "com.metrolist.desktop.input.MacCoreGraphics"
+        ]
+      }
+    },
+    {
+      "type": "com.metrolist.desktop.input.MacCoreFoundation",
+      "jniAccessible": true,
+      "allDeclaredMethods": true
+    },
+    {
+      "type": {
+        "proxy": [
+          "com.metrolist.desktop.input.MacCoreFoundation"
+        ]
+      }
+    },
+    {
       "type": "com.metrolist.desktop.utils.NativeMemoryTrimmer$MacAllocator",
       "jniAccessible": true,
       "allDeclaredFields": true,

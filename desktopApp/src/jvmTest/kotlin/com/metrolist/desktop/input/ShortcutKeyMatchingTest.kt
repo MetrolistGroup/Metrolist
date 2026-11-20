@@ -71,6 +71,36 @@ class ShortcutKeyMatchingTest {
     }
 
     @Test
+    fun orderedPhysicalKeyCapturePreservesUnmappedKeyEvents() {
+        val captures = OrderedPhysicalKeyCaptureBuffer { 0L }
+        captures.record(null)
+        captures.record(PhysicalKeyPosition.SLASH)
+
+        assertEquals(null, captures.consume())
+        assertEquals(PhysicalKeyPosition.SLASH, captures.consume())
+        assertEquals(null, captures.consume())
+    }
+
+    @Test
+    fun orderedPhysicalKeyCaptureExpiresStaleEvents() {
+        var nowNanos = 0L
+        val captures = OrderedPhysicalKeyCaptureBuffer { nowNanos }
+        captures.record(PhysicalKeyPosition.SLASH)
+        nowNanos = 6_000_000_000L
+
+        assertEquals(null, captures.consume())
+    }
+
+    @Test
+    fun macOsAndLinuxPhysicalKeyCodesMapToSharedPositions() {
+        assertEquals(PhysicalKeyPosition.BACKQUOTE, macOsPhysicalPositionForKeyCode(50))
+        assertEquals(PhysicalKeyPosition.SLASH, macOsPhysicalPositionForKeyCode(44))
+        assertEquals(PhysicalKeyPosition.MINUS, linuxPhysicalPositionForX11KeyCode(20))
+        assertEquals(PhysicalKeyPosition.COMMA, linuxPhysicalPositionForX11KeyCode(59))
+        assertEquals(null, linuxPhysicalPositionForX11KeyCode(38))
+    }
+
+    @Test
     fun recordingFreshCaptureDiscardsExpiredEntries() {
         var nowNanos = 0L
         val captures = WindowsPhysicalKeyCaptureBuffer { nowNanos }
