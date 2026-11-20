@@ -79,9 +79,10 @@ import com.metrolist.shared.model.AlbumPage
 import com.metrolist.shared.model.SongItem
 import com.metrolist.shared.model.filterForPlaylistSearch
 import com.metrolist.shared.model.withDownloadsPlayable
-import com.metrolist.shared.settings.Settings
 import com.metrolist.shared.settings.BlockedContent
+import com.metrolist.shared.settings.Settings
 import com.metrolist.shared.state.AlbumLikeState
+import com.metrolist.shared.state.AlbumLikeToggleAlreadyInProgressException
 import com.metrolist.shared.state.GlobalYouTubeRepository
 import com.metrolist.shared.ui.components.CollectionHeaderNavigation
 import com.metrolist.shared.ui.components.CollectionPreviews
@@ -177,8 +178,10 @@ fun AlbumScreen(
                             }
                         }
                     }.onFailure {
-                        AppState.scope.launch {
-                            AppState.snackbarHostState.showSnackbar(getString(Res.string.error_occurred))
+                        if (it !is AlbumLikeToggleAlreadyInProgressException) {
+                            AppState.scope.launch {
+                                AppState.snackbarHostState.showSnackbar(getString(Res.string.error_occurred))
+                            }
                         }
                     }
             }

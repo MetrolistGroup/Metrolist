@@ -55,7 +55,10 @@ object AlbumLikeState {
     ) {
         while (true) {
             val current = _inFlightAlbumIds.value
-            if (album.id in current) return
+            if (album.id in current) {
+                scope.launch { onResult(Result.failure(AlbumLikeToggleAlreadyInProgressException())) }
+                return
+            }
             if (_inFlightAlbumIds.compareAndSet(current, current + album.id)) break
         }
         scope.launch {
@@ -78,6 +81,8 @@ object AlbumLikeState {
         }
     }
 }
+
+class AlbumLikeToggleAlreadyInProgressException : IllegalStateException()
 
 private val albumBookmarkGuard = Mutex()
 private val albumBookmarkLocks = mutableMapOf<String, AlbumBookmarkLock>()
