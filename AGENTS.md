@@ -5,7 +5,7 @@ Metrolist is a YouTube Music client for Android, desktop and iOS.
 ## One task per PR
 
 - Keep each PR to one task or issue. Include all affected callers and platforms needed to complete it.
-- Include necessary tests, strings and documentation. Leave unrelated features, refactors, formatting, dependency updates and opportunistic fixes out.
+- Include necessary strings and documentation, and tests only where [Tests](#tests) allows them. Leave unrelated features, refactors, formatting, dependency updates and opportunistic fixes out.
 - Agree on separate changes for independent goals before implementing them. Ask about unclear behavior; do not invent requirements.
 - Check `git status` first. Preserve existing work; never stage, revert or format unrelated files.
 - Do not commit, push, open a PR, merge or rewrite history without explicit human approval. Do not change `appVersion` unless release work is explicitly authorized.
@@ -101,9 +101,28 @@ Use [development.md](docs/development.md) for setup and the code map. Before bui
 - Derive locale defaults and fallbacks from system locale, settings or resources. Never silently fall back to English or hardcode language or country defaults. Derive bundled languages from `composeResources/values*/`, never a hardcoded list.
 - When `contentLanguage` or `contentCountry` is `SYSTEM`, use the JVM system locale. Otherwise use the selected code.
 
+## Tests
+
+Tests cost CI time and agent context, so the suite is kept small on purpose. A test belongs here only when a silent regression would lose user data or break an external contract that types and review cannot catch:
+
+- Parsers and decoders checked against recorded or reduced fixtures: InnerTube responses, lyrics formats, XML and media containers.
+- Database migrations, backup, restore and import.
+- Credential and secret storage, crypto, and the Listen Together, Device Connect and cast codecs and protocols.
+- The reflection-free server suites in `shared/build.gradle.kts` and the opt-in live and LAN probes.
+
+Do not add a test by default. A bug fix or feature needs no test unless it falls in that list, and the test must fail on a realistic future break of user-visible behavior. Never write tests that:
+
+- Cover view models, UI state, navigation, menus, motion, layout, timing, haptics or polling.
+- Mirror the implementation: asserting call order on fakes or mocks, computing the expected value with production code, faking the unit under test, or failing on any refactor that keeps behavior.
+- Pin constants, defaults, enum mappings, data classes, string resources or source text.
+- Add a new file or regression suite for one fix. Extend the existing test beside the code instead.
+- Exist to raise coverage or prove that a change works. Verify on CI and report unverified behavior instead.
+
+If a change breaks an existing test that falls outside the list, delete that test. Do not repair it.
+
 ## Verify and report
 
-- Update backend tests to cover the new behavior. Do not add or maintain coded UI tests or trivial tests.
+- Follow [Tests](#tests). Do not add or maintain coded UI tests.
 - Build affected code and run relevant [checks](docs/checks.md) before review. Fix failures you introduce; report unrelated blockers without expanding scope.
 - After pushing, check the PR's CI jobs. A failing job is a real result: fix it, or report the job, failing step and log excerpt. Do not describe a failing or unfinished job as passing, absent or irrelevant, even when the failure comes from the base branch.
 - Format changed Kotlin with `ktlint --format`. Documentation-only edits need link checks and `git diff --check`, not an app rebuild.

@@ -132,7 +132,7 @@ Scrolling changes need checks with physical wheel, touchpad and touchscreen inpu
 
 `desktopApp/src/jvmMain/kotlin/com/metrolist/desktop/window/HyprlandRenderVisibility.kt` tracks each window's workspace visibility. Before hiding a GL layer, it copies the retained frame to Java-owned pixels for compositor transitions. Live rendering resumes when visible or when compositor state is unknown. Pinned windows and windows visible on another monitor keep rendering.
 
-Run `HyprlandRetainedFrameTest` for retained-image changes. Native compositor and driver behavior need a Hyprland session.
+Retained-image changes need a Hyprland session to check native compositor and driver behavior.
 
 ## Linux ARM64
 
