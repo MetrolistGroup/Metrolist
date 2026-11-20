@@ -286,6 +286,7 @@ private fun WindowsAccountContent(
     var failed by remember { mutableStateOf(false) }
     var needsLogin by remember { mutableStateOf(!authManager.isLoggedIn) }
     var helperLaunchedFromPicker by remember { mutableStateOf(false) }
+    var helperCompletedFromPicker by remember { mutableStateOf(false) }
     var loginUrl by remember { mutableStateOf<String?>(null) }
     var completedSignInUrl by remember { mutableStateOf<String?>(null) }
 
@@ -301,9 +302,7 @@ private fun WindowsAccountContent(
                 failed = accounts.isEmpty()
                 if (accountDiscoveryAction(accounts.size, isSwitchingChannel) == AccountDiscoveryAction.COMPLETE_LOGIN) {
                     val candidate = authData.copy(dataSyncId = singleAccountDataSyncId(authData.dataSyncId, accounts))
-                    if (candidate.dataSyncId.isBlank()) {
-                        failed = true
-                    } else if (authManager.validateAndSaveCredentials(
+                    if (authManager.validateAndSaveCredentials(
                             candidate.cookie,
                             candidate.visitorData,
                             candidate.dataSyncId,
@@ -334,6 +333,7 @@ private fun WindowsAccountContent(
                 selectedAccount = null
                 failed = false
                 busy = true
+                helperCompletedFromPicker = helperLaunchedFromPicker
                 helperLaunchedFromPicker = false
                 completedSignInUrl = loginUrl
                 loginUrl = null
@@ -369,7 +369,8 @@ private fun WindowsAccountContent(
             )
         }
         val canCompleteWithExistingCredentials =
-            !isSwitchingChannel && accounts.isEmpty() && authData.cookie.isNotBlank() && authData.dataSyncId.isNotBlank()
+            accounts.isEmpty() && authData.cookie.isNotBlank() && authData.dataSyncId.isNotBlank() &&
+                (!isSwitchingChannel || helperCompletedFromPicker)
         FlowRow(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -685,7 +686,9 @@ private fun WebViewContent(
             AccountDiscoveryAction.SELECT_ACCOUNT -> {
                 pendingAuthData = authData
                 pendingAccounts = accounts
-                selectedAccount = accounts.firstOrNull { it.isSelected } ?: accounts.firstOrNull()
+                selectedAccount =
+                    accounts.firstOrNull { it.isSelected && it.isSelectableForLogin(authData.dataSyncId.orEmpty()) }
+                        ?: accounts.firstOrNull { it.isSelectableForLogin(authData.dataSyncId.orEmpty()) }
                 loginStage = LoginStage.SelectingAccount
             }
 
@@ -695,12 +698,7 @@ private fun WebViewContent(
 
             AccountDiscoveryAction.COMPLETE_LOGIN -> {
                 val dataSyncId = singleAccountDataSyncId(authData.dataSyncId, accounts)
-                if (dataSyncId.isBlank()) {
-                    validationFailed = true
-                    loginStage = LoginStage.Authenticating
-                } else {
-                    finalizeLogin(authData.copy(dataSyncId = dataSyncId))
-                }
+                finalizeLogin(authData.copy(dataSyncId = dataSyncId))
             }
         }
     }
