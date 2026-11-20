@@ -250,7 +250,7 @@ class HistorySongPersistenceTest {
                         }
                     locked.await()
                     val editor =
-                        SongEditor(scope, "Edited title", "Edited artist", { title, artist ->
+                        SongEditor(scope, "Remote title", "Remote artist", { title, artist ->
                             started.complete(Unit)
                             editSongMetadata(database, song, title, artist)
                         }, {
@@ -259,6 +259,8 @@ class HistorySongPersistenceTest {
                         }, {
                             scope.cancel()
                         })
+                    editor.title = "Edited title"
+                    editor.artist = "Edited artist"
                     editor.confirm()
                     started.await()
                     editor.dismiss()
@@ -274,6 +276,36 @@ class HistorySongPersistenceTest {
                 } finally {
                     release.complete(Unit)
                     scope.cancel()
+                    database.close()
+                    Files.deleteIfExists(path)
+                }
+            }
+        }
+
+    @Test
+    fun titleOnlyEditPreservesBothCanonicalArtistCredits() =
+        runBlocking {
+            withTimeout(15_000) {
+                val path = Files.createTempFile("metrolist-song-title-only", ".db")
+                Files.deleteIfExists(path)
+                val database = getDesktopDatabaseBuilder(path.toFile()).build()
+                try {
+                    val artists = listOf(ArtistTiny("first", "First artist"), ArtistTiny("second", "Second artist"))
+                    val song = SongItem("song", "Remote title", null, artists, null)
+                    val completed = CompletableDeferred<Unit>()
+                    val editor =
+                        SongEditor(this, song.title, artists.first().name, { title, artist ->
+                            editSongMetadata(database, song, title, artist)
+                        }, { completed.complete(Unit) }, {})
+                    editor.title = "Edited title"
+                    editor.confirm()
+                    completed.await()
+
+                    val stored = requireNotNull(database.dao().getSongById(song.id))
+                    assertEquals("Edited title", stored.toSongItem().title)
+                    assertNull(stored.song.customArtist)
+                    assertEquals(artists, stored.toSongItem().artists)
+                } finally {
                     database.close()
                     Files.deleteIfExists(path)
                 }

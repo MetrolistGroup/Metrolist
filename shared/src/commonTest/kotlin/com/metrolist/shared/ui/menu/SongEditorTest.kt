@@ -50,11 +50,11 @@ class SongEditorTest {
         runTest {
             val scope = CoroutineScope(coroutineContext + Job())
             val pending = CompletableDeferred<Unit>()
-            val saved = mutableListOf<Pair<String, String>>()
+            val saved = mutableListOf<Pair<String?, String?>>()
             var completed = false
             var dismissed = false
             val editor =
-                SongEditor(scope, " Title ", " Artist ", { title, artist ->
+                SongEditor(scope, "Original title", "Original artist", { title, artist ->
                     pending.await()
                     saved += title to artist
                 }, {
@@ -65,6 +65,8 @@ class SongEditorTest {
                     scope.cancel()
                 })
             try {
+                editor.title = " Title "
+                editor.artist = " Artist "
                 editor.confirm()
                 editor.confirm()
                 editor.dismiss()
@@ -76,7 +78,7 @@ class SongEditorTest {
 
                 pending.complete(Unit)
                 runCurrent()
-                assertEquals(listOf("Title" to "Artist"), saved)
+                assertEquals(listOf<Pair<String?, String?>>("Title" to "Artist"), saved)
                 assertTrue(completed)
                 assertFalse(editor.busy)
                 assertFalse(editor.failed)
@@ -123,12 +125,37 @@ class SongEditorTest {
                 SongEditor(scope, "Title", "Artist", { _, _ -> pending.await() }, {
                     error("Cancelled save must not complete")
                 }, { error("Unexpected dismissal") })
+            editor.title = "Changed title"
             editor.confirm()
             runCurrent()
             scope.cancel()
             runCurrent()
             assertFalse(editor.busy)
             assertFalse(editor.failed)
+        }
+
+    @Test
+    fun titleOnlySendsAnOverrideForTheTitle() =
+        runTest {
+            val saved = mutableListOf<Pair<String?, String?>>()
+            val editor = SongEditor(backgroundScope, "Original", "Artist", { title, artist -> saved += title to artist }, {}, {})
+            editor.title = " Edited "
+            editor.confirm()
+            runCurrent()
+            assertEquals(listOf<Pair<String?, String?>>("Edited" to null), saved)
+        }
+
+    @Test
+    fun aDraftWithNoChangesClosesWithoutSaving() =
+        runTest {
+            var completed = false
+            val editor =
+                SongEditor(backgroundScope, "Title", "Artist", { _, _ -> error("Unexpected save") }, { completed = true }, {})
+            editor.title = " Title "
+            editor.confirm()
+            runCurrent()
+            assertTrue(completed)
+            assertFalse(editor.busy)
         }
 
     @Test
