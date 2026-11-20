@@ -160,6 +160,25 @@ class DatabaseLikesRecoveryTest {
     }
 
     @Test
+    fun signedInCatalogWithLikesAddedAfterActivationMergesMissingDatabaseLikes() {
+        for (version in listOf(2, 3)) {
+            val settings = Settings(MapSettings())
+            settings.innerTubeCookie = "SAPISID=test"
+            settings.likedSongsOrderAccount = "account|0"
+            settings.databaseLikesRecoveryVersion = version
+            val added = song.copy(id = "added")
+            settings.likedSongsJson = Json.encodeToString(listOf(added))
+            assertTrue(settings.recoverDatabaseLikes(databaseLikes))
+            assertEquals(
+                listOf("added", "new", "middle", "old"),
+                Json.decodeFromString<List<SongItem>>(settings.likedSongsJson).map(SongItem::id),
+            )
+            assertEquals("{}", settings.pendingSongVotesJson)
+            assertFalse(settings.recoverDatabaseLikes(databaseLikes))
+        }
+    }
+
+    @Test
     fun completedSignedOutRecoveryDoesNotRunAgainAfterVersionBump() {
         for (version in listOf(1, 2)) {
             val settings = Settings(MapSettings())
