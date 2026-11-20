@@ -211,12 +211,15 @@ fun List<SongItem>.preservePlaylistOccurrenceMappings(previousSongs: List<SongIt
     }
     val unmatchedCurrentIndices = indices.filterNot(matches::containsKey)
     val unmatchedPreviousIndices = previousSongs.indices.filterNot(matchedPreviousIndices::contains)
-    for (songId in unmatchedCurrentIndices.map { this[it].id }.distinct()) {
-        val current = unmatchedCurrentIndices.filter { this[it].id == songId }
-        val previous = unmatchedPreviousIndices.filter { previousSongs[it].id == songId }
-        if (current.size == previous.size) {
-            current.zip(previous).forEach { (currentIndex, previousIndex) ->
-                matches[currentIndex] = previousIndex
+    if (unmatchedPreviousIndices.isNotEmpty()) {
+        val previousBySongId = unmatchedPreviousIndices.groupBy { previousSongs[it].id }
+        val currentBySongId = unmatchedCurrentIndices.groupBy { this[it].id }
+        for ((songId, current) in currentBySongId) {
+            val previous = previousBySongId[songId] ?: continue
+            if (current.size == previous.size) {
+                current.zip(previous).forEach { (currentIndex, previousIndex) ->
+                    matches[currentIndex] = previousIndex
+                }
             }
         }
     }
