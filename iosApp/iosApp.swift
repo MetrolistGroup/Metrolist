@@ -92,12 +92,23 @@ private final class AutomaticBackupAppDelegate: NSObject, UIApplicationDelegate 
     }
 
     private func run(_ task: BGProcessingTask) {
-        task.expirationHandler = {
-            IosAutomaticBackupBridgeKt.cancelIosAutomaticBackup()
-        }
-        IosAutomaticBackupBridgeKt.createIosAutomaticBackup { [weak self] succeeded in
+        let completionLock = NSLock()
+        var didComplete = false
+        let complete: (Bool) -> Void = { [weak self] succeeded in
+            completionLock.lock()
+            let shouldComplete = !didComplete
+            didComplete = true
+            completionLock.unlock()
+            guard shouldComplete else { return }
             task.setTaskCompleted(success: succeeded)
             self?.schedule()
+        }
+        task.expirationHandler = {
+            IosAutomaticBackupBridgeKt.cancelIosAutomaticBackup()
+            complete(false)
+        }
+        IosAutomaticBackupBridgeKt.createIosAutomaticBackup { succeeded in
+            complete(succeeded.boolValue)
         }
     }
 }
