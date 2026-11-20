@@ -74,6 +74,7 @@ class AudioRenderer internal constructor(
     private var processorPitch = 1f
     private var positionSpeed = 1f
     private var writtenFrameCount = 0L
+    private var lineFrameOffset = 0L
     private var expectingOutput = false
     private var lastWriteAtNs = 0L
     private var lastUnderrunAtNs = 0L
@@ -81,6 +82,7 @@ class AudioRenderer internal constructor(
 
     @Volatile
     private var outputGeneration = 0L
+    private var closed = false
     private var tempoProcessor: AudioTempoProcessor? = null
     private val equalizer = ParametricEqualizer(sampleRate, channelCount)
     private val positionClock = AudioPositionClock(audioFormat.sampleRate)
@@ -108,6 +110,7 @@ class AudioRenderer internal constructor(
         if (data == null || data.isEmpty()) return
         val (output, generation) =
             synchronized(safeLock) {
+                if (closed) return
                 if (!isCurrent()) return
                 reopenOutputLineIfClosed()
                 val current = configuration()
@@ -159,19 +162,11 @@ class AudioRenderer internal constructor(
         outputSpeed: Float,
         isCurrent: () -> Boolean = { true },
     ): Boolean {
-        val currentVol = if (volume == 0f || !hardwareVolumeApplied) volume else 1f
-        val boost = normalizationGain
-        val processedData =
-            if (currentVol != 1f || boost > 1f) {
-                applyVolume(data, currentVol, boost)
-            } else {
-                data
-            }
         var offset = 0
-        while (offset < processedData.size) {
+        while (offset < data.size) {
             val writtenBytes =
                 synchronized(safeLock) {
-                    while (generation == outputGeneration && !isPlaying) {
+                    while (!closed && generation == outputGeneration && !isPlaying) {
                         try {
                             safeLock.wait()
                         } catch (_: InterruptedException) {
@@ -179,8 +174,16 @@ class AudioRenderer internal constructor(
                             return false
                         }
                     }
-                    if (generation != outputGeneration || !isCurrent()) return false
+                    if (closed || generation != outputGeneration || !isCurrent()) return false
                     reopenOutputLineIfClosed()
+                    val currentVol = if (volume == 0f || !hardwareVolumeApplied) volume else 1f
+                    val boost = normalizationGain
+                    val outputData =
+                        if (currentVol != 1f || boost > 1f) {
+                            applyVolume(data, currentVol, boost)
+                        } else {
+                            data
+                        }
                     val availableBytes =
                         try {
                             line.available()
@@ -192,7 +195,7 @@ class AudioRenderer internal constructor(
                             throw error
                         }
                     val writableBytes =
-                        minOf(processedData.size - offset, availableBytes) / audioFormat.frameSize * audioFormat.frameSize
+                        minOf(outputData.size - offset, availableBytes) / audioFormat.frameSize * audioFormat.frameSize
                     if (writableBytes == 0) {
                         val bufferedFrames = (line.bufferSize - availableBytes).coerceAtLeast(0) / audioFormat.frameSize
                         val waitMs = (bufferedFrames * 500L / sampleRate).coerceIn(1L, 20L)
@@ -209,7 +212,7 @@ class AudioRenderer internal constructor(
                             positionSpeed = outputSpeed
                         }
                         try {
-                            line.write(processedData, offset, writableBytes)
+                            line.write(outputData, offset, writableBytes)
                         } catch (error: Exception) {
                             if (!line.isOpen) {
                                 reopenOutputLineIfClosed()
@@ -252,7 +255,7 @@ class AudioRenderer internal constructor(
                     "lastAudioWriteMs" to ((now - lastWriteAtNs) / 1_000_000L).toString(),
                     "lineActive" to line.isActive.toString(),
                     "lineRunning" to line.isRunning.toString(),
-                    "lineFramePosition" to line.longFramePosition.toString(),
+                    "lineFramePosition" to currentOutputFrame().toString(),
                     "writtenFrames" to writtenFrameCount.toString(),
                     "sampleRate" to sampleRate.toString(),
                     "channels" to channelCount.toString(),
@@ -269,40 +272,43 @@ class AudioRenderer internal constructor(
         }
 
     private fun reopenOutputLineIfClosed() {
-        if (line.isOpen) return
-        val positionMs = runCatching { positionClock.position(line.longFramePosition) }.getOrDefault(positionClock.position(0L))
+        if (closed || line.isOpen) return
         val replacement = createOutputLine(start = isPlaying)
         line = replacement
-        writtenFrameCount = replacement.longFramePosition
-        positionSpeed = playbackSpeed
-        positionClock.reset(positionMs, writtenFrameCount, playbackSpeed)
+        lineFrameOffset = writtenFrameCount - replacement.longFramePosition
         expectingOutput = false
         updateMasterGainControl()
     }
 
+    private fun currentOutputFrame(): Long = lineFrameOffset + line.longFramePosition
+
     private fun updateMasterGainControl() {
-        masterGainControl =
-            if (line.isControlSupported(FloatControl.Type.MASTER_GAIN)) {
-                line.getControl(FloatControl.Type.MASTER_GAIN) as? FloatControl
-            } else {
-                null
-            }
-        hardwareVolumeApplied = false
-        setHardwareVolume()
+        synchronized(safeLock) {
+            masterGainControl =
+                if (line.isControlSupported(FloatControl.Type.MASTER_GAIN)) {
+                    line.getControl(FloatControl.Type.MASTER_GAIN) as? FloatControl
+                } else {
+                    null
+                }
+            hardwareVolumeApplied = false
+            setHardwareVolume()
+        }
     }
 
     private fun setHardwareVolume() {
-        masterGainControl?.let { control ->
-            try {
-                if (volume <= 0.0001f) {
-                    control.value = control.minimum
-                } else {
-                    val dB = (20.0f * log10(volume)).coerceIn(control.minimum, control.maximum)
-                    control.value = dB
+        synchronized(safeLock) {
+            masterGainControl?.let { control ->
+                try {
+                    if (volume <= 0.0001f) {
+                        control.value = control.minimum
+                    } else {
+                        val dB = (20.0f * log10(volume)).coerceIn(control.minimum, control.maximum)
+                        control.value = dB
+                    }
+                    hardwareVolumeApplied = true
+                } catch (_: Exception) {
+                    runCatching { control.value = 0f.coerceIn(control.minimum, control.maximum) }
                 }
-                hardwareVolumeApplied = true
-            } catch (_: Exception) {
-                runCatching { control.value = 0f.coerceIn(control.minimum, control.maximum) }
             }
         }
     }
@@ -366,7 +372,7 @@ class AudioRenderer internal constructor(
             outputGeneration++
             expectingOutput = false
             safeLock.notifyAll()
-            val lineFrame = line.longFramePosition
+            val lineFrame = currentOutputFrame()
             writtenFrameCount = lineFrame
             positionSpeed = playbackSpeed
             positionClock.reset(mediaMs, lineFrame, playbackSpeed)
@@ -377,7 +383,7 @@ class AudioRenderer internal constructor(
 
     fun getPlayedPositionMs(): Long =
         synchronized(safeLock) {
-            runCatching { positionClock.position(line.longFramePosition) }.getOrDefault(positionClock.position(0L))
+            runCatching { positionClock.position(currentOutputFrame()) }.getOrDefault(positionClock.position(0L))
         }
 
     fun pause() {
@@ -396,6 +402,7 @@ class AudioRenderer internal constructor(
 
     fun resume() {
         synchronized(safeLock) {
+            if (closed) return
             isPlaying = true
             if (line.isOpen && !line.isActive) {
                 try {
@@ -444,7 +451,7 @@ class AudioRenderer internal constructor(
     fun drain(shouldContinue: () -> Boolean): Boolean {
         val (pending, generation) =
             synchronized(safeLock) {
-                if (!shouldContinue()) return false
+                if (closed || !shouldContinue()) return false
                 expectingOutput = false
                 val chunks =
                     buildList {
@@ -462,7 +469,7 @@ class AudioRenderer internal constructor(
         }
         val drainTimeoutMs =
             synchronized(safeLock) {
-                if (generation != outputGeneration || !shouldContinue()) return false
+                if (closed || generation != outputGeneration || !shouldContinue()) return false
                 reopenOutputLineIfClosed()
                 expectingOutput = false
                 positionClock.finishSilence(writtenFrameCount, silenceSkipper.outputFrames)
@@ -488,9 +495,12 @@ class AudioRenderer internal constructor(
 
     fun setVolume(volume: Float) {
         val clampedVol = volume.coerceIn(0.0f, 1.0f)
-        this.volume = clampedVol
-        hardwareVolumeApplied = false
-        setHardwareVolume()
+        synchronized(safeLock) {
+            if (closed) return
+            this.volume = clampedVol
+            hardwareVolumeApplied = false
+            setHardwareVolume()
+        }
     }
 
     fun getVolume(): Float = this.volume
@@ -504,6 +514,8 @@ class AudioRenderer internal constructor(
 
     fun close() {
         synchronized(safeLock) {
+            if (closed) return
+            closed = true
             outputGeneration++
             safeLock.notifyAll()
             isPlaying = false
