@@ -19,7 +19,7 @@
     <string name="forgotten_favorites">Вы давно не слушали</string>
     <string name="keep_listening">Слушать дальше</string>
     <string name="similar_to">Похоже на</string>
-    <string name="new_releases">Новинки</string>
+    <string name="new_releases">Новые релизы</string>
     <string name="podcasts_for_you">Подкасты для вас</string>
     <string name="recap">Итоги</string>
     <string name="home_unavailable">Главная страница недоступна</string>
@@ -34,12 +34,12 @@
     <string name="filter_downloaded">Скачанные</string>
     <string name="filter_all">Все</string>
     <string name="filter_videos">Видео</string>
-    <string name="filter_community_playlists">Плейлисты сообщества</string>
-    <string name="filter_featured_playlists">Избранные плейлисты</string>
+    <string name="filter_community_playlists">Пользовательские плейлисты</string>
+    <string name="filter_featured_playlists">Плейлисты YouTube Music</string>
     <string name="other_versions">Другие версии</string>
     <string name="liked_songs">Понравившиеся треки</string>
-    <string name="downloaded_songs">Скачанные песни</string>
-    <string name="retry">Повтор</string>
+    <string name="downloaded_songs">Скачанные треки</string>
+    <string name="retry">Повторить попытку</string>
     <string name="shuffle">Перемешать</string>
     <string name="reset">Сбросить</string>
     <string name="mix">Микс</string>
@@ -48,7 +48,7 @@
     <string name="start_radio">Запустить радио</string>
     <string name="play">Играть</string>
     <string name="pause">Пауза</string>
-    <string name="play_next">Играть следующее</string>
+    <string name="play_next">Играть следующим</string>
     <string name="add_to_queue">Добавить в очередь</string>
     <string name="remove_from_library">Удалить из библиотеки</string>
     <string name="action_download">Скачать</string>
