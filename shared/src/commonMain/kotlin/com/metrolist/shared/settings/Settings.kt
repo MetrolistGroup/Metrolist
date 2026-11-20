@@ -657,6 +657,10 @@ class Settings(
     var listenBrainzUsername by preference("")
     var listenBrainzEnabled by preference(false)
     var listenBrainzUseNowPlaying by preference(true)
+
+    // Android Soulseek login; both are in secureSettingsKeys. Desktop keeps the password in the system keychain instead.
+    var soulseekUsername by preference("")
+    var soulseekPassword by preference("")
     var pendingScrobblesJson by preference("[]")
     var corruptPendingScrobblesJson by preference("")
     var systemInDarkTheme by preference(false)
@@ -1336,6 +1340,8 @@ class Settings(
                     "spotifySession",
                     LyricsOpenRouterOAuthSessionKey,
                     DiscordPendingAuthSessionKey,
+                    // A reusable password, unlike the revocable tokens above, so backup files never carry it.
+                    "soulseekPassword",
                 )
         private val nonPortableKeys =
             secureSettingsKeys +

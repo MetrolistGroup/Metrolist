@@ -20,6 +20,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
 import com.metrolist.android.LocalMiniPlayerBottomInset
 import com.metrolist.android.playback.LocalPlayerConnection
+import com.metrolist.android.soulseek.soulseekSettingsHost
 import com.metrolist.android.ui.screens.rememberDeviceConnectSettingsHost
 import com.metrolist.shared.discord.DiscordRpcManager
 import com.metrolist.shared.discord.openDiscordUrl
@@ -88,6 +89,7 @@ fun IntegrationsScreen(
                         }
                 },
                 deviceConnect = rememberDeviceConnectSettingsHost(),
+                soulseek = soulseekSettingsHost(),
                 onOpenListenTogether = onNavigateToListenTogether,
                 onOpenUrl = { url -> runCatching { context.openDiscordUrl(url) } },
                 onCopyText = { label, text -> context.copyToClipboard(label, text, copiedMessage) },

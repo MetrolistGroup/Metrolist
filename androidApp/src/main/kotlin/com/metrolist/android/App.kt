@@ -36,6 +36,7 @@ import com.metrolist.android.playlistimport.AndroidPlaylistImportNotifier
 import com.metrolist.android.quicksettings.MusicRecognizerTileService
 import com.metrolist.android.recognition.MusicRecognitionService
 import com.metrolist.android.scrobble.LastFmSessionNotification
+import com.metrolist.android.soulseek.SoulseekAndroid
 import com.metrolist.android.ui.GlobalPlaybackNetworkMonitor
 import com.metrolist.android.update.AppUpdateManager
 import com.metrolist.android.utils.CrashHandler
@@ -168,6 +169,7 @@ class App :
     @OptIn(ExperimentalResourceApi::class)
     private fun initializeMainProcess() {
         setResourceReaderAndroidContext(applicationContext)
+        SoulseekAndroid.initialize(applicationContext)
         val appStart = SystemClock.elapsedRealtime()
         val hasPendingRestore = BackupRestoreManager.hasPendingRestore(this)
         restoringBackup = hasPendingRestore

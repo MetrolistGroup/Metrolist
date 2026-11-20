@@ -46,7 +46,6 @@ import com.metrolist.desktop.storage.CachedSongEntry
 import com.metrolist.desktop.storage.DownloadManager
 import com.metrolist.desktop.storage.DownloadedFile
 import com.metrolist.desktop.storage.SongCacheManager
-import com.metrolist.desktop.storage.SoulseekLibrary
 import com.metrolist.desktop.ui.components.CollectionCoverEditor
 import com.metrolist.desktop.ui.components.PlaylistContextMenu
 import com.metrolist.desktop.ui.components.SongContextMenu
@@ -102,6 +101,7 @@ import com.metrolist.shared.model.SongItem
 import com.metrolist.shared.settings.HiddenLibraryItem
 import com.metrolist.shared.settings.HiddenLibraryItemType
 import com.metrolist.shared.settings.HiddenLibraryItems
+import com.metrolist.shared.soulseek.SoulseekLibrary
 import com.metrolist.shared.state.GlobalYouTubeRepository
 import com.metrolist.shared.state.SongLikeState
 import com.metrolist.shared.ui.components.CollectionHeaderNavigation

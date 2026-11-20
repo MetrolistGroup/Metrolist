@@ -95,6 +95,7 @@ import com.metrolist.shared.db.isHistoryPlaylistId
 import com.metrolist.shared.db.refreshUploadedSongs
 import com.metrolist.shared.generated.resources.Res
 import com.metrolist.shared.generated.resources.action_cannot_be_undone
+import com.metrolist.shared.generated.resources.brand_soulseek
 import com.metrolist.shared.generated.resources.cancel
 import com.metrolist.shared.generated.resources.create_playlist
 import com.metrolist.shared.generated.resources.delete
@@ -113,6 +114,7 @@ import com.metrolist.shared.generated.resources.share_artist
 import com.metrolist.shared.generated.resources.share_playlist
 import com.metrolist.shared.generated.resources.share_podcast
 import com.metrolist.shared.generated.resources.share_song
+import com.metrolist.shared.generated.resources.soulseek_collection_subtitle
 import com.metrolist.shared.model.AlbumItem
 import com.metrolist.shared.model.AlbumTiny
 import com.metrolist.shared.model.ArtistItem
@@ -127,6 +129,7 @@ import com.metrolist.shared.settings.HiddenLibraryItems
 import com.metrolist.shared.settings.LibraryFilterType
 import com.metrolist.shared.settings.Settings
 import com.metrolist.shared.settings.initialLibraryFilter
+import com.metrolist.shared.soulseek.SoulseekLibrary
 import com.metrolist.shared.state.GlobalYouTubeRepository
 import com.metrolist.shared.state.SongLikeState
 import com.metrolist.shared.state.UploadNotificationState
@@ -269,7 +272,18 @@ fun LibraryScreen(
     val topPadding = tabContentTopPadding()
     val hasNewUploads by UploadNotificationState.hasNewUploads.collectAsStateWithLifecycle()
     val moreOptionsLabel = stringResource(Res.string.more_options)
-    val autoPlaylists = libraryAutoPlaylists(hasNewUploads)
+    val soulseekRow =
+        LibraryAutoPlaylist(
+            type = "soulseek",
+            title = stringResource(Res.string.brand_soulseek),
+            subtitle = stringResource(Res.string.soulseek_collection_subtitle),
+            icon = MetrolistIcons.Outlined.Download,
+        )
+    val autoPlaylists =
+        libraryAutoPlaylists(hasNewUploads).let { rows ->
+            val afterDownloaded = rows.indexOfFirst { it.type == "downloaded" } + 1
+            rows.take(afterDownloaded) + soulseekRow + rows.drop(afterDownloaded)
+        }
 
     fun share(
         url: String,
@@ -336,6 +350,10 @@ fun LibraryScreen(
                         .downloadedSongsByCreateDateAsc()
                         .first()
                         .map { it.toSongItem() }
+                }
+
+                "soulseek" -> {
+                    SoulseekLibrary.songs()
                 }
 
                 "cached" -> {

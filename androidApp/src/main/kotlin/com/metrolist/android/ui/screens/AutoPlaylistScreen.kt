@@ -105,6 +105,7 @@ import com.metrolist.shared.db.refreshUploadedSongs
 import com.metrolist.shared.db.synchronizeUploadedSongs
 import com.metrolist.shared.generated.resources.Res
 import com.metrolist.shared.generated.resources.back
+import com.metrolist.shared.generated.resources.brand_soulseek
 import com.metrolist.shared.generated.resources.cached_playlist
 import com.metrolist.shared.generated.resources.cancel
 import com.metrolist.shared.generated.resources.delete
@@ -153,6 +154,7 @@ import com.metrolist.shared.settings.SavedPlaylistCollectionSorting
 import com.metrolist.shared.settings.SavedPlaylistSongSorting
 import com.metrolist.shared.settings.Settings
 import com.metrolist.shared.settings.displayName
+import com.metrolist.shared.soulseek.SoulseekLibrary
 import com.metrolist.shared.state.GlobalYouTubeRepository
 import com.metrolist.shared.state.SongLikeState
 import com.metrolist.shared.state.SongMetadataState
@@ -230,6 +232,7 @@ fun AutoPlaylistScreen(
         mapOf(
             "liked" to stringResource(Res.string.liked_songs),
             "downloaded" to stringResource(Res.string.filter_downloaded),
+            "soulseek" to stringResource(Res.string.brand_soulseek),
             "top100" to stringResource(Res.string.my_top_100),
             "cached" to stringResource(Res.string.cached_playlist),
             "uploaded" to stringResource(Res.string.uploaded_playlist_name),
@@ -483,6 +486,15 @@ fun AutoPlaylistScreen(
                                 },
                             )
                         }
+                    isLoading = false
+                }
+                return@LaunchedEffect
+            }
+
+            "soulseek" -> {
+                // Re-reads when a Soulseek download or version change updates the shared store.
+                snapshotFlow { SoulseekLibrary.songIds() }.collectLatest {
+                    songs = BlockedContent.filterSongs(SoulseekLibrary.songs())
                     isLoading = false
                 }
                 return@LaunchedEffect

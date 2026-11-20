@@ -203,6 +203,7 @@ import com.metrolist.shared.settings.flushDesktopCredentialWarnings
 import com.metrolist.shared.settings.flushDesktopSettings
 import com.metrolist.shared.settings.recoverDesktopCredentials
 import com.metrolist.shared.settings.refreshRecoveredDesktopCredentials
+import com.metrolist.shared.soulseek.SoulseekLibrary
 import com.metrolist.shared.state.GlobalInnerTube
 import com.metrolist.shared.state.GlobalYouTube
 import com.metrolist.shared.state.GlobalYouTubeRepository
@@ -819,6 +820,7 @@ fun main(args: Array<String>) {
         return
     }
     DesktopCrashRecovery.install()
+    SoulseekLibrary.storeFile = File(XdgUtils.getXdgStateHome(), "metrolist/soulseek-files.json")
     try {
         configureDesktopJvmErrorFile()
         NativeMemoryTrimmer.limitArenasByReexec()

@@ -13,6 +13,8 @@ internal val secureSettingsKeys =
         "innerTubeAuthUser",
         "lastFmSession",
         "listenBrainzToken",
+        "soulseekUsername",
+        "soulseekPassword",
         "lyricsAiApiKey",
         "lyricsAiApiKeys",
         LyricsOpenRouterOAuthKey,

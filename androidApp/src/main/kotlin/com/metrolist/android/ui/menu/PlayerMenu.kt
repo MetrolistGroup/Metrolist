@@ -62,6 +62,7 @@ import com.metrolist.android.playback.AudioCacheManager
 import com.metrolist.android.playback.LocalPlayerConnection
 import com.metrolist.android.playback.SongDownloadManager
 import com.metrolist.android.playback.launchSystemEqualizer
+import com.metrolist.android.soulseek.soulseekMenuActions
 import com.metrolist.android.ui.component.rememberMetroEqProfilePicker
 import com.metrolist.android.ui.download.rememberDownloadPermissionGate
 import com.metrolist.shared.db.MusicDatabase
@@ -158,6 +159,7 @@ fun PlayerMenu(
 
     val uiState by playerViewModel.uiState.collectAsState()
     val currentSong = uiState.currentSong
+    val menuActions = extraActions + soulseekMenuActions(currentSong?.toSongItem(), onDismiss)
     val songTitle = currentSong?.title ?: stringResource(Res.string.unknown)
     val artistName = currentSong?.artists?.joinToString(", ") { it.displayName } ?: stringResource(Res.string.unknown_artist)
     val thumbnail = currentSong?.displayThumbnail
@@ -306,8 +308,8 @@ fun PlayerMenu(
                                 )
                             }
 
-                            if (extraActions.isNotEmpty()) {
-                                item { PlayerMenuActionGroup(actions = extraActions) }
+                            if (menuActions.isNotEmpty()) {
+                                item { PlayerMenuActionGroup(actions = menuActions) }
                             }
 
                             item {

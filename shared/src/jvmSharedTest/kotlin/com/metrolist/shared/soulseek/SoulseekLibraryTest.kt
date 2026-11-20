@@ -1,4 +1,4 @@
-package com.metrolist.desktop.storage
+package com.metrolist.shared.soulseek
 
 import com.metrolist.shared.model.SongItem
 import kotlinx.coroutines.runBlocking
@@ -12,7 +12,7 @@ import kotlin.test.assertNull
 
 class SoulseekLibraryTest {
     private lateinit var dir: File
-    private lateinit var original: File
+    private var original: File? = null
 
     @BeforeTest
     fun setUp() {

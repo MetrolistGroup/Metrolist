@@ -23,6 +23,7 @@ import com.metrolist.shared.network.sharedHttpTransportHandlesFailures
 import com.metrolist.shared.playback.downloadSabrAudio
 import com.metrolist.shared.repository.LyricsRepository
 import com.metrolist.shared.settings.Settings
+import com.metrolist.shared.soulseek.SoulseekLibrary
 import com.metrolist.shared.state.GlobalYouTubeRepository
 import com.metrolist.shared.storage.DownloadedPlaylists
 import com.metrolist.shared.utils.XdgUtils

@@ -20,6 +20,7 @@ import com.metrolist.android.LocalListenTogetherManager
 import com.metrolist.android.LocalPlaylistAdder
 import com.metrolist.android.listentogether.AndroidListenTogetherManager
 import com.metrolist.android.playback.PlayerConnection
+import com.metrolist.android.soulseek.soulseekMenuActions
 import com.metrolist.android.utils.startActivitySafely
 import com.metrolist.shared.db.MusicDatabase
 import com.metrolist.shared.generated.resources.Res
@@ -212,7 +213,7 @@ fun SongMenu(
                             onDismiss()
                         }
                     },
-                ),
+                ) + soulseekMenuActions(song, onDismiss),
         )
     if (showDetails) {
         SongDetailsSheet(song = song, onDismiss = onDismiss)

@@ -113,6 +113,18 @@ class PortableSettingsTest {
     }
 
     @Test
+    fun backupsKeepTheSoulseekUsernameButNeverItsPassword() {
+        val source =
+            Settings(FakeSettings()).apply {
+                soulseekUsername = "slsk-user"
+                soulseekPassword = "slsk-password"
+            }
+        val exportedKeys = source.exportBackupSettings().entries.mapTo(mutableSetOf()) { it.key }
+        assertTrue("soulseekUsername" in exportedKeys)
+        assertFalse("soulseekPassword" in exportedKeys)
+    }
+
+    @Test
     fun backupRestoreClearsCredentialsMissingFromBackupAfterValidation() {
         val backing = FakeSettings()
         val settings =

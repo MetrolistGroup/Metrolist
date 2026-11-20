@@ -86,7 +86,6 @@ import com.metrolist.desktop.state.playback.PlayerState
 import com.metrolist.desktop.storage.DownloadManager
 import com.metrolist.desktop.storage.DownloadState
 import com.metrolist.desktop.storage.SongCacheManager
-import com.metrolist.desktop.storage.SoulseekLibrary
 import com.metrolist.desktop.storage.playlistDownloadProgress
 import com.metrolist.desktop.storage.playlistDownloadState
 import com.metrolist.desktop.storage.soulseekMenuActions
@@ -156,6 +155,7 @@ import com.metrolist.shared.model.previewThumbnailUrl
 import com.metrolist.shared.model.speedDialItemId
 import com.metrolist.shared.model.toSongItem
 import com.metrolist.shared.settings.BlockedContent
+import com.metrolist.shared.soulseek.SoulseekLibrary
 import com.metrolist.shared.state.GlobalYouTubeRepository
 import com.metrolist.shared.state.SongLikeState
 import com.metrolist.shared.ui.components.AlertDialog

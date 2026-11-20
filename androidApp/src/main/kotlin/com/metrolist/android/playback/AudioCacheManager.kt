@@ -40,6 +40,7 @@ import com.metrolist.shared.playback.downloadSabrAudio
 import com.metrolist.shared.playback.ffmpeg.DirectPlaybackCache
 import com.metrolist.shared.playback.ffmpeg.SabrInputStream
 import com.metrolist.shared.settings.Settings
+import com.metrolist.shared.soulseek.SoulseekLibrary
 import com.metrolist.shared.storage.audioCacheBudget
 import com.metrolist.shared.youtube.playback.PlaybackResource
 import com.metrolist.shared.youtube.playback.toCachedFormatEntity
@@ -282,6 +283,8 @@ class AudioCacheManager(
     ): PlaybackResource? =
         withContext(Dispatchers.IO) {
             val songId = song.id
+            // A Soulseek version picked for this song plays instead of the cache and the stream, offline too.
+            SoulseekLibrary.playbackResource(songId) { File(it).toUri().toString() }?.let { return@withContext it }
             val entry = database.dao().cachedAudio(songId) ?: return@withContext null
             val fileSize = audioSize(entry.filePath)
             if (!audioAvailable(entry.filePath)) {

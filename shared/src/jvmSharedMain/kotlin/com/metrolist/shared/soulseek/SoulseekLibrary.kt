@@ -1,4 +1,4 @@
-package com.metrolist.desktop.storage
+package com.metrolist.shared.soulseek
 
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -6,16 +6,13 @@ import androidx.compose.runtime.setValue
 import com.metrolist.shared.db.MusicDatabase
 import com.metrolist.shared.db.entities.toSongItem
 import com.metrolist.shared.model.SongItem
-import com.metrolist.shared.utils.XdgUtils
 import com.metrolist.shared.youtube.playback.PlaybackResource
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
-import org.koin.core.context.GlobalContext
+import org.koin.mp.KoinPlatform
 import java.io.File
-import java.nio.file.Files
-import java.nio.file.StandardCopyOption
 
 /** A Soulseek download kept on disk for one song. */
 @Serializable
@@ -29,7 +26,7 @@ data class SoulseekFile(
     val sampleRate: Int? = null,
 )
 
-/** Which Soulseek versions each song has, and the one it plays instead of streaming. */
+/** Which Soulseek versions each song has, and the one it plays instead of streaming. Shared by Android and desktop. */
 object SoulseekLibrary {
     @Serializable
     private data class Store(
@@ -42,16 +39,16 @@ object SoulseekLibrary {
 
     private val json = Json { ignoreUnknownKeys = true }
 
-    /** Settable so tests keep their store away from the user's state directory. */
-    internal var storeFile = File(XdgUtils.getXdgStateHome(), "metrolist/soulseek-files.json")
+    /** Where the store lives; each app sets it at startup, and setting it loads the store. */
+    var storeFile: File? = null
         set(value) {
             field = value
             store = load()
         }
 
-    private var store by mutableStateOf(load())
+    private var store by mutableStateOf(Store())
 
-    /** The song whose versions [SoulseekVersionsDialog] shows, or null when it is closed. */
+    /** The song whose versions dialog is open, or null when it is closed. */
     var versionsSong by mutableStateOf<SongItem?>(null)
         private set
 
@@ -63,15 +60,17 @@ object SoulseekLibrary {
         versionsSong = null
     }
 
-    private fun load(): Store = runCatching { json.decodeFromString<Store>(storeFile.readText()) }.getOrDefault(Store())
+    private fun load(): Store = storeFile?.let { runCatching { json.decodeFromString<Store>(it.readText()) }.getOrNull() } ?: Store()
 
     private fun save(next: Store) {
         store = next
+        val file = storeFile ?: return
         runCatching {
-            storeFile.parentFile.mkdirs()
-            val temp = File(storeFile.parentFile, "${storeFile.name}.tmp")
+            file.parentFile?.mkdirs()
+            val temp = File(file.parentFile, "${file.name}.tmp")
             temp.writeText(json.encodeToString(next))
-            Files.move(temp.toPath(), storeFile.toPath(), StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE)
+            // A rename replaces the file in one step; java.nio Files.move needs Android 8.
+            if (!temp.renameTo(file)) file.writeText(json.encodeToString(next))
         }
     }
 
@@ -80,7 +79,7 @@ object SoulseekLibrary {
         store.versions[songId]
             .orEmpty()
             .filter { File(it.path).isFile }
-            .sortedBy { SoulseekDownloader.formatOrder.indexOf(it.format) }
+            .sortedBy { SoulseekMatching.FORMAT_ORDER.indexOf(it.format) }
 
     fun selected(songId: String): SoulseekFile? = store.selected[songId]?.let { path -> versions(songId).firstOrNull { it.path == path } }
 
@@ -115,8 +114,8 @@ object SoulseekLibrary {
             } else {
                 withContext(Dispatchers.IO) {
                     runCatching {
-                        GlobalContext
-                            .get()
+                        KoinPlatform
+                            .getKoin()
                             .get<MusicDatabase>()
                             .dao()
                             .getSongsByIds(missing)
@@ -128,10 +127,7 @@ object SoulseekLibrary {
         return ids.mapNotNull { store.songs[it] ?: stored[it] }
     }
 
-    /** Where Soulseek downloads land by default, used as the file chooser's start folder. */
-    val downloadDirectory: File get() = File(System.getProperty("user.home"), "Music/Soulseek")
-
-    /** A description from the file name alone, for when the helper cannot read the file's headers. */
+    /** A description from the file name alone, for when the file's headers cannot be read. */
     fun describeByExtension(file: File): SoulseekFile {
         val extension = file.extension.lowercase()
         return SoulseekFile(
@@ -153,12 +149,18 @@ object SoulseekLibrary {
         save(store.copy(selected = if (path == null) store.selected - songId else store.selected + (songId to path)))
     }
 
-    /** The selected version as a local playback source, checked before downloads and the stream. */
-    fun playbackResource(songId: String): PlaybackResource? =
+    /**
+     * The selected version as a local playback source, checked before downloads and the stream. [url] turns the file
+     * path into what the platform player opens: a plain path on desktop, a file URI on Android.
+     */
+    fun playbackResource(
+        songId: String,
+        url: (String) -> String = { it },
+    ): PlaybackResource? =
         selected(songId)?.let { file ->
             PlaybackResource(
                 videoId = songId,
-                url = file.path,
+                url = url(file.path),
                 headers = emptyMap(),
                 loudnessDb = null,
                 expiresAt = null,
@@ -167,6 +169,7 @@ object SoulseekLibrary {
                 sampleRate = file.sampleRate,
                 clientName = "local",
                 profileId = "downloaded-audio",
+                requireBoundedRange = false,
             )
         }
 }

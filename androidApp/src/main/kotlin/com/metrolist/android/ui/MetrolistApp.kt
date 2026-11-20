@@ -178,6 +178,7 @@ import com.metrolist.android.playback.SongDownloadManager
 import com.metrolist.android.playback.isRunnable
 import com.metrolist.android.playback.resolveIncomingPlaybackSong
 import com.metrolist.android.playback.voiceSearchRequest
+import com.metrolist.android.soulseek.SoulseekDialogs
 import com.metrolist.android.ui.component.BottomSheetMenu
 import com.metrolist.android.ui.component.FloatingTopAppBar
 import com.metrolist.android.ui.component.LocalMenuState
@@ -1963,6 +1964,8 @@ fun MetrolistApp(
                                 .padding(bottom = miniPlayerCollapsedBound + 16.dp)
                                 .zIndex(100f),
                     )
+
+                    SoulseekDialogs()
 
                     PopupVisibility(visible = showContinuePlaybackPrompt) {
                         AlertDialog(

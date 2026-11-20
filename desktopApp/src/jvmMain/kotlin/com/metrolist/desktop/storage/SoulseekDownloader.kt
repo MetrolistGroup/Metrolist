@@ -73,6 +73,9 @@ import com.metrolist.shared.generated.resources.soulseek_versions
 import com.metrolist.shared.generated.resources.soulseek_versions_playing
 import com.metrolist.shared.generated.resources.username
 import com.metrolist.shared.model.SongItem
+import com.metrolist.shared.soulseek.SoulseekFile
+import com.metrolist.shared.soulseek.SoulseekLibrary
+import com.metrolist.shared.soulseek.SoulseekMatching
 import com.metrolist.shared.ui.components.AlertDialog
 import com.metrolist.shared.ui.components.PlayerMenuAction
 import com.metrolist.shared.ui.icons.MetrolistIcons
@@ -129,7 +132,7 @@ object SoulseekDownloader {
     private const val EXIT_NOT_LOGGED_IN = 3
 
     /** The order the picker lists formats in, matching the helper's `FORMAT_ORDER`. */
-    val formatOrder = listOf("320", "lossless", "hires")
+    val formatOrder = SoulseekMatching.FORMAT_ORDER
 
     private val json = Json { ignoreUnknownKeys = true }
 
@@ -322,7 +325,7 @@ object SoulseekDownloader {
     ) {
         val dialog =
             FileDialog(null as Frame?, chooserTitle, FileDialog.LOAD).apply {
-                SoulseekLibrary.downloadDirectory.takeIf { it.isDirectory }?.let { directory = it.absolutePath }
+                soulseekDownloadDirectory.takeIf { it.isDirectory }?.let { directory = it.absolutePath }
                 filenameFilter = FilenameFilter { _, name -> name.substringAfterLast('.').lowercase() in SoulseekLibrary.audioExtensions }
             }
         dialog.isVisible = true
@@ -644,3 +647,6 @@ fun soulseekMenuActions(
         },
     )
 }
+
+/** Where Soulseek downloads land by default (the helper's download_dir), used as the file chooser's start folder. */
+private val soulseekDownloadDirectory: File get() = File(System.getProperty("user.home"), "Music/Soulseek")
