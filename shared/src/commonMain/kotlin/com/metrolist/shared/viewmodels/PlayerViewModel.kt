@@ -227,6 +227,7 @@ class PlayerViewModel(
             song?.let(SongMetadataState::apply)
         }.onEach { song ->
             val isNewSong = song?.id != lastProcessedSongId
+            val previousSongId = lastProcessedSongId
             if (isNewSong) {
                 canvasPlaybackRecovery.reset()
                 lastProcessedSongId = song?.id
@@ -321,8 +322,8 @@ class PlayerViewModel(
                         manualAiTranslationForSongChange(
                             isNewSong = isNewSong,
                             newSongId = song?.id,
-                            newSongIsVideo = song?.isVideoSong == true,
                             counterpartTrackId = _uiState.value.counterpartTrackId,
+                            previousSongId = previousSongId,
                             currentValue = _uiState.value.manualAiTranslationEnabled,
                         ),
                     lyricsTranslationProgress = if (isNewSong) LyricsTranslationProgress() else _uiState.value.lyricsTranslationProgress,
@@ -2220,17 +2221,14 @@ class PlayerViewModel(
 internal fun manualAiTranslationForSongChange(
     isNewSong: Boolean,
     newSongId: String?,
-    newSongIsVideo: Boolean,
     counterpartTrackId: String?,
+    previousSongId: String?,
     currentValue: Boolean,
 ): Boolean =
     if (!isNewSong) {
         currentValue
     } else {
-        // The return from video to audio is recognized by the counterpart ID. The outward
-        // switch happens before the video's counterpart is resolved, so a video song is
-        // treated as the other half of the same logical-song transition.
-        currentValue && ((newSongId != null && newSongId == counterpartTrackId) || newSongIsVideo)
+        currentValue && newSongId != null && newSongId == counterpartTrackId && previousSongId != newSongId
     }
 
 internal fun computeSeekTarget(
