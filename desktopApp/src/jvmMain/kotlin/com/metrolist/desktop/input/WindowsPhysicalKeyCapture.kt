@@ -10,9 +10,17 @@ import com.sun.jna.platform.win32.WinUser
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
+import java.awt.event.KeyEvent as AwtKeyEvent
+
+internal const val WINDOWS_LOW_LEVEL_EXTENDED_KEY_FLAG = 0x01
 
 internal class WindowsPhysicalKeyCapture : AutoCloseable {
-    private val scanCodesByVirtualKey = ConcurrentHashMap<Int, Int>()
+    private data class CapturedKey(
+        val scanCode: Int,
+        val flags: Int,
+    )
+
+    private val scanCodesByVirtualKey = ConcurrentHashMap<Int, CapturedKey>()
 
     @Volatile private var hook: WinUser.HHOOK? = null
 
@@ -20,6 +28,8 @@ internal class WindowsPhysicalKeyCapture : AutoCloseable {
 
     @Volatile private var enabled = false
     private var hookThread: Thread? = null
+
+    val isAvailable: Boolean get() = hook != null
 
     private val procedure =
         object : HookProcedure {
@@ -34,7 +44,13 @@ internal class WindowsPhysicalKeyCapture : AutoCloseable {
                     val virtualKeyCode = pointer.getInt(0)
                     when (messageId) {
                         WM_KEYDOWN, WM_SYSKEYDOWN -> {
-                            if (enabled) scanCodesByVirtualKey[virtualKeyCode] = pointer.getInt(Int.SIZE_BYTES.toLong())
+                            if (enabled) {
+                                scanCodesByVirtualKey[virtualKeyCode] =
+                                    CapturedKey(
+                                        pointer.getInt(Int.SIZE_BYTES.toLong()),
+                                        pointer.getInt((Int.SIZE_BYTES * 2).toLong()),
+                                    )
+                            }
                         }
 
                         WM_KEYUP, WM_SYSKEYUP -> {
@@ -90,7 +106,11 @@ internal class WindowsPhysicalKeyCapture : AutoCloseable {
         }
     }
 
-    fun consume(awtKeyCode: Int): PhysicalKeyPosition? = scanCodesByVirtualKey.remove(awtKeyCode)?.let(::windowsPhysicalPositionForScanCode)
+    fun consume(awtKeyCode: Int): PhysicalKeyPosition? {
+        val virtualKeyCode = windowsVirtualKeyForAwtCode(awtKeyCode)
+        val capturedKey = scanCodesByVirtualKey.remove(virtualKeyCode) ?: return null
+        return windowsPhysicalPositionForScanCode(capturedKey.scanCode, capturedKey.flags)
+    }
 
     override fun close() = setEnabled(false)
 
@@ -109,3 +129,13 @@ internal class WindowsPhysicalKeyCapture : AutoCloseable {
         const val WM_SYSKEYUP = 0x0105
     }
 }
+
+internal fun windowsVirtualKeyForAwtCode(awtKeyCode: Int): Int =
+    when (awtKeyCode) {
+        AwtKeyEvent.VK_BACK_QUOTE, AwtKeyEvent.VK_DEAD_GRAVE -> 0xC0
+        AwtKeyEvent.VK_MINUS -> 0xBD
+        AwtKeyEvent.VK_EQUALS -> 0xBB
+        AwtKeyEvent.VK_COMMA -> 0xBC
+        AwtKeyEvent.VK_SLASH -> 0xBF
+        else -> awtKeyCode
+    }

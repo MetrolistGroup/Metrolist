@@ -44,6 +44,9 @@ class ShortcutKeyMatchingTest {
         assertEquals(PhysicalKeyPosition.COMMA, windowsPhysicalPositionForScanCode(0x33))
         assertEquals(PhysicalKeyPosition.EQUALS, windowsPhysicalPositionForScanCode(0x0D))
         assertEquals(PhysicalKeyPosition.NUMPAD_PLUS, windowsPhysicalPositionForScanCode(0x4E))
+        assertEquals(null, windowsPhysicalPositionForScanCode(0x35, WINDOWS_LOW_LEVEL_EXTENDED_KEY_FLAG))
+        assertEquals(0xBF, windowsVirtualKeyForAwtCode(AwtKeyEvent.VK_SLASH))
+        assertEquals(0xBC, windowsVirtualKeyForAwtCode(AwtKeyEvent.VK_COMMA))
     }
 
     @Test
