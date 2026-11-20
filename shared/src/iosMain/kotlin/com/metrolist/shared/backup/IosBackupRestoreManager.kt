@@ -147,9 +147,12 @@ class IosBackupRestoreManager(
             val fs = FileSystem.SYSTEM
             try {
                 fs.createDirectories(staging)
-                val source = fileSeekableSource(sourcePath)
-                val header = source.use { if (it.size >= SQLITE_HEADER.size) it.readFully(0, SQLITE_HEADER.size) else ByteArray(0) }
+                val (sourceSize, header) =
+                    fileSeekableSource(sourcePath).use { source ->
+                        source.size to if (source.size >= SQLITE_HEADER.size) source.readFully(0, SQLITE_HEADER.size) else ByteArray(0)
+                    }
                 if (header.contentEquals(SQLITE_HEADER)) {
+                    requireBackupSize(sourceSize, BackupArchiveLimits.DATABASE_BYTES)
                     val candidate = "$stagingPath/source.db"
                     copyFile(sourcePath, candidate, BackupArchiveLimits.DATABASE_BYTES)
                     return@withContext readAndImportForeignDatabase(candidate, database)
@@ -239,7 +242,7 @@ class IosBackupRestoreManager(
             } catch (error: Exception) {
                 Result.failure(error)
             } finally {
-                fs.deleteRecursively(staging, mustExist = false)
+                runCatching { fs.deleteRecursively(staging, mustExist = false) }
             }
         }
 

@@ -67,6 +67,34 @@ class PrismBackupImportTest {
     }
 
     @Test
+    fun repeatedPrismPlaylistIdsReadTheirPageOnce() {
+        val pagePath = "files/offline/pages/abc.json"
+        val reads = mutableListOf<String>()
+        val library = ForeignLibrary(ForeignLibraryFamily.PRISM, emptyList(), emptyList(), emptyList(), emptyList(), emptyList())
+
+        val result =
+            library.withPrismBackupData { entry ->
+                reads += entry
+                when (entry) {
+                    "files/offline/library.json" -> {
+                        """{"playlists":[{"kind":"playlist","id":"VLabc","title":"List"},{"kind":"playlist","id":"VLabc","title":"List"}]}"""
+                    }
+
+                    pagePath -> {
+                        """{"owned":true,"songs":[]}"""
+                    }
+
+                    else -> {
+                        null
+                    }
+                }
+            }
+
+        assertEquals(1, reads.count { it == pagePath })
+        assertEquals(2, result.playlists.size)
+    }
+
+    @Test
     fun nullFavoriteThumbnailRemainsMissing() {
         val preferences =
             checkNotNull(prismArchiveFile(directory, "shared_prefs/artist_prefs.xml"))

@@ -53,7 +53,10 @@ internal fun ForeignLibrary.withPrismBackupData(readEntry: (String) -> String?):
     val artists = artists.toMutableList()
     val albums = albums.toMutableList()
 
-    fun read(entry: String) = readEntry(entry)?.let { Json.parseToJsonElement(it).jsonObject }
+    val parsedEntries = mutableMapOf<String, JsonObject>()
+
+    fun read(entry: String): JsonObject? =
+        parsedEntries[entry] ?: readEntry(entry)?.let { Json.parseToJsonElement(it).jsonObject.also { parsedEntries[entry] = it } }
 
     fun members(collection: JsonObject): List<String> =
         collection.objects("songs").map { item ->
