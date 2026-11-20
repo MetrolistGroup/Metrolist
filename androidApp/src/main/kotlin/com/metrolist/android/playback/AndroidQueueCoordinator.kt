@@ -474,7 +474,7 @@ internal class AndroidQueueCoordinator(
         isRadioQueue = true
         radioQueuePlaylistId = "RDAMVM${seed.id}"
         radioQueueParams = null
-        if (preserveCurrent) bootstrapRecommendations(seed.id)
+        if (preserveCurrent) bootstrapRecommendations(seed.id, allowRepeatMode = true)
         onSave()
     }
 
@@ -482,7 +482,10 @@ internal class AndroidQueueCoordinator(
         pendingRestorePosition.update(currentQueueEntryKey(), position)
     }
 
-    fun bootstrapRecommendations(seedSongId: String) {
+    fun bootstrapRecommendations(
+        seedSongId: String,
+        allowRepeatMode: Boolean = false,
+    ) {
         if (!PlaybackNetworkStateStore.current.connected) return
         if (!canBootstrapRecommendations()) return
         if (AndroidDeviceConnect.manager.remote.isFollowing || AndroidListenTogetherManager.isGuestPlaybackLocked) return
@@ -510,7 +513,8 @@ internal class AndroidQueueCoordinator(
                                 requestGeneration,
                                 queueSessionId,
                                 recommendationRequestGeneration,
-                            ) && PlaybackNetworkStateStore.current.connected && repeatMode.value == Player.REPEAT_MODE_OFF &&
+                            ) && PlaybackNetworkStateStore.current.connected &&
+                                (allowRepeatMode || repeatMode.value == Player.REPEAT_MODE_OFF) &&
                                 canBootstrapRecommendations() &&
                                 !AndroidDeviceConnect.manager.remote.isFollowing &&
                                 !AndroidListenTogetherManager.isGuestPlaybackLocked
@@ -525,6 +529,7 @@ internal class AndroidQueueCoordinator(
                                 generatedQueueSourceTitle = if (initial) QUEUE_SOURCE_AUTO_MIX else QUEUE_SOURCE_RECOMMENDED,
                                 playlistId = "RDAMVM$seedSongId",
                                 params = null,
+                                allowRepeatMode = allowRepeatMode,
                             )
                         },
                     )
@@ -596,6 +601,7 @@ internal class AndroidQueueCoordinator(
                         selectedChipId = chip.id,
                         playlistId = chip.playlistId,
                         params = chip.params,
+                        allowRepeatMode = isRadioQueue,
                     )
                 } catch (e: CancellationException) {
                     throw e
@@ -615,10 +621,11 @@ internal class AndroidQueueCoordinator(
         playlistId: String? = null,
         params: String? = null,
         limit: Int? = null,
+        allowRepeatMode: Boolean = false,
     ): Boolean {
         fun isCurrent() =
             PlaybackNetworkStateStore.current.connected &&
-                repeatMode.value == Player.REPEAT_MODE_OFF &&
+                (allowRepeatMode || repeatMode.value == Player.REPEAT_MODE_OFF) &&
                 !AndroidDeviceConnect.manager.remote.isFollowing &&
                 !AndroidListenTogetherManager.isGuestPlaybackLocked &&
                 isCurrentRecommendationRequest(
