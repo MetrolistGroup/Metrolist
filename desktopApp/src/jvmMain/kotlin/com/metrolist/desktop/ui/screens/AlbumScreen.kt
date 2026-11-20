@@ -158,29 +158,30 @@ fun AlbumScreen(
                 isTogglingFavorite = false
                 result
                     .onSuccess { liked ->
-                    if (liked && Settings.shared.autoDownloadSavedCollections) {
-                        AppState.scope.launch(Dispatchers.IO) {
-                            try {
-                                val cursor = page.playlistPage
-                                val allSongs =
-                                    if (cursor?.hasMore == true) {
-                                        GlobalYouTubeRepository.instance.completePlaylistPage(cursor).songs
-                                    } else {
-                                        songs
-                                    }
-                                DownloadManager.downloadAll(allSongs)
-                            } catch (e: CancellationException) {
-                                throw e
-                            } catch (e: Exception) {
-                                AppLogger.warning("AlbumAutoDownload", "Unable to load album for automatic download", e)
+                        if (liked && Settings.shared.autoDownloadSavedCollections) {
+                            AppState.scope.launch(Dispatchers.IO) {
+                                try {
+                                    val cursor = page.playlistPage
+                                    val allSongs =
+                                        if (cursor?.hasMore == true) {
+                                            GlobalYouTubeRepository.instance.completePlaylistPage(cursor).songs
+                                        } else {
+                                            songs
+                                        }
+                                    DownloadManager.downloadAll(allSongs)
+                                } catch (e: CancellationException) {
+                                    throw e
+                                } catch (e: Exception) {
+                                    AppLogger.warning("AlbumAutoDownload", "Unable to load album for automatic download", e)
+                                }
                             }
                         }
+                    }.onFailure {
+                        AppState.scope.launch {
+                            AppState.snackbarHostState.showSnackbar(getString(Res.string.error_occurred))
+                        }
                     }
-                }.onFailure {
-                    AppState.scope.launch {
-                        AppState.snackbarHostState.showSnackbar(getString(Res.string.error_occurred))
-                    }
-                }
+            }
         }
     }
     val displayedSongs =
