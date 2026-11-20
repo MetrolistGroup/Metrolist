@@ -139,6 +139,7 @@ class IosBackupRestoreManager(
         val archivePath = "$destinationPath.${NSUUID().UUIDString}.tmp"
         val previousPath = "$destinationPath.${NSUUID().UUIDString}.previous"
         return try {
+            check(!FileSystem.SYSTEM.exists(recoveryPath)) { "An interrupted restore still needs recovery" }
             val destination = resolveFilePath(destinationPath)
             val protectedPaths =
                 listOf(databasePath, "$databasePath-wal", "$databasePath-shm", "$databasePath-journal")

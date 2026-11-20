@@ -17,6 +17,7 @@ import java.io.File
 object DesktopAutomaticBackupScheduler {
     private var scope: CoroutineScope? = null
     private var job: Job? = null
+    private var pruningPending = false
 
     fun start(applicationScope: CoroutineScope) {
         scope = applicationScope
@@ -37,16 +38,26 @@ object DesktopAutomaticBackupScheduler {
                         delay(CREDENTIAL_RECOVERY_POLL_MILLIS)
                         continue
                     }
+                    if (pruningPending) {
+                        val directory = File(XdgUtils.getXdgDataHome(), "metrolist/automatic-backups")
+                        val pruneResult = withContext(Dispatchers.IO) { runCatching { pruneBackups(directory) } }
+                        pruningPending = pruneResult.isFailure
+                        if (pruneResult.isFailure) {
+                            AppLogger.warning(
+                                "AutomaticBackup",
+                                "Could not prune automatic backups: ${pruneResult.exceptionOrNull()?.message ?: "Unknown error"}",
+                            )
+                        }
+                        delay(if (pruningPending) FAILURE_RETRY_MILLIS else 1L)
+                        continue
+                    }
                     val now = System.currentTimeMillis()
                     if (isAutoBackupDue(settings.autoBackupLastSuccessEpochMillis, now, frequency)) {
                         val directory = File(XdgUtils.getXdgDataHome(), "metrolist/automatic-backups")
                         val destination = File(directory, "${defaultBackupFilename(BACKUP_FILENAME_PREFIX)}.zip")
                         val result =
                             withContext(Dispatchers.IO) {
-                                runCatching {
-                                    DesktopBackupRestoreManager.backup(destination).getOrThrow()
-                                    pruneBackups(directory)
-                                }
+                                DesktopBackupRestoreManager.backup(destination)
                             }
                         if (result.isSuccess) {
                             settings.autoBackupLastSuccessEpochMillis = System.currentTimeMillis()
@@ -57,13 +68,21 @@ object DesktopAutomaticBackupScheduler {
                                         "Could not persist automatic backup time: ${error.message ?: "Unknown error"}",
                                     )
                                 }
+                            val pruneResult = withContext(Dispatchers.IO) { runCatching { pruneBackups(directory) } }
+                            pruningPending = pruneResult.isFailure
+                            if (pruningPending) {
+                                AppLogger.warning(
+                                    "AutomaticBackup",
+                                    "Could not prune automatic backups: ${pruneResult.exceptionOrNull()?.message ?: "Unknown error"}",
+                                )
+                            }
                         } else {
                             AppLogger.warning(
                                 "AutomaticBackup",
                                 "Automatic backup failed: ${result.exceptionOrNull()?.message ?: "Unknown error"}",
                             )
                         }
-                        delay(if (result.isSuccess) frequency.intervalMillis else FAILURE_RETRY_MILLIS)
+                        delay(if (result.isSuccess && !pruningPending) frequency.intervalMillis else FAILURE_RETRY_MILLIS)
                     } else {
                         val nextDue = settings.autoBackupLastSuccessEpochMillis + frequency.intervalMillis
                         delay((nextDue - now).coerceAtLeast(1L))
