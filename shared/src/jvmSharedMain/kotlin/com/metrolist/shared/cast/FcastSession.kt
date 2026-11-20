@@ -186,7 +186,13 @@ internal class FcastSession(
         if (!autoplay) send(OPCODE_PAUSE)
     }
 
-    override suspend fun play() = withContext(Dispatchers.IO) { send(OPCODE_RESUME) }
+    override suspend fun play() =
+        withContext(Dispatchers.IO) {
+            synchronized(mediaStateLock) {
+                stopRequested = false
+            }
+            send(OPCODE_RESUME)
+        }
 
     override suspend fun pause() = withContext(Dispatchers.IO) { send(OPCODE_PAUSE) }
 
