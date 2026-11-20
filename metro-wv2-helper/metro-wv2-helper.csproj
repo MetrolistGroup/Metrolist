@@ -8,6 +8,9 @@
     <ApplicationIcon />
     <StartupObject />
     <AssemblyName>metro-wv2-helper</AssemblyName>
+    <Company>Metrolist</Company>
+    <Product>Metrolist</Product>
+    <Description>Metrolist YouTube Music login helper</Description>
     <RootNamespace>MetroWv2Helper</RootNamespace>
     <PublishSingleFile>true</PublishSingleFile>
     <SelfContained>true</SelfContained>
