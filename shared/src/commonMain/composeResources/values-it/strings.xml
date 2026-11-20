@@ -177,38 +177,38 @@
     <string name="stop_music_on_task_clear">Interrompi la riproduzione alla chiusura dell'app</string>
     <string name="storage">Archiviazione</string>
     <string name="music_video_quality" tools:ignore="MissingTranslation">Qualità video musicale</string>
-    <string name="music_video_quality_desc" tools:ignore="MissingTranslation">Risoluzione predefinita per i video</string>
+    <string name="music_video_quality_desc" tools:ignore="MissingTranslation">Risoluzione predefinita per i video musicali</string>
     <string name="music_video_quality_auto" tools:ignore="MissingTranslation">Automatica</string>
     <string name="music_video_resolution" tools:ignore="MissingTranslation">Risoluzione video</string>
     <string name="music_video_resolution_desc" tools:ignore="MissingTranslation">Cambia la risoluzione per questo video musicale</string>
     <string name="music_video_resolution_current" tools:ignore="MissingTranslation">In riproduzione</string>
     <string name="music_video_cache" tools:ignore="MissingTranslation">Cache video musicali</string>
-    <string name="clear_music_video_cache" tools:ignore="MissingTranslation">Cancella la cache dei video musicali</string>
-    <string name="clear_music_video_cache_desc" tools:ignore="MissingTranslation">Rimuovi gli accoppiamenti brani-video nella cache</string>
+    <string name="clear_music_video_cache" tools:ignore="MissingTranslation">Svuota cache video musicali</string>
+    <string name="clear_music_video_cache_desc" tools:ignore="MissingTranslation">Rimuovi le corrispondenze tra brani e video salvate nella cache</string>
     <string name="image_cache">Cache immagini</string>
     <string name="song_cache">Cache brani</string>
     <string name="unlimited">Illimitata</string>
-    <string name="clear_all_downloads">Cancella tutti i download</string>
-    <string name="clear_all_downloads_dialog">Vuoi rimuovere la lista dei file audio scaricati?</string>
-    <string name="max_image_cache_size">Dimensione massima cache delle immagini</string>
-    <string name="clear_image_cache">Cancella la cache delle immagini</string>
-    <string name="max_song_cache_size">Dimensione massima cache dei brani</string>
-    <string name="clear_song_cache">Cancella la cache dei brani</string>
-    <string name="song_cache_location">Percorso cache dei brani</string>
-    <string name="song_cache_location_internal">Spazio di archiviazione dell'app</string>
-    <string name="song_cache_location_internal_desc">Nascosto nello spazio d'archiviazione</string>
+    <string name="clear_all_downloads">Elimina tutti i download</string>
+    <string name="clear_all_downloads_dialog">Vuoi rimuovere tutti i file audio scaricati?</string>
+    <string name="max_image_cache_size">Dimensione massima cache immagini</string>
+    <string name="clear_image_cache">Svuota cache immagini</string>
+    <string name="max_song_cache_size">Dimensione massima cache brani</string>
+    <string name="clear_song_cache">Svuota cache brani</string>
+    <string name="song_cache_location">Posizione cache brani</string>
+    <string name="song_cache_location_internal">Memoria interna dell'app</string>
+    <string name="song_cache_location_internal_desc">Nascosto nella memoria dell'app</string>
     <string name="song_cache_location_shared_media">Cartella multimediale condivisa</string>
-    <string name="song_cache_location_shared_media_desc">Visibile in Android/media per i file manager e gli scanner multimediali</string>
+    <string name="song_cache_location_shared_media_desc">Visibile in Android/media per gestori di file e scanner multimediali</string>
     <string name="song_cache_location_custom">Cartella personalizzata</string>
     <string name="song_cache_location_custom_desc">Cartella selezionata tramite Storage Access Framework</string>
-    <string name="song_cache_directory">Percorso della cache dei brani</string>
-    <string name="size_used">%1$s usati</string>
+    <string name="song_cache_directory">Cartella cache brani</string>
+    <string name="size_used">%1$s utilizzati</string>
     <string name="storage_in_total">%1$s in totale</string>
     <string name="downloads">Download</string>
     <string name="youtube_playlists">Playlist di YouTube</string>
     <string name="podcasts">Podcast</string>
-    <string name="download_location">Percorso dei download</string>
-    <string name="animated_cover_resolution">Qualità delle copertine animate</string>
+    <string name="download_location">Posizione download</string>
+    <string name="animated_cover_resolution">Qualità copertine animate</string>
     <string name="animated_cover_resolution_low">Bassa (360p)</string>
     <string name="animated_cover_resolution_medium">Media (720p)</string>
     <string name="animated_cover_resolution_high">Alta (1080p)</string>
