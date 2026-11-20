@@ -58,9 +58,9 @@
     <string name="completed_downloads">Download completati</string>
     <string name="download_completion_summary">%1$d scaricati, %2$d non riusciti</string>
     <plurals name="download_notification_progress">
-        <item quantity="one">Scaricato %1$d su %2$d brano, %3$d fallito</item>
-        <item quantity="many">Scaricati %1$d su %2$d brani, %3$d falliti</item>
-        <item quantity="other">Scaricati %1$d su %2$d brani, %3$d falliti</item>
+        <item quantity="one">Scaricato %1$d brano su %2$d, %3$d non riusciti</item>
+        <item quantity="many">Scaricati %1$d brani su %2$d, %3$d non riusciti</item>
+        <item quantity="other">Scaricati %1$d brani su %2$d, %3$d non riusciti</item>
     </plurals>
     <string name="download_pause_all">Metti in pausa tutti</string>
     <string name="download_resume_all">Riprendi tutti</string>
@@ -240,8 +240,8 @@
     <string name="action_backup">Backup</string>
     <string name="action_restore">Ripristina</string>
     <string name="backup_create_success">Backup creato</string>
-    <string name="backup_create_failed">Impossibile creare un backup</string>
-    <string name="restore_failed">Impossibile eseguire il ripristino dal backup</string>
+    <string name="backup_create_failed">Impossibile creare il backup</string>
+    <string name="restore_failed">Impossibile ripristinare il backup</string>
     <string name="dismiss">Ignora</string>
     <string name="preview">Anteprima</string>
     <string name="about">Informazioni</string>
@@ -273,10 +273,10 @@
     <string name="discord_status_not_initialized">Non connesso</string>
     <string name="discord_status_authorized">Autorizzato</string>
     <string name="discord_error_denied">Autorizzazione negata da Discord.</string>
-    <string name="discord_error_connection_failed">Non è stato possibile connettersi a Discord. Metrolist riproverà automaticamente.</string>
+    <string name="discord_error_connection_failed">Impossibile connettersi a Discord. Metrolist riproverà automaticamente.</string>
     <string name="discord_error_no_browser">Nessuna app disponibile per aprire l\u0027autorizzazione di Discord.</string>
-    <string name="discord_error_token_exchange_failed">Scambio di token fallito. Riprova.</string>
-    <string name="discord_error_token_refresh_failed">Aggiornamento del token fallito. Riprova ad accedere.</string>
+    <string name="discord_error_token_exchange_failed">Scambio del token non riuscito. Riprova.</string>
+    <string name="discord_error_token_refresh_failed">Aggiornamento del token non riuscito. Accedi di nuovo.</string>
     <string name="discord_error_invalid_scope">Campo non valido. Riprova ad accedere.</string>
     <string name="discord_error_timeout">Autorizzazione scaduta. Riprova.</string>
     <string name="discord_error_missing_code">Codice autorizzazione mancante nella risposta di Discord.</string>
@@ -506,7 +506,7 @@
     <string name="listenbrainz_now_playing_description">Mostra il brano in riproduzione su ListenBrainz</string>
     <string name="listenbrainz_connect_title">Connettiti a ListenBrainz</string>
     <string name="listenbrainz_user_token">Token utente</string>
-    <string name="restore_database_incompatible">Questo backup utilizza la versione %1$d del database, ma quest'app supporta solo fino alla versione %2$d. Aggiorna Metrolist e riprova.</string>
+    <string name="restore_database_incompatible">Questo backup utilizza la versione %1$d del database, ma t'app supporta fino alla versione %2$d. Aggiorna Metrolist e riprova.</string>
     <string name="restore_failed_detail">Impossibile ripristinare il backup durante %1$s\n\nMotivo: %2$s</string>
     <string name="restore_error_unknown">Nessun\u0027informazione aggiuntiva disponibile.</string>
     <string name="restore_stage_reading_backup">Leggendo il file di backup</string>
@@ -600,7 +600,7 @@
     <string name="updates_channel_description">Notifiche sulle nuove versioni di Metrolist</string>
     <string name="updates_download_failed">Impossibile scaricare l'aggiornamento.</string>
     <string name="updates_digest_failed">L'aggiornamento scaricato non corrisponde al checksum di GitHub.</string>
-    <string name="updates_installer_failed">L'installer di Android non è disponibile o l'installazione delle app non è consentita.</string>
+    <string name="updates_installer_failed">Il programma di installazione pacchetti di Android non è disponibile oppure l'installazione delle app è limitata su questo dispositivo.</string>
     <string name="updates_release_unavailable">Questo rilascio non include un APK compatibile.</string>
     <string name="updates_release_notes_title">Cosa c\u0027è di nuovo in Metrolist %1$s</string>
     <string name="device_connect_title">Device Connect</string>
@@ -728,7 +728,7 @@
     <string name="history_deleting_message">Eliminazione dell'elemento in corso…</string>
     <string name="lyrics_source_preference">Scelta fonti testi</string>
     <string name="expanded">Espanso</string>
-    <string name="authentication_data_extraction_failed">Estrazione dei dati di autenticazione non riuscita. Riprova.</string>
+    <string name="authentication_data_extraction_failed">Impossibile estrarre i dati di autenticazione. Riprova.</string>
     <string name="hidden_item_type_auto">Playlist automatica</string>
     <string name="hidden_item_type_other">Altro</string>
     <string name="cast_connection_failed">Impossibile connettersi al dispositivo di trasmissione.</string>
@@ -796,7 +796,7 @@
     <string name="share_album">Condividi album</string>
     <string name="listen_together_users">Utenti</string>
     <string name="listen_together_log_user_joined">Utente entrato</string>
-    <string name="login_failed_with_error">Errore di login: %1$s</string>
+    <string name="login_failed_with_error">Accesso non riuscito: %1$s</string>
     <string name="play_track_by_artist">Riproduci %1$s di %2$s</string>
     <string name="share_artist">Condividi artista</string>
     <string name="choose_youtube_channel">Scegli un canale YouTube</string>
@@ -834,7 +834,7 @@
     <string name="no_song_selected">Nessun brano selezionato</string>
     <string name="nothing_to_show">Nulla da mostrare</string>
     <string name="ok">OK</string>
-    <string name="page_load_failed_with_error">Errore caricamento pagina: %1$s</string>
+    <string name="page_load_failed_with_error">Impossibile caricare la pagina: %1$s</string>
     <string name="remove_from_speed_dial">Rimuovi da Ascolta subito</string>
     <string name="speed_dial">Ascolta subito</string>
     <string name="pin_to_speed_dial">Fissa in Ascolta subito</string>
@@ -886,7 +886,7 @@
     <string name="skip">Salta</string>
     <string name="details_desc">Vedi le informazioni del brano</string>
     <string name="recent_searches">Ricerche recenti</string>
-    <string name="recognition_failed">Brano non riconosciuto</string>
+    <string name="recognition_failed">Riconoscimento non riuscito</string>
     <string name="more_lyrics_options">Più opzioni dei testi</string>
     <string name="listen_together_servers">Server</string>
     <string name="listen_together_log_joined_room">Entrato nella stanza</string>
@@ -980,7 +980,7 @@
     <string name="library_empty">La tua libreria è vuota</string>
     <string name="upload">Carica</string>
     <string name="repeat">Ripeti</string>
-    <string name="account_logout_webview_failed">Disconnessione effettuata, ma non è stato possibile rimuovere il profilo di accesso di WebView.</string>
+    <string name="account_logout_webview_failed">Disconnessione effettuata, ma impossibile rimuovere il profilo di accesso WebView.</string>
     <string name="stop_downloading">Ferma il download</string>
     <string name="update_downloading_manager">Scaricando il gestore degli aggiornamenti</string>
     <string name="listen_together_blocked_users">Utenti bloccati</string>
@@ -1186,7 +1186,7 @@
     <string name="disconnect_cast">Disconnettiti</string>
     <string name="cast_no_media">Scegli un brano prima di trasmettere.</string>
     <string name="cast_unsupported_stream">Questo brano non supporta la trasmissione.</string>
-    <string name="cast_playback_failed">Il dispositivo di trasmissione non è riuscito a completare l'azione.</string>
+    <string name="cast_playback_failed">Il dispositivo di trasmissione non è riuscito a completare l'azione di riproduzione.</string>
     <string name="lyrics_romanize_as_main">Testi romanizzati come principale</string>
     <string name="lyrics_romanization_syllable_title">Sillabe romanizzate sotto le parole</string>
     <string name="lyrics_romanization_syllable_description">Mostra il testo romanizzato sotto ogni parola nei testi sincronizzati per parola (come Apple Music)</string>
@@ -1330,7 +1330,7 @@
     <string name="spotify_import_error_sign_in_failed">Accesso a Spotify non riuscito.</string>
     <string name="spotify_import_error_load_playlists">Impossibile caricare le playlist di Spotify selezionate.</string>
     <string name="spotify_import_error_no_matched_songs">Impossibile trovare brani corrispondenti per questa playlist.</string>
-    <string name="spotify_import_error_import_failed">Impossibile importare le playlist di Spotify.</string>
+    <string name="spotify_import_error_import_failed">Importazione playlist da Spotify non riuscita.</string>
     <plurals name="spotify_import_skipped_playlists">
         <item quantity="one">Saltata %1$d playlist di Spotify priva di brani importabili.</item>
         <item quantity="many">Saltate %1$d playlist di Spotify prive di brani importabili.</item>
@@ -1838,9 +1838,9 @@
     <string name="settings_history_playlists_desc">Crea playlist settimanali e mensili dalla tua cronologia d'ascolto. Si aggiornano automaticamente e vengono visualizzate nella libreria.</string>
     <string name="history_playlist_monthly">Brani più ascoltati del mese</string>
     <plurals name="downloads_failed_banner">
-        <item quantity="one">%1$d download fallito</item>
-        <item quantity="many">%1$d download falliti</item>
-        <item quantity="other">%1$d download falliti</item>
+        <item quantity="one">%1$d download non riuscito</item>
+        <item quantity="many">%1$d download non riusciti</item>
+        <item quantity="other">%1$d download non riusciti</item>
     </plurals>
     <string name="connected_devices">Dispositivi connessi</string>
     <string name="available_devices">Dispositivi disponibili</string>
@@ -1919,9 +1919,9 @@
     <string name="lyrics_share_auto_fit">Ripristina adattamento automatico</string>
     <string name="lyrics_share_scroll_options">Scorri in basso l\u0027anteprima per personalizzare la tua immagine.</string>
     <plurals name="download_queue_pending">
-        <item quantity="one">%1$d brano nella coda di download</item>
-        <item quantity="many">%1$d brani nella coda di download</item>
-        <item quantity="other">%1$d brani nella coda di download</item>
+        <item quantity="one">%1$d brano in coda di download</item>
+        <item quantity="many">%1$d brani in coda di download</item>
+        <item quantity="other">%1$d brani in coda di download</item>
     </plurals>
     <string name="download_paused">In pausa</string>
     <string name="ui_enhancements">Miglioramenti interfaccia</string>
@@ -1950,7 +1950,7 @@
     <string name="ai_test_connection_running">Test di connessione…</string>
     <string name="ai_test_connection_description">Invia una richiesta di testo d\u0027esempio usando le impostazioni attuali</string>
     <string name="ai_test_connection_success">Connessione riuscita.</string>
-    <string name="ai_test_connection_failed">Connessione fallita. Controlla le tue credenziali e i modelli.</string>
+    <string name="ai_test_connection_failed">Connessione non riuscita. Controlla le credenziali e i modelli.</string>
     <string name="ai_test_missing_credentials">Inserisci le credenziali prima del test.</string>
     <string name="ai_test_detection_result">Rilevamento: traduzione necessaria = %1$s</string>
     <string name="ai_test_translation_result">Traduzione d\u0027esempio: %1$s</string>
@@ -2015,7 +2015,7 @@
     <string name="lyrics_provider_lrcred_description">Database di testi con sincronizzazione per riga e per parola, con supporto a testi temporizzati e sincronizzati automaticamente</string>
     <string name="foreign_import_title">Importa da un\u0027altra app</string>
     <string name="foreign_import_desc">Aggiungi Mi Piace, playlist e cronologia d'ascolto da un backup di InnerTune, OuterTune, ViMusic, RiMusic, Kreate, SimpMusic o Prism. La libreria corrente viene mantenuta.</string>
-    <string name="foreign_import_success">Importati %1$d brani, %2$d Mi Piace, %3$d playlist e %4$d riproduzioni</string>
+    <string name="foreign_import_success">Importati %1$d brani, %2$d Mi piace, %3$d playlist e %4$d riproduzioni</string>
     <string name="foreign_import_unsupported">Il file non è un backup proveniente da un servizio musicale supportato</string>
     <string name="foreign_import_failed">Importazione non riuscita: %1$s</string>
     <string name="listen_together_description">Ascolta la musica con i tuoi amici in tempo reale. Crea una stanza per ospitare, o unisciti ad una esistente con un codice</string>
