@@ -3674,8 +3674,12 @@ object PlayerState {
             } ?: return null
         if (currentRemoved && !connectedSession) {
             localQueueRemovalPlaybackIntents.removeAll { it.first.get() == null }
-            localQueueRemovalPlaybackIntents += WeakReference(removal) to wasPlaying
-            if (nextEntryKey == null) stop() else playQueueOccurrence(nextEntryKey)
+            if (nextEntryKey == null) {
+                localQueueRemovalPlaybackIntents += WeakReference(removal) to wasPlaying
+                stop()
+            } else {
+                playQueueOccurrence(nextEntryKey)
+            }
         }
         return removal
     }
@@ -3735,7 +3739,7 @@ object PlayerState {
         if (restored && removal.items.any { it.index == removal.previousCurrentIndex } &&
             queue.currentIndex.value == removal.previousCurrentIndex
         ) {
-            val startPlayingOverride = consumeLocalQueueRemovalPlaybackIntent(removal)
+            val startPlayingOverride = consumeLocalQueueRemovalPlaybackIntent(removal) ?: player.isPlaying.value
             queue.state.value.entries
                 .getOrNull(queue.currentIndex.value)
                 ?.key

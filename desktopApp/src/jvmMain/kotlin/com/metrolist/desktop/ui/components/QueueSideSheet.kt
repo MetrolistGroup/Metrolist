@@ -87,7 +87,7 @@ internal fun DesktopQueueContent(
         val removal = pendingRemoval ?: return@LaunchedEffect
         val count = removal.items.size
         val result =
-            snackbarHostState.showSnackbar(
+            AppState.snackbarHostState.showSnackbar(
                 message = getPluralString(Res.plurals.removed_from_queue, count, count),
                 actionLabel = getString(Res.string.undo),
                 duration = SnackbarDuration.Short,
