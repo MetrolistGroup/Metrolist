@@ -87,6 +87,51 @@ class ArtistTracksLoaderTest {
         }
 
     @Test
+    fun visibleItemCanRetryMissingMetadataWithoutAnotherArtistRefresh() =
+        runTest {
+            var requests = 0
+            val client =
+                client {
+                    if (++requests == 1) {
+                        """{"queueDatas":[]}"""
+                    } else {
+                        """{"queueDatas":[{"content":{"playlistPanelVideoRenderer":{"videoId":"song","title":{"runs":[{"text":"Remote title"}]},"lengthText":{"runs":[{"text":"3:20"}]}}}}]}"""
+                    }
+                }
+            val job = Job()
+            try {
+                val song = SongItem("song", "Displayed title", null, emptyList(), null)
+                val sections = mapOf("Songs" to listOf(song))
+                val state = MutableStateFlow(ArtistUiState(sections = sections, unfilteredSections = sections))
+                val repository = YouTubeRepository(InnerTube(client))
+                val loader = ArtistTracksLoader("artist", CoroutineScope(coroutineContext + job), state) { repository }
+
+                loader.loadItemMetadata(listOf(song))
+                job.children.toList().forEach { it.join() }
+                assertEquals(1, requests)
+                assertEquals(
+                    song,
+                    state.value.sections
+                        .getValue("Songs")
+                        .single(),
+                )
+
+                repeat(2) { loader.loadItemMetadata(listOf(song)) }
+                job.children.toList().forEach { it.join() }
+                assertEquals(2, requests)
+                assertEquals(
+                    song.copy(duration = 200),
+                    state.value.sections
+                        .getValue("Songs")
+                        .single(),
+                )
+            } finally {
+                job.cancelAndJoin()
+                client.close()
+            }
+        }
+
+    @Test
     fun durationUpdatesPreserveUnchangedSectionsAndUnknownResponses() {
         val song = SongItem("song", "Title", null, emptyList(), null)
         val known = song.copy(id = "known", duration = 45)
