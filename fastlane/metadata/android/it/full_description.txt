@@ -18,4 +18,4 @@ Funzionalità:
 - **Canvas da Apple Music**, Spotify e YouTube Music
 - Diversi stili di lettore, copertina, minilettore e sfondo tra cui scegliere
 - Supporto per font e icone dell'app personalizzati
-- ... e molto altro ancora!
+- …e molto altro ancora!
