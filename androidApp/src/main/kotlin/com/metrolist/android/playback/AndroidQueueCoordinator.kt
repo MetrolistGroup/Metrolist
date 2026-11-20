@@ -474,7 +474,7 @@ internal class AndroidQueueCoordinator(
         isRadioQueue = true
         radioQueuePlaylistId = "RDAMVM${seed.id}"
         radioQueueParams = null
-        if (preserveCurrent) bootstrapRecommendations(seed.id, allowRepeatMode = true)
+        bootstrapRecommendations(seed.id, allowRepeatMode = true)
         onSave()
     }
 
@@ -687,7 +687,7 @@ internal class AndroidQueueCoordinator(
     fun observeAutoLoadMore() {
         scope.launch {
             combine(repeatMode, player.songQueue) { mode, _ -> mode }.collect { mode ->
-                if (mode == Player.REPEAT_MODE_ALL) {
+                if (mode == Player.REPEAT_MODE_ALL && !isRadioQueue) {
                     autoLoadMoreJob?.cancel()
                     // Repeat All removes generated tracks; allow the same song to refill once repeat is off.
                     lastAutoLoadedSongId = null
