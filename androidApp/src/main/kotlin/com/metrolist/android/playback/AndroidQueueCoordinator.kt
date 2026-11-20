@@ -683,6 +683,8 @@ internal class AndroidQueueCoordinator(
             combine(repeatMode, player.songQueue) { mode, _ -> mode }.collect { mode ->
                 if (mode == Player.REPEAT_MODE_ALL) {
                     autoLoadMoreJob?.cancel()
+                    // Repeat All removes generated tracks; allow the same song to refill once repeat is off.
+                    lastAutoLoadedSongId = null
                     recommendationBootstrapJob?.cancel()
                     transitions.cancelNextTrackPreload()
                     generatedQueueIndicesToRemoveForRepeat(player.songQueue.value, player.currentMediaItemIndex.value)
