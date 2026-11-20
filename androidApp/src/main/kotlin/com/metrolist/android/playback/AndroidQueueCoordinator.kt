@@ -277,11 +277,13 @@ internal class AndroidQueueCoordinator(
         queueTitle: String?,
         finite: Boolean,
         playlistPage: PlaylistPage? = null,
+        radioQueue: Boolean = false,
         replacement: () -> Unit,
     ) {
         val seed = songs.getOrNull(startIndex) ?: return
         synchronized(queueSessionLock) {
             resetQueueSession(seed.id, queueTitle, finite)
+            isRadioQueue = radioQueue
             this.playlistPage = playlistPage
             queuedSongIds.addAll(songs.map(SongItem::id))
             replacement()
@@ -301,6 +303,7 @@ internal class AndroidQueueCoordinator(
         startPositionMs: Long = 0L,
         startPlaying: Boolean = true,
         startVideo: Boolean = false,
+        radioQueue: Boolean = false,
     ) {
         val (playableSongs, adjustedStartIndex) =
             filteredQueueSelection(songs, startIndex, BlockedContent.snapshot()::isBlocked) ?: return
@@ -326,7 +329,7 @@ internal class AndroidQueueCoordinator(
         ) {
             return
         }
-        replaceQueueSession(playableSongs, adjustedStartIndex, queueTitle, finite ?: true, playlistPage) {
+        replaceQueueSession(playableSongs, adjustedStartIndex, queueTitle, finite ?: true, playlistPage, radioQueue) {
             if (startVideo && !fromRemote) onVideoSelected(playableSongs[adjustedStartIndex])
             player.setQueue(
                 songs = playableSongs,
@@ -457,7 +460,7 @@ internal class AndroidQueueCoordinator(
         }
         val preserveCurrent = current != null && player.isReady && !player.playbackTransitionPending.value
         if (preserveCurrent) {
-            replaceQueueSession(listOf(requireNotNull(current)), 0, title, finite = false) {
+            replaceQueueSession(listOf(requireNotNull(current)), 0, title, finite = false, radioQueue = true) {
                 val queue = MusicQueue().apply { setQueue(listOf(current)) }
                 if (Settings.shared.persistentShuffleAcrossQueues &&
                     player.isShuffleEnabled
@@ -469,9 +472,15 @@ internal class AndroidQueueCoordinator(
                 _shuffleModeEnabled.value = player.isShuffleEnabled
             }
         } else {
-            playQueue(songs = listOf(seed), queueTitle = title, finite = false, fromRemote = true, startPlaying = startPlaying)
+            playQueue(
+                songs = listOf(seed),
+                queueTitle = title,
+                finite = false,
+                fromRemote = true,
+                startPlaying = startPlaying,
+                radioQueue = true,
+            )
         }
-        isRadioQueue = true
         radioQueuePlaylistId = "RDAMVM${seed.id}"
         radioQueueParams = null
         bootstrapRecommendations(seed.id, allowRepeatMode = true)
@@ -484,7 +493,7 @@ internal class AndroidQueueCoordinator(
 
     fun bootstrapRecommendations(
         seedSongId: String,
-        allowRepeatMode: Boolean = false,
+        allowRepeatMode: Boolean = isRadioQueue,
     ) {
         if (!PlaybackNetworkStateStore.current.connected) return
         if (!canBootstrapRecommendations()) return
