@@ -66,8 +66,6 @@ internal fun audioOutputFormats(
 ): List<AudioFormat> =
     if (osName.startsWith("Windows", ignoreCase = true) && format.channels == 2 && format.sampleSizeInBits == 16) {
         listOf(format, AudioFormat(format.sampleRate, 16, 4, true, format.isBigEndian))
-    } else if (osName.startsWith("Windows", ignoreCase = true) && format.channels == 4 && format.sampleSizeInBits == 16) {
-        listOf(format, AudioFormat(format.sampleRate, 16, 2, true, format.isBigEndian))
     } else {
         listOf(format)
     }
