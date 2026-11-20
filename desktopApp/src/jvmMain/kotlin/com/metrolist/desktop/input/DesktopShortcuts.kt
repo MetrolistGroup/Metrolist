@@ -894,7 +894,12 @@ internal class ShortcutPressTracker {
         val repeatablePhysicalKey =
             physicalPositionsAvailable &&
                 (physicalPosition == PhysicalKeyPosition.MINUS || physicalPosition == PhysicalKeyPosition.EQUALS)
-        val repeatable = event.keyCode in REPEATABLE_AWT_KEY_CODES || repeatablePhysicalKey
+        val repeatable =
+            if (physicalPositionsAvailable) {
+                repeatablePhysicalKey
+            } else {
+                event.keyCode in REPEATABLE_AWT_KEY_CODES
+            }
         if (consumed && !repeatable) handled.add(event.keyCode)
         return consumed
     }
