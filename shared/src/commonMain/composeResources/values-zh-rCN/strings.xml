@@ -209,9 +209,9 @@
     <string name="explicit_only_desc">隐藏未标记为露骨的歌曲</string>
     <string name="action_backup">备份</string>
     <string name="action_restore">还原</string>
-    <string name="backup_create_success">成功新建备份</string>
-    <string name="backup_create_failed">无法新建备份</string>
-    <string name="restore_failed">无法还原备份</string>
+    <string name="backup_create_success">备份已创建</string>
+    <string name="backup_create_failed">无法创建备份</string>
+    <string name="restore_failed">无法恢复备份</string>
     <string name="dismiss">关闭</string>
     <string name="preview">预览</string>
     <string name="about">关于</string>
@@ -219,14 +219,14 @@
     <string name="credits_creator">Metrolist 创建者</string>
     <string name="credits_desktop_developer">桌面开发者</string>
     <string name="credits_macos_developer">macOS 开发者</string>
-    <string name="credits_lyrics_ui_services">歌词界面及服务</string>
-    <string name="credits_android_designer">Android 设计师</string>
+    <string name="credits_lyrics_ui_services">歌词界面和服务</string>
+    <string name="credits_android_designer">界面设计师</string>
     <string name="open_website">打开网站</string>
     <string name="open_github_profile">打开 GitHub 个人资料</string>
     <string name="sponsor_developer">赞助开发者</string>
     <string name="credits_license_name">许可</string>
-    <string name="credits_license_desc">Metrolist 采用 GPL-3.0 许可证授权。</string>
-    <string name="devmode_already_active" translatable="true">开发模式已激活</string>
+    <string name="credits_license_desc">Metrolist 采用 GPL-3.0 许可</string>
+    <string name="devmode_already_active" translatable="true">开发者模式已经激活</string>
     <string name="discord_listen_to_metrolist">收听 Metrolist</string>
     <string name="discord_login_description">连接您的 Discord 账号</string>
     <string name="discord_button1_text_default">在 YouTube Music 上收听</string>
@@ -236,25 +236,25 @@
     <string name="discord_status_authorized">已授权</string>
     <string name="discord_error_denied">Discord 拒绝了授权。</string>
     <string name="discord_error_connection_failed">无法连接到 Discord。Metrolist 将自动重试。</string>
-    <string name="discord_error_no_browser">没有可用的应用来打开 Discord 授权。</string>
+    <string name="discord_error_no_browser">没有可用于打开 Discord 授权的应用。</string>
     <string name="discord_error_token_exchange_failed">令牌交换失败。请重试。</string>
     <string name="discord_error_token_refresh_failed">令牌刷新失败。请重新登录。</string>
     <string name="discord_error_invalid_scope">无效范围。请重新登录。</string>
     <string name="discord_error_timeout">授权超时。请重试。</string>
     <string name="discord_error_missing_code">Discord 响应中缺少授权码。</string>
-    <string name="discord_button1_label">按钮 1 的文字</string>
+    <string name="discord_button1_label">按钮 1 的标签</string>
     <string name="discord_button1_url">按钮 1 的 URL</string>
-    <string name="discord_button2_label">按钮 2 的文字</string>
+    <string name="discord_button2_label">按钮 2 的标签</string>
     <string name="discord_button2_url">按钮 2 的 URL</string>
     <string name="discord_refresh_rpc">刷新 RPC</string>
-    <string name="discord_refresh_rpc_description">重新发送当前状态至 Discord</string>
+    <string name="discord_refresh_rpc_description">再次将您的当前在线状态发送到 Discord</string>
     <string name="discord_refresh_rate_limited">再次刷新前请稍等片刻</string>
-    <string name="discord_refresh_error">刷新状态失败</string>
+    <string name="discord_refresh_error">无法刷新状态</string>
     <string name="integrations">集成</string>
     <string name="settings_interface">界面</string>
     <string name="settings_playback">播放</string>
     <string name="settings_player_audio_description">音频、过渡、队列</string>
-    <string name="track_transition_fade_desc">平滑过渡当前曲目与下一曲目</string>
+    <string name="track_transition_fade_desc">在当前歌曲和下一首歌曲之间平滑过渡</string>
     <string name="settings_content_title">内容</string>
     <string name="settings_content_description">语言、动态、发现</string>
     <string name="settings_lyrics_description">歌词获取与翻译</string>
@@ -269,13 +269,13 @@
     <string name="settings_about_title">关于 Metrolist</string>
     <string name="settings_search_placeholder">搜索设置</string>
     <string name="settings_search_no_results">未找到设置</string>
-    <string name="settings_search_no_results_desc">未找到 %1$s 的匹配项</string>
+    <string name="settings_search_no_results_desc">%1$s 没有匹配项</string>
     <string name="search_no_results">未找到结果</string>
     <string name="appearance_title">外观</string>
     <string name="appearance_theme">主题</string>
     <string name="appearance_style">样式</string>
     <string name="appearance_app_icon">应用图标</string>
-    <string name="appearance_app_icon_credit">备用图标由 Kayé 制作 (@thy_k on Discord)</string>
+    <string name="appearance_app_icon_credit">备选图标由 Kayé（Discord 用户名：@thy_k）设计</string>
     <string name="song_artwork_colors">歌曲封面颜色</string>
     <string name="song_artwork_colors_description">如有当前歌曲封面，则将其覆盖应用颜色</string>
     <string name="theme_palette_style">调色板样式</string>
@@ -289,7 +289,7 @@
     <string name="app_icon_arctic_haze">北极迷雾</string>
     <string name="app_icon_static">静态</string>
     <string name="app_font_choose">选择字体文件</string>
-    <string name="app_font_picker_desc">选择 TTF 或 OTF 文件。Metrolist 将其复制到应用私有存储。</string>
+    <string name="app_font_picker_desc">选择 TTF 或 OTF 文件。Metrolist 会将其复制到应用专属存储空间。</string>
     <string name="app_font_system">系统默认</string>
     <string name="app_font_applied">使用 %1$s</string>
     <string name="app_font_invalid">无法使用该字体。请选择有效的 TTF 或 OTF 文件，大小小于 20 MB。</string>
@@ -319,7 +319,7 @@
     <string name="appearance_play_videos_in_mini_player" tools:ignore="MissingTranslation">在迷你播放器中播放视频</string>
     <string name="appearance_play_videos_in_mini_player_desc" tools:ignore="MissingTranslation">迷你播放器收起时显示音乐视频</string>
     <string name="appearance_mini_player_swipe_sensitivity">滑动灵敏度</string>
-    <string name="appearance_misc">杂项</string>
+    <string name="appearance_misc">其他</string>
     <string name="appearance_default_open_tab">默认启动标签页</string>
     <string name="appearance_navigation_tabs">导航标签</string>
     <string name="appearance_show_home_tab">显示主页标签</string>
@@ -796,5 +796,5 @@
     <string name="edit_playlist_cover_note">您的账号必须绑定电话号码并在 YouTube Music 上完成验证才能更改播放列表封面</string>
     <string name="discord_state">状态</string>
     <string name="settings_reset_to_default">重置为默认设置</string>
-    <string name="backup_created"></string>
+    <string name="backup_created">备份已创建</string>
 </resources>
