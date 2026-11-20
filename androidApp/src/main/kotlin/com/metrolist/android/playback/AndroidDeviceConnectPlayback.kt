@@ -119,6 +119,9 @@ internal class AndroidDeviceConnectPlayback(
                 ) {
                     queue.resetQueueSession(seedId, desired.title, desired.finite)
                 }
+                if (!desired.finite) {
+                    queue.setExplicitRadioQueue(true)
+                }
                 queue.setTitle(desired.title)
                 repeatMode.value = desired.repeatMode.toPlayerRepeatMode()
                 if (trackChanged || previousQueue != desiredQueue) player.restoreQueue(desiredQueue, currentTrackChanged = trackChanged)

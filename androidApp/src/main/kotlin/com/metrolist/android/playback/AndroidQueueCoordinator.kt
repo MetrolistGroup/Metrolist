@@ -260,6 +260,13 @@ internal class AndroidQueueCoordinator(
         onSessionReset()
     }
 
+    fun setExplicitRadioQueue(explicitRadio: Boolean) {
+        synchronized(queueSessionLock) {
+            isRadioQueue = explicitRadio
+            isExplicitRadioQueue = explicitRadio
+        }
+    }
+
     fun synchronizeMediaSessionQueue(replacesQueue: Boolean) {
         val songs = player.songQueue.value
         synchronized(queueSessionLock) {
@@ -459,6 +466,7 @@ internal class AndroidQueueCoordinator(
                 ),
             )
         ) {
+            setExplicitRadioQueue(true)
             // The target keeps a retained seed's play state, so send the play intent separately.
             if (startPlaying) AndroidDeviceConnect.intercept(DcPlaybackCommand(DcPlaybackAction.PLAY))
             return
