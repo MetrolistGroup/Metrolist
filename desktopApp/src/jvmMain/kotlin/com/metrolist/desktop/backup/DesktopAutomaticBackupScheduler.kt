@@ -48,8 +48,6 @@ object DesktopAutomaticBackupScheduler {
                                 "Could not prune automatic backups: ${pruneResult.exceptionOrNull()?.message ?: "Unknown error"}",
                             )
                         }
-                        delay(if (pruningPending) FAILURE_RETRY_MILLIS else 1L)
-                        continue
                     }
                     val now = System.currentTimeMillis()
                     if (isAutoBackupDue(settings.autoBackupLastSuccessEpochMillis, now, frequency)) {
@@ -85,11 +83,18 @@ object DesktopAutomaticBackupScheduler {
                         delay(if (result.isSuccess && !pruningPending) frequency.intervalMillis else FAILURE_RETRY_MILLIS)
                     } else {
                         val nextDue = settings.autoBackupLastSuccessEpochMillis + frequency.intervalMillis
-                        delay((nextDue - now).coerceAtLeast(1L))
+                        val untilNextBackup = (nextDue - now).coerceAtLeast(1L)
+                        delay(if (pruningPending) minOf(untilNextBackup, FAILURE_RETRY_MILLIS) else untilNextBackup)
                     }
                 }
             }
     }
+
+    fun listBackups(): List<File> =
+        File(XdgUtils.getXdgDataHome(), "metrolist/automatic-backups")
+            .listFiles { file -> file.isFile && file.extension == "zip" }
+            .orEmpty()
+            .sortedByDescending(File::lastModified)
 
     private fun pruneBackups(directory: File) {
         directory

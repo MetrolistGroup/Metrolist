@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
@@ -75,6 +76,9 @@ import com.metrolist.shared.generated.resources.automatic_backup_description
 import com.metrolist.shared.generated.resources.automatic_backup_frequency
 import com.metrolist.shared.generated.resources.automatic_backup_location
 import com.metrolist.shared.generated.resources.automatic_backup_monthly
+import com.metrolist.shared.generated.resources.automatic_backup_restore
+import com.metrolist.shared.generated.resources.automatic_backup_restore_desc
+import com.metrolist.shared.generated.resources.automatic_backup_restore_empty
 import com.metrolist.shared.generated.resources.automatic_backup_weekly
 import com.metrolist.shared.generated.resources.backup_create_failed
 import com.metrolist.shared.generated.resources.backup_create_success
@@ -364,6 +368,8 @@ fun BackupRestoreSettingsScreen(colorScheme: ColorScheme) {
     var showBackupWarning by remember { mutableStateOf(false) }
     var warningSeconds by remember { mutableIntStateOf(5) }
     var restoreFile by remember { mutableStateOf<File?>(null) }
+    var automaticBackups by remember { mutableStateOf<List<File>>(emptyList()) }
+    var showAutomaticBackupPicker by remember { mutableStateOf(false) }
     var isRestoring by remember { mutableStateOf(false) }
     var status by remember { mutableStateOf<String?>(null) }
 
@@ -679,6 +685,16 @@ fun BackupRestoreSettingsScreen(colorScheme: ColorScheme) {
                             },
                         ),
                         Material3SettingsItem(
+                            title = { Text(stringResource(Res.string.automatic_backup_restore)) },
+                            description = { Text(stringResource(Res.string.automatic_backup_restore_desc)) },
+                            onClick = {
+                                scope.launch {
+                                    automaticBackups = withContext(Dispatchers.IO) { DesktopAutomaticBackupScheduler.listBackups() }
+                                    showAutomaticBackupPicker = true
+                                }
+                            },
+                        ),
+                        Material3SettingsItem(
                             title = { Text(stringResource(Res.string.foreign_import_title)) },
                             description = {
                                 Text(stringResource(if (isBusy) Res.string.backup_restore_busy else Res.string.foreign_import_desc))
@@ -899,6 +915,37 @@ fun BackupRestoreSettingsScreen(colorScheme: ColorScheme) {
             },
             dismissButton = {
                 TextButton(onClick = { restoreFile = null }, shapes = ButtonDefaults.shapes()) { Text(stringResource(Res.string.cancel)) }
+            },
+        )
+    }
+
+    PopupVisibility(visible = showAutomaticBackupPicker) {
+        AlertDialog(
+            onDismissRequest = { showAutomaticBackupPicker = false },
+            title = { Text(stringResource(Res.string.automatic_backup)) },
+            text = {
+                if (automaticBackups.isEmpty()) {
+                    Text(stringResource(Res.string.automatic_backup_restore_empty))
+                } else {
+                    LazyColumn(modifier = Modifier.heightIn(max = 320.dp)) {
+                        items(automaticBackups) { file ->
+                            TextButton(
+                                modifier = Modifier.fillMaxWidth(),
+                                onClick = {
+                                    showAutomaticBackupPicker = false
+                                    restoreFile = file
+                                },
+                            ) {
+                                Text(file.name)
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showAutomaticBackupPicker = false }) {
+                    Text(stringResource(Res.string.close))
+                }
             },
         )
     }
