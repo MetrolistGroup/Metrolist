@@ -701,7 +701,7 @@ internal class AndroidQueueCoordinator(
     fun observeAutoLoadMore() {
         scope.launch {
             combine(repeatMode, player.songQueue) { mode, _ -> mode }.collect { mode ->
-                if (mode == Player.REPEAT_MODE_ALL && !isRadioQueue) {
+                if (mode == Player.REPEAT_MODE_ALL && !isExplicitRadioQueue) {
                     autoLoadMoreJob?.cancel()
                     // Repeat All removes generated tracks; allow the same song to refill once repeat is off.
                     lastAutoLoadedSongId = null
