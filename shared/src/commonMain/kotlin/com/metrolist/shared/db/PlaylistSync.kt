@@ -121,17 +121,19 @@ suspend fun MusicDatabase.cacheRemotePlaylist(
             .map { it.map }
             .toMutableList()
     dao.clearPlaylist(entity.id)
+    val existingById = existingMappings.associateBy { it.id }
+    val existingBySetVideoId = existingMappings.mapNotNull { m -> m.setVideoId?.let { it to m } }.toMap()
     val matches = mutableMapOf<Int, PlaylistSongMap>()
     val claimed = mutableSetOf<Int>()
     songs.forEachIndexed { index, song ->
         val mapping =
-            song.playlistLocalMappingId?.let { id -> existingMappings.firstOrNull { it.id == id } }
-                ?: song.playlistSetVideoId?.let { token -> existingMappings.firstOrNull { it.setVideoId == token } }
+            song.playlistLocalMappingId?.let { id -> existingById[id] }
+                ?: song.playlistSetVideoId?.let { token -> existingBySetVideoId[token] }
         if (mapping != null && claimed.add(mapping.id)) matches[index] = mapping
     }
-    val unmatched = existingMappings.filterNot { it.id in claimed }
+    val unmatchedBySongId = existingMappings.filterNot { it.id in claimed }.groupBy { it.songId }
     songs.indices.filterNot(matches::containsKey).groupBy { songs[it].id }.forEach { (songId, indices) ->
-        val old = unmatched.filter { it.songId == songId }
+        val old = unmatchedBySongId[songId].orEmpty()
         if (indices.size == old.size) indices.zip(old).forEach { (index, mapping) -> matches[index] = mapping }
     }
     songs.forEachIndexed { index, song ->

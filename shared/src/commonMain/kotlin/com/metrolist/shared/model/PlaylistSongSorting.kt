@@ -198,7 +198,7 @@ fun YTItem.librarySearchKey(): String =
     }
 
 fun SongItem.playlistOccurrenceIdentity(): String? =
-    playlistOccurrenceId ?: playlistLocalMappingId?.let { "local:$it" } ?: playlistSetVideoId?.let { "remote:$it" }
+    playlistOccurrenceId ?: playlistSetVideoId?.let { "remote:$it" } ?: playlistLocalMappingId?.let { "local:$it" }
 
 fun List<SongItem>.preservePlaylistOccurrenceMappings(previousSongs: List<SongItem>): List<SongItem> {
     val previousIndexBySetVideoId =
