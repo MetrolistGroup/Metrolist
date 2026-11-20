@@ -1,11 +1,14 @@
 package com.metrolist.shared.viewmodels
 
+import com.metrolist.shared.model.ArtistItem
 import com.metrolist.shared.model.PlaylistItem
 import com.metrolist.shared.model.SongItem
 import com.metrolist.shared.model.SortDirection
+import com.metrolist.shared.settings.ArtistNameAliases
 import com.metrolist.shared.settings.HiddenLibraryItemKey
 import com.metrolist.shared.settings.HiddenLibraryItemType
 import com.metrolist.shared.settings.Settings
+import com.metrolist.shared.settings.displayTitle
 import com.metrolist.shared.ui.screens.LibraryFilter
 import com.metrolist.shared.ui.screens.LibrarySortType
 import com.russhwolf.settings.MapSettings
@@ -91,6 +94,26 @@ class LibraryPresentationTest {
             assertEquals(emptyList(), presentation.prepare(emptySearch))
             assertEquals(emptyList(), presentation.cached(emptySearch))
             assertNull(presentation.cached(input))
+        }
+
+    @Test
+    fun nameOrderFollowsArtistDisplayAliasAfterRenamingAndClearing() =
+        runTest {
+            val zulu = ArtistItem("z", "Zulu", null)
+            val beta = ArtistItem("b", "Beta", null)
+            val artists = input.copy(items = listOf(zulu, beta), filter = LibraryFilter.ARTISTS)
+            val presentation = LibraryPresentation(StandardTestDispatcher(testScheduler))
+            assertEquals(listOf(beta, zulu), presentation.prepare(artists))
+
+            ArtistNameAliases.set(zulu.id, null, zulu.title, "Able")
+            val aliased = artists.copy(artistAliases = ArtistNameAliases.aliases)
+            assertNull(presentation.cached(aliased))
+            val sorted = presentation.prepare(aliased)
+            assertEquals(listOf("Able", "Beta"), sorted.map { it.displayTitle })
+            assertSame(zulu, sorted.first())
+
+            ArtistNameAliases.clear(zulu.id, null, zulu.title)
+            assertEquals(listOf(beta, zulu), presentation.prepare(artists.copy(artistAliases = ArtistNameAliases.aliases)))
         }
 
     @Test
