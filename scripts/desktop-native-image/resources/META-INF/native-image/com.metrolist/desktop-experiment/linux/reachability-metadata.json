@@ -1,6 +1,18 @@
 {
   "reflection": [
     {
+      "type": "com.metrolist.desktop.input.X11",
+      "jniAccessible": true,
+      "allDeclaredMethods": true
+    },
+    {
+      "type": {
+        "proxy": [
+          "com.metrolist.desktop.input.X11"
+        ]
+      }
+    },
+    {
       "type": "com.metrolist.desktop.utils.WindowMoveX11",
       "jniAccessible": true,
       "allDeclaredFields": true,
