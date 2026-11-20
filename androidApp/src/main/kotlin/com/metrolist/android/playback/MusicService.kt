@@ -1590,8 +1590,9 @@ class MusicService :
                     )
             }
         podcastProgress.flush()?.join()
+        if (stagedShouldCommit == null && !isCurrentRequest()) return false
         val requestedPosition =
-            if (stagedShouldCommit == null) queueCoordinator.takeRestorePosition(request.song, request.positionMs) else request.positionMs
+            if (stagedShouldCommit == null) queueCoordinator.takeRestorePosition(request.positionMs) else request.positionMs
         val targetPosition =
             withContext(Dispatchers.IO) {
                 PodcastLibrary.resumePosition(
