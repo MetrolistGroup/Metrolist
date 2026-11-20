@@ -62,10 +62,10 @@
         <item quantity="many">Scaricati %1$d brani su %2$d, %3$d non riusciti</item>
         <item quantity="other">Scaricati %1$d brani su %2$d, %3$d non riusciti</item>
     </plurals>
-    <string name="download_pause_all">Metti in pausa tutti</string>
-    <string name="download_resume_all">Riprendi tutti</string>
-    <string name="download_cancel_all">Annulla tutti</string>
-    <string name="remove_download">Rimuovi i download</string>
+    <string name="download_pause_all">Sospendi tutto</string>
+    <string name="download_resume_all">Riprendi tutto</string>
+    <string name="download_cancel_all">Annulla tutto</string>
+    <string name="remove_download">Rimuovi download</string>
     <string name="add_to_playlist">Aggiungi alla playlist</string>
     <string name="view_artist">Mostra artista</string>
     <string name="view_song_info">Mostra dettagli brano</string>
@@ -277,7 +277,7 @@
     <string name="discord_error_no_browser">Nessuna app disponibile per aprire l\u0027autorizzazione di Discord.</string>
     <string name="discord_error_token_exchange_failed">Scambio del token non riuscito. Riprova.</string>
     <string name="discord_error_token_refresh_failed">Aggiornamento del token non riuscito. Accedi di nuovo.</string>
-    <string name="discord_error_invalid_scope">Campo non valido. Riprova ad accedere.</string>
+    <string name="discord_error_invalid_scope">Autorizzazioni non valide. Accedi di nuovo.</string>
     <string name="discord_error_timeout">Autorizzazione scaduta. Riprova.</string>
     <string name="discord_error_missing_code">Codice autorizzazione mancante nella risposta di Discord.</string>
     <string name="discord_button1_label">Etichetta del pulsante 1</string>
@@ -337,7 +337,7 @@
     <string name="app_font_picker_desc">Seleziona un file TTF od OTF. Metrolist lo copierà nell\u0027archiviazione privata dell\u0027app.</string>
     <string name="app_font_system">Predefinito di sistema</string>
     <string name="app_font_applied">Utilizzando %1$s</string>
-    <string name="app_font_invalid">Impossibile utilizzare questo font. Seleziona un file TTF od OTF valido e inferiore a 20MB.</string>
+    <string name="app_font_invalid">Impossibile utilizzare questo font. Seleziona un file TTF o OTF valido di dimensioni inferiori a 20MB.</string>
     <string name="app_font_downloads">Download rapido dei font</string>
     <string name="app_font_checking">Controllo il font installato…</string>
     <string name="app_font_reset">Reimposta font</string>
@@ -1146,7 +1146,7 @@
     <string name="token_login_title">Token di accesso</string>
     <string name="token_login_show_token">Mostra token</string>
     <string name="token_login_sensitive_warning_title">Questo token contiene dati sensibili.</string>
-    <string name="token_adv_login_description">Questo è un metodo di login avanzato. Puoi immettere o aggiornare il token qui come alternativa di accesso al portale web.\nQuesto può accelerare il login su più dispositivi per esempio.\nNota che qualsiasi formato token invalido non verrà accettato.\n\nNon condividere il token.</string>
+    <string name="token_adv_login_description">Questo è un metodo di login avanzato. In alternativa al portale web, qui puoi inserire o aggiornare direttamente il token di accesso.\nAd esempio, questo può velocizzare il login su più dispositivi.\nI formati token non validi che l'app non riesce ad analizzare non verranno accettati.\n\nNon condividere il token.</string>
     <string name="token_login_error_missing_auth_cookie">Includi un cookie non vuoto SAPISID, __Secure-1PAPISID o __Secure-3PAPISID.</string>
     <string name="statistics">Statistiche</string>
     <string name="save_changes">Salva modifiche</string>
@@ -1923,7 +1923,7 @@
         <item quantity="many">%1$d brani in coda di download</item>
         <item quantity="other">%1$d brani in coda di download</item>
     </plurals>
-    <string name="download_paused">In pausa</string>
+    <string name="download_paused">Sospendi</string>
     <string name="ui_enhancements">Miglioramenti interfaccia</string>
     <string name="ui_enhancements_description">Copertine più arrotondate, forme espressive per gli artisti e indicatori di riproduzione al posto dei pulsanti di avvio</string>
     <string name="updates_installing_title">Installazione dell\u0027aggiornamento</string>
@@ -2134,12 +2134,12 @@
     <string name="onboarding_library_migrated_title">La tua libreria è stata migrata.</string>
     <string name="onboarding_continue_without_migration">Continua con una libreria vuota</string>
     <string name="onboarding_migration_recovery_description">Puoi riprovare o continuare con una libreria vuota. Una copia di recupero del database originale rimarrà su questo dispositivo. Potrai ripristinare un backup dopo la configurazione.</string>
-    <string name="onboarding_migration_failed">Impossibile preparare la libreria. I dati originali sono stati conservati.</string>
+    <string name="onboarding_migration_failed">Impossibile preparare la libreria. I tuoi dati originali sono stati conservati.</string>
     <string name="onboarding_library_migrated_description">Le tue playlist, la cronologia, i brani piaciuti e i dati della libreria sono pronti in questa versione di Metrolist.</string>
     <string name="onboarding_notifications_denied">Le notifiche sono disattivate. Puoi attivarle in seguito nelle impostazioni dell'app di Android oppure scegliere No per continuare.</string>
     <string name="mini_player_video_prerequisite">Attiva prima Riproduci video musicali nelle impostazioni di riproduzione</string>
     <string name="download_folder_access_failed">Impossibile salvare l'accesso a questa cartella. Scegli una cartella con accesso in lettura e scrittura.</string>
-    <string name="download_migration_failed">Alcuni download non sono stati spostati e rimangono nella posizione precedente. Controlla l'accesso all'archiviazione e lo spazio libero, poi riprova.</string>
+    <string name="download_migration_failed">Impossibile spostare alcuni download, che restano nella posizione precedente. Controlla l'accesso all'archiviazione e lo spazio libero, quindi riprova.</string>
     <string name="download_error_storage_full">Spazio di archiviazione insufficiente. Libera spazio e riprova.</string>
     <string name="download_error_storage_access">Impossibile accedere alla cartella dei download. Selezionala di nuovo nelle impostazioni di archiviazione e riprova.</string>
     <string name="download_error_network">Connessione non riuscita. Controlla la connessione e riprova.</string>
@@ -2148,7 +2148,7 @@
     <string name="import_cancelled_partial">Importazione annullata. Destinazione: %2$s. Brani salvati: almeno %1$d. Per continuare, avvia di nuovo l'importazione e scegli questa destinazione.</string>
     <string name="recognition_history_save_failed">Impossibile salvare questo brano nella cronologia dei brani riconosciuti.</string>
     <string name="device_connect_server_failed">Impossibile avviare Device Connect. Controlla la rete e riprova.</string>
-    <string name="device_connect_discovery_failed">Ricerca dei dispositivi non riuscita. Controlla l'accesso alla rete locale e ripeti la ricerca.</string>
+    <string name="device_connect_discovery_failed">Ricerca dei dispositivi non riuscita. Controlla l'accesso alla rete locale e ripeti la scansione.</string>
     <string name="home_offline_empty">Sei offline e non ci sono contenuti salvati per la Home. Connettiti a Internet e aggiorna per caricare i consigli.</string>
     <string name="home_load_failed">Impossibile caricare la Home. Controlla la connessione e riprova.</string>
     <string name="library_load_failed">Impossibile caricare la libreria. Controlla la connessione e riprova.</string>
@@ -2207,8 +2207,8 @@
     <string name="listen_together_submitting_join">Invio della richiesta di accesso…</string>
     <string name="listen_together_connection_lost_guest">Connessione persa. Riprova per riprendere la riproduzione della stanza oppure esci per controllare la riproduzione autonomamente.</string>
     <string name="listen_together_suggestion_waiting">In attesa che l'host esamini il tuo suggerimento</string>
-    <string name="playlist_update_partially_failed">Playlist rinominata, ma non è stato possibile salvare la descrizione. Prova a modificarla di nuovo.</string>
-    <string name="import_error_resolution_failed">Impossibile cercare i brani. Controlla la connessione e riprova l'importazione.</string>
+    <string name="playlist_update_partially_failed">Playlist rinominata, ma impossibile salvare la descrizione. Prova a modificarla di nuovo.</string>
+    <string name="import_error_resolution_failed">Impossibile cercare i brani. Controlla la connessione e ripeti l'importazione.</string>
     <string name="import_error_incomplete_source">Impossibile caricare la playlist completa. Riprova.</string>
     <string name="ios_screen_privacy">Nascondi anteprime e registrazioni dello schermo</string>
     <string name="ios_screen_privacy_description">Nascondi i contenuti dell'app nella schermata delle app recenti e durante la registrazione o la duplicazione dello schermo. iOS consente comunque gli screenshot.</string>
@@ -2229,7 +2229,7 @@
     <string name="backup_unsupported_database">La versione del database in questo backup non è supportata da questa versione di Metrolist.</string>
     <string name="backup_too_large">Il backup supera un limite consentito di dimensione o numero di voci.</string>
     <string name="backup_invalid_data">Impossibile leggere o convalidare il backup. Potrebbe essere danneggiato o contenere dati non supportati.</string>
-    <string name="search_history_removal_failed">Impossibile cancellare la cronologia delle ricerche dell'account. Riprova quando sei connesso.</string>
+    <string name="search_history_removal_failed">Impossibile cancellare la cronologia ricerche dell'account. Riprova quando sei connesso.</string>
     <string name="top_period_all_time">Dall'inizio</string>
     <string name="top_period_past_24_hours">Ultime 24 ore</string>
     <string name="top_period_past_week">Ultima settimana</string>
@@ -2324,7 +2324,7 @@
     <string name="download_filter_unavailable">Impossibile caricare la playlist completa. Mostrati tutti i download. Riprova ad applicare il filtro playlist.</string>
     <string name="statistics_share">Condividi statistiche di ascolto</string>
     <string name="statistics_save_image">Salva immagine statistiche</string>
-    <string name="statistics_share_failed">Non è stato possibile creare o condividere l'immagine delle statistiche. Riprova.</string>
+    <string name="statistics_share_failed">Impossibile creare o condividere l'immagine delle statistiche. Riprova.</string>
     <string name="queue_move">Sposta</string>
     <string name="queue_multi_select">Selezione multipla</string>
     <string name="queue_move_hint">Sposta: premi OK per prendere o posizionare un brano, Su/Giù per spostarlo e Indietro per terminare.</string>
@@ -2332,7 +2332,7 @@
     <string name="device_connect_direct_title">Connettiti con indirizzo IP</string>
     <string name="device_connect_direct_address">Indirizzo IP e porta</string>
     <string name="device_connect_direct_hint">Questo dispositivo è in ascolto sulla porta %1$d. Inserisci l'indirizzo IP LAN o VPN dell'altro dispositivo e la relativa porta di ascolto nel formato IPv4:porta o [IPv6]:porta. Confronta il codice di associazione su entrambi i dispositivi.</string>
-    <string name="device_connect_direct_failed">Impossibile connettersi o completare l'abbinamento. Controlla l'indirizzo, porta di ascolto, accesso alla VPN e l'approvazione dell'abbinamento, quindi prova di nuovo.</string>
+    <string name="device_connect_direct_failed">Impossibile connettersi o completare l'associazione. Controlla l'indirizzo, la porta di ascolto, l'accesso VPN e l'approvazione dell'associazione, quindi riprova.</string>
     <string name="device_connect_default_device">Dispositivo di riproduzione predefinito</string>
     <string name="device_connect_default_device_description">Inizia la riproduzione su questo dispositivo abbinato quando connesso. Scegli Nessuno per cancellare il predefinito.</string>
     <string name="player_type_expressive">Espressivo</string>
@@ -2535,7 +2535,7 @@
     <string name="channel_switch_sign_in_again">Accedi di nuovo</string>
     <string name="channel_switch_browse_hint">Apri il menù dalla foto profilo sulla pagina di YouTube Music e scegli il canale, quindi seleziona %1$s.</string>
     <string name="settings_library_grid_columns">Colonne griglia libreria</string>
-    <string name="youtube_sync_failed">Impossibile sincronizzare con YouTube Music. Verifica la connessione o accedi di nuovo.</string>
+    <string name="youtube_sync_failed">Impossibile sincronizzare con YouTube Music. Controlla la connessione o accedi di nuovo.</string>
     <string name="playlist_picker_library_order">Ordine libreria</string>
     <string name="ai_translation_failed">Traduzione con IA non riuscita</string>
     <string name="ai_setup_title">Imposta la traduzione testi con IA</string>
@@ -2557,15 +2557,15 @@
     <string name="devtools_render_backend_opengl">OpenGL</string>
     <string name="devtools_render_backend_software">Software</string>
     <string name="devtools_render_backend_metal">Metal</string>
-    <string name="ai_translation_failed_privacy">Traduzione automatica IA bloccata dalle impostazioni sulla privacy</string>
-    <string name="ai_translation_failed_key">Traduzione con IA non riuscita: chiave invalida o scaduta</string>
-    <string name="ai_translation_failed_credit">Traduzione con IA non riuscita: limite account o di crediti raggiunto</string>
+    <string name="ai_translation_failed_privacy">Traduzione con IA bloccata dalle impostazioni sulla privacy</string>
+    <string name="ai_translation_failed_key">Traduzione con IA non riuscita: chiave non valida o scaduta</string>
+    <string name="ai_translation_failed_credit">Traduzione con IA non riuscita: limite di credito dell'account o della chiave raggiunto</string>
     <string name="ai_translation_failed_rate">Traduzione con IA non riuscita: limite di richieste raggiunto</string>
-    <string name="ai_translation_failed_daily">Limite giornaliero di traduzioni gratuite raggiunto. Riprova domani oppure aggiungi crediti OpenRouter.</string>
+    <string name="ai_translation_failed_daily">Limite giornaliero di traduzioni gratuite raggiunto. Riprova domani o aggiungi crediti OpenRouter.</string>
     <string name="ai_translation_failed_minute">Limite di traduzioni gratuite raggiunto. Attendi un minuto e riprova.</string>
-    <string name="ai_translation_failed_busy">Traduzione con IAnon riuscita: i modelli gratuiti sono occupati</string>
+    <string name="ai_translation_failed_busy">Traduzione con IA non riuscita: i modelli gratuiti sono occupati</string>
     <string name="ai_translation_failed_model">Traduzione con IA non riuscita: modello non disponibile</string>
-    <string name="ai_translation_failed_network">Traduzione con IA non riuscita: connessione persa o scaduta</string>
+    <string name="ai_translation_failed_network">Traduzione con IA non riuscita: connessione interrotta o scaduta</string>
     <string name="ai_translation_failed_empty">Traduzione con IA non riuscita: risposta vuota</string>
     <string name="ai_translation_failed_invalid">Traduzione con IA non riuscita: risposta non valida</string>
     <string name="ai_translation_failed_incomplete">Traduzione con IA non riuscita: risposta incompleta</string>
