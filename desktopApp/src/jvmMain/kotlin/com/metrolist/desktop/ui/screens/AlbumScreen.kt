@@ -80,6 +80,7 @@ import com.metrolist.shared.model.SongItem
 import com.metrolist.shared.model.filterForPlaylistSearch
 import com.metrolist.shared.model.withDownloadsPlayable
 import com.metrolist.shared.settings.Settings
+import com.metrolist.shared.settings.BlockedContent
 import com.metrolist.shared.state.AlbumLikeState
 import com.metrolist.shared.state.GlobalYouTubeRepository
 import com.metrolist.shared.ui.components.CollectionHeaderNavigation
@@ -150,12 +151,11 @@ fun AlbumScreen(
     var menuSong by remember { mutableStateOf<SongItem?>(null) }
     var searchQuery by remember(album.id) { mutableStateOf("") }
     val selection = rememberSelectionState(album.id)
-    var isTogglingFavorite by remember(album.id) { mutableStateOf(false) }
+    val inFlightAlbumIds by AlbumLikeState.inFlightAlbumIds.collectAsState()
+    val isTogglingFavorite = album.id in inFlightAlbumIds
     val onFavorite: () -> Unit = {
         if (!isTogglingFavorite) {
-            isTogglingFavorite = true
             AlbumLikeState.toggleAlbumLike(album, songs) { result ->
-                isTogglingFavorite = false
                 result
                     .onSuccess { liked ->
                         if (liked && Settings.shared.autoDownloadSavedCollections) {
@@ -168,7 +168,7 @@ fun AlbumScreen(
                                         } else {
                                             songs
                                         }
-                                    DownloadManager.downloadAll(allSongs)
+                                    DownloadManager.downloadAll(BlockedContent.filterSongs(allSongs))
                                 } catch (e: CancellationException) {
                                     throw e
                                 } catch (e: Exception) {

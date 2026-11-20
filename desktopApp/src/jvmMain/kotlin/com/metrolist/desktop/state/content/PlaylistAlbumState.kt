@@ -345,19 +345,27 @@ object PlaylistAlbumState {
     }
 
     private fun downloadBookmarkedPlaylist(id: String) {
+        val activeLoad = playlistLoadJob.takeIf { selectedPlaylistId == id }
         AppState.scope.launch {
             try {
+                activeLoad?.join()
                 val playlist =
                     withContext(Dispatchers.IO) {
                         database.dao().playlist(id).first()
                             ?: database.dao().playlistByBrowseId(id.removePrefix("VL")).first()
                             ?: database.dao().playlistByBrowseId(id).first()
                     }
+                val storedSongs =
+                    playlist?.let {
+                        withContext(Dispatchers.IO) {
+                            database.dao().playlistSongs(it.id).first().map { song -> song.toSongItem() }
+                        }
+                    }.orEmpty()
                 val songs =
                     if (playlist?.playlist?.isLocal == true) {
-                        withContext(Dispatchers.IO) {
-                            database.dao().playlistSongs(playlist.id).first().map { it.toSongItem() }
-                        }
+                        storedSongs
+                    } else if (playlist != null && hasCompleteStoredPlaylist(playlist.playlist, storedSongs)) {
+                        storedSongs
                     } else {
                         withContext(Dispatchers.IO) {
                             val repository = GlobalYouTubeRepository.instance
