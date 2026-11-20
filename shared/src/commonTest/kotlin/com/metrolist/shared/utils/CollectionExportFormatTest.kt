@@ -91,6 +91,47 @@ class CollectionExportFormatTest {
     }
 
     @Test
+    fun artistlessM3uTitlesKeepPunctuationAndLiteralBy() {
+        val titles = listOf("Stand by Me", "12 - Finale", "Call : Response", "\"Quoted\"")
+        val tracks = titles.map { song.copy(id = "abcdefghijk", title = it, artists = emptyList()) }
+        val exported = CollectionExportFormat.M3U.render(tracks)
+        val ordinaryM3u = "#EXTM3U\n" + titles.joinToString("") { "#EXTINF:123,$it\nhttps://music.youtube.com/watch?v=abcdefghijk\n" }
+
+        assertEquals(ordinaryM3u, exported.replace("#METROLIST:TITLE-ONLY\n", ""))
+        assertEquals(
+            titles.size,
+            exported.lineSequence().windowed(2).count { (first, second) ->
+                first.startsWith("#EXTINF:") && second.startsWith("https://")
+            },
+        )
+        val restored = UniversalPlaylistParser.prepareFile(exported, "playlist.m3u", "Playlist", "File").tracks
+        assertEquals(titles, restored.map { it.customTitle })
+        assertEquals(List(titles.size) { "" }, restored.map { it.artist })
+    }
+
+    @Test
+    fun m3uTitleCommentOnlyAffectsItsOwnNonemptyExtendedLabel() {
+        val text =
+            """
+            #EXTM3U
+            #EXTINF:120,First by Legacy
+            #METROLIST:TITLE-ONLY
+            https://youtu.be/abcdefghijk
+              #METROLIST:TITLE-ONLY${" ".repeat(3)}
+            # ordinary comment
+            #EXTINF:120,   Stand by Me${" ".repeat(3)}
+            https://youtu.be/bcdefghijkl
+            #METROLIST:TITLE-ONLY
+            #EXTINF:120,Ignored by Legacy
+            #EXTINF:120,Next by Legacy
+            https://youtu.be/cdefghijklm
+            """.trimIndent()
+        val restored = UniversalPlaylistParser.prepareFile(text, "playlist.m3u", "Playlist", "File").tracks
+        assertEquals(listOf("First", "Stand by Me", "Next"), restored.map { it.customTitle })
+        assertEquals(listOf("Legacy", "", "Legacy"), restored.map { it.artist })
+    }
+
+    @Test
     fun mixedExportsPreserveLocalUrisAndRemoteUrls() {
         val local = song.copy(id = "file:///music/song.flac", isLocal = true)
         for (format in CollectionExportFormat.entries) {

@@ -8,6 +8,8 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonPrimitive
 
+internal const val M3U_LITERAL_TITLE_COMMENT = "#METROLIST:TITLE-ONLY"
+
 object UniversalPlaylistParser {
     private val json =
         Json {
@@ -189,12 +191,23 @@ object UniversalPlaylistParser {
         resolveLocalReference: (String) -> String?,
     ): List<PlaylistImportManager.CsvTrack> {
         val results = mutableListOf<PlaylistImportManager.CsvTrack>()
-        var pendingInfo: String? = null
+        var pendingInfo: Pair<String, Boolean>? = null
+        var literalNextLabel = false
         for (line in text.lineSequence()) {
             val trimmed = line.trim()
             if (trimmed.isBlank()) continue
             if (trimmed.startsWith("#EXTINF:", ignoreCase = true)) {
-                pendingInfo = trimmed.substringAfter(',').trim().takeIf { ',' in trimmed && it.isNotBlank() }
+                pendingInfo =
+                    trimmed
+                        .substringAfter(',')
+                        .trim()
+                        .takeIf { ',' in trimmed && it.isNotBlank() }
+                        ?.let { it to literalNextLabel }
+                literalNextLabel = false
+                continue
+            }
+            if (trimmed == M3U_LITERAL_TITLE_COMMENT) {
+                literalNextLabel = true
                 continue
             }
             if (trimmed.startsWith("#")) continue
@@ -203,11 +216,12 @@ object UniversalPlaylistParser {
             val directReference = if (videoId == null) resolveDirectReference(trimmed, resolveLocalReference) else null
             val fallbackTitle = referenceTitle(trimmed)
             val suppliedInfo =
-                pendingInfo?.let { label ->
-                    splitArtistAndTitleOn(label, " - ") ?: splitArtistAndTitle(label)
+                pendingInfo?.let { (label, literal) ->
+                    if (literal) "" to label else splitM3uDisplayLabel(label)
                 }
             val (artist, title) = suppliedInfo ?: ("" to fallbackTitle)
             pendingInfo = null
+            literalNextLabel = false
             if (title.isNotBlank() || videoId != null || directReference != null) {
                 results +=
                     PlaylistImportManager.CsvTrack(
@@ -289,6 +303,9 @@ object UniversalPlaylistParser {
             .substringBeforeLast('.')
             .ifBlank { value }
     }
+
+    internal fun splitM3uDisplayLabel(label: String): Pair<String, String> =
+        splitArtistAndTitleOn(label, " - ") ?: splitArtistAndTitle(label)
 
     internal fun splitArtistAndTitle(line: String): Pair<String, String> {
         val trimmed = line.trim()
