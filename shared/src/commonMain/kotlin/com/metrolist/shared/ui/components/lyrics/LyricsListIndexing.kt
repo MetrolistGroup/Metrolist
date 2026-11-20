@@ -106,9 +106,9 @@ internal fun mergeBackgroundLyricsEntries(lyrics: List<LyricsEntry>): List<Lyric
                 nextMain?.let { main ->
                     main.endTime?.takeIf { it > main.time } ?: main.time + 4000L
                 }
-            val overlapsNextMain =
-                nextMainStart != null && nextMainEnd != null && background.time < nextMainEnd && nextMainStart < backgroundEnd
-            if (overlapsNextMain && sourceBackground != null && nextMainBackground != null &&
+            val nextMainCoversBackground =
+                nextMainStart != null && nextMainEnd != null && nextMainStart <= background.time && nextMainEnd >= backgroundEnd
+            if (nextMainCoversBackground && sourceBackground != null && nextMainBackground != null &&
                 normalizeBackgroundText(sourceBackground) == normalizeBackgroundText(nextMainBackground)
             ) {
                 displayLines[index] =
