@@ -63,7 +63,7 @@ object DesktopAutomaticBackupScheduler {
                                 "Automatic backup failed: ${result.exceptionOrNull()?.message ?: "Unknown error"}",
                             )
                         }
-                        delay(frequency.intervalMillis)
+                        delay(if (result.isSuccess) frequency.intervalMillis else FAILURE_RETRY_MILLIS)
                     } else {
                         val nextDue = settings.autoBackupLastSuccessEpochMillis + frequency.intervalMillis
                         delay((nextDue - now).coerceAtLeast(1L))
@@ -83,5 +83,6 @@ object DesktopAutomaticBackupScheduler {
 
     private const val BACKUP_FILENAME_PREFIX = "metrolist-backup"
     private const val CREDENTIAL_RECOVERY_POLL_MILLIS = 1_000L
+    private const val FAILURE_RETRY_MILLIS = 5 * 60 * 1_000L
     private const val MAX_RETAINED_BACKUPS = 10
 }
