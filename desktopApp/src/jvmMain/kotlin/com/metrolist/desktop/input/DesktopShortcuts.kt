@@ -101,7 +101,7 @@ fun DesktopShortcutLayer(
     val textInputInterceptor =
         remember(keyFocus) {
             PlatformTextInputInterceptor { request, next ->
-                val session = Any()
+                val session = DesktopTextInputSession()
                 keyFocus.setTextInputActive(session, true)
                 try {
                     next.startInputMethod(request)
@@ -178,7 +178,7 @@ private fun installGlobalShortcutDispatcher(
                     onRefresh,
                     toggleWindowFullscreen,
                     physicalKeyCapture?.consume(event.keyCode),
-                    physicalPositionsAvailable = physicalKeyCapture != null,
+                    physicalPositionsAvailable = physicalKeyCapture?.isAvailable == true,
                 )
             }
         }
@@ -839,6 +839,8 @@ internal fun handleShortcut(
     }
 }
 
+private class DesktopTextInputSession
+
 private fun isComposeModalActive(): Boolean =
     UiState.showShortcutsDialog ||
         UiState.showSettings ||
@@ -919,14 +921,18 @@ internal fun physicalPositionForAwtCode(awtKeyCode: Int): PhysicalKeyPosition? =
         else -> null
     }
 
-internal fun windowsPhysicalPositionForScanCode(scanCode: Int): PhysicalKeyPosition? =
-    when (scanCode and 0xFF) {
-        0x29 -> PhysicalKeyPosition.BACKQUOTE
-        0x0C -> PhysicalKeyPosition.MINUS
-        0x0D -> PhysicalKeyPosition.EQUALS
-        0x4E -> PhysicalKeyPosition.NUMPAD_PLUS
-        0x33 -> PhysicalKeyPosition.COMMA
-        0x35 -> PhysicalKeyPosition.SLASH
+internal fun windowsPhysicalPositionForScanCode(
+    scanCode: Int,
+    flags: Int = 0,
+): PhysicalKeyPosition? =
+    when {
+        scanCode and 0xFF == 0x35 && flags and WINDOWS_LOW_LEVEL_EXTENDED_KEY_FLAG != 0 -> null
+        scanCode and 0xFF == 0x29 -> PhysicalKeyPosition.BACKQUOTE
+        scanCode and 0xFF == 0x0C -> PhysicalKeyPosition.MINUS
+        scanCode and 0xFF == 0x0D -> PhysicalKeyPosition.EQUALS
+        scanCode and 0xFF == 0x4E -> PhysicalKeyPosition.NUMPAD_PLUS
+        scanCode and 0xFF == 0x33 -> PhysicalKeyPosition.COMMA
+        scanCode and 0xFF == 0x35 -> PhysicalKeyPosition.SLASH
         else -> null
     }
 
