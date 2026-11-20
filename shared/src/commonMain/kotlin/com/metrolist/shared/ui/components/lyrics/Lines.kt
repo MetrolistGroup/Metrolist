@@ -973,7 +973,12 @@ internal fun InlineLyricsLine(
 
     val bgText =
         remember(rawBgWordsForText, entry.backgroundText) {
-            rawBgWordsForText?.joinToString("") { romanizedSyllableText(it) }?.trim() ?: entry.backgroundText.orEmpty()
+            combineBackgroundText(
+                listOf(
+                    rawBgWordsForText?.joinToString("") { romanizedSyllableText(it) }?.trim(),
+                    entry.backgroundText,
+                ),
+            )
         }
 
     val bgDisplayStyle = remember(bgStyle, bgText) { bgStyle.forDisplayedText(bgText) }

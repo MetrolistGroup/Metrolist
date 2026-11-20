@@ -48,6 +48,7 @@ internal fun selectedLyricsText(
                             ?.removeSurrounding("(", ")"),
                         entry.words?.backgroundText(),
                     ).distinctBy(::normalizeBackgroundText)
+                        .filterNot { mainText != null && normalizeBackgroundText(it) == normalizeBackgroundText(mainText) }
                         .joinToString(" ")
                         .takeIf(String::isNotBlank)
                 listOfNotNull(mainText, backgroundText?.let { "($it)" }).joinToString(" ").takeIf(String::isNotBlank)

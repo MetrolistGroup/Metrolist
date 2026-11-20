@@ -1207,10 +1207,12 @@ fun LyricsView(
                                 itemsIndexed(unsyncedDisplayLyrics, key = { _, indexedEntry -> indexedEntry.first }) { _, indexedEntry ->
                                     val (index, entry) = indexedEntry
                                     val displayText =
-                                        listOfNotNull(
-                                            entry.text.takeIf(String::isNotBlank),
-                                            entry.backgroundText?.takeIf(String::isNotBlank)?.let { "($it)" },
-                                        ).joinToString(" ")
+                                        combineBackgroundText(
+                                            listOf(
+                                                entry.text.takeIf(String::isNotBlank),
+                                                entry.backgroundText?.takeIf(String::isNotBlank)?.let { "($it)" },
+                                            ),
+                                        )
                                     Text(
                                         text = displayText,
                                         color = textColor,

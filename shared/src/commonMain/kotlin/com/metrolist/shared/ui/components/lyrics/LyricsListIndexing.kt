@@ -55,6 +55,14 @@ internal fun normalizeBackgroundText(text: String): String =
         .replace(Regex("\\s+"), " ")
         .lowercase()
 
+internal fun combineBackgroundText(parts: List<String?>): String =
+    parts
+        .filterNotNull()
+        .map(String::trim)
+        .filter(String::isNotBlank)
+        .distinctBy(::normalizeBackgroundText)
+        .joinToString(" ")
+
 private fun textBackgroundWord(
     text: String?,
     entry: LyricsEntry,
@@ -77,17 +85,20 @@ internal fun mergeBackgroundLyricsEntries(lyrics: List<LyricsEntry>): List<Lyric
         if (!background.isBackground) return@forEachIndexed
         val mainIndex = (index - 1 downTo 0).firstOrNull { !lyrics[it].isBackground }
         if (mainIndex == null) {
-            val nextMain = lyrics.drop(index + 1).firstOrNull { !it.isBackground }
+            val nextMainIndex = (index + 1 until lyrics.size).firstOrNull { !lyrics[it].isBackground }
+            val nextMain = nextMainIndex?.let(lyrics::get)
             val sourceBackground =
                 listOfNotNull(
                     background.text.takeIf(String::isNotBlank),
                     background.backgroundText?.takeIf(String::isNotBlank),
                     background.words?.backgroundText(),
-                ).joinToString(" ").takeIf(String::isNotBlank)
+                ).distinctBy(::normalizeBackgroundText).joinToString(" ").takeIf(String::isNotBlank)
             val nextMainBackground =
                 nextMain?.let {
                     listOfNotNull(it.backgroundText?.takeIf(String::isNotBlank), it.words?.backgroundText())
-                        .joinToString(" ").takeIf(String::isNotBlank)
+                        .distinctBy(::normalizeBackgroundText)
+                        .joinToString(" ")
+                        .takeIf(String::isNotBlank)
                 }
             val backgroundEnd = background.endTime?.takeIf { it > background.time } ?: background.time + 4000L
             val nextMainStart = nextMain?.time
@@ -110,6 +121,16 @@ internal fun mergeBackgroundLyricsEntries(lyrics: List<LyricsEntry>): List<Lyric
                         backgroundText = null,
                         backgroundTranslatedText = null,
                     )
+                nextMainIndex?.let { targetIndex ->
+                    nextMain?.let { main ->
+                        displayLines[targetIndex] =
+                            main.copy(
+                                romanizedText = main.romanizedText ?: background.romanizedText,
+                                translatedText = main.translatedText ?: background.translatedText,
+                                backgroundTranslatedText = main.backgroundTranslatedText ?: background.backgroundTranslatedText,
+                            )
+                    }
+                }
             }
             return@forEachIndexed
         }
@@ -193,9 +214,13 @@ internal fun mergeBackgroundLyricsEntries(lyrics: List<LyricsEntry>): List<Lyric
                         existingRawBackgroundWords.filterNot { raw ->
                             existingRomanizedWords.any { roman ->
                                 roman.isBackground &&
-                                    roman.startTime == raw.startTime &&
-                                    roman.endTime == raw.endTime &&
-                                    (!raw.isLineTimed || normalizeBackgroundText(roman.text) == normalizeBackgroundText(raw.text))
+                                    if (raw.isLineTimed) {
+                                        roman.startTime == raw.startTime &&
+                                            roman.endTime == raw.endTime &&
+                                            normalizeBackgroundText(roman.text) == normalizeBackgroundText(raw.text)
+                                    } else {
+                                        roman.startTime < raw.endTime && roman.endTime > raw.startTime
+                                    }
                             }
                         }
                 ).withBackgroundPhraseBoundary() + romanizedIncomingWords.withBackgroundPhraseBoundary()
@@ -203,14 +228,19 @@ internal fun mergeBackgroundLyricsEntries(lyrics: List<LyricsEntry>): List<Lyric
                 null
             }
         val timedWordEndTime =
-            backgroundWords.filter { !it.isLineTimed && it.endTime > it.startTime }
+            backgroundWords
+                .filter { !it.isLineTimed && it.endTime > it.startTime }
                 .maxOfOrNull { (it.endTime * 1000.0).toLong() }
-        val nextMainEndTime = lyrics.drop(index + 1).firstOrNull { !it.isBackground }?.time?.takeIf { it > background.time }
+        val nextMainStartTime =
+            lyrics
+                .drop(index + 1)
+                .firstOrNull { !it.isBackground }
+                ?.time
+                ?.takeIf { it > background.time }
         val backgroundFallbackEndTime =
             background.endTime?.takeIf { it > background.time }
                 ?: timedWordEndTime?.takeIf { it > background.time }
-                ?: nextMainEndTime
-                ?: background.time + 4000L
+                ?: minOf(nextMainStartTime ?: Long.MAX_VALUE, background.time + 4000L)
         val backgroundEndTime =
             maxOf(
                 backgroundFallbackEndTime,
@@ -221,7 +251,11 @@ internal fun mergeBackgroundLyricsEntries(lyrics: List<LyricsEntry>): List<Lyric
                 words = mergedWords.takeIf { it.isNotEmpty() },
                 romanizedWords = mergedRomanizedWords,
                 endTime = listOfNotNull(main.endTime, backgroundEndTime).maxOrNull(),
-                backgroundText = mergedWords.backgroundText(),
+                backgroundText =
+                    listOfNotNull(
+                        main.backgroundText?.takeIf(String::isNotBlank),
+                        mergedWords.backgroundText(),
+                    ).distinctBy(::normalizeBackgroundText).joinToString(" ").takeIf(String::isNotBlank),
                 backgroundTranslatedText =
                     listOfNotNull(
                         main.backgroundTranslatedText?.takeIf(String::isNotBlank),
