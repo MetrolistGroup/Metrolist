@@ -320,7 +320,7 @@
     <string name="appearance_play_videos_in_mini_player_desc" tools:ignore="MissingTranslation">迷你播放器收起时显示音乐视频</string>
     <string name="appearance_mini_player_swipe_sensitivity">滑动灵敏度</string>
     <string name="appearance_misc">其他</string>
-    <string name="appearance_default_open_tab">默认启动标签页</string>
+    <string name="appearance_default_open_tab">默认打开的标签页</string>
     <string name="appearance_navigation_tabs">导航标签</string>
     <string name="appearance_show_home_tab">显示主页标签</string>
     <string name="appearance_show_search_tab">显示搜索标签页</string>
@@ -797,5 +797,5 @@
     <string name="discord_state">状态</string>
     <string name="settings_reset_to_default">重置为默认设置</string>
     <string name="backup_created">备份已创建</string>
-    <string name="search_songs_artists_podcasts"></string>
+    <string name="search_songs_artists_podcasts">搜索歌曲、艺人、播客</string>
 </resources>
