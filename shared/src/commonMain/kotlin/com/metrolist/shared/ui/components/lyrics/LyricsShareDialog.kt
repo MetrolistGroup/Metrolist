@@ -123,7 +123,7 @@ fun LyricsShareDialog(
     var busy by remember { mutableStateOf(false) }
     var failed by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
-    val shareText = if (storyMode) null else stringResource(Res.string.lyrics_share_text, text, title, artist, ShareUrls.song(songId))
+    val shareText = stringResource(Res.string.lyrics_share_text, text, title, artist, ShareUrls.song(songId))
     var style by remember {
         mutableStateOf(
             decodeLyricsImageStyle(
@@ -136,7 +136,7 @@ fun LyricsShareDialog(
                     },
             ).let { style ->
                 if (storyMode && Settings.shared.lyricsShareImageStyle.isBlank()) {
-                    style.copy(background = if (artworkUrl == null) LyricsImageBackground.GRADIENT else LyricsImageBackground.BLUR)
+                    style.copy(background = if (artworkUrl == null) LyricsImageBackground.SOLID else LyricsImageBackground.BLUR)
                 } else {
                     style
                 }
@@ -396,16 +396,14 @@ fun LyricsShareDialog(
                         onClick = onDismiss,
                         shapes = ButtonDefaults.shapes(),
                     ) { Text(stringResource(Res.string.cancel)) }
-                    if (!storyMode) {
-                        Button(
-                            enabled = !busy,
-                            onClick = {
-                                shareText?.let(onShareText)
-                                onDismiss()
-                            },
-                            shapes = ButtonDefaults.shapes(),
-                        ) { Text(stringResource(Res.string.share_as_text)) }
-                    }
+                    Button(
+                        enabled = !busy,
+                        onClick = {
+                            onShareText(shareText)
+                            onDismiss()
+                        },
+                        shapes = ButtonDefaults.shapes(),
+                    ) { Text(stringResource(Res.string.share_as_text)) }
                     Button(
                         enabled = bitmap != null && !busy,
                         onClick = {

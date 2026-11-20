@@ -163,7 +163,9 @@ internal fun renderLyricsImage(
     val cardHeight = if (story) cardBottom - layout.cardTop else 0f
     val verticalOffset = if (story) ((340f * 16f / 9f - cardHeight) / 2f) - layout.cardTop else 0f
     val verticalOffsetPx = verticalOffset * scale
-    val textTop = lyricsTop + lyricsInsetY + verticalOffsetPx
+    val textTop =
+        lyricsTop + lyricsInsetY + verticalOffsetPx +
+            if (story) 0f else (textHeight - renderedLyricsHeight) / 2f
     val textClipHeight = if (story) renderedLyricsHeight else textHeight
     CanvasDrawScope().draw(density, layoutDirection, Canvas(bitmap), Size(bitmap.width.toFloat(), bitmap.height.toFloat())) {
         val path =
@@ -294,31 +296,31 @@ internal fun renderLyricsImage(
             val footerScale = scale * contentScale
             drawCircle(
                 if (story) storySecondaryColor else style.secondaryColor,
-                radius = 10 * footerScale,
+                radius = (if (story) 10 else 22) * footerScale,
                 center =
                     Offset(
-                        padding + 28f * footerScale,
-                        (footerTop + verticalOffset) * scale + 14 * footerScale,
+                        padding + (if (story) 28f else 22f) * footerScale,
+                        (footerTop + verticalOffset) * scale + (if (story) 14 else 22) * footerScale,
                     ),
             )
             translate(
-                padding + 18f * footerScale,
-                (footerTop + verticalOffset) * scale + 4 * footerScale,
+                padding + (if (story) 18f else 3f) * footerScale,
+                (footerTop + verticalOffset) * scale + (if (story) 4 else 3) * footerScale,
             ) {
                 with(logo) {
                     draw(
-                        Size(20 * footerScale, 20 * footerScale),
+                        Size((if (story) 20 else 38) * footerScale, (if (story) 20 else 38) * footerScale),
                         colorFilter = ColorFilter.tint(if (story) storyCardColor else style.backgroundColor),
                     )
                 }
             }
             label(
                 appName,
-                layout.padding + 44f * contentScale,
-                footerTop + verticalOffset + 8f * contentScale,
-                12f * contentScale,
+                layout.padding + (if (story) 44f else 52f) * contentScale,
+                footerTop + verticalOffset + (if (story) 8f else 13f) * contentScale,
+                (if (story) 12f else 14f) * contentScale,
                 if (story) storySecondaryColor else style.secondaryColor,
-                layout.lyricsWidth - 62f * contentScale,
+                layout.lyricsWidth - (if (story) 62f else 52f) * contentScale,
             )
         }
     }
