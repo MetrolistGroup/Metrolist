@@ -27,6 +27,18 @@ internal fun preparePlaylistBatch(
         )
     }
 
+internal fun preparePlaylistPreview(
+    playlist: SpotifyImportManager.LoadedPlaylist?,
+    fallbackTitle: String,
+    source: String,
+    provider: ImportSourceType,
+): ImportedPlaylistData =
+    if (playlist == null) {
+        ImportedPlaylistData(fallbackTitle, emptyList(), source = source, provider = provider, sourcePlaylistCount = 0)
+    } else {
+        preparePlaylistBatch(listOf(playlist), source, provider).single()
+    }
+
 internal data class PlaylistImportBatchResult(
     val completed: List<ImportProgressState.Completed>,
     val failures: List<Pair<String, Throwable>>,

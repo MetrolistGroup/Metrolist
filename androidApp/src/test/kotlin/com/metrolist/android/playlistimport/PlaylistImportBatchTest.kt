@@ -11,11 +11,33 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class PlaylistImportBatchTest {
+    @Test
+    fun singlePlaylistPreviewKeepsTheSameMetadataAndCoverAsBatchImport() {
+        for (provider in listOf(ImportSourceType.SPOTIFY, ImportSourceType.APPLE_MUSIC)) {
+            val playlist = loadedPlaylists().first()
+            val preview = preparePlaylistPreview(playlist, "Fallback", provider.displayName, provider)
+            assertEquals(preparePlaylistBatch(listOf(playlist), provider.displayName, provider).single(), preview)
+            assertEquals(playlist.image, preview.coverUrl)
+            assertEquals(1, preview.sourcePlaylistCount)
+
+            val noArtwork = preparePlaylistPreview(playlist.copy(image = null), "Fallback", provider.displayName, provider)
+            assertNull(noArtwork.coverUrl)
+            assertEquals(preview.copy(coverUrl = null), noArtwork)
+
+            val emptyPreview = preparePlaylistPreview(null, "Fallback", provider.displayName, provider)
+            assertEquals(
+                ImportedPlaylistData("Fallback", emptyList(), source = provider.displayName, provider = provider, sourcePlaylistCount = 0),
+                emptyPreview,
+            )
+        }
+    }
+
     @Test
     fun selectedPlaylistsKeepTheirNamesTracksAndCoversAndImportSequentially() =
         runTest {
