@@ -174,26 +174,31 @@ internal class FcastSession(
 
     override suspend fun play() =
         withContext(Dispatchers.IO) {
-            synchronized(mediaStateLock) {
-                val stoppedMedia = loadedMedia?.takeIf { stopRequested || _state.value.hasEnded }
+            synchronized(writeLock) {
+                val stoppedMedia =
+                    synchronized(mediaStateLock) {
+                        loadedMedia?.takeIf { stopRequested || _state.value.hasEnded }?.also {
+                            mediaGeneration++
+                            awaitingCurrentMediaUpdate = true
+                            awaitingMediaStartPositionMs = 0L
+                            _state.value =
+                                _state.value.copy(
+                                    isPlaying = true,
+                                    isBuffering = true,
+                                    positionMs = 0L,
+                                    hasEnded = false,
+                                    mediaGeneration = mediaGeneration,
+                                )
+                        } ?: run {
+                            _state.value = _state.value.copy(isPlaying = true, hasEnded = false)
+                            null
+                        }
+                    }
                 if (stoppedMedia != null) {
-                    val current = _state.value
-                    stopRequested = false
-                    awaitingCurrentMediaUpdate = true
-                    awaitingMediaStartPositionMs = 0L
-                    _state.value =
-                        current.copy(
-                            isPlaying = true,
-                            isBuffering = true,
-                            positionMs = 0L,
-                            hasEnded = false,
-                        )
                     sendPlay(stoppedMedia.url, stoppedMedia.media, 0L)
-                    return@synchronized
+                } else {
+                    send(OPCODE_RESUME)
                 }
-                stopRequested = false
-                _state.value = _state.value.copy(isPlaying = true, hasEnded = false)
-                send(OPCODE_RESUME)
             }
         }
 
@@ -211,9 +216,11 @@ internal class FcastSession(
 
     override suspend fun stop() =
         withContext(Dispatchers.IO) {
-            synchronized(mediaStateLock) {
-                stopRequested = true
-                _state.value = _state.value.copy(isPlaying = false, isBuffering = false, positionMs = 0L, hasEnded = false)
+            synchronized(writeLock) {
+                synchronized(mediaStateLock) {
+                    stopRequested = true
+                    _state.value = _state.value.copy(isPlaying = false, isBuffering = false, positionMs = 0L, hasEnded = false)
+                }
                 send(OPCODE_STOP)
             }
         }
@@ -331,9 +338,11 @@ internal class FcastSession(
                         return
                     }
                     awaitingCurrentMediaUpdate = false
+                    if (isPlaying) stopRequested = false
                     _state.value =
                         current.copy(
                             isPlaying = isPlaying,
+                            isBuffering = false,
                             positionMs = positionMs,
                             durationMs = durationMs,
                             hasEnded = hasEnded,
