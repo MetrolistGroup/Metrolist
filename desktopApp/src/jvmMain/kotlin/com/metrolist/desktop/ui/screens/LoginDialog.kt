@@ -308,23 +308,19 @@ private fun WindowsAccountContent(
     if (needsLogin) {
         WindowsHelperContent(
             onAuthDataExtracted = { cookie, visitorData, dataSyncId, authUser ->
-                if (loginUrl != null) {
-                    onAuthDataExtracted(cookie, visitorData, dataSyncId, authUser)
-                } else {
-                    authData = AuthData(cookie, visitorData, dataSyncId, authUser)
-                    accounts = emptyList()
-                    selectedAccount = null
-                    busy = true
-                    needsLogin = false
-                }
+                authData = AuthData(cookie, visitorData, dataSyncId, authUser)
+                accounts = emptyList()
+                selectedAccount = null
+                failed = false
+                busy = true
+                loginUrl = null
+                needsLogin = false
             },
             onDismissRequest = {
                 loginUrl = null
                 needsLogin = false
             },
             loginUrl = loginUrl,
-            // Refreshing the list must not save the helper's default channel.
-            validateCredentials = loginUrl != null,
         )
         return
     }
@@ -354,41 +350,60 @@ private fun WindowsAccountContent(
                 shapes = ButtonDefaults.shapes(),
             ) { Text(stringResource(Res.string.channel_switch_sign_in_again)) }
             Button(
-                enabled = !busy && selectedAccount != null,
+                enabled = !busy && (selectedAccount != null || (accounts.isEmpty() && authData.cookie.isNotBlank())),
                 onClick = {
-                    val selected = selectedAccount ?: return@Button
+                    val selected = selectedAccount
                     scope.launch {
                         busy = true
                         failed = false
                         try {
-                            val handled =
-                                selectWebViewAccount(
-                                    authData,
-                                    selected,
-                                    validateAndComplete = { candidate ->
-                                        if (authManager.validateAndSaveCredentials(
-                                                candidate.cookie,
-                                                candidate.visitorData,
-                                                candidate.dataSyncId,
-                                                candidate.authUser,
-                                            )
-                                        ) {
-                                            onAuthDataExtracted(
-                                                candidate.cookie,
-                                                candidate.visitorData,
-                                                candidate.dataSyncId,
-                                                candidate.authUser,
-                                            )
-                                        } else {
-                                            failed = true
-                                        }
-                                    },
-                                    navigate = { url ->
-                                        loginUrl = url
-                                        needsLogin = true
-                                    },
-                                )
-                            if (!handled) failed = true
+                            if (selected == null) {
+                                if (authManager.validateAndSaveCredentials(
+                                        authData.cookie,
+                                        authData.visitorData,
+                                        authData.dataSyncId,
+                                        authData.authUser,
+                                    )
+                                ) {
+                                    onAuthDataExtracted(
+                                        authData.cookie,
+                                        authData.visitorData,
+                                        authData.dataSyncId,
+                                        authData.authUser,
+                                    )
+                                } else {
+                                    failed = true
+                                }
+                            } else {
+                                val handled =
+                                    selectWebViewAccount(
+                                        authData,
+                                        selected,
+                                        validateAndComplete = { candidate ->
+                                            if (authManager.validateAndSaveCredentials(
+                                                    candidate.cookie,
+                                                    candidate.visitorData,
+                                                    candidate.dataSyncId,
+                                                    candidate.authUser,
+                                                )
+                                            ) {
+                                                onAuthDataExtracted(
+                                                    candidate.cookie,
+                                                    candidate.visitorData,
+                                                    candidate.dataSyncId,
+                                                    candidate.authUser,
+                                                )
+                                            } else {
+                                                failed = true
+                                            }
+                                        },
+                                        navigate = { url ->
+                                            loginUrl = url
+                                            needsLogin = true
+                                        },
+                                    )
+                                if (!handled) failed = true
+                            }
                         } catch (e: CancellationException) {
                             throw e
                         } catch (error: Exception) {
@@ -410,7 +425,6 @@ private fun WindowsHelperContent(
     onAuthDataExtracted: (cookie: String, visitorData: String, dataSyncId: String, authUser: String) -> Unit,
     onDismissRequest: () -> Unit,
     loginUrl: String? = null,
-    validateCredentials: Boolean = true,
 ) {
     val coroutineScope = rememberCoroutineScope()
     var status by remember { mutableStateOf<WindowsLoginStatus>(WindowsLoginStatus.Ready) }
@@ -456,18 +470,7 @@ private fun WindowsHelperContent(
                             dataSyncId = json["dataSyncId"]?.jsonPrimitive?.content.orEmpty(),
                             authUser = json["authUser"]?.jsonPrimitive?.content.orEmpty(),
                         )
-                    if (
-                        authData.cookie.isNotBlank() &&
-                        (
-                            !validateCredentials ||
-                                AuthManager().validateAndSaveCredentials(
-                                    authData.cookie,
-                                    authData.visitorData,
-                                    authData.dataSyncId,
-                                    authData.authUser,
-                                )
-                        )
-                    ) {
+                    if (authData.cookie.isNotBlank()) {
                         status = WindowsLoginStatus.Success
                         onAuthDataExtracted(authData.cookie, authData.visitorData, authData.dataSyncId, authData.authUser)
                     } else {
