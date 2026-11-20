@@ -338,10 +338,6 @@ On Android, play a live broadcast and inspect media notifications and Android Au
 
 Play an uncached direct HTTP audio stream on a throttled connection that is faster than the encoded audio bitrate. Check continuous playback across range boundaries, then seek forwards and backwards, pause/resume, and switch tracks during a pending read. Repeat with a short file and a fully cached/downloaded track. Range requests stay bounded, obsolete requests stop when playback closes, and read ahead does not change the playback position. SABR playback and video range sizing remain unchanged.
 
-### Windows multichannel audio output
-
-On Windows, configure the default playback device for a four-channel layout while disabling stereo-only output devices, then play stereo PCM/Opus tracks. Playback should start and remain in sync, with audio on the first two output channels and silence on the extra channels. Also verify a stereo-only device and a non-Windows desktop output retain their existing behavior. The four-channel device check requires Windows hardware; `AudioOutputTest` and `AudioRendererTest` cover negotiation and channel mapping.
-
 ### Android TV root exit
 
 With Stop music on task clear enabled, confirm Back twice at the root on Android TV removes the task and stops active playback. With the setting disabled, playback should continue. Leaving a nested screen or closing the player must not exit; phone Back-exit behavior remains unchanged.
