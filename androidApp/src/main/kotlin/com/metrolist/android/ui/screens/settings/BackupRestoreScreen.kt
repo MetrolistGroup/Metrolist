@@ -441,12 +441,38 @@ fun BackupRestoreScreen(onNavigateBack: () -> Unit) {
             }
         }
 
+    fun importPlaylistFile(uri: Uri) {
+        scope.launch {
+            val fullFileName =
+                withContext(Dispatchers.IO) {
+                    context.getDisplayName(uri) ?: uri.lastPathSegment?.substringAfterLast('/')
+                }
+            val baseName =
+                fullFileName?.substringBeforeLast('.')?.takeIf { it.isNotBlank() }
+                    ?: importedPlaylistText
+            reportPreparationStartFailure(
+                AndroidPlaylistImportTransfer.prepareForeground(
+                    context = context,
+                    playlistTitle = baseName,
+                    source = fileSource,
+                    type = PlaylistImportPreparationType.IMPORT_DATA,
+                ) {
+                    readPlaylistFile(context, uri, fullFileName.orEmpty(), baseName, fileSource).getOrThrow()
+                },
+            )
+        }
+    }
+
     val restoreLauncher =
         rememberLauncherForActivityResult(
             contract = ActivityResultContracts.OpenDocument(),
         ) { uri ->
             if (uri != null) {
-                restoreUri = uri
+                scope.launch {
+                    val extension = withContext(Dispatchers.IO) { context.getDisplayName(uri) }?.substringAfterLast('.', "")?.lowercase()
+                    // Exported playlists picked from Restore belong to the playlist file import, not the backup reader.
+                    if (extension in playlistFileExtensions) importPlaylistFile(uri) else restoreUri = uri
+                }
             }
         }
 
@@ -490,27 +516,7 @@ fun BackupRestoreScreen(onNavigateBack: () -> Unit) {
         rememberLauncherForActivityResult(
             contract = ActivityResultContracts.OpenDocument(),
         ) { uri ->
-            if (uri != null) {
-                scope.launch {
-                    val fullFileName =
-                        withContext(Dispatchers.IO) {
-                            context.getDisplayName(uri) ?: uri.lastPathSegment?.substringAfterLast('/')
-                        }
-                    val baseName =
-                        fullFileName?.substringBeforeLast('.')?.takeIf { it.isNotBlank() }
-                            ?: importedPlaylistText
-                    reportPreparationStartFailure(
-                        AndroidPlaylistImportTransfer.prepareForeground(
-                            context = context,
-                            playlistTitle = baseName,
-                            source = fileSource,
-                            type = PlaylistImportPreparationType.IMPORT_DATA,
-                        ) {
-                            readPlaylistFile(context, uri, fullFileName.orEmpty(), baseName, fileSource).getOrThrow()
-                        },
-                    )
-                }
-            }
+            if (uri != null) importPlaylistFile(uri)
         }
 
     fun openPlaylistFile() {
@@ -1988,6 +1994,8 @@ private val BackupRestoreManager.RestoreStage.descriptionResource: StringResourc
             BackupRestoreManager.RestoreStage.APPLYING_SETTINGS -> Res.string.restore_stage_applying_settings
             BackupRestoreManager.RestoreStage.RESTARTING_APP -> Res.string.restore_stage_restarting_app
         }
+
+private val playlistFileExtensions = setOf("csv", "tsv", "m3u", "m3u8", "json", "txt")
 
 private fun Context.getDisplayName(uri: Uri): String? {
     if (uri.scheme == ContentResolver.SCHEME_CONTENT) {
