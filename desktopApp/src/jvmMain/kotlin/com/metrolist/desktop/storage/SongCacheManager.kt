@@ -508,7 +508,7 @@ object SongCacheManager {
         awaitReady: suspend () -> Unit = {},
     ) {
         if (resource != null && !resource.isDirectFile && !resource.isSabr) return
-        if (resource?.clientName == "local") return
+        if (resource?.isMuxedProgressive == true || resource?.clientName == "local") return
         val mvId = resource?.musicVideoId
         val targetSong =
             if (mvId != null && mvId != song.id) {

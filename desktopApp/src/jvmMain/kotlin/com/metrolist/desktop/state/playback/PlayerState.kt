@@ -4117,7 +4117,7 @@ object PlayerState {
     ) {
         automaticCacheJob?.cancel()
         if (
-            (!resource.isDirectFile && !resource.isSabr) || resource.clientName == "local" ||
+            (!resource.isDirectFile && !resource.isSabr) || resource.isMuxedProgressive || resource.clientName == "local" ||
             !automaticCacheAllowedForCurrentTrack ||
             !automaticCachingEnabled()
         ) {
