@@ -178,7 +178,6 @@ internal class FcastSession(
                 val stoppedMedia =
                     synchronized(mediaStateLock) {
                         loadedMedia?.takeIf { stopRequested || _state.value.hasEnded }?.also {
-                            mediaGeneration++
                             awaitingCurrentMediaUpdate = true
                             awaitingMediaStartPositionMs = 0L
                             _state.value =
