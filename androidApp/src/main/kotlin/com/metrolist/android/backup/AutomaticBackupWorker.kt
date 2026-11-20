@@ -59,6 +59,9 @@ class AutomaticBackupWorker(
 
     private fun pruneBackups(directory: File) {
         directory
+            .listFiles { file -> file.isFile && (file.extension == "tmp" || file.name.endsWith(".tmp")) }
+            ?.forEach { it.delete() }
+        directory
             .listFiles { file -> file.isFile && file.extension == "zip" }
             .orEmpty()
             .sortedByDescending(File::lastModified)

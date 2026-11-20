@@ -69,12 +69,15 @@ fun createIosAutomaticBackup(completion: (Boolean) -> Unit) {
                         Settings.shared.autoBackupLastSuccessEpochMillis =
                             (NSDate().timeIntervalSince1970 * 1000).toLong()
                         Settings.shared.flush()
-                        val files =
+                        val entries =
                             fileManager
                                 .contentsOfDirectoryAtPath(backupDirectory, error = null)
                                 .orEmpty()
                                 .filterIsInstance<String>()
-                                .filter { it.endsWith(".zip") }
+                        entries
+                            .filter { it.endsWith(".tmp") }
+                            .forEach { filename -> fileManager.removeItemAtPath("$backupDirectory/$filename", error = null) }
+                        val files = entries.filter { it.endsWith(".zip") }
                         files
                             .map { filename ->
                                 val path = "$backupDirectory/$filename"
