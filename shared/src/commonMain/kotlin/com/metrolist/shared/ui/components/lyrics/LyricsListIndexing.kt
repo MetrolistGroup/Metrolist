@@ -171,11 +171,15 @@ internal fun mergeBackgroundLyricsEntries(lyrics: List<LyricsEntry>): List<Lyric
             }
         val timedWordEndTime =
             backgroundWords.filterNot(WordTimestamp::isLineTimed).maxOfOrNull { (it.endTime * 1000.0).toLong() }
+        val backgroundFallbackEndTime =
+            background.endTime?.takeIf { it > background.time }
+                ?: timedWordEndTime?.takeIf { it > background.time }
+                ?: background.time + 4000L
         val backgroundEndTime =
             maxOf(
-                background.endTime?.takeIf { it > background.time || timedWordEndTime != null } ?: Long.MIN_VALUE,
+                backgroundFallbackEndTime,
                 timedWordEndTime ?: Long.MIN_VALUE,
-            ).takeIf { it != Long.MIN_VALUE }
+            )
         displayLines[mainIndex] =
             main.copy(
                 words = mergedWords.takeIf { it.isNotEmpty() },
