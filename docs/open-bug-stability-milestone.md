@@ -1,12 +1,13 @@
 # Open bug and stability milestone
 
-This local milestone proposal covers all 53 issues currently labeled `bug` and open in Metrolist as of 2026-11-20, plus the unlabelled open crash report #5039. No issue is open with the `crash` label, and searches found no open OOM or out-of-memory report. The [crash, OOM and stability tracker](crash-oom-issue-tracker.md) includes the wider issue scan and closed reports. Each independent root cause belongs in a separate PR. Existing PRs stay with their current authors and remain listed for tracking.
+This local milestone proposal covers all 54 issues currently labeled `bug` and open in Metrolist as of 2026-11-20, plus the unlabelled open crash report #5039. No issue is open with the `crash` label, and searches found no open OOM or out-of-memory report. The [crash, OOM and stability tracker](crash-oom-issue-tracker.md) includes the wider issue scan and closed reports. Each independent root cause belongs in a separate PR. Existing PRs stay with their current authors and remain listed for tracking.
 
 The canonical GitHub milestone could not be created: the connected account has read-only permission on `MetrolistGroup/Metrolist`. The list is ready to attach when an account with triage or write permission is available.
 
 ## Issues
 
 - [ ] [#5076](https://github.com/MetrolistGroup/Metrolist/issues/5076) Application frozen after playing song
+- [ ] [#5085](https://github.com/MetrolistGroup/Metrolist/issues/5085) Device connect fails to pair devices
 - [ ] [#5083](https://github.com/MetrolistGroup/Metrolist/issues/5083) Weird GPU usages
 - [ ] [#5082](https://github.com/MetrolistGroup/Metrolist/issues/5082) 1x3 widget still shows the player bar instead of the compact player (follow-up to #4585); proposed fix in draft [PR #5084](https://github.com/MetrolistGroup/Metrolist/pull/5084)
 - [ ] [#5080](https://github.com/MetrolistGroup/Metrolist/issues/5080) Bug or not?
@@ -89,6 +90,8 @@ The canonical GitHub milestone could not be created: the connected account has r
 - [#4639](https://github.com/MetrolistGroup/Metrolist/pull/4639) is related to the Home performance report #4748; its cause still needs runtime verification.
 
 ## Triage notes
+
+- #5085 reports the unresolved-account-identity message on both Android and Linux desktop v14.0.1 even though the reporter says both devices use the same account. In current code, a supported auth cookie with a blank `dataSyncId` produces `resolved=false`, which pairing intentionally rejects. The issue has no logs showing which device lacks that ID. Closed WIP PR #4767 concerns client-isolated networks and does not establish this identity failure’s cause; first identify the two devices’ login/channel identity state before changing pairing rules.
 
 - #5080 says the upcoming-song list is empty during playback on Android 14.0.1, without specifying which screen or queue mode. There are no logs or further reproduction details; confirm whether this is the player queue, autoplay recommendations, or a playlist queue before tracing a code path.
 - #5083 reports GPU usage and power increasing while the player, queue and lyrics are visible on Windows 11 26H2. The reporter retested nightly `be252bc` and says the issue remains; GPU use in the queue varies from 25% to 50%. Screenshots still omit GPU model/engine, sampling duration, display resolution/refresh rate and a controlled comparison with the same screen states. Request those details before changing rendering or animation code.
