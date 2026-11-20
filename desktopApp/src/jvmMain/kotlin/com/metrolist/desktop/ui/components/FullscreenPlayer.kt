@@ -62,6 +62,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.graphicsLayer
@@ -128,7 +129,13 @@ fun FullscreenPlayerView(
     }
     val isSolid = playerBackgroundStyle == PlayerBackgroundStyle.SOLID
     val baseBackgroundColor = if (isSolid) colorScheme.surfaceContainer else Color.Black
-    val iconTint = if (isSolid) colorScheme.onSurface.copy(alpha = 0.8f) else Color.White.copy(alpha = 0.8f)
+    val iconTint =
+        when {
+            isSolid -> colorScheme.onSurface.copy(alpha = 0.8f)
+            playerBackgroundStyle == PlayerBackgroundStyle.LIQUID && colorScheme.surface.luminance() >= 0.5f ->
+                Color.Black.copy(alpha = 0.8f)
+            else -> Color.White.copy(alpha = 0.8f)
+        }
     val captionInsets =
         when {
             PlayerState.isFullscreen || UiState.isNativeFullscreen -> WindowInsets(0)
