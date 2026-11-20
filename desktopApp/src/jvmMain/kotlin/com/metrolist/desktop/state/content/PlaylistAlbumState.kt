@@ -360,10 +360,16 @@ object PlaylistAlbumState {
                         }
                     } else {
                         withContext(Dispatchers.IO) {
-                            database.loadAndCachePlaylistPage(GlobalYouTubeRepository.instance, id).songs
+                            val repository = GlobalYouTubeRepository.instance
+                            val firstPage = database.loadAndCachePlaylistPage(repository, id)
+                            if (firstPage.hasMore) {
+                                repository.completePlaylistPage(firstPage, applyContentFilters = false).songs
+                            } else {
+                                firstPage.songs
+                            }
                         }
                     }
-                DownloadManager.downloadPlaylist(id, BlockedContent.filterSongs(songs))
+                DownloadManager.downloadAll(BlockedContent.filterSongs(songs))
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
