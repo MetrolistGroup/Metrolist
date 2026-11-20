@@ -34,20 +34,22 @@ internal class WindowsPhysicalKeyCaptureBuffer(
     ) {
         if (windowsPhysicalPositionForScanCode(scanCode, flags) == null) return
         val now = timeSourceNanos()
-        capturesByVirtualKey
-            .computeIfAbsent(virtualKeyCode) { ConcurrentLinkedDeque() }
-            .also { captures ->
+        synchronized(capturesByVirtualKey) {
+            val captures = capturesByVirtualKey.computeIfAbsent(virtualKeyCode) { ConcurrentLinkedDeque() }
+            synchronized(captures) {
                 pruneExpired(captures, now)
                 captures.addLast(CapturedKey(scanCode, flags, now))
             }
+        }
     }
 
     fun consume(awtKeyCode: Int): PhysicalKeyPosition? {
         val virtualKeyCode = windowsVirtualKeyForAwtCode(awtKeyCode)
         val captures = capturesByVirtualKey[virtualKeyCode] ?: return null
-        pruneExpired(captures, timeSourceNanos())
-        val capturedKey = captures.pollFirst()
-        return capturedKey?.let { windowsPhysicalPositionForScanCode(it.scanCode, it.flags) }
+        return synchronized(captures) {
+            pruneExpired(captures, timeSourceNanos())
+            captures.pollFirst()?.let { windowsPhysicalPositionForScanCode(it.scanCode, it.flags) }
+        }
     }
 
     private fun pruneExpired(
@@ -61,7 +63,11 @@ internal class WindowsPhysicalKeyCaptureBuffer(
         }
     }
 
-    fun clear() = capturesByVirtualKey.clear()
+    fun clear() {
+        synchronized(capturesByVirtualKey) {
+            capturesByVirtualKey.clear()
+        }
+    }
 }
 
 internal class WindowsPhysicalKeyCapture : AutoCloseable {
