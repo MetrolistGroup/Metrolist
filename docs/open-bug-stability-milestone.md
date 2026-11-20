@@ -7,7 +7,7 @@ The canonical GitHub milestone could not be created: the connected account has r
 ## Issues
 
 - [ ] [#5076](https://github.com/MetrolistGroup/Metrolist/issues/5076) Application frozen after playing song
-- [ ] [#5085](https://github.com/MetrolistGroup/Metrolist/issues/5085) Device connect fails to pair devices
+- [ ] [#5085](https://github.com/MetrolistGroup/Metrolist/issues/5085) Device connect fails to pair devices; proposed fix in draft [PR #5087](https://github.com/MetrolistGroup/Metrolist/pull/5087)
 - [ ] [#5083](https://github.com/MetrolistGroup/Metrolist/issues/5083) Weird GPU usages
 - [ ] [#5082](https://github.com/MetrolistGroup/Metrolist/issues/5082) 1x3 widget still shows the player bar instead of the compact player (follow-up to #4585); proposed fix in draft [PR #5084](https://github.com/MetrolistGroup/Metrolist/pull/5084)
 - [ ] [#5080](https://github.com/MetrolistGroup/Metrolist/issues/5080) Bug or not?
@@ -64,6 +64,7 @@ The canonical GitHub milestone could not be created: the connected account has r
 
 ## Existing PRs
 
+- [#5087](https://github.com/MetrolistGroup/Metrolist/pull/5087) recovers the discovered account data-sync ID when single-account login completes and WebView omitted it, on Android and desktop. Shared regression test, desktop compilation and shared/desktop ktlint pass; Android ktlint passes, while Android compilation is blocked by unaccepted local SDK licenses.
 - [#5084](https://github.com/MetrolistGroup/Metrolist/pull/5084) proposes 4 dp vertical padding and a 56 dp minimum metadata-row height for compact and wide music widget layouts. Regression cases and manual-check guidance are added; Android tests/build are blocked by unaccepted local SDK licenses, and device verification remains pending.
 - [#4982](https://github.com/MetrolistGroup/Metrolist/pull/4982) covers the Listen Together foreground-service regression reported in #4672.
 - [#4981](https://github.com/MetrolistGroup/Metrolist/pull/4981) fixes retained artwork identity for #4961; the current head is approved, CodeRabbit and Greptile pass, and shared URL tests, Android compilation and ktlint pass. Android unit tests could not run because `/tmp` was full.
@@ -91,7 +92,7 @@ The canonical GitHub milestone could not be created: the connected account has r
 
 ## Triage notes
 
-- #5085 reports the unresolved-account-identity message on both Android and Linux desktop v14.0.1 even though the reporter says both devices use the same account. In current code, a supported auth cookie with a blank `dataSyncId` produces `resolved=false`, which pairing intentionally rejects. The issue has no logs showing which device lacks that ID. Closed WIP PR #4767 concerns client-isolated networks and does not establish this identity failure’s cause; first identify the two devices’ login/channel identity state before changing pairing rules.
+- #5085 reports the unresolved-account-identity message on Android and Linux desktop v14.0.1 even though the reporter says both use the same account. In current code, a supported auth cookie with a blank `dataSyncId` produces `resolved=false`, which pairing intentionally rejects. The login flows skipped the discovered account ID when exactly one account was returned and the WebView omitted it. Draft PR #5087 supplies that ID on Android and desktop without guessing among multiple accounts; shared tests and desktop compilation pass, but Android compilation awaits accepted local SDK licenses. Closed WIP PR #4767 concerns client-isolated networks and is not this fix.
 
 - #5080 says the upcoming-song list is empty during playback on Android 14.0.1, without specifying which screen or queue mode. There are no logs or further reproduction details; confirm whether this is the player queue, autoplay recommendations, or a playlist queue before tracing a code path.
 - #5083 reports GPU usage and power increasing while the player, queue and lyrics are visible on Windows 11 26H2. The reporter retested nightly `be252bc` and says the issue remains; GPU use in the queue varies from 25% to 50%. Screenshots still omit GPU model/engine, sampling duration, display resolution/refresh rate and a controlled comparison with the same screen states. Request those details before changing rendering or animation code.
