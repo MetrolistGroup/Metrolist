@@ -60,6 +60,7 @@ internal class AndroidQueueCoordinator(
     private val onSessionReset: () -> Unit,
     private val onVideoSelected: (SongItem) -> Unit = {},
     private val castState: () -> CastState = { CastState() },
+    private val onRemotePlay: () -> Unit = {},
 ) {
     companion object {
         private const val TAG = "MusicService"
@@ -472,6 +473,7 @@ internal class AndroidQueueCoordinator(
                     val state = player.queueState.value
                     player.removeQueueItems(state.entries.indices.filterTo(mutableSetOf()) { it != state.currentIndex })
                     if (!Settings.shared.persistentShuffleAcrossQueues && player.isShuffleEnabled) player.toggleShuffle()
+                    if (startPlaying && !remote.isPlaying) onRemotePlay()
                 } else {
                     val queue = MusicQueue().apply { setQueue(listOf(current)) }
                     if (Settings.shared.persistentShuffleAcrossQueues &&

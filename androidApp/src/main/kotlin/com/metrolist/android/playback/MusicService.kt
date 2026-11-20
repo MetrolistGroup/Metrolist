@@ -475,6 +475,7 @@ class MusicService :
                 },
                 onVideoSelected = { song -> videoMode.selectVideoForQueue(song) },
                 castState = { castManager.state.value },
+                onRemotePlay = { serviceScope.launch { castManager.play() } },
             )
         transitions =
             AndroidQueueTransitions(
