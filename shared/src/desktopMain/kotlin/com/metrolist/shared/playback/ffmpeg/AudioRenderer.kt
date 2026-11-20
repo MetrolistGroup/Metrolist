@@ -390,6 +390,7 @@ class AudioRenderer internal constructor(
                 replayOutputChunkIndex++
                 replayOutputChunkOffset = 0
             }
+            discardPlayedOutput()
             expectingOutput = replayOutputChunkIndex < replayOutputChunks.size || pendingOutputChunks.isNotEmpty()
             lastWriteAtNs = System.nanoTime()
         }
