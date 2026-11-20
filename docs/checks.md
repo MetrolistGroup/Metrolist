@@ -213,8 +213,6 @@ For the shared About header, check narrow and wide widths, Portuguese and RTL lo
 
 For Devtools, fill the playback log with large diagnostics, then open and reopen the page during playback. Check scrolling, client selection and clear, plus copy and export through the platform actions. The latest 300 events render lazily with a 4,096-character preview per event; copy and export keep their own limits. Open Crash logs with 50 large reports, scroll a report, copy/share it and clear the list. Opening, scrolling and clearing stay responsive on Android, desktop and iOS.
 
-On iOS, open Backup & import and verify backup creation, restore, and foreign library import from both a raw database and a ZIP backup. Confirm unsupported files report an error, existing library data remains, and playlist import stays available from the same page. Open each playlist import source, including Spotify, Apple Music, YouTube Music, Deezer, Tidal, Amazon Music, and File or text; load a supported public link or text file, select a destination, and verify duplicate handling and CSV column mapping.
-
 On desktop, unlock Devtools and compare Render backend choices after Restart app. Auto uses the launcher default, explicit environment/JVM overrides win, and the startup log includes the requested and actual APIs. Direct3D appears only on Windows, Metal only on macOS, and OpenGL stays hidden on Windows ARM64. Compare window size, scrolling, animations and playback with the same settings on each backend. These checks need Windows x64/ARM64, macOS and a Linux desktop session.
 
 ### Accounts and integrations
