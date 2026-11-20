@@ -287,7 +287,19 @@ internal class DlnaSession(
                     lastPlayingPositionMs = lastPlayingPositionMs ?: positionMs,
                     pollIntervalMs = pollIntervalMs,
                 )
-        if (transportState == "PLAYING") {
+        if (restarted) {
+            lastPlayingPositionMs = null
+            lastPlayingTrackUri = null
+            runCatching {
+                soap(
+                    descriptor.avTransportUrl,
+                    descriptor.avTransportType,
+                    "Stop",
+                    "<InstanceID>0</InstanceID>",
+                    logFailure = false,
+                )
+            }
+        } else if (transportState == "PLAYING") {
             lastPlayingPositionMs = positionMs
             lastPlayingTrackUri = trackUri
         }
