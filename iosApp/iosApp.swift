@@ -73,17 +73,10 @@ private final class AutomaticBackupAppDelegate: NSObject, UIApplicationDelegate 
 
     @objc private func schedule() {
         BGTaskScheduler.shared.cancel(taskRequestWithIdentifier: Self.taskIdentifier)
-        guard UserDefaults.standard.bool(forKey: "autoBackupEnabled") else { return }
+        guard IosAutomaticBackupBridgeKt.iosAutomaticBackupEnabled() else { return }
 
-        let frequency = UserDefaults.standard.string(forKey: "autoBackupFrequency") ?? "WEEKLY"
-        let interval: TimeInterval
-        switch frequency {
-        case "DAILY": interval = 24 * 60 * 60
-        case "MONTHLY": interval = 30 * 24 * 60 * 60
-        case "WEEKLY", "": interval = 7 * 24 * 60 * 60
-        default: return
-        }
-        let lastSuccess = UserDefaults.standard.double(forKey: "autoBackupLastSuccessEpoch") / 1000
+        let interval = TimeInterval(IosAutomaticBackupBridgeKt.iosAutomaticBackupIntervalMillis()) / 1000
+        let lastSuccess = TimeInterval(IosAutomaticBackupBridgeKt.iosAutomaticBackupLastSuccessEpochMillis()) / 1000
         let request = BGProcessingTaskRequest(identifier: Self.taskIdentifier)
         request.earliestBeginDate = Date(timeIntervalSince1970: lastSuccess + interval)
         request.requiresNetworkConnectivity = false

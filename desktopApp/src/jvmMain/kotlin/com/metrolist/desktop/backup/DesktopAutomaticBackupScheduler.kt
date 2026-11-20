@@ -50,7 +50,13 @@ object DesktopAutomaticBackupScheduler {
                             }
                         if (result.isSuccess) {
                             settings.autoBackupLastSuccessEpochMillis = System.currentTimeMillis()
-                            settings.flush()
+                            runCatching { settings.flush() }
+                                .onFailure { error ->
+                                    AppLogger.warning(
+                                        "AutomaticBackup",
+                                        "Could not persist automatic backup time: ${error.message ?: "Unknown error"}",
+                                    )
+                                }
                         } else {
                             AppLogger.warning(
                                 "AutomaticBackup",
