@@ -14,7 +14,10 @@ fun AccountsListResponse.Account.selectionDataSyncId(currentDataSyncId: String):
 fun singleAccountDataSyncId(
     currentDataSyncId: String,
     accounts: List<AccountsListResponse.Account>,
-): String = accounts.singleOrNull()?.selectionDataSyncId(currentDataSyncId) ?: currentDataSyncId
+): String =
+    sanitizeDataSyncId(currentDataSyncId).takeIf(String::isNotBlank)
+        ?: accounts.singleOrNull()?.selectionDataSyncId(currentDataSyncId)
+        ?: currentDataSyncId
 
 enum class AccountDiscoveryAction {
     SELECT_ACCOUNT,

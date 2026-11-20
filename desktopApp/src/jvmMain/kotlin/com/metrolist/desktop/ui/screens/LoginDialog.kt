@@ -229,7 +229,7 @@ fun LoginDialog(
                             onDismissRequest = requestDismiss,
                         )
                     } else if (OsUtil.isWindows) {
-                        WindowsHelperContent(
+                        WindowsAccountContent(
                             onAuthDataExtracted = { cookie, visitorData, dataSyncId, authUser ->
                                 loginCompleted = true
                                 onAuthDataExtracted(cookie, visitorData, dataSyncId, authUser)
