@@ -15,7 +15,8 @@ object UniversalPlaylistParser {
             isLenient = true
         }
 
-    private val numberingRegex = Regex("""^\s*(?:\[\d+]|\d+[\.\-\):\s]+)\s*""")
+    // A separator between two digits is part of titles like 4:44, not a list marker.
+    private val numberingRegex = Regex("""^\s*(?:\[\d+]|\d+(?![.\-:]\d)[\.\-\):\s]+)\s*""")
     private val bareYoutubeIdRegex = Regex("[A-Za-z0-9_-]{11}")
     private val youtubeHosts = setOf("youtube.com", "www.youtube.com", "m.youtube.com", "music.youtube.com", "youtu.be")
 
