@@ -3026,11 +3026,8 @@ class MusicService :
                     commands.build(),
                     if (isAssistantController(controller)) {
                         automotivePlayerCommands()
-                    } else if (authorized || controller.controllerVersion == MediaSession.ControllerInfo.LEGACY_CONTROLLER_VERSION) {
-                        // Platform bridges can lack a verified package; media-ID requests can only select the active queue.
-                        externalTransportPlayerCommands()
                     } else {
-                        MediaSession.ConnectionResult.DEFAULT_UNTRUSTED_PLAYER_COMMANDS
+                        externalTransportPlayerCommands()
                     },
                 )
             }
