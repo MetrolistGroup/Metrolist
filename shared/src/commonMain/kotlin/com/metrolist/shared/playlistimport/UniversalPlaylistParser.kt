@@ -76,7 +76,12 @@ object UniversalPlaylistParser {
         val structured =
             trimmed.startsWith("{") || trimmed.startsWith("[") || trimmed.startsWith("#EXTM3U", true) ||
                 trimmed.contains("#EXTINF:", true)
-        val csv = if (explicitCsv || (!structured && text.any { it in ",;\t" })) CsvPlaylist.parse(text) else null
+        val csv =
+            if (explicitCsv || (!structured && text.any { it in ",;\t" })) {
+                CsvPlaylist.parse(text, preferTabs = extension == "tsv")
+            } else {
+                null
+            }
         val needsMapping = explicitCsv || (csv?.columnCount ?: 0) > 1
         if (needsMapping && csv?.rows.orEmpty().none { row -> row.any(String::isNotBlank) }) {
             throw ImportException(ImportErrorKey.NoTracksRecognized)
