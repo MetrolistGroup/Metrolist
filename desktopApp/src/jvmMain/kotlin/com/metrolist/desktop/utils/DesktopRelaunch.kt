@@ -80,8 +80,9 @@ internal fun ProcessBuilder.prepareDesktopRelaunch(): ProcessBuilder =
         environment().remove("_JPACKAGE_LAUNCHER")
         if (System.getProperty("os.name").startsWith("Mac", ignoreCase = true)) {
             val command = command()
+            val launcherIndex = command.indexOf("/usr/bin/open")
             val argsIndex = command.indexOf("--args")
-            if (command.firstOrNull() == "/usr/bin/open" && argsIndex >= 0) {
+            if (launcherIndex >= 0 && argsIndex > launcherIndex) {
                 val environmentOptions = environment().keys.sorted().flatMap { listOf("--env", it) }
                 command(command.take(argsIndex) + environmentOptions + command.drop(argsIndex))
             }
