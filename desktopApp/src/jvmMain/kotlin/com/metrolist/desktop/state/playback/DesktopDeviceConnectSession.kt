@@ -60,7 +60,6 @@ internal class DesktopDeviceConnectSession(
 
     private var undo: QueueUndo? = null
     private var requestedPlaying: Boolean? = null
-    private var observedPlaying = false
 
     // UI undo can outlive the session; weak identity keeps old remote removals from becoming local undos.
     private val connectedRemovals = mutableListOf<WeakReference<QueueRemoval>>()
@@ -81,11 +80,10 @@ internal class DesktopDeviceConnectSession(
         val requested = requestedPlaying
         if (requested == null) {
             desiredPlaying = playback.playing
-        } else if (playback.playing == requested && playback.playing != observedPlaying) {
+        } else if (playback.playing == requested) {
             desiredPlaying = playback.playing
             requestedPlaying = null
         }
-        observedPlaying = playback.playing
         title = playback.title
         finite = playback.finite
         baseSpeed = playback.speed

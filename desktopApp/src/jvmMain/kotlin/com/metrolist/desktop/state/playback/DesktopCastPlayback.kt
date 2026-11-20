@@ -52,20 +52,13 @@ internal class DesktopCastPlayback(
 
     init {
         scope.launch {
-            var previous = manager.state.value
             manager.state.collect { current ->
                 val requested = requestedPlaying
                 if (requested != null) {
-                    if (!current.isConnected ||
-                        (
-                            !current.isBuffering && !current.hasEnded && current.isPlaying == requested &&
-                                (current.isPlaying != previous.isPlaying || current.mediaGeneration != previous.mediaGeneration)
-                        )
-                    ) {
+                    if (!current.isConnected || (!current.isBuffering && !current.hasEnded && current.isPlaying == requested)) {
                         requestedPlaying = null
                     }
                 }
-                previous = current
             }
         }
     }
