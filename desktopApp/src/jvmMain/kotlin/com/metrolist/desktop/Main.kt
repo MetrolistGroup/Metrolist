@@ -107,6 +107,8 @@ import com.metrolist.desktop.state.playback.PlayerState
 import com.metrolist.desktop.storage.DownloadManager
 import com.metrolist.desktop.storage.DownloadState
 import com.metrolist.desktop.storage.SongCacheManager
+import com.metrolist.desktop.storage.SoulseekLoginDialog
+import com.metrolist.desktop.storage.SoulseekPickerDialog
 import com.metrolist.desktop.ui.DesktopDensityProvider
 import com.metrolist.desktop.ui.components.DesktopMenuBar
 import com.metrolist.desktop.ui.components.DesktopPlayerVisibility
@@ -610,6 +612,8 @@ private fun WindowScope.AppContent(
             PopupVisibility(visible = UiState.showSettings) {
                 SettingsOverlay(colorScheme)
             }
+            SoulseekPickerDialog()
+            SoulseekLoginDialog()
             YouTubeSyncSnackbar(AppState.snackbarHostState)
             val snackbarScheme = rememberUpdatedState(colorScheme)
             SnackbarHost(AppState.snackbarHostState, modifier = Modifier.align(Alignment.BottomCenter)) { data ->

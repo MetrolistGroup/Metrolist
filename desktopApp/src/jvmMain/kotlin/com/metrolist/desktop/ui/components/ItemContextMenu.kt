@@ -88,6 +88,7 @@ import com.metrolist.desktop.storage.DownloadState
 import com.metrolist.desktop.storage.SongCacheManager
 import com.metrolist.desktop.storage.playlistDownloadProgress
 import com.metrolist.desktop.storage.playlistDownloadState
+import com.metrolist.desktop.storage.soulseekMenuActions
 import com.metrolist.desktop.utils.exportCollection
 import com.metrolist.shared.api.playlistSongs
 import com.metrolist.shared.db.MusicDatabase
@@ -293,7 +294,7 @@ fun SongContextMenu(
                         }
                     }
                 },
-            additionalActions = additionalActions,
+            additionalActions = additionalActions + soulseekMenuActions(song, onDismiss),
         )
     }
 }

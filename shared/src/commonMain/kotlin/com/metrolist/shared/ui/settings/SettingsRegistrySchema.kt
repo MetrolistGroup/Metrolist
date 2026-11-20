@@ -62,6 +62,7 @@ enum class SettingsPageId {
     LAST_FM,
     LISTEN_BRAINZ,
     DEVICE_CONNECT,
+    SOULSEEK,
     LISTEN_TOGETHER,
     EQUALIZER,
 }

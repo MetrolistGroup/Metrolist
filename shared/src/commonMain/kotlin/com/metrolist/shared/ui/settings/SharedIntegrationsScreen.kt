@@ -110,6 +110,7 @@ data class SharedIntegrationsHost(
     val onStartDiscordLogin: (DiscordAuthSession) -> Unit,
     val onDiscordSettingsChanged: () -> Unit = {},
     val deviceConnect: DeviceConnectSettingsHost? = null,
+    val soulseek: SoulseekSettingsHost? = null,
     val listenTogetherManager: ListenTogetherManager? = null,
     val onOpenListenTogether: (() -> Unit)? = null,
     val onOpenUrl: (String) -> Unit = {},
@@ -677,6 +678,7 @@ private fun buildIntegrationsRegistry(
     }
 
     host.deviceConnect?.let { builder.deviceConnectPage(it) }
+    host.soulseek?.let { builder.soulseekPage(it) }
     if (host.listenTogetherManager != null || host.onOpenListenTogether != null) {
         builder.customPage(
             SettingsPageId.LISTEN_TOGETHER,
@@ -707,6 +709,7 @@ private fun buildIntegrationsRegistry(
             SettingsPageId.LAST_FM,
             SettingsPageId.LISTEN_BRAINZ,
             SettingsPageId.DEVICE_CONNECT.takeIf { host.deviceConnect != null },
+            SettingsPageId.SOULSEEK.takeIf { host.soulseek != null },
             SettingsPageId.LISTEN_TOGETHER.takeIf { host.listenTogetherManager != null || host.onOpenListenTogether != null },
         ).toTypedArray(),
     )

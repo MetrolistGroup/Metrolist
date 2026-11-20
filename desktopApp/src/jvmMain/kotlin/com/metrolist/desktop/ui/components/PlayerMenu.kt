@@ -47,6 +47,7 @@ import com.metrolist.desktop.state.content.PlaylistAlbumState
 import com.metrolist.desktop.state.playback.ListenTogetherState
 import com.metrolist.desktop.state.playback.LyricsState
 import com.metrolist.desktop.state.playback.PlayerState
+import com.metrolist.desktop.storage.soulseekMenuActions
 import com.metrolist.shared.api.lyrics.LyricsUtils
 import com.metrolist.shared.db.MusicDatabase
 import com.metrolist.shared.generated.resources.Res
@@ -622,7 +623,7 @@ fun PlayerMenuPanel(
                     currentTrack?.artists?.firstOrNull { it.id != null }?.let { artist ->
                         blockArtistMenuAction(onDismiss, { PlayerState.blockArtist(artist) }, artist.displayName)
                     },
-                ),
+                ) + soulseekMenuActions(currentTrack, onDismiss),
                 listOfNotNull(
                     equalizerMenuAction(onOpen = { showEqualizer = true }),
                     tempoPitchMenuAction(varispeed) { showTempoPitch = true },

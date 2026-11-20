@@ -27,6 +27,7 @@ import com.metrolist.desktop.state.app.UiState
 import com.metrolist.desktop.state.playback.DiscordRpcState
 import com.metrolist.desktop.state.playback.ListenTogetherState
 import com.metrolist.desktop.state.playback.PlayerState
+import com.metrolist.desktop.storage.rememberSoulseekSettingsHost
 import com.metrolist.desktop.ui.screens.DiscordLoginDialog
 import com.metrolist.shared.discord.openDiscordUrl
 import com.metrolist.shared.settings.Settings
@@ -89,6 +90,7 @@ fun IntegrationsOverlay(colorScheme: ColorScheme) {
                             DiscordRpcState.updateDiscordRpc()
                         },
                         deviceConnect = rememberDeviceConnectSettingsHost(),
+                        soulseek = rememberSoulseekSettingsHost(),
                         listenTogetherManager = ListenTogetherState.listenTogetherManager,
                         onOpenUrl = { openDiscordUrl(it, null) },
                         onCopyText = { _, text -> AppState.copyToClipboard(text) },

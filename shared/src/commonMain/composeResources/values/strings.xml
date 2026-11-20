@@ -137,6 +137,49 @@
     <string name="remove_from_library">Remove from library</string>
     <!-- Translators: Imperative action that downloads media for offline playback. -->
     <string name="action_download">Download</string>
+    <!-- Translators: Song menu action and dialog title for downloading the song from the Soulseek network. -->
+    <string name="soulseek_download">Download from Soulseek</string>
+    <!-- Translators: Description under the Soulseek download action. -->
+    <string name="soulseek_download_description">Choose a 320 kbps, lossless or hi-res version</string>
+    <!-- Translators: Heading in the Soulseek version picker for 320 kbps lossy files. -->
+    <string name="soulseek_format_320">320 kbps</string>
+    <!-- Translators: Heading in the Soulseek version picker for CD-quality lossless files. -->
+    <string name="soulseek_format_lossless">Lossless</string>
+    <!-- Translators: Heading in the Soulseek version picker for 24-bit or high sample rate lossless files. -->
+    <string name="soulseek_format_hires">Hi-res lossless</string>
+    <!-- Translators: Audio bitrate. %1$d is kilobits per second. -->
+    <string name="soulseek_bitrate">%1$d kbps</string>
+    <!-- Translators: Audio bit depth. %1$d is the number of bits. -->
+    <string name="soulseek_bit_depth">%1$d-bit</string>
+    <!-- Translators: Audio sample rate. %1$s is the rate in kilohertz. -->
+    <string name="soulseek_sample_rate">%1$s kHz</string>
+    <!-- Translators: Shown under a Soulseek file whose sharer has no free upload slot. -->
+    <string name="soulseek_peer_busy">Sharer is busy; the download may wait in a queue</string>
+    <!-- Translators: Snackbar shown while a Soulseek file downloads. %1$s is the song title. -->
+    <string name="soulseek_downloading">Downloading %1$s from Soulseek…</string>
+    <!-- Translators: Snackbar shown when the Soulseek sharer did not send the file. %1$s is the song title. -->
+    <string name="soulseek_fetch_failed">The sharer didn't send %1$s. Try another version.</string>
+    <!-- Translators: Snackbar shown while searching Soulseek. %1$s is the song title. -->
+    <string name="soulseek_searching">Searching Soulseek for %1$s…</string>
+    <!-- Translators: Snackbar shown after a Soulseek download finishes. %1$s is the saved file name. -->
+    <string name="soulseek_downloaded">Saved %1$s</string>
+    <!-- Translators: Snackbar shown when Soulseek has no file matching the song. %1$s is the song title. -->
+    <string name="soulseek_no_match">No matching file on Soulseek for %1$s</string>
+    <!-- Translators: Snackbar shown when a Soulseek download fails. %1$s is the error message. -->
+    <string name="soulseek_download_failed">Soulseek download failed: %1$s</string>
+    <string name="brand_soulseek" translatable="false">Soulseek</string>
+    <!-- Translators: Subtitle of the Soulseek integration in the integrations list. -->
+    <string name="settings_soulseek_overview">High-quality song downloads</string>
+    <!-- Translators: Soulseek account row. %1$s is the Soulseek username. -->
+    <string name="soulseek_signed_in_as">Signed in as %1$s</string>
+    <!-- Translators: Title of the dialog that signs in to the Soulseek network. -->
+    <string name="soulseek_login_title">Sign in to Soulseek</string>
+    <!-- Translators: Explains the Soulseek sign-in dialog. -->
+    <string name="soulseek_login_description">Soulseek checks your username and password, then your password is kept in the system keychain. An unused username creates a new account.</string>
+    <!-- Translators: Error shown when Soulseek refuses the username or password. -->
+    <string name="soulseek_login_rejected">Soulseek rejected this username or password</string>
+    <!-- Translators: Snackbar shown when the Soulseek helper program is not installed. Keep the command unchanged. -->
+    <string name="soulseek_helper_missing">Soulseek helper not found. Install it with: uv tool install scripts/soulseek</string>
     <!-- Translators: Heading for notification in the downloads. -->
     <string name="download_notification_title">Downloading songs</string>
     <!-- Translators: Label for notification paused in the downloads. -->
