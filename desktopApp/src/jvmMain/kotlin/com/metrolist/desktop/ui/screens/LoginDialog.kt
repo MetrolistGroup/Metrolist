@@ -420,24 +420,22 @@ private fun WindowsAccountContent(
                                         },
                                         navigate = { url ->
                                             if (url == completedSignInUrl) {
-                                                scope.launch {
-                                                    val resolved = authData.dataSyncId.isNotBlank() &&
-                                                        authManager.validateAndSaveCredentials(
-                                                            authData.cookie,
-                                                            authData.visitorData,
-                                                            authData.dataSyncId,
-                                                            authData.authUser,
-                                                        )
-                                                    if (resolved) {
-                                                        onAuthDataExtracted(
-                                                            authData.cookie,
-                                                            authData.visitorData,
-                                                            authData.dataSyncId,
-                                                            authData.authUser,
-                                                        )
-                                                    } else {
-                                                        failed = true
-                                                    }
+                                                val resolved = authData.dataSyncId.isNotBlank() &&
+                                                    authManager.validateAndSaveCredentials(
+                                                        authData.cookie,
+                                                        authData.visitorData,
+                                                        authData.dataSyncId,
+                                                        authData.authUser,
+                                                    )
+                                                if (resolved) {
+                                                    onAuthDataExtracted(
+                                                        authData.cookie,
+                                                        authData.visitorData,
+                                                        authData.dataSyncId,
+                                                        authData.authUser,
+                                                    )
+                                                } else {
+                                                    failed = true
                                                 }
                                             } else {
                                                 loginUrl = url
@@ -871,7 +869,7 @@ internal suspend fun selectWebViewAccount(
     authData: AuthData,
     account: AccountsListResponse.Account,
     validateAndComplete: suspend (AuthData) -> Unit,
-    navigate: (String) -> Unit,
+    navigate: suspend (String) -> Unit,
 ): Boolean {
     val candidate = authData.forAccount(account)
     if (candidate != null) {
