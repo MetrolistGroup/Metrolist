@@ -232,6 +232,7 @@ internal class AndroidDeviceConnectPlayback(
                         shuffleModeEnabled.value = playback.queue.isShuffled
                         syncTargetLoaded = false
                     }
+                    queue.setExplicitRadioQueue(playback?.explicitRadioQueue ?: false)
                     controllerPlayback = playback
                     player.setControllerPlayback(playback)
                     if (playback !=

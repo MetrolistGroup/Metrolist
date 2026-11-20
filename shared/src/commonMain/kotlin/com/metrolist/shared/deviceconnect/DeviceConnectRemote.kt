@@ -711,7 +711,9 @@ class DeviceConnectRemote(
                 return
             }
         val playback = if (change.playback.queue === current.playback.queue) change.playback else wireQueueCache.sanitize(change.playback)
-        val queueChanged = !sameDcQueue(current.playback.queue, playback.queue)
+        val queueChanged =
+            !sameDcQueue(current.playback.queue, playback.queue) ||
+                current.playback.explicitRadioQueue != playback.explicitRadioQueue
         if (!(if (queueChanged) validDcPlayback(playback) else validDcPlaybackScalars(playback))) {
             commandError(sender, DcSyncError.INVALID_MESSAGE)
             return

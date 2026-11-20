@@ -1,12 +1,38 @@
 package com.metrolist.shared.deviceconnect
 
 import kotlinx.serialization.Serializable
+import com.metrolist.shared.model.SongItem
+import com.metrolist.shared.playback.MusicQueue
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNull
 
 class DeviceConnectPitchCodecTest {
+    @Test
+    fun explicitRadioMarkerSurvivesQueueReplacementAndClearsOnOrdinaryReplacement() {
+        val song = SongItem("seed", "Seed", null, emptyList(), null)
+        val marked =
+            reduceDcPlayback(
+                DcLocalPlaybackState(),
+                DcPlaybackCommand(
+                    action = DcPlaybackAction.REPLACE_QUEUE,
+                    songs = listOf(song),
+                    index = 0,
+                    finite = false,
+                    explicitRadioQueue = true,
+                ),
+            )
+        assertEquals(true, marked?.playback?.explicitRadioQueue)
+        val queue = MusicQueue().apply { setQueue(listOf(song)) }.snapshot()
+        val cleared =
+            reduceDcPlayback(
+                DcLocalPlaybackState(queue = queue, explicitRadioQueue = true),
+                DcPlaybackCommand(DcPlaybackAction.REPLACE_QUEUE),
+            )
+        assertEquals(false, cleared?.playback?.explicitRadioQueue)
+    }
+
     @Test
     fun pitchSurvivesCommandsSnapshotsTransfersAndScalarUpdates() {
         val command = DcPlaybackCommand(DcPlaybackAction.PITCH, pitch = 0.75f)

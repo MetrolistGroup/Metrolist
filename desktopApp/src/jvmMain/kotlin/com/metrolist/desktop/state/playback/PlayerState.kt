@@ -533,6 +533,7 @@ object PlayerState {
                             player.playbackReady && player.loadFailure.value == null &&
                                 (!deviceConnect.isActive || syncSession.ready),
                         finite = syncSession.finite,
+                        explicitRadioQueue = syncSession.explicitRadioQueue,
                         scrobbleSession = scrobbleManager.session(),
                     )
                 }
