@@ -222,6 +222,7 @@ fun LoginDialog(
                         }
                     } else if (OsUtil.isWindows && isSwitchingChannel) {
                         WindowsAccountContent(
+                            isSwitchingChannel = true,
                             onAuthDataExtracted = { cookie, visitorData, dataSyncId, authUser ->
                                 loginCompleted = true
                                 onAuthDataExtracted(cookie, visitorData, dataSyncId, authUser)
@@ -230,6 +231,7 @@ fun LoginDialog(
                         )
                     } else if (OsUtil.isWindows) {
                         WindowsAccountContent(
+                            isSwitchingChannel = false,
                             onAuthDataExtracted = { cookie, visitorData, dataSyncId, authUser ->
                                 loginCompleted = true
                                 onAuthDataExtracted(cookie, visitorData, dataSyncId, authUser)
@@ -268,6 +270,7 @@ fun LoginDialog(
 
 @Composable
 private fun WindowsAccountContent(
+    isSwitchingChannel: Boolean,
     onAuthDataExtracted: (cookie: String, visitorData: String, dataSyncId: String, authUser: String) -> Unit,
     onDismissRequest: () -> Unit,
 ) {
@@ -295,6 +298,20 @@ private fun WindowsAccountContent(
                         .filter { authData.forAccount(it) != null || !it.signinUrl.isNullOrBlank() }
                 selectedAccount = accounts.firstOrNull { it.isSelected } ?: accounts.firstOrNull()
                 failed = accounts.isEmpty()
+                if (!isSwitchingChannel && accounts.size <= 1) {
+                    val candidate = authData.copy(dataSyncId = singleAccountDataSyncId(authData.dataSyncId, accounts))
+                    if (authManager.validateAndSaveCredentials(
+                            candidate.cookie,
+                            candidate.visitorData,
+                            candidate.dataSyncId,
+                            candidate.authUser,
+                        )
+                    ) {
+                        onAuthDataExtracted(candidate.cookie, candidate.visitorData, candidate.dataSyncId, candidate.authUser)
+                    } else {
+                        failed = true
+                    }
+                }
             } catch (e: CancellationException) {
                 throw e
             } catch (error: Exception) {
