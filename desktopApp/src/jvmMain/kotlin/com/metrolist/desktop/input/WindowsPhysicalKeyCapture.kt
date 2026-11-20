@@ -32,23 +32,33 @@ internal class WindowsPhysicalKeyCaptureBuffer(
         scanCode: Int,
         flags: Int,
     ) {
+        if (windowsPhysicalPositionForScanCode(scanCode, flags) == null) return
+        val now = timeSourceNanos()
         capturesByVirtualKey
             .computeIfAbsent(virtualKeyCode) { ConcurrentLinkedDeque() }
-            .addLast(CapturedKey(scanCode, flags, timeSourceNanos()))
+            .also { captures ->
+                pruneExpired(captures, now)
+                captures.addLast(CapturedKey(scanCode, flags, now))
+            }
     }
 
     fun consume(awtKeyCode: Int): PhysicalKeyPosition? {
         val virtualKeyCode = windowsVirtualKeyForAwtCode(awtKeyCode)
         val captures = capturesByVirtualKey[virtualKeyCode] ?: return null
-        val now = timeSourceNanos()
+        pruneExpired(captures, timeSourceNanos())
+        val capturedKey = captures.pollFirst()
+        return capturedKey?.let { windowsPhysicalPositionForScanCode(it.scanCode, it.flags) }
+    }
+
+    private fun pruneExpired(
+        captures: ConcurrentLinkedDeque<CapturedKey>,
+        nowNanos: Long,
+    ) {
         while (true) {
             val oldest = captures.peekFirst() ?: break
-            if (now - oldest.capturedAtNanos <= PENDING_KEY_CAPTURE_MAX_AGE_NANOS) break
+            if (nowNanos - oldest.capturedAtNanos <= PENDING_KEY_CAPTURE_MAX_AGE_NANOS) break
             captures.pollFirst()
         }
-        val capturedKey = captures.pollFirst()
-        if (captures.isEmpty()) capturesByVirtualKey.remove(virtualKeyCode, captures)
-        return capturedKey?.let { windowsPhysicalPositionForScanCode(it.scanCode, it.flags) }
     }
 
     fun clear() = capturesByVirtualKey.clear()

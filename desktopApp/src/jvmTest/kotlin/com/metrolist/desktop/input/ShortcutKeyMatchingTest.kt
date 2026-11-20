@@ -71,6 +71,17 @@ class ShortcutKeyMatchingTest {
     }
 
     @Test
+    fun recordingFreshCaptureDiscardsExpiredEntries() {
+        var nowNanos = 0L
+        val captures = WindowsPhysicalKeyCaptureBuffer { nowNanos }
+        captures.record(0xBF, 0x35, 0)
+        nowNanos = 6_000_000_000L
+        captures.record(0xBF, 0x33, 0)
+
+        assertEquals(PhysicalKeyPosition.COMMA, captures.consume(AwtKeyEvent.VK_SLASH))
+    }
+
+    @Test
     fun controlModifiedLetterEventsMatchTheirLetter() {
         val shortcuts =
             listOf(
