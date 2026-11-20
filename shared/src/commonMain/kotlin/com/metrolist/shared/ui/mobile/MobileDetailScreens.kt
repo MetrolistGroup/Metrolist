@@ -900,6 +900,7 @@ internal fun MobilePlaylistScreen(
                 onBackClick = onBack,
                 onArtistClick = onArtistClick,
                 currentSongId = playbackState.currentSongId,
+                currentQueueItemId = playbackState.originalQueueItemId,
                 isPlaying = playbackState.isPlaying,
                 contentPadding = PaddingValues(bottom = 88.dp + bottomContentPadding),
                 modifier = modifier.fillMaxSize(),
