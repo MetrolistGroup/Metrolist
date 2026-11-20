@@ -1,12 +1,13 @@
 # Open bug and stability milestone
 
-This local milestone proposal covers all 54 issues currently labeled `bug` and open in Metrolist as of 2026-11-20, plus the unlabelled open crash report #5039. No issue is open with the `crash` label, and searches found no open OOM or out-of-memory report. The [crash, OOM and stability tracker](crash-oom-issue-tracker.md) includes the wider issue scan and closed reports. Each independent root cause belongs in a separate PR. Existing PRs stay with their current authors and remain listed for tracking.
+This local milestone proposal covers all 55 issues currently labeled `bug` and open in Metrolist as of 2026-11-20, plus the unlabelled open crash report #5039. No issue is open with the `crash` label, and searches found no open OOM or out-of-memory report. The [crash, OOM and stability tracker](crash-oom-issue-tracker.md) includes the wider issue scan and closed reports. Each independent root cause belongs in a separate PR. Existing PRs stay with their current authors and remain listed for tracking.
 
 The canonical GitHub milestone could not be created: the connected account has read-only permission on `MetrolistGroup/Metrolist`. The list is ready to attach when an account with triage or write permission is available.
 
 ## Issues
 
 - [ ] [#5076](https://github.com/MetrolistGroup/Metrolist/issues/5076) Application frozen after playing song
+- [ ] [#5086](https://github.com/MetrolistGroup/Metrolist/issues/5086) Playlist / Library Not Syncing on MacBook
 - [ ] [#5085](https://github.com/MetrolistGroup/Metrolist/issues/5085) Device connect fails to pair devices; proposed fix in draft [PR #5087](https://github.com/MetrolistGroup/Metrolist/pull/5087)
 - [ ] [#5083](https://github.com/MetrolistGroup/Metrolist/issues/5083) Weird GPU usages
 - [ ] [#5082](https://github.com/MetrolistGroup/Metrolist/issues/5082) 1x3 widget still shows the player bar instead of the compact player (follow-up to #4585); proposed fix in draft [PR #5084](https://github.com/MetrolistGroup/Metrolist/pull/5084)
@@ -91,6 +92,8 @@ The canonical GitHub milestone could not be created: the connected account has r
 - [#4639](https://github.com/MetrolistGroup/Metrolist/pull/4639) is related to the Home performance report #4748; its cause still needs runtime verification.
 
 ## Triage notes
+
+- #5086 reports empty playlists, albums and library data on macOS desktop 14.0.1 while Android shows the data; the reporter confirms only the same email, not the selected YouTube channel, and provides no logs. Closed PR #4506 fixed older disappearing-playlist reports caused by incomplete remote results and thumbnail parsing; that does not establish this all-library desktop failure. Draft PR #5087 recovers a discovered account ID when exactly one account is returned, which could apply if desktop identity is unresolved, but the report does not show that state. Diagnose with a sanitized desktop log showing account identity resolution and library-sync results before attributing the issue.
 
 - #5085 reports the unresolved-account-identity message on Android and Linux desktop v14.0.1 even though the reporter says both use the same account. In current code, a supported auth cookie with a blank `dataSyncId` produces `resolved=false`, which pairing intentionally rejects. The login flows skipped the discovered account ID when exactly one account was returned and the WebView omitted it. Draft PR #5087 supplies that ID on Android and desktop without guessing among multiple accounts; shared tests and desktop compilation pass, but Android compilation awaits accepted local SDK licenses. Closed WIP PR #4767 concerns client-isolated networks and is not this fix.
 
