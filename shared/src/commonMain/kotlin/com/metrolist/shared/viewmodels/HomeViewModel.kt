@@ -620,12 +620,18 @@ class HomeViewModel(
                                 )
                             ) {
                                 cachedSelectedChipContent =
-                                    publishedPrimaryChipContent
-                                        ?.takeIf { it.first == cancelledGeneration }
-                                        ?.second
+                                    cachedSelectedChipContent
+                                        ?.takeIf { it.selectedChip == interruptedState.selectedChip }
                                         ?.withLatestLibraryAndSpeedDialState(interruptedState)
                                         ?.withLatestSongMetadataFrom(interruptedState)
+                                        ?.withSpeedDialPins(latestSpeedDialPins, speedDialRecommendationItems)
                                         ?.asOfflineSnapshot()
+                                        ?: publishedPrimaryChipContent
+                                            ?.takeIf { it.first == cancelledGeneration }
+                                            ?.second
+                                            ?.withLatestLibraryAndSpeedDialState(interruptedState)
+                                            ?.withLatestSongMetadataFrom(interruptedState)
+                                            ?.asOfflineSnapshot()
                                         ?: homeSelectedChipCacheAfterOfflineCancellation(
                                             cachedSelectedChipContent,
                                             interruptedState,
@@ -694,6 +700,7 @@ class HomeViewModel(
                 var primaryContinuation: String? = null
                 var primaryContentSnapshot: HomeUiState? = null
                 var loadedPrimaryPage: HomePageData? = primaryPageOverride
+                var completionTransferred = false
                 supervisorScope {
                     try {
                         val homePageDataDeferred =
@@ -797,7 +804,11 @@ class HomeViewModel(
                                 publishedPrimaryAllContent = generation to primaryState.copy(continuation = homePageData.continuation)
                             }
                             if (isFiltered) {
-                                val chipPrimaryState = primaryState.copy(continuation = homePageData.continuation)
+                                val chipPrimaryState =
+                                    primaryState.copy(
+                                        continuation = homePageData.continuation,
+                                        isContentLoading = true,
+                                    )
                                 cachedSelectedChipContent = chipPrimaryState
                                 publishedPrimaryChipContent = generation to chipPrimaryState
                             }
@@ -962,6 +973,7 @@ class HomeViewModel(
                                 loadedState.selectedChip?.let { chip ->
                                     cacheChipContent(chip, loadedState)
                                 }
+                                if (publishedPrimaryChipContent?.first == generation) publishedPrimaryChipContent = null
                             } else {
                                 allContentReloadRequired = false
                                 cacheAllContentState(loadedState)
@@ -981,10 +993,12 @@ class HomeViewModel(
                         throw e
                     } catch (e: HomeLibraryRevisionChangedException) {
                         if (generation == contentLoadGeneration) {
+                            completionTransferred = true
                             loadHomeData(
                                 params = params,
                                 browseId = browseId,
                                 isRefresh = isRefresh,
+                                onComplete = onComplete,
                                 primaryPageOverride = loadedPrimaryPage,
                             )
                         }
@@ -1090,7 +1104,7 @@ class HomeViewModel(
                                 )
                             }
                         }
-                        scope.launch { onComplete() }
+                        if (!completionTransferred) scope.launch { onComplete() }
                     }
                 }
             }
