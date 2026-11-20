@@ -13,6 +13,29 @@
       }
     },
     {
+      "type": "com.metrolist.desktop.input.XTestRecord",
+      "jniAccessible": true,
+      "allDeclaredMethods": true
+    },
+    {
+      "type": {
+        "proxy": [
+          "com.metrolist.desktop.input.XTestRecord"
+        ]
+      }
+    },
+    {
+      "type": "com.metrolist.desktop.input.XRecordInterceptProc",
+      "jniAccessible": true,
+      "allDeclaredMethods": true
+    },
+    {
+      "type": "com.metrolist.desktop.input.XRecordInterceptData",
+      "jniAccessible": true,
+      "allDeclaredFields": true,
+      "allDeclaredConstructors": true
+    },
+    {
       "type": "com.metrolist.desktop.utils.WindowMoveX11",
       "jniAccessible": true,
       "allDeclaredFields": true,

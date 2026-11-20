@@ -201,7 +201,7 @@ For button-opened containers, check the desktop account menu opens on the first 
 
 For desktop Settings and Keyboard shortcuts, open and dismiss each dialog over a page and the expanded player. Check the opening and closing motion, outside clicks, Escape, settings text fields and nested dialogs. The scrim covers the title bar, navigation rail and player bar throughout the animation and after resizing. Repeat with both desktop layouts, custom window frames, display scaling and reduced motion. Check Integrations, Add to playlist and settings confirmation dialogs through the shared dialog host too.
 
-For desktop keyboard shortcuts, use a non-QWERTY layout such as AZERTY on Windows, macOS and Linux. Verify symbol shortcuts follow the physical symbol position, letter shortcuts follow the produced character, Ctrl+/ works when its key requires Shift, and Ctrl+Shift+L still works. On macOS, allow Input Monitoring when prompted and verify shortcuts still use character matching if access is denied. Repeat after window focus changes and rapid deactivate/reactivate cycles. Linux physical capture requires an X11 or XWayland display.
+For desktop keyboard shortcuts, use a non-QWERTY layout such as AZERTY on Windows, macOS and Linux. Verify symbol shortcuts follow the physical symbol position, letter shortcuts follow the produced character, Ctrl+/ works when its key requires Shift, and Ctrl+Shift+L still works. On macOS, allow Input Monitoring when prompted and verify shortcuts still use character matching if access is denied. Repeat after window focus changes and rapid deactivate/reactivate cycles. Linux physical capture requires X11 or XWayland with XRecord available.
 
 ### Settings
 

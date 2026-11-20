@@ -176,9 +176,11 @@ private fun installGlobalShortcutDispatcher(
             ) {
                 keyFocus.keyboardNavigation = true
             }
+            val physicalPositionsAvailable = physicalKeyCapture?.isAvailable == true
+            val isModifierPress = event.id == AwtKeyEvent.KEY_PRESSED && event.keyCode.isAwtModifierKey()
             val physicalPosition =
-                if (event.id == AwtKeyEvent.KEY_PRESSED) physicalKeyCapture?.consume(event.keyCode) else null
-            pressed.dispatch(event) {
+                if (event.id == AwtKeyEvent.KEY_PRESSED && !isModifierPress) physicalKeyCapture?.consume(event.keyCode) else null
+            pressed.dispatch(event, physicalPosition, physicalPositionsAvailable) {
                 handleAwtKeyEvent(
                     event,
                     isPlaybackBackgroundFocused(),
@@ -186,7 +188,7 @@ private fun installGlobalShortcutDispatcher(
                     onRefresh,
                     toggleWindowFullscreen,
                     physicalPosition,
-                    physicalPositionsAvailable = physicalKeyCapture?.isAvailable == true,
+                    physicalPositionsAvailable = physicalPositionsAvailable,
                 )
             }
         }
@@ -287,6 +289,17 @@ internal fun handleBackMouseEvent(
 
 internal fun shouldDispatchGlobalShortcut(event: AwtKeyEvent): Boolean =
     !event.isConsumed && event.id == AwtKeyEvent.KEY_PRESSED && event.keyCode != AwtKeyEvent.VK_ESCAPE
+
+private fun Int.isAwtModifierKey(): Boolean =
+    this in
+        setOf(
+            AwtKeyEvent.VK_SHIFT,
+            AwtKeyEvent.VK_CONTROL,
+            AwtKeyEvent.VK_ALT,
+            AwtKeyEvent.VK_META,
+            AwtKeyEvent.VK_ALT_GRAPH,
+            AwtKeyEvent.VK_WINDOWS,
+        )
 
 private fun handleAwtKeyEvent(
     event: AwtKeyEvent,
@@ -863,6 +876,8 @@ internal class ShortcutPressTracker {
 
     fun dispatch(
         event: AwtKeyEvent,
+        physicalPosition: PhysicalKeyPosition?,
+        physicalPositionsAvailable: Boolean,
         action: () -> Boolean,
     ): Boolean {
         if (event.id == AwtKeyEvent.KEY_RELEASED) {
@@ -882,7 +897,7 @@ internal class ShortcutPressTracker {
                     AwtKeyEvent.VK_ADD,
                     AwtKeyEvent.VK_MINUS,
                     AwtKeyEvent.VK_SUBTRACT,
-                )
+                ) || physicalPositionsAvailable && physicalPosition in setOf(PhysicalKeyPosition.MINUS, PhysicalKeyPosition.EQUALS)
         if (consumed && !repeatable) handled.add(event.keyCode)
         return consumed
     }
