@@ -34,6 +34,8 @@ internal class DesktopDeviceConnectSession(
         private set
     var trackRevision = -1L
         private set
+    var targetCurrentIndex = -1
+        private set
     var desiredPlaying = false
         private set
     var baseSpeed = Settings.shared.playbackSpeed
@@ -57,6 +59,8 @@ internal class DesktopDeviceConnectSession(
     )
 
     private var undo: QueueUndo? = null
+    private var requestedPlaying: Boolean? = null
+    private var observedPlaying = false
 
     // UI undo can outlive the session; weak identity keeps old remote removals from becoming local undos.
     private val connectedRemovals = mutableListOf<WeakReference<QueueRemoval>>()
@@ -64,6 +68,7 @@ internal class DesktopDeviceConnectSession(
     fun acknowledge(snapshot: DcPlaybackSnapshot) {
         sessionId = snapshot.sessionId
         trackRevision = snapshot.trackRevision
+        targetCurrentIndex = snapshot.playback.queue.currentIndex
         baseSpeed = snapshot.playback.speed
     }
 
@@ -73,7 +78,14 @@ internal class DesktopDeviceConnectSession(
     }
 
     fun applyPlayback(playback: DcLocalPlaybackState) {
-        desiredPlaying = playback.playing
+        val requested = requestedPlaying
+        if (requested == null) {
+            desiredPlaying = playback.playing
+        } else if (playback.playing == requested && playback.playing != observedPlaying) {
+            desiredPlaying = playback.playing
+            requestedPlaying = null
+        }
+        observedPlaying = playback.playing
         title = playback.title
         finite = playback.finite
         baseSpeed = playback.speed
@@ -82,17 +94,21 @@ internal class DesktopDeviceConnectSession(
     fun resetQueueMetadata() {
         title = null
         finite = false
+        targetCurrentIndex = -1
         undo = null
     }
 
     fun disconnected() {
         sessionId = null
         trackRevision = -1L
+        targetCurrentIndex = -1
         undo = null
+        requestedPlaying = null
     }
 
     fun setPlaying(playing: Boolean) {
         desiredPlaying = playing
+        requestedPlaying = playing
     }
 
     fun setReady(value: Boolean) {
@@ -115,9 +131,14 @@ internal class DesktopDeviceConnectSession(
         val sync = coordinator()
         val activeSession = sync.state.value.sessionId ?: return null
         val revision = sync.queueRevision ?: return null
-        val local = MusicQueue().apply { restore(expectedQueue) }
+        val local =
+            MusicQueue().apply {
+                restore(expectedQueue)
+                targetCurrentIndex.takeIf { it in expectedQueue.displayedItems.indices }?.let(::skipTo)
+            }
+        val original = local.snapshot()
         val removal = local.removeAt(indices, advanceCurrentToSuccessor = true, successorIndex = successorIndex) ?: return null
-        undo = QueueUndo(removal, expectedQueue, local.snapshot(), activeSession, revision + 1L, desiredPlaying)
+        undo = QueueUndo(removal, original, local.snapshot(), activeSession, revision + 1L, desiredPlaying)
         connectedRemovals.removeAll { it.get() == null }
         connectedRemovals += WeakReference(removal)
         sync.intercept(

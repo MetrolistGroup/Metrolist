@@ -56,9 +56,11 @@ internal class DesktopCastPlayback(
             manager.state.collect { current ->
                 val requested = requestedPlaying
                 if (requested != null) {
-                    if (!current.isConnected || current.mediaGeneration != previous.mediaGeneration ||
-                        current.isPlaying != previous.isPlaying ||
-                        (!current.isBuffering && !current.hasEnded && current.isPlaying == requested)
+                    if (!current.isConnected ||
+                        (
+                            !current.isBuffering && !current.hasEnded && current.isPlaying == requested &&
+                                (current.isPlaying != previous.isPlaying || current.mediaGeneration != previous.mediaGeneration)
+                        )
                     ) {
                         requestedPlaying = null
                     }

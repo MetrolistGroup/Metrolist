@@ -3618,13 +3618,19 @@ object PlayerState {
     ): QueueRemoval? {
         if (isListenTogetherGuest()) return null
         val state = queue.state.value
-        val currentRemoved = state.currentIndex in indices
+        val targetCurrentIndex =
+            if (deviceConnect.isActive) {
+                syncSession.targetCurrentIndex.takeIf { it in state.entries.indices } ?: state.currentIndex
+            } else {
+                state.currentIndex
+            }
+        val currentRemoved = targetCurrentIndex in indices
         val nextEntry =
             if (currentRemoved) {
                 state.entries
                     .withIndex()
                     .firstOrNull { (index, entry) ->
-                        index > state.currentIndex && index !in indices && !isSongBlocked(entry.song)
+                        index > targetCurrentIndex && index !in indices && !isSongBlocked(entry.song)
                     }
             } else {
                 null
