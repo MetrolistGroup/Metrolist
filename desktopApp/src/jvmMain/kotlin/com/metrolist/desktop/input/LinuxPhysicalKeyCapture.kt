@@ -1,8 +1,12 @@
 package com.metrolist.desktop.input
 
+import com.sun.jna.Callback
 import com.sun.jna.Library
+import com.sun.jna.Memory
 import com.sun.jna.Native
+import com.sun.jna.NativeLong
 import com.sun.jna.Pointer
+import com.sun.jna.Structure
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.locks.ReentrantLock
@@ -53,7 +57,7 @@ internal class LinuxPhysicalKeyCapture : PlatformPhysicalKeyCapture {
             Thread(
                 {
                     try {
-                        pollX11Keymap(ready)
+                        captureX11Events(ready)
                     } finally {
                         lifecycleLock.withLock {
                             val shouldRestart = restartOnExit && requested
@@ -73,26 +77,40 @@ internal class LinuxPhysicalKeyCapture : PlatformPhysicalKeyCapture {
         return ready
     }
 
-    private fun pollX11Keymap(ready: CountDownLatch) {
-        var display: Pointer? = null
+    private fun captureX11Events(ready: CountDownLatch) {
+        var eventDisplay: Pointer? = null
+        var controlDisplay: Pointer? = null
+        var context: NativeLong? = null
+        var range: Pointer? = null
         try {
             val x11 = X11.INSTANCE
-            display = x11.XOpenDisplay(null) ?: return
-            val previous = ByteArray(KEYMAP_SIZE)
-            val current = ByteArray(KEYMAP_SIZE)
-            x11.XQueryKeymap(display, previous)
+            val xtst = XTestRecord.INSTANCE
+            val activeEventDisplay = x11.XOpenDisplay(null) ?: return
+            eventDisplay = activeEventDisplay
+            val activeControlDisplay = x11.XOpenDisplay(null) ?: return
+            controlDisplay = activeControlDisplay
+            range = xtst.XRecordAllocRange() ?: return
+            range.clear(X_RECORD_RANGE_SIZE)
+            // XRecordRange.device_events is the two-byte range at offset 18 in Xlib's 32-byte structure.
+            range.setByte(DEVICE_EVENTS_OFFSET, X_KEY_PRESS.toByte())
+            range.setByte(DEVICE_EVENTS_OFFSET + 1, X_KEY_PRESS.toByte())
+
+            val clients = Memory(Native.LONG_SIZE.toLong())
+            clients.setNativeLong(0, NativeLong(X_RECORD_ALL_CLIENTS))
+            val ranges = Memory(Native.POINTER_SIZE.toLong())
+            ranges.setPointer(0, range)
+            val recordContext = xtst.XRecordCreateContext(activeControlDisplay, 0, clients, 1, ranges, 1)
+            if (recordContext.toLong() == 0L) return
+            context = recordContext
+            if (xtst.XRecordEnableContextAsync(activeEventDisplay, recordContext, callback, null) == 0) return
+
             available = true
             ready.countDown()
+            x11.XFlush(activeEventDisplay)
             while (requested) {
-                if (x11.XQueryKeymap(display, current) == 0) break
-                for (keyCode in MIN_X11_KEYCODE..MAX_X11_KEYCODE) {
-                    if (isPressed(current, keyCode) && !isPressed(previous, keyCode)) {
-                        pending.record(linuxPhysicalPositionForX11KeyCode(keyCode))
-                    }
-                }
-                current.copyInto(previous)
+                xtst.XRecordProcessReplies(activeEventDisplay)
                 try {
-                    Thread.sleep(POLL_INTERVAL_MILLIS)
+                    Thread.sleep(REPLY_POLL_INTERVAL_MILLIS)
                 } catch (_: InterruptedException) {
                     Thread.currentThread().interrupt()
                     break
@@ -102,29 +120,79 @@ internal class LinuxPhysicalKeyCapture : PlatformPhysicalKeyCapture {
             available = false
         } finally {
             ready.countDown()
-            display?.let(X11.INSTANCE::XCloseDisplay)
+            val activeContext = context
+            eventDisplay?.let { display ->
+                activeContext?.let { recordContext ->
+                    runCatching { XTestRecord.INSTANCE.XRecordDisableContext(display, recordContext) }
+                }
+            }
+            controlDisplay?.let { display ->
+                activeContext?.let { recordContext ->
+                    runCatching { XTestRecord.INSTANCE.XRecordFreeContext(display, recordContext) }
+                }
+            }
+            range?.let { runCatching { X11.INSTANCE.XFree(it) } }
+            eventDisplay?.let { runCatching { X11.INSTANCE.XCloseDisplay(it) } }
+            controlDisplay?.let { runCatching { X11.INSTANCE.XCloseDisplay(it) } }
         }
     }
 
-    private fun isPressed(
-        keymap: ByteArray,
-        keyCode: Int,
-    ): Boolean {
-        val byteIndex = keyCode ushr 3
-        val bitIndex = keyCode and 7
-        return keymap[byteIndex].toInt() and (1 shl bitIndex) != 0
-    }
+    private val callback =
+        object : XRecordInterceptProc {
+            override fun invoke(
+                closure: Pointer?,
+                dataPointer: Pointer?,
+            ) {
+                if (dataPointer == null) return
+                try {
+                    val data = XRecordInterceptData(dataPointer)
+                    data.read()
+                    val eventData = data.data ?: return
+                    if (data.category != RECORD_FROM_SERVER || data.dataLength.toLong() <= 0L) return
+                    if (eventData.getByte(0).toInt() and X_EVENT_TYPE_MASK != X_KEY_PRESS) return
+
+                    val xKeyCode = eventData.getByte(1).toInt() and 0xFF
+                    if (xKeyCode !in X_MODIFIER_KEYCODES) {
+                        pending.record(linuxPhysicalPositionForX11KeyCode(xKeyCode))
+                    }
+                } finally {
+                    XTestRecord.INSTANCE.XRecordFreeData(dataPointer)
+                }
+            }
+        }
 
     override fun consume(awtKeyCode: Int): PhysicalKeyPosition? = pending.consume()
 
     override fun close() = setEnabled(false)
 
     private companion object {
-        const val KEYMAP_SIZE = 32
-        const val MIN_X11_KEYCODE = 8
-        const val MAX_X11_KEYCODE = 255
-        const val POLL_INTERVAL_MILLIS = 8L
+        const val X_RECORD_ALL_CLIENTS = 3L
+        const val RECORD_FROM_SERVER = 0
+        const val X_KEY_PRESS = 2
+        const val X_EVENT_TYPE_MASK = 0x7F
+        const val DEVICE_EVENTS_OFFSET = 18L
+        const val X_RECORD_RANGE_SIZE = 32L
+        const val REPLY_POLL_INTERVAL_MILLIS = 5L
+        val X_MODIFIER_KEYCODES = setOf(37, 50, 62, 64, 92, 105, 108, 133, 134)
     }
+}
+
+private interface XRecordInterceptProc : Callback {
+    fun invoke(
+        closure: Pointer?,
+        dataPointer: Pointer?,
+    )
+}
+
+@Structure.FieldOrder("idBase", "serverTime", "clientSequence", "category", "clientSwapped", "data", "dataLength")
+private class XRecordInterceptData(pointer: Pointer) : Structure(pointer) {
+    @JvmField var idBase: NativeLong = NativeLong(0)
+    @JvmField var serverTime: NativeLong = NativeLong(0)
+    @JvmField var clientSequence: NativeLong = NativeLong(0)
+    @JvmField var category: Int = 0
+    @JvmField var clientSwapped: Int = 0
+    @JvmField var data: Pointer? = null
+    @JvmField var dataLength: NativeLong = NativeLong(0)
 }
 
 @Suppress("FunctionName")
@@ -133,12 +201,50 @@ private interface X11 : Library {
 
     fun XCloseDisplay(display: Pointer): Int
 
-    fun XQueryKeymap(
-        display: Pointer,
-        keysReturn: ByteArray,
-    ): Int
+    fun XFlush(display: Pointer): Int
+
+    fun XFree(data: Pointer): Int
 
     companion object {
         val INSTANCE: X11 = Native.load("X11", X11::class.java)
+    }
+}
+
+@Suppress("FunctionName")
+private interface XTestRecord : Library {
+    fun XRecordAllocRange(): Pointer?
+
+    fun XRecordCreateContext(
+        display: Pointer,
+        datumFlags: Int,
+        clients: Pointer,
+        clientCount: Int,
+        ranges: Pointer,
+        rangeCount: Int,
+    ): NativeLong
+
+    fun XRecordEnableContextAsync(
+        display: Pointer,
+        context: NativeLong,
+        callback: XRecordInterceptProc,
+        closure: Pointer?,
+    ): Int
+
+    fun XRecordProcessReplies(display: Pointer)
+
+    fun XRecordDisableContext(
+        display: Pointer,
+        context: NativeLong,
+    ): Int
+
+    fun XRecordFreeContext(
+        display: Pointer,
+        context: NativeLong,
+    ): Int
+
+    fun XRecordFreeData(data: Pointer)
+
+    companion object {
+        val INSTANCE: XTestRecord = Native.load("Xtst", XTestRecord::class.java)
     }
 }
