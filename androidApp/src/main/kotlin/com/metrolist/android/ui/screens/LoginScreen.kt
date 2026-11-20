@@ -341,7 +341,13 @@ fun LoginScreen(
             }
 
             AccountDiscoveryAction.COMPLETE_LOGIN -> {
-                finalizeLogin(authData.copy(dataSyncId = singleAccountDataSyncId(authData.dataSyncId, accounts)))
+                val dataSyncId = singleAccountDataSyncId(authData.dataSyncId, accounts)
+                if (dataSyncId.isBlank()) {
+                    errorMessage = loginError
+                    loginStage = LoginStage.Authenticating
+                } else {
+                    finalizeLogin(authData.copy(dataSyncId = dataSyncId))
+                }
             }
         }
     }

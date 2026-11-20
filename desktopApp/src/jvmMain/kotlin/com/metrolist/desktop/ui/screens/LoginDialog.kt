@@ -285,6 +285,7 @@ private fun WindowsAccountContent(
     var busy by remember { mutableStateOf(true) }
     var failed by remember { mutableStateOf(false) }
     var needsLogin by remember { mutableStateOf(!authManager.isLoggedIn) }
+    var helperLaunchedFromPicker by remember { mutableStateOf(false) }
     var loginUrl by remember { mutableStateOf<String?>(null) }
     var completedSignInUrl by remember { mutableStateOf<String?>(null) }
 
@@ -333,13 +334,19 @@ private fun WindowsAccountContent(
                 selectedAccount = null
                 failed = false
                 busy = true
+                helperLaunchedFromPicker = false
                 completedSignInUrl = loginUrl
                 loginUrl = null
                 needsLogin = false
             },
             onDismissRequest = {
                 loginUrl = null
-                needsLogin = false
+                if (helperLaunchedFromPicker) {
+                    helperLaunchedFromPicker = false
+                    needsLogin = false
+                } else {
+                    onDismissRequest()
+                }
             },
             loginUrl = loginUrl,
         )
@@ -361,6 +368,8 @@ private fun WindowsAccountContent(
                 onAccountSelected = { if (!busy) selectedAccount = it },
             )
         }
+        val canCompleteWithExistingCredentials =
+            !isSwitchingChannel && accounts.isEmpty() && authData.cookie.isNotBlank() && authData.dataSyncId.isNotBlank()
         FlowRow(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -370,15 +379,13 @@ private fun WindowsAccountContent(
                 enabled = !busy,
                 onClick = {
                     loginUrl = null
+                    helperLaunchedFromPicker = true
                     needsLogin = true
                 },
                 shapes = ButtonDefaults.shapes(),
             ) { Text(stringResource(Res.string.channel_switch_sign_in_again)) }
             Button(
-                enabled =
-                    !busy &&
-                        (selectedAccount != null ||
-                            (!isSwitchingChannel && accounts.isEmpty() && authData.cookie.isNotBlank() && authData.dataSyncId.isNotBlank())),
+                enabled = !busy && (selectedAccount != null || canCompleteWithExistingCredentials),
                 onClick = {
                     val selected = selectedAccount
                     scope.launch {
@@ -427,13 +434,14 @@ private fun WindowsAccountContent(
                                         },
                                         navigate = { url ->
                                             if (url == completedSignInUrl) {
-                                                val resolved = authData.dataSyncId.isNotBlank() &&
-                                                    authManager.validateAndSaveCredentials(
-                                                        authData.cookie,
-                                                        authData.visitorData,
-                                                        authData.dataSyncId,
-                                                        authData.authUser,
-                                                    )
+                                                val resolved =
+                                                    authData.dataSyncId.isNotBlank() &&
+                                                        authManager.validateAndSaveCredentials(
+                                                            authData.cookie,
+                                                            authData.visitorData,
+                                                            authData.dataSyncId,
+                                                            authData.authUser,
+                                                        )
                                                 if (resolved) {
                                                     onAuthDataExtracted(
                                                         authData.cookie,
@@ -446,6 +454,7 @@ private fun WindowsAccountContent(
                                                 }
                                             } else {
                                                 loginUrl = url
+                                                helperLaunchedFromPicker = true
                                                 needsLogin = true
                                             }
                                         },
@@ -685,7 +694,13 @@ private fun WebViewContent(
             }
 
             AccountDiscoveryAction.COMPLETE_LOGIN -> {
-                finalizeLogin(authData.copy(dataSyncId = singleAccountDataSyncId(authData.dataSyncId, accounts)))
+                val dataSyncId = singleAccountDataSyncId(authData.dataSyncId, accounts)
+                if (dataSyncId.isBlank()) {
+                    validationFailed = true
+                    loginStage = LoginStage.Authenticating
+                } else {
+                    finalizeLogin(authData.copy(dataSyncId = dataSyncId))
+                }
             }
         }
     }
@@ -773,7 +788,7 @@ private fun WebViewContent(
                     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                         Text(stringResource(Res.string.account_picker_subtitle))
                         AccountPickerList(
-                            accounts.filter { it.isSelectableForLogin(authData.dataSyncId) },
+                            accounts.filter { it.isSelectableForLogin(pendingAuthData?.dataSyncId.orEmpty()) },
                             selectedAccount,
                             onAccountSelected = { selectedAccount = it },
                         )

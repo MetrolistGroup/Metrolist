@@ -225,12 +225,7 @@ internal fun IosLoginScreen(
 
                 AccountDiscoveryAction.COMPLETE_LOGIN -> {
                     val dataSyncId = singleAccountDataSyncId(authData.dataSyncId, availableAccounts)
-                    if (dataSyncId.isBlank()) {
-                        errorMessage = loginError
-                        stage = IosLoginStage.AUTHENTICATING
-                    } else {
-                        finalizeLogin(authData.copy(dataSyncId = dataSyncId))
-                    }
+                    finalizeLogin(authData.copy(dataSyncId = dataSyncId))
                 }
             }
         }
