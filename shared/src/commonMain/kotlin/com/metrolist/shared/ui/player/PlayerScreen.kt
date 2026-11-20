@@ -900,6 +900,12 @@ fun PlayerScreen(
                 queueSheetState.expandSoft()
             }
 
+            LaunchedEffect(useLandscapeLayout, queueSheetState.isSettledExpanded) {
+                if (!useLandscapeLayout && queueSheetState.isSettledExpanded && uiState.isLyricsExpanded) {
+                    viewModel.setLyricsVisible(false)
+                }
+            }
+
             LaunchedEffect(useLandscapeLayout, uiState.isLyricsExpanded) {
                 if (useLandscapeLayout && uiState.isLyricsExpanded) {
                     viewModel.setLyricsExpanded(false)
