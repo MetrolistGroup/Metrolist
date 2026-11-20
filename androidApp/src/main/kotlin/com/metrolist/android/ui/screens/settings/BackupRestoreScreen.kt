@@ -26,7 +26,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -901,7 +900,9 @@ fun BackupRestoreScreen(onNavigateBack: () -> Unit) {
                 TextButton(
                     onClick = {
                         showAutomaticBackupPicker = false
-                        restoreLauncher.launch(arrayOf("application/zip", "application/octet-stream", "*/*"))
+                        runCatching {
+                            restoreLauncher.launch(arrayOf("application/zip", "application/octet-stream", "*/*"))
+                        }
                     },
                 ) {
                     Text(stringResource(Res.string.restore_backup))
