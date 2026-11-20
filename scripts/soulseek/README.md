@@ -2,9 +2,11 @@
 
 Finds a song on Soulseek and downloads it. Only files whose name matches the title and artist, and whose length is within 3 seconds of the song, count; remixes, live and other versions the title doesn't ask for are skipped, as are files below 320 kbps (the automatic mode below also accepts 256 kbps).
 
-In Metrolist desktop, **Download from Soulseek** in a song or player menu opens a picker. It searches first, then lists up to three files for each format with their size, in this order: 320 kbps or V0, CD-quality lossless, then hi-res lossless (24-bit or above 48 kHz). Picking one downloads that file. Sign in under **Settings → Integrations → Soulseek**, or in the dialog that opens when a search needs it.
+In Metrolist desktop, **Download from Soulseek** in a song or player menu opens a picker. It searches first, then lists up to three files for each format with their size, in this order: 320 kbps or V0, CD-quality lossless, then hi-res lossless (24-bit or above 48 kHz). Picking one downloads that file, and the song then plays that file instead of streaming, offline too. **Downloaded versions** in the same menu lists every version kept for the song and switches between them or back to streaming. Metrolist records the versions in `soulseek-files.json` in its state directory (`~/.local/state/metrolist` by default). Sign in under **Settings → Integrations → Soulseek**, or in the dialog that opens when a search needs it.
 
 ## Install
+
+Desktop packages bundle the helper as one executable built by `build_sidecar.sh`, which freezes it with PyInstaller into `desktopApp/src/desktopMain/resources/<os>/`. CI runs it before each desktop package; set `SOULSEEK_PYTHON` to pick the interpreter and so the architecture. When Metrolist runs from source, or the package has no helper, it uses one installed on the machine:
 
 ```sh
 uv tool install --force scripts/soulseek

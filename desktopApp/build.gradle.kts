@@ -369,6 +369,9 @@ val generateSidecarChecksums =
                 Triple("macos/bgutil-ytdlp-pot-provider-rs", "macos", "bgutil-ytdlp-pot-provider-rs.sha256"),
                 Triple("windows/bgutil-ytdlp-pot-provider-rs.exe", "windows", "bgutil-ytdlp-pot-provider-rs.exe.sha256"),
                 Triple("windows/metro-wv2-helper.exe", "windows", "metro-wv2-helper.exe.sha256"),
+                Triple("linux/metrolist-slsk", "linux", "metrolist-slsk.sha256"),
+                Triple("macos/metrolist-slsk", "macos", "metrolist-slsk.sha256"),
+                Triple("windows/metrolist-slsk.exe", "windows", "metrolist-slsk.exe.sha256"),
             )
         val resourcesDirectory = layout.projectDirectory.dir("src/desktopMain/resources")
         inputs
@@ -406,7 +409,16 @@ val syncExternalResources =
         into(nativeResourcesDir)
 
         from(project.file("src/desktopMain/resources")) {
-            include("windows/*.dll", "windows/*.exe", "linux/*.so", "linux/bgutil*", "macos/*.dylib", "macos/bgutil*")
+            include(
+                "windows/*.dll",
+                "windows/*.exe",
+                "linux/*.so",
+                "linux/bgutil*",
+                "linux/metrolist-slsk",
+                "macos/*.dylib",
+                "macos/bgutil*",
+                "macos/metrolist-slsk",
+            )
         }
 
         if (platform == "win") {

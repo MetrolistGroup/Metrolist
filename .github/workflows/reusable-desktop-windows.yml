@@ -155,6 +155,13 @@ jobs:
           $helper = Join-Path $output "metro-wv2-helper.exe"
           if (-not (Test-Path $helper -PathType Leaf)) { throw "Windows login helper was not produced at $helper" }
 
+      - name: Set up uv
+        uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+
+      - name: Build Soulseek helper
+        shell: bash
+        run: scripts/soulseek/build_sidecar.sh
+
       - name: Build Windows portable package
         shell: bash
         env:

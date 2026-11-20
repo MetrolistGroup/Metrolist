@@ -649,6 +649,7 @@ object DownloadManager {
         songId: String,
         song: SongItem?,
     ): PlaybackResource? {
+        SoulseekLibrary.playbackResource(songId)?.let { return it }
         val path = getLocalAudioPath(songId) ?: return null
         return getDownloadMetadata(songId)?.toPlaybackResource(storedAudioReportingSong(song, database))?.copy(url = path)
     }

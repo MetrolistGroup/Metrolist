@@ -23,6 +23,7 @@ import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedSecureTextField
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -38,6 +39,7 @@ import androidx.compose.ui.autofill.ContentType
 import androidx.compose.ui.semantics.contentType
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.metrolist.desktop.state.app.AppState
 import com.metrolist.shared.generated.resources.Res
@@ -63,13 +65,19 @@ import com.metrolist.shared.generated.resources.soulseek_no_match
 import com.metrolist.shared.generated.resources.soulseek_peer_busy
 import com.metrolist.shared.generated.resources.soulseek_sample_rate
 import com.metrolist.shared.generated.resources.soulseek_searching
+import com.metrolist.shared.generated.resources.soulseek_stream
+import com.metrolist.shared.generated.resources.soulseek_versions
+import com.metrolist.shared.generated.resources.soulseek_versions_playing
 import com.metrolist.shared.generated.resources.username
 import com.metrolist.shared.model.SongItem
 import com.metrolist.shared.ui.components.AlertDialog
 import com.metrolist.shared.ui.components.PlayerMenuAction
 import com.metrolist.shared.ui.icons.MetrolistIcons
+import com.metrolist.shared.ui.playback.LocalPlaybackController
 import com.metrolist.shared.ui.settings.SoulseekSettingsHost
 import com.metrolist.shared.ui.utils.rememberFileSizeFormatter
+import com.metrolist.shared.utils.OsUtil
+import com.metrolist.shared.utils.XdgUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
@@ -122,16 +130,36 @@ object SoulseekDownloader {
     // One Soulseek login per account: a second concurrent helper would disconnect the first.
     private val mutex = Mutex()
 
-    // shortcut: finds the helper only at uv's default tool path or on PATH; add a settings field if it lives elsewhere.
+    private val helperName = if (OsUtil.isWindows) "metrolist-slsk.exe" else "metrolist-slsk"
+
+    /** The helper bundled in the app's resources, else one installed with `uv tool install scripts/soulseek` (source runs). */
     private fun helper(): File? =
-        (
-            listOf(File(System.getProperty("user.home"), ".local/bin/metrolist-slsk")) +
-                System
-                    .getenv("PATH")
-                    .orEmpty()
-                    .split(File.pathSeparator)
-                    .map { File(it, "metrolist-slsk") }
-        ).firstOrNull { it.canExecute() }
+        System
+            .getProperty("compose.application.resources.dir")
+            ?.let { File(it, helperName) }
+            ?.takeIf { it.isFile }
+            ?.let(::runnable)
+            ?: (
+                listOf(File(System.getProperty("user.home"), ".local/bin/$helperName")) +
+                    System
+                        .getenv("PATH")
+                        .orEmpty()
+                        .split(File.pathSeparator)
+                        .map { File(it, helperName) }
+            ).firstOrNull { it.isFile && it.canExecute() }
+
+    // Packaging drops the executable bit; read-only installs (mounted DMG, AppImage) need a writable copy to set it.
+    private fun runnable(bundled: File): File? {
+        if (bundled.canExecute() || bundled.setExecutable(true)) return bundled
+        val copy = File(XdgUtils.getXdgCacheHome(), "metrolist/$helperName")
+        return runCatching {
+            if (!copy.isFile || copy.length() != bundled.length() || copy.lastModified() < bundled.lastModified()) {
+                copy.parentFile.mkdirs()
+                bundled.copyTo(copy, overwrite = true)
+            }
+            copy.takeIf { it.canExecute() || it.setExecutable(true) }
+        }.getOrNull()
+    }
 
     /** The song whose versions the picker shows, or null when it is closed. */
     var pickerSong by mutableStateOf<SongItem?>(null)
@@ -232,7 +260,20 @@ object SoulseekDownloader {
             val message =
                 when (exitCode) {
                     0 -> {
-                        getString(Res.string.soulseek_downloaded, File(output.last()).name)
+                        val path = File(output.last())
+                        SoulseekLibrary.add(
+                            song.id,
+                            SoulseekFile(
+                                path = path.absolutePath,
+                                format = option.format,
+                                extension = option.extension,
+                                size = path.length(),
+                                bitrate = option.bitrate,
+                                bitDepth = option.bitDepth,
+                                sampleRate = option.sampleRate,
+                            ),
+                        )
+                        getString(Res.string.soulseek_downloaded, path.name)
                     }
 
                     EXIT_NO_MATCH -> {
@@ -389,17 +430,74 @@ fun SoulseekPickerDialog() {
     )
 }
 
+@Composable
+private fun optionDetails(option: SoulseekOption) =
+    formatDetails(option.format, option.extension, option.bitrate, option.bitDepth, option.sampleRate)
+
+@Composable
+private fun fileDetails(file: SoulseekFile) = formatDetails(file.format, file.extension, file.bitrate, file.bitDepth, file.sampleRate)
+
 /** "MP3 · 320 kbps" or "FLAC · 24-bit · 96 kHz". */
 @Composable
-private fun optionDetails(option: SoulseekOption): String {
-    val sampleRate =
-        option.sampleRate?.let { hz -> if (hz % 1000 == 0) "${hz / 1000}" else "%.1f".format(hz / 1000.0) }
+private fun formatDetails(
+    format: String,
+    extension: String,
+    bitrate: Int?,
+    bitDepth: Int?,
+    sampleRate: Int?,
+): String {
+    val kilohertz = sampleRate?.let { hz -> if (hz % 1000 == 0) "${hz / 1000}" else "%.1f".format(hz / 1000.0) }
     return listOfNotNull(
-        option.extension.uppercase(),
-        option.bitrate?.takeIf { option.format == "320" }?.let { stringResource(Res.string.soulseek_bitrate, it) },
-        option.bitDepth?.takeIf { option.format != "320" }?.let { stringResource(Res.string.soulseek_bit_depth, it) },
-        sampleRate?.takeIf { option.format != "320" }?.let { stringResource(Res.string.soulseek_sample_rate, it) },
+        extension.uppercase(),
+        bitrate?.takeIf { format == "320" }?.let { stringResource(Res.string.soulseek_bitrate, it) },
+        bitDepth?.takeIf { format != "320" }?.let { stringResource(Res.string.soulseek_bit_depth, it) },
+        kilohertz?.takeIf { format != "320" }?.let { stringResource(Res.string.soulseek_sample_rate, it) },
     ).joinToString(" · ")
+}
+
+/** Picks which downloaded Soulseek version of a song plays, or goes back to streaming, and plays it. */
+@Composable
+fun SoulseekVersionsDialog() {
+    val song = SoulseekLibrary.versionsSong ?: return
+    val playback = LocalPlaybackController.current
+    val formatSize = rememberFileSizeFormatter()
+    val versions = SoulseekLibrary.versions(song.id)
+    val selected = SoulseekLibrary.selected(song.id)?.path
+
+    fun choose(path: String?) {
+        SoulseekLibrary.select(song.id, path)
+        SoulseekLibrary.closeVersions()
+        playback.play(song)
+    }
+
+    AlertDialog(
+        onDismissRequest = SoulseekLibrary::closeVersions,
+        title = { Text(stringResource(Res.string.soulseek_versions)) },
+        text = {
+            Column(modifier = Modifier.heightIn(max = 420.dp).verticalScroll(rememberScrollState())) {
+                ListItem(
+                    modifier = Modifier.clickable { choose(null) },
+                    leadingContent = { RadioButton(selected = selected == null, onClick = null) },
+                    headlineContent = { Text(stringResource(Res.string.soulseek_stream)) },
+                )
+                versions.forEach { file ->
+                    ListItem(
+                        modifier = Modifier.clickable { choose(file.path) },
+                        leadingContent = { RadioButton(selected = selected == file.path, onClick = null) },
+                        headlineContent = { Text(fileDetails(file)) },
+                        supportingContent = { Text(File(file.path).name, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                        trailingContent = { Text(formatSize(file.size)) },
+                    )
+                }
+            }
+        },
+        confirmButton = {},
+        dismissButton = {
+            TextButton(onClick = SoulseekLibrary::closeVersions, shapes = ButtonDefaults.shapes()) {
+                Text(stringResource(Res.string.cancel))
+            }
+        },
+    )
 }
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
@@ -475,7 +573,9 @@ fun soulseekMenuActions(
     onDismiss: () -> Unit,
 ): List<PlayerMenuAction> {
     if (song == null || song.isLocal || song.isUploaded || song.podcastId != null) return emptyList()
-    return listOf(
+    val versions = SoulseekLibrary.versions(song.id)
+    val playing = SoulseekLibrary.selected(song.id)
+    return listOfNotNull(
         PlayerMenuAction(
             MetrolistIcons.Outlined.Download,
             stringResource(Res.string.soulseek_download),
@@ -483,6 +583,17 @@ fun soulseekMenuActions(
         ) {
             SoulseekDownloader.openPicker(song)
             onDismiss()
+        },
+        versions.takeIf { it.isNotEmpty() }?.let {
+            PlayerMenuAction(
+                MetrolistIcons.Outlined.LibraryMusic,
+                stringResource(Res.string.soulseek_versions),
+                playing?.let { stringResource(Res.string.soulseek_versions_playing, fileDetails(it)) }
+                    ?: stringResource(Res.string.soulseek_stream),
+            ) {
+                SoulseekLibrary.openVersions(song)
+                onDismiss()
+            }
         },
     )
 }

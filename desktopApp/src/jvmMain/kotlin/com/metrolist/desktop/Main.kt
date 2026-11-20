@@ -109,6 +109,7 @@ import com.metrolist.desktop.storage.DownloadState
 import com.metrolist.desktop.storage.SongCacheManager
 import com.metrolist.desktop.storage.SoulseekLoginDialog
 import com.metrolist.desktop.storage.SoulseekPickerDialog
+import com.metrolist.desktop.storage.SoulseekVersionsDialog
 import com.metrolist.desktop.ui.DesktopDensityProvider
 import com.metrolist.desktop.ui.components.DesktopMenuBar
 import com.metrolist.desktop.ui.components.DesktopPlayerVisibility
@@ -613,6 +614,7 @@ private fun WindowScope.AppContent(
                 SettingsOverlay(colorScheme)
             }
             SoulseekPickerDialog()
+            SoulseekVersionsDialog()
             SoulseekLoginDialog()
             YouTubeSyncSnackbar(AppState.snackbarHostState)
             val snackbarScheme = rememberUpdatedState(colorScheme)

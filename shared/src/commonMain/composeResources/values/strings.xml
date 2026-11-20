@@ -157,6 +157,12 @@
     <string name="soulseek_peer_busy">Sharer is busy; the download may wait in a queue</string>
     <!-- Translators: Snackbar shown while a Soulseek file downloads. %1$s is the song title. -->
     <string name="soulseek_downloading">Downloading %1$s from Soulseek…</string>
+    <!-- Translators: Song menu action and dialog title for choosing which downloaded Soulseek version of the song plays. -->
+    <string name="soulseek_versions">Downloaded versions</string>
+    <!-- Translators: Description under the downloaded versions action. %1$s describes the file, for example "FLAC · 24-bit · 96 kHz". -->
+    <string name="soulseek_versions_playing">Playing %1$s</string>
+    <!-- Translators: Option that plays the song from YouTube Music instead of a downloaded Soulseek file. -->
+    <string name="soulseek_stream">Stream from YouTube Music</string>
     <!-- Translators: Snackbar shown when the Soulseek sharer did not send the file. %1$s is the song title. -->
     <string name="soulseek_fetch_failed">The sharer didn't send %1$s. Try another version.</string>
     <!-- Translators: Snackbar shown while searching Soulseek. %1$s is the song title. -->
@@ -178,8 +184,8 @@
     <string name="soulseek_login_description">Soulseek checks your username and password, then your password is kept in the system keychain. An unused username creates a new account.</string>
     <!-- Translators: Error shown when Soulseek refuses the username or password. -->
     <string name="soulseek_login_rejected">Soulseek rejected this username or password</string>
-    <!-- Translators: Snackbar shown when the Soulseek helper program is not installed. Keep the command unchanged. -->
-    <string name="soulseek_helper_missing">Soulseek helper not found. Install it with: uv tool install scripts/soulseek</string>
+    <!-- Translators: Shown when this Metrolist build does not include the Soulseek helper program. -->
+    <string name="soulseek_helper_missing">This Metrolist build doesn't include Soulseek downloads. Reinstall Metrolist to get them.</string>
     <!-- Translators: Heading for notification in the downloads. -->
     <string name="download_notification_title">Downloading songs</string>
     <!-- Translators: Label for notification paused in the downloads. -->

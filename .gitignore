@@ -40,6 +40,8 @@ desktopApp/src/desktopMain/resources/windows/*.exe
 desktopApp/src/desktopMain/resources/windows/*.dll
 desktopApp/src/desktopMain/resources/linux/bgutil-ytdlp-pot-provider-rs
 desktopApp/src/desktopMain/resources/macos/bgutil-ytdlp-pot-provider-rs
+desktopApp/src/desktopMain/resources/linux/metrolist-slsk
+desktopApp/src/desktopMain/resources/macos/metrolist-slsk
 /desktopApp/src/jvmMain/proto/listentogether.proto
 metro-wv2-helper/bin/
 metro-wv2-helper/obj/
