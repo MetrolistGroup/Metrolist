@@ -204,7 +204,7 @@ internal class IosMusicVideoSurfacePlayer(
                 }
                 return@seekToTime
             }
-            driftRetryPolicy.recordSeek(seekDurationMs)
+            driftRetryPolicy.recordSeek(seekDurationMs, succeeded = stillAligned)
             completedSeekGeneration++
             seekCooldownStartedAt = TimeSource.Monotonic.markNow()
             if (!stillAligned) {
