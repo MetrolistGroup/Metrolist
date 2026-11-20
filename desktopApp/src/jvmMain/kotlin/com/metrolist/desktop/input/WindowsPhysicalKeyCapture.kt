@@ -7,73 +7,15 @@ import com.sun.jna.platform.win32.WinDef.LPARAM
 import com.sun.jna.platform.win32.WinDef.LRESULT
 import com.sun.jna.platform.win32.WinDef.WPARAM
 import com.sun.jna.platform.win32.WinUser
-import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.ConcurrentLinkedDeque
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.withLock
-import java.awt.event.KeyEvent as AwtKeyEvent
 
 internal const val WINDOWS_LOW_LEVEL_EXTENDED_KEY_FLAG = 0x01
-private const val PENDING_KEY_CAPTURE_MAX_AGE_NANOS = 5_000_000_000L
-
-internal class WindowsPhysicalKeyCaptureBuffer(
-    private val timeSourceNanos: () -> Long = System::nanoTime,
-) {
-    private data class CapturedKey(
-        val scanCode: Int,
-        val flags: Int,
-        val capturedAtNanos: Long,
-    )
-
-    private val capturesByVirtualKey = ConcurrentHashMap<Int, ConcurrentLinkedDeque<CapturedKey>>()
-
-    fun record(
-        virtualKeyCode: Int,
-        scanCode: Int,
-        flags: Int,
-    ) {
-        if (windowsPhysicalPositionForScanCode(scanCode, flags) == null) return
-        val now = timeSourceNanos()
-        synchronized(capturesByVirtualKey) {
-            val captures = capturesByVirtualKey.computeIfAbsent(virtualKeyCode) { ConcurrentLinkedDeque() }
-            synchronized(captures) {
-                pruneExpired(captures, now)
-                captures.addLast(CapturedKey(scanCode, flags, now))
-            }
-        }
-    }
-
-    fun consume(awtKeyCode: Int): PhysicalKeyPosition? {
-        val virtualKeyCode = windowsVirtualKeyForAwtCode(awtKeyCode)
-        val captures = capturesByVirtualKey[virtualKeyCode] ?: return null
-        return synchronized(captures) {
-            pruneExpired(captures, timeSourceNanos())
-            captures.pollFirst()?.let { windowsPhysicalPositionForScanCode(it.scanCode, it.flags) }
-        }
-    }
-
-    private fun pruneExpired(
-        captures: ConcurrentLinkedDeque<CapturedKey>,
-        nowNanos: Long,
-    ) {
-        while (true) {
-            val oldest = captures.peekFirst() ?: break
-            if (nowNanos - oldest.capturedAtNanos <= PENDING_KEY_CAPTURE_MAX_AGE_NANOS) break
-            captures.pollFirst()
-        }
-    }
-
-    fun clear() {
-        synchronized(capturesByVirtualKey) {
-            capturesByVirtualKey.clear()
-        }
-    }
-}
 
 internal class WindowsPhysicalKeyCapture : PlatformPhysicalKeyCapture {
-    private val pendingKeyCaptures = WindowsPhysicalKeyCaptureBuffer()
+    private val pendingKeyCaptures = OrderedPhysicalKeyCaptureBuffer()
     private val lifecycleLock = ReentrantLock()
 
     @Volatile private var hook: WinUser.HHOOK? = null
@@ -174,11 +116,12 @@ internal class WindowsPhysicalKeyCapture : PlatformPhysicalKeyCapture {
             val pointer = Pointer(data.toLong())
             val virtualKeyCode = pointer.getInt(0)
             if (messageId == WM_KEYDOWN || messageId == WM_SYSKEYDOWN) {
-                if (enabled) {
+                if (enabled && virtualKeyCode !in WINDOWS_MODIFIER_VIRTUAL_KEYS) {
                     pendingKeyCaptures.record(
-                        virtualKeyCode,
-                        pointer.getInt(Int.SIZE_BYTES.toLong()),
-                        pointer.getInt((Int.SIZE_BYTES * 2).toLong()),
+                        windowsPhysicalPositionForScanCode(
+                            pointer.getInt(Int.SIZE_BYTES.toLong()),
+                            pointer.getInt((Int.SIZE_BYTES * 2).toLong()),
+                        ),
                     )
                 }
             }
@@ -186,7 +129,7 @@ internal class WindowsPhysicalKeyCapture : PlatformPhysicalKeyCapture {
         return User32.INSTANCE.CallNextHookEx(hook, code, message, data)
     }
 
-    override fun consume(awtKeyCode: Int): PhysicalKeyPosition? = pendingKeyCaptures.consume(awtKeyCode)
+    override fun consume(awtKeyCode: Int): PhysicalKeyPosition? = pendingKeyCaptures.consume()
 
     override fun close() = setEnabled(false)
 
@@ -195,6 +138,20 @@ internal class WindowsPhysicalKeyCapture : PlatformPhysicalKeyCapture {
         const val WM_KEYUP = 0x0101
         const val WM_SYSKEYDOWN = 0x0104
         const val WM_SYSKEYUP = 0x0105
+        val WINDOWS_MODIFIER_VIRTUAL_KEYS =
+            setOf(
+                0x10,
+                0x11,
+                0x12,
+                0x5B,
+                0x5C,
+                0xA0,
+                0xA1,
+                0xA2,
+                0xA3,
+                0xA4,
+                0xA5,
+            )
     }
 }
 
@@ -216,12 +173,3 @@ internal interface WindowsPhysicalKeyHookProcedureContract : WinUser.HOOKPROC {
     ): LRESULT
 }
 
-internal fun windowsVirtualKeyForAwtCode(awtKeyCode: Int): Int =
-    when (awtKeyCode) {
-        AwtKeyEvent.VK_BACK_QUOTE, AwtKeyEvent.VK_DEAD_GRAVE -> 0xC0
-        AwtKeyEvent.VK_MINUS -> 0xBD
-        AwtKeyEvent.VK_EQUALS -> 0xBB
-        AwtKeyEvent.VK_COMMA -> 0xBC
-        AwtKeyEvent.VK_SLASH -> 0xBF
-        else -> awtKeyCode
-    }
