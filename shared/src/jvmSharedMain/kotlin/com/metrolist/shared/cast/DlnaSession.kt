@@ -81,6 +81,8 @@ internal class DlnaSession(
 
     @Volatile private var lastPlayingPositionMs: Long? = null
 
+    @Volatile private var lastPlayingTrackUri: String? = null
+
     @Volatile private var stopRequested = false
 
     @Volatile
@@ -108,7 +110,9 @@ internal class DlnaSession(
         }
         lastPoll = null
         lastPlayingPositionMs = null
+        lastPlayingTrackUri = null
         stopRequested = false
+        normalizeSonosPlayMode()
         val mimeType = requireNotNull(media.resource.mimeType).substringBefore(';').trim()
         val duration = formatDlnaTime(media.durationMs)
         val didl =
@@ -196,6 +200,7 @@ internal class DlnaSession(
     override suspend fun seekTo(positionMs: Long) =
         withContext(Dispatchers.IO) {
             lastPlayingPositionMs = null
+            lastPlayingTrackUri = null
             soap(
                 descriptor.avTransportUrl,
                 descriptor.avTransportType,
@@ -255,11 +260,28 @@ internal class DlnaSession(
         val current = _state.value
         val positionMs = position.text("RelTime")?.let(::parseDlnaTime) ?: current.positionMs
         val durationMs = position.text("TrackDuration")?.let(::parseDlnaTime)?.takeIf { it > 0L } ?: current.durationMs
+        val trackUri = position.text("TrackURI")
         val transportState = transport.text("CurrentTransportState")
         val volume = readVolume(logFailure = false) ?: current.volume
         val isPlaying = transportState == "PLAYING" || transportState == "TRANSITIONING"
         val isBuffering = transportState == "TRANSITIONING"
-        if (transportState == "PLAYING") lastPlayingPositionMs = positionMs
+        normalizeSonosPlayMode()
+        val wasPlaying = current.isPlaying && !current.isBuffering && lastPlayingPositionMs != null
+        val restarted =
+            descriptor.isSonos &&
+                castPlaybackRestartedNearDuration(
+                    wasPlaying = wasPlaying,
+                    isPlaying = transportState == "PLAYING",
+                    sameMedia = trackUri != null && trackUri == lastPlayingTrackUri,
+                    positionMs = positionMs,
+                    durationMs = durationMs,
+                    lastPlayingPositionMs = lastPlayingPositionMs ?: positionMs,
+                    pollIntervalMs = pollIntervalMs,
+                )
+        if (transportState == "PLAYING") {
+            lastPlayingPositionMs = positionMs
+            lastPlayingTrackUri = trackUri
+        }
         _state.value =
             CastSessionState(
                 connected = true,
@@ -272,16 +294,40 @@ internal class DlnaSession(
                     !stopRequested && (
                         (current.hasEnded && transportState == "STOPPED") ||
                             castPlaybackEndedNearDuration(
-                                current.isPlaying && !current.isBuffering && lastPlayingPositionMs != null,
+                                wasPlaying,
                                 transportState == "STOPPED",
                                 positionMs,
                                 durationMs,
                                 lastPlayingPositionMs = lastPlayingPositionMs ?: positionMs,
                                 pollIntervalMs = pollIntervalMs,
-                            )
+                            ) || restarted
                     ),
                 mediaGeneration = pollGeneration,
             )
+    }
+
+    private fun normalizeSonosPlayMode() {
+        if (!descriptor.isSonos) return
+        val mode =
+            runCatching {
+                soap(
+                    descriptor.avTransportUrl,
+                    descriptor.avTransportType,
+                    "GetTransportSettings",
+                    "<InstanceID>0</InstanceID>",
+                    logFailure = false,
+                ).text("PlayMode")
+            }.getOrNull() ?: return
+        if (mode == "NORMAL") return
+        runCatching {
+            soap(
+                descriptor.avTransportUrl,
+                descriptor.avTransportType,
+                "SetPlayMode",
+                "<InstanceID>0</InstanceID><NewPlayMode>NORMAL</NewPlayMode>",
+                logFailure = false,
+            )
+        }
     }
 
     private fun readVolume(logFailure: Boolean = true): Float? {
