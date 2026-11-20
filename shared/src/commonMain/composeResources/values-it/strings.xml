@@ -151,32 +151,32 @@
     <string name="playback_notification_channel_name">Riproduzione</string>
     <string name="settings">Impostazioni</string>
     <string name="theme_mode">Modalità tema</string>
-    <string name="pure_black">Nero assoluto</string>
+    <string name="pure_black">Nero puro</string>
     <string name="lyrics_provided_by">Testo fornito da %1$s</string>
     <string name="lyrics_written_by">Scritto da %1$s</string>
     <string name="lyrics_auto_scroll_btn">Scorrimento automatico</string>
-    <string name="squiggly">Ondulato</string>
+    <string name="squiggly">Ondulata</string>
     <string name="action_logout">Esci</string>
     <string name="action_login">Accedi</string>
     <string name="action_not_now">Non ora</string>
-    <string name="youtube_session_expired_title">La sessione è scaduta</string>
-    <string name="youtube_session_expired_message">Accedi per ripristinare le funzionalità di YouTube. Puoi continuare ad ascoltare la musica scaricata e nella cache offline.</string>
-    <string name="audio_quality">Qualità dell'audio</string>
+    <string name="youtube_session_expired_title">Potresti essere stato disconnesso</string>
+    <string name="youtube_session_expired_message">Accedi di nuovo per ripristinare le funzionalità dell'account YouTube. Puoi continuare a utilizzare i contenuti scaricati e salvati nella cache offline.</string>
+    <string name="audio_quality">Qualità audio</string>
     <string name="audio_quality_auto">Automatica</string>
     <string name="audio_quality_high">Alta</string>
     <string name="audio_quality_low">Bassa</string>
     <string name="queue">Coda</string>
     <string name="persistent_queue">Ripristina coda all'avvio</string>
-    <string name="persistent_queue_desc">Ripristina l'ultima coda all'apertura dell'app</string>
-    <string name="auto_load_more">Carica brani simili in automatico</string>
-    <string name="auto_load_more_desc">Aggiungi automaticamente brani simili quando le code di radio e mix stanno per finire</string>
-    <string name="skip_silence">Salta il silenzio</string>
-    <string name="audio_normalization">Normalizzazione dell'audio</string>
-    <string name="auto_skip_next_on_error">Salta al prossimo brano quando c'è un errore</string>
-    <string name="auto_skip_next_on_error_desc">Passa al brano successivo in caso di errore di riproduzione</string>
-    <string name="stop_music_on_task_clear">Interrompi la musica quando l'attività è interrotta</string>
+    <string name="persistent_queue_desc">Ripristina l'ultima coda all'avvio dell'app</string>
+    <string name="auto_load_more">Aggiungi automaticamente brani simili</string>
+    <string name="auto_load_more_desc">Aggiungi automaticamente brani simili alle code radio e mix quando stanno per terminare</string>
+    <string name="skip_silence">Salta i silenzi</string>
+    <string name="audio_normalization">Normalizzazione audio</string>
+    <string name="auto_skip_next_on_error">Salta in caso di errore</string>
+    <string name="auto_skip_next_on_error_desc">Continua la riproduzione quando non è possibile riprodurre un brano</string>
+    <string name="stop_music_on_task_clear">Interrompi la riproduzione alla chiusura dell'app</string>
     <string name="storage">Archiviazione</string>
-    <string name="music_video_quality" tools:ignore="MissingTranslation">Qualità video musicali</string>
+    <string name="music_video_quality" tools:ignore="MissingTranslation">Qualità video musicale</string>
     <string name="music_video_quality_desc" tools:ignore="MissingTranslation">Risoluzione predefinita per i video</string>
     <string name="music_video_quality_auto" tools:ignore="MissingTranslation">Automatica</string>
     <string name="music_video_resolution" tools:ignore="MissingTranslation">Risoluzione video</string>
@@ -2503,7 +2503,7 @@
     <string name="lyrics_active_by_real_timing_description">Evidenzia ciascun verso durante il loro intervallo, anche quando i versi si sovrappongono</string>
     <string name="lyrics_progressive_blur">Sfocatura progressiva testi</string>
     <string name="lyrics_progressive_blur_description">Sfoca gradualmente i versi verso i bordi mantenendo nitida la riga attiva</string>
-    <string name="lyrics_curated_by">(fornito da %1$s)</string>
+    <string name="lyrics_curated_by">(a cura di %1$s)</string>
     <string name="hide_from_home">Nascondi dalla Home</string>
     <string name="hidden_from_home">%1$s nascosto dalla Home</string>
     <string name="hidden_home_items">Nascosto dalla Home</string>
