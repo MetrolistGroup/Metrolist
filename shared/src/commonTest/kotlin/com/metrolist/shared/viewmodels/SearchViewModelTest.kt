@@ -176,6 +176,59 @@ class SearchViewModelTest {
         }
 
     @Test
+    fun alternatingContinuationStopsAndKeepsRowsFromTheLastPage() =
+        runTest {
+            val client =
+                HttpClient(
+                    mockEngine { request ->
+                        val cursor = request.url.parameters["continuation"]
+                        val id =
+                            if (cursor == "next-a") {
+                                "two"
+                            } else if (cursor == "next-b") {
+                                "three"
+                            } else {
+                                "one"
+                            }
+                        val next = if (cursor == "next-a") "next-b" else "next-a"
+                        val tracks = """[{"musicResponsiveListItemRenderer":{
+                            "flexColumns":[{"musicResponsiveListItemFlexColumnRenderer":{"text":{"runs":[{"text":"$id"}]}}}],
+                            "playlistItemData":{"videoId":"$id"}
+                        }}]"""
+                        val shelf = """{"title":{"runs":[{"text":"Songs"}]}, "contents":$tracks,
+                            "continuations":[{"nextContinuationData":{"continuation":"$next"}}]}"""
+                        val response =
+                            if (cursor == null) {
+                                """{"contents":{"sectionListRenderer":{"contents":[{"musicShelfRenderer":$shelf}]}}}"""
+                            } else {
+                                """{"continuationContents":{"musicShelfContinuation":$shelf}}"""
+                            }
+                        respond(response, headers = headersOf(HttpHeaders.ContentType, "application/json"))
+                    },
+                ) { install(ContentNegotiation) { json(Json { ignoreUnknownKeys = true }) } }
+            try {
+                val viewModel = SearchViewModel(backgroundScope, YouTubeRepository(InnerTube(client, retryDelay = {})))
+                viewModel.searchQuery("query")
+                viewModel.uiState.first { it.searchSummary != null && !it.isSearching }
+                viewModel.searchFiltered(SearchFilter.SONG)
+                viewModel.uiState.first { it.filteredResults?.continuation == "next-a" && !it.isSearching }
+                viewModel.loadMoreFilteredResults()
+                viewModel.uiState.first { it.filteredResults?.continuation == "next-b" && !it.isLoadingMore }
+                viewModel.loadMoreFilteredResults()
+                val complete = viewModel.uiState.first { it.filteredResults?.items?.size == 3 && !it.isLoadingMore }
+                assertNull(complete.filteredResults!!.continuation)
+                assertEquals(listOf("one", "two", "three"), complete.filteredResults.items.map { it.id })
+                val requests = (client.engine as MockEngine).requestHistory.size
+                viewModel.loadMoreFilteredResults()
+                runCurrent()
+                assertEquals(requests, (client.engine as MockEngine).requestHistory.size)
+                viewModel.close()
+            } finally {
+                client.close()
+            }
+        }
+
+    @Test
     fun clearHistoryPreservesEntriesWhenRemoteReadFails() =
         runTest {
             Settings.shared.searchHistory = SearchHistoryCodec.encode(listOf("keep me"))
