@@ -2261,7 +2261,6 @@ class ListenTogetherManager(
             restoredRoomCode = null
             sessionStartedAt = 0L
             _persistedRoomSession.value = false
-            if (sessionPersistenceEnabled) Settings.shared.listenTogetherDesktopSession = ""
         }
         val wasInRoom = _isInRoom.value
         clearRoomRequest()
@@ -2300,6 +2299,7 @@ class ListenTogetherManager(
                 playback.setPlaybackSpeedFromRemote(Settings.shared.playbackSpeed.coerceIn(0.5f, 2f))
             }
         }
+        if (clearSession && sessionPersistenceEnabled) Settings.shared.listenTogetherDesktopSession = ""
     }
 
     private fun clearRoomRequest() {
