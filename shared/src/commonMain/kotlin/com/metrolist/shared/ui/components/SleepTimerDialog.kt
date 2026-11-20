@@ -133,6 +133,8 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
 import kotlin.math.abs
+import kotlin.time.TimeMark
+import kotlin.time.TimeSource
 
 @Composable
 fun SleepTimerDialog(
@@ -401,15 +403,20 @@ private fun DurationField(
     val hapticFeedback = LocalHapticFeedback.current
     val coroutineScope = rememberCoroutineScope()
     var latestValue by remember { mutableStateOf(value) }
-    SideEffect { latestValue = value }
+    var lastResetSignal by remember { mutableIntStateOf(resetSignal) }
     val currentOnValueChange by rememberUpdatedState(onValueChange)
     var input by remember { mutableStateOf(TextFieldValue(value)) }
     var isFocused by remember { mutableStateOf(false) }
     var lastDirection by remember { mutableIntStateOf(1) }
     var flingJob by remember { mutableStateOf<Job?>(null) }
 
-    LaunchedEffect(resetSignal) {
-        if (resetSignal > 0) flingJob?.cancel()
+    SideEffect {
+        if (resetSignal != lastResetSignal) {
+            lastResetSignal = resetSignal
+            flingJob?.cancel()
+            flingJob = null
+        }
+        latestValue = value
     }
 
     LaunchedEffect(value) {
@@ -437,20 +444,24 @@ private fun DurationField(
                     val velocityTracker = VelocityTracker()
                     val decay = exponentialDecay<Float>(frictionMultiplier = 2.6f)
                     var accumulatedDrag = 0f
+                    var lastDragMark: TimeMark? = null
                     detectVerticalDragGestures(
                         onDragStart = {
                             flingJob?.cancel()
                             focusManager.clearFocus()
                             velocityTracker.resetTracking()
                             accumulatedDrag = 0f
+                            lastDragMark = null
                         },
                         onDragCancel = {
                             velocityTracker.resetTracking()
                             accumulatedDrag = 0f
+                            lastDragMark = null
                         },
                         onVerticalDrag = { change, dragAmount ->
                             change.consume()
                             velocityTracker.addPointerInputChange(change)
+                            lastDragMark = TimeSource.Monotonic.markNow()
                             accumulatedDrag += dragAmount
                             val steps = (-accumulatedDrag / stepPx).toInt()
                             if (steps != 0) {
@@ -459,8 +470,10 @@ private fun DurationField(
                             }
                         },
                         onDragEnd = {
-                            val velocityY = velocityTracker.calculateVelocity().y
+                            val isRecentDrag = lastDragMark?.elapsedNow()?.inWholeMilliseconds?.let { it < 100L } == true
+                            val velocityY = if (isRecentDrag) velocityTracker.calculateVelocity().y else 0f
                             velocityTracker.resetTracking()
+                            lastDragMark = null
                             val startOffset = accumulatedDrag
                             accumulatedDrag = 0f
                             if (abs(velocityY) > stepPx * 3f) {
