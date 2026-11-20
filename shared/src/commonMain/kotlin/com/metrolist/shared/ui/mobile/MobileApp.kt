@@ -1248,6 +1248,7 @@ fun MobileApp(
                                     database = database,
                                     viewModel = libraryViewModel,
                                     playbackController = playbackController,
+                                    guestPlaybackLocked = isListenTogetherGuest,
                                     onSwipeFeedback = onSwipeFeedback,
                                     onItemClick = ::openItem,
                                     onItemLongClick = { menuItem = it to null },

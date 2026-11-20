@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -53,6 +54,7 @@ import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.metrolist.shared.constants.ThumbnailCornerRadius
 import com.metrolist.shared.db.MusicDatabase
 import com.metrolist.shared.db.collectionPlayCounts
 import com.metrolist.shared.db.entities.CachedAudioEntity
@@ -174,6 +176,7 @@ internal fun MobileLibrary(
     viewModel: LibraryViewModel,
     database: MusicDatabase,
     playbackController: PlaybackController,
+    guestPlaybackLocked: Boolean,
     onItemClick: (YTItem) -> Unit,
     onAutoPlaylistClick: (String, String) -> Unit,
     onSwipeFeedback: (String) -> Unit,
@@ -361,7 +364,13 @@ internal fun MobileLibrary(
                         }
                     }
                     if (ytItem is SongItem && !isGridView) {
-                        SongSwipeActions(ytItem, onSwipeFeedback, content = libraryItemContent)
+                        SongSwipeActions(
+                            ytItem,
+                            onSwipeFeedback,
+                            enabled = !guestPlaybackLocked,
+                            shape = RoundedCornerShape(ThumbnailCornerRadius),
+                            content = libraryItemContent,
+                        )
                     } else {
                         libraryItemContent()
                     }
