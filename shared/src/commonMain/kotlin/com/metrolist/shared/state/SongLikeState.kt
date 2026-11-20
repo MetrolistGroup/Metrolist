@@ -596,8 +596,9 @@ object SongLikeState {
             val index = currentList.indexOfFirst { it.id == song.id }
             val liked = !isLiked(song.id)
 
+            val likedSong = song.copy(originalQueueItemId = null)
             if (liked) {
-                currentList.add(0, song)
+                currentList.add(0, likedSong)
                 removeDislike(song.id, sync = false)
             } else if (index >= 0) {
                 currentList.removeAt(index)
@@ -606,7 +607,7 @@ object SongLikeState {
             updateLikedSongs(currentList)
             saveLikedSongs()
             syncLike(song.id, liked)
-            if (liked) _newLikes.tryEmit(song)
+            if (liked) _newLikes.tryEmit(likedSong)
             return liked
         }
 

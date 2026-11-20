@@ -236,9 +236,13 @@ fun PlaylistContent(
             }
         }
     val displayedSongs = remember(songs, displayedIndices) { displayedIndices?.map(songs::get) ?: songs }
-    val preferQueueItemIdState = rememberUpdatedState(currentQueueItemId != null && displayedSongs.any { it.id == currentQueueItemId })
-    val songKeys = preparedSongKeys ?: remember(displayedSongs) { displayedSongs.playlistLazyItemKeys() }
     val effectiveSuggestions = suggestions.takeIf { effectiveQuery.isBlank() }.orEmpty()
+    val preferQueueItemIdState =
+        rememberUpdatedState(
+            currentQueueItemId != null &&
+                (displayedSongs.any { it.id == currentQueueItemId } || effectiveSuggestions.any { it.id == currentQueueItemId }),
+        )
+    val songKeys = preparedSongKeys ?: remember(displayedSongs) { displayedSongs.playlistLazyItemKeys() }
 
     val isTv = LocalIsTv.current
     var tvScrollTarget by remember(playlist?.id) { mutableStateOf<TvReorderScrollTarget?>(null) }
@@ -530,6 +534,8 @@ fun PlaylistContent(
                                                         count = effectiveSuggestions.size,
                                                         offset = displayedSongs.size,
                                                         currentSongId = currentSongIdState,
+                                                        currentQueueItemId = currentQueueItemIdState,
+                                                        preferQueueItemId = preferQueueItemIdState,
                                                         isPlaying = isPlayingState,
                                                         isDownloaded = song.id in downloadedSongIds,
                                                         onTrackClick = onTrackClick,
@@ -723,6 +729,8 @@ fun PlaylistContent(
                                         offset = displayedSongs.size,
                                         modifier = itemModifier.padding(horizontal = CollectionHeaderHorizontalPadding),
                                         currentSongId = currentSongIdState,
+                                        currentQueueItemId = currentQueueItemIdState,
+                                        preferQueueItemId = preferQueueItemIdState,
                                         isPlaying = isPlayingState,
                                         isDownloaded = song.id in downloadedSongIds,
                                         onTrackClick = onTrackClick,
@@ -935,6 +943,8 @@ private fun PlaylistSuggestionItemRow(
     offset: Int,
     modifier: Modifier = Modifier,
     currentSongId: State<String?>,
+    currentQueueItemId: State<String?>,
+    preferQueueItemId: State<Boolean>,
     isPlaying: State<Boolean>,
     isDownloaded: Boolean,
     onTrackClick: (SongItem, Int) -> Unit,
@@ -942,7 +952,7 @@ private fun PlaylistSuggestionItemRow(
     onArtistClick: ((String) -> Unit)?,
     trackContainer: @Composable (SongItem, Boolean, @Composable () -> Unit) -> Unit,
 ) {
-    val playback by rememberItemPlayback(song.id, currentSongId, isPlaying)
+    val playback by rememberItemPlayback(song.id, currentSongId, isPlaying, currentQueueItemId, preferQueueItemId)
     trackContainer(song, true) {
         GroupedListItem(index = index, count = count, modifier = modifier, isCurrent = playback.isCurrent) {
             SongListItem(
