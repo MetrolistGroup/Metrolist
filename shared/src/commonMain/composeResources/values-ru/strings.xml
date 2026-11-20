@@ -253,7 +253,7 @@
     <string name="restore_failed">Не удалось восстановить бэкап</string>
     <string name="dismiss">Скрыть</string>
     <string name="preview">Предпросмотр</string>
-    <string name="about">О приложении</string>
+    <string name="about">Информация</string>
     <string name="credits_android_lead">Ведущий Android-разработчик</string>
     <string name="credits_desktop_lead">Ведущий десктоп-разработчик</string>
     <string name="credits_creator">Создатель Metrolist</string>
@@ -308,7 +308,7 @@
     <string name="settings_privacy_description">История, ограничения скриншотов</string>
     <string name="settings_storage_data">Хранилище и данные</string>
     <string name="settings_backup_restore_description">Сделайте бэкап своей библиотеки или импортируйте её из других приложений</string>
-    <string name="settings_application_about">О приложении</string>
+    <string name="settings_application_about">Приложение и информация</string>
     <string name="settings_open_supported_links_title">Открывать поддерживаемые ссылки</string>
     <string name="settings_updates_title">Обновления</string>
     <string name="settings_updates_available_description">Доступно новое обновление Metrolist</string>
