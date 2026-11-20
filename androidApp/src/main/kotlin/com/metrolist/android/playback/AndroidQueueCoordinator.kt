@@ -90,6 +90,7 @@ internal class AndroidQueueCoordinator(
     private var radioQueuePlaylistId: String? = null
     private var radioQueueParams: String? = null
     private var isRadioQueue = false
+    private var isExplicitRadioQueue = false
     private val queuedSongIds = linkedSetOf<String>()
     private val recommendationHistory = RadioRecommendationHistory()
     private val queueSessionLock = Any()
@@ -147,6 +148,7 @@ internal class AndroidQueueCoordinator(
             radioQueueSeedSongId = recommendationSeedSongId,
             radioQueueFinite = isFiniteQueue,
             radioQueue = isRadioQueue,
+            explicitRadioQueue = isExplicitRadioQueue,
             queueSessionId = queueSessionId.takeIf { isRadioQueue },
             radioQueueChips =
                 queueChipsState.value.map { chip ->
@@ -185,6 +187,7 @@ internal class AndroidQueueCoordinator(
             )
             val restoredPosition = state.currentPosition
             isRadioQueue = state.radioQueue || restoredMix
+            isExplicitRadioQueue = state.explicitRadioQueue ?: state.radioQueue
             radioQueueContinuation = state.radioQueueContinuation
             radioQueuePlaylistId = state.radioQueuePlaylistId
             radioQueueParams = state.radioQueueParams
@@ -248,6 +251,7 @@ internal class AndroidQueueCoordinator(
         queueChipsState.value = emptyList()
         isFiniteQueue = finite
         isRadioQueue = false
+        isExplicitRadioQueue = false
         radioQueueContinuation = null
         radioQueuePlaylistId = null
         radioQueueParams = null
@@ -284,6 +288,7 @@ internal class AndroidQueueCoordinator(
         synchronized(queueSessionLock) {
             resetQueueSession(seed.id, queueTitle, finite)
             isRadioQueue = radioQueue
+            isExplicitRadioQueue = radioQueue
             this.playlistPage = playlistPage
             queuedSongIds.addAll(songs.map(SongItem::id))
             replacement()
@@ -702,8 +707,11 @@ internal class AndroidQueueCoordinator(
                     lastAutoLoadedSongId = null
                     recommendationBootstrapJob?.cancel()
                     transitions.cancelNextTrackPreload()
-                    generatedQueueIndicesToRemoveForRepeat(player.songQueue.value, player.currentMediaItemIndex.value)
-                        .asReversed()
+                    generatedQueueIndicesToRemoveForRepeat(
+                        player.songQueue.value,
+                        player.currentMediaItemIndex.value,
+                        preserveAutoMix = isExplicitRadioQueue,
+                    ).asReversed()
                         .forEach(player::removeQueueItem)
                     queuedSongIds.clear()
                     queuedSongIds.addAll(player.songQueue.value.map(SongItem::id))
