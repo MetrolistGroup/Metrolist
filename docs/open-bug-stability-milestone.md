@@ -1,11 +1,17 @@
 # Open bug and stability milestone
 
-This local milestone proposal covers all 55 issues currently labeled `bug` and open in Metrolist as of 2026-11-20, plus the unlabelled open crash report #5039. No issue is open with the `crash` label, and searches found no open OOM or out-of-memory report. The [crash, OOM and stability tracker](crash-oom-issue-tracker.md) includes the wider issue scan and closed reports. Each independent root cause belongs in a separate PR. Existing PRs stay with their current authors and remain listed for tracking.
+This local milestone proposal covers all 61 issues currently labeled `bug` and open in Metrolist as of 2026-11-20, plus the unlabelled open crash report #5039. No issue is open with the `crash` label, and searches found no open OOM or out-of-memory report. The [crash, OOM and stability tracker](crash-oom-issue-tracker.md) includes the wider issue scan and closed reports. Each independent root cause belongs in a separate PR. Existing PRs stay with their current authors and remain listed for tracking.
 
 The canonical GitHub milestone could not be created: the connected account has read-only permission on `MetrolistGroup/Metrolist`. The list is ready to attach when an account with triage or write permission is available.
 
 ## Issues
 
+- [ ] [#5097](https://github.com/MetrolistGroup/Metrolist/issues/5097) Repeat Playback Mode Resets When Switching to Another Song
+- [ ] [#5096](https://github.com/MetrolistGroup/Metrolist/issues/5096) Cramped widget; possible duplicate of #5082, proposed fix in [PR #5084](https://github.com/MetrolistGroup/Metrolist/pull/5084)
+- [ ] [#5095](https://github.com/MetrolistGroup/Metrolist/issues/5095) Audio silence at crossfade/track transition; overlaps previous reports #4794 and merged PR #4814, needs reproduction details before a separate fix
+- [ ] [#5093](https://github.com/MetrolistGroup/Metrolist/issues/5093) Windows playback fails on a quadraphonic audio interface; fix proposed in [PR #5098](https://github.com/MetrolistGroup/Metrolist/pull/5098), Windows hardware verification pending
+- [ ] [#5091](https://github.com/MetrolistGroup/Metrolist/issues/5091) Bluetooth disconnects when a track switches; needs playback logs and route details
+- [ ] [#5088](https://github.com/MetrolistGroup/Metrolist/issues/5088) YT Music Mixes do not show songs; needs account, reproduction and request diagnostics
 - [ ] [#5076](https://github.com/MetrolistGroup/Metrolist/issues/5076) Application frozen after playing song
 - [ ] [#5086](https://github.com/MetrolistGroup/Metrolist/issues/5086) Playlist / Library Not Syncing on MacBook
 - [ ] [#5085](https://github.com/MetrolistGroup/Metrolist/issues/5085) Device connect fails to pair devices; proposed fix in draft [PR #5087](https://github.com/MetrolistGroup/Metrolist/pull/5087)
@@ -67,6 +73,7 @@ The canonical GitHub milestone could not be created: the connected account has r
 
 - [#5087](https://github.com/MetrolistGroup/Metrolist/pull/5087) recovers the discovered account data-sync ID when single-account login completes and WebView omitted it, on Android and desktop. Shared regression test, desktop compilation and shared/desktop ktlint pass; Android ktlint passes, while Android compilation is blocked by unaccepted local SDK licenses.
 - [#5090](https://github.com/MetrolistGroup/Metrolist/pull/5090) reopens a desktop audio output line when the operating system closes it, reapplies volume and preserves the playback clock. The focused regression test and full desktop/shared checks pass. The report does not confirm line closure on resume, so the PR is related to #4985 pending a Windows device retest.
+- [#5098](https://github.com/MetrolistGroup/Metrolist/pull/5098) retries rejected Windows stereo PCM output with a four-channel format and maps stereo frames to the first two channels for #5093. Desktop build, shared desktop tests and ktlint pass; Windows hardware verification remains pending.
 - [#5084](https://github.com/MetrolistGroup/Metrolist/pull/5084) proposes 4 dp vertical padding and a 56 dp minimum metadata-row height for compact and wide music widget layouts. Regression cases and manual-check guidance are added; Android tests/build are blocked by unaccepted local SDK licenses, and device verification remains pending.
 - [#4982](https://github.com/MetrolistGroup/Metrolist/pull/4982) covers the Listen Together foreground-service regression reported in #4672.
 - [#4981](https://github.com/MetrolistGroup/Metrolist/pull/4981) fixes retained artwork identity for #4961; the current head is approved, CodeRabbit and Greptile pass, and shared URL tests, Android compilation and ktlint pass. Android unit tests could not run because `/tmp` was full.
