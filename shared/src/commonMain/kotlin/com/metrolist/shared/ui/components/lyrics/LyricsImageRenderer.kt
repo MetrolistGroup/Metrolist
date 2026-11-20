@@ -105,6 +105,7 @@ internal fun renderLyricsImage(
     storyCardColor: Color = style.backgroundColor,
     storyTextColor: Color = style.textColor,
     storySecondaryColor: Color = style.secondaryColor,
+    shareUrl: String? = null,
 ): ImageBitmap {
     val bitmap = ImageBitmap(sizePx, if (story) sizePx * 16 / 9 else sizePx)
     val scale = sizePx / 340f
@@ -324,6 +325,16 @@ internal fun renderLyricsImage(
                 if (story) storySecondaryColor else style.secondaryColor,
                 layout.lyricsWidth - (if (story) 62f else 52f) * contentScale,
             )
+            if (story && shareUrl != null) {
+                label(
+                    shareUrl,
+                    layout.padding + 44f * contentScale,
+                    footerTop + verticalOffset + 20f * contentScale,
+                    7f * contentScale,
+                    storySecondaryColor,
+                    layout.lyricsWidth - 62f * contentScale,
+                )
+            }
         }
     }
     return bitmap

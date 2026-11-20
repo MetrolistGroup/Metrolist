@@ -123,7 +123,8 @@ fun LyricsShareDialog(
     var busy by remember { mutableStateOf(false) }
     var failed by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
-    val shareText = stringResource(Res.string.lyrics_share_text, text, title, artist, ShareUrls.song(songId))
+    val shareUrl = ShareUrls.song(songId)
+    val shareText = stringResource(Res.string.lyrics_share_text, text, title, artist, shareUrl)
     var style by remember {
         mutableStateOf(
             decodeLyricsImageStyle(
@@ -206,6 +207,7 @@ fun LyricsShareDialog(
         storyCardColor,
         storyTextColor,
         storySecondaryColor,
+        shareUrl,
     ) {
         if (!loadingArtwork) {
             delay(80)
@@ -232,6 +234,7 @@ fun LyricsShareDialog(
                                 storyCardColor = storyCardColor,
                                 storyTextColor = storyTextColor,
                                 storySecondaryColor = storySecondaryColor,
+                                shareUrl = shareUrl,
                             )
                         }
                     }
@@ -431,6 +434,7 @@ fun LyricsShareDialog(
                                                     storyCardColor = storyCardColor,
                                                     storyTextColor = storyTextColor,
                                                     storySecondaryColor = storySecondaryColor,
+                                                    shareUrl = shareUrl,
                                                 )
                                             }
                                         }
