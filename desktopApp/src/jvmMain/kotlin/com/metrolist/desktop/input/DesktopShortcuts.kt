@@ -302,7 +302,7 @@ private fun Int.isAwtModifierKey(): Boolean =
         this == AwtKeyEvent.VK_META ||
         this == AwtKeyEvent.VK_ALT_GRAPH ||
         this == AwtKeyEvent.VK_WINDOWS ||
-        (this == AwtKeyEvent.VK_CAPS_LOCK && (OsUtil.isMac || OsUtil.isWindows))
+        this == AwtKeyEvent.VK_CAPS_LOCK
 
 private fun handleAwtKeyEvent(
     event: AwtKeyEvent,
