@@ -19,7 +19,7 @@ internal fun musicWidgetSizePolicy(
     val scale = fontScale.coerceAtLeast(1f)
     val tallHeight = maxOf(150, ceil(104 + 35 * scale).toInt())
     val playerHeight = maxOf(150, ceil(74 + 44 * scale).toInt())
-    val metadataRowHeight = maxOf(MIN_COMPACT_ROW_HEIGHT_DP, ceil(2 + 35 * scale).toInt())
+    val metadataRowHeight = maxOf(MIN_COMPACT_ROW_HEIGHT_DP, ceil(10 + 35 * scale).toInt())
     val layout =
         when {
             height >= playerHeight && width >= 250 -> MusicWidgetLayout.PLAYER
