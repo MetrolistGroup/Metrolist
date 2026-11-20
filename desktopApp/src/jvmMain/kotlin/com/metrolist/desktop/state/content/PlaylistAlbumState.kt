@@ -335,12 +335,40 @@ object PlaylistAlbumState {
                     isPlaylistBookmarked = bookmarked
                     LibraryContentState.fetchLibraryData()
                     if (bookmarked && Settings.shared.autoDownloadSavedCollections) {
-                        withCompletePlaylist { songs -> DownloadManager.downloadPlaylist(id, songs) }
+                        downloadBookmarkedPlaylist(id)
                     }
                 } else {
                     AppState.snackbarHostState.showSnackbar(getString(Res.string.error_occurred))
                 }
             }
+    }
+
+    private fun downloadBookmarkedPlaylist(id: String) {
+        AppState.scope.launch {
+            try {
+                val playlist =
+                    withContext(Dispatchers.IO) {
+                        database.dao().playlist(id).first()
+                            ?: database.dao().playlistByBrowseId(id.removePrefix("VL")).first()
+                            ?: database.dao().playlistByBrowseId(id).first()
+                    }
+                val songs =
+                    if (playlist?.playlist?.isLocal == true) {
+                        withContext(Dispatchers.IO) {
+                            database.dao().playlistSongs(playlist.id).first().map { it.toSongItem() }
+                        }
+                    } else {
+                        withContext(Dispatchers.IO) {
+                            database.loadAndCachePlaylistPage(GlobalYouTubeRepository.instance, id).songs
+                        }
+                    }
+                DownloadManager.downloadPlaylist(id, BlockedContent.filterSongs(songs))
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                AppState.snackbarHostState.showSnackbar(getString(Res.string.error_occurred))
+            }
+        }
     }
 
     fun restoreAlbum(id: String): Boolean {
