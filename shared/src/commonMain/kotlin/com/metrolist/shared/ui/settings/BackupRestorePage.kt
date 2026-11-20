@@ -11,6 +11,8 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
@@ -28,6 +30,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.metrolist.shared.backup.AutoBackupFrequency
@@ -106,30 +109,37 @@ fun BackupRestorePage(
         Text(stringResource(Res.string.backup_restore_export_desc), style = MaterialTheme.typography.bodyMedium)
         Text(stringResource(Res.string.automatic_backup), style = MaterialTheme.typography.titleMedium)
         Text(stringResource(Res.string.automatic_backup_location), style = MaterialTheme.typography.bodyMedium)
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        Row(
+            modifier =
+                Modifier.fillMaxWidth().toggleable(
+                    value = settings.autoBackupEnabled,
+                    role = Role.Switch,
+                    onValueChange = {
+                        settings.autoBackupEnabled = it
+                        onAutoBackupSettingsChanged()
+                    },
+                ),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
             Text(stringResource(Res.string.automatic_backup_description), modifier = Modifier.weight(1f))
-            Switch(
-                checked = settings.autoBackupEnabled,
-                onCheckedChange = {
-                    settings.autoBackupEnabled = it
-                    onAutoBackupSettingsChanged()
-                },
-            )
+            Switch(checked = settings.autoBackupEnabled, onCheckedChange = null)
         }
         if (settings.autoBackupEnabled) {
             Text(stringResource(Res.string.automatic_backup_frequency), style = MaterialTheme.typography.titleSmall)
             AutoBackupFrequency.entries.forEach { frequency ->
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier =
+                        Modifier.fillMaxWidth().selectable(
+                            selected = autoBackupFrequency == frequency,
+                            role = Role.RadioButton,
+                            onClick = {
+                                settings.autoBackupFrequency = frequency.name
+                                onAutoBackupSettingsChanged()
+                            },
+                        ),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    RadioButton(
-                        selected = autoBackupFrequency == frequency,
-                        onClick = {
-                            settings.autoBackupFrequency = frequency.name
-                            onAutoBackupSettingsChanged()
-                        },
-                    )
+                    RadioButton(selected = autoBackupFrequency == frequency, onClick = null)
                     Spacer(Modifier.width(8.dp))
                     Text(
                         stringResource(

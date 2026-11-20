@@ -33,7 +33,12 @@ object DesktopAutomaticBackupScheduler {
         job =
             activeScope.launch {
                 while (true) {
-                    if (isAutoBackupDue(settings.autoBackupLastSuccessEpochMillis, System.currentTimeMillis(), frequency)) {
+                    if (settings.credentialsPending) {
+                        delay(CREDENTIAL_RECOVERY_POLL_MILLIS)
+                        continue
+                    }
+                    val now = System.currentTimeMillis()
+                    if (isAutoBackupDue(settings.autoBackupLastSuccessEpochMillis, now, frequency)) {
                         val directory = File(XdgUtils.getXdgDataHome(), "metrolist/automatic-backups")
                         val destination = File(directory, "${defaultBackupFilename(BACKUP_FILENAME_PREFIX)}.zip")
                         val result =
@@ -52,8 +57,11 @@ object DesktopAutomaticBackupScheduler {
                                 "Automatic backup failed: ${result.exceptionOrNull()?.message ?: "Unknown error"}",
                             )
                         }
+                        delay(frequency.intervalMillis)
+                    } else {
+                        val nextDue = settings.autoBackupLastSuccessEpochMillis + frequency.intervalMillis
+                        delay((nextDue - now).coerceAtLeast(1L))
                     }
-                    delay(frequency.intervalMillis)
                 }
             }
     }
@@ -68,5 +76,6 @@ object DesktopAutomaticBackupScheduler {
     }
 
     private const val BACKUP_FILENAME_PREFIX = "metrolist-backup"
+    private const val CREDENTIAL_RECOVERY_POLL_MILLIS = 1_000L
     private const val MAX_RETAINED_BACKUPS = 10
 }
