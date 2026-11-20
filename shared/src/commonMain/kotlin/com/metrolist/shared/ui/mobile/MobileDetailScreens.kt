@@ -739,6 +739,8 @@ internal fun MobilePlaylistScreen(
                 durationSongs = page?.takeUnless { it.isOffline }?.songs ?: cachedSections?.playlistSongs().orEmpty(),
                 hasMoreSongs = page?.hasMore == true,
                 hiddenSongCount = loadedSongs.size - songs.size,
+                // Unlike the visible rows, the artwork list already includes hidden tracks.
+                loadedSongCount = loadedSongs.size,
                 paginationContent = {
                     if (page?.hasMore == true) {
                         if (pageFailed) {
