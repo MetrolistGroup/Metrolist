@@ -140,8 +140,8 @@
     <string name="repeat_mode_one">Ripeti brano</string>
     <string name="repeat_mode_all">Ripeti coda</string>
     <string name="up_next">A seguire</string>
-    <string name="queue_loading">Caricamento coda…</string>
-    <string name="calculating">Calcolando…</string>
+    <string name="queue_loading">Caricamento della coda…</string>
+    <string name="calculating">Calcolo in corso…</string>
     <plurals name="queue_track_count_duration">
         <item quantity="one">%1$d brano · %2$s</item>
         <item quantity="many">%1$d brani · %2$s</item>
@@ -2193,7 +2193,7 @@
     <string name="discord_error_gateway_configuration">Discord ha rifiutato la configurazione della connessione. Aggiorna Metrolist prima di riprovare.</string>
     <string name="discord_preview_buttons_adjusted">Discord abbrevia le etichette lunghe dei pulsanti e omette i pulsanti con link troppo lunghi. Questa anteprima mostra i pulsanti che verranno inviati.</string>
     <string name="discord_presence_status_warning">Rich Presence invia lo stato Online a Discord. Può sostituire Invisibile o Non disturbare, anche quando la riproduzione si interrompe.</string>
-    <string name="discord_refresh_queued">Aggiornamento della presenza in coda.</string>
+    <string name="discord_refresh_queued">Aggiornamento presenza in coda.</string>
     <string name="metroeq_delete_profile_confirm">Eliminare il profilo salvato “%1$s”?</string>
     <string name="metroeq_switch_profile_confirm">Salvare le modifiche prima di cambiare profilo?</string>
     <string name="metroeq_discard_changes">Scarta</string>
