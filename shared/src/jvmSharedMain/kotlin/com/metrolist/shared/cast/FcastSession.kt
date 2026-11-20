@@ -96,6 +96,8 @@ internal class FcastSession(
     @Volatile
     private var currentMediaUrl: String? = null
 
+    private var loadedMedia: LoadedMedia? = null
+
     @Volatile
     private var stopRequested = false
 
@@ -115,6 +117,7 @@ internal class FcastSession(
             check(!closed)
             this@FcastSession.mediaGeneration = mediaGeneration
             currentMediaUrl = mediaUrl
+            loadedMedia = LoadedMedia(mediaUrl, media)
             stopRequested = false
             awaitingCurrentMediaUpdate = true
             awaitingMediaStartPositionMs = positionMs
@@ -165,33 +168,33 @@ internal class FcastSession(
                     }
                 }
         }
-        val mimeType = requireNotNull(media.resource.mimeType).substringBefore(';').trim()
-        send(
-            OPCODE_PLAY,
-            buildJsonObject {
-                put("container", mimeType)
-                put("url", mediaUrl)
-                put("time", positionMs / 1000.0)
-                put("speed", 1.0)
-                put(
-                    "metadata",
-                    buildJsonObject {
-                        put("type", 0)
-                        put("title", media.title)
-                        media.artworkUrl?.let { put("thumbnailUrl", it) }
-                    },
-                )
-            }.toString(),
-        )
+        sendPlay(mediaUrl, media, positionMs)
         if (!autoplay) send(OPCODE_PAUSE)
     }
 
     override suspend fun play() =
         withContext(Dispatchers.IO) {
             synchronized(mediaStateLock) {
+                val stoppedMedia = loadedMedia?.takeIf { stopRequested || _state.value.hasEnded }
+                if (stoppedMedia != null) {
+                    val current = _state.value
+                    stopRequested = false
+                    awaitingCurrentMediaUpdate = true
+                    awaitingMediaStartPositionMs = 0L
+                    _state.value =
+                        current.copy(
+                            isPlaying = true,
+                            isBuffering = true,
+                            positionMs = 0L,
+                            hasEnded = false,
+                        )
+                    sendPlay(stoppedMedia.url, stoppedMedia.media, 0L)
+                    return@synchronized
+                }
                 stopRequested = false
+                _state.value = _state.value.copy(isPlaying = true, hasEnded = false)
+                send(OPCODE_RESUME)
             }
-            send(OPCODE_RESUME)
         }
 
     override suspend fun pause() = withContext(Dispatchers.IO) { send(OPCODE_PAUSE) }
@@ -210,9 +213,40 @@ internal class FcastSession(
         withContext(Dispatchers.IO) {
             synchronized(mediaStateLock) {
                 stopRequested = true
+                _state.value = _state.value.copy(isPlaying = false, isBuffering = false, positionMs = 0L, hasEnded = false)
+                send(OPCODE_STOP)
             }
-            send(OPCODE_STOP)
         }
+
+    private fun sendPlay(
+        mediaUrl: String,
+        media: CastMedia,
+        positionMs: Long,
+    ) {
+        val mimeType = requireNotNull(media.resource.mimeType).substringBefore(';').trim()
+        send(
+            OPCODE_PLAY,
+            buildJsonObject {
+                put("container", mimeType)
+                put("url", mediaUrl)
+                put("time", positionMs / 1000.0)
+                put("speed", 1.0)
+                put(
+                    "metadata",
+                    buildJsonObject {
+                        put("type", 0)
+                        put("title", media.title)
+                        media.artworkUrl?.let { put("thumbnailUrl", it) }
+                    },
+                )
+            }.toString(),
+        )
+    }
+
+    private data class LoadedMedia(
+        val url: String,
+        val media: CastMedia,
+    )
 
     private fun readLoop() {
         try {

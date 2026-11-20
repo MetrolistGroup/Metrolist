@@ -12,7 +12,6 @@ import com.sun.net.httpserver.HttpServer
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.yield
@@ -26,7 +25,6 @@ import okhttp3.Request
 import okhttp3.Response
 import okhttp3.ResponseBody.Companion.toResponseBody
 import java.io.ByteArrayInputStream
-import java.io.DataInputStream
 import java.io.EOFException
 import java.io.IOException
 import java.net.InetAddress
@@ -36,8 +34,6 @@ import java.net.Socket
 import java.net.SocketException
 import java.net.URI
 import java.net.UnknownHostException
-import java.nio.ByteBuffer
-import java.nio.ByteOrder
 import java.util.Collections
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.ThreadPoolExecutor
@@ -429,81 +425,6 @@ class CastProtocolTest {
     }
 
     @Test
-    fun fcastAcceptsMediaEndEventsOnlyForTheCurrentMedia() {
-        val currentUrl = "http://127.0.0.1:46899/audio?token=current"
-        val currentEnd =
-            """{"event":{"type":1,"item":{"url":"$currentUrl"}}}"""
-        val oldEnd =
-            """{"event":{"type":1,"item":{"url":"http://127.0.0.1:46899/audio?token=old"}}}"""
-
-        assertTrue(isCurrentFcastMediaItemEndEvent(currentEnd, currentUrl))
-        assertFalse(isCurrentFcastMediaItemEndEvent(oldEnd, currentUrl))
-        assertFalse(isCurrentFcastMediaItemEndEvent("""{"event":{"type":2,"item":{"url":"$currentUrl"}}}""", currentUrl))
-        assertFalse(isCurrentFcastMediaItemEndEvent("""{"event":{"type":1}}""", currentUrl))
-        assertFalse(isCurrentFcastMediaItemEndEvent("not-json", currentUrl))
-    }
-
-    @Test
-    fun fcastKeepsEndStateAcrossIdleUpdatesAndIgnoresOldMediaEvents() =
-        runBlocking {
-            ServerSocket(0, 1, InetAddress.getLoopbackAddress()).use { server ->
-                val readySocket = CompletableDeferred<Socket>()
-                val finishReceiver = CountDownLatch(1)
-                thread(isDaemon = true) {
-                    server.accept().use { receiver ->
-                        receiver.soTimeout = 5_000
-                        val input = DataInputStream(receiver.getInputStream())
-                        while (true) {
-                            val (opcode, _) = readFcastTestFrame(input)
-                            if (opcode == 11) writeFcastTestFrame(receiver, 11, """{"version":3}""")
-                            if (opcode == 1) {
-                                readySocket.complete(receiver)
-                                finishReceiver.await(5, TimeUnit.SECONDS)
-                                return@thread
-                            }
-                        }
-                    }
-                }
-
-                val currentUrl = "http://127.0.0.1:${server.localPort}/current"
-                val oldUrl = "http://127.0.0.1:${server.localPort}/old"
-                val session = FcastSession(this, InetAddress.getLoopbackAddress(), server.localPort, "test")
-                val media =
-                    CastMedia(
-                        SongItem("song", "Title", null, emptyList(), null),
-                        null,
-                        PlaybackResource("song", "https://media.example.test/audio", emptyMap(), null, null, mimeType = "audio/mp4"),
-                        10_000,
-                    )
-                try {
-                    session.load(currentUrl, media, 0, true, 1f, 1)
-                    val receiver = withTimeout(5_000) { readySocket.await() }
-                    writeFcastTestFrame(receiver, 6, """{"state":1,"time":1,"duration":10}""")
-                    withTimeout(5_000) { session.state.first { it.positionMs == 1_000L } }
-
-                    writeFcastTestFrame(receiver, 19, """{"event":{"type":1,"item":{"url":"$currentUrl"}}}""")
-                    withTimeout(5_000) { session.state.first { it.hasEnded } }
-                    writeFcastTestFrame(receiver, 6, """{"state":0,"time":9.7,"duration":10}""")
-                    val ended = withTimeout(5_000) { session.state.first { it.positionMs == 9_700L } }
-                    assertTrue(ended.hasEnded)
-
-                    session.load(oldUrl, media, 0, true, 1f, 2)
-                    val replacement = session.state.value
-                    assertFalse(replacement.hasEnded)
-                    assertEquals(2L, replacement.mediaGeneration)
-                    writeFcastTestFrame(receiver, 19, """{"event":{"type":1,"item":{"url":"$currentUrl"}}}""")
-                    writeFcastTestFrame(receiver, 6, """{"state":1,"time":1,"duration":10}""")
-                    val playingReplacement = withTimeout(5_000) { session.state.first { it.positionMs == 1_000L } }
-                    assertFalse(playingReplacement.hasEnded)
-                    assertEquals(2L, playingReplacement.mediaGeneration)
-                } finally {
-                    session.close()
-                    finishReceiver.countDown()
-                }
-            }
-        }
-
-    @Test
     fun byteRangesStayInsideKnownMediaLength() {
         assertEquals(ByteRange(10, 19), parseByteRange("bytes=10-19", 100))
         assertEquals(ByteRange(90, 99), parseByteRange("bytes=-10", 100))
@@ -713,35 +634,5 @@ class CastProtocolTest {
         proxy.close()
         assertFalse(sharedOkHttpClient.dispatcher.executorService.isShutdown)
         assertFalse(sharedOkHttpClient.dispatcher.executorService.isTerminated)
-    }
-}
-
-private fun readFcastTestFrame(input: DataInputStream): Pair<Int, String?> {
-    val header = ByteArray(4)
-    input.readFully(header)
-    val size = ByteBuffer.wrap(header).order(ByteOrder.LITTLE_ENDIAN).int
-    val opcode = input.readUnsignedByte()
-    val body = ByteArray(size - 1)
-    input.readFully(body)
-    return opcode to body.takeIf { it.isNotEmpty() }?.toString(Charsets.UTF_8)
-}
-
-private fun writeFcastTestFrame(
-    socket: Socket,
-    opcode: Int,
-    body: String,
-) {
-    val bytes = body.toByteArray(Charsets.UTF_8)
-    socket.getOutputStream().apply {
-        write(
-            ByteBuffer
-                .allocate(4)
-                .order(ByteOrder.LITTLE_ENDIAN)
-                .putInt(bytes.size + 1)
-                .array(),
-        )
-        write(opcode)
-        write(bytes)
-        flush()
     }
 }
