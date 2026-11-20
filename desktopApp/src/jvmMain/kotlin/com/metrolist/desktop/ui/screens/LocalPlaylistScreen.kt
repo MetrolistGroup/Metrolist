@@ -46,6 +46,7 @@ import com.metrolist.desktop.storage.CachedSongEntry
 import com.metrolist.desktop.storage.DownloadManager
 import com.metrolist.desktop.storage.DownloadedFile
 import com.metrolist.desktop.storage.SongCacheManager
+import com.metrolist.desktop.storage.SoulseekLibrary
 import com.metrolist.desktop.ui.components.CollectionCoverEditor
 import com.metrolist.desktop.ui.components.PlaylistContextMenu
 import com.metrolist.desktop.ui.components.SongContextMenu
@@ -61,6 +62,7 @@ import com.metrolist.shared.db.entities.withStoredDownloadMetadata
 import com.metrolist.shared.db.refreshUploadedSongs
 import com.metrolist.shared.db.synchronizeUploadedSongs
 import com.metrolist.shared.generated.resources.Res
+import com.metrolist.shared.generated.resources.brand_soulseek
 import com.metrolist.shared.generated.resources.cached_songs_empty
 import com.metrolist.shared.generated.resources.cached_songs_empty_hint
 import com.metrolist.shared.generated.resources.cached_songs_subtitle
@@ -77,6 +79,9 @@ import com.metrolist.shared.generated.resources.liked_songs_subtitle
 import com.metrolist.shared.generated.resources.liked_songs_title
 import com.metrolist.shared.generated.resources.local_file
 import com.metrolist.shared.generated.resources.remove
+import com.metrolist.shared.generated.resources.soulseek_collection_empty
+import com.metrolist.shared.generated.resources.soulseek_collection_empty_hint
+import com.metrolist.shared.generated.resources.soulseek_collection_subtitle
 import com.metrolist.shared.generated.resources.top_playlist_empty
 import com.metrolist.shared.generated.resources.top_playlist_empty_hint
 import com.metrolist.shared.generated.resources.top_playlist_subtitle
@@ -132,8 +137,30 @@ fun LocalPlaylistScreen(type: String) {
         "downloaded" -> DownloadedPlaylistScreen()
         "cached" -> CachedPlaylistScreen()
         "uploaded" -> UploadedPlaylistScreen()
+        "soulseek" -> SoulseekPlaylistScreen()
         else -> TopPlaylistScreen()
     }
+}
+
+@Composable
+private fun SoulseekPlaylistScreen() {
+    // Re-reads when a version is added, linked or removed.
+    val ids = SoulseekLibrary.songIds()
+    val songs by produceState(emptyList<SongItem>(), ids) { value = SoulseekLibrary.songs() }
+    LocalPlaylistLayout(
+        type = "soulseek",
+        title = stringResource(Res.string.brand_soulseek),
+        subtitle = stringResource(Res.string.soulseek_collection_subtitle),
+        icon = MetrolistIcons.Outlined.Download,
+        songs = songs,
+        emptyMessage = stringResource(Res.string.soulseek_collection_empty),
+        emptyHint = stringResource(Res.string.soulseek_collection_empty_hint),
+        extraInfo = { index, _ ->
+            songs.getOrNull(index)?.let { song -> SoulseekLibrary.selected(song.id) }?.let { file ->
+                Text(file.extension.uppercase(), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+            }
+        },
+    )
 }
 
 @Composable

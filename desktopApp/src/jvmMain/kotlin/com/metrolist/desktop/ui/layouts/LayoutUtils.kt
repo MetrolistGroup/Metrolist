@@ -24,6 +24,7 @@ import com.metrolist.desktop.state.content.SearchState
 import com.metrolist.desktop.state.playback.PlayerState
 import com.metrolist.shared.generated.resources.Res
 import com.metrolist.shared.generated.resources.app_name
+import com.metrolist.shared.generated.resources.brand_soulseek
 import com.metrolist.shared.generated.resources.browse
 import com.metrolist.shared.generated.resources.cached_playlist
 import com.metrolist.shared.generated.resources.downloaded
@@ -124,6 +125,7 @@ object LayoutUtils {
                 LayoutConstants.PlaylistTypes.DOWNLOADED -> stringResource(Res.string.downloaded)
                 LayoutConstants.PlaylistTypes.CACHED -> stringResource(Res.string.cached_playlist)
                 LayoutConstants.PlaylistTypes.UPLOADED -> stringResource(Res.string.uploaded_playlist_name)
+                "soulseek" -> stringResource(Res.string.brand_soulseek)
                 else -> null
             }
         return remember(

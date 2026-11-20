@@ -1,5 +1,7 @@
 package com.metrolist.desktop.storage
 
+import com.metrolist.shared.model.SongItem
+import kotlinx.coroutines.runBlocking
 import java.io.File
 import java.nio.file.Files
 import kotlin.test.AfterTest
@@ -25,6 +27,8 @@ class SoulseekLibraryTest {
         dir.deleteRecursively()
     }
 
+    private val song = SongItem("song", "Song", null, emptyList(), null)
+
     private fun version(
         name: String,
         format: String,
@@ -37,8 +41,8 @@ class SoulseekLibraryTest {
     fun newestDownloadPlaysAndVersionsFollowFormatOrder() {
         val flac = version("song.flac", "lossless")
         val mp3 = version("song.mp3", "320")
-        SoulseekLibrary.add("song", flac)
-        SoulseekLibrary.add("song", mp3)
+        SoulseekLibrary.add(song, flac)
+        SoulseekLibrary.add(song, mp3)
 
         assertEquals(listOf(mp3, flac), SoulseekLibrary.versions("song"))
         val resource = SoulseekLibrary.playbackResource("song")!!
@@ -49,7 +53,7 @@ class SoulseekLibraryTest {
     @Test
     fun choosingStreamingOrDeletingTheFileFallsBackToTheStream() {
         val flac = version("song.flac", "lossless")
-        SoulseekLibrary.add("song", flac)
+        SoulseekLibrary.add(song, flac)
 
         SoulseekLibrary.select("song", null)
         assertNull(SoulseekLibrary.playbackResource("song"))
@@ -64,12 +68,24 @@ class SoulseekLibraryTest {
     fun choicesSurviveARestart() {
         val mp3 = version("song.mp3", "320")
         val hires = version("song-24.flac", "hires")
-        SoulseekLibrary.add("song", mp3)
-        SoulseekLibrary.add("song", hires)
+        SoulseekLibrary.add(song, mp3)
+        SoulseekLibrary.add(song, hires)
         SoulseekLibrary.select("song", mp3.path)
 
         SoulseekLibrary.storeFile = File(dir, "soulseek-files.json") // reloads from disk
         assertEquals(mp3.path, SoulseekLibrary.selected("song")?.path)
         assertEquals(listOf(mp3, hires), SoulseekLibrary.versions("song"))
+        assertEquals(listOf(song), runBlocking { SoulseekLibrary.songs() })
+    }
+
+    @Test
+    fun recordsFromBeforeSongSnapshotsStillLoad() {
+        val flac = version("old.flac", "lossless")
+        File(dir, "old.json").writeText(
+            """{"versions":{"old":[{"path":"${flac.path}","format":"lossless","extension":"flac","size":5}]},"selected":{"old":"${flac.path}"}}""",
+        )
+        SoulseekLibrary.storeFile = File(dir, "old.json")
+        assertEquals(listOf("old"), SoulseekLibrary.songIds())
+        assertEquals(flac.path, SoulseekLibrary.playbackResource("old")?.url)
     }
 }

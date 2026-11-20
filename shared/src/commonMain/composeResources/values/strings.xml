@@ -157,6 +157,18 @@
     <string name="soulseek_peer_busy">Sharer is busy; the download may wait in a queue</string>
     <!-- Translators: Snackbar shown while a Soulseek file downloads. %1$s is the song title. -->
     <string name="soulseek_downloading">Downloading %1$s from Soulseek…</string>
+    <!-- Translators: Button in the Soulseek download dialog that attaches an audio file already on the computer to the song. -->
+    <string name="soulseek_link_file">Use a file I already have…</string>
+    <!-- Translators: Title of the file chooser for attaching an audio file to a song. %1$s is the song title. -->
+    <string name="soulseek_choose_file">Choose the audio file for %1$s</string>
+    <!-- Translators: Snackbar shown after an audio file is attached to a song. %1$s is the file name. -->
+    <string name="soulseek_linked">Added %1$s to this song</string>
+    <!-- Translators: Subtitle of the Soulseek collection in the Library. -->
+    <string name="soulseek_collection_subtitle">Songs downloaded from Soulseek</string>
+    <!-- Translators: Shown when the Soulseek collection has no songs. -->
+    <string name="soulseek_collection_empty">No Soulseek downloads yet</string>
+    <!-- Translators: Hint under the empty Soulseek collection. -->
+    <string name="soulseek_collection_empty_hint">Open a song's menu and choose Download from Soulseek</string>
     <!-- Translators: Song menu action and dialog title for choosing which downloaded Soulseek version of the song plays. -->
     <string name="soulseek_versions">Downloaded versions</string>
     <!-- Translators: Description under the downloaded versions action. %1$s describes the file, for example "FLAC · 24-bit · 96 kHz". -->

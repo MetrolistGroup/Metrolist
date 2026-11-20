@@ -31,4 +31,27 @@ from metrolist_slsk import option_json, options  # noqa: E402
 assert options(all_files, "Daft Punk", "Digital Love", 301) == [mp3, v0, flac, hires]
 assert [option_json(o)["format"] for o in options(all_files, "Daft Punk", "Digital Love", 301)] == ["320", "320", "lossless", "hires"]
 assert len(options([mp3] * 5, "Daft Punk", "Digital Love", 301, per_format=3)) == 3
+
+# probe reads the format from the file's own headers.
+import tempfile  # noqa: E402
+import wave  # noqa: E402
+from pathlib import Path  # noqa: E402
+
+from metrolist_slsk import probe  # noqa: E402
+
+
+def wav(bits, rate):
+    path = Path(tempfile.mkdtemp()) / f"song-{bits}-{rate}.wav"
+    with wave.open(str(path), "wb") as w:
+        w.setnchannels(2)
+        w.setsampwidth(bits // 8)
+        w.setframerate(rate)
+        w.writeframes(b"\0" * (bits // 8) * 2 * rate)
+    return path
+
+
+cd = probe(wav(16, 44100))
+assert (cd["format"], cd["bitDepth"], cd["sampleRate"], cd["extension"]) == ("lossless", 16, 44100, "wav"), cd
+assert probe(wav(24, 44100))["format"] == "hires"  # 24-bit counts as hi-res even at 44.1 kHz
+assert probe(wav(16, 96000))["format"] == "hires"
 print("ok")

@@ -86,6 +86,7 @@ import com.metrolist.desktop.state.playback.PlayerState
 import com.metrolist.desktop.storage.DownloadManager
 import com.metrolist.desktop.storage.DownloadState
 import com.metrolist.desktop.storage.SongCacheManager
+import com.metrolist.desktop.storage.SoulseekLibrary
 import com.metrolist.desktop.storage.playlistDownloadProgress
 import com.metrolist.desktop.storage.playlistDownloadState
 import com.metrolist.desktop.storage.soulseekMenuActions
@@ -909,6 +910,10 @@ private suspend fun loadMediaSongs(
 
                 "downloaded" -> {
                     LibraryState.downloadedFiles.map { it.toSongItem() }
+                }
+
+                "soulseek" -> {
+                    SoulseekLibrary.songs()
                 }
 
                 "top100" -> {

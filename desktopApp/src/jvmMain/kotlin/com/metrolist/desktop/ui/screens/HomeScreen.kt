@@ -288,9 +288,16 @@ private fun openHomeItem(item: YTItem) {
             val collectionType = builtin?.collectionType
             when {
                 builtin == BuiltinPlaylist.HISTORY -> DesktopNavigation.navigate(Screen.History)
+
                 builtin == BuiltinPlaylist.NEW_EPISODES -> BrowseState.fetchBrowseData("VLRDPN", title = item.title)
+
                 builtin == BuiltinPlaylist.SAVED_EPISODES -> BrowseState.fetchBrowseData("VLSE", title = item.title)
+
                 collectionType != null -> LibraryState.navigateToAutoPlaylist(collectionType)
+
+                // Desktop-only collection, not in the shared BuiltinPlaylist list.
+                item.id == "auto:soulseek" -> LibraryState.navigateToAutoPlaylist("soulseek")
+
                 else -> PlaylistAlbumState.fetchPlaylistData(item.id, item.thumbnail)
             }
         }

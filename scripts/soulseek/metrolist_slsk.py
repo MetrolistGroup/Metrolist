@@ -138,6 +138,26 @@ def option_json(c: Candidate) -> dict:
     }
 
 
+def probe(path: Path) -> dict:
+    """Describes an audio file on disk from its own headers, in the same shape as a search option."""
+    import mutagen
+
+    info = getattr(mutagen.File(path), "info", None)
+    attrs = {
+        key: value
+        for key, value in (
+            (BITRATE, getattr(info, "bitrate", 0) // 1000),
+            (BIT_DEPTH, getattr(info, "bits_per_sample", 0)),
+            (SAMPLE_RATE, getattr(info, "sample_rate", 0)),
+            (DURATION, int(getattr(info, "length", 0))),
+        )
+        if value
+    }
+    c = Candidate("", path.name, path.stat().st_size, attrs, True, 0, 0)
+    # Lossy files under 320 kbps have no picker format; their bitrate still shows in the label.
+    return option_json(c) | {"format": format_group(c) or "320", "filename": str(path)}
+
+
 def now_playing() -> tuple[str, str, int | None]:
     info = json.loads(subprocess.run(["media-control", "get"], capture_output=True, text=True, check=True).stdout or "null")
     if not info or not info.get("title"):
@@ -314,11 +334,15 @@ def main():
         return logout()
     if sys.argv[1:2] == ["status"]:
         return status()
+    if sys.argv[1:2] == ["probe"]:
+        if len(sys.argv) != 3:
+            sys.exit("usage: metrolist-slsk probe FILE")
+        return print(json.dumps(probe(Path(sys.argv[2]))))
     command = sys.argv[1] if sys.argv[1:2] in (["search"], ["fetch"]) else None
     parser = argparse.ArgumentParser(
         prog="metrolist-slsk" + (f" {command}" if command else ""),
         description=__doc__,
-        epilog="Commands: search (list versions as JSON), fetch (download one listed file), login, logout, status",
+        epilog="Commands: search (list versions as JSON), fetch (download one listed file), probe FILE, login, logout, status",
     )
     if command == "fetch":
         parser.add_argument("--username", required=True, help="Soulseek user sharing the file")

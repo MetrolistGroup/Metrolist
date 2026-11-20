@@ -71,6 +71,7 @@ import com.metrolist.shared.generated.resources.Res
 import com.metrolist.shared.generated.resources.action_cannot_be_undone
 import com.metrolist.shared.generated.resources.artist
 import com.metrolist.shared.generated.resources.artists
+import com.metrolist.shared.generated.resources.brand_soulseek
 import com.metrolist.shared.generated.resources.cancel
 import com.metrolist.shared.generated.resources.close
 import com.metrolist.shared.generated.resources.create_playlist
@@ -94,6 +95,7 @@ import com.metrolist.shared.generated.resources.remove_from_library
 import com.metrolist.shared.generated.resources.rename_playlist_dialog_title
 import com.metrolist.shared.generated.resources.restore
 import com.metrolist.shared.generated.resources.sort_options
+import com.metrolist.shared.generated.resources.soulseek_collection_subtitle
 import com.metrolist.shared.model.AlbumItem
 import com.metrolist.shared.model.ArtistItem
 import com.metrolist.shared.model.EpisodeItem
@@ -182,7 +184,18 @@ fun LibraryScreen(
     var showHiddenItems by remember { mutableStateOf(false) }
     val hiddenItemKeys = remember(hiddenItemVersion) { HiddenLibraryItems.keys() }
     val hiddenItems = remember(hiddenItemVersion) { HiddenLibraryItems.all() }
-    val autoPlaylists = libraryAutoPlaylists()
+    val soulseekRow =
+        LibraryAutoPlaylist(
+            type = "soulseek",
+            title = stringResource(Res.string.brand_soulseek),
+            subtitle = stringResource(Res.string.soulseek_collection_subtitle),
+            icon = MetrolistIcons.Outlined.Download,
+        )
+    val autoPlaylists =
+        libraryAutoPlaylists().let { rows ->
+            val afterDownloaded = rows.indexOfFirst { it.type == "downloaded" } + 1
+            rows.take(afterDownloaded) + soulseekRow + rows.drop(afterDownloaded)
+        }
     val items = remember(sections) { sections.values.flatten() }
 
     Box(Modifier.fillMaxSize()) {

@@ -48,6 +48,7 @@ import com.metrolist.shared.generated.resources.connect
 import com.metrolist.shared.generated.resources.password
 import com.metrolist.shared.generated.resources.soulseek_bit_depth
 import com.metrolist.shared.generated.resources.soulseek_bitrate
+import com.metrolist.shared.generated.resources.soulseek_choose_file
 import com.metrolist.shared.generated.resources.soulseek_download
 import com.metrolist.shared.generated.resources.soulseek_download_description
 import com.metrolist.shared.generated.resources.soulseek_download_failed
@@ -58,6 +59,8 @@ import com.metrolist.shared.generated.resources.soulseek_format_320
 import com.metrolist.shared.generated.resources.soulseek_format_hires
 import com.metrolist.shared.generated.resources.soulseek_format_lossless
 import com.metrolist.shared.generated.resources.soulseek_helper_missing
+import com.metrolist.shared.generated.resources.soulseek_link_file
+import com.metrolist.shared.generated.resources.soulseek_linked
 import com.metrolist.shared.generated.resources.soulseek_login_description
 import com.metrolist.shared.generated.resources.soulseek_login_rejected
 import com.metrolist.shared.generated.resources.soulseek_login_title
@@ -87,7 +90,10 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import org.jetbrains.compose.resources.getString
 import org.jetbrains.compose.resources.stringResource
+import java.awt.FileDialog
+import java.awt.Frame
 import java.io.File
+import java.io.FilenameFilter
 
 /** One downloadable version of a song, as listed by `metrolist-slsk search`. */
 @Serializable
@@ -187,17 +193,43 @@ object SoulseekDownloader {
         exe: File,
         args: List<String>,
         stdin: String? = null,
+    ): Pair<Int, List<String>> = mutex.withLock { runUnlocked(exe, args, stdin) }
+
+    /** For commands that never log in to Soulseek, so they need not wait for a running download. */
+    private suspend fun runUnlocked(
+        exe: File,
+        args: List<String>,
+        stdin: String? = null,
     ): Pair<Int, List<String>> =
-        mutex.withLock {
-            withContext(Dispatchers.IO) {
-                runCatching {
-                    val process = ProcessBuilder(listOf(exe.path) + args).redirectErrorStream(true).start()
-                    process.outputStream.bufferedWriter().use { writer -> stdin?.let { writer.write(it + "\n") } }
-                    val output = process.inputStream.bufferedReader().readLines()
-                    process.waitFor() to output
-                }.getOrElse { -1 to listOf(it.message.orEmpty()) }
-            }
+        withContext(Dispatchers.IO) {
+            runCatching {
+                val process = ProcessBuilder(listOf(exe.path) + args).redirectErrorStream(true).start()
+                process.outputStream.bufferedWriter().use { writer -> stdin?.let { writer.write(it + "\n") } }
+                val output = process.inputStream.bufferedReader().readLines()
+                process.waitFor() to output
+            }.getOrElse { -1 to listOf(it.message.orEmpty()) }
         }
+
+    /** Reads format, bit depth, sample rate and bitrate from the file's own headers. */
+    private suspend fun describe(file: File): SoulseekFile {
+        val probed =
+            helper()
+                ?.let { runUnlocked(it, listOf("probe", file.absolutePath)) }
+                ?.takeIf { it.first == 0 }
+                ?.second
+                ?.lastOrNull { it.startsWith("{") }
+                ?.let { runCatching { json.decodeFromString<SoulseekOption>(it) }.getOrNull() }
+                ?: return SoulseekLibrary.describeByExtension(file)
+        return SoulseekFile(
+            path = file.absolutePath,
+            format = probed.format,
+            extension = probed.extension,
+            size = probed.size,
+            bitrate = probed.bitrate,
+            bitDepth = probed.bitDepth,
+            sampleRate = probed.sampleRate,
+        )
+    }
 
     fun openPicker(song: SongItem) {
         pickerSong = song
@@ -261,18 +293,7 @@ object SoulseekDownloader {
                 when (exitCode) {
                     0 -> {
                         val path = File(output.last())
-                        SoulseekLibrary.add(
-                            song.id,
-                            SoulseekFile(
-                                path = path.absolutePath,
-                                format = option.format,
-                                extension = option.extension,
-                                size = path.length(),
-                                bitrate = option.bitrate,
-                                bitDepth = option.bitDepth,
-                                sampleRate = option.sampleRate,
-                            ),
-                        )
+                        SoulseekLibrary.add(song, describe(path))
                         getString(Res.string.soulseek_downloaded, path.name)
                     }
 
@@ -291,6 +312,27 @@ object SoulseekDownloader {
                     }
                 }
             AppState.snackbarHostState.showSnackbar(message)
+        }
+    }
+
+    /** Lets the user pick an audio file already on disk and keeps it as a version of [song]. */
+    fun linkFile(
+        song: SongItem,
+        chooserTitle: String,
+    ) {
+        val dialog =
+            FileDialog(null as Frame?, chooserTitle, FileDialog.LOAD).apply {
+                SoulseekLibrary.downloadDirectory.takeIf { it.isDirectory }?.let { directory = it.absolutePath }
+                filenameFilter = FilenameFilter { _, name -> name.substringAfterLast('.').lowercase() in SoulseekLibrary.audioExtensions }
+            }
+        dialog.isVisible = true
+        val chosen = dialog.directory?.let { dir -> dialog.file?.let { File(dir, it) } }?.takeIf { it.isFile }
+        dialog.dispose()
+        if (chosen == null) return
+        pickerSong = null
+        AppState.scope.launch {
+            SoulseekLibrary.add(song, describe(chosen))
+            AppState.snackbarHostState.showSnackbar(getString(Res.string.soulseek_linked, chosen.name))
         }
     }
 
@@ -421,7 +463,12 @@ fun SoulseekPickerDialog() {
                 }
             }
         },
-        confirmButton = {},
+        confirmButton = {
+            val chooserTitle = stringResource(Res.string.soulseek_choose_file, song.searchTitle)
+            TextButton(onClick = { SoulseekDownloader.linkFile(song, chooserTitle) }, shapes = ButtonDefaults.shapes()) {
+                Text(stringResource(Res.string.soulseek_link_file))
+            }
+        },
         dismissButton = {
             TextButton(onClick = SoulseekDownloader::closePicker, shapes = ButtonDefaults.shapes()) {
                 Text(stringResource(Res.string.cancel))
