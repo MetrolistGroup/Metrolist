@@ -142,7 +142,7 @@ internal class MacOsPhysicalKeyCapture : PlatformPhysicalKeyCapture {
             }
         }
 
-    override fun consume(awtEventWhen: Long): PhysicalKeyPosition? = pending.consume(awtEventWhen)
+    override fun consume(awtEventWhen: Long): CapturedPhysicalKey? = pending.consume(awtEventWhen)
 
     override fun close() = setEnabled(false)
 

@@ -7,8 +7,10 @@ internal interface PlatformPhysicalKeyCapture : AutoCloseable {
 
     fun setEnabled(enabled: Boolean)
 
-    fun consume(awtEventWhen: Long): PhysicalKeyPosition?
+    fun consume(awtEventWhen: Long): CapturedPhysicalKey?
 }
+
+internal data class CapturedPhysicalKey(val position: PhysicalKeyPosition?)
 
 internal class OrderedPhysicalKeyCaptureBuffer(
     private val timeSourceMillis: () -> Long = System::currentTimeMillis,
@@ -29,7 +31,7 @@ internal class OrderedPhysicalKeyCaptureBuffer(
     }
 
     @Synchronized
-    fun consume(awtEventWhen: Long): PhysicalKeyPosition? {
+    fun consume(awtEventWhen: Long): CapturedPhysicalKey? {
         pruneExpired(timeSourceMillis())
         while (
             captures.firstOrNull()?.capturedAtMillis?.let {
@@ -40,7 +42,7 @@ internal class OrderedPhysicalKeyCaptureBuffer(
         }
         val capture = captures.firstOrNull() ?: return null
         if (capture.capturedAtMillis > awtEventWhen + MAX_EVENT_ALIGNMENT_MILLIS) return null
-        return captures.removeFirst().position
+        return CapturedPhysicalKey(captures.removeFirst().position)
     }
 
     @Synchronized
