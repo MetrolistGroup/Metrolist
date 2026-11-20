@@ -53,6 +53,7 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import java.io.File
+import java.io.InputStream
 import java.util.UUID
 import java.util.zip.ZipEntry
 import java.util.zip.ZipInputStream
@@ -215,6 +216,12 @@ class BackupRestoreManager(
         }
 
     suspend fun restore(uri: Uri): Result<Unit> =
+        restoreInput { context.contentResolver.openInputStream(uri) }
+
+    suspend fun restore(file: File): Result<Unit> =
+        restoreInput { file.inputStream() }
+
+    private suspend fun restoreInput(openInput: () -> InputStream?): Result<Unit> =
         withContext(Dispatchers.IO) {
             var restoreStage = RestoreStage.READING_BACKUP
             val stagedDb = File(context.cacheDir, "restore-$BACKUP_DATABASE_ENTRY")
@@ -241,7 +248,7 @@ class BackupRestoreManager(
                     var manifest: BackupManifest? = null
                     var entryCount = 0
                     var extractedBytes = 0L
-                    context.contentResolver.openInputStream(uri)?.use { rawInput ->
+                    openInput()?.use { rawInput ->
                         ZipInputStream(rawInput.buffered()).use { zip ->
                             var entry = zip.nextEntry
                             while (entry != null) {

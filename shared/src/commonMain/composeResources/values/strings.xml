@@ -1399,6 +1399,8 @@
     <string name="automatic_backup_weekly">Weekly</string>
     <string name="automatic_backup_monthly">Monthly</string>
     <string name="automatic_backup_location">Backups stay on this device. Mobile operating systems may defer them. Desktop backups run while Metrolist is open.</string>
+    <string name="automatic_backup_restore">Restore an automatic backup</string>
+    <string name="automatic_backup_restore_empty">No automatic backups are available.</string>
     <!-- Translators: Title of the Backup & Restore option that imports a backup made by a different YouTube Music app. -->
     <string name="foreign_import_title">Import from another app</string>
     <!-- Translators: Supporting text beneath the import-from-another-app option in the Backup & Restore. App names are product names. -->

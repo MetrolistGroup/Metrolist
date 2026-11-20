@@ -26,6 +26,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -93,6 +94,8 @@ import com.metrolist.shared.generated.resources.automatic_backup_daily
 import com.metrolist.shared.generated.resources.automatic_backup_description
 import com.metrolist.shared.generated.resources.automatic_backup_frequency
 import com.metrolist.shared.generated.resources.automatic_backup_location
+import com.metrolist.shared.generated.resources.automatic_backup_restore
+import com.metrolist.shared.generated.resources.automatic_backup_restore_empty
 import com.metrolist.shared.generated.resources.automatic_backup_monthly
 import com.metrolist.shared.generated.resources.automatic_backup_weekly
 import com.metrolist.shared.generated.resources.back
@@ -336,6 +339,9 @@ fun BackupRestoreScreen(onNavigateBack: () -> Unit) {
     val controlsEnabled = !isBusy && activeImport?.isRunning != true
 
     var restoreUri by remember { mutableStateOf<Uri?>(null) }
+    var automaticBackups by remember { mutableStateOf(emptyList<File>()) }
+    var showAutomaticBackupPicker by remember { mutableStateOf(false) }
+    var automaticBackupToRestore by remember { mutableStateOf<File?>(null) }
     var restoreError by remember { mutableStateOf<String?>(null) }
     var showBackupWarning by remember { mutableStateOf(false) }
     var warningSeconds by remember { mutableIntStateOf(5) }
@@ -863,6 +869,77 @@ fun BackupRestoreScreen(onNavigateBack: () -> Unit) {
             },
             dismissButton = {
                 TextButton(onClick = { restoreUri = null }, shapes = ButtonDefaults.shapes()) {
+                    Text(androidStringResource(android.R.string.cancel))
+                }
+            },
+        )
+    }
+
+    PopupVisibility(visible = showAutomaticBackupPicker) {
+        AlertDialog(
+            onDismissRequest = { showAutomaticBackupPicker = false },
+            title = { Text(stringResource(Res.string.automatic_backup_restore)) },
+            text = {
+                if (automaticBackups.isEmpty()) {
+                    Text(stringResource(Res.string.automatic_backup_restore_empty))
+                } else {
+                    LazyColumn {
+                        items(automaticBackups, key = File::getName) { backup ->
+                            TextButton(
+                                onClick = {
+                                    automaticBackupToRestore = backup
+                                    showAutomaticBackupPicker = false
+                                },
+                            ) {
+                                Text(backup.name)
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showAutomaticBackupPicker = false
+                        restoreLauncher.launch(arrayOf("application/zip", "application/octet-stream", "*/*"))
+                    },
+                ) {
+                    Text(stringResource(Res.string.restore_backup))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showAutomaticBackupPicker = false }) {
+                    Text(androidStringResource(android.R.string.cancel))
+                }
+            },
+        )
+    }
+
+    PopupContent(automaticBackupToRestore) { backup ->
+        AlertDialog(
+            onDismissRequest = { automaticBackupToRestore = null },
+            title = { Text(stringResource(Res.string.restore_confirm_title)) },
+            text = { Text(stringResource(Res.string.restore_confirm_message)) },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        automaticBackupToRestore = null
+                        scope.launch {
+                            isBusy = true
+                            isRestoring = true
+                            playlistCollectionJob?.cancelAndJoin()
+                            val result = manager.restore(backup)
+                            isBusy = false
+                            isRestoring = false
+                            result.exceptionOrNull()?.let { error -> restoreError = error.restoreMessage() }
+                        }
+                    },
+                ) {
+                    Text(stringResource(Res.string.action_restore))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { automaticBackupToRestore = null }) {
                     Text(androidStringResource(android.R.string.cancel))
                 }
             },
@@ -1860,10 +1937,23 @@ fun BackupRestoreScreen(onNavigateBack: () -> Unit) {
                             },
                         enabled = controlsEnabled,
                         onClick = {
-                            runCatching {
-                                restoreLauncher.launch(
-                                    arrayOf("application/zip", "application/octet-stream", "*/*"),
-                                )
+                            scope.launch {
+                                automaticBackups =
+                                    withContext(Dispatchers.IO) {
+                                        File(context.filesDir, "automatic-backups")
+                                            .listFiles { file -> file.isFile && file.extension == "zip" }
+                                            .orEmpty()
+                                            .sortedByDescending(File::lastModified)
+                                    }
+                                if (automaticBackups.isNotEmpty()) {
+                                    showAutomaticBackupPicker = true
+                                } else {
+                                    runCatching {
+                                        restoreLauncher.launch(
+                                            arrayOf("application/zip", "application/octet-stream", "*/*"),
+                                        )
+                                    }
+                                }
                             }
                         },
                     ),
