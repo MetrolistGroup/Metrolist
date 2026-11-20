@@ -8,6 +8,7 @@
     <ApplicationIcon />
     <StartupObject />
     <AssemblyName>metro-wv2-helper</AssemblyName>
+    <AssemblyTitle>Metrolist YouTube Music login helper</AssemblyTitle>
     <Company>Metrolist</Company>
     <Product>Metrolist</Product>
     <Description>Metrolist YouTube Music login helper</Description>
