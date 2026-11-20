@@ -115,7 +115,6 @@ internal class DlnaSession(
         lastPlayingPositionMs = null
         lastPlayingTrackUri = null
         stopRequested = false
-        normalizeSonosPlayMode()
         val mimeType = requireNotNull(media.resource.mimeType).substringBefore(';').trim()
         val duration = formatDlnaTime(media.durationMs)
         val didl =
@@ -147,6 +146,7 @@ internal class DlnaSession(
                 logFailure = false,
             )
         }
+        normalizeSonosPlayMode()
         if (positionMs > 0L) {
             seekTo(positionMs)
         }
@@ -271,7 +271,8 @@ internal class DlnaSession(
         val isPlaying = transportState == "PLAYING" || transportState == "TRANSITIONING"
         val isBuffering = transportState == "TRANSITIONING"
         normalizeSonosPlayMode()
-        if (trackUri != null && lastPlayingTrackUri != null && trackUri != lastPlayingTrackUri) {
+        if (pollGeneration != mediaGeneration || pollSeekGeneration != seekGeneration) return
+        if (trackUri != null && lastPlayingTrackUri != null && trackUri != lastPlayingTrackUri && isPlaying) {
             lastPlayingPositionMs = null
             lastPlayingTrackUri = trackUri
         }
