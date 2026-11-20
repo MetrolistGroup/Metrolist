@@ -624,7 +624,6 @@ class HomeViewModel(
                                         ?.takeIf { it.selectedChip == interruptedState.selectedChip }
                                         ?.withLatestLibraryAndSpeedDialState(interruptedState)
                                         ?.withLatestSongMetadataFrom(interruptedState)
-                                        ?.withSpeedDialPins(latestSpeedDialPins, speedDialRecommendationItems)
                                         ?.asOfflineSnapshot()
                                         ?: publishedPrimaryChipContent
                                             ?.takeIf { it.first == cancelledGeneration }
@@ -2111,6 +2110,7 @@ internal fun homeContentAfterBlockedContentChange(
 
             else -> {
                 homeContentForCurrentSelection(currentState, cachedAllContent, cachedSelectedChipContent)
+                    .withCurrentHomeLoadState(currentState)
             }
         }
     ).withoutBlockedContent()
