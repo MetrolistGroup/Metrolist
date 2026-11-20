@@ -613,9 +613,9 @@ class MusicService :
                         devices.peers.any { it.state == DeviceConnectManager.PeerState.CONNECTED }
                 }
             observePlaybackServiceLifetime(taskRemoved, playbackRequired, snapshotFlow { Settings.shared.stopMusicOnTaskClear }) {
+                saveFinalPlaybackState()?.join()
                 isRunning = false
                 running.value = false
-                saveFinalPlaybackState()?.join()
                 pauseAllPlayersAndStopSelf()
             }
         }

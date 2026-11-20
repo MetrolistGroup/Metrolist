@@ -91,8 +91,10 @@ object AndroidListenTogetherManager {
                     manager.isInRoom,
                     manager.connectionState,
                     manager.roomRequestPending,
-                ) { role, inRoom, connection, pending ->
-                    (role == ListenTogetherRoomRole.GUEST && inRoom) to roomNeedsPlaybackService(inRoom, pending, connection)
+                    manager.persistedRoomSession,
+                ) { role, inRoom, connection, pending, persistedSession ->
+                    (role == ListenTogetherRoomRole.GUEST && inRoom) to
+                        roomNeedsPlaybackService(inRoom, pending || persistedSession, connection)
                 }.collect { (locked, required) ->
                     _isGuestPlaybackLocked.value = locked
                     _playbackRequired.value = required
