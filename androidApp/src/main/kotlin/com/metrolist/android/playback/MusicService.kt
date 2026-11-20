@@ -3462,7 +3462,12 @@ class MusicService :
                     requestGeneration = requestGeneration,
                     mediaItems = songs.map(automotiveLibrary::playableItem),
                     startIndex = playable?.startIndex ?: startIndex,
-                    startPositionMs = if (songQueue?.shuffle == true) C.TIME_UNSET else startPositionMs,
+                    startPositionMs =
+                        if (songQueue?.shuffle == true || playable?.retainsRequestedStartPosition == false) {
+                            C.TIME_UNSET
+                        } else {
+                            startPositionMs
+                        },
                     queueTitle = pinnedQueue?.title,
                     shuffleModeEnabled = pinnedQueue?.shuffle ?: songQueue?.shuffle?.takeIf { it },
                     playlistPage = pinnedQueue?.playlistPage ?: songQueue?.playlistPage,
