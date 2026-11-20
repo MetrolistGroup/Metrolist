@@ -35,9 +35,9 @@ internal fun openAudioLine(
     var failure: Exception? = null
     for (attempt in 0..3) {
         if (attempt > 0) sleep(100L shl (attempt - 1))
-        for (outputFormat in audioOutputFormats(format, osName)) {
-            val outputBufferSize = bufferSize * outputFormat.frameSize / format.frameSize
-            for (mixer in audioOutputMixers(osName, configuredLine, mixers())) {
+        for (mixer in audioOutputMixers(osName, configuredLine, mixers())) {
+            for (outputFormat in audioOutputFormats(format, osName)) {
+                val outputBufferSize = bufferSize * outputFormat.frameSize / format.frameSize
                 var line: SourceDataLine? = null
                 var opened = false
                 try {
