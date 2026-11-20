@@ -128,11 +128,11 @@
     </plurals>
     <string name="undo">Annulla</string>
     <string name="lyrics_not_found">Testo non trovato</string>
-    <string name="sleep_timer">Timer per il sonno</string>
-    <string name="sleep_timer_end_current_song">Alla fine del brano</string>
-    <string name="sleep_timer_fade_out">Dissolvenza al minuto finale</string>
-    <string name="sleep_timer_fade_out_enabled">L'audio si dissolverà durante l'ultimo minuto.</string>
-    <string name="sleep_timer_remaining">Rimanenti: %1$s</string>
+    <string name="sleep_timer">Timer di spegnimento</string>
+    <string name="sleep_timer_end_current_song">Fine del brano attuale</string>
+    <string name="sleep_timer_fade_out">Dissolvenza nell'ultimo minuto</string>
+    <string name="sleep_timer_fade_out_enabled">L'audio si attenuerà nell'ultimo minuto.</string>
+    <string name="sleep_timer_remaining">Rimanente: %1$s</string>
     <string name="sleep_timer_cancel">Annulla timer</string>
     <string name="error_unknown">Errore sconosciuto</string>
     <string name="action_like">Mi piace</string>
@@ -292,7 +292,7 @@
     <string name="settings_interface">Interfaccia</string>
     <string name="settings_playback">Riproduzione</string>
     <string name="settings_player_audio_description">Audio, transizioni, coda</string>
-    <string name="track_transition_fade_desc">Sfuma gradualmente fra il brano corrente e quello successivo</string>
+    <string name="track_transition_fade_desc">Sfuma gradualmente tra il brano attuale e quello successivo</string>
     <string name="settings_content_title">Contenuti</string>
     <string name="settings_content_description">Lingua, feed, esplorazione</string>
     <string name="settings_lyrics_description">Acquisizione testi e traduzione</string>
@@ -317,7 +317,7 @@
     <string name="appearance_app_icon_credit">Icone alternative realizzate da Kayé (@thy_k su Discord)</string>
     <string name="material_you_description">Utilizza uno schema di colori generato in stile Material</string>
     <string name="song_artwork_colors">Colori dalla copertina del brano</string>
-    <string name="song_artwork_colors_description">Genera la palette colori della copertina del brano in riproduzione, quando possibile</string>
+    <string name="song_artwork_colors_description">Sostituisci i colori dell'app con quelli della copertina del brano attuale, se disponibile</string>
     <string name="theme_palette_style">Stile palette</string>
     <string name="theme_palette_tonal_spot">Tenue</string>
     <string name="theme_palette_vibrant">Vivace</string>
@@ -410,7 +410,7 @@
     <string name="lyrics_auto_scroll">Scorrimento automatico testo</string>
     <string name="lyrics_auto_scroll_desc">Fai scorrere i testi automaticamente durante la riproduzione</string>
     <string name="lyrics_show_on_player">Linea di testo in riproduzione</string>
-    <string name="lyrics_show_on_player_desc">Mostra la linea di testo attuale nel lettore</string>
+    <string name="lyrics_show_on_player_desc">Mostra il verso attuale del testo nel lettore</string>
     <string name="lyrics_display">Visualizzazione</string>
     <string name="privacy_settings_title">Privacy</string>
     <string name="sentry_reporting">Report di arresti anomali e prestazioni</string>
@@ -563,8 +563,8 @@
     <string name="playback_speed">Velocità di riproduzione</string>
     <string name="equalizer">Equalizzatore</string>
     <string name="adjust_audio_equalizer">Regola l\u0027equalizzatore audio</string>
-    <string name="queue_current_playing">Brano corrente, in riproduzione</string>
-    <string name="queue_current_paused">Brano corrente, in pausa</string>
+    <string name="queue_current_playing">Brano attuale, in riproduzione</string>
+    <string name="queue_current_paused">Brano attuale, in pausa</string>
     <string name="lyrics_timing_unsynced">Non sincronizzato</string>
     <string name="lyrics_timing_line_synced">Sincronizzato</string>
     <string name="lyrics_timing_word_synced">Sillaba</string>
@@ -1573,7 +1573,7 @@
     <string name="show_interval_indicator">Indicatore intervallo</string>
     <string name="show_lyrics">Mostra testo</string>
     <string name="show_queue">Mostra coda</string>
-    <string name="sleep_label">Sospendi</string>
+    <string name="sleep_label">Sospensione</string>
     <string name="stopping_after_current_song">Ferma dopo questo brano</string>
     <string name="stop_music_after_set_time">Ferma dopo un tempo prefissato</string>
     <string name="unsubscribe">Disiscriviti</string>
@@ -1602,8 +1602,8 @@
     <string name="discord_logged_in">Accesso effettuato</string>
     <string name="lastfm_logged_in_as">Accesso effettuato come %1$s</string>
     <string name="lastfm_scrobble_percentage">Percentuale: %1$d%2$s</string>
-    <string name="lastfm_invalid_credentials">Username o password errata. Controlla le tue credenziali Last.fm.</string>
-    <string name="lastfm_login_session_invalid">Risposta della sessione non valida</string>
+    <string name="lastfm_invalid_credentials">Nome utente o password non validi. Controlla le credenziali di Last.fm.</string>
+    <string name="lastfm_login_session_invalid">Risposta di sessione non valida</string>
     <string name="listenbrainz_description">Connetti ListenBrainz e regola le opzioni di scrobbling</string>
     <string name="listenbrainz_connected_as">Connesso come %1$s</string>
     <string name="update_failed">Aggiornamento non riuscito</string>
@@ -1762,7 +1762,7 @@
     <string name="import_destination_favorites">Preferiti</string>
     <string name="import_error_empty_input">L\u0027input non può essere vuoto</string>
     <string name="import_error_youtube_dedicated_flow">Le playlist di YouTube devono essere importate nella sezione dedicata</string>
-    <string name="import_error_invalid_youtube_url">URL della playlist di YouTube non valido</string>
+    <string name="import_error_invalid_youtube_url">URL playlist YouTube non valido</string>
     <string name="import_error_no_tracks_recognized">Impossibile riconoscere alcun brano dal testo o dal link fornito</string>
     <string name="import_default_imported_playlist_title">Playlist importata</string>
     <string name="import_error_no_tracks_to_import">Nessun brano da importare</string>
@@ -1948,7 +1948,7 @@
     <string name="openrouter_sign_in_description">Accedi dal tuo browser, o inserisci una chiave API qui sotto</string>
     <string name="ai_test_connection">Test di connessione</string>
     <string name="ai_test_connection_running">Test di connessione…</string>
-    <string name="ai_test_connection_description">Invia una richiesta di testo d'esempio usando le impostazioni attuali</string>
+    <string name="ai_test_connection_description">Invia una richiesta di esempio per i testi usando le impostazioni attuali</string>
     <string name="ai_test_connection_success">Connessione riuscita.</string>
     <string name="ai_test_connection_failed">Connessione non riuscita. Controlla le credenziali e i modelli.</string>
     <string name="ai_test_missing_credentials">Inserisci le credenziali prima del test.</string>
@@ -2014,7 +2014,7 @@
     <string name="bottom_sheet_pane_title">Riquadro inferiore</string>
     <string name="lyrics_provider_lrcred_description">Database di testi con sincronizzazione per riga e per parola, con supporto a testi temporizzati e sincronizzati automaticamente</string>
     <string name="foreign_import_title">Importa da un\u0027altra app</string>
-    <string name="foreign_import_desc">Aggiungi Mi Piace, playlist e cronologia d'ascolto da un backup di InnerTune, OuterTune, ViMusic, RiMusic, Kreate, SimpMusic o Prism. La libreria corrente viene mantenuta.</string>
+    <string name="foreign_import_desc">Importa i Mi piace, le playlist e la cronologia d'ascolto da un backup di InnerTune, OuterTune, ViMusic, RiMusic, Kreate, SimpMusic o Prism. La libreria attuale viene mantenuta.</string>
     <string name="foreign_import_success">Importati %1$d brani, %2$d Mi piace, %3$d playlist e %4$d riproduzioni</string>
     <string name="foreign_import_unsupported">Il file non è un backup proveniente da un servizio musicale supportato</string>
     <string name="foreign_import_failed">Importazione non riuscita: %1$s</string>
@@ -2179,7 +2179,7 @@
     <string name="window_maximize">Massimizza</string>
     <string name="window_restore">Ripristina finestra</string>
     <string name="equalizer_stream_unavailable">Equalizzatore e preamplificatore non disponibili per questo flusso. Le modifiche verranno applicate alla riproduzione di un brano supportato.</string>
-    <string name="sleep_timer_end_current_song_description">Timer per il sonno: fine del brano corrente</string>
+    <string name="sleep_timer_end_current_song_description">Timer di spegnimento: fine del brano corrente</string>
     <string name="repeat_mode_description">Ripetizione: %1$s</string>
     <string name="statistics_plays_label">Riproduzioni</string>
     <plurals name="statistics_plays">
@@ -2384,7 +2384,7 @@
     <string name="sleep_timer_hour">Ora</string>
     <string name="sleep_timer_minute">Minuto</string>
     <string name="sleep_timer_advanced_options">Opzioni avanzate</string>
-    <string name="sleep_timer_finish_current_song">Ferma il timer alla fine del brano quando il tempo scade</string>
+    <string name="sleep_timer_finish_current_song">Ferma il timer alla fine del brano attuale</string>
     <string name="sleep_timer_set_default">Imposta come predefinito</string>
     <string name="edit_in_metroeq">Modifica in MetroEQ</string>
     <string name="album_order_original">Ordine album</string>
@@ -2576,7 +2576,7 @@
     <string name="desktop_tray_toggle_on_click">Nascondi o mostra al click sulla barra di sistema</string>
     <string name="ai_setup_verify_description">Fatto invia un breve campione al modello gratuito che hai scelto. La traduzione si attiva solo dopo che il test ha esito positivo.</string>
     <string name="ai_setup_privacy_hint">La tua policy sui dati di OpenRouter esclude gli endpoint di questo modello. Verifica le opzioni relative al modello gratuito e al provider nelle impostazioni sulla privacy di OpenRouter, quindi riprova.</string>
-    <string name="ai_setup_key_hint">Accedi nuovamente a OpenRouter per sostituire la chiave non valida o scaduta, quindi riprova.</string>
+    <string name="ai_setup_key_hint">Accedi di nuovo a OpenRouter per sostituire la chiave non valida o scaduta, quindi riprova.</string>
     <string name="ai_setup_credit_hint">Verifica il saldo del tuo conto e il limite di credito della tua chiave OpenRouter. Anche una chiave OAuth può avere un proprio limite. Riprova dopo aver risolto il problema del limite.</string>
     <string name="ai_setup_rate_hint">Attendi e riprova, oppure scegli un altro modello gratuito. OpenRouter limita le richieste gratuite al minuto e al giorno. Il cambio di modello potrebbe non consentire di aggirare il limite dell'account.</string>
     <string name="ai_setup_daily_hint">Riprova domani oppure aggiungi crediti in OpenRouter per aumentare il limite giornaliero gratuito. Cambiare modello non permette di aggirare questo limite.</string>
