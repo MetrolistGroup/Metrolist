@@ -129,16 +129,21 @@ internal fun moveAudioToDirectory(
     }
 }
 
-internal fun downloadFileBaseName(song: SongItem): String {
-    val artist = song.artists.joinToString(", ") { it.name }.trim()
-    return listOf(artist, song.title.trim())
+internal fun downloadFileBaseName(song: SongItem): String =
+    downloadFileBaseName(song.artists.joinToString(", ") { it.name }.trim(), song.title.trim(), song.id)
+
+internal fun downloadFileBaseName(
+    artist: String,
+    title: String,
+    fallbackId: String,
+): String =
+    listOf(artist, title)
         .filter(String::isNotBlank)
         .joinToString(" - ")
         .replace(Regex("""[\\/:*?\"<>|\p{Cc}]"""), "_")
         .trim(' ', '.')
         .boundedDownloadBaseName()
-        .ifBlank { song.id }
-}
+        .ifBlank { fallbackId }
 
 // The normal basename leaves room for the longest audio extension.
 private fun String.boundedDownloadBaseName(maxBytes: Int = 255 - ".audio".length): String {
@@ -806,14 +811,7 @@ class AudioCacheManager(
                             )
 
                         val extension = extensionForMimeType(mimeType)
-                        val baseName =
-                            listOf(entry.artist, entry.title)
-                                .filter(String::isNotBlank)
-                                .joinToString(" - ")
-                                .replace(Regex("""[\\/:*?\"<>|\p{Cc}]"""), "_")
-                                .trim(' ', '.')
-                                .take(120)
-                                .ifBlank { safeId }
+                        val baseName = downloadFileBaseName(entry.artist, entry.title, safeId)
                         publishStoredAudio(entry, {
                             when {
                                 targetCustom -> {
