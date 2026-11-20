@@ -75,7 +75,36 @@ internal fun mergeBackgroundLyricsEntries(lyrics: List<LyricsEntry>): List<Lyric
     val displayLines = lyrics.toMutableList()
     lyrics.forEachIndexed { index, background ->
         if (!background.isBackground) return@forEachIndexed
-        val mainIndex = (index - 1 downTo 0).firstOrNull { !lyrics[it].isBackground } ?: return@forEachIndexed
+        val mainIndex = (index - 1 downTo 0).firstOrNull { !lyrics[it].isBackground }
+        if (mainIndex == null) {
+            val nextMain = lyrics.drop(index + 1).firstOrNull { !it.isBackground }
+            val sourceBackground =
+                listOfNotNull(
+                    background.text.takeIf(String::isNotBlank),
+                    background.backgroundText?.takeIf(String::isNotBlank),
+                    background.words?.backgroundText(),
+                ).joinToString(" ").takeIf(String::isNotBlank)
+            val nextMainBackground =
+                nextMain?.let {
+                    listOfNotNull(it.backgroundText?.takeIf(String::isNotBlank), it.words?.backgroundText())
+                        .joinToString(" ").takeIf(String::isNotBlank)
+                }
+            if (sourceBackground != null && nextMainBackground != null &&
+                normalizeBackgroundText(sourceBackground) == normalizeBackgroundText(nextMainBackground)
+            ) {
+                displayLines[index] =
+                    background.copy(
+                        text = "",
+                        words = null,
+                        romanizedText = null,
+                        romanizedWords = null,
+                        translatedText = null,
+                        backgroundText = null,
+                        backgroundTranslatedText = null,
+                    )
+            }
+            return@forEachIndexed
+        }
         val main = displayLines[mainIndex]
         val mainBackgroundWords = main.words.orEmpty().filter(WordTimestamp::isBackground)
         val mainWordBackgroundText = mainBackgroundWords.backgroundText()
