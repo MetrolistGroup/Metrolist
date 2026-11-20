@@ -533,7 +533,11 @@ class MusicService :
             SleepTimerController(
                 scope = serviceScope,
                 player =
-                    MusicSleepTimerPlayer(player, pausePlayback = { media3Player?.pause() }) {
+                    MusicSleepTimerPlayer(
+                        player,
+                        pausePlayback = { media3Player?.pause() },
+                        hasRemotePlaybackRoute = { castManager.state.value.isConnected || AndroidDeviceConnect.manager.remote.isFollowing },
+                    ) {
                         transitions.cancelAndroidCrossfade()
                         transitions.cancelNextTrackPreload()
                     },
