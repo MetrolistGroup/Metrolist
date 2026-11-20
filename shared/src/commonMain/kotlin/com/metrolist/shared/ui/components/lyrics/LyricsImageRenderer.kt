@@ -179,8 +179,10 @@ internal fun renderLyricsImage(
                     LyricsImageBackground.SOLID -> {}
 
                     LyricsImageBackground.BLUR -> {
-                        blurredArtwork?.let { drawCover(it, Offset.Zero, size.width) }
-                        drawRect(Color.Black.copy(alpha = 0.3f))
+                        blurredArtwork?.let {
+                            drawCover(it, Offset.Zero, size.width)
+                            drawRect(Color.Black.copy(alpha = 0.3f))
+                        }
                     }
 
                     LyricsImageBackground.GRADIENT -> {
