@@ -1,5 +1,6 @@
 package com.metrolist.shared.db
 
+import com.metrolist.shared.api.YouTubeItemParser
 import com.metrolist.shared.db.entities.AlbumEntity
 import com.metrolist.shared.db.entities.ArtistEntity
 import com.metrolist.shared.db.entities.SongEntity
@@ -15,10 +16,14 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.datetime.LocalDateTime
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonObject
 import java.nio.file.Files
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertIs
 import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class RemoteLibrarySyncTest {
@@ -135,6 +140,60 @@ class RemoteLibrarySyncTest {
                         .artists
                         .single()
                         .id,
+                )
+            } finally {
+                database.close()
+                Files.deleteIfExists(path)
+            }
+        }
+
+    @Test
+    fun sparseAlbumLibraryRowDoesNotEraseStoredAlbumDetails() =
+        runBlocking {
+            val path = Files.createTempFile("remote-album-sync", ".db")
+            Files.delete(path)
+            val database = getDesktopDatabaseBuilder(path.toFile()).build()
+            try {
+                val earlier = LocalDateTime(2026, 1, 1, 0, 0)
+                val now = LocalDateTime(2026, 10, 1, 0, 0)
+                val stored =
+                    AlbumEntity(
+                        id = "MPREb_album",
+                        title = "Stored title",
+                        playlistId = "OLAKstored",
+                        year = 1998,
+                        thumbnailUrl = "stored-art",
+                        songCount = 7,
+                        duration = 1234,
+                        bookmarkedAt = earlier,
+                    )
+                val row =
+                    Json
+                        .parseToJsonElement(
+                            """{
+                            "musicResponsiveListItemRenderer": {
+                                "flexColumns": [{"musicResponsiveListItemFlexColumnRenderer":{
+                                    "text":{"runs":[{"text":"Library title"}]}
+                                }}],
+                                "navigationEndpoint":{"browseEndpoint":{"browseId":"MPREb_album"}}
+                            }
+                        }""",
+                        ).jsonObject
+                val album = assertIs<AlbumItem>(YouTubeItemParser.parseItem(row))
+                assertNull(album.playlistId)
+                assertNull(album.year)
+                val dao = database.dao()
+                dao.upsert(stored)
+
+                database.syncRemoteLibraryItems(listOf(album), now)
+
+                assertEquals(stored.copy(title = "Library title"), dao.album(album.id).first()?.album)
+
+                database.syncRemoteLibraryItems(listOf(album.copy(playlistId = "OLAKupdated", year = "2026")), now)
+
+                assertEquals(
+                    stored.copy(title = "Library title", playlistId = "OLAKupdated", year = 2026),
+                    dao.album(album.id).first()?.album,
                 )
             } finally {
                 database.close()
