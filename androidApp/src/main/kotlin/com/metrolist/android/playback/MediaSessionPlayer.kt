@@ -902,10 +902,20 @@ class MediaSessionPlayer(
         } else if (isCurrentMediaItemLive) {
             val previousIndex = getPreviousMediaItemIndex()
             if (previousIndex != C.INDEX_UNSET && previousIndex != getCurrentMediaItemIndex()) seekToPreviousMediaItem()
-        } else if (shouldRestartCurrentItem(remoteState.positionMs, musicPlayer.currentMediaItemIndex.value)) {
-            onRemoteSeek(0L)
         } else {
-            seekToPreviousMediaItem()
+            val currentIndex = musicPlayer.currentMediaItemIndex.value
+            val shouldWrap =
+                shouldWrapToLastItem(
+                    repeatAll = repeatMode.value == Player.REPEAT_MODE_ALL,
+                    playbackPositionMs = remoteState.positionMs,
+                    currentQueueIndex = currentIndex,
+                    lastQueueIndex = musicPlayer.songQueue.value.lastIndex,
+                )
+            if (!shouldWrap && shouldRestartCurrentItem(remoteState.positionMs, currentIndex)) {
+                onRemoteSeek(0L)
+            } else {
+                seekToPreviousMediaItem()
+            }
         }
     }
 

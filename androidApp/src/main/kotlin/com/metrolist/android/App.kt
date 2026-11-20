@@ -363,6 +363,7 @@ class App :
         get<CoroutineScope>().launch(Dispatchers.IO) {
             SongLikeState.recoverDatabaseLikes(get<MusicDatabase>())
         }
+        get<CoroutineScope>().launch(Dispatchers.IO) { SentryManager.reportPlaybackClientStats() }
         get<CoroutineScope>().launch {
             MusicRecognitionService.status.collect {
                 try {

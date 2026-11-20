@@ -38,4 +38,18 @@ class DesktopSleepTimerCastVolumeTest {
         assertEquals(0.1f, volume.setGain(other, 0.5f))
         assertEquals(0.2f, volume.setGain(other, 1f))
     }
+
+    @Test
+    fun integerReceiverAcknowledgesFractionalRestoreAndFollowsLaterVolumeUpdates() {
+        for (protocol in listOf(CastProtocol.DLNA, CastProtocol.SONOS)) {
+            val receiver = remote.copy(device = remote.device!!.copy(protocol = protocol))
+            val volume = DesktopSleepTimerCastVolume()
+            volume.setGain(receiver, 0.5f)
+            assertEquals(0.1785f, volume.setRequestedVolume(0.357f))
+            assertEquals(0.357f, volume.setGain(receiver.copy(volume = 0.17f), 1f))
+            assertEquals(0.357f, volume.requestedVolume(receiver.copy(volume = 0.17f)))
+            assertEquals(0.35f, volume.requestedVolume(receiver.copy(volume = 0.35f)))
+            assertEquals(0.73f, volume.requestedVolume(receiver.copy(volume = 0.73f)))
+        }
+    }
 }

@@ -45,9 +45,13 @@ class DatabaseLikesUpgradeTest {
                 SongLikeState.awaitPersistence()
                 assertFalse(SongLikeState.isLiked("song"))
                 assertEquals(1, database.dao().likedSongsCount().first())
-                settings.databaseLikesRecoveryVersion = 1
+                // An empty account catalog is reseeded; the next complete refresh removes rows YouTube lacks again.
+                settings.databaseLikesRecoveryVersion = 2
                 SongLikeState.refreshFromSettings()
                 SongLikeState.recoverDatabaseLikes(database)
+                assertTrue(SongLikeState.isLiked("song"))
+                assertEquals("{}", settings.pendingSongVotesJson)
+                SongLikeState.replaceLikesFromRemote(emptyList())
                 assertFalse(SongLikeState.isLiked("song"))
             } finally {
                 database.close()

@@ -273,6 +273,36 @@ class OfflineAlbumTest {
         }
 
     @Test
+    fun offlineSearchTreatsPercentAndUnderscoreAsLiteralTitleCharacters(): Unit =
+        runBlocking {
+            val path = Files.createTempFile("metrolist-offline-literal-search", ".db")
+            Files.deleteIfExists(path)
+            val database = getDesktopDatabaseBuilder(path.toFile()).build()
+            try {
+                val tracks =
+                    listOf(
+                        "literal-percent" to "100% Real",
+                        "plain-percent-prefix" to "100 choices",
+                        "literal-underscore" to "hello_world",
+                        "plain-underscore-prefix" to "hello world",
+                    ).map { (id, title) -> page.songs.first().copy(id = id, title = title) }
+                tracks.forEach { database.upsertOfflineTestSong(it) }
+                val available = tracks.mapTo(mutableSetOf()) { it.id }
+
+                suspend fun ids(query: String) = database.searchOfflineMedia(query, available).filterIsInstance<SongItem>().map { it.id }
+
+                assertEquals(listOf("literal-percent"), ids("100%"))
+                assertEquals(listOf("literal-underscore"), ids("HELLO_"))
+                assertEquals(listOf("literal-percent"), ids("%"))
+                assertEquals(listOf("literal-underscore"), ids("_"))
+                assertEquals(listOf("literal-underscore", "plain-underscore-prefix"), ids("HeLLo"))
+            } finally {
+                database.close()
+                Files.deleteIfExists(path)
+            }
+        }
+
+    @Test
     fun songsCachedBeforeAlbumPersistenceCanStillLoadTheirAlbumAndArtist(): Unit =
         runBlocking {
             val path = Files.createTempFile("metrolist-legacy-offline", ".db")

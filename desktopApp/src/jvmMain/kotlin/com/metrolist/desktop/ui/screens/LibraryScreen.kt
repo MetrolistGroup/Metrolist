@@ -41,6 +41,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -51,6 +52,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.metrolist.desktop.state.app.AppState
 import com.metrolist.desktop.state.app.UiState
 import com.metrolist.desktop.state.content.ArtistState
 import com.metrolist.desktop.state.content.HomeState
@@ -130,6 +132,8 @@ import com.metrolist.shared.ui.screens.libraryContentText
 import com.metrolist.shared.ui.screens.rememberLibrarySearchScrollState
 import com.metrolist.shared.ui.theme.MdSpacing
 import com.metrolist.shared.ui.utils.verticalScrollWithDrag
+import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.getString
 import org.jetbrains.compose.resources.stringResource
 
 @Composable
@@ -176,6 +180,7 @@ fun LibraryScreen(
     }
     var showNewPlaylistMenu by remember { mutableStateOf(false) }
     var createName by remember { mutableStateOf("") }
+    var createDraftRevision by remember { mutableLongStateOf(0L) }
     val renameDialog = remember { PlaylistRenameDialogState() }
     var playlistToDelete by remember { mutableStateOf<PlaylistItem?>(null) }
     var playlistDeleteFailed by remember { mutableStateOf(false) }
@@ -458,13 +463,26 @@ fun LibraryScreen(
             title = stringResource(Res.string.create_playlist_dialog_title),
             confirmActionLabel = stringResource(Res.string.playlist_create_action),
             value = createName,
-            onValueChange = { createName = it },
+            onValueChange = {
+                createName = it
+                createDraftRevision++
+            },
             onDismiss = { showCreateDialog = false },
         ) {
             val name = createName
+            val revision = ++createDraftRevision
             showCreateDialog = false
             createName = ""
-            LibraryContentState.createPlaylist(name) { result -> result.onSuccess { PlaylistAlbumState.fetchPlaylistData(it) } }
+            LibraryContentState.createPlaylist(name) { result ->
+                result
+                    .onSuccess { PlaylistAlbumState.fetchPlaylistData(it) }
+                    .onFailure {
+                        if (createDraftRevision == revision) createName = name
+                        AppState.scope.launch {
+                            AppState.snackbarHostState.showSnackbar(getString(Res.string.error_occurred))
+                        }
+                    }
+            }
         }
     }
     PopupContent(renameDialog.playlist) {

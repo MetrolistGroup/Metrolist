@@ -273,7 +273,7 @@ class DesktopVideoPlaybackPolicyTest {
         assertFalse("TVHTML5_SIMPLY_SABR" in candidates)
         assertTrue("TVHTML5_SIMPLY" in candidates)
         assertTrue("WEB_SABR" in candidates)
-        assertTrue("MWEB_SABR" in candidates)
+        assertTrue("WEB_REMIX_SABR" in candidates)
         assertFalse(
             desktopStreamRecoveryHints(
                 hints.withStreamCapabilities(allowSabr = false),

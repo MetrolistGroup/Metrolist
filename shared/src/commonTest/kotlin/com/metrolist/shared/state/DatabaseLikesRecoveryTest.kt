@@ -111,7 +111,7 @@ class DatabaseLikesRecoveryTest {
 
     @Test
     fun signedInUpgradeRecoversBeforeAccountActivationIncludingTheOldSkippedVersion() {
-        for (version in listOf(0, 1)) {
+        for (version in listOf(0, 1, 2)) {
             val settings = Settings(MapSettings())
             settings.innerTubeCookie = "SAPISID=test"
             settings.dataSyncId = "account"
@@ -147,12 +147,27 @@ class DatabaseLikesRecoveryTest {
     }
 
     @Test
+    fun emptyActivatedAccountCatalogIsSeededAfterAStartupRefreshActivatedItFirst() {
+        for (version in listOf(0, 2)) {
+            val settings = Settings(MapSettings())
+            settings.innerTubeCookie = "SAPISID=test"
+            settings.likedSongsOrderAccount = "account|0"
+            settings.databaseLikesRecoveryVersion = version
+            assertTrue(settings.recoverDatabaseLikes(databaseLikes))
+            assertEquals(listOf("new", "middle", "old"), Json.decodeFromString<List<SongItem>>(settings.likedSongsJson).map(SongItem::id))
+            assertFalse(settings.recoverDatabaseLikes(databaseLikes))
+        }
+    }
+
+    @Test
     fun completedSignedOutRecoveryDoesNotRunAgainAfterVersionBump() {
-        val settings = Settings(MapSettings())
-        settings.databaseLikesRecoveryVersion = 1
-        assertFalse(settings.recoverDatabaseLikes(databaseLikes))
-        assertEquals("[]", settings.likedSongsJson)
-        assertEquals(DATABASE_LIKES_RECOVERY_VERSION, settings.databaseLikesRecoveryVersion)
+        for (version in listOf(1, 2)) {
+            val settings = Settings(MapSettings())
+            settings.databaseLikesRecoveryVersion = version
+            assertFalse(settings.recoverDatabaseLikes(databaseLikes))
+            assertEquals("[]", settings.likedSongsJson)
+            assertEquals(DATABASE_LIKES_RECOVERY_VERSION, settings.databaseLikesRecoveryVersion)
+        }
     }
 
     @Test

@@ -1,5 +1,6 @@
 package com.metrolist.desktop.state.playback
 
+import com.metrolist.shared.model.RepeatMode
 import com.metrolist.shared.model.SongItem
 import com.metrolist.shared.playback.MusicQueue
 import kotlin.test.Test
@@ -19,6 +20,26 @@ class DesktopPlaybackResumeTest {
         assertNull(desktopPreviousRestartPosition(pending, 60_000L, true, true))
         assertNull(desktopPreviousRestartPosition(pending, 2_000L, false, true))
         assertEquals("second" to 0L, desktopPreviousRestartPosition(pending, 2_000L, false, false))
+    }
+
+    @Test
+    fun firstTrackRepeatAllPreviousSelectsTheLastOccurrenceAndDiscardsTheRestoredPosition() {
+        val first = SongItem("first", "First", null, emptyList(), null)
+        val queue = MusicQueue()
+        queue.setQueue(listOf(first, first.copy(id = "middle"), first))
+        val state = queue.state.value
+        val pending = first.id to 2_999L
+        val previous = desktopPreviousQueueIndex(state.currentIndex, state.entries.lastIndex, RepeatMode.ALL, isLive = false)
+
+        assertEquals(2, previous)
+        assertNull(desktopPreviousRestartPosition(pending, pending.second, false, previous != null))
+        assertEquals(first.id to 0L, desktopPreviousRestartPosition(pending, 3_001L, false, previous != null))
+        assertEquals(first, previous?.let(queue::skipTo))
+        assertEquals(
+            state.entries.last().key,
+            queue.state.value.entries[queue.currentIndex.value]
+                .key,
+        )
     }
 
     @Test

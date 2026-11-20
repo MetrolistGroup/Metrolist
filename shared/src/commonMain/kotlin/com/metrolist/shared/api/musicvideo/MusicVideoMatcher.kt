@@ -25,11 +25,16 @@ object MusicVideoMatcher {
                 .toSet()
         val title = cleanCoreTitle(stripArtistPrefix(video.title, artistNames))
         // Search cannot identify which live performance, remix or other edition the user selected.
-        if (title.isBlank() || NON_OFFICIAL_VARIANT_PATTERN.containsMatchIn(title)) return null
+        if (title.isBlank() || NON_OFFICIAL_VARIANT_PATTERN.containsMatchIn(title) ||
+            video.canonicalAudioVariants().isNotEmpty()
+        ) {
+            return null
+        }
         val eligibleTracks =
             candidates.filterIsInstance<SongItem>().filter { candidate ->
                 !candidate.isVideoSong && candidate.id != video.id &&
                     cleanCoreTitle(candidate.title) == title &&
+                    candidate.canonicalAudioVariants().isEmpty() &&
                     audioDurationCompatible(video.duration, candidate.duration)
             }
         val artistMatches =
@@ -246,13 +251,20 @@ object MusicVideoMatcher {
     internal fun hasSameAudioVariant(
         video: SongItem,
         track: SongItem,
-    ): Boolean {
-        fun variants(song: SongItem): Set<String> {
-            val artistNames = song.artists.map { normalizeName(it.name) }.toSet()
-            val title = cleanCoreTitle(stripArtistPrefix(song.title, artistNames))
-            return NON_OFFICIAL_VARIANT_PATTERN.findAll(title).map { it.value }.toSet()
-        }
-        return variants(video) == variants(track)
+    ): Boolean =
+        audioVariants(video.title, video.artists) == audioVariants(track.title, track.artists) &&
+            video.canonicalAudioVariants() == track.canonicalAudioVariants()
+
+    // Editing a display title does not change the underlying recording.
+    private fun SongItem.canonicalAudioVariants(): Set<String> = audioVariants(canonicalTitle ?: title, canonicalArtists ?: artists)
+
+    private fun audioVariants(
+        title: String,
+        artists: List<ArtistTiny>,
+    ): Set<String> {
+        val artistNames = artists.map { normalizeName(it.name) }.toSet()
+        val core = cleanCoreTitle(stripArtistPrefix(title, artistNames))
+        return NON_OFFICIAL_VARIANT_PATTERN.findAll(core).map { it.value }.toSet()
     }
 
     internal fun candidateMatchesTrackArtist(

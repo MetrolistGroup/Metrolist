@@ -176,6 +176,59 @@ class SearchViewModelTest {
         }
 
     @Test
+    fun alternatingContinuationStopsAndKeepsRowsFromTheLastPage() =
+        runTest {
+            val client =
+                HttpClient(
+                    mockEngine { request ->
+                        val cursor = request.url.parameters["continuation"]
+                        val id =
+                            if (cursor == "next-a") {
+                                "two"
+                            } else if (cursor == "next-b") {
+                                "three"
+                            } else {
+                                "one"
+                            }
+                        val next = if (cursor == "next-a") "next-b" else "next-a"
+                        val tracks = """[{"musicResponsiveListItemRenderer":{
+                            "flexColumns":[{"musicResponsiveListItemFlexColumnRenderer":{"text":{"runs":[{"text":"$id"}]}}}],
+                            "playlistItemData":{"videoId":"$id"}
+                        }}]"""
+                        val shelf = """{"title":{"runs":[{"text":"Songs"}]}, "contents":$tracks,
+                            "continuations":[{"nextContinuationData":{"continuation":"$next"}}]}"""
+                        val response =
+                            if (cursor == null) {
+                                """{"contents":{"sectionListRenderer":{"contents":[{"musicShelfRenderer":$shelf}]}}}"""
+                            } else {
+                                """{"continuationContents":{"musicShelfContinuation":$shelf}}"""
+                            }
+                        respond(response, headers = headersOf(HttpHeaders.ContentType, "application/json"))
+                    },
+                ) { install(ContentNegotiation) { json(Json { ignoreUnknownKeys = true }) } }
+            try {
+                val viewModel = SearchViewModel(backgroundScope, YouTubeRepository(InnerTube(client, retryDelay = {})))
+                viewModel.searchQuery("query")
+                viewModel.uiState.first { it.searchSummary != null && !it.isSearching }
+                viewModel.searchFiltered(SearchFilter.SONG)
+                viewModel.uiState.first { it.filteredResults?.continuation == "next-a" && !it.isSearching }
+                viewModel.loadMoreFilteredResults()
+                viewModel.uiState.first { it.filteredResults?.continuation == "next-b" && !it.isLoadingMore }
+                viewModel.loadMoreFilteredResults()
+                val complete = viewModel.uiState.first { it.filteredResults?.items?.size == 3 && !it.isLoadingMore }
+                assertNull(complete.filteredResults!!.continuation)
+                assertEquals(listOf("one", "two", "three"), complete.filteredResults.items.map { it.id })
+                val requests = (client.engine as MockEngine).requestHistory.size
+                viewModel.loadMoreFilteredResults()
+                runCurrent()
+                assertEquals(requests, (client.engine as MockEngine).requestHistory.size)
+                viewModel.close()
+            } finally {
+                client.close()
+            }
+        }
+
+    @Test
     fun clearHistoryPreservesEntriesWhenRemoteReadFails() =
         runTest {
             Settings.shared.searchHistory = SearchHistoryCodec.encode(listOf("keep me"))
@@ -417,6 +470,85 @@ class SearchViewModelTest {
                 assertEquals(listOf("keep"), model.uiState.value.searchHistory)
                 assertEquals(listOf("keep"), SearchHistoryCodec.decode(Settings.shared.searchHistory))
             } finally {
+                client.close()
+            }
+        }
+
+    @Test
+    fun submittingAnotherQueryHidesOldResultsWhileHistoryRemovalIsPending() =
+        runTest {
+            Settings.shared.pauseSearchHistory = false
+            val started = CompletableDeferred<Unit>()
+            val release = CompletableDeferred<Unit>()
+            val engine =
+                mockEngine { request ->
+                    val response =
+                        when (request.url.encodedPath.substringAfterLast('/')) {
+                            "feedback" -> {
+                                started.complete(Unit)
+                                release.await()
+                                "{}"
+                            }
+
+                            "get_search_suggestions" -> {
+                                historyResponse("remove", "remove-token")
+                            }
+
+                            else -> {
+                                val query =
+                                    Json
+                                        .parseToJsonElement((request.body as TextContent).text)
+                                        .jsonObject["query"]!!
+                                        .jsonPrimitive.content
+                                """{"contents":{"sectionListRenderer":{"contents":[{"musicShelfRenderer":{
+                                    "title":{"runs":[{"text":"Songs"}]},
+                                    "contents":[{"musicResponsiveListItemRenderer":{
+                                        "flexColumns":[{"musicResponsiveListItemFlexColumnRenderer":{"text":{"runs":[{"text":"$query"}]}}}],
+                                        "playlistItemData":{"videoId":"$query"}
+                                    }}]
+                                }}]}}}"""
+                            }
+                        }
+                    respond(response, headers = headersOf(HttpHeaders.ContentType, "application/json"))
+                }
+            val client = HttpClient(engine) { install(ContentNegotiation) { json() } }
+            try {
+                val tube = InnerTube(client, retryDelay = {}).apply { cookie = "SAPISID=session" }
+                val model = SearchViewModel(backgroundScope, YouTubeRepository(tube))
+                model.searchQuery("first")
+                val initial = model.uiState.first { it.searchSummary != null && !it.isSearching }
+                assertEquals(
+                    listOf("first"),
+                    initial.searchSummary!!
+                        .summaries
+                        .flatMap { it.items }
+                        .map { it.id },
+                )
+
+                model.removeSearchHistoryItem("remove")
+                started.await()
+                model.searchQuery("second")
+                runCurrent()
+
+                val pending = model.uiState.value
+                assertEquals("second", pending.query)
+                assertTrue(pending.isQuerySubmitted)
+                assertTrue(pending.isSearching)
+                assertNull(pending.searchSummary)
+                assertEquals(1, engine.requestHistory.count { it.url.encodedPath.endsWith("search") })
+
+                release.complete(Unit)
+                val complete = model.uiState.first { it.query == "second" && !it.isSearching }
+                assertFalse(complete.searchFailed)
+                assertEquals(
+                    listOf("second"),
+                    complete.searchSummary!!
+                        .summaries
+                        .flatMap { it.items }
+                        .map { it.id },
+                )
+            } finally {
+                release.complete(Unit)
                 client.close()
             }
         }

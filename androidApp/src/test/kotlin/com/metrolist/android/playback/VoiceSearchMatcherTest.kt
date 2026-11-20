@@ -38,6 +38,37 @@ class VoiceSearchMatcherTest {
     }
 
     @Test
+    fun orderedExactTitleBeatsReorderedWords() {
+        val reordered = song("All Is Love")
+        val exact = song("Love Is All")
+        val request = VoiceSearchRequest("play something", VoiceSearchFocus.SONG, title = "Love Is All")
+
+        assertSame(exact, request.bestMatch(listOf(reordered, exact)))
+        assertEquals(
+            listOf(exact, reordered),
+            VoiceSearchMatcher.rankAll("love is all", listOf(reordered, exact)).map { it.song },
+        )
+        assertSame(reordered, request.bestMatch(listOf(reordered)))
+    }
+
+    @Test
+    fun orderedExactTitleBeatsRepeatedTitleWords() {
+        val repeated = song("Run Run Run")
+        val exact = song("Run")
+
+        assertSame(exact, matchRequest("run", listOf(repeated, exact)))
+    }
+
+    @Test
+    fun exactTitleBeatsAnEarlierFuzzySpellingMatch() {
+        val near = song("Starlite")
+        val exact = song("Starlight")
+
+        assertSame(exact, matchRequest("starlight", listOf(near, exact)))
+        assertSame(near, matchRequest("starlight", listOf(near)))
+    }
+
+    @Test
     fun matchingNormalizesUnicodePunctuationAndWhitespace() {
         val candidate = song("Żółta łódź — 東京")
         assertSame(candidate, matchRequest("  ŻÓŁTA\tłódź\n東京 ", listOf(candidate)))

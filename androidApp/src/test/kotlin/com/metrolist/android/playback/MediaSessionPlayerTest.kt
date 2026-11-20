@@ -156,6 +156,30 @@ class MediaSessionPlayerTest {
     }
 
     @Test
+    fun localLivePreviousWrapsFirstQueueEntryInRepeatAllWithoutRestarting() {
+        val live = song("live").copy(musicVideoType = "MUSIC_VIDEO_TYPE_LIVE")
+        val last = song("last")
+        val backend = RecordingPlaybackPlayer(listOf(live, last))
+        val repeat = MutableStateFlow(Player.REPEAT_MODE_ALL)
+        val scope = CoroutineScope(Dispatchers.Unconfined + SupervisorJob())
+        try {
+            val adapter = MediaSessionPlayer(backend.player, repeat, scope = scope)
+            assertTrue(adapter.isCurrentMediaItemLive)
+            backend.currentPosition.value = 15_000L
+
+            adapter.seekToPrevious()
+
+            assertEquals(1, backend.currentMediaItemIndex.value)
+            assertEquals(last, backend.currentSong.value)
+            assertEquals(0L, backend.currentPosition.value)
+            assertFalse(backend.wantsPlayback)
+            assertTrue(backend.seekSources.isEmpty())
+        } finally {
+            scope.cancel()
+        }
+    }
+
+    @Test
     fun previousFromLiveCastMovesToPreviousTrackWithoutSeekingTheStream() {
         val live = song("live").copy(musicVideoType = "MUSIC_VIDEO_TYPE_LIVE")
         val backend = RecordingPlaybackPlayer(listOf(song("previous"), live))
@@ -177,6 +201,72 @@ class MediaSessionPlayerTest {
             adapter.seekToPrevious()
             assertEquals(0, backend.currentMediaItemIndex.value)
             assertTrue(seekPositions.isEmpty())
+        } finally {
+            scope.cancel()
+        }
+    }
+
+    @Test
+    fun recordedCastPreviousWrapsFirstTrackOnlyBeforeRestartThresholdWithRepeatAll() {
+        val remote = MutableStateFlow(castState(1, 120_000L).copy(isPlaying = false))
+        val repeat = MutableStateFlow(Player.REPEAT_MODE_ALL)
+        val backend = RecordingPlaybackPlayer(listOf(song("first"), song("last"))).apply { wantsPlayback = false }
+        val seekPositions = mutableListOf<Long>()
+        val scope = CoroutineScope(Dispatchers.Unconfined + SupervisorJob())
+        try {
+            val adapter =
+                MediaSessionPlayer(
+                    backend.player,
+                    repeat,
+                    isPlaybackLockedProvider = { false },
+                    isPlaybackLockedFlow = MutableStateFlow(false),
+                    remotePlaybackState = remote,
+                    onRemoteSeek = { seekPositions += it },
+                    scope = scope,
+                )
+            remote.value = remote.value.copy(positionMs = 4_999L)
+            adapter.seekToPrevious()
+            assertEquals(1, backend.currentMediaItemIndex.value)
+            assertTrue(seekPositions.isEmpty())
+            assertFalse(adapter.playWhenReady)
+            assertFalse(backend.wantsPlayback)
+
+            backend.player.skipToQueueItem(0)
+            remote.value = remote.value.copy(positionMs = 5_000L)
+            adapter.seekToPrevious()
+            assertEquals(0, backend.currentMediaItemIndex.value)
+            assertEquals(listOf(0L), seekPositions)
+
+            repeat.value = Player.REPEAT_MODE_OFF
+            remote.value = remote.value.copy(positionMs = 1_000L)
+            adapter.seekToPrevious()
+            assertEquals(0, backend.currentMediaItemIndex.value)
+            assertEquals(listOf(0L, 0L), seekPositions)
+        } finally {
+            scope.cancel()
+        }
+    }
+
+    @Test
+    fun recordedCastPreviousRestartsSingleTrackWithRepeatAll() {
+        val remote = MutableStateFlow(castState(1, 120_000L).copy(positionMs = 4_999L))
+        val backend = RecordingPlaybackPlayer(listOf(song("only")))
+        val seekPositions = mutableListOf<Long>()
+        val scope = CoroutineScope(Dispatchers.Unconfined + SupervisorJob())
+        try {
+            val adapter =
+                MediaSessionPlayer(
+                    backend.player,
+                    MutableStateFlow(Player.REPEAT_MODE_ALL),
+                    isPlaybackLockedProvider = { false },
+                    isPlaybackLockedFlow = MutableStateFlow(false),
+                    remotePlaybackState = remote,
+                    onRemoteSeek = { seekPositions += it },
+                    scope = scope,
+                )
+            adapter.seekToPrevious()
+            assertEquals(0, backend.currentMediaItemIndex.value)
+            assertEquals(listOf(0L), seekPositions)
         } finally {
             scope.cancel()
         }

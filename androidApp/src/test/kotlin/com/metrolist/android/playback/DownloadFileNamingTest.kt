@@ -9,6 +9,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
 import java.io.IOException
+import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 
 class DownloadFileNamingTest {
@@ -30,6 +31,43 @@ class DownloadFileNamingTest {
                 val source = directory.resolve("short-$index.tmp").apply { writeText(index.toString()) }
                 assertEquals(index.toString(), File(moveAudioToDirectory(source, directory, "x.mp3")).readText())
             }
+        } finally {
+            directory.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun fullLengthCjkNameCollisionKeepsBothRecordingsAndTheExtension() {
+        assertFullLengthCollisionIsSafe("界".repeat(84), "界".repeat(76))
+    }
+
+    @Test
+    fun fullLengthEmojiNameCollisionDoesNotSplitThePrefix() {
+        val prefix = "語".repeat(75)
+        assertFullLengthCollisionIsSafe("$prefix🎵${"曲".repeat(10)}", prefix)
+    }
+
+    private fun assertFullLengthCollisionIsSafe(
+        title: String,
+        expectedPrefix: String,
+    ) {
+        val directory = Files.createTempDirectory("public-audio-unicode").toFile()
+        try {
+            val song = SongItem("video-id", title, null, emptyList(), null)
+            val name = "${downloadFileBaseName(song)}.audio"
+            val original = directory.resolve("original.tmp").apply { writeText("original") }
+            val first = File(moveAudioToDirectory(original, directory, name))
+            assertEquals(name, first.name)
+
+            val replacement = directory.resolve("replacement.tmp").apply { writeText("new") }
+            val second = File(moveAudioToDirectory(replacement, directory, name))
+            assertFalse(first == second)
+            assertEquals("original", first.readText())
+            assertEquals("new", second.readText())
+            assertEquals("audio", second.extension)
+            assertTrue(second.name.startsWith("$expectedPrefix-"))
+            assertTrue(second.name.encodeToByteArray().size <= 255)
+            assertTrue(StandardCharsets.UTF_8.newEncoder().canEncode(second.name))
         } finally {
             directory.deleteRecursively()
         }
@@ -150,6 +188,32 @@ class DownloadFileNamingTest {
             )
 
         assertEquals("Artist_Guest - Title_ Live_", downloadFileBaseName(song))
+    }
+
+    @Test
+    fun longDownloadNameDoesNotSplitASupplementaryCharacter() {
+        val prefix = "a".repeat(119)
+        val song = SongItem("video-id", "$prefix🎵 finale", null, emptyList(), null)
+        val clipped = downloadFileBaseName(song)
+        val keepsCompleteCharacter = downloadFileBaseName(song.copy(title = "${prefix.dropLast(1)}🎵 finale"))
+
+        assertTrue(StandardCharsets.UTF_8.newEncoder().canEncode(clipped))
+        assertEquals(prefix, clipped)
+        assertEquals("${prefix.dropLast(1)}🎵", keepsCompleteCharacter)
+    }
+
+    @Test
+    fun cjkDownloadNameLeavesRoomForTheLongestExtension() {
+        val song = SongItem("video-id", "界".repeat(120), null, emptyList(), null)
+        val fileName = downloadFileBaseName(song) + ".audio"
+        val directory = Files.createTempDirectory("utf8-audio-name").toFile()
+        try {
+            assertTrue(directory.resolve(fileName).createNewFile())
+            assertEquals("界".repeat(83) + ".audio", fileName)
+            assertEquals(255, fileName.toByteArray(Charsets.UTF_8).size)
+        } finally {
+            directory.deleteRecursively()
+        }
     }
 
     @Test

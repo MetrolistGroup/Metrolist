@@ -21,6 +21,7 @@ class AudioCacheResourceTest {
         assertNull(cacheableAudioResource(direct.copy(profileId = "cached-audio"), now))
         assertNull(cacheableAudioResource(direct.copy(mimeType = "application/dash+xml"), now))
         assertNull(cacheableAudioResource(direct.copy(url = "https://example.com/audio.m3u8"), now))
+        assertNull(cacheableAudioResource(direct.copy(mimeType = "video/mp4", itag = 18), now))
     }
 
     @Test

@@ -1104,6 +1104,7 @@ private fun runDesktopApp(args: Array<String>) {
         startup.appFrame.await()
         applicationScope.launch(Dispatchers.IO) {
             if (settings.desktopOnboardingComplete) SentryManager.initialize()
+            SentryManager.reportPlaybackClientStats()
         }
         applicationScope.launch {
             observeDiscordInitialization { DiscordRpcManager.init(GlobalYouTube.client) }

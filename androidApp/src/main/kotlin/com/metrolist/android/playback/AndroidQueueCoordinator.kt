@@ -387,6 +387,7 @@ internal class AndroidQueueCoordinator(
     }
 
     fun extendPlaylistBeforeSkip(resumePlayback: Boolean? = null): Boolean {
+        if (!PlaybackNetworkStateStore.current.connected) return false
         if (playlistPage?.hasMore != true || player.currentMediaItemIndex.value < player.songQueue.value.lastIndex) return false
         val sessionId = queueSessionId
         schedulePlaylistPage()

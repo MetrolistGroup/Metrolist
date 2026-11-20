@@ -160,6 +160,39 @@ class CsvPlaylistTest {
     }
 
     @Test
+    fun filePreparationUsesTabsForHeaderlessTsvWithCommaRichTitles() {
+        for (extension in listOf("tsv", "TSV")) {
+            val text = "Part one, part two, part three\tArtist A\r\nIntro, middle, end\tArtist B"
+            val data = UniversalPlaylistParser.prepareFile(text, "playlist.$extension", "Playlist", "File")
+            val csv = assertNotNull(data.csv)
+
+            assertEquals(listOf(listOf("Part one, part two, part three", "Artist A"), listOf("Intro, middle, end", "Artist B")), csv.rows)
+            val tracks = csv.tracks(csv.guessMapping())
+            assertEquals(listOf("Part one, part two, part three", "Intro, middle, end"), tracks.map { it.title })
+            assertEquals(listOf("Artist A", "Artist B"), tracks.map { it.artist })
+        }
+    }
+
+    @Test
+    fun tsvExtensionDoesNotOverrideAnExplicitSeparatorOrTabsInsideQuotes() {
+        for (directive in listOf("", "sep=;\r\n")) {
+            val text = "\uFEFF${directive}Title;Artist\r\n\"Song\tPart two\";Artist"
+            val csv = assertNotNull(UniversalPlaylistParser.prepareFile(text, "playlist.tsv", "Playlist", "File").csv)
+
+            val track = csv.tracks(csv.guessMapping()).single()
+            assertEquals("Song\tPart two", track.title)
+            assertEquals("Artist", track.artist)
+        }
+        val explicitlySemicolonDelimited = "sep=;\nTitle;Artist\nSong\tPart two;Artist"
+        val csv =
+            assertNotNull(UniversalPlaylistParser.prepareFile(explicitlySemicolonDelimited, "playlist.tsv", "Playlist", "File").csv)
+        assertEquals("Song\tPart two", csv.tracks(csv.guessMapping()).single().title)
+        val mislabeledTsv = "Title;Artist\nSong\tPart two;Artist\nSong two;Artist two"
+        val fallback = assertNotNull(UniversalPlaylistParser.prepareFile(mislabeledTsv, "playlist.tsv", "Playlist", "File").csv)
+        assertEquals(listOf("Song\tPart two", "Song two"), fallback.tracks(fallback.guessMapping()).map { it.title })
+    }
+
+    @Test
     fun preservesPunctuationInHeaderlessM3uLocalPaths() {
         val path = "Music/One, Two; Three.mp3"
         val resolved = "file:///library/one-two-three.mp3"

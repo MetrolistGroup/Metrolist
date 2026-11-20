@@ -57,6 +57,42 @@ class HistoryStatisticsTest {
         }
 
     @Test
+    fun snapshotKeepsTheIdsOfDifferentEditionsWithTheSameAlbumCredits() =
+        runBlocking {
+            Settings.replaceSharedForTest(Settings(MapSettings()))
+            val path = Files.createTempFile("statistics-album-identities", ".db")
+            Files.delete(path)
+            val db = getDesktopDatabaseBuilder(path.toFile()).build()
+            try {
+                val first =
+                    SongItem(
+                        "original-song",
+                        "Track one",
+                        null,
+                        listOf(ArtistTiny("artist", "Artist")),
+                        AlbumTiny("MPREbOriginal", "Album"),
+                    )
+                val second = first.copy(id = "reissue-song", album = AlbumTiny("MPREbReissue", "Album"))
+                db.recordHistoryPlay(first, 1_765_000_000_000L, playTimeMs = 1_000L)
+                db.recordHistoryPlay(second, 1_765_000_000_001L, playTimeMs = 3_000L)
+                db.recordHistoryPlay(second, 1_765_000_000_002L, playTimeMs = 2_000L)
+
+                for (catalogArtistIds in listOf(false, true)) {
+                    val albums = db.historyStatisticsSnapshot(0, Long.MAX_VALUE, catalogArtistIds).albums
+                    assertEquals(listOf("Album", "Album"), albums.map { it.name })
+                    assertEquals(listOf("Artist", "Artist"), albums.map { it.artists })
+                    assertEquals(listOf("MPREbReissue", "MPREbOriginal"), albums.map { it.id })
+                    assertEquals(listOf(2, 1), albums.map { it.playCount })
+                    assertEquals(listOf(5_000L, 1_000L), albums.map { it.playTimeMs })
+                }
+            } finally {
+                db.close()
+                Files.deleteIfExists(path)
+                Settings.replaceSharedForTest(null)
+            }
+        }
+
+    @Test
     fun snapshotBucketsUseTheSameLocalCalendarAsTheCharts() =
         runBlocking {
             Settings.replaceSharedForTest(Settings(MapSettings()))

@@ -26,6 +26,24 @@ import java.io.IOException
 
 class DownloadQueueStateTest {
     @Test
+    fun localSongsAreExcludedFromDirectDownloadBatches() {
+        val local = song("local_123").copy(isLocal = true)
+        val remote = song("remote")
+        assertTrue(mergeDownloadQueue(emptyList(), listOf(local), 1L).isEmpty())
+        assertEquals(
+            listOf(remote),
+            mergeDownloadQueue(emptyList(), listOf(local, remote, remote), 1L).map { it.song },
+        )
+    }
+
+    @Test
+    fun selectingLocalSongAgainDoesNotRetryItsFailedRemoteDownload() {
+        val local = song("local_123").copy(isLocal = true)
+        val failed = DownloadRequest(local, DownloadQueueState.FAILED, enqueuedAt = 1L)
+        assertEquals(listOf(failed), mergeDownloadQueue(listOf(failed), listOf(local), 2L))
+    }
+
+    @Test
     fun unavailableRowsAreExcludedFromDirectAndTrackedPlaylistDownloads() {
         val unavailable = song("unavailable").copy(isUnavailable = true)
         val playable = song("playable")

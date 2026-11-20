@@ -1,6 +1,7 @@
 package com.metrolist.android.playback
 
 import android.Manifest
+import android.app.Notification
 import android.app.NotificationManager
 import android.content.ComponentName
 import android.content.ContextWrapper
@@ -8,6 +9,7 @@ import android.content.Intent
 import android.content.res.Resources
 import androidx.room3.Room
 import androidx.sqlite.driver.AndroidSQLiteDriver
+import com.metrolist.android.R
 import com.metrolist.android.db.QueryCallbackDriver
 import com.metrolist.shared.db.MusicDatabase
 import com.metrolist.shared.db.entities.CachedAudioEntity
@@ -320,6 +322,53 @@ class SongDownloadManagerTest {
             } finally {
                 manager.flushQueue()
                 stopKoin()
+                database.close()
+                Settings.replaceSharedForTest(null)
+            }
+        }
+
+    @Test
+    fun aggregateNotificationOffersPauseWhileOtherWorkIsQueued() =
+        runBlocking {
+            val context = notificationContext()
+            val database = Room.inMemoryDatabaseBuilder(context, MusicDatabase::class.java).setDriver(AndroidSQLiteDriver()).build()
+            val queued = SongItem("queued", "Queued", null, emptyList(), null)
+            val paused = queued.copy(id = "paused", title = "Paused")
+            val requests = listOf(DownloadRequest(paused, DownloadQueueState.PAUSED, 1), DownloadRequest(queued, enqueuedAt = 2))
+            Settings.replaceSharedForTest(Settings(MapSettings()).apply { downloadQueueJson = Json.encodeToString(requests) })
+            val manager = SongDownloadManager(context, AudioCacheManager(context, database), database)
+            try {
+                manager.flushQueue()
+
+                fun assertNotification(
+                    title: Int,
+                    label: Int,
+                    action: String,
+                ) {
+                    val notification = manager.aggregateNotification()
+                    assertEquals(title.toString(), notification.extras.getCharSequence(Notification.EXTRA_TITLE)?.toString())
+                    assertEquals(
+                        label.toString(),
+                        notification.actions
+                            .first()
+                            .title
+                            .toString(),
+                    )
+                    assertEquals(action, shadowOf(notification.actions.first().actionIntent).savedIntent.action)
+                }
+                assertNotification(
+                    R.string.download_notification_title,
+                    R.string.download_pause_all,
+                    SongDownloadManager.ACTION_PAUSE_ALL,
+                )
+                manager.pause(queued.id).join()
+                assertNotification(
+                    R.string.download_notification_paused,
+                    R.string.download_resume_all,
+                    SongDownloadManager.ACTION_RESUME_ALL,
+                )
+            } finally {
+                manager.flushQueue()
                 database.close()
                 Settings.replaceSharedForTest(null)
             }
