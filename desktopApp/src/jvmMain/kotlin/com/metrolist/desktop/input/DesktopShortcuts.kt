@@ -53,6 +53,17 @@ internal fun triggerSearchShortcut() {
     }
 }
 
+internal sealed interface ShortcutKeyCode {
+    data class Compose(
+        val key: Key,
+    ) : ShortcutKeyCode
+
+    data class Awt(
+        val code: Int,
+        val character: Char,
+    ) : ShortcutKeyCode
+}
+
 @Composable
 fun DesktopShortcutLayer(
     isPlaybackBackgroundFocused: () -> Boolean,
@@ -69,7 +80,7 @@ fun DesktopShortcutLayer(
             ctrl = false,
             meta = false,
             shift = false,
-            keyCode = Key.Escape,
+            keyCode = ShortcutKeyCode.Compose(Key.Escape),
             suppressUnmodified = false,
             onRefresh = onRefresh,
             toggleWindowFullscreen = toggleWindowFullscreen,
@@ -267,7 +278,7 @@ private fun handleAwtKeyEvent(
         ctrl = event.isControlDown,
         meta = event.isMetaDown,
         shift = event.isShiftDown,
-        keyCode = event.keyCode,
+        keyCode = ShortcutKeyCode.Awt(event.keyCode, event.keyChar),
         suppressUnmodified = editableInputActive || modalActive,
         modalActive = modalActive,
         onRefresh = onRefresh,
@@ -301,7 +312,7 @@ internal fun handleShortcut(
     ctrl: Boolean,
     meta: Boolean,
     shift: Boolean,
-    keyCode: Any,
+    keyCode: ShortcutKeyCode,
     suppressUnmodified: Boolean,
     onRefresh: () -> Unit,
     toggleWindowFullscreen: () -> Unit,
@@ -322,7 +333,7 @@ internal fun handleShortcut(
             return true
         }
         if (primary && UiState.showShortcutsDialog &&
-            (keyCodeMatches(keyCode, Key.Grave, AwtKeyEvent.VK_BACK_QUOTE) || keyCode == AwtKeyEvent.VK_DEAD_GRAVE)
+            (keyCodeMatches(keyCode, Key.Grave, AwtKeyEvent.VK_BACK_QUOTE) || keyCode.isAwtCode(AwtKeyEvent.VK_DEAD_GRAVE))
         ) {
             UiState.showShortcutsDialog = false
             return true
@@ -340,7 +351,7 @@ internal fun handleShortcut(
         return true
     }
 
-    if (primary && !alt && !shift && keyCodeMatches(keyCode, Key.Slash, AwtKeyEvent.VK_SLASH)) {
+    if (primary && !alt && keyCodeMatches(keyCode, Key.Slash, AwtKeyEvent.VK_SLASH)) {
         UiState.showShortcutsDialog = true
         return true
     }
@@ -356,7 +367,7 @@ internal fun handleShortcut(
     }
 
     if (primary &&
-        (keyCodeMatches(keyCode, Key.Grave, AwtKeyEvent.VK_BACK_QUOTE) || (keyCode is Int && keyCode == AwtKeyEvent.VK_DEAD_GRAVE))
+        (keyCodeMatches(keyCode, Key.Grave, AwtKeyEvent.VK_BACK_QUOTE) || keyCode.isAwtCode(AwtKeyEvent.VK_DEAD_GRAVE))
     ) {
         UiState.showShortcutsDialog = !UiState.showShortcutsDialog
         return true
@@ -823,20 +834,30 @@ private fun isComposeModalActive(): Boolean =
         PlayerState.showAddToPlaylistSong != null ||
         PlayerState.showPlayerError
 
-internal fun isVolumeDecreaseShortcut(keyCode: Any): Boolean =
+internal fun isVolumeDecreaseShortcut(keyCode: ShortcutKeyCode): Boolean =
     keyCodeMatches(keyCode, Key.Minus, AwtKeyEvent.VK_MINUS) ||
         keyCodeMatches(keyCode, Key.NumPadSubtract, AwtKeyEvent.VK_SUBTRACT)
 
-private fun keyCodeMatches(
-    keyCode: Any,
+internal fun keyCodeMatches(
+    keyCode: ShortcutKeyCode,
     composeKey: Key,
     awtKeyCode: Int,
 ): Boolean =
     when (keyCode) {
-        is Key -> keyCode == composeKey
-        is Int -> keyCode == awtKeyCode
-        else -> false
+        is ShortcutKeyCode.Compose -> {
+            keyCode.key == composeKey
+        }
+
+        is ShortcutKeyCode.Awt -> {
+            if (awtKeyCode in AwtKeyEvent.VK_A..AwtKeyEvent.VK_Z) {
+                keyCode.character.uppercaseChar().code == awtKeyCode
+            } else {
+                keyCode.code == awtKeyCode
+            }
+        }
     }
+
+private fun ShortcutKeyCode.isAwtCode(expectedCode: Int): Boolean = (this as? ShortcutKeyCode.Awt)?.code == expectedCode
 
 internal class ShortcutPressTracker {
     private val handled = mutableSetOf<Int>()
