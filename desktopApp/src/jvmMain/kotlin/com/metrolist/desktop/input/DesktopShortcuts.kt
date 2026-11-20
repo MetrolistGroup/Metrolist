@@ -177,9 +177,14 @@ private fun installGlobalShortcutDispatcher(
                 keyFocus.keyboardNavigation = true
             }
             val physicalPositionsAvailable = physicalKeyCapture?.isAvailable == true
-            val isModifierPress = event.id == AwtKeyEvent.KEY_PRESSED && event.keyCode.isAwtModifierKey()
+            val isModifierPress =
+                event.id == AwtKeyEvent.KEY_PRESSED && event.keyCode.isAwtModifierKey()
             val physicalPosition =
-                if (event.id == AwtKeyEvent.KEY_PRESSED && !isModifierPress) physicalKeyCapture?.consume(event.keyCode) else null
+                if (event.id == AwtKeyEvent.KEY_PRESSED && !isModifierPress) {
+                    physicalKeyCapture?.consume(event.keyCode)
+                } else {
+                    null
+                }
             pressed.dispatch(event, physicalPosition, physicalPositionsAvailable) {
                 handleAwtKeyEvent(
                     event,
@@ -291,15 +296,12 @@ internal fun shouldDispatchGlobalShortcut(event: AwtKeyEvent): Boolean =
     !event.isConsumed && event.id == AwtKeyEvent.KEY_PRESSED && event.keyCode != AwtKeyEvent.VK_ESCAPE
 
 private fun Int.isAwtModifierKey(): Boolean =
-    this in
-        setOf(
-            AwtKeyEvent.VK_SHIFT,
-            AwtKeyEvent.VK_CONTROL,
-            AwtKeyEvent.VK_ALT,
-            AwtKeyEvent.VK_META,
-            AwtKeyEvent.VK_ALT_GRAPH,
-            AwtKeyEvent.VK_WINDOWS,
-        )
+    this == AwtKeyEvent.VK_SHIFT ||
+        this == AwtKeyEvent.VK_CONTROL ||
+        this == AwtKeyEvent.VK_ALT ||
+        this == AwtKeyEvent.VK_META ||
+        this == AwtKeyEvent.VK_ALT_GRAPH ||
+        this == AwtKeyEvent.VK_WINDOWS
 
 private fun handleAwtKeyEvent(
     event: AwtKeyEvent,
@@ -886,19 +888,25 @@ internal class ShortcutPressTracker {
         if (event.id != AwtKeyEvent.KEY_PRESSED) return false
         if (event.keyCode in handled) return true
         val consumed = action()
-        val repeatable =
-            event.keyCode in
-                setOf(
-                    AwtKeyEvent.VK_LEFT,
-                    AwtKeyEvent.VK_RIGHT,
-                    AwtKeyEvent.VK_UP,
-                    AwtKeyEvent.VK_DOWN,
-                    AwtKeyEvent.VK_EQUALS,
-                    AwtKeyEvent.VK_ADD,
-                    AwtKeyEvent.VK_MINUS,
-                    AwtKeyEvent.VK_SUBTRACT,
-                ) || physicalPositionsAvailable && physicalPosition in setOf(PhysicalKeyPosition.MINUS, PhysicalKeyPosition.EQUALS)
+        val repeatablePhysicalKey =
+            physicalPositionsAvailable &&
+                (physicalPosition == PhysicalKeyPosition.MINUS || physicalPosition == PhysicalKeyPosition.EQUALS)
+        val repeatable = event.keyCode in REPEATABLE_AWT_KEY_CODES || repeatablePhysicalKey
         if (consumed && !repeatable) handled.add(event.keyCode)
         return consumed
+    }
+
+    private companion object {
+        val REPEATABLE_AWT_KEY_CODES =
+            setOf(
+                AwtKeyEvent.VK_LEFT,
+                AwtKeyEvent.VK_RIGHT,
+                AwtKeyEvent.VK_UP,
+                AwtKeyEvent.VK_DOWN,
+                AwtKeyEvent.VK_EQUALS,
+                AwtKeyEvent.VK_ADD,
+                AwtKeyEvent.VK_MINUS,
+                AwtKeyEvent.VK_SUBTRACT,
+            )
     }
 }
