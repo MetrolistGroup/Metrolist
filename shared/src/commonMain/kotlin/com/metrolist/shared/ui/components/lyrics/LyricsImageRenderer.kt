@@ -205,19 +205,23 @@ internal fun renderLyricsImage(
             artwork?.let {
                 val topLeft = Offset(layout.artworkX * scale, (layout.artworkTop + verticalOffset) * scale)
                 val artworkSide = layout.artworkSize * scale
-                val artworkClip =
-                    Path().apply {
-                        addRoundRect(
-                            RoundRect(
-                                topLeft.x,
-                                topLeft.y,
-                                topLeft.x + artworkSide,
-                                topLeft.y + artworkSide,
-                                CornerRadius(18 * scale),
-                            ),
-                        )
-                    }
-                clipPath(artworkClip) { drawCover(it, topLeft, artworkSide) }
+                if (story) {
+                    val artworkClip =
+                        Path().apply {
+                            addRoundRect(
+                                RoundRect(
+                                    topLeft.x,
+                                    topLeft.y,
+                                    topLeft.x + artworkSide,
+                                    topLeft.y + artworkSide,
+                                    CornerRadius(18 * scale),
+                                ),
+                            )
+                        }
+                    clipPath(artworkClip) { drawCover(it, topLeft, artworkSide) }
+                } else {
+                    drawCover(it, topLeft, artworkSide)
+                }
             }
 
             fun label(
@@ -227,8 +231,9 @@ internal fun renderLyricsImage(
                 fontSize: Float,
                 color: Color,
                 maxWidth: Float,
+                shrinkToFit: Boolean = false,
             ) {
-                val layout =
+                fun measure(fontSize: Float) =
                     textMeasurer.measure(
                         text,
                         style =
@@ -248,7 +253,13 @@ internal fun renderLyricsImage(
                         density = density,
                         layoutDirection = layoutDirection,
                     )
-                drawText(layout, topLeft = Offset(x * scale, y * scale))
+                var resolvedFontSize = fontSize
+                var textLayout = measure(resolvedFontSize)
+                while (shrinkToFit && textLayout.didOverflowWidth && resolvedFontSize > 4f) {
+                    resolvedFontSize = (resolvedFontSize - 0.25f).coerceAtLeast(4f)
+                    textLayout = measure(resolvedFontSize)
+                }
+                drawText(textLayout, topLeft = Offset(x * scale, y * scale))
             }
             val headerX =
                 if (story && artwork != null) {
@@ -333,6 +344,7 @@ internal fun renderLyricsImage(
                     7f * contentScale,
                     storySecondaryColor,
                     layout.lyricsWidth - 62f * contentScale,
+                    shrinkToFit = true,
                 )
             }
         }
