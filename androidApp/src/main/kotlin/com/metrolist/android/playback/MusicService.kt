@@ -277,6 +277,8 @@ class MusicService :
     private val mainHandler = Handler(Looper.getMainLooper())
     private var mediaNotificationProvider: PromotedMediaNotificationProvider? = null
     private var foregroundStartCleanupJob: Job? = null
+
+    @Volatile private var isDestroying = false
     private val playbackBenchmark: PlaybackBenchmarkRunner by inject()
     private val streamResolver: StreamResolver by inject()
     private val tokenProvider: TokenProvider by inject()
@@ -611,8 +613,9 @@ class MusicService :
                         devices.peers.any { it.state == DeviceConnectManager.PeerState.CONNECTED }
                 }
             observePlaybackServiceLifetime(taskRemoved, playbackRequired, snapshotFlow { Settings.shared.stopMusicOnTaskClear }) {
-                saveFinalPlaybackState()?.join()
+                isRunning = false
                 running.value = false
+                saveFinalPlaybackState()?.join()
                 pauseAllPlayersAndStopSelf()
             }
         }
@@ -646,6 +649,7 @@ class MusicService :
     }
 
     private fun promoteRoomForeground() {
+        if (isDestroying || !isRunning) return
         setupNotificationChannel()
         val notification =
             mediaNotificationProvider?.latestNotification?.takeIf {
@@ -3012,6 +3016,8 @@ class MusicService :
     }
 
     override fun onDestroy() {
+        isDestroying = true
+        isRunning = false
         if (!::player.isInitialized) {
             podcastWriterScope.cancel()
             serviceScope.cancel()
