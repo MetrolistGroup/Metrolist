@@ -136,8 +136,29 @@ internal fun downloadFileBaseName(song: SongItem): String {
         .joinToString(" - ")
         .replace(Regex("""[\\/:*?\"<>|\p{Cc}]"""), "_")
         .trim(' ', '.')
-        .take(120)
+        .boundedDownloadBaseName()
         .ifBlank { song.id }
+}
+
+private fun String.boundedDownloadBaseName(): String {
+    var end = 0
+    var bytes = 0
+    while (end < length) {
+        val codePoint = codePointAt(end)
+        val charCount = Character.charCount(codePoint)
+        val byteCount =
+            when {
+                codePoint <= 0x7F -> 1
+                codePoint <= 0x7FF -> 2
+                codePoint <= 0xFFFF -> 3
+                else -> 4
+            }
+        // Keep the existing length limit and reserve room for the longest extension (.audio).
+        if (end + charCount > 120 || bytes + byteCount > 255 - ".audio".length) break
+        end += charCount
+        bytes += byteCount
+    }
+    return substring(0, end)
 }
 
 internal fun cacheableAudioResource(
