@@ -854,7 +854,7 @@
     <string name="remove_from_favorites">Удалить из Любимых</string>
     <string name="remove_from_recent_question">Удалить из недавних?</string>
     <string name="remove_from_saved_episodes">Удалить из сохраненных выпусков</string>
-    <string name="remove_from_speed_dial">Удалить из Быстрого набора</string>
+    <string name="remove_from_speed_dial">Удалить из Быстрого выбора</string>
     <string name="remove_recent_search_description">Удалить %1$s из недавних поисков?</string>
     <string name="remove_recent_search_item_description">Удалить %1$s из недавних поисков?</string>
     <string name="remove_recent_search_question">Удалить недавний поиск?</string>
@@ -1233,7 +1233,7 @@
     <string name="discord_advanced_mode">Расширенный режим</string>
     <string name="speed_dial">Быстрый выбор</string>
     <string name="pin_to_speed_dial">Закрепить в Быстрый выбор</string>
-    <string name="unpin_from_speed_dial">Открепить из Быстрого набора</string>
+    <string name="unpin_from_speed_dial">Открепить из Быстрого выбора</string>
     <string name="view_podcast">Просмотреть подкаст</string>
     <string name="auto_playlist">Автоплейлист</string>
     <string name="restore_confirm_title">Восстановить бэкап?</string>
@@ -2315,7 +2315,7 @@
     <string name="android_auto_quick_add_playlist">Быстрое добавление плейлиста</string>
     <string name="android_auto_quick_add_playlist_not_set">Выберите плейлист с для быстрого добавления в настройках Android Auto.</string>
     <string name="artist_lastfm_listeners">Слушатели Last.fm</string>
-    <string name="artist_lastfm_scrobbles">Скробблы Last.fm: 1 250</string>
+    <string name="artist_lastfm_scrobbles">Скробблы Last.fm</string>
     <string name="artist_lastfm_biography">Биография на Last.fm</string>
     <string name="artist_lastfm_read_more">Узнать больше на Last.fm</string>
     <string name="artist_similar_artists">Похожие исполнители на Last.fm</string>
