@@ -2635,4 +2635,7 @@
     <string name="classic_recommendations_desc">Creează selecții rapide din propriul istoric de ascultare și redă în ordine lista personală YouTube „Urmează”, la fel ca în Metrolist 13</string>
     <string name="classic_recommendations_desc_desktop">Redă în ordine lista personală YouTube „Urmează”, la fel ca în Metrolist 13</string>
     <string name="clearing_search_history">Se șterge istoricul căutărilor…</string>
+    <string name="support_prompt_title">Îți place aplicația?</string>
+    <string name="support_prompt_message">Susține dezvoltarea Metrolist prin sprijinirea dezvoltatorilor din spatele acesteia. Atinge pe cineva pentru a deschide pagina sa de susținere.</string>
+    <string name="support_prompt_never_show">Nu mai afișa acest mesaj</string>
 </resources>
