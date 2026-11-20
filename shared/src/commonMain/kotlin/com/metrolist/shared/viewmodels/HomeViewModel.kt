@@ -265,6 +265,8 @@ class HomeViewModel(
 
     @Volatile private var publishedPrimaryAllContent: Pair<Long, HomeUiState>? = null
 
+    @Volatile private var publishedPrimaryChipContent: Pair<Long, HomeUiState>? = null
+
     @Volatile private var cachedSelectedChipContent: HomeUiState? = null
 
     @Volatile private var chipContentCache: Map<HomeChipKey, HomeUiState> = emptyMap()
@@ -418,6 +420,14 @@ class HomeViewModel(
                         cachedAllContent?.let { cached ->
                             cached.withSpeedDialPins(pinned, cached.speedDialUnpinnedItems())
                         }
+                    publishedPrimaryAllContent =
+                        publishedPrimaryAllContent?.let { (generation, state) ->
+                            generation to state.withSpeedDialPins(pinned, state.speedDialUnpinnedItems())
+                        }
+                    publishedPrimaryChipContent =
+                        publishedPrimaryChipContent?.let { (generation, state) ->
+                            generation to state.withSpeedDialPins(pinned, state.speedDialUnpinnedItems())
+                        }
                 }
             }
 
@@ -454,6 +464,10 @@ class HomeViewModel(
                     _uiState.update { it.withLibrarySnapshot() }
                     cachedAllContent = cachedAllContent?.withLibrarySnapshot()
                     cachedSelectedChipContent = cachedSelectedChipContent?.withLibrarySnapshot()
+                    publishedPrimaryAllContent =
+                        publishedPrimaryAllContent?.let { (generation, state) -> generation to state.withLibrarySnapshot() }
+                    publishedPrimaryChipContent =
+                        publishedPrimaryChipContent?.let { (generation, state) -> generation to state.withLibrarySnapshot() }
                     chipContentCache = chipContentCache.mapValues { it.value.withLibrarySnapshot() }
                     val known =
                         playlists
@@ -585,6 +599,7 @@ class HomeViewModel(
                                 val latestPrimary =
                                     interruptedPrimary.second
                                         .withLatestLibraryAndSpeedDialState(interruptedState)
+                                        .withLatestSongMetadataFrom(interruptedState)
                                         .withSpeedDialPins(latestSpeedDialPins, speedDialRecommendationItems)
                                 cachedAllContent =
                                     homeCacheAfterOfflineCancellation(
@@ -605,13 +620,20 @@ class HomeViewModel(
                                 )
                             ) {
                                 cachedSelectedChipContent =
-                                    homeSelectedChipCacheAfterOfflineCancellation(
-                                        cachedSelectedChipContent,
-                                        interruptedState,
-                                    )
+                                    publishedPrimaryChipContent
+                                        ?.takeIf { it.first == cancelledGeneration }
+                                        ?.second
+                                        ?.withLatestLibraryAndSpeedDialState(interruptedState)
+                                        ?.withLatestSongMetadataFrom(interruptedState)
+                                        ?.asOfflineSnapshot()
+                                        ?: homeSelectedChipCacheAfterOfflineCancellation(
+                                            cachedSelectedChipContent,
+                                            interruptedState,
+                                        )
                                 cachedSelectedChipContent?.selectedChip?.let { chip ->
                                     cachedSelectedChipContent?.let { cacheChipContent(chip, it, markFresh = false) }
                                 }
+                                publishedPrimaryChipContent = null
                             }
                             contentLoadGeneration++
                             cancelPagination()
@@ -639,6 +661,7 @@ class HomeViewModel(
         browseId: String = "FEmusic_home",
         isRefresh: Boolean = false,
         onComplete: () -> Unit = {},
+        primaryPageOverride: HomePageData? = null,
     ) {
         val isFiltered = isFilteredHome(params, browseId)
         val hadIncompleteAllContent = allContentReloadRequired || cachedAllContent?.isAllContentPending == true
@@ -670,13 +693,15 @@ class HomeViewModel(
                 var primaryContentPublished = false
                 var primaryContinuation: String? = null
                 var primaryContentSnapshot: HomeUiState? = null
+                var loadedPrimaryPage: HomePageData? = primaryPageOverride
                 supervisorScope {
                     try {
                         val homePageDataDeferred =
                             async {
-                                homeRequestResult("primary home") {
-                                    GlobalYouTubeRepository.instance.getHomePageData(params, browseId)
-                                }
+                                primaryPageOverride?.let { Result.success(it) }
+                                    ?: homeRequestResult("primary home") {
+                                        GlobalYouTubeRepository.instance.getHomePageData(params, browseId)
+                                    }
                             }
                         val authenticatedSpeedDialSectionsDeferred =
                             async {
@@ -717,6 +742,7 @@ class HomeViewModel(
                                 }
                             }
                         val homePageData = homePageDataDeferred.await().getOrThrow()
+                        loadedPrimaryPage = homePageData
                         primaryContinuation = homePageData.continuation
                         val rawHomeSections = homePageData.sections.withoutRegionalCharts(signedIn)
                         if (generation != contentLoadGeneration ||
@@ -767,8 +793,14 @@ class HomeViewModel(
                                         sections = uncategorizedHomeSections(hydratedPrimarySections),
                                     )
                             primaryContentSnapshot = primaryState
-                            if (!isFiltered) publishedPrimaryAllContent = generation to primaryState
-                            if (isFiltered) cachedSelectedChipContent = primaryState
+                            if (!isFiltered) {
+                                publishedPrimaryAllContent = generation to primaryState.copy(continuation = homePageData.continuation)
+                            }
+                            if (isFiltered) {
+                                val chipPrimaryState = primaryState.copy(continuation = homePageData.continuation)
+                                cachedSelectedChipContent = chipPrimaryState
+                                publishedPrimaryChipContent = generation to chipPrimaryState
+                            }
                             primaryState.withoutBlockedContent()
                         }
                         primaryContentPublished = true
@@ -934,6 +966,7 @@ class HomeViewModel(
                                 allContentReloadRequired = false
                                 cacheAllContentState(loadedState)
                                 publishedPrimaryAllContent = null
+                                publishedPrimaryChipContent = null
                             }
                             saveLastHomePage(loadedState)
                             if (!isFiltered) appendMissingMainFeedMoods(generation)
@@ -948,7 +981,12 @@ class HomeViewModel(
                         throw e
                     } catch (e: HomeLibraryRevisionChangedException) {
                         if (generation == contentLoadGeneration) {
-                            loadHomeData(params = params, browseId = browseId, isRefresh = isRefresh)
+                            loadHomeData(
+                                params = params,
+                                browseId = browseId,
+                                isRefresh = isRefresh,
+                                primaryPageOverride = loadedPrimaryPage,
+                            )
                         }
                     } catch (e: Exception) {
                         if (generation != contentLoadGeneration ||
@@ -977,14 +1015,14 @@ class HomeViewModel(
                                 isRevalidating = false,
                                 isContentLoading = false,
                                 isLoadingMore = false,
-                                isAllContentPending = failedAllPending,
+                                isAllContentPending = false,
                                 continuation =
                                     homeContinuationAfterAssemblyFailure(
                                         currentContinuation = currentState.continuation,
                                         primaryContinuation = primaryContinuation,
                                         primaryContentPublished = true,
                                     ),
-                                error = e.message,
+                                error = e.message.orEmpty(),
                             )
                         val failedState =
                             currentState.copy(
@@ -993,8 +1031,7 @@ class HomeViewModel(
                                 isRevalidating = false,
                                 isContentLoading = false,
                                 isLoadingMore = false,
-                                isAllContentPending =
-                                    if (!isFiltered) failedAllPending else currentState.isAllContentPending,
+                                isAllContentPending = if (!isFiltered) false else currentState.isAllContentPending,
                                 continuation =
                                     if (failedAllPending) {
                                         null
@@ -1005,7 +1042,7 @@ class HomeViewModel(
                                             primaryContentPublished = primaryContentPublished,
                                         )
                                     },
-                                error = e.message,
+                                error = e.message.orEmpty(),
                             )
                         _uiState.value = failedState
                         if (!isFiltered) {
@@ -1040,6 +1077,7 @@ class HomeViewModel(
                                 )
                             cachedSelectedChipContent = failedChipSnapshot
                             failedChipSnapshot?.selectedChip?.let { chip -> cacheChipContent(chip, failedChipSnapshot) }
+                            if (publishedPrimaryChipContent?.first == generation) publishedPrimaryChipContent = null
                         }
                     } finally {
                         if (generation == contentLoadGeneration) {
@@ -1478,7 +1516,14 @@ class HomeViewModel(
         }
 
         if (currentChip == null) {
-            cacheAllContentState()
+            val pendingPrimary = publishedPrimaryAllContent?.takeIf { it.first == contentLoadGeneration }?.second
+            if (pendingPrimary != null) {
+                cachedAllContent =
+                    cacheableAllContentSnapshot(pendingPrimary.copy(isAllContentPending = false)) ?: cachedAllContent
+                allContentReloadRequired = true
+            } else {
+                cacheAllContentState()
+            }
         }
 
         contentLoadGeneration++
@@ -1559,6 +1604,10 @@ class HomeViewModel(
         Settings.shared.speedDialSurprisePinned = pinned
         _uiState.update { it.copy(speedDialSurprisePinned = pinned) }
         cachedAllContent = cachedAllContent?.copy(speedDialSurprisePinned = pinned)
+        publishedPrimaryAllContent =
+            publishedPrimaryAllContent?.let { (generation, state) -> generation to state.copy(speedDialSurprisePinned = pinned) }
+        publishedPrimaryChipContent =
+            publishedPrimaryChipContent?.let { (generation, state) -> generation to state.copy(speedDialSurprisePinned = pinned) }
     }
 
     fun updateSongMetadata(song: SongItem) {
@@ -1568,6 +1617,10 @@ class HomeViewModel(
         _uiState.update { it.withUpdatedSongMetadata(updated) }
         publishedPrimaryAllContent =
             publishedPrimaryAllContent?.let { (generation, snapshot) ->
+                generation to snapshot.withUpdatedSongMetadata(updated)
+            }
+        publishedPrimaryChipContent =
+            publishedPrimaryChipContent?.let { (generation, snapshot) ->
                 generation to snapshot.withUpdatedSongMetadata(updated)
             }
         cachedAllContent = cachedAllContent?.withUpdatedSongMetadata(updated)
