@@ -83,6 +83,8 @@ internal class DlnaSession(
 
     @Volatile private var lastPlayingTrackUri: String? = null
 
+    @Volatile private var seekGeneration = 0L
+
     @Volatile private var stopRequested = false
 
     @Volatile
@@ -103,6 +105,7 @@ internal class DlnaSession(
         pollingJob?.cancelAndJoin()
         pollingJob = null
         this@DlnaSession.mediaGeneration = mediaGeneration
+        seekGeneration++
         if (::descriptor.isInitialized) {
             runCatching { stop() }
         } else {
@@ -199,6 +202,7 @@ internal class DlnaSession(
 
     override suspend fun seekTo(positionMs: Long) =
         withContext(Dispatchers.IO) {
+            seekGeneration++
             lastPlayingPositionMs = null
             lastPlayingTrackUri = null
             soap(
@@ -242,6 +246,7 @@ internal class DlnaSession(
         val pollIntervalMs = lastPoll?.elapsedNow()?.inWholeMilliseconds?.coerceAtLeast(POLL_INTERVAL_MS) ?: POLL_INTERVAL_MS
         lastPoll = TimeSource.Monotonic.markNow()
         val pollGeneration = mediaGeneration
+        val pollSeekGeneration = seekGeneration
         val position =
             soap(
                 descriptor.avTransportUrl,
@@ -256,7 +261,7 @@ internal class DlnaSession(
                 "GetTransportInfo",
                 "<InstanceID>0</InstanceID>",
             )
-        if (pollGeneration != mediaGeneration) return
+        if (pollGeneration != mediaGeneration || pollSeekGeneration != seekGeneration) return
         val current = _state.value
         val positionMs = position.text("RelTime")?.let(::parseDlnaTime) ?: current.positionMs
         val durationMs = position.text("TrackDuration")?.let(::parseDlnaTime)?.takeIf { it > 0L } ?: current.durationMs
@@ -266,7 +271,11 @@ internal class DlnaSession(
         val isPlaying = transportState == "PLAYING" || transportState == "TRANSITIONING"
         val isBuffering = transportState == "TRANSITIONING"
         normalizeSonosPlayMode()
-        val wasPlaying = current.isPlaying && !current.isBuffering && lastPlayingPositionMs != null
+        if (trackUri != null && lastPlayingTrackUri != null && trackUri != lastPlayingTrackUri) {
+            lastPlayingPositionMs = null
+            lastPlayingTrackUri = trackUri
+        }
+        val wasPlaying = current.isPlaying && lastPlayingPositionMs != null
         val restarted =
             descriptor.isSonos &&
                 castPlaybackRestartedNearDuration(
