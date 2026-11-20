@@ -123,6 +123,7 @@ fun PlaylistContent(
     durationSongs: List<SongItem> = artworkSongs,
     hasMoreSongs: Boolean = false,
     hiddenSongCount: Int = 0,
+    loadedSongCount: Int = artworkSongs.size + hiddenSongCount,
     isLoading: Boolean = false,
     previewThumbnail: String? = null,
     loadingHeader: (@Composable () -> Unit)? = null,
@@ -176,7 +177,6 @@ fun PlaylistContent(
     val onEdit = onEdit.takeIf { canEdit }
     val headerPlaylist = remember(playlist, artworkSongs) { playlist?.withLocalArtwork(artworkSongs) }
     val reportedSongCount = playlist?.songCount?.takeIf { it.isNotBlank() }
-    val loadedSongCount = artworkSongs.size + hiddenSongCount
     val totalSongLabel =
         reportedSongCount?.toIntOrNull()?.let { text.songCount(it) }
             ?: reportedSongCount

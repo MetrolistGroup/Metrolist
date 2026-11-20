@@ -59,14 +59,12 @@ class LibraryViewModel(
     fun deletePlaylist(
         playlist: PlaylistItem,
         onResult: (Result<Unit>) -> Unit,
-    ) {
-        viewModelScope.launch {
-            val result = deleteStoredPlaylist(database, GlobalYouTubeRepository.instance, playlist.id)
-            if (result.isSuccess) {
-                sharedViewModel.onItemDeleted(playlist)
-                refresh(force = true)
-            }
-            onResult(result)
+    ) = viewModelScope.launch {
+        val result = deleteStoredPlaylist(database, GlobalYouTubeRepository.instance, playlist.id)
+        if (result.isSuccess) {
+            sharedViewModel.onItemDeleted(playlist)
+            refresh(force = true)
         }
+        onResult(result)
     }
 }

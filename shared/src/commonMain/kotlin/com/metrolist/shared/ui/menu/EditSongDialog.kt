@@ -33,7 +33,7 @@ import org.jetbrains.compose.resources.stringResource
 fun EditSongDialog(
     title: String,
     artist: String,
-    onSave: suspend (String, String) -> Unit,
+    onSave: suspend (String?, String?) -> Unit,
     onSaved: () -> Unit,
     onDismiss: () -> Unit,
     onReset: (suspend () -> Unit)? = null,

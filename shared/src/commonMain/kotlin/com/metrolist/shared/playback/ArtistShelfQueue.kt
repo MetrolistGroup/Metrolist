@@ -7,18 +7,10 @@ import com.metrolist.shared.state.GlobalYouTubeRepository
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.withTimeoutOrNull
 
-internal fun artistShelfQueue(
-    song: SongItem,
-    sections: Map<String, List<YTItem>>,
-): List<SongItem> =
-    sections.values
-        .firstOrNull { items -> items.any { it is SongItem && it.id == song.id } }
-        ?.filterIsInstance<SongItem>()
-        ?: listOf(song)
-
 /** Queues the whole playlist behind an artist shelf, falling back to the loaded rows when it cannot load quickly. */
 suspend fun fullArtistShelfQueue(
     song: SongItem,
+    sectionTitle: String,
     sections: Map<String, List<YTItem>>,
     sectionBrowseIds: Map<String, Pair<String?, String?>>,
     loadPlaylist: suspend (String) -> List<SongItem> = { id ->
@@ -28,9 +20,11 @@ suspend fun fullArtistShelfQueue(
             .playlistSongs()
     },
 ): List<SongItem> {
-    val loaded = artistShelfQueue(song, sections)
-    val title = sections.entries.firstOrNull { (_, items) -> items.any { it is SongItem && it.id == song.id } }?.key
-    val playlistId = title?.let { sectionBrowseIds[it]?.first }?.takeIf { it.startsWith("VL") } ?: return loaded
+    val loaded =
+        sections[sectionTitle]
+            ?.filterIsInstance<SongItem>()
+            ?.takeIf { songs -> songs.any { it.id == song.id } } ?: return listOf(song)
+    val playlistId = sectionBrowseIds[sectionTitle]?.first?.takeIf { it.startsWith("VL") } ?: return loaded
     val full =
         try {
             withTimeoutOrNull(SHELF_PLAYLIST_TIMEOUT_MS) { loadPlaylist(playlistId) }

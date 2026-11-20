@@ -32,4 +32,4 @@ The shared 18-band meter captures PCM only while the MetroEQ page requests it. A
 
 ## Verification
 
-Run affected [platform checks](checks.md#platform-checks), including `AudioTempoProcessorTest` for desktop tempo changes. Check audible output on each affected route with effects on and off, speed/pitch changes, silence skipping, crossfade and interruption. iOS HLS needs a separate check for its unavailable-processing state. Backend tests cannot verify offload, Bluetooth output or tap installation on devices.
+Run affected [platform checks](checks.md#platform-checks). Check audible output on each affected route with effects on and off, speed/pitch changes, silence skipping, crossfade and interruption. iOS HLS needs a separate check for its unavailable-processing state. Backend tests cannot verify offload, Bluetooth output or tap installation on devices.

@@ -466,21 +466,24 @@ object PlaylistAlbumState {
         }
     }
 
-    fun deleteSelectedPlaylist(onResult: (Result<Unit>) -> Unit) {
+    fun deleteSelectedPlaylist(
+        id: String,
+        onResult: (Result<Unit>) -> Unit,
+    ) {
+        if (selectedPlaylistId != id) return onResult(Result.failure(IllegalStateException("Playlist is unavailable")))
         playlistLoadJob?.cancel()
         isPlaylistLoading = false
-        val id =
-            selectedPlaylistId
-                ?: return onResult(Result.failure(IllegalStateException("Playlist is unavailable")))
         AppState.scope.launch {
             val result =
                 withContext(Dispatchers.IO) {
                     deleteStoredPlaylist(database, GlobalYouTubeRepository.instance, id)
                 }
             if (result.isSuccess) {
-                selectedPlaylistId = null
-                unfilteredPlaylistData = emptyMap()
-                playlistData = emptyMap()
+                if (selectedPlaylistId == id) {
+                    selectedPlaylistId = null
+                    unfilteredPlaylistData = emptyMap()
+                    playlistData = emptyMap()
+                }
                 LibraryContentState.fetchLibraryData()
             }
             onResult(result)

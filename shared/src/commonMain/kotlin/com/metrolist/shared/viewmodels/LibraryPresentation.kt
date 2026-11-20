@@ -22,6 +22,7 @@ internal data class LibraryPresentationInput(
     val contentFilterVersion: Int,
     val searchQuery: String,
     val contentMatchedSongs: List<SongItem>,
+    val artistAliases: Map<String, String> = emptyMap(),
 )
 
 class LibraryPresentation(
@@ -46,6 +47,7 @@ class LibraryPresentation(
                     input.sortDirection,
                     input.searchQuery,
                     BlockedContent.filterSongs(input.contentMatchedSongs, blockedContent),
+                    input.artistAliases,
                 )
             }
         this.input = input

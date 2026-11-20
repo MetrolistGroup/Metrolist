@@ -4,6 +4,7 @@ import com.metrolist.shared.model.ArtistTiny
 import com.metrolist.shared.model.MusicVideoType
 import com.metrolist.shared.model.SongItem
 import com.metrolist.shared.model.YTItem
+import com.metrolist.shared.model.isLiveType
 import com.metrolist.shared.model.isOfficialMusicVideo
 import com.metrolist.shared.model.isVideoSong
 import com.metrolist.shared.model.parseMusicVideoType
@@ -25,7 +26,7 @@ object MusicVideoMatcher {
                 .toSet()
         val title = cleanCoreTitle(stripArtistPrefix(video.title, artistNames))
         // Search cannot identify which live performance, remix or other edition the user selected.
-        if (title.isBlank() || NON_OFFICIAL_VARIANT_PATTERN.containsMatchIn(title) ||
+        if (isLiveType(video.musicVideoType) || title.isBlank() || NON_OFFICIAL_VARIANT_PATTERN.containsMatchIn(title) ||
             video.canonicalAudioVariants().isNotEmpty()
         ) {
             return null
@@ -251,9 +252,14 @@ object MusicVideoMatcher {
     internal fun hasSameAudioVariant(
         video: SongItem,
         track: SongItem,
-    ): Boolean =
-        audioVariants(video.title, video.artists) == audioVariants(track.title, track.artists) &&
-            video.canonicalAudioVariants() == track.canonicalAudioVariants()
+    ): Boolean {
+        val videoVariants = audioVariants(video.title, video.artists)
+        val canonicalVideoVariants = video.canonicalAudioVariants()
+        // The source can be labeled live without either title identifying the recording.
+        if (isLiveType(video.musicVideoType) && "live" !in videoVariants && "live" !in canonicalVideoVariants) return false
+        return videoVariants == audioVariants(track.title, track.artists) &&
+            canonicalVideoVariants == track.canonicalAudioVariants()
+    }
 
     // Editing a display title does not change the underlying recording.
     private fun SongItem.canonicalAudioVariants(): Set<String> = audioVariants(canonicalTitle ?: title, canonicalArtists ?: artists)
