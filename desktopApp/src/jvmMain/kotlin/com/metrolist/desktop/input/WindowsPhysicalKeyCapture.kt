@@ -72,54 +72,33 @@ internal class WindowsPhysicalKeyCapture : AutoCloseable {
     @Volatile private var hookThreadId: Int? = null
 
     @Volatile private var enabled = false
-    private var hookThread: Thread? = null
+
+    @Volatile private var hookThread: Thread? = null
 
     val isAvailable: Boolean get() = hook != null
 
-    private val procedure =
-        object : HookProcedure {
-            override fun callback(
-                code: Int,
-                message: WPARAM,
-                data: LPARAM,
-            ): LRESULT {
-                if (code >= 0) {
-                    val messageId = message.toInt()
-                    val pointer = Pointer(data.toLong())
-                    val virtualKeyCode = pointer.getInt(0)
-                    when (messageId) {
-                        WM_KEYDOWN, WM_SYSKEYDOWN -> {
-                            if (enabled) {
-                                pendingKeyCaptures.record(
-                                    virtualKeyCode,
-                                    pointer.getInt(Int.SIZE_BYTES.toLong()),
-                                    pointer.getInt((Int.SIZE_BYTES * 2).toLong()),
-                                )
-                            }
-                        }
-
-                        WM_KEYUP, WM_SYSKEYUP -> {}
-                    }
-                }
-                return User32.INSTANCE.CallNextHookEx(hook, code, message, data)
-            }
-        }
+    private val procedure = WindowsPhysicalKeyHookProcedure(this)
 
     fun setEnabled(enabled: Boolean) {
         if (enabled == this.enabled) return
+        if (enabled && hookThread?.isAlive == true) return
         this.enabled = enabled
         if (enabled) {
             val ready = CountDownLatch(1)
             hookThread =
                 Thread(
                     {
+                        User32.INSTANCE.PeekMessage(WinUser.MSG(), null, 0, 0, 0)
                         hookThreadId = Kernel32.INSTANCE.GetCurrentThreadId()
                         if (this.enabled) {
-                            User32.INSTANCE.PeekMessage(WinUser.MSG(), null, 0, 0, 0)
                             hook =
                                 runCatching {
                                     User32.INSTANCE.SetWindowsHookEx(WinUser.WH_KEYBOARD_LL, procedure, null, 0)
                                 }.getOrNull()
+                        }
+                        if (!this.enabled) {
+                            hook?.let(User32.INSTANCE::UnhookWindowsHookEx)
+                            hook = null
                         }
                         ready.countDown()
                         if (hook == null) this.enabled = false
@@ -132,6 +111,7 @@ internal class WindowsPhysicalKeyCapture : AutoCloseable {
                         hook = null
                         hookThreadId = null
                         pendingKeyCaptures.clear()
+                        if (hookThread === Thread.currentThread()) hookThread = null
                     },
                     "Metrolist Windows shortcut key capture",
                 ).apply {
@@ -144,22 +124,37 @@ internal class WindowsPhysicalKeyCapture : AutoCloseable {
                 User32.INSTANCE.PostThreadMessage(threadId, WinUser.WM_QUIT, WPARAM(0), LPARAM(0))
             }
             pendingKeyCaptures.clear()
-            hookThread?.join(1_000)
-            hookThread = null
+            val thread = hookThread
+            thread?.join(1_000)
+            if (thread?.isAlive != true) hookThread = null
         }
+    }
+
+    internal fun onHookCallback(
+        code: Int,
+        message: WPARAM,
+        data: LPARAM,
+    ): LRESULT {
+        if (code >= 0) {
+            val messageId = message.toInt()
+            val pointer = Pointer(data.toLong())
+            val virtualKeyCode = pointer.getInt(0)
+            if (messageId == WM_KEYDOWN || messageId == WM_SYSKEYDOWN) {
+                if (enabled) {
+                    pendingKeyCaptures.record(
+                        virtualKeyCode,
+                        pointer.getInt(Int.SIZE_BYTES.toLong()),
+                        pointer.getInt((Int.SIZE_BYTES * 2).toLong()),
+                    )
+                }
+            }
+        }
+        return User32.INSTANCE.CallNextHookEx(hook, code, message, data)
     }
 
     fun consume(awtKeyCode: Int): PhysicalKeyPosition? = pendingKeyCaptures.consume(awtKeyCode)
 
     override fun close() = setEnabled(false)
-
-    private interface HookProcedure : WinUser.HOOKPROC {
-        fun callback(
-            code: Int,
-            message: WPARAM,
-            data: LPARAM,
-        ): LRESULT
-    }
 
     private companion object {
         const val WM_KEYDOWN = 0x0100
@@ -167,6 +162,24 @@ internal class WindowsPhysicalKeyCapture : AutoCloseable {
         const val WM_SYSKEYDOWN = 0x0104
         const val WM_SYSKEYUP = 0x0105
     }
+}
+
+internal class WindowsPhysicalKeyHookProcedure(
+    private val capture: WindowsPhysicalKeyCapture,
+) : WindowsPhysicalKeyHookProcedureContract {
+    override fun callback(
+        code: Int,
+        message: WPARAM,
+        data: LPARAM,
+    ): LRESULT = capture.onHookCallback(code, message, data)
+}
+
+internal interface WindowsPhysicalKeyHookProcedureContract : WinUser.HOOKPROC {
+    fun callback(
+        code: Int,
+        message: WPARAM,
+        data: LPARAM,
+    ): LRESULT
 }
 
 internal fun windowsVirtualKeyForAwtCode(awtKeyCode: Int): Int =
