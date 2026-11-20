@@ -148,6 +148,7 @@ internal class ClusterMaskCache(
         val fullH = ceil(lh).toInt().coerceIn(1, MAX_GLOW_FULL_SIDE)
         val full = ImageBitmap(fullW, fullH, maskConfig)
         rasterScope.draw(density, LayoutDirection.Ltr, Canvas(full), Size(fullW.toFloat(), fullH.toFloat())) {
+            drawRect(color = Color.Transparent, blendMode = BlendMode.Clear)
             drawText(
                 textLayoutResult = layout,
                 topLeft = Offset(padPx, padPx),
@@ -156,6 +157,7 @@ internal class ClusterMaskCache(
             )
         }
         rasterScope.draw(density, LayoutDirection.Ltr, Canvas(bmp), Size(w.toFloat(), h.toFloat())) {
+            drawRect(color = Color.Transparent, blendMode = BlendMode.Clear)
             withTransform({ scale(s, s, Offset.Zero) }) {
                 drawImage(
                     image = full,
@@ -249,6 +251,7 @@ internal class ClusterMaskCache(
 
         val bmp = ImageBitmap(w, h, maskConfig)
         rasterScope.draw(density, LayoutDirection.Ltr, Canvas(bmp), Size(w.toFloat(), h.toFloat())) {
+            drawRect(color = Color.Transparent, blendMode = BlendMode.Clear)
             withTransform({ scale(s, s, Offset.Zero) }) {
                 drawText(
                     textLayoutResult = layout,
