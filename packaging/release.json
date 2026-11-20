@@ -1,33 +1,33 @@
 {
-  "version": "14.0.0",
-  "releaseUrl": "https://github.com/MetrolistGroup/Metrolist/releases/tag/v14.0.0",
-  "date": "2026-11-14",
+  "version": "14.0.1",
+  "releaseUrl": "https://github.com/MetrolistGroup/Metrolist/releases/tag/v14.0.1",
+  "date": "2026-11-19",
   "linux": {
     "x86_64-linux": {
-      "name": "metrolist-desktop-linux-x64-14.0.0.AppImage",
-      "url": "https://github.com/MetrolistGroup/Metrolist/releases/download/v14.0.0/metrolist-desktop-linux-x64-14.0.0.AppImage",
-      "sha256": "0e75981e7a805ce669290edfb5537b96a4ac8951c2c3e6a50f00ed2b7896045f",
-      "hash": "sha256-DnWYHnqAXOZpKQ7ftVN7lqSsiVHCw+alDwDtK3iWBF8="
+      "name": "metrolist-desktop-linux-x64-14.0.1.AppImage",
+      "url": "https://github.com/MetrolistGroup/Metrolist/releases/download/v14.0.1/metrolist-desktop-linux-x64-14.0.1.AppImage",
+      "sha256": "b3c363a95e391be4e26a52bf95ae07a69f59639cdc63edb1f34183c5ebca4230",
+      "hash": "sha256-s8NjqV45G+TialK/la4Hpp9ZY5zcY+2x80GDxevKQjA="
     },
     "aarch64-linux": {
-      "name": "metrolist-desktop-linux-arm64-14.0.0.AppImage",
-      "url": "https://github.com/MetrolistGroup/Metrolist/releases/download/v14.0.0/metrolist-desktop-linux-arm64-14.0.0.AppImage",
-      "sha256": "4e73eb3fa6b8bc8d20e783bd931fcf36365a9dae836d76ed9870e1be34d0e54a",
-      "hash": "sha256-TnPrP6a4vI0g54O9kx/PNjZana6DbXbtmHDhvjTQ5Uo="
+      "name": "metrolist-desktop-linux-arm64-14.0.1.AppImage",
+      "url": "https://github.com/MetrolistGroup/Metrolist/releases/download/v14.0.1/metrolist-desktop-linux-arm64-14.0.1.AppImage",
+      "sha256": "521100e8ea7810a92fecb16a3b0ca6bb4c23beb93075ac365aee1159ce19d0ca",
+      "hash": "sha256-UhEA6Op4EKkv7LFqOwymu0wjvrkwdaw2Wu4RWc4Z0Mo="
     }
   },
   "darwin": {
     "aarch64-darwin": {
-      "name": "metrolist-desktop-macos-arm64-14.0.0.dmg",
-      "url": "https://github.com/MetrolistGroup/Metrolist/releases/download/v14.0.0/metrolist-desktop-macos-arm64-14.0.0.dmg",
-      "sha256": "cbee8dce25f62ed1ba0ca89538b7a43e128995f188108722293ac9f752291e48",
-      "hash": "sha256-y+6NziX2LtG6DKiVOLekPhKJlfGIEIciKTrJ91IpHkg="
+      "name": "metrolist-desktop-macos-arm64-14.0.1.dmg",
+      "url": "https://github.com/MetrolistGroup/Metrolist/releases/download/v14.0.1/metrolist-desktop-macos-arm64-14.0.1.dmg",
+      "sha256": "1ffc14e691ce5bcb50d4a08d3aba6fba725458e4a07edb9125cbc08c7001ae29",
+      "hash": "sha256-H/wU5pHOW8tQ1KCNOrpvunJUWOSgftuRJcvAjHABrik="
     },
     "x86_64-darwin": {
-      "name": "metrolist-desktop-macos-x64-14.0.0.dmg",
-      "url": "https://github.com/MetrolistGroup/Metrolist/releases/download/v14.0.0/metrolist-desktop-macos-x64-14.0.0.dmg",
-      "sha256": "3ab2634cc5a5bdd29e2a000ee08ada9b6bc8886e883bc0c97b9ab5060a098cc1",
-      "hash": "sha256-OrJjTMWlvdKeKgAO4Iram2vIiG6IO8DJe5q1BgoJjME="
+      "name": "metrolist-desktop-macos-x64-14.0.1.dmg",
+      "url": "https://github.com/MetrolistGroup/Metrolist/releases/download/v14.0.1/metrolist-desktop-macos-x64-14.0.1.dmg",
+      "sha256": "43fbb98130f23532c7217db4152f67eee257a543fc1926a5f27a70c9b49bbfba",
+      "hash": "sha256-Q/u5gTDyNTLHIX20FS9n7uJXpUP8GSal8npwybSbv7o="
     }
   }
 }
