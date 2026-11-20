@@ -22,12 +22,27 @@ internal fun mapPcm16ChannelCount(
     inputChannelCount: Int,
     outputChannelCount: Int,
 ): ByteArray {
-    require(inputChannelCount > 0 && outputChannelCount >= inputChannelCount)
+    require(inputChannelCount > 0 && outputChannelCount > 0)
     if (inputChannelCount == outputChannelCount) return data
 
     val inputFrameSize = inputChannelCount * Short.SIZE_BYTES
     require(data.size % inputFrameSize == 0)
     val outputFrameSize = outputChannelCount * Short.SIZE_BYTES
+    if (inputChannelCount == 4 && outputChannelCount == 2) {
+        return ByteArray(data.size / inputFrameSize * outputFrameSize).also { output ->
+            for (frame in 0 until data.size / inputFrameSize) {
+                val inputOffset = frame * inputFrameSize
+                val outputOffset = frame * outputFrameSize
+                val left = mixPcm16Channels(data, inputOffset, inputOffset + 4)
+                val right = mixPcm16Channels(data, inputOffset + 2, inputOffset + 6)
+                output[outputOffset] = left.toByte()
+                output[outputOffset + 1] = (left shr 8).toByte()
+                output[outputOffset + 2] = right.toByte()
+                output[outputOffset + 3] = (right shr 8).toByte()
+            }
+        }
+    }
+    require(outputChannelCount > inputChannelCount)
     return ByteArray(data.size / inputFrameSize * outputFrameSize).also { output ->
         var inputOffset = 0
         var outputOffset = 0
@@ -37,6 +52,15 @@ internal fun mapPcm16ChannelCount(
             outputOffset += outputFrameSize
         }
     }
+}
+
+private fun mixPcm16Channels(
+    data: ByteArray,
+    firstChannelOffset: Int,
+    secondChannelOffset: Int,
+): Int {
+    fun sample(offset: Int): Int = ((data[offset].toInt() and 0xff) or (data[offset + 1].toInt() shl 8)).toShort().toInt()
+    return ((sample(firstChannelOffset) + sample(secondChannelOffset)) / 2).coerceIn(Short.MIN_VALUE.toInt(), Short.MAX_VALUE.toInt())
 }
 
 private data class RenderedAudioChunk(
@@ -323,7 +347,7 @@ class AudioRenderer internal constructor(
         lineFactory(audioFormat, lineBufferSize).apply {
             if (!isOpen) open(audioFormat, lineBufferSize)
             val openedFormat = format
-            if (openedFormat.channels > channelCount) {
+            if (openedFormat.channels > 0) {
                 outputChannelCount = openedFormat.channels
                 outputFrameSize = openedFormat.frameSize
             }
