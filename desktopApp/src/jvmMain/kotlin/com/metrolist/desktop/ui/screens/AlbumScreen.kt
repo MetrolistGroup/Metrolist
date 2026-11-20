@@ -165,7 +165,7 @@ fun AlbumScreen(
                                     val cursor = page.playlistPage
                                     val allSongs =
                                         if (cursor?.hasMore == true) {
-                                            GlobalYouTubeRepository.instance.completePlaylistPage(cursor).songs
+                                            GlobalYouTubeRepository.instance.completePlaylistPage(cursor, applyContentFilters = false).songs
                                         } else {
                                             songs
                                         }
