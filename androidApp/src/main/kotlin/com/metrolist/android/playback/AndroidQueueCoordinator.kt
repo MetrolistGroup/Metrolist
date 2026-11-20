@@ -187,7 +187,7 @@ internal class AndroidQueueCoordinator(
             )
             val restoredPosition = state.currentPosition
             isRadioQueue = state.radioQueue || restoredMix
-            isExplicitRadioQueue = state.explicitRadioQueue ?: state.radioQueue
+            isExplicitRadioQueue = state.explicitRadioQueue ?: false
             radioQueueContinuation = state.radioQueueContinuation
             radioQueuePlaylistId = state.radioQueuePlaylistId
             radioQueueParams = state.radioQueueParams
@@ -498,7 +498,7 @@ internal class AndroidQueueCoordinator(
 
     fun bootstrapRecommendations(
         seedSongId: String,
-        allowRepeatMode: Boolean = isRadioQueue,
+        allowRepeatMode: Boolean = isExplicitRadioQueue,
     ) {
         if (!PlaybackNetworkStateStore.current.connected) return
         if (!canBootstrapRecommendations()) return
@@ -615,7 +615,7 @@ internal class AndroidQueueCoordinator(
                         selectedChipId = chip.id,
                         playlistId = chip.playlistId,
                         params = chip.params,
-                        allowRepeatMode = isRadioQueue,
+                        allowRepeatMode = isExplicitRadioQueue,
                     )
                 } catch (e: CancellationException) {
                     throw e
@@ -701,12 +701,14 @@ internal class AndroidQueueCoordinator(
     fun observeAutoLoadMore() {
         scope.launch {
             combine(repeatMode, player.songQueue) { mode, _ -> mode }.collect { mode ->
-                if (mode == Player.REPEAT_MODE_ALL && !isExplicitRadioQueue) {
-                    autoLoadMoreJob?.cancel()
-                    // Repeat All removes generated tracks; allow the same song to refill once repeat is off.
-                    lastAutoLoadedSongId = null
-                    recommendationBootstrapJob?.cancel()
-                    transitions.cancelNextTrackPreload()
+                if (mode == Player.REPEAT_MODE_ALL) {
+                    if (!isExplicitRadioQueue) {
+                        autoLoadMoreJob?.cancel()
+                        // Repeat All removes generated tracks; allow the same song to refill once repeat is off.
+                        lastAutoLoadedSongId = null
+                        recommendationBootstrapJob?.cancel()
+                        transitions.cancelNextTrackPreload()
+                    }
                     generatedQueueIndicesToRemoveForRepeat(
                         player.songQueue.value,
                         player.currentMediaItemIndex.value,

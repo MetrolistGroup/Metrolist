@@ -184,7 +184,10 @@ internal class AndroidDeviceConnectPlayback(
                     desired.scrobbleSession,
                 )
                 if (!queue.isFiniteQueue && queue.recommendationBootstrapJob == null && song != null) {
-                    queue.bootstrapRecommendations(queue.recommendationSeedSongId ?: song.id)
+                    queue.bootstrapRecommendations(
+                        queue.recommendationSeedSongId ?: song.id,
+                        allowRepeatMode = true,
+                    )
                 }
                 onSave()
             }
