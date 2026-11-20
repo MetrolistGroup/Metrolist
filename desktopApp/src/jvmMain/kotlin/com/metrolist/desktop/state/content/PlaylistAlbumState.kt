@@ -330,14 +330,15 @@ object PlaylistAlbumState {
                     withContext(Dispatchers.IO) {
                         setStoredPlaylistBookmarked(database, GlobalYouTubeRepository.instance, id, playlist, bookmarked, songCount)
                     }
-                if (selectedPlaylistId != id) return@launch
                 if (result.isSuccess) {
-                    isPlaylistBookmarked = bookmarked
-                    LibraryContentState.fetchLibraryData()
+                    if (selectedPlaylistId == id) {
+                        isPlaylistBookmarked = bookmarked
+                        LibraryContentState.fetchLibraryData()
+                    }
                     if (bookmarked && Settings.shared.autoDownloadSavedCollections) {
                         downloadBookmarkedPlaylist(id)
                     }
-                } else {
+                } else if (selectedPlaylistId == id) {
                     AppState.snackbarHostState.showSnackbar(getString(Res.string.error_occurred))
                 }
             }
