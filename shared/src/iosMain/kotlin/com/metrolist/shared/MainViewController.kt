@@ -363,10 +363,11 @@ fun MetrolistIOSApp() {
                 try {
                     val sourcePath =
                         withContext(Dispatchers.IO) {
-                            IosNativeFiles.copyPickedFile(
-                                url,
-                                BackupArchiveLimits.TOTAL_UNCOMPRESSED_BYTES + 2L * 1024L * 1024L,
-                            )
+                            IosNativeFiles
+                                .copyPickedFile(
+                                    url,
+                                    BackupArchiveLimits.TOTAL_UNCOMPRESSED_BYTES + 2L * 1024L * 1024L,
+                                ).also { copiedPath = it }
                         }
                     copiedPath = sourcePath
                     val generationBeforeRestore = databaseGeneration
