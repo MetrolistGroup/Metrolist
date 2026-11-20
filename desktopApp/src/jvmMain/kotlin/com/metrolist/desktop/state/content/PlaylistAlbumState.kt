@@ -30,6 +30,7 @@ import com.metrolist.shared.model.PlaylistItem
 import com.metrolist.shared.model.SongItem
 import com.metrolist.shared.model.YTItem
 import com.metrolist.shared.model.moveSelection
+import com.metrolist.shared.model.preservePlaylistOccurrenceMappings
 import com.metrolist.shared.playlist.PlaylistChanges
 import com.metrolist.shared.playlist.PlaylistPartiallyUpdatedException
 import com.metrolist.shared.playlist.addSongToStoredPlaylist
@@ -157,6 +158,7 @@ object PlaylistAlbumState {
         database: MusicDatabase,
         repository: () -> YouTubeRepository,
     ) {
+        val previousPlaylistSongs = unfilteredPlaylistData.playlistSongs().takeIf { selectedPlaylistId == id }.orEmpty()
         try {
             val localPlaylist =
                 withContext(Dispatchers.IO) {
@@ -177,7 +179,7 @@ object PlaylistAlbumState {
                 val songItems =
                     localSongs.map {
                         it.toSongItem().copy(
-                            playlistLocalMappingId = if (headerItem.isLocal) it.map.id else null,
+                            playlistLocalMappingId = it.map.id,
                         )
                     }
                 if (selectedPlaylistId == id) {
@@ -237,7 +239,10 @@ object PlaylistAlbumState {
                         }
                     }
                 }
-            val unfilteredResult = loadedPage.sections
+            val unfilteredResult =
+                loadedPage.sections.let { sections ->
+                    sections + ("songs" to sections.playlistSongs().preservePlaylistOccurrenceMappings(previousPlaylistSongs))
+                }
             val playlist = unfilteredResult["header"]?.firstOrNull() as? PlaylistItem
             val storedCustom =
                 withContext(Dispatchers.IO) {

@@ -114,10 +114,29 @@ suspend fun MusicDatabase.cacheRemotePlaylist(
             isAutoSync = true,
         )
     dao.upsert(entity)
+    val existingMappings =
+        dao
+            .playlistSongs(entity.id)
+            .first()
+            .map { it.map }
+            .toMutableList()
     dao.clearPlaylist(entity.id)
     songs.forEachIndexed { index, song ->
         dao.upsertHistorySong(song)
-        dao.insert(PlaylistSongMap(playlistId = entity.id, songId = song.id, position = index, setVideoId = song.playlistSetVideoId))
+        val existingMapping =
+            song.playlistLocalMappingId?.let { mappingId -> existingMappings.firstOrNull { it.id == mappingId } }
+                ?: song.playlistSetVideoId?.let { setVideoId -> existingMappings.firstOrNull { it.setVideoId == setVideoId } }
+                ?: existingMappings.firstOrNull { it.songId == song.id }
+        existingMapping?.let(existingMappings::remove)
+        dao.insert(
+            PlaylistSongMap(
+                id = existingMapping?.id ?: 0,
+                playlistId = entity.id,
+                songId = song.id,
+                position = index,
+                setVideoId = song.playlistSetVideoId,
+            ),
+        )
     }
 }
 

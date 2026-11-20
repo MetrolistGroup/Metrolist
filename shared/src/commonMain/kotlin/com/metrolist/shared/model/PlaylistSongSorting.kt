@@ -197,14 +197,31 @@ fun YTItem.librarySearchKey(): String =
         is SongItem -> "song:$id"
     }
 
-fun SongItem.playlistOccurrenceIdentity(): String? = playlistSetVideoId?.let { "remote:$it" } ?: playlistLocalMappingId?.let { "local:$it" }
+fun SongItem.playlistOccurrenceIdentity(): String? = playlistLocalMappingId?.let { "local:$it" } ?: playlistSetVideoId?.let { "remote:$it" }
+
+fun List<SongItem>.preservePlaylistOccurrenceMappings(previousSongs: List<SongItem>): List<SongItem> {
+    val matchedPreviousIndices = mutableSetOf<Int>()
+    return map { song ->
+        val matchingIndex =
+            song.playlistSetVideoId?.let { setVideoId ->
+                previousSongs.indices.firstOrNull { index ->
+                    index !in matchedPreviousIndices && previousSongs[index].playlistSetVideoId == setVideoId
+                }
+            } ?: previousSongs.indices.firstOrNull { index ->
+                index !in matchedPreviousIndices && previousSongs[index].id == song.id &&
+                    previousSongs[index].playlistLocalMappingId != null
+            }
+        val previous = matchingIndex?.let { index -> previousSongs[index].also { matchedPreviousIndices += index } }
+        song.copy(playlistLocalMappingId = song.playlistLocalMappingId ?: previous?.playlistLocalMappingId)
+    }
+}
 
 fun SongItem.playlistOccurrenceKey(fallbackIndex: Int): String = playlistOccurrenceIdentity() ?: "$id@$fallbackIndex"
 
 fun List<SongItem>.playlistLazyItemKeys(): List<String> {
     val occurrences = mutableMapOf<String, Int>()
     return map { song ->
-        val identity = song.playlistSetVideoId ?: song.playlistLocalMappingId?.let { "local:$it" } ?: song.id
+        val identity = song.playlistOccurrenceIdentity() ?: song.id
         val occurrence = occurrences[identity] ?: 0
         occurrences[identity] = occurrence + 1
         "playlist_song:$identity@$occurrence"

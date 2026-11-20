@@ -48,6 +48,7 @@ import com.metrolist.shared.model.SongItem
 import com.metrolist.shared.model.isSyncablePlaylistId
 import com.metrolist.shared.model.moveSelection
 import com.metrolist.shared.model.preparePlaylistPresentation
+import com.metrolist.shared.model.preservePlaylistOccurrenceMappings
 import com.metrolist.shared.model.selectionReorderMoves
 import com.metrolist.shared.model.withNavigationThumbnail
 import com.metrolist.shared.playlist.PlaylistChanges
@@ -335,7 +336,7 @@ class PlaylistViewModel(
                                 ?.firstOrNull()
                                 ?.withNavigationThumbnail(thumbnailHint)
                                 ?.copy(customThumbnail = customCover)
-                        val songs = data.playlistSongs()
+                        val songs = data.playlistSongs().preservePlaylistOccurrenceMappings(_songs.value)
                         if (!page.hasMore && !page.isOffline) cachePlaylist(id, playlistInfo, songs)
                         publishLoadedSongs(songs, data.playlistSuggestions(), page.hasMore) {
                             _playlistInfo.value = playlistInfo
