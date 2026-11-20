@@ -177,15 +177,16 @@ private fun installGlobalShortcutDispatcher(
             ) {
                 keyFocus.keyboardNavigation = true
             }
-            val physicalPositionsAvailable = physicalKeyCapture?.isAvailable == true
+            val physicalCaptureAvailable = physicalKeyCapture?.isAvailable == true
             val isModifierPress =
                 event.id == AwtKeyEvent.KEY_PRESSED && event.keyCode.isAwtModifierKey()
             val physicalPosition =
-                if (event.id == AwtKeyEvent.KEY_PRESSED && !isModifierPress) {
+                if (physicalCaptureAvailable && event.id == AwtKeyEvent.KEY_PRESSED && !isModifierPress) {
                     physicalKeyCapture?.consume(event.`when`)
                 } else {
                     null
                 }
+            val physicalPositionsAvailable = physicalCaptureAvailable && physicalPosition != null
             pressed.dispatch(event, physicalPosition, physicalPositionsAvailable) {
                 handleAwtKeyEvent(
                     event,
