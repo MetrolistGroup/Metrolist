@@ -286,6 +286,7 @@ internal class IosPlaybackController(
     private val isVideoResolving = MutableStateFlow(false)
     private var videoModeJob: Job? = null
     private var videoModeRequestId = 0L
+    private var videoModeSongId: String? = null
     private val failedVideoResourceIds = mutableSetOf<String>()
     private var deferredVideoModeSongId: String? = null
     private var videoSurfacePlayer: IosMusicVideoSurfacePlayer? = null
@@ -414,6 +415,8 @@ internal class IosPlaybackController(
                 val songId = song?.id
                 if (songId != observedSongId) {
                     observedSongId = songId
+                    if (songId == deferredVideoModeSongId || songId == videoModeSongId) return@collect
+                    deferredVideoModeSongId = null
                     videoModeRequestId++
                     videoModeJob?.cancel()
                     clearVideoMode()
@@ -1061,8 +1064,8 @@ internal class IosPlaybackController(
             clearVideoMode()
             return
         }
-        deferredVideoModeSongId = null
         if (!wantVideo || !Settings.shared.musicVideoPlaybackEnabled || guestLocked) {
+            deferredVideoModeSongId = null
             clearVideoMode()
             return
         }
@@ -1070,9 +1073,12 @@ internal class IosPlaybackController(
         if (song == null || song.isLocal || song.isUploaded || song.id.startsWith("local_") ||
             (!song.isVideoSong && !song.isPodcast && !song.canSwitchToMusicVideo)
         ) {
+            deferredVideoModeSongId = null
             clearVideoMode()
             return
         }
+        deferredVideoModeSongId = null
+        videoModeSongId = song.id
         isVideoResolving.value = true
         videoModeJob =
             scope.launch {
@@ -1132,6 +1138,7 @@ internal class IosPlaybackController(
         isVideoModeActive.value = false
         videoPlaybackResource.value = null
         videoPositionMap.value = null
+        videoModeSongId = null
         releaseMusicVideoSurfacePlayer()
     }
 

@@ -37,11 +37,12 @@ internal class MusicVideoSeekLifecycle {
     fun completeSeek(
         completedGeneration: Long,
         finished: Boolean,
+        synchronized: Boolean = finished,
     ): Boolean {
         if (completedGeneration != generation) return false
         seekInFlight = false
         if (!isForeground || !finished) return false
-        positionSynchronized = true
+        positionSynchronized = synchronized
         return true
     }
 
@@ -69,8 +70,16 @@ internal class MusicVideoDriftRetryPolicy(
     val exhausted: Boolean
         get() = consecutiveSlowSeeks >= maximumSlowSeeks
 
-    fun recordSeek(durationMs: Long) {
-        consecutiveSlowSeeks = if (durationMs > slowSeekThresholdMs) consecutiveSlowSeeks + 1 else 0
+    fun recordSeek(
+        durationMs: Long,
+        succeeded: Boolean = true,
+    ) {
+        consecutiveSlowSeeks =
+            when {
+                !succeeded -> consecutiveSlowSeeks + 1
+                durationMs > slowSeekThresholdMs -> consecutiveSlowSeeks + 1
+                else -> 0
+            }
     }
 
     fun shouldRetry(isUserSeek: Boolean): Boolean = isUserSeek || !exhausted

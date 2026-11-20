@@ -184,7 +184,16 @@ internal class IosMusicVideoSurfacePlayer(
         val seekStartedAt = TimeSource.Monotonic.markNow()
         player.seekToTime(target, toleranceBefore = zero, toleranceAfter = zero) { finished ->
             if (!seekLifecycle.isCurrentSeek(currentSeekGeneration)) return@seekToTime
-            if (!seekLifecycle.completeSeek(currentSeekGeneration, finished)) {
+            val seekDurationMs = seekStartedAt.elapsedNow().inWholeMilliseconds
+            val currentPositionMs = (CMTimeGetSeconds(player.currentTime()) * 1000.0).toLong()
+            val stillAligned = abs(currentPositionMs - latestTargetPositionMs) <= SEEK_POST_SEEK_DRIFT_TOLERANCE_MS
+            if (!seekLifecycle.completeSeek(currentSeekGeneration, finished, synchronized = stillAligned)) {
+                driftRetryPolicy.recordSeek(seekDurationMs, succeeded = false)
+                if (driftRetryPolicy.exhausted) {
+                    driftRecoveryFailed = true
+                    seekLifecycle.markUnsynchronized()
+                    return@seekToTime
+                }
                 if (foreground) {
                     if (userSeekPending) {
                         seekCooldownStartedAt = null
@@ -195,9 +204,16 @@ internal class IosMusicVideoSurfacePlayer(
                 }
                 return@seekToTime
             }
-            driftRetryPolicy.recordSeek(seekStartedAt.elapsedNow().inWholeMilliseconds)
+            driftRetryPolicy.recordSeek(seekDurationMs)
             completedSeekGeneration++
             seekCooldownStartedAt = TimeSource.Monotonic.markNow()
+            if (!stillAligned) {
+                seekLifecycle.markUnsynchronized()
+                if (driftRetryPolicy.exhausted) {
+                    driftRecoveryFailed = true
+                    return@seekToTime
+                }
+            }
             if (userSeekPending) {
                 seekCooldownStartedAt = null
                 applyPendingSeek()
