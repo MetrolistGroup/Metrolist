@@ -11,6 +11,8 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentLinkedDeque
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.locks.ReentrantLock
+import kotlin.concurrent.withLock
 import java.awt.event.KeyEvent as AwtKeyEvent
 
 internal const val WINDOWS_LOW_LEVEL_EXTENDED_KEY_FLAG = 0x01
@@ -72,6 +74,7 @@ internal class WindowsPhysicalKeyCaptureBuffer(
 
 internal class WindowsPhysicalKeyCapture : AutoCloseable {
     private val pendingKeyCaptures = WindowsPhysicalKeyCaptureBuffer()
+    private val lifecycleLock = ReentrantLock()
 
     @Volatile private var hook: WinUser.HHOOK? = null
 
@@ -86,54 +89,74 @@ internal class WindowsPhysicalKeyCapture : AutoCloseable {
     private val procedure = WindowsPhysicalKeyHookProcedure(this)
 
     fun setEnabled(enabled: Boolean) {
-        if (enabled == this.enabled) return
-        if (enabled && hookThread?.isAlive == true) return
-        this.enabled = enabled
         if (enabled) {
-            val ready = CountDownLatch(1)
-            hookThread =
-                Thread(
-                    {
-                        User32.INSTANCE.PeekMessage(WinUser.MSG(), null, 0, 0, 0)
-                        hookThreadId = Kernel32.INSTANCE.GetCurrentThreadId()
-                        if (this.enabled) {
-                            hook =
-                                runCatching {
-                                    User32.INSTANCE.SetWindowsHookEx(WinUser.WH_KEYBOARD_LL, procedure, null, 0)
-                                }.getOrNull()
-                        }
-                        if (!this.enabled) {
-                            hook?.let(User32.INSTANCE::UnhookWindowsHookEx)
-                            hook = null
-                        }
-                        ready.countDown()
-                        if (hook == null) this.enabled = false
-                        val message = WinUser.MSG()
-                        while (hook != null && User32.INSTANCE.GetMessage(message, null, 0, 0) > 0) {
-                            User32.INSTANCE.TranslateMessage(message)
-                            User32.INSTANCE.DispatchMessage(message)
-                        }
+            val ready =
+                lifecycleLock.withLock {
+                    if (!this.enabled) this.enabled = true
+                    if (hookThread?.isAlive == true) {
+                        null
+                    } else {
+                        startHookThread()
+                    }
+                }
+            if (ready != null && !ready.await(1, TimeUnit.SECONDS)) setEnabled(false)
+        } else {
+            val thread =
+                lifecycleLock.withLock {
+                    if (!this.enabled) return
+                    this.enabled = false
+                    hookThreadId?.let { threadId ->
+                        User32.INSTANCE.PostThreadMessage(threadId, WinUser.WM_QUIT, WPARAM(0), LPARAM(0))
+                    }
+                    pendingKeyCaptures.clear()
+                    hookThread
+                }
+            thread?.join(1_000)
+            lifecycleLock.withLock {
+                if (hookThread === thread && thread?.isAlive != true) hookThread = null
+            }
+        }
+    }
+
+    private fun startHookThread(): CountDownLatch {
+        val ready = CountDownLatch(1)
+        hookThread =
+            Thread(
+                {
+                    User32.INSTANCE.PeekMessage(WinUser.MSG(), null, 0, 0, 0)
+                    hookThreadId = Kernel32.INSTANCE.GetCurrentThreadId()
+                    if (enabled) {
+                        hook =
+                            runCatching {
+                                User32.INSTANCE.SetWindowsHookEx(WinUser.WH_KEYBOARD_LL, procedure, null, 0)
+                            }.getOrNull()
+                    }
+                    if (!enabled) {
                         hook?.let(User32.INSTANCE::UnhookWindowsHookEx)
                         hook = null
-                        hookThreadId = null
-                        pendingKeyCaptures.clear()
+                    }
+                    ready.countDown()
+                    if (hook == null) enabled = false
+                    val message = WinUser.MSG()
+                    while (hook != null && User32.INSTANCE.GetMessage(message, null, 0, 0) > 0) {
+                        User32.INSTANCE.TranslateMessage(message)
+                        User32.INSTANCE.DispatchMessage(message)
+                    }
+                    hook?.let(User32.INSTANCE::UnhookWindowsHookEx)
+                    hook = null
+                    hookThreadId = null
+                    pendingKeyCaptures.clear()
+                    lifecycleLock.withLock {
                         if (hookThread === Thread.currentThread()) hookThread = null
-                    },
-                    "Metrolist Windows shortcut key capture",
-                ).apply {
-                    isDaemon = true
-                    start()
-                }
-            if (!ready.await(1, TimeUnit.SECONDS)) setEnabled(false)
-        } else {
-            hookThreadId?.let { threadId ->
-                User32.INSTANCE.PostThreadMessage(threadId, WinUser.WM_QUIT, WPARAM(0), LPARAM(0))
+                        if (enabled && hookThread == null) startHookThread()
+                    }
+                },
+                "Metrolist Windows shortcut key capture",
+            ).apply {
+                isDaemon = true
+                start()
             }
-            pendingKeyCaptures.clear()
-            val thread = hookThread
-            thread?.join(1_000)
-            if (thread?.isAlive != true) hookThread = null
-        }
+        return ready
     }
 
     internal fun onHookCallback(
