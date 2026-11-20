@@ -141,12 +141,13 @@ private fun installGlobalShortcutDispatcher(
     clearPointerFocus: () -> Unit,
 ): AutoCloseable {
     val keyboardFocusManager = KeyboardFocusManager.getCurrentKeyboardFocusManager()
+    val toolkit = Toolkit.getDefaultToolkit()
     val pressed = ShortcutPressTracker()
     val physicalKeyCapture: PlatformPhysicalKeyCapture? =
         when {
             OsUtil.isWindows -> WindowsPhysicalKeyCapture()
             OsUtil.isMac -> MacOsPhysicalKeyCapture()
-            OsUtil.isLinux && !usesNativeWaylandToolkit() -> LinuxPhysicalKeyCapture()
+            OsUtil.isLinux && toolkit.javaClass.name == "sun.awt.X11.XToolkit" -> LinuxPhysicalKeyCapture()
             else -> null
         }
 
@@ -181,7 +182,7 @@ private fun installGlobalShortcutDispatcher(
                 event.id == AwtKeyEvent.KEY_PRESSED && event.keyCode.isAwtModifierKey()
             val physicalPosition =
                 if (event.id == AwtKeyEvent.KEY_PRESSED && !isModifierPress) {
-                    physicalKeyCapture?.consume(event.when)
+                    physicalKeyCapture?.consume(event.`when`)
                 } else {
                     null
                 }
@@ -197,7 +198,6 @@ private fun installGlobalShortcutDispatcher(
                 )
             }
         }
-    val toolkit = Toolkit.getDefaultToolkit()
     val backButton = backMouseButton(toolkit.javaClass.name)
     val forwardButton = forwardMouseButton(toolkit.javaClass.name)
     val mouseEventQueue =
@@ -302,10 +302,7 @@ private fun Int.isAwtModifierKey(): Boolean =
         this == AwtKeyEvent.VK_META ||
         this == AwtKeyEvent.VK_ALT_GRAPH ||
         this == AwtKeyEvent.VK_WINDOWS ||
-        this == AwtKeyEvent.VK_CAPS_LOCK
-
-private fun usesNativeWaylandToolkit(): Boolean =
-    System.getProperty("metrolist.useWakefield") == "true" || System.getenv("METROLIST_USE_WAKEFIELD") == "1"
+        (this == AwtKeyEvent.VK_CAPS_LOCK && (OsUtil.isMac || OsUtil.isWindows))
 
 private fun handleAwtKeyEvent(
     event: AwtKeyEvent,
