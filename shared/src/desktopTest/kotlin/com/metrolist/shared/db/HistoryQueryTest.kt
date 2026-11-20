@@ -4,6 +4,7 @@ import com.metrolist.shared.api.YouTubeHistoryEntry
 import com.metrolist.shared.db.daos.WidgetSong
 import com.metrolist.shared.db.entities.Event
 import com.metrolist.shared.db.entities.HistorySnapshot
+import com.metrolist.shared.db.entities.RecognitionHistory
 import com.metrolist.shared.db.entities.SongAlbumMap
 import com.metrolist.shared.db.entities.SongEntity
 import com.metrolist.shared.model.AlbumItem
@@ -39,6 +40,35 @@ import kotlin.test.assertTrue
 import kotlin.time.Instant
 
 class HistoryQueryTest {
+    @Test
+    fun recognitionSearchMatchesLiteralTitleAndArtistTextNewestFirst() =
+        databaseTest { db ->
+            val dao = db.dao()
+            val tracks =
+                listOf(
+                    Triple("title-percent", "100% Love", "Different Artist"),
+                    Triple("title-false", "1000 Love", "Different Artist"),
+                    Triple("artist-percent", "Unrelated title", "100% Band"),
+                    Triple("artist-underscore", "Another title", "Synth_Wave"),
+                    Triple("artist-false", "Unrelated", "Synth Wave"),
+                )
+            tracks.forEachIndexed { index, (id, title, artist) ->
+                dao.insert(
+                    RecognitionHistory(trackId = id, title = title, artist = artist, recognizedAt = LocalDateTime(2026, 1, 1, 0, index)),
+                )
+            }
+
+            suspend fun ids(query: String) = dao.searchRecognitionHistory(query).first().map { it.trackId }
+
+            assertEquals(listOf("artist-percent", "title-percent"), ids("100%"))
+            assertEquals(listOf("artist-percent", "title-percent"), ids("%"))
+            assertEquals(listOf("artist-underscore"), ids("sYnTh_wAvE"))
+            assertEquals(listOf("artist-underscore"), ids("_"))
+            assertEquals(listOf("artist-false", "artist-underscore"), ids("wAvE"))
+            assertEquals(listOf("title-false", "title-percent"), ids("lOvE"))
+            assertEquals(emptyList(), ids("missing"))
+        }
+
     @Test
     fun bulkSelectionFindsRemoteTokensOutsideTheLoadedPage() =
         databaseTest { db ->
