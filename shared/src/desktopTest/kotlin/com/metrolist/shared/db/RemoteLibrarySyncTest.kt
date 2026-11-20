@@ -165,6 +165,7 @@ class RemoteLibrarySyncTest {
                         thumbnailUrl = "stored-art",
                         songCount = 7,
                         duration = 1234,
+                        lastUpdateTime = earlier,
                         bookmarkedAt = earlier,
                     )
                 val row =
