@@ -128,7 +128,12 @@ internal class WindowsPhysicalKeyCapture : PlatformPhysicalKeyCapture {
                     if (enabled) {
                         hook =
                             runCatching {
-                                User32.INSTANCE.SetWindowsHookEx(WinUser.WH_KEYBOARD_LL, procedure, null, 0)
+                                User32.INSTANCE.SetWindowsHookEx(
+                                    WinUser.WH_KEYBOARD_LL,
+                                    procedure,
+                                    Kernel32.INSTANCE.GetModuleHandle(null),
+                                    0,
+                                )
                             }.getOrNull()
                     }
                     if (!enabled) {
