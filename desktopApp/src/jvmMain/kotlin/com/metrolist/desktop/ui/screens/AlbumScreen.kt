@@ -150,10 +150,14 @@ fun AlbumScreen(
     var menuSong by remember { mutableStateOf<SongItem?>(null) }
     var searchQuery by remember(album.id) { mutableStateOf("") }
     val selection = rememberSelectionState(album.id)
+    var isTogglingFavorite by remember(album.id) { mutableStateOf(false) }
     val onFavorite: () -> Unit = {
-        AlbumLikeState.toggleAlbumLike(album, songs) { result ->
-            result
-                .onSuccess { liked ->
+        if (!isTogglingFavorite) {
+            isTogglingFavorite = true
+            AlbumLikeState.toggleAlbumLike(album, songs) { result ->
+                isTogglingFavorite = false
+                result
+                    .onSuccess { liked ->
                     if (liked && Settings.shared.autoDownloadSavedCollections) {
                         AppState.scope.launch(Dispatchers.IO) {
                             try {
