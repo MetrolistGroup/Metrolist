@@ -190,13 +190,21 @@ private interface XRecordInterceptProc : Callback {
 }
 
 @Structure.FieldOrder("idBase", "serverTime", "clientSequence", "category", "clientSwapped", "data", "dataLength")
-private class XRecordInterceptData(pointer: Pointer) : Structure(pointer) {
+private class XRecordInterceptData(
+    pointer: Pointer,
+) : Structure(pointer) {
     @JvmField var idBase: NativeLong = NativeLong(0)
+
     @JvmField var serverTime: NativeLong = NativeLong(0)
+
     @JvmField var clientSequence: NativeLong = NativeLong(0)
+
     @JvmField var category: Int = 0
+
     @JvmField var clientSwapped: Int = 0
+
     @JvmField var data: Pointer? = null
+
     @JvmField var dataLength: NativeLong = NativeLong(0)
 }
 
@@ -208,7 +216,10 @@ private interface X11 : Library {
 
     fun XFlush(display: Pointer): Int
 
-    fun XSync(display: Pointer, discard: Boolean): Int
+    fun XSync(
+        display: Pointer,
+        discard: Boolean,
+    ): Int
 
     fun XFree(data: Pointer): Int
 
@@ -250,5 +261,4 @@ private interface XTestRecord : Library {
     ): Int
 
     fun XRecordFreeData(data: Pointer)
-
 }
