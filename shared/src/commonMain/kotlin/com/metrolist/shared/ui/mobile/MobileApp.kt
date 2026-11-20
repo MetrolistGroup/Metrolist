@@ -1170,6 +1170,10 @@ fun MobileApp(
                                     },
                                     onSearch = { query ->
                                         cancelVideoLookup()
+                                        resolveMobilePodcastBrowseLink(query)?.let { route ->
+                                            open(route)
+                                            return@SearchScreen
+                                        }
                                         when (val parsed = parseYouTubeUrl(query)) {
                                             is YouTubeUrlParser.ParsedUrl.Video -> {
                                                 playVideo(parsed.id)
