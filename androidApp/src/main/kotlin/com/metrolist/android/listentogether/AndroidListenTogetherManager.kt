@@ -9,6 +9,7 @@ import com.metrolist.android.playback.PlayerConnection
 import com.metrolist.android.playback.roomNeedsPlaybackService
 import com.metrolist.shared.generated.resources.Res
 import com.metrolist.shared.generated.resources.unknown_artist
+import com.metrolist.shared.listentogether.ListenTogetherConnectionState
 import com.metrolist.shared.listentogether.ListenTogetherLogLevel
 import com.metrolist.shared.listentogether.ListenTogetherLogger
 import com.metrolist.shared.listentogether.ListenTogetherManager
@@ -94,7 +95,11 @@ object AndroidListenTogetherManager {
                     manager.persistedRoomSession,
                 ) { role, inRoom, connection, pending, persistedSession ->
                     (role == ListenTogetherRoomRole.GUEST && inRoom) to
-                        roomNeedsPlaybackService(inRoom, pending || persistedSession, connection)
+                        roomNeedsPlaybackService(
+                            inRoom,
+                            pending || (persistedSession && connection != ListenTogetherConnectionState.ERROR),
+                            connection,
+                        )
                 }.collect { (locked, required) ->
                     _isGuestPlaybackLocked.value = locked
                     _playbackRequired.value = required

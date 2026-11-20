@@ -873,7 +873,10 @@ class ListenTogetherManager(
     }
 
     val hasActiveOrPendingRoom: Boolean
-        get() = _isInRoom.value || hasPendingRoomRequest || hasPersistedSession || reconnectJob?.isActive == true
+        get() =
+            _isInRoom.value || hasPendingRoomRequest ||
+                (hasPersistedSession && _connectionState.value != ListenTogetherConnectionState.ERROR) ||
+                reconnectJob?.isActive == true
 
     val hasPendingRoomRequest: Boolean
         get() = pendingAction != null || awaitingRoomResponse
