@@ -2,10 +2,10 @@ package com.metrolist.shared.backup
 
 import com.metrolist.shared.settings.Settings
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.launch
 import platform.Foundation.NSDate
@@ -69,15 +69,20 @@ fun createIosAutomaticBackup(completion: (Boolean) -> Unit) {
                         Settings.shared.autoBackupLastSuccessEpochMillis =
                             (NSDate().timeIntervalSince1970 * 1000).toLong()
                         Settings.shared.flush()
-                        val files = fileManager.contentsOfDirectoryAtPath(backupDirectory, error = null).orEmpty()
+                        val files =
+                            fileManager
+                                .contentsOfDirectoryAtPath(backupDirectory, error = null)
+                                .orEmpty()
+                                .filterIsInstance<String>()
+                                .filter { it.endsWith(".zip") }
                         files
-                            .mapNotNull { (it as? String)?.let { filename ->
+                            .map { filename ->
                                 val path = "$backupDirectory/$filename"
                                 val modifiedAt =
                                     (fileManager.attributesOfItemAtPath(path, error = null)?.get(NSFileModificationDate) as? NSDate)
                                         ?.timeIntervalSince1970 ?: 0.0
                                 filename to modifiedAt
-                            } }
+                            }
                             .sortedByDescending { it.second }
                             .drop(MAX_RETAINED_BACKUPS)
                             .forEach { (filename, _) -> fileManager.removeItemAtPath("$backupDirectory/$filename", error = null) }
