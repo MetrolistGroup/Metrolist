@@ -2707,5 +2707,5 @@
     <string name="lyrics_romanization_show_original_description">Afișează versul original dedesubt</string>
     <string name="lyrics_romanization_show_original">Afișează originalul</string>
     <string name="lyrics_romanization_show_romanization_description">Afișează romanizarea sub versuri</string>
-    <string name="search_episodes"></string>
+    <string name="search_episodes">Caută episoade</string>
 </resources>
