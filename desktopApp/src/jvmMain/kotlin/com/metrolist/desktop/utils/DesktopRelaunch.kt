@@ -78,4 +78,12 @@ internal fun windowsDelayedRestartCommand(appCommand: List<String>): List<String
 internal fun ProcessBuilder.prepareDesktopRelaunch(): ProcessBuilder =
     apply {
         environment().remove("_JPACKAGE_LAUNCHER")
+        if (System.getProperty("os.name").startsWith("Mac", ignoreCase = true)) {
+            val command = command()
+            val argsIndex = command.indexOf("--args")
+            if (command.firstOrNull() == "/usr/bin/open" && argsIndex >= 0) {
+                val environmentOptions = environment().keys.sorted().flatMap { listOf("--env", it) }
+                command(command.take(argsIndex) + environmentOptions + command.drop(argsIndex))
+            }
+        }
     }
