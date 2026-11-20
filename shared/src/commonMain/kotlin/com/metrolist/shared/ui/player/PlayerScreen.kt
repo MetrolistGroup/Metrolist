@@ -2267,7 +2267,7 @@ fun PlayerScreen(
 
                     if (!useLandscapeLayout) {
                         playerControlsTransition.AnimatedVisibility(
-                            visible = { (expanded, minimalUi) -> !expanded && !minimalUi },
+                            visible = { (_, minimalUi) -> !minimalUi },
                             enter =
                                 fadeIn(canvasEffectsSpec) +
                                     slideInVertically(canvasSlideSpec) { it },
