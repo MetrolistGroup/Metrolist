@@ -6,7 +6,7 @@ The canonical GitHub milestone could not be created: the connected account has r
 
 ## Issues
 
-- [ ] [#5097](https://github.com/MetrolistGroup/Metrolist/issues/5097) Repeat Playback Mode Resets When Switching to Another Song
+- [ ] [#5097](https://github.com/MetrolistGroup/Metrolist/issues/5097) Repeat mode reset when starting a radio mix; fix proposed in [PR #5100](https://github.com/MetrolistGroup/Metrolist/pull/5100)
 - [ ] [#5096](https://github.com/MetrolistGroup/Metrolist/issues/5096) Cramped widget; possible duplicate of #5082, proposed fix in [PR #5084](https://github.com/MetrolistGroup/Metrolist/pull/5084)
 - [ ] [#5095](https://github.com/MetrolistGroup/Metrolist/issues/5095) Audio silence at crossfade/track transition; overlaps previous reports #4794 and merged PR #4814, needs reproduction details before a separate fix
 - [ ] [#5093](https://github.com/MetrolistGroup/Metrolist/issues/5093) Windows playback fails on a quadraphonic audio interface; fix proposed in [PR #5098](https://github.com/MetrolistGroup/Metrolist/pull/5098), Windows hardware verification pending
@@ -71,6 +71,7 @@ The canonical GitHub milestone could not be created: the connected account has r
 
 ## Existing PRs
 
+- [#5100](https://github.com/MetrolistGroup/Metrolist/pull/5100) preserves the selected repeat mode when starting a radio mix for #5097. No tests or build were run, per the user's instruction.
 - [#5087](https://github.com/MetrolistGroup/Metrolist/pull/5087) recovers the discovered account data-sync ID when single-account login completes and WebView omitted it, on Android and desktop. Its regression test was removed; earlier desktop compilation and ktlint passed, but the current head was not rebuilt. Android compilation had been blocked by unaccepted local SDK licenses.
 - [#5090](https://github.com/MetrolistGroup/Metrolist/pull/5090) reopens a desktop audio output line when the operating system closes it, reapplies volume and preserves the playback clock. Its regression test was removed after full desktop/shared checks passed; the current head was not rebuilt. The report does not confirm line closure on resume, so the PR is related to #4985 pending a Windows device retest.
 - [#5098](https://github.com/MetrolistGroup/Metrolist/pull/5098) retries rejected Windows stereo PCM output with a four-channel format and maps stereo frames to the first two channels for #5093. Its regression tests were removed after the desktop build, shared desktop tests and ktlint passed; the current head was not rebuilt. Windows hardware verification remains pending.
