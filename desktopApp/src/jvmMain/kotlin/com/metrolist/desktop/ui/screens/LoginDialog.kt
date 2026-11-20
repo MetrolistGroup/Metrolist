@@ -292,13 +292,10 @@ private fun WindowsAccountContent(
             busy = true
             failed = false
             try {
-                accounts =
-                    authManager
-                        .fetchAccounts(authData.cookie, authData.visitorData, authData.dataSyncId, authData.authUser)
-                        .filter { authData.forAccount(it) != null || !it.signinUrl.isNullOrBlank() }
+                accounts = authManager.fetchAccounts(authData.cookie, authData.visitorData, authData.dataSyncId, authData.authUser)
                 selectedAccount = accounts.firstOrNull { it.isSelected } ?: accounts.firstOrNull()
                 failed = accounts.isEmpty()
-                if (!isSwitchingChannel && accounts.size <= 1) {
+                if (accountDiscoveryAction(accounts.size, isSwitchingChannel) == AccountDiscoveryAction.COMPLETE_LOGIN) {
                     val candidate = authData.copy(dataSyncId = singleAccountDataSyncId(authData.dataSyncId, accounts))
                     if (authManager.validateAndSaveCredentials(
                             candidate.cookie,
