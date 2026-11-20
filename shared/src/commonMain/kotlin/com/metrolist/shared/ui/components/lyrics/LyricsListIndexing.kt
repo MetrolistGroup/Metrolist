@@ -123,11 +123,31 @@ internal fun mergeBackgroundLyricsEntries(lyrics: List<LyricsEntry>): List<Lyric
                     )
                 nextMainIndex?.let { targetIndex ->
                     nextMain?.let { main ->
+                        val romanizedBackgroundWords = background.romanizedWords.orEmpty().map(WordTimestamp::asBackground)
+                        val romanizedBackgroundText =
+                            textBackgroundWord(background.romanizedText, background)?.takeUnless { word ->
+                                romanizedBackgroundWords.backgroundText()?.let { romanized ->
+                                    normalizeBackgroundText(romanized) == normalizeBackgroundText(word.text)
+                                } == true
+                            }
+                        val transferredRomanizedWords =
+                            (
+                                main.romanizedWords.orEmpty() + romanizedBackgroundWords +
+                                    listOfNotNull(romanizedBackgroundText)
+                            ).distinctBy { word ->
+                                Triple(word.startTime, word.endTime, normalizeBackgroundText(word.text))
+                            }.withBackgroundPhraseBoundary()
                         displayLines[targetIndex] =
                             main.copy(
-                                romanizedText = main.romanizedText ?: background.romanizedText,
-                                translatedText = main.translatedText ?: background.translatedText,
-                                backgroundTranslatedText = main.backgroundTranslatedText ?: background.backgroundTranslatedText,
+                                romanizedWords = transferredRomanizedWords.takeIf { it.isNotEmpty() },
+                                backgroundTranslatedText =
+                                    combineBackgroundText(
+                                        listOf(
+                                            main.backgroundTranslatedText,
+                                            background.translatedText,
+                                            background.backgroundTranslatedText,
+                                        ),
+                                    ).takeIf(String::isNotBlank),
                             )
                     }
                 }
@@ -251,11 +271,7 @@ internal fun mergeBackgroundLyricsEntries(lyrics: List<LyricsEntry>): List<Lyric
                 words = mergedWords.takeIf { it.isNotEmpty() },
                 romanizedWords = mergedRomanizedWords,
                 endTime = listOfNotNull(main.endTime, backgroundEndTime).maxOrNull(),
-                backgroundText =
-                    listOfNotNull(
-                        main.backgroundText?.takeIf(String::isNotBlank),
-                        mergedWords.backgroundText(),
-                    ).distinctBy(::normalizeBackgroundText).joinToString(" ").takeIf(String::isNotBlank),
+                backgroundText = mergedWords.backgroundText(),
                 backgroundTranslatedText =
                     listOfNotNull(
                         main.backgroundTranslatedText?.takeIf(String::isNotBlank),
