@@ -54,6 +54,7 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -1148,6 +1149,58 @@ class PlaylistMutationsTest {
             val stored = requireNotNull(database.dao().findPlaylistEntity(playlist.id))
             assertNull(stored.customThumbnailUrl)
             assertEquals("https://example.com/default=s0", stored.thumbnailUrl)
+        }
+
+    @Test
+    fun remoteCoverRemovalWithoutReplacementDoesNotKeepTheUploadedCover() =
+        withDatabase { database ->
+            val playlist = PlaylistEntity(id = "remote-remove", name = "Remote", browseId = "VLPLremove", isEditable = true)
+            database.dao().insert(playlist)
+            val uploaded =
+                uploadStoredPlaylistCover(
+                    database,
+                    authenticatedRepository(coverUploadEngine()),
+                    playlist.id,
+                    byteArrayOf(1),
+                ).getOrThrow()
+            assertNotNull(uploaded)
+            assertEquals(uploaded, database.dao().findPlaylistEntity(playlist.id)?.thumbnailUrl)
+            val engine =
+                MockEngine { request ->
+                    check(request.url.encodedPath.endsWith("/browse/edit_playlist"))
+                    respondJson(PLAYLIST_EDIT_SUCCEEDED)
+                }
+
+            assertNull(removeStoredPlaylistCover(database, authenticatedRepository(engine), playlist.id).getOrThrow())
+
+            val stored = requireNotNull(database.dao().findPlaylistEntity(playlist.id))
+            assertNull(stored.customThumbnailUrl)
+            assertNull(stored.thumbnailUrl)
+        }
+
+    @Test
+    fun remoteCoverRemovalRejectedInsideSuccessfulHttpResponsePreservesBothFields() =
+        withDatabase { database ->
+            val uploaded = "https://example.com/custom=s0-w200"
+            val playlist =
+                PlaylistEntity(
+                    id = "remote-reject-removal",
+                    name = "Remote",
+                    browseId = "VLPLremove",
+                    thumbnailUrl = uploaded,
+                    customThumbnailUrl = uploaded,
+                )
+            val dao = database.dao()
+            dao.insert(playlist)
+            val before = dao.findPlaylistEntity(playlist.id)
+            val engine =
+                MockEngine { request ->
+                    check(request.url.encodedPath.endsWith("/browse/edit_playlist"))
+                    respondJson(PLAYLIST_EDIT_FAILED)
+                }
+
+            assertTrue(removeStoredPlaylistCover(database, authenticatedRepository(engine), playlist.id).isFailure)
+            assertEquals(before, dao.findPlaylistEntity(playlist.id))
         }
 
     @Test

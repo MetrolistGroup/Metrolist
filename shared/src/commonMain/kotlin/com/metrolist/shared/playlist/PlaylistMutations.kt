@@ -384,19 +384,21 @@ suspend fun removeStoredPlaylistCover(
         val entity = stored ?: unsavedRemotePlaylistEntity(id, playlist)
         val isEditable = playlist?.canEdit ?: entity.isEditable
         val remoteId = remotePlaylistId(entity, id)
-        val remoteThumbnail =
-            if (remoteId != null && isEditable && repository.canManagePlaylists()) {
-                repository.removePlaylistThumbnail(remoteId).getOrThrow()
+        val removeRemoteCover = remoteId != null && isEditable && repository.canManagePlaylists()
+        val fallback =
+            if (removeRemoteCover) {
+                repository.removePlaylistThumbnail(remoteId).getOrThrow()?.takeIf { it.isNotBlank() }
             } else {
                 null
             }
-        val fallback = remoteThumbnail?.takeIf { it.isNotBlank() }
+        // Upload can store the same custom image in both thumbnail fields.
+        val removedCover = entity.customThumbnailUrl.takeIf { removeRemoteCover }
         database.withDatabaseTransaction {
             val current = database.dao().findPlaylistEntity(entity.id) ?: entity.takeIf { stored == null } ?: throw NoSuchElementException()
             database.dao().upsert(
                 current.copy(
                     customThumbnailUrl = null,
-                    thumbnailUrl = fallback ?: current.thumbnailUrl,
+                    thumbnailUrl = fallback ?: current.thumbnailUrl.takeUnless { it == removedCover },
                     isEditable = isEditable,
                     lastUpdateTime = Clock.System.now().toLocalDateTime(TimeZone.UTC),
                 ),
