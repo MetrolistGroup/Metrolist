@@ -143,6 +143,7 @@ internal class WindowsPhysicalKeyCapture : PlatformPhysicalKeyCapture {
                 0x10,
                 0x11,
                 0x12,
+                0x14,
                 0x5B,
                 0x5C,
                 0xA0,

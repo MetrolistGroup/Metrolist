@@ -174,7 +174,7 @@ internal class LinuxPhysicalKeyCapture : PlatformPhysicalKeyCapture {
         const val DEVICE_EVENTS_OFFSET = 18L
         const val X_RECORD_RANGE_SIZE = 32L
         const val REPLY_POLL_INTERVAL_MILLIS = 5L
-        val X_MODIFIER_KEYCODES = setOf(37, 50, 62, 64, 92, 105, 108, 133, 134)
+        val X_MODIFIER_KEYCODES = setOf(37, 50, 62, 64, 66, 92, 105, 108, 133, 134)
     }
 }
 
