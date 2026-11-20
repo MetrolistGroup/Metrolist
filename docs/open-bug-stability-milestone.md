@@ -12,7 +12,7 @@ The canonical GitHub milestone could not be created: the connected account has r
 - [ ] [#5093](https://github.com/MetrolistGroup/Metrolist/issues/5093) Windows playback fails on a quadraphonic audio interface; fix proposed in [PR #5098](https://github.com/MetrolistGroup/Metrolist/pull/5098), Windows hardware verification pending
 - [ ] [#5091](https://github.com/MetrolistGroup/Metrolist/issues/5091) Bluetooth disconnects when a track switches; needs playback logs and route details
 - [ ] [#5088](https://github.com/MetrolistGroup/Metrolist/issues/5088) YT Music Mixes do not show songs; needs account, reproduction and request diagnostics
-- [ ] [#5076](https://github.com/MetrolistGroup/Metrolist/issues/5076) Application frozen after playing song
+- [ ] [#5076](https://github.com/MetrolistGroup/Metrolist/issues/5076) macOS UI freeze with a JVM dump showing AppKit accessibility waiting on AWT while Wry WebView `load_url` blocks the AWT queue. A reporter retest with `COMPOSE_DISABLE_ACCESSIBILITY=1` succeeded, but the cause is not confirmed; investigate the WebView dependency and reproduce on macOS before proposing an app change.
 - [ ] [#5086](https://github.com/MetrolistGroup/Metrolist/issues/5086) Playlist / Library Not Syncing on MacBook
 - [ ] [#5085](https://github.com/MetrolistGroup/Metrolist/issues/5085) Device connect fails to pair devices; proposed fix in draft [PR #5087](https://github.com/MetrolistGroup/Metrolist/pull/5087)
 - [ ] [#5083](https://github.com/MetrolistGroup/Metrolist/issues/5083) Weird GPU usages
