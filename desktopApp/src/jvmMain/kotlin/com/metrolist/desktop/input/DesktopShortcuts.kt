@@ -146,7 +146,7 @@ private fun installGlobalShortcutDispatcher(
         when {
             OsUtil.isWindows -> WindowsPhysicalKeyCapture()
             OsUtil.isMac -> MacOsPhysicalKeyCapture()
-            OsUtil.isLinux -> LinuxPhysicalKeyCapture()
+            OsUtil.isLinux && !usesNativeWaylandToolkit() -> LinuxPhysicalKeyCapture()
             else -> null
         }
 
@@ -181,7 +181,7 @@ private fun installGlobalShortcutDispatcher(
                 event.id == AwtKeyEvent.KEY_PRESSED && event.keyCode.isAwtModifierKey()
             val physicalPosition =
                 if (event.id == AwtKeyEvent.KEY_PRESSED && !isModifierPress) {
-                    physicalKeyCapture?.consume(event.keyCode)
+                    physicalKeyCapture?.consume(event.when)
                 } else {
                     null
                 }
@@ -301,7 +301,11 @@ private fun Int.isAwtModifierKey(): Boolean =
         this == AwtKeyEvent.VK_ALT ||
         this == AwtKeyEvent.VK_META ||
         this == AwtKeyEvent.VK_ALT_GRAPH ||
-        this == AwtKeyEvent.VK_WINDOWS
+        this == AwtKeyEvent.VK_WINDOWS ||
+        this == AwtKeyEvent.VK_CAPS_LOCK
+
+private fun usesNativeWaylandToolkit(): Boolean =
+    System.getProperty("metrolist.useWakefield") == "true" || System.getenv("METROLIST_USE_WAKEFIELD") == "1"
 
 private fun handleAwtKeyEvent(
     event: AwtKeyEvent,

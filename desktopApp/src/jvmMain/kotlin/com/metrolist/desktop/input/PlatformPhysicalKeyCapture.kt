@@ -7,45 +7,55 @@ internal interface PlatformPhysicalKeyCapture : AutoCloseable {
 
     fun setEnabled(enabled: Boolean)
 
-    fun consume(awtKeyCode: Int): PhysicalKeyPosition?
+    fun consume(awtEventWhen: Long): PhysicalKeyPosition?
 }
 
 internal class OrderedPhysicalKeyCaptureBuffer(
-    private val timeSourceNanos: () -> Long = System::nanoTime,
+    private val timeSourceMillis: () -> Long = System::currentTimeMillis,
 ) {
     private data class Capture(
         val position: PhysicalKeyPosition?,
-        val capturedAtNanos: Long,
+        val capturedAtMillis: Long,
     )
 
     private val captures = ArrayDeque<Capture>()
 
     @Synchronized
     fun record(position: PhysicalKeyPosition?) {
-        val now = timeSourceNanos()
+        val now = timeSourceMillis()
         pruneExpired(now)
         while (captures.size >= MAX_PENDING_CAPTURES) captures.removeFirst()
         captures.addLast(Capture(position, now))
     }
 
     @Synchronized
-    fun consume(): PhysicalKeyPosition? {
-        pruneExpired(timeSourceNanos())
-        return captures.pollFirst()?.position
+    fun consume(awtEventWhen: Long): PhysicalKeyPosition? {
+        pruneExpired(timeSourceMillis())
+        while (
+            captures.firstOrNull()?.capturedAtMillis?.let {
+                it < awtEventWhen - MAX_EVENT_ALIGNMENT_MILLIS
+            } == true
+        ) {
+            captures.removeFirst()
+        }
+        val capture = captures.firstOrNull() ?: return null
+        if (capture.capturedAtMillis > awtEventWhen + MAX_EVENT_ALIGNMENT_MILLIS) return null
+        return captures.removeFirst().position
     }
 
     @Synchronized
     fun clear() = captures.clear()
 
-    private fun pruneExpired(nowNanos: Long) {
-        while (captures.firstOrNull()?.let { nowNanos - it.capturedAtNanos > MAX_CAPTURE_AGE_NANOS } == true) {
+    private fun pruneExpired(nowMillis: Long) {
+        while (captures.firstOrNull()?.let { nowMillis - it.capturedAtMillis > MAX_CAPTURE_AGE_MILLIS } == true) {
             captures.removeFirst()
         }
     }
 
     private companion object {
         const val MAX_PENDING_CAPTURES = 128
-        const val MAX_CAPTURE_AGE_NANOS = 5_000_000_000L
+        const val MAX_CAPTURE_AGE_MILLIS = 5_000L
+        const val MAX_EVENT_ALIGNMENT_MILLIS = 100L
     }
 }
 

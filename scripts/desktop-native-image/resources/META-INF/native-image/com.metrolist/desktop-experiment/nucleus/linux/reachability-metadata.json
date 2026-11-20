@@ -698,6 +698,18 @@
           "parameterTypes": []
         }
       ]
+    },
+    {
+      "type": "com.metrolist.desktop.input.LinuxPhysicalKeyCapture$callback$1",
+      "methods": [
+        {
+          "name": "invoke",
+          "parameterTypes": [
+            "com.sun.jna.Pointer",
+            "com.sun.jna.Pointer"
+          ]
+        }
+      ]
     }
   ],
   "resources": [
