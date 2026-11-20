@@ -3634,7 +3634,7 @@ object PlayerState {
         val connectedSession = deviceConnect.isActive
         val wasPlaying =
             when {
-                castManager.state.value.isConnected -> castManager.state.value.isPlaying
+                castManager.state.value.isConnected -> playbackTransitions.playbackIntent(castManager.state.value.isPlaying)
                 isPlaybackResolving -> desiredPlayback.value
                 else -> player.wantsPlayback
             }
@@ -4011,6 +4011,7 @@ object PlayerState {
                 expectedQueue = queue.snapshots.value,
             )
         ) {
+            syncSession.setPlaying(playing)
             return
         }
         if (isListenTogetherGuest()) return
