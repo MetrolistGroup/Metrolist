@@ -2,6 +2,7 @@ package com.metrolist.desktop.input
 
 import androidx.compose.ui.input.key.Key
 import kotlin.test.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 import java.awt.event.KeyEvent as AwtKeyEvent
@@ -18,6 +19,31 @@ class ShortcutKeyMatchingTest {
     fun symbolsMatchTheirPhysicalKeyCode() {
         assertTrue(keyCodeMatches(ShortcutKeyCode.Awt(AwtKeyEvent.VK_SLASH, '?'), Key.Slash, AwtKeyEvent.VK_SLASH))
         assertFalse(keyCodeMatches(ShortcutKeyCode.Awt(AwtKeyEvent.VK_1, '!'), Key.Slash, AwtKeyEvent.VK_SLASH))
+    }
+
+    @Test
+    fun windowsSymbolsMatchPhysicalScanCodesAcrossLayouts() {
+        val azertySlashPosition =
+            ShortcutKeyCode.Awt(
+                AwtKeyEvent.VK_1,
+                '!',
+                windowsPhysicalPositionForScanCode(0x35),
+                physicalPositionsAvailable = true,
+            )
+
+        assertTrue(keyCodeMatches(azertySlashPosition, Key.Slash, AwtKeyEvent.VK_SLASH))
+        assertFalse(keyCodeMatches(azertySlashPosition, Key.Comma, AwtKeyEvent.VK_COMMA))
+        assertFalse(
+            keyCodeMatches(
+                ShortcutKeyCode.Awt(AwtKeyEvent.VK_SLASH, '/', physicalPositionsAvailable = true),
+                Key.Slash,
+                AwtKeyEvent.VK_SLASH,
+            ),
+        )
+        assertEquals(PhysicalKeyPosition.SLASH, windowsPhysicalPositionForScanCode(0x35))
+        assertEquals(PhysicalKeyPosition.COMMA, windowsPhysicalPositionForScanCode(0x33))
+        assertEquals(PhysicalKeyPosition.EQUALS, windowsPhysicalPositionForScanCode(0x0D))
+        assertEquals(PhysicalKeyPosition.NUMPAD_PLUS, windowsPhysicalPositionForScanCode(0x4E))
     }
 
     @Test

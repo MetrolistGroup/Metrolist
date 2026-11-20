@@ -61,6 +61,8 @@ internal sealed interface ShortcutKeyCode {
     data class Awt(
         val code: Int,
         val character: Char,
+        val physicalPosition: PhysicalKeyPosition? = null,
+        val physicalPositionsAvailable: Boolean = false,
     ) : ShortcutKeyCode
 }
 
@@ -140,6 +142,11 @@ private fun installGlobalShortcutDispatcher(
 ): AutoCloseable {
     val keyboardFocusManager = KeyboardFocusManager.getCurrentKeyboardFocusManager()
     val pressed = ShortcutPressTracker()
+    val physicalKeyCapture = if (OsUtil.isWindows) WindowsPhysicalKeyCapture() else null
+
+    fun updatePhysicalKeyCapture() {
+        physicalKeyCapture?.setEnabled(keyboardFocusManager.activeWindow != null)
+    }
 
     fun restorePointerFocus() {
         if (keyboardFocusManager.activeWindow != null && !keyFocus.keyboardNavigation && !keyFocus.retainsFocus &&
@@ -151,6 +158,7 @@ private fun installGlobalShortcutDispatcher(
     val focusListener =
         PropertyChangeListener {
             pressed.clear()
+            updatePhysicalKeyCapture()
             EventQueue.invokeLater { restorePointerFocus() }
         }
     val dispatcher =
@@ -163,7 +171,15 @@ private fun installGlobalShortcutDispatcher(
                 keyFocus.keyboardNavigation = true
             }
             pressed.dispatch(event) {
-                handleAwtKeyEvent(event, isPlaybackBackgroundFocused(), keyFocus, onRefresh, toggleWindowFullscreen)
+                handleAwtKeyEvent(
+                    event,
+                    isPlaybackBackgroundFocused(),
+                    keyFocus,
+                    onRefresh,
+                    toggleWindowFullscreen,
+                    physicalKeyCapture?.consume(event.keyCode),
+                    physicalPositionsAvailable = physicalKeyCapture != null,
+                )
             }
         }
     val toolkit = Toolkit.getDefaultToolkit()
@@ -214,12 +230,14 @@ private fun installGlobalShortcutDispatcher(
 
     keyboardFocusManager.addPropertyChangeListener("activeWindow", focusListener)
     keyboardFocusManager.addKeyEventDispatcher(dispatcher)
+    updatePhysicalKeyCapture()
     toolkit.systemEventQueue.push(mouseEventQueue)
 
     return AutoCloseable {
         mouseEventQueue.close()
         keyboardFocusManager.removeKeyEventDispatcher(dispatcher)
         keyboardFocusManager.removePropertyChangeListener("activeWindow", focusListener)
+        physicalKeyCapture?.close()
     }
 }
 
@@ -268,6 +286,8 @@ private fun handleAwtKeyEvent(
     keyFocus: PlaybackKeyFocus,
     onRefresh: () -> Unit,
     toggleWindowFullscreen: () -> Unit,
+    physicalPosition: PhysicalKeyPosition?,
+    physicalPositionsAvailable: Boolean,
 ): Boolean {
     if (!shouldDispatchGlobalShortcut(event)) return false
     val focusManager = KeyboardFocusManager.getCurrentKeyboardFocusManager()
@@ -285,7 +305,13 @@ private fun handleAwtKeyEvent(
         ctrl = event.isControlDown,
         meta = event.isMetaDown,
         shift = event.isShiftDown,
-        keyCode = ShortcutKeyCode.Awt(event.keyCode, normalizeControlCharacter(event.keyChar, event.isControlDown)),
+        keyCode =
+            ShortcutKeyCode.Awt(
+                event.keyCode,
+                normalizeControlCharacter(event.keyChar, event.isControlDown),
+                physicalPosition,
+                physicalPositionsAvailable,
+            ),
         suppressUnmodified = editableInputActive || modalActive,
         modalActive = modalActive,
         onRefresh = onRefresh,
@@ -761,7 +787,10 @@ internal fun keyCodeMatches(
         }
 
         is ShortcutKeyCode.Awt -> {
-            if (awtKeyCode in AwtKeyEvent.VK_A..AwtKeyEvent.VK_Z) {
+            val physicalPosition = physicalPositionForAwtCode(awtKeyCode)
+            if (physicalPosition != null && keyCode.physicalPositionsAvailable) {
+                keyCode.physicalPosition == physicalPosition
+            } else if (awtKeyCode in AwtKeyEvent.VK_A..AwtKeyEvent.VK_Z) {
                 keyCode.character.uppercaseChar().code == awtKeyCode
             } else {
                 keyCode.code == awtKeyCode
@@ -779,7 +808,39 @@ internal fun normalizeControlCharacter(
         character
     }
 
-private fun ShortcutKeyCode.isAwtCode(expectedCode: Int): Boolean = (this as? ShortcutKeyCode.Awt)?.code == expectedCode
+private fun ShortcutKeyCode.isAwtCode(expectedCode: Int): Boolean {
+    val awtKey = this as? ShortcutKeyCode.Awt ?: return false
+    val physicalPosition = physicalPositionForAwtCode(expectedCode)
+    return if (physicalPosition != null && awtKey.physicalPositionsAvailable) {
+        awtKey.physicalPosition == physicalPosition
+    } else {
+        awtKey.code == expectedCode
+    }
+}
+
+internal enum class PhysicalKeyPosition { BACKQUOTE, MINUS, EQUALS, NUMPAD_PLUS, COMMA, SLASH }
+
+internal fun physicalPositionForAwtCode(awtKeyCode: Int): PhysicalKeyPosition? =
+    when (awtKeyCode) {
+        AwtKeyEvent.VK_BACK_QUOTE, AwtKeyEvent.VK_DEAD_GRAVE -> PhysicalKeyPosition.BACKQUOTE
+        AwtKeyEvent.VK_MINUS -> PhysicalKeyPosition.MINUS
+        AwtKeyEvent.VK_EQUALS -> PhysicalKeyPosition.EQUALS
+        AwtKeyEvent.VK_ADD -> PhysicalKeyPosition.NUMPAD_PLUS
+        AwtKeyEvent.VK_COMMA -> PhysicalKeyPosition.COMMA
+        AwtKeyEvent.VK_SLASH -> PhysicalKeyPosition.SLASH
+        else -> null
+    }
+
+internal fun windowsPhysicalPositionForScanCode(scanCode: Int): PhysicalKeyPosition? =
+    when (scanCode and 0xFF) {
+        0x29 -> PhysicalKeyPosition.BACKQUOTE
+        0x0C -> PhysicalKeyPosition.MINUS
+        0x0D -> PhysicalKeyPosition.EQUALS
+        0x4E -> PhysicalKeyPosition.NUMPAD_PLUS
+        0x33 -> PhysicalKeyPosition.COMMA
+        0x35 -> PhysicalKeyPosition.SLASH
+        else -> null
+    }
 
 internal class ShortcutPressTracker {
     private val handled = mutableSetOf<Int>()
