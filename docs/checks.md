@@ -49,8 +49,6 @@ For Android lookahead crashes, repeat portrait/landscape rotation, background/re
 
 For desktop startup and miniplayer changes, test a fresh profile through onboarding and relaunch an already-onboarded profile with the miniplayer hidden. Toggle the miniplayer from the tray, close and reopen it, switch focus mode, and hide/show the main window while the miniplayer remains responsive. Repeat on JVM and native builds; each window must provide its own theme after its window composition is established.
 
-On macOS, restore a backup from Settings and confirm the relaunched app keeps its normal Metrolist Dock identity and receives the restored settings. Also check a normal app restart and a backup with a profile argument containing spaces.
-
 ### Collections and pages
 
 On Android, desktop and iOS, choose list view for Library Tracks and grid view for Playlists, Artists and Albums. Switch tabs and restart the app. Each tab keeps its choice and the list/grid transition still animates. Sort Tracks by Downloaded in both directions; completed downloads precede tracks without downloads, with newest downloads first by default. Sort album, playlist and Liked songs by listening time, including unplayed songs and duplicate playlist entries. Check playback follows the displayed order. Save and remove a song while viewing album, playlist and artist rows; its library badge updates, including wide artist rows. Unlock an editable playlist in Playlist order, play a song, open its menu and move tracks using the handle. Reopen it and restart the app, then lock it again. Read-only, incomplete and differently sorted playlists must not expose reordering. Check touch, keyboard and TV movement, multi-selection and pull-to-refresh during a drag.
