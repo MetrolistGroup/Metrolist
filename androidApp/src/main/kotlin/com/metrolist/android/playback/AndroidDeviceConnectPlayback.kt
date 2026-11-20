@@ -80,6 +80,7 @@ internal class AndroidDeviceConnectPlayback(
                                     .getOrNull(player.currentMediaItemIndex.value)
                                     ?.id,
                         finite = queue.isFiniteQueue,
+                        explicitRadioQueue = queue.explicitRadioQueue,
                         scrobbleSession = scrobbleManager.session(),
                     )
                 }
@@ -119,9 +120,7 @@ internal class AndroidDeviceConnectPlayback(
                 ) {
                     queue.resetQueueSession(seedId, desired.title, desired.finite)
                 }
-                if (!desired.finite) {
-                    queue.setExplicitRadioQueue(true)
-                }
+                queue.setExplicitRadioQueue(desired.explicitRadioQueue)
                 queue.setTitle(desired.title)
                 repeatMode.value = desired.repeatMode.toPlayerRepeatMode()
                 if (trackChanged || previousQueue != desiredQueue) player.restoreQueue(desiredQueue, currentTrackChanged = trackChanged)
@@ -189,7 +188,7 @@ internal class AndroidDeviceConnectPlayback(
                 if (!queue.isFiniteQueue && queue.recommendationBootstrapJob == null && song != null) {
                     queue.bootstrapRecommendations(
                         queue.recommendationSeedSongId ?: song.id,
-                        allowRepeatMode = true,
+                        allowRepeatMode = desired.explicitRadioQueue,
                     )
                 }
                 onSave()

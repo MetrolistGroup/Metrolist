@@ -91,6 +91,7 @@ internal class AndroidQueueCoordinator(
     private var radioQueueParams: String? = null
     private var isRadioQueue = false
     private var isExplicitRadioQueue = false
+    val explicitRadioQueue: Boolean get() = isExplicitRadioQueue
     private val queuedSongIds = linkedSetOf<String>()
     private val recommendationHistory = RadioRecommendationHistory()
     private val queueSessionLock = Any()
@@ -461,12 +462,12 @@ internal class AndroidQueueCoordinator(
                     index = 0,
                     title = title,
                     finite = false,
+                    explicitRadioQueue = true,
                     positionMs = if (current != null) player.getRealtimePositionMs() else 0L,
                     preserveCurrentTrack = true,
                 ),
             )
         ) {
-            setExplicitRadioQueue(true)
             // The target keeps a retained seed's play state, so send the play intent separately.
             if (startPlaying) AndroidDeviceConnect.intercept(DcPlaybackCommand(DcPlaybackAction.PLAY))
             return
@@ -710,12 +711,12 @@ internal class AndroidQueueCoordinator(
         scope.launch {
             combine(repeatMode, player.songQueue) { mode, _ -> mode }.collect { mode ->
                 if (mode == Player.REPEAT_MODE_ALL) {
+                    autoLoadMoreJob?.cancel()
+                    // Repeat All removes generated tracks; allow the same song to refill once repeat is off.
+                    lastAutoLoadedSongId = null
+                    transitions.cancelNextTrackPreload()
                     if (!isExplicitRadioQueue) {
-                        autoLoadMoreJob?.cancel()
-                        // Repeat All removes generated tracks; allow the same song to refill once repeat is off.
-                        lastAutoLoadedSongId = null
                         recommendationBootstrapJob?.cancel()
-                        transitions.cancelNextTrackPreload()
                     }
                     generatedQueueIndicesToRemoveForRepeat(
                         player.songQueue.value,

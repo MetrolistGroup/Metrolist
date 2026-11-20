@@ -32,7 +32,7 @@ Unconfirmed transfer failure restores the saved position without counting waitin
 
 ## Compatibility and queues
 
-Peers need playback version 4. Version 3 cannot join playback sessions. Authenticated optional capabilities `supportsPlaybackClock` and `supportsPlaybackPitch` default false. Never infer them from unauthenticated state.
+Peers need playback version 5. Version 4 and earlier cannot join playback sessions. Authenticated optional capabilities `supportsPlaybackClock` and `supportsPlaybackPitch` default false. Never infer them from unauthenticated state. Queue snapshots preserve whether a non-finite queue came from explicit Radio, so ordinary queues expanded by Auto Load More do not inherit Radio's repeat behavior.
 
 Send `PITCH` only to a capable target. Snapshots and scalar updates may carry pitch from 0.5 to 2; absence preserves the receiver's pitch. Speed changes preserve pitch, and pitch does not affect the clock. Older peers ignore optional JSON fields without a version bump.
 
