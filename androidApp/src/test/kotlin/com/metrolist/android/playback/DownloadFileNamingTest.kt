@@ -37,6 +37,43 @@ class DownloadFileNamingTest {
     }
 
     @Test
+    fun fullLengthCjkNameCollisionKeepsBothRecordingsAndTheExtension() {
+        assertFullLengthCollisionIsSafe("界".repeat(84), "界".repeat(76))
+    }
+
+    @Test
+    fun fullLengthEmojiNameCollisionDoesNotSplitThePrefix() {
+        val prefix = "語".repeat(75)
+        assertFullLengthCollisionIsSafe("$prefix🎵${"曲".repeat(10)}", prefix)
+    }
+
+    private fun assertFullLengthCollisionIsSafe(
+        title: String,
+        expectedPrefix: String,
+    ) {
+        val directory = Files.createTempDirectory("public-audio-unicode").toFile()
+        try {
+            val song = SongItem("video-id", title, null, emptyList(), null)
+            val name = "${downloadFileBaseName(song)}.audio"
+            val original = directory.resolve("original.tmp").apply { writeText("original") }
+            val first = File(moveAudioToDirectory(original, directory, name))
+            assertEquals(name, first.name)
+
+            val replacement = directory.resolve("replacement.tmp").apply { writeText("new") }
+            val second = File(moveAudioToDirectory(replacement, directory, name))
+            assertFalse(first == second)
+            assertEquals("original", first.readText())
+            assertEquals("new", second.readText())
+            assertEquals("audio", second.extension)
+            assertTrue(second.name.startsWith("$expectedPrefix-"))
+            assertTrue(second.name.encodeToByteArray().size <= 255)
+            assertTrue(StandardCharsets.UTF_8.newEncoder().canEncode(second.name))
+        } finally {
+            directory.deleteRecursively()
+        }
+    }
+
+    @Test
     fun publicAudioRemuxPreservesMetadataAndKeepsOriginalOnFailure() {
         val directory = Files.createTempDirectory("audio-remux").toFile()
         val metadata = AudioExportMetadata("Title", "Artist", "Album")
