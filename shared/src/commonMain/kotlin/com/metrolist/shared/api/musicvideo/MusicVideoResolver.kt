@@ -100,6 +100,7 @@ class MusicVideoResolver(
 
     private data class TrackLookupKey(
         val videoId: String,
+        val musicVideoType: String?,
         val title: String,
         val artists: List<ArtistTiny>,
         val canonicalTitle: String?,
@@ -259,6 +260,7 @@ class MusicVideoResolver(
             val key =
                 TrackLookupKey(
                     video.id,
+                    video.musicVideoType,
                     video.title,
                     video.artists,
                     video.canonicalTitle,
