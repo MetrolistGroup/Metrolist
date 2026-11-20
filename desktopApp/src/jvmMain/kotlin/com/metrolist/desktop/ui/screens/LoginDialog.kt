@@ -50,6 +50,7 @@ import com.metrolist.shared.auth.AccountDiscoveryAction
 import com.metrolist.shared.auth.AuthManager
 import com.metrolist.shared.auth.accountDiscoveryAction
 import com.metrolist.shared.auth.selectionDataSyncId
+import com.metrolist.shared.auth.singleAccountDataSyncId
 import com.metrolist.shared.generated.resources.Res
 import com.metrolist.shared.generated.resources.account_picker_subtitle
 import com.metrolist.shared.generated.resources.account_picker_title
@@ -633,7 +634,7 @@ private fun WebViewContent(
             }
 
             AccountDiscoveryAction.COMPLETE_LOGIN -> {
-                finalizeLogin(authData)
+                finalizeLogin(authData.copy(dataSyncId = singleAccountDataSyncId(authData.dataSyncId, accounts)))
             }
         }
     }
