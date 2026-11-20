@@ -129,7 +129,7 @@ internal class WindowsPhysicalKeyCapture : PlatformPhysicalKeyCapture {
         return User32.INSTANCE.CallNextHookEx(hook, code, message, data)
     }
 
-    override fun consume(awtKeyCode: Int): PhysicalKeyPosition? = pendingKeyCaptures.consume()
+    override fun consume(awtEventWhen: Long): PhysicalKeyPosition? = pendingKeyCaptures.consume(awtEventWhen)
 
     override fun close() = setEnabled(false)
 

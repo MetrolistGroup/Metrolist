@@ -102,6 +102,7 @@ internal class LinuxPhysicalKeyCapture : PlatformPhysicalKeyCapture {
             val recordContext = xtst.XRecordCreateContext(activeControlDisplay, 0, clients, 1, ranges, 1)
             if (recordContext.toLong() == 0L) return
             context = recordContext
+            x11.XSync(activeControlDisplay, false)
             if (xtst.XRecordEnableContextAsync(activeEventDisplay, recordContext, callback, null) == 0) return
 
             available = true
@@ -161,7 +162,7 @@ internal class LinuxPhysicalKeyCapture : PlatformPhysicalKeyCapture {
             }
         }
 
-    override fun consume(awtKeyCode: Int): PhysicalKeyPosition? = pending.consume()
+    override fun consume(awtEventWhen: Long): PhysicalKeyPosition? = pending.consume(awtEventWhen)
 
     override fun close() = setEnabled(false)
 
@@ -202,6 +203,8 @@ private interface X11 : Library {
     fun XCloseDisplay(display: Pointer): Int
 
     fun XFlush(display: Pointer): Int
+
+    fun XSync(display: Pointer, discard: Boolean): Int
 
     fun XFree(data: Pointer): Int
 
