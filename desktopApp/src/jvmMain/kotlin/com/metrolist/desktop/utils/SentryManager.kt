@@ -6,6 +6,7 @@
 package com.metrolist.desktop.utils
 
 import com.metrolist.shared.BuildConfig
+import com.metrolist.shared.playback.PlaybackClientStats
 import com.metrolist.shared.settings.Settings
 import com.metrolist.shared.utils.isCrashReportingAvailable
 import com.metrolist.shared.utils.redactDiagnosticText
@@ -13,9 +14,13 @@ import com.metrolist.shared.utils.redactDiagnosticUrl
 import io.sentry.Attachment
 import io.sentry.Breadcrumb
 import io.sentry.Sentry
+import io.sentry.SentryAttribute
+import io.sentry.SentryAttributes
 import io.sentry.SentryEvent
 import io.sentry.SentryLevel
+import io.sentry.SentryLogLevel
 import io.sentry.SentryOptions
+import io.sentry.logger.SentryLogParameters
 import io.sentry.protocol.Request
 import io.sentry.protocol.SentryId
 
@@ -60,6 +65,11 @@ object SentryManager {
         DesktopNativeCrashRecovery.reportPending()
     }
 
+    suspend fun reportPlaybackClientStats() {
+        val report = PlaybackClientStats.takeReportOnLaunch() ?: return
+        if (isEnabled) sendPlaybackClientStats(report)
+    }
+
     internal fun reportPreviousExit(previous: PreviousDesktopExit): Boolean {
         if (!isEnabled) return false
         return capturePreviousDesktopExit(previous)
@@ -82,6 +92,21 @@ object SentryManager {
                 ?.codeSource
                 ?.location ?: return false
         return source.protocol == "file" && source.path.endsWith(".jar", ignoreCase = true)
+    }
+}
+
+internal const val PLAYBACK_CLIENT_STATS_MESSAGE = "Playback client stats"
+
+internal fun sendPlaybackClientStats(report: Map<String, Map<String, Int>>) {
+    report.forEach { (profile, counts) ->
+        val attributes =
+            listOf(SentryAttribute.stringAttribute("playback.profile", profile)) +
+                counts.map { (counter, value) -> SentryAttribute.integerAttribute("playback.$counter", value) }
+        Sentry.logger().log(
+            SentryLogLevel.INFO,
+            SentryLogParameters.create(SentryAttributes.of(*attributes.toTypedArray())),
+            PLAYBACK_CLIENT_STATS_MESSAGE,
+        )
     }
 }
 
@@ -115,6 +140,10 @@ internal fun configureDesktopSentry(
     options.isEnableUncaughtExceptionHandler = true
     options.isEnableAutoSessionTracking = false
     options.addInAppInclude("com.metrolist")
+    options.logs.isEnabled = true
+    // Logs carry only the periodic playback client stats.
+    options.logs.beforeSend =
+        SentryOptions.Logs.BeforeSendLogCallback { log -> log.takeIf { it.body == PLAYBACK_CLIENT_STATS_MESSAGE } }
     options.beforeBreadcrumb =
         SentryOptions.BeforeBreadcrumbCallback { breadcrumb, _ ->
             sanitizeBreadcrumb(breadcrumb)

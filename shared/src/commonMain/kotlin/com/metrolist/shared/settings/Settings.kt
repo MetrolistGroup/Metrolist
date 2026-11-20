@@ -138,6 +138,8 @@ import com.metrolist.shared.constants.PendingSongVotesJsonKey
 import com.metrolist.shared.constants.PersistentPlaybackPositionKey
 import com.metrolist.shared.constants.PlayVideosInMiniPlayerKey
 import com.metrolist.shared.constants.PlaybackClientHealthJsonKey
+import com.metrolist.shared.constants.PlaybackClientStatsJsonKey
+import com.metrolist.shared.constants.PlaybackClientStatsLaunchesKey
 import com.metrolist.shared.constants.PlaybackPitchKey
 import com.metrolist.shared.constants.PlaybackSpeedKey
 import com.metrolist.shared.constants.PlayerConfigRemoteEtagKey
@@ -275,6 +277,8 @@ class Settings(
         }
 
     var artistNameAliasesJson by preference(ArtistNameAliasesJsonKey, "{}")
+    var playbackClientStatsJson by preference(PlaybackClientStatsJsonKey, "{}")
+    var playbackClientStatsLaunches by preference(PlaybackClientStatsLaunchesKey, 0)
     val artistNameAliases: Map<String, String> by derivedStateOf { ArtistNameAliases.deserialize(artistNameAliasesJson) }
 
     var tokenLoginWarningDismissed by preference(TokenLoginWarningDismissedKey, false)

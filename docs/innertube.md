@@ -72,6 +72,8 @@ Android and desktop playback allow InnerTubeX's progressive transport, which iOS
 
 Token callbacks keep request-local results. A canceled Kotlin caller does not cancel a WebView promise; late results cannot overwrite another request. Check this with `node --test scripts/test_page_bound_po_token.mjs`.
 
+With crash reporting enabled, `PlaybackClientStats` counts resolve outcomes per client profile and playback successes and failures by category. It stores only catalog profile IDs and counters, never video IDs. Every fifth launch Android and desktop send one Sentry log per profile and reset the counts; sum `playback.play.ok` and `playback.play.fail.*` by `playback.profile` in Sentry Logs to compare clients. iOS counts locally but does not send them yet.
+
 ## SABR
 
 `SabrAudioStream` can mint alongside an untokenized bootstrap. Later requests attach the ready token in streamer-context field 2. Before requesting beyond 80 seconds of media, or after PENDING/REQUIRED protection status, wait within the mint's 30-second bound. Failure retains attestation recovery.
