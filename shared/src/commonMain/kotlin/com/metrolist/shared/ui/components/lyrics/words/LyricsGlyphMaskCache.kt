@@ -337,11 +337,6 @@ internal fun computeWipe(
 
     val lastSylIdx = if (lastSyllableIndex != -1) lastSyllableIndex else syllableIndex
     val isPartOfActiveSyl = syllableIndex != -1 && activeSylIdx in syllableIndex..lastSylIdx
-    // A sung syllable stays fully lit; otherwise the next word's band would dim its tail again.
-    if (syllableIndex != -1 && activeSylIdx >= 0 && lastSylIdx < activeSylIdx) {
-        out.mode = WIPE_PAST
-        return
-    }
     val effectiveLineIdx = if (isPartOfActiveSyl) clusterLineIdx else activeLineIdx
 
     val rawLocalX = curGX - lineStart
@@ -355,14 +350,9 @@ internal fun computeWipe(
     val localX =
         when {
             activeSylIdx == -1 -> -gradientWidth * 2f
-
-            // The band leaves the syllable's own glyphs as it ends, so a pause before the next word shows no dim tail.
-            isPartOfActiveSyl -> rawLocalX + activeSylProgress * halfGradientWidth
-
+            isPartOfActiveSyl -> rawLocalX + brushShift
             clusterLineIdx < activeLineIdx -> lineWidth + gradientWidth * 2f
-
             clusterLineIdx > activeLineIdx -> -gradientWidth * 2f
-
             else -> rawLocalX + brushShift
         }
 

@@ -11,6 +11,7 @@ class LyricsWipeTest {
         activeSylIdx: Int,
         curGX: Float,
         progress: Float,
+        isActiveSylLastOfLine: Boolean = false,
     ): Int {
         val out = WipeResult()
         computeWipe(
@@ -26,7 +27,7 @@ class LyricsWipeTest {
             activeSylIdx = activeSylIdx,
             activeLineIdx = 0,
             curGX = curGX,
-            isActiveSylLastOfLine = false,
+            isActiveSylLastOfLine = isActiveSylLastOfLine,
             activeSylProgress = progress,
             gradientWidth = 40f,
             out = out,
@@ -35,16 +36,22 @@ class LyricsWipeTest {
     }
 
     @Test
-    fun finishedWordIsFullyLitWhileTheNextWordWaits() {
-        // First word spans 0..100, the next word starts at 110; the singer pauses after the first word.
-        assertEquals(WIPE_PAST, wipe(0, 0f, 100f, activeSylIdx = 0, curGX = 100f, progress = 1f))
+    fun wipeUsesMiddleAnchorBetweenWordsAndClearsAtLineEnd() {
+        // Middle anchor keeps the soft band centered at the syllable boundary until the next word advances.
+        assertEquals(WIPE_BAND, wipe(0, 0f, 100f, activeSylIdx = 0, curGX = 100f, progress = 1f))
         assertEquals(WIPE_BAND, wipe(0, 0f, 100f, activeSylIdx = 0, curGX = 50f, progress = 0.5f))
         assertEquals(WIPE_BAND, wipe(1, 110f, 200f, activeSylIdx = 0, curGX = 100f, progress = 1f))
+        // The last syllable of a line shifts by half the gradient width as it finishes so the line clears completely.
+        assertEquals(
+            WIPE_PAST,
+            wipe(1, 110f, 200f, activeSylIdx = 1, curGX = 200f, progress = 1f, isActiveSylLastOfLine = true),
+        )
     }
 
     @Test
-    fun sungWordStaysLitWhenTheNextWordStarts() {
-        assertEquals(WIPE_PAST, wipe(0, 0f, 100f, activeSylIdx = 1, curGX = 110f, progress = 0f))
+    fun sungWordClearsAsTheNextWordAdvancesPastHalfGradient() {
+        assertEquals(WIPE_BAND, wipe(0, 0f, 100f, activeSylIdx = 1, curGX = 110f, progress = 0f))
+        assertEquals(WIPE_PAST, wipe(0, 0f, 100f, activeSylIdx = 1, curGX = 120f, progress = 0.2f))
         assertEquals(WIPE_UNLIT, wipe(2, 210f, 300f, activeSylIdx = 1, curGX = 110f, progress = 0f))
     }
 }

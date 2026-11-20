@@ -23,4 +23,11 @@ class BraccatoExitTest {
         assertEquals(0f, braccatoExitOpacity(15_000f))
         assertEquals(0f, braccatoExitOpacity(60_000f))
     }
+
+    @Test
+    fun swipeCompletionExtendsPastRawWordDurationSoFinalLetterFills() {
+        val elapsed = braccatoSwipeCompletionElapsedMs(1_000f)
+        assertEquals(1_100f, elapsed)
+        assertEquals(0f, braccatoSwipeCompletionElapsedMs(0f))
+    }
 }
