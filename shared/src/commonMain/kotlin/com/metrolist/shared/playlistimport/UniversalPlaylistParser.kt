@@ -19,6 +19,7 @@ object UniversalPlaylistParser {
 
     // A separator between two digits is part of titles like 4:44, not a list marker.
     private val numberingRegex = Regex("""^\s*(?:\[\d+]|\d+(?![.\-:]\d)[\.\-\):\s]+)\s*""")
+    private val pathFileExtensionRegex = Regex("""\.[A-Za-z0-9]+$""")
     private val bareYoutubeIdRegex = Regex("[A-Za-z0-9_-]{11}")
     private val youtubeHosts = setOf("youtube.com", "www.youtube.com", "m.youtube.com", "music.youtube.com", "youtu.be")
 
@@ -255,12 +256,16 @@ object UniversalPlaylistParser {
                 val cleaned = numberingRegex.replace(line, "").trim()
                 if (cleaned.isBlank()) return@mapNotNull null
                 val videoId = extractVideoId(cleaned)
+                val (labelArtist, labelTitle) = splitArtistAndTitle(cleaned)
                 val directReference =
-                    cleaned.takeIf { videoId == null && looksLikeDirectReference(it) }?.let {
-                        resolveDirectReference(it, resolveLocalReference)
-                    }
+                    cleaned
+                        .takeIf { videoId == null && looksLikeDirectReference(it) }
+                        ?.let { resolveDirectReference(it, resolveLocalReference) }
+                        ?.takeUnless { (_, resolved) ->
+                            !resolved && labelArtist.isNotBlank() && labelTitle.isNotBlank() && isAmbiguousSlashLabel(cleaned)
+                        }
                 val (artist, title) =
-                    if (directReference == null) splitArtistAndTitle(cleaned) else "" to referenceTitle(cleaned)
+                    if (directReference == null) labelArtist to labelTitle else "" to referenceTitle(cleaned)
                 if (title.isBlank() && videoId == null && directReference == null) return@mapNotNull null
                 PlaylistImportManager.CsvTrack(
                     title.ifBlank { cleaned },
@@ -273,6 +278,11 @@ object UniversalPlaylistParser {
             }.take(PlaylistImportManager.MAX_PLAYLIST_TRACKS + 1)
             .toList()
             .checkTrackLimit()
+
+    // An artist or title can contain a slash; only favor the label if the reference has no stronger path signal.
+    private fun isAmbiguousSlashLabel(value: String): Boolean =
+        '/' in value && '\\' !in value && !value.startsWith('/') && !value.startsWith('.') &&
+            uriScheme(value) == null && !pathFileExtensionRegex.containsMatchIn(value.substringAfterLast('/'))
 
     private fun List<PlaylistImportManager.CsvTrack>.checkTrackLimit(): List<PlaylistImportManager.CsvTrack> {
         if (size > PlaylistImportManager.MAX_PLAYLIST_TRACKS) throw ImportException(ImportErrorKey.TooManyTracks)
