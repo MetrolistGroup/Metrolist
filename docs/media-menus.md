@@ -14,8 +14,6 @@ Unavailable episodes remain visible for management and sharing. Disable playback
 
 Keep downloads, storage permissions, confirmation, native sharing, clipboard modifiers, file export and System equalizer as platform callbacks. Guests cannot start radio or bypass host transport restrictions.
 
-On Android and iOS, select up to five lines in the player lyrics and use Share to story in the lyrics share dialog to create a 9:16 image with the selected lyrics, artwork, title and artist. The story share sends only the image; native share sheets handle destination selection.
-
 Android and iOS song, queue and player menus use the shared player session for dislikes. Disliking the current song invokes the player's Next command, including room restrictions and remote playback routing. Removing a dislike or disliking another song does not advance playback. Queue occurrences stay in place.
 
 Song, queue and player menus share the confirmed Delete upload action for signed-in users. It reads stored upload metadata for rows built from downloads or incomplete queue metadata and fetches the complete uploads list if the entity ID is missing. Deletion clears library membership while keeping local audio, history and playlist entries; download removal and playlist removal have their own actions.
