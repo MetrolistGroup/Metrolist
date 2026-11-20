@@ -297,7 +297,9 @@ private fun WindowsAccountContent(
                 failed = accounts.isEmpty()
                 if (accountDiscoveryAction(accounts.size, isSwitchingChannel) == AccountDiscoveryAction.COMPLETE_LOGIN) {
                     val candidate = authData.copy(dataSyncId = singleAccountDataSyncId(authData.dataSyncId, accounts))
-                    if (authManager.validateAndSaveCredentials(
+                    if (candidate.dataSyncId.isBlank()) {
+                        failed = true
+                    } else if (authManager.validateAndSaveCredentials(
                             candidate.cookie,
                             candidate.visitorData,
                             candidate.dataSyncId,
@@ -366,7 +368,10 @@ private fun WindowsAccountContent(
                 shapes = ButtonDefaults.shapes(),
             ) { Text(stringResource(Res.string.channel_switch_sign_in_again)) }
             Button(
-                enabled = !busy && (selectedAccount != null || (accounts.isEmpty() && authData.cookie.isNotBlank())),
+                enabled =
+                    !busy &&
+                        (selectedAccount != null ||
+                            (accounts.isEmpty() && authData.cookie.isNotBlank() && authData.dataSyncId.isNotBlank())),
                 onClick = {
                     val selected = selectedAccount
                     scope.launch {
