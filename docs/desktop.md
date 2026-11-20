@@ -24,6 +24,10 @@ Windows caption hit testing takes its own snapshot of Compose scene layers. Nati
 
 Connected action groups use the shared Material shapes and spacing, with fixed corners during press and selection. The fullscreen artwork player's action buttons are 40 dp tall, and its transport buttons share one height. Overflow sizing includes minimum touch targets and the gap before the overflow button so the last visible action has the trailing corners. The bottom volume button stays round beside overflow, with a 12 dp gap before the volume segment.
 
+## Keyboard shortcuts
+
+Non-QWERTY shortcut matching uses the physical key position while the app window is active. Windows captures scan codes with a low-level keyboard hook. macOS listens for key events through a listen-only event tap and requires Input Monitoring permission in System Settings > Privacy & Security. Linux captures physical keys only with the X11 toolkit, including XWayland, and requires the Xtst runtime library. Native Wayland has no physical-key capture. When capture is denied or unavailable, shortcuts fall back to AWT's key code and character; non-QWERTY layouts may then behave according to the produced character instead of the physical key position. A captured key without a mapped physical position does not match a physical-position shortcut.
+
 ## Miniplayer
 
 The Linux miniplayer and player top bar use the main window's X11 drag handler, which avoids Compose's JBR window-move lookup. When Java does not export its X11 peer APIs, the handler falls back to pointer-based window positioning. The player top bar uses it with both system and custom window frames. Both JVM and native packages use this handler. Linux keeps the miniplayer window opaque, because some backends stop drawing transparent undecorated windows, so both layouts use square corners there.
