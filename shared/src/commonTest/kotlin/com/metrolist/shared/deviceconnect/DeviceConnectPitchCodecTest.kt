@@ -28,7 +28,12 @@ class DeviceConnectPitchCodecTest {
         val cleared =
             reduceDcPlayback(
                 DcLocalPlaybackState(queue = queue, explicitRadioQueue = true),
-                DcPlaybackCommand(DcPlaybackAction.REPLACE_QUEUE),
+                DcPlaybackCommand(
+                    action = DcPlaybackAction.REPLACE_QUEUE,
+                    songs = listOf(song),
+                    index = 0,
+                    finite = false,
+                ),
             )
         assertEquals(false, cleared?.playback?.explicitRadioQueue)
     }
