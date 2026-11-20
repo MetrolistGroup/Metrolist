@@ -17,6 +17,28 @@ import javax.sound.sampled.FloatControl
 import javax.sound.sampled.SourceDataLine
 import kotlin.math.log10
 
+internal fun mapPcm16ChannelCount(
+    data: ByteArray,
+    inputChannelCount: Int,
+    outputChannelCount: Int,
+): ByteArray {
+    require(inputChannelCount > 0 && outputChannelCount >= inputChannelCount)
+    if (inputChannelCount == outputChannelCount) return data
+
+    val inputFrameSize = inputChannelCount * Short.SIZE_BYTES
+    require(data.size % inputFrameSize == 0)
+    val outputFrameSize = outputChannelCount * Short.SIZE_BYTES
+    return ByteArray(data.size / inputFrameSize * outputFrameSize).also { output ->
+        var inputOffset = 0
+        var outputOffset = 0
+        while (inputOffset < data.size) {
+            data.copyInto(output, outputOffset, inputOffset, inputOffset + inputFrameSize)
+            inputOffset += inputFrameSize
+            outputOffset += outputFrameSize
+        }
+    }
+}
+
 private data class RenderedAudioChunk(
     val data: ByteArray,
     val playbackSpeed: Float,
@@ -53,6 +75,8 @@ class AudioRenderer internal constructor(
     private var line: SourceDataLine
     private var masterGainControl: FloatControl? = null
     private val lineBufferSize = (0.15 * audioFormat.sampleRate * audioFormat.frameSize).toInt()
+    private var outputChannelCount = channelCount
+    private var outputFrameSize = audioFormat.frameSize
 
     @Volatile
     private var hardwareVolumeApplied = false
@@ -172,8 +196,9 @@ class AudioRenderer internal constructor(
         outputSpeed: Float,
         isCurrent: () -> Boolean = { true },
     ): Boolean {
+        val mappedData = mapPcm16ChannelCount(data, channelCount, outputChannelCount)
         var offset = 0
-        while (offset < data.size) {
+        while (offset < mappedData.size) {
             val result =
                 synchronized(safeLock) {
                     while (!closed && generation == outputGeneration && !isPlaying) {
@@ -202,9 +227,9 @@ class AudioRenderer internal constructor(
                     val boost = normalizationGain
                     val outputData =
                         if (currentVol != 1f || boost > 1f) {
-                            applyVolume(data, currentVol, boost)
+                            applyVolume(mappedData, currentVol, boost)
                         } else {
-                            data
+                            mappedData
                         }
                     val availableBytes =
                         try {
@@ -217,9 +242,9 @@ class AudioRenderer internal constructor(
                             throw error
                         }
                     val writableBytes =
-                        minOf(outputData.size - offset, availableBytes) / audioFormat.frameSize * audioFormat.frameSize
+                        minOf(outputData.size - offset, availableBytes) / outputFrameSize * outputFrameSize
                     if (writableBytes == 0) {
-                        val bufferedFrames = (line.bufferSize - availableBytes).coerceAtLeast(0) / audioFormat.frameSize
+                        val bufferedFrames = (line.bufferSize - availableBytes).coerceAtLeast(0) / outputFrameSize
                         val waitMs = (bufferedFrames * 500L / sampleRate).coerceIn(1L, 20L)
                         try {
                             safeLock.wait(waitMs)
@@ -243,8 +268,8 @@ class AudioRenderer internal constructor(
                             throw error
                         }.let { writtenBytes ->
                             if (writtenBytes > 0) {
-                                rememberWrittenOutput(data, offset, writtenBytes)
-                                writtenFrameCount += writtenBytes / audioFormat.frameSize
+                                rememberWrittenOutput(outputData, offset, writtenBytes)
+                                writtenFrameCount += writtenBytes / outputFrameSize
                                 discardPlayedOutput()
                                 hasWrittenAudio = true
                                 expectingOutput = true
@@ -280,7 +305,7 @@ class AudioRenderer internal constructor(
                     "rendererId" to System.identityHashCode(this).toString(),
                     "underrunCount" to underrunCount.toString(),
                     "audioBufferBytes" to bufferBytes.toString(),
-                    "audioBufferMs" to (bufferBytes * 1_000L / audioFormat.frameSize / sampleRate).toString(),
+                    "audioBufferMs" to (bufferBytes * 1_000L / outputFrameSize / sampleRate).toString(),
                     "lastAudioWriteMs" to ((now - lastWriteAtNs) / 1_000_000L).toString(),
                     "lineActive" to line.isActive.toString(),
                     "lineRunning" to line.isRunning.toString(),
@@ -297,6 +322,11 @@ class AudioRenderer internal constructor(
     private fun createOutputLine(start: Boolean): SourceDataLine =
         lineFactory(audioFormat, lineBufferSize).apply {
             if (!isOpen) open(audioFormat, lineBufferSize)
+            val openedFormat = format
+            if (openedFormat.channels > channelCount) {
+                outputChannelCount = openedFormat.channels
+                outputFrameSize = openedFormat.frameSize
+            }
             if (start) start()
         }
 
@@ -337,7 +367,7 @@ class AudioRenderer internal constructor(
             return
         }
         val playedFrames = (currentOutputFrame().coerceAtMost(writtenFrameCount) - pendingOutputBaseFrame).coerceAtLeast(0L)
-        var bytesToDiscard = (playedFrames * audioFormat.frameSize).coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
+        var bytesToDiscard = (playedFrames * outputFrameSize).coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
         while (bytesToDiscard > 0 && pendingOutputChunks.isNotEmpty()) {
             val first = pendingOutputChunks.first()
             val available = first.size - pendingOutputChunkOffset
@@ -349,7 +379,7 @@ class AudioRenderer internal constructor(
                 pendingOutputChunkOffset = 0
             }
         }
-        val discardedFrames = playedFrames - bytesToDiscard / audioFormat.frameSize
+        val discardedFrames = playedFrames - bytesToDiscard / outputFrameSize
         pendingOutputBaseFrame += discardedFrames
         if (pendingOutputChunks.isEmpty()) {
             pendingOutputBaseFrame = writtenFrameCount
@@ -372,7 +402,7 @@ class AudioRenderer internal constructor(
                 }
                 throw error
             }
-        val writableBytes = minOf(outputData.size - replayOutputChunkOffset, availableBytes) / audioFormat.frameSize * audioFormat.frameSize
+        val writableBytes = minOf(outputData.size - replayOutputChunkOffset, availableBytes) / outputFrameSize * outputFrameSize
         if (writableBytes <= 0) return 0
         val writtenBytes =
             try {
@@ -621,7 +651,7 @@ class AudioRenderer internal constructor(
                 expectingOutput = false
                 positionClock.finishSilence(writtenFrameCount, silenceSkipper.outputFrames)
                 val bufferedBytes = (line.bufferSize.toLong() - line.available()).coerceAtLeast(0L)
-                val bytesPerSecond = sampleRate.toLong() * audioFormat.frameSize
+                val bytesPerSecond = sampleRate.toLong() * outputFrameSize
                 (bufferedBytes * 1_000L + bytesPerSecond - 1L) / bytesPerSecond + 250L
             }
         // SourceDataLine.drain() cannot be interrupted reliably on every mixer.
