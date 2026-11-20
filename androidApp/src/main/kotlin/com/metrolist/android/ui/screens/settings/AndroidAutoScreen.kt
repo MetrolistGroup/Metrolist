@@ -116,10 +116,8 @@ fun AndroidAutoScreen(onNavigateBack: () -> Unit) {
                 thumbnail = libraryArtwork(playlist.id, playlist.thumbnailUrl, playlist.playlist.customThumbnailUrl),
             )
         }
-    val localBrowseIds = localPlaylists.mapNotNullTo(mutableSetOf()) { it.playlist.browseId }
     val youtubeChoices =
-        youtubePlaylists
-            .filterNot { it.id in localBrowseIds }
+        availableYoutubeAutomotivePinChoices(localPlaylists.map { it.playlist.browseId }, youtubePlaylists)
             .map { playlist ->
                 AutomotivePinnedPlaylist(
                     source = AutomotivePlaylistSource.YOUTUBE,
@@ -367,4 +365,12 @@ private fun notifyAutomotiveLibraryChanged(context: Context) {
     context.startService(
         Intent(context, MusicService::class.java).setAction(MusicService.ACTION_REFRESH_AUTOMOTIVE_LIBRARY),
     )
+}
+
+internal fun availableYoutubeAutomotivePinChoices(
+    localBrowseIds: List<String?>,
+    youtubePlaylists: List<PlaylistItem>,
+): List<PlaylistItem> {
+    val storedIds = localBrowseIds.mapNotNullTo(mutableSetOf()) { it?.removePrefix("VL")?.takeIf(String::isNotBlank) }
+    return youtubePlaylists.filterNot { it.id.removePrefix("VL") in storedIds }
 }
