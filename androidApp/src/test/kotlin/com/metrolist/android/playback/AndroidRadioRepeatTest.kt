@@ -182,6 +182,7 @@ class AndroidRadioRepeatTest {
                                         Long::class.javaPrimitiveType,
                                         ReflectionHelpers.getField<Long>(coordinator, "recommendationRequestGeneration"),
                                     ),
+                                    from(Boolean::class.javaPrimitiveType, Settings.shared.classicRecommendations),
                                     from(Boolean::class.javaPrimitiveType, false),
                                     from(String::class.java, QUEUE_SOURCE_AUTO_MIX),
                                     from(String::class.java, null),

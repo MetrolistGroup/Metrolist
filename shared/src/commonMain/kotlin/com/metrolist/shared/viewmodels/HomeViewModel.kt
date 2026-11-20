@@ -1025,10 +1025,30 @@ class HomeViewModel(
         if (isFiltered) {
             cachedSelectedChipContent = updated
             updated.selectedChip?.let { chip -> cacheChipContent(chip, updated) }
+            rebuildCachedAllQuickPicks(localQuickPicks, localForgottenFavorites)
         } else {
             cacheAllContentState(updated)
         }
         saveLastHomePage(updated)
+    }
+
+    // The mode change applies to the cached All feed too; rebuild its picks so
+    // returning to All does not restore the previous mode's selection.
+    private fun rebuildCachedAllQuickPicks(
+        localQuickPicks: List<SongItem>,
+        localForgottenFavorites: List<SongItem>,
+    ) {
+        val cached = cachedAllContent ?: return
+        val apiQuickPicks =
+            findSectionSongs(cached.data.orEmpty(), "FEmusic_quickpicks").ifEmpty { cached.quickPicks }
+        val quickPicks =
+            if (Settings.shared.classicRecommendations) {
+                classicQuickPicks(localQuickPicks, localForgottenFavorites).ifEmpty { apiQuickPicks }
+            } else {
+                personalizedSection(apiQuickPicks, localQuickPicks, isFiltered = false)
+            }.distinctBy(::canonicalHomeItemId)
+        cachedAllContent =
+            cached.copy(quickPicks = BlockedContent.filterSongs(quickPicks, BlockedContent.snapshot()))
     }
 
     private fun HomeUiState.withMergedSections(
