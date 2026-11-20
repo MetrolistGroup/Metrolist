@@ -156,6 +156,30 @@ class MediaSessionPlayerTest {
     }
 
     @Test
+    fun localLivePreviousWrapsFirstQueueEntryInRepeatAllWithoutRestarting() {
+        val live = song("live").copy(musicVideoType = "MUSIC_VIDEO_TYPE_LIVE")
+        val last = song("last")
+        val backend = RecordingPlaybackPlayer(listOf(live, last))
+        val repeat = MutableStateFlow(Player.REPEAT_MODE_ALL)
+        val scope = CoroutineScope(Dispatchers.Unconfined + SupervisorJob())
+        try {
+            val adapter = MediaSessionPlayer(backend.player, repeat, scope = scope)
+            assertTrue(adapter.isCurrentMediaItemLive)
+            backend.currentPosition.value = 15_000L
+
+            adapter.seekToPrevious()
+
+            assertEquals(1, backend.currentMediaItemIndex.value)
+            assertEquals(last, backend.currentSong.value)
+            assertEquals(0L, backend.currentPosition.value)
+            assertFalse(backend.wantsPlayback)
+            assertTrue(backend.seekSources.isEmpty())
+        } finally {
+            scope.cancel()
+        }
+    }
+
+    @Test
     fun previousFromLiveCastMovesToPreviousTrackWithoutSeekingTheStream() {
         val live = song("live").copy(musicVideoType = "MUSIC_VIDEO_TYPE_LIVE")
         val backend = RecordingPlaybackPlayer(listOf(song("previous"), live))
