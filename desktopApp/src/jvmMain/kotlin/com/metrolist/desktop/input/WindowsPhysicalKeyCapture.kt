@@ -8,19 +8,54 @@ import com.sun.jna.platform.win32.WinDef.LRESULT
 import com.sun.jna.platform.win32.WinDef.WPARAM
 import com.sun.jna.platform.win32.WinUser
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.ConcurrentLinkedDeque
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import java.awt.event.KeyEvent as AwtKeyEvent
 
 internal const val WINDOWS_LOW_LEVEL_EXTENDED_KEY_FLAG = 0x01
+private const val PENDING_KEY_CAPTURE_MAX_AGE_NANOS = 5_000_000_000L
 
-internal class WindowsPhysicalKeyCapture : AutoCloseable {
+internal class WindowsPhysicalKeyCaptureBuffer(
+    private val timeSourceNanos: () -> Long = System::nanoTime,
+) {
     private data class CapturedKey(
         val scanCode: Int,
         val flags: Int,
+        val capturedAtNanos: Long,
     )
 
-    private val scanCodesByVirtualKey = ConcurrentHashMap<Int, CapturedKey>()
+    private val capturesByVirtualKey = ConcurrentHashMap<Int, ConcurrentLinkedDeque<CapturedKey>>()
+
+    fun record(
+        virtualKeyCode: Int,
+        scanCode: Int,
+        flags: Int,
+    ) {
+        capturesByVirtualKey
+            .computeIfAbsent(virtualKeyCode) { ConcurrentLinkedDeque() }
+            .addLast(CapturedKey(scanCode, flags, timeSourceNanos()))
+    }
+
+    fun consume(awtKeyCode: Int): PhysicalKeyPosition? {
+        val virtualKeyCode = windowsVirtualKeyForAwtCode(awtKeyCode)
+        val captures = capturesByVirtualKey[virtualKeyCode] ?: return null
+        val now = timeSourceNanos()
+        while (true) {
+            val oldest = captures.peekFirst() ?: break
+            if (now - oldest.capturedAtNanos <= PENDING_KEY_CAPTURE_MAX_AGE_NANOS) break
+            captures.pollFirst()
+        }
+        val capturedKey = captures.pollFirst()
+        if (captures.isEmpty()) capturesByVirtualKey.remove(virtualKeyCode, captures)
+        return capturedKey?.let { windowsPhysicalPositionForScanCode(it.scanCode, it.flags) }
+    }
+
+    fun clear() = capturesByVirtualKey.clear()
+}
+
+internal class WindowsPhysicalKeyCapture : AutoCloseable {
+    private val pendingKeyCaptures = WindowsPhysicalKeyCaptureBuffer()
 
     @Volatile private var hook: WinUser.HHOOK? = null
 
@@ -40,22 +75,20 @@ internal class WindowsPhysicalKeyCapture : AutoCloseable {
             ): LRESULT {
                 if (code >= 0) {
                     val messageId = message.toInt()
-                    val pointer = Pointer.createConstant(data.toLong())
+                    val pointer = Pointer(data.toLong())
                     val virtualKeyCode = pointer.getInt(0)
                     when (messageId) {
                         WM_KEYDOWN, WM_SYSKEYDOWN -> {
                             if (enabled) {
-                                scanCodesByVirtualKey[virtualKeyCode] =
-                                    CapturedKey(
-                                        pointer.getInt(Int.SIZE_BYTES.toLong()),
-                                        pointer.getInt((Int.SIZE_BYTES * 2).toLong()),
-                                    )
+                                pendingKeyCaptures.record(
+                                    virtualKeyCode,
+                                    pointer.getInt(Int.SIZE_BYTES.toLong()),
+                                    pointer.getInt((Int.SIZE_BYTES * 2).toLong()),
+                                )
                             }
                         }
 
-                        WM_KEYUP, WM_SYSKEYUP -> {
-                            scanCodesByVirtualKey.remove(virtualKeyCode)
-                        }
+                        WM_KEYUP, WM_SYSKEYUP -> {}
                     }
                 }
                 return User32.INSTANCE.CallNextHookEx(hook, code, message, data)
@@ -88,7 +121,7 @@ internal class WindowsPhysicalKeyCapture : AutoCloseable {
                         hook?.let(User32.INSTANCE::UnhookWindowsHookEx)
                         hook = null
                         hookThreadId = null
-                        scanCodesByVirtualKey.clear()
+                        pendingKeyCaptures.clear()
                     },
                     "Metrolist Windows shortcut key capture",
                 ).apply {
@@ -100,17 +133,13 @@ internal class WindowsPhysicalKeyCapture : AutoCloseable {
             hookThreadId?.let { threadId ->
                 User32.INSTANCE.PostThreadMessage(threadId, WinUser.WM_QUIT, WPARAM(0), LPARAM(0))
             }
-            scanCodesByVirtualKey.clear()
+            pendingKeyCaptures.clear()
             hookThread?.join(1_000)
             hookThread = null
         }
     }
 
-    fun consume(awtKeyCode: Int): PhysicalKeyPosition? {
-        val virtualKeyCode = windowsVirtualKeyForAwtCode(awtKeyCode)
-        val capturedKey = scanCodesByVirtualKey.remove(virtualKeyCode) ?: return null
-        return windowsPhysicalPositionForScanCode(capturedKey.scanCode, capturedKey.flags)
-    }
+    fun consume(awtKeyCode: Int): PhysicalKeyPosition? = pendingKeyCaptures.consume(awtKeyCode)
 
     override fun close() = setEnabled(false)
 
