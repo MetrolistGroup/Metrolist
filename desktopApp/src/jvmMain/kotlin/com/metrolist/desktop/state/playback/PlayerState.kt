@@ -3634,7 +3634,7 @@ object PlayerState {
         val connectedSession = deviceConnect.isActive
         val wasPlaying =
             when {
-                castManager.state.value.isConnected -> playbackTransitions.playbackIntent(desiredPlayback.value)
+                castManager.state.value.isConnected -> castPlayback.playbackIntent(castManager.state.value.isPlaying)
                 isPlaybackResolving -> desiredPlayback.value
                 else -> player.wantsPlayback
             }

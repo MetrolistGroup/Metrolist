@@ -43,12 +43,8 @@ class DeviceConnectPitchCodecTest {
         assertEquals(1.25f, DcJson.decodeFromString<LegacyPlayback>(DcJson.encodeToString(state)).speed)
         val update = DcSyncMessage(DcSyncMessageType.UPDATE, speed = 1.5f, pitch = 0.75f)
         assertEquals(1.5f, DcJson.decodeFromString<LegacyPlayback>(DcJson.encodeToString(update)).speed)
-        val info =
-            DeviceInfoPayload("new", "New", "desktop", playbackVersion = DEVICE_CONNECT_PLAYBACK_VERSION, supportsPlaybackPitch = true)
-        assertEquals(
-            DEVICE_CONNECT_PLAYBACK_VERSION,
-            DcJson.decodeFromString<LegacyDeviceInfo>(DcJson.encodeToString(info)).playbackVersion,
-        )
+        val info = DeviceInfoPayload("new", "New", "desktop", playbackVersion = 4, supportsPlaybackPitch = true)
+        assertEquals(4, DcJson.decodeFromString<LegacyDeviceInfo>(DcJson.encodeToString(info)).playbackVersion)
     }
 
     @Serializable
