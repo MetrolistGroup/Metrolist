@@ -47,12 +47,12 @@ class HomeSectionCategorizationTest {
     @Test
     fun savedAlbumFilterPreservesYourShowsAcrossPagesAndLeavesRecommendationsAlone() {
         val music = HomeSection("From your library", listOf(album("unsaved")), browseId = "FEmusic_library_landing")
-        val recommendations = music.copy(browseId = "FEmusic_recommendations")
+        val recommendations = music.copy(browseId = "FEmusic_recommendations", params = "recommendation-params")
         for (browseId in listOf("FEmusic_library_podcasts", "FEmusic_library_non_music_audio_list")) {
             val shows = HomeSection("Your shows", listOf(PodcastItem("MPSPshow", "Show", null)), browseId = browseId, params = "shows")
             val nextShows = shows.copy(items = listOf(PodcastItem("MPSPnext", "Next show", null)))
             for (sections in listOf(listOf(music, shows, nextShows), listOf(shows, music, nextShows))) {
-                val merged = mergeAndDeduplicateHomeSections(sections) + recommendations
+                val merged = mergeAndDeduplicateHomeSections(sections + recommendations)
                 assertEquals(
                     listOf(shows.copy(items = shows.items + nextShows.items), recommendations),
                     uncategorizedHomeSections(merged).withLibraryMusicAlbumsOnly(emptySet()),
@@ -137,6 +137,29 @@ class HomeSectionCategorizationTest {
 
         assertEquals(1, merged.size)
         assertEquals(listOf("s1", "s2", "s3"), merged.single().items.map { it.id })
+    }
+
+    @Test
+    fun sameTitleShelvesKeepDistinctBrowseRoutesWhileContinuationsMerge() {
+        val first = HomeSection("Mixes", listOf(playlist("one")), browseId = "FEmusic_community", params = "first")
+        val second = HomeSection("mixes", listOf(playlist("two")), browseId = "FEmusic_recommendations", params = "second")
+        val continuation = second.copy(items = listOf(playlist("three")))
+
+        assertEquals(
+            listOf(first, second.copy(items = second.items + continuation.items)),
+            mergeAndDeduplicateHomeSections(listOf(first, second, continuation)),
+        )
+    }
+
+    @Test
+    fun titleOnlyContinuationStillMergesIntoItsShelf() {
+        val first = HomeSection("Mixes", listOf(playlist("one")), browseId = "FEmusic_recommendations", params = "mixes")
+        val continuation = HomeSection("mixes", listOf(playlist("two")))
+
+        assertEquals(
+            listOf(first.copy(items = first.items + continuation.items)),
+            mergeAndDeduplicateHomeSections(listOf(first, continuation)),
+        )
     }
 
     @Test

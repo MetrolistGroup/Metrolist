@@ -79,7 +79,12 @@ fun mergeAndDeduplicateHomeSections(
             continue
         }
 
-        val existingIndex = (browseIdKey?.let { seenBrowseIds[it] } ?: titleKey?.let { seenTitles[it] })
+        val existingIndex =
+            browseIdKey?.let { seenBrowseIds[it] } ?: titleKey?.let { seenTitles[it] }?.takeIf { index ->
+                // Identical labels can refer to different destinations, such as library and discovery shelves.
+                val existingBrowseId = result[index].browseId
+                browseIdKey == null || existingBrowseId.isNullOrBlank() || browseIdKey == existingBrowseId
+            }
         if (existingIndex != null) {
             val existing = result[existingIndex]
             val mergedItems = (existing.items + uniqueItems).distinctBy(::canonicalHomeItemId)
@@ -88,7 +93,7 @@ fun mergeAndDeduplicateHomeSections(
             val index = result.size
             result.add(section.copy(items = uniqueItems))
             browseIdKey?.let { seenBrowseIds[it] = index }
-            titleKey?.let { seenTitles[it] = index }
+            titleKey?.let { seenTitles.getOrPut(it) { index } }
         }
     }
 
