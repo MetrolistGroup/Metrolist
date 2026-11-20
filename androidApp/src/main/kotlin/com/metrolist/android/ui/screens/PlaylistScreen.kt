@@ -157,7 +157,9 @@ import com.metrolist.shared.ui.theme.uiEnhanced
 import com.metrolist.shared.ui.tv.tvFocusHighlight
 import com.metrolist.shared.utils.ArtworkPrefetchWindow
 import com.metrolist.shared.utils.ShareUrls
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
@@ -277,6 +279,7 @@ fun PlaylistScreen(
     var stagedCoverUri by remember { mutableStateOf<Uri?>(null) }
     var stagedCoverBytes by remember { mutableStateOf<ByteArray?>(null) }
     var stagedCoverRemove by remember { mutableStateOf(false) }
+    var coverReadJob by remember { mutableStateOf<Job?>(null) }
 
     fun handleRemoveCover() {
         val info = playlistInfo ?: return
@@ -289,9 +292,16 @@ fun PlaylistScreen(
     }
 
     fun clearStagedCover() {
+        coverReadJob?.cancel()
+        coverReadJob = null
         stagedCoverUri = null
         stagedCoverBytes = null
         stagedCoverRemove = false
+    }
+
+    fun stageCoverRemoval() {
+        clearStagedCover()
+        stagedCoverRemove = true
     }
 
     fun applyStagedCover() {
@@ -336,12 +346,15 @@ fun PlaylistScreen(
     }
 
     fun handlePickedCover(uri: Uri) {
-        if (isCoverUploading) return
-        isCoverUploading = true
-        coroutineScope.launch(Dispatchers.IO) {
-            try {
-                val bytes = runCatching { context.contentResolver.openInputStream(uri)?.use(::readPlaylistCover) }.getOrNull()
-                withContext(Dispatchers.Main) {
+        if (isCoverUploading || coverReadJob != null || !showRenameDialog) return
+        val job =
+            coroutineScope.launch(start = CoroutineStart.LAZY) {
+                try {
+                    val bytes =
+                        withContext(Dispatchers.IO) {
+                            runCatching { context.contentResolver.openInputStream(uri)?.use(::readPlaylistCover) }.getOrNull()
+                        }
+                    if (coverReadJob !== coroutineContext[Job]) return@launch
                     if (bytes == null) {
                         Toast.makeText(context, coverUpdateFailedText, Toast.LENGTH_SHORT).show()
                     } else {
@@ -349,11 +362,12 @@ fun PlaylistScreen(
                         stagedCoverBytes = bytes
                         stagedCoverRemove = false
                     }
+                } finally {
+                    if (coverReadJob === coroutineContext[Job]) coverReadJob = null
                 }
-            } finally {
-                isCoverUploading = false
             }
-        }
+        coverReadJob = job
+        job.start()
     }
     val coverPicker =
         rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
@@ -377,6 +391,7 @@ fun PlaylistScreen(
     }
 
     fun saveFullEdit() {
+        if (coverReadJob != null) return
         applyStagedCover()
         if (isEditablePlaylist && editName.isNotBlank()) {
             viewModel.updatePlaylist(editName, editDescription) { result ->
@@ -977,6 +992,7 @@ fun PlaylistScreen(
                             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                                 TextButton(
                                     onClick = { launchCoverPicker() },
+                                    enabled = coverReadJob == null,
                                     modifier = Modifier.tvFocusHighlight(CircleShape),
                                     shapes = ButtonDefaults.shapes(),
                                 ) {
@@ -984,11 +1000,7 @@ fun PlaylistScreen(
                                 }
                                 if (stagedCoverUri != null || hasStagedCustom) {
                                     TextButton(
-                                        onClick = {
-                                            stagedCoverUri = null
-                                            stagedCoverBytes = null
-                                            stagedCoverRemove = true
-                                        },
+                                        onClick = { stageCoverRemoval() },
                                         modifier = Modifier.tvFocusHighlight(CircleShape),
                                         shapes = ButtonDefaults.shapes(),
                                     ) {
@@ -1017,12 +1029,16 @@ fun PlaylistScreen(
                 confirmButton = {
                     if (isEditablePlaylist) {
                         TextButton(
-                            enabled = editName.isNotBlank(),
+                            enabled = editName.isNotBlank() && coverReadJob == null,
                             onClick = { saveFullEdit() },
                             shapes = ButtonDefaults.shapes(),
                         ) { Text(stringResource(Res.string.save)) }
                     } else {
-                        TextButton(onClick = { saveFullEdit() }, shapes = ButtonDefaults.shapes()) { Text(stringResource(Res.string.done)) }
+                        TextButton(
+                            enabled = coverReadJob == null,
+                            onClick = { saveFullEdit() },
+                            shapes = ButtonDefaults.shapes(),
+                        ) { Text(stringResource(Res.string.done)) }
                     }
                 },
                 dismissButton = {
