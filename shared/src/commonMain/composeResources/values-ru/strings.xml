@@ -2139,7 +2139,7 @@
     <string name="lyrics_youtube_captions">Субтитры YouTube</string>
     <string name="edit_playlist_cover">Изменить обложку альбома</string>
     <string name="edit_playlist_cover_note">Чтобы изменить обложку плейлиста, ваша учетная запись должна быть привязана к номеру телефона и подтверждена в YouTube Music</string>
-    <string name="edit_playlist_cover_note_wait">После выбора изображения подождите немного, пока новая обложка появится в вашем плейлистe</string>
+    <string name="edit_playlist_cover_note_wait">После выбора изображения подождите немного, пока новая обложка появится в вашем плейлисте</string>
     <string name="choose_from_library">Выбрать из библиотеки</string>
     <string name="remove_custom_image">Удалить изменённую обложку</string>
     <string name="playlist_cover_update_failed">Не удалось обновить обложку альбома</string>
@@ -2431,7 +2431,7 @@
     <string name="play_on_app">Воспроизвести в Metrolist</string>
     <string name="re_listen">Прослушать ещё раз</string>
     <string name="stands_with_palestine">Этот проект поддерживает Палестину</string>
-    <string name="about_play_favorite_song">Хотите включить их любимую песню?</string>
+    <string name="about_play_favorite_song">Включить любимую песню этого участника?</string>
     <string name="recognition_match_found">Найдено совпадение</string>
     <string name="recognition_listening_hint">Поднесите телефон к источнику музыки</string>
     <string name="no_recognized_songs_hint">Здесь будут отображаться песни, которые вы распознаете.</string>
