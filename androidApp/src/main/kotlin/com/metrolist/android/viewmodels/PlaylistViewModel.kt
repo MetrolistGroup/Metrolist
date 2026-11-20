@@ -402,11 +402,12 @@ class PlaylistViewModel(
                                 repositoryProvider().continuePlaylistPage(page, applyContentFilters = false)
                             }
                         if (_page.value !== page) return@withLock
-                        publishLoadedSongs(next.songs, next.sections.playlistSuggestions(), next.hasMore) {
+                        val songs = next.songs.preservePlaylistOccurrenceMappings(_songs.value)
+                        publishLoadedSongs(songs, next.sections.playlistSuggestions(), next.hasMore) {
                             _page.value = next
                             _playlistTrackCount.intValue = next.songs.size
                         }
-                        if (!next.hasMore) cachePlaylist(_playlistId.value ?: return@withLock, _playlistInfo.value, next.songs)
+                        if (!next.hasMore) cachePlaylist(_playlistId.value ?: return@withLock, _playlistInfo.value, songs)
                     }
                 } catch (e: CancellationException) {
                     throw e
@@ -425,8 +426,9 @@ class PlaylistViewModel(
             withContext(Dispatchers.IO) {
                 repositoryProvider().completePlaylistPage(initial, applyContentFilters = false)
             }
-        cachePlaylist(_playlistId.value ?: return _songs.value, _playlistInfo.value, page.songs)
-        publishLoadedSongs(page.songs, page.sections.playlistSuggestions()) {
+        val songs = page.songs.preservePlaylistOccurrenceMappings(_songs.value)
+        cachePlaylist(_playlistId.value ?: return _songs.value, _playlistInfo.value, songs)
+        publishLoadedSongs(songs, page.sections.playlistSuggestions()) {
             _page.value = page
             _playlistTrackCount.intValue = page.songs.size
         }

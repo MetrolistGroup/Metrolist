@@ -197,22 +197,32 @@ fun YTItem.librarySearchKey(): String =
         is SongItem -> "song:$id"
     }
 
-fun SongItem.playlistOccurrenceIdentity(): String? = playlistLocalMappingId?.let { "local:$it" } ?: playlistSetVideoId?.let { "remote:$it" }
+fun SongItem.playlistOccurrenceIdentity(): String? =
+    playlistOccurrenceId ?: playlistLocalMappingId?.let { "local:$it" } ?: playlistSetVideoId?.let { "remote:$it" }
 
 fun List<SongItem>.preservePlaylistOccurrenceMappings(previousSongs: List<SongItem>): List<SongItem> {
+    val previousIndexBySetVideoId =
+        previousSongs.mapIndexedNotNull { index, song -> song.playlistSetVideoId?.let { it to index } }.toMap()
     val matchedPreviousIndices = mutableSetOf<Int>()
-    return map { song ->
-        val matchingIndex =
-            song.playlistSetVideoId?.let { setVideoId ->
-                previousSongs.indices.firstOrNull { index ->
-                    index !in matchedPreviousIndices && previousSongs[index].playlistSetVideoId == setVideoId
-                }
-            } ?: previousSongs.indices.firstOrNull { index ->
-                index !in matchedPreviousIndices && previousSongs[index].id == song.id &&
-                    previousSongs[index].playlistLocalMappingId != null
+    val matches = mutableMapOf<Int, Int>()
+    forEachIndexed { index, song ->
+        val previousIndex = song.playlistSetVideoId?.let(previousIndexBySetVideoId::get)
+        if (previousIndex != null && matchedPreviousIndices.add(previousIndex)) matches[index] = previousIndex
+    }
+    val unmatchedCurrentIndices = indices.filterNot(matches::containsKey)
+    val unmatchedPreviousIndices = previousSongs.indices.filterNot(matchedPreviousIndices::contains)
+    for (songId in unmatchedCurrentIndices.map { this[it].id }.distinct()) {
+        val current = unmatchedCurrentIndices.filter { this[it].id == songId }
+        val previous = unmatchedPreviousIndices.filter { previousSongs[it].id == songId }
+        if (current.size == previous.size) {
+            current.zip(previous).forEach { (currentIndex, previousIndex) ->
+                matches[currentIndex] = previousIndex
             }
-        val previous = matchingIndex?.let { index -> previousSongs[index].also { matchedPreviousIndices += index } }
-        song.copy(playlistLocalMappingId = song.playlistLocalMappingId ?: previous?.playlistLocalMappingId)
+        }
+    }
+    return mapIndexed { index, song ->
+        val previous = matches[index]?.let(previousSongs::get)
+        song.copy(playlistOccurrenceId = song.playlistOccurrenceId ?: previous?.playlistOccurrenceIdentity())
     }
 }
 

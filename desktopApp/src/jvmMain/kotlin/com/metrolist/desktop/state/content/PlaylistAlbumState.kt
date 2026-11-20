@@ -159,6 +159,7 @@ object PlaylistAlbumState {
         repository: () -> YouTubeRepository,
     ) {
         val previousPlaylistSongs = unfilteredPlaylistData.playlistSongs().takeIf { selectedPlaylistId == id }.orEmpty()
+        var invocationPlaylistSongs = previousPlaylistSongs
         try {
             val localPlaylist =
                 withContext(Dispatchers.IO) {
@@ -179,9 +180,10 @@ object PlaylistAlbumState {
                 val songItems =
                     localSongs.map {
                         it.toSongItem().copy(
-                            playlistLocalMappingId = it.map.id,
+                            playlistOccurrenceId = "local:${it.map.id}",
                         )
                     }
+                invocationPlaylistSongs = songItems
                 if (selectedPlaylistId == id) {
                     playlistHasMore = !hasCompleteStoredPlaylist(localPlaylist.playlist, songItems)
                     playlistDurationComplete = !playlistHasMore
@@ -232,7 +234,10 @@ object PlaylistAlbumState {
                                     playlistHasMore = firstPage.hasMore
                                     playlistDurationComplete = !firstPage.hasMore && !firstPage.isOffline
                                     playlistTrackCount = firstPage.songs.size
-                                    unfilteredPlaylistData = sections
+                                    unfilteredPlaylistData =
+                                        sections.withPlaylistSongs(
+                                            sections.playlistSongs().preservePlaylistOccurrenceMappings(invocationPlaylistSongs),
+                                        )
                                     playlistData = unfilteredPlaylistData.withoutBlockedContent()
                                 }
                             }
@@ -241,7 +246,9 @@ object PlaylistAlbumState {
                 }
             val unfilteredResult =
                 loadedPage.sections.let { sections ->
-                    sections + ("songs" to sections.playlistSongs().preservePlaylistOccurrenceMappings(previousPlaylistSongs))
+                    sections.withPlaylistSongs(
+                        sections.playlistSongs().preservePlaylistOccurrenceMappings(invocationPlaylistSongs),
+                    )
                 }
             val playlist = unfilteredResult["header"]?.firstOrNull() as? PlaylistItem
             val storedCustom =
@@ -756,6 +763,12 @@ object PlaylistAlbumState {
 
     private fun Map<String, List<YTItem>>.withoutBlockedContent(): Map<String, List<YTItem>> =
         mapValues { (title, items) -> if (title == "header") items else BlockedContent.filterItems(items) }
+
+    private fun Map<String, List<YTItem>>.withPlaylistSongs(songs: List<SongItem>): Map<String, List<YTItem>> {
+        if (containsKey("Tracks")) return this + ("Tracks" to songs) + ("Continuation" to emptyList())
+        if (containsKey("Continuation")) return this + ("Continuation" to songs)
+        return this + ("songs" to songs)
+    }
 }
 
 internal fun canRestoreAlbum(

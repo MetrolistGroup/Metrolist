@@ -121,13 +121,22 @@ suspend fun MusicDatabase.cacheRemotePlaylist(
             .map { it.map }
             .toMutableList()
     dao.clearPlaylist(entity.id)
+    val matches = mutableMapOf<Int, PlaylistSongMap>()
+    val claimed = mutableSetOf<Int>()
+    songs.forEachIndexed { index, song ->
+        val mapping =
+            song.playlistLocalMappingId?.let { id -> existingMappings.firstOrNull { it.id == id } }
+                ?: song.playlistSetVideoId?.let { token -> existingMappings.firstOrNull { it.setVideoId == token } }
+        if (mapping != null && claimed.add(mapping.id)) matches[index] = mapping
+    }
+    val unmatched = existingMappings.filterNot { it.id in claimed }
+    songs.indices.filterNot(matches::containsKey).groupBy { songs[it].id }.forEach { (songId, indices) ->
+        val old = unmatched.filter { it.songId == songId }
+        if (indices.size == old.size) indices.zip(old).forEach { (index, mapping) -> matches[index] = mapping }
+    }
     songs.forEachIndexed { index, song ->
         dao.upsertHistorySong(song)
-        val existingMapping =
-            song.playlistLocalMappingId?.let { mappingId -> existingMappings.firstOrNull { it.id == mappingId } }
-                ?: song.playlistSetVideoId?.let { setVideoId -> existingMappings.firstOrNull { it.setVideoId == setVideoId } }
-                ?: existingMappings.firstOrNull { it.songId == song.id }
-        existingMapping?.let(existingMappings::remove)
+        val existingMapping = matches[index]
         dao.insert(
             PlaylistSongMap(
                 id = existingMapping?.id ?: 0,
