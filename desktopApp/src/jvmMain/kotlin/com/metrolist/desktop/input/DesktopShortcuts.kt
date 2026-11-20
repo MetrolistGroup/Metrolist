@@ -170,6 +170,8 @@ private fun installGlobalShortcutDispatcher(
             ) {
                 keyFocus.keyboardNavigation = true
             }
+            val physicalPosition =
+                if (event.id == AwtKeyEvent.KEY_PRESSED) physicalKeyCapture?.consume(event.keyCode) else null
             pressed.dispatch(event) {
                 handleAwtKeyEvent(
                     event,
@@ -177,7 +179,7 @@ private fun installGlobalShortcutDispatcher(
                     keyFocus,
                     onRefresh,
                     toggleWindowFullscreen,
-                    physicalKeyCapture?.consume(event.keyCode),
+                    physicalPosition,
                     physicalPositionsAvailable = physicalKeyCapture?.isAvailable == true,
                 )
             }
