@@ -367,7 +367,7 @@ internal fun MobileLibrary(
                         SongSwipeActions(
                             ytItem,
                             onSwipeFeedback,
-                            enabled = !guestPlaybackLocked,
+                            enabled = !guestPlaybackLocked && !ytItem.isUnavailable,
                             shape = RoundedCornerShape(ThumbnailCornerRadius),
                             content = libraryItemContent,
                         )

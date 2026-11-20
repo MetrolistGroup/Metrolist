@@ -551,7 +551,7 @@ fun LibraryScreen(
                             enabled =
                                 playerConnection != null &&
                                     Settings.shared.swipeToSong &&
-                                    item is SongItem && !item.isUnavailable && !isGridView &&
+                                    ((item is SongItem && !item.isUnavailable && !isGridView) || searchQuery.isNotBlank()) &&
                                     !isGuestPlaybackLocked,
                             shape = if (isGridView) gridCellShape() else RoundedCornerShape(ThumbnailCornerRadius),
                             content = content,
