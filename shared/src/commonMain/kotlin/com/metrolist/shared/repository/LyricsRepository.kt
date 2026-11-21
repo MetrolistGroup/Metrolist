@@ -1187,7 +1187,7 @@ class LyricsRepository(
         val preset = AiProviderPresets.find(provider) ?: return
         val (apiKey, baseUrl) = settings.lyricsAiCredentials(provider)
         val model = settings.lyricsAiModel
-        val validated = catalog.validatedModel(preset, apiKey, baseUrl, model)
+        val validated = catalog.validatedModel(preset, apiKey, baseUrl, model, freeOnly = preset.keyless && apiKey.isBlank())
         if (settings.lyricsAiProvider == provider && settings.lyricsAiCredentials(provider) == (apiKey to baseUrl)) {
             if (settings.lyricsAiModel == model) settings.lyricsAiModel = validated
         }

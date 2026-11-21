@@ -63,7 +63,7 @@ The `flatpark` job in `release.yml` runs [flatpark/publish-action](https://githu
 
 The source manifest builds the committed `main` branch of the local checkout with Gradle and network access (`make flatpak-bundle`). Its JDK module stays unstripped because jlink rejects modified JDK libraries. It uses GNOME 51, matching flatpark.
 
-Permissions cover X11, IPC, DRI, PulseAudio, network, Secret Service, the app's MPRIS name, the tray watcher and tray item name (`org.kde.StatusNotifierItem-2-1`, the app runs as PID 2 in the sandbox), Downloads and Music. The manifest grants neither the whole home directory nor the session bus. Inside the sandbox the Wayland scale probes cannot reach the compositor and fall back to environment variables, the download folder chooser sees only Downloads and Music, and Omarchy detection relies on `OMARCHY_PATH`. Check login, credentials, local files, downloads, audio, tray, MPRIS and GPU rendering in the sandbox.
+Permissions cover X11, IPC, DRI, PulseAudio, network, Secret Service, the app's MPRIS name, the tray watcher and tray item name (`org.kde.StatusNotifierItem-2-1`, the app runs as PID 2 in the sandbox), Downloads and Music. The manifest grants neither the whole home directory nor the session bus. Inside the sandbox the Wayland scale probes cannot reach the compositor and fall back to environment variables, and the download folder chooser sees only Downloads and Music. Omarchy detection requires its OS identity or version tool to be visible inside the sandbox; `OMARCHY_PATH` alone does not trigger rejection. Check login, credentials, local files, downloads, audio, tray, MPRIS and GPU rendering in the sandbox.
 
 ## Optional external proposals
 

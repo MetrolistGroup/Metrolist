@@ -21,6 +21,8 @@ data class AiProviderPreset(
     val supportsOAuth: Boolean = false,
     val publicModelList: Boolean = false,
     val mixedProtocols: Boolean = false,
+    /** Free models work without an API key; a key stays optional for paid ones. */
+    val keyless: Boolean = false,
 ) {
     val isAi: Boolean get() = group != AiProviderGroup.SERVICE
 
@@ -29,6 +31,10 @@ data class AiProviderPreset(
             endpoint
                 .replace(Regex("/(chat/completions|messages)$"), "/models")
                 .replace(Regex("/models/[^/]+:generateContent$"), "/models")
+
+    fun isKeylessFreeModel(modelId: String): Boolean = keyless && modelId == defaultModel
+
+    fun allowsFreeModel(model: AiModelInfo): Boolean = model.free && (keyless || model.id.endsWith(":free"))
 }
 
 object AiProviderPresets {
@@ -75,6 +81,14 @@ object AiProviderPresets {
                 modelsDevId = "opencode-go",
                 publicModelList = true,
                 mixedProtocols = true,
+            ),
+            AiProviderPreset(
+                "Kilo",
+                AiProviderGroup.GATEWAY,
+                endpoint = "https://ai-gateway.kilo.ai/api/v1/chat/completions",
+                defaultModel = "kilo-auto/free",
+                publicModelList = true,
+                keyless = true,
             ),
             AiProviderPreset(
                 "Groq",
