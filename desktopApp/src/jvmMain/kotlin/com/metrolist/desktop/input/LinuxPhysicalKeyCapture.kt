@@ -424,7 +424,8 @@ internal class LinuxPhysicalKeyCapture : PlatformPhysicalKeyCapture {
                             if (clockAnchor == null || !modifierMappingReady) return
                             val xKeyCode = eventData.getByte(1).toInt() and 0xFF
                             if (xKeyCode in modifierKeycodes) return
-                            val position = linuxPhysicalPositionForX11KeyCode(xKeyCode) ?: return
+                            // AWT consumes one capture per non-modifier press; keep unmapped presses as null markers.
+                            val position = linuxPhysicalPositionForX11KeyCode(xKeyCode)
                             pending.record(position, wallTimeForServerTime(serverTime))
                         }
                     }
