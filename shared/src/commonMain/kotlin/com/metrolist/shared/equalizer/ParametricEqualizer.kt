@@ -41,9 +41,10 @@ class ParametricEqualizer(
     private var preampGain = 1.0
     private var peakEnvelope = 0.0
     private var peakHoldFrames = 0
-    private var sustainedOverloadFrames = 0
+    private var sustainedOverloadRatio = 0.0
     private val peakHoldDuration = (sampleRate * PEAK_HOLD_SECONDS).toInt()
-    private val sustainedOverloadDuration = (sampleRate * SUSTAIN_DETECTION_SECONDS).toInt().coerceAtLeast(1)
+    private val sustainedOverloadDuration = (sampleRate * SUSTAIN_DETECTION_SECONDS / channelCount).toInt().coerceAtLeast(1)
+    private val sustainedOverloadAlpha = 1.0 / sustainedOverloadDuration
     private val releaseDecay = exp(-1.0 / (sampleRate * LIMITER_RELEASE_SECONDS))
     var gainReductionDb = 0.0
         private set
@@ -81,7 +82,7 @@ class ParametricEqualizer(
                     }.toTypedArray()
             appliedBands = bands
             preampGain = 10.0.pow((profile?.preamp ?: 0.0) / 20.0)
-            sustainedOverloadFrames = 0
+            sustainedOverloadRatio = 0.0
         }
         return profile != null
     }
@@ -131,7 +132,7 @@ class ParametricEqualizer(
         val outputGain = 10.0.pow(outputGainDb.coerceIn(MIN_AUDIO_PREAMP_DB, MAX_AUDIO_BOOST_DB) / 20.0)
         if (activeFilters.isEmpty() && preampGain == 1.0 && outputGain == 1.0) {
             if (peakEnvelope <= LIMITER_CEILING) {
-                sustainedOverloadFrames = 0
+                sustainedOverloadRatio = 0.0
                 gainReductionDb = 0.0
                 return
             }
@@ -146,7 +147,7 @@ class ParametricEqualizer(
                 }
                 frameStart = frameEnd
             }
-            sustainedOverloadFrames = 0
+            sustainedOverloadRatio = 0.0
             gainReductionDb = -20.0 * log10(lastGain)
             return
         }
@@ -169,28 +170,28 @@ class ParametricEqualizer(
         if (activeFilters.isEmpty() && preampGain == 1.0 && outputGain == 1.0) {
             var peak = 0.0
             for (i in 0 until count) peak = maxOf(peak, abs(samples[i].toDouble()))
-            if (peakEnvelope <= LIMITER_CEILING) {
-                sustainedOverloadFrames = 0
-                gainReductionDb = 0.0
-                if (peak > 1.0) {
-                    for (i in 0 until count) samples[i] = samples[i].coerceIn(-1.0f, 1.0f)
+            // Identity means unity input as well: normalized float PCM above full scale still needs peak protection.
+            if (peak <= 1.0) {
+                if (peakEnvelope <= LIMITER_CEILING) {
+                    sustainedOverloadRatio = 0.0
+                    gainReductionDb = 0.0
+                    return
                 }
+                var frameStart = 0
+                var lastGain = 1.0
+                while (frameStart < count) {
+                    val frameEnd = minOf(frameStart + channelCount, count)
+                    val gain = releaseStep()
+                    lastGain = gain
+                    if (gain != 1.0) {
+                        for (i in frameStart until frameEnd) samples[i] = (samples[i] * gain).toFloat()
+                    }
+                    frameStart = frameEnd
+                }
+                sustainedOverloadRatio = 0.0
+                gainReductionDb = -20.0 * log10(lastGain)
                 return
             }
-            var frameStart = 0
-            var lastGain = 1.0
-            while (frameStart < count) {
-                val frameEnd = minOf(frameStart + channelCount, count)
-                val gain = releaseStep()
-                lastGain = gain
-                if (gain != 1.0 || peak > 1.0) {
-                    for (i in frameStart until frameEnd) samples[i] = (samples[i] * gain).coerceIn(-1.0, 1.0).toFloat()
-                }
-                frameStart = frameEnd
-            }
-            sustainedOverloadFrames = 0
-            gainReductionDb = -20.0 * log10(lastGain)
-            return
         }
         if (processingBuffer.size < count) processingBuffer = DoubleArray(count)
         for (i in 0 until count) processingBuffer[i] = samples[i].toDouble()
@@ -253,14 +254,10 @@ class ParametricEqualizer(
                 rawPeak = maxOf(rawPeak, abs(x))
                 saturatedPeak = maxOf(saturatedPeak, abs(softClip(x)))
             }
-            // Saturated peaks soften isolated transients; only repeated pre-clip overload asks for full gain reduction.
-            sustainedOverloadFrames =
-                if (rawPeak > LIMITER_CEILING) {
-                    minOf(sustainedOverloadFrames + 1, sustainedOverloadDuration)
-                } else {
-                    maxOf(0, sustainedOverloadFrames - 1)
-                }
-            val peak = if (sustainedOverloadFrames >= sustainedOverloadDuration) rawPeak else saturatedPeak
+            // A rolling overload fraction spans waveform cycles, so periodic peaks drive limiting without counting isolated transients.
+            val overloadTarget = if (rawPeak > LIMITER_CEILING) 1.0 else 0.0
+            sustainedOverloadRatio += (overloadTarget - sustainedOverloadRatio) * sustainedOverloadAlpha
+            val peak = if (sustainedOverloadRatio >= SUSTAINED_OVERLOAD_RATIO) rawPeak else saturatedPeak
             val gain = limiterGain(peak)
             lastGain = gain
             for (i in frameStart until frameEnd) processingBuffer[i] = softClip(processingBuffer[i] * gain)
@@ -295,7 +292,7 @@ class ParametricEqualizer(
     }
 
     private fun releaseStep(): Double {
-        sustainedOverloadFrames = 0
+        sustainedOverloadRatio = 0.0
         if (peakEnvelope <= LIMITER_CEILING) return 1.0
         return limiterGain(0.0, allowAttack = false)
     }
@@ -304,7 +301,7 @@ class ParametricEqualizer(
         state.forEach { it.fill(0.0) }
         peakEnvelope = 0.0
         peakHoldFrames = 0
-        sustainedOverloadFrames = 0
+        sustainedOverloadRatio = 0.0
         gainReductionDb = 0.0
     }
 
@@ -353,6 +350,7 @@ class ParametricEqualizer(
         const val LIMITER_CEILING = 0.98
         const val SOFT_CLIP_THRESHOLD = 0.88
         const val SUSTAIN_DETECTION_SECONDS = 0.005
+        const val SUSTAINED_OVERLOAD_RATIO = 0.1
         const val PEAK_HOLD_SECONDS = 0.03
         const val LIMITER_RELEASE_SECONDS = 0.10
     }
