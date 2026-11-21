@@ -51,7 +51,6 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
-import androidx.compose.ui.platform.LocalLocale
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -90,7 +89,7 @@ internal fun ActivityHeatmap(
     period: StatisticsPeriod,
     dateRange: StatisticsDateRange? = null,
 ) {
-    val formatter = remember(LocalLocale.current) { StatisticsFormatter() }
+    val formatter = rememberStatisticsFormatter()
     val today = dateRange?.end ?: Clock.System.todayIn(TimeZone.currentSystemDefault())
     val firstDate =
         dateRange?.start ?: period.takeUnless { it == StatisticsPeriod.ALL }?.let {
@@ -253,7 +252,7 @@ private fun activityColor(
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 internal fun HourlyActivityChart(hourlyStats: Map<Int, Int>) {
-    val formatter = remember(LocalLocale.current) { StatisticsFormatter() }
+    val formatter = rememberStatisticsFormatter()
     val counts = remember(hourlyStats) { (0..23).map { hourlyStats[it]?.coerceAtLeast(0) ?: 0 } }
     val ticks = remember(counts) { listeningCountTicks(counts.max()) }
     var selectedHour by remember(hourlyStats) { mutableIntStateOf(counts.indices.maxBy { counts[it] }) }
