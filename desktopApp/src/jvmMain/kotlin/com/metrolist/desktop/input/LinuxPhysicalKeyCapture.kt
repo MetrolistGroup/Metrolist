@@ -13,6 +13,7 @@ import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.withLock
+import kotlin.math.abs
 
 private object X11ThreadingState {
     @Volatile var ready = false
@@ -21,6 +22,7 @@ private object X11ThreadingState {
 private data class ServerClockAnchor(
     val wallTimeAtAnchor: Long,
     val serverTimeAtAnchor: Long,
+    val monotonicTimeAtAnchorMillis: Long,
 )
 
 private data class ClockProbe(
@@ -29,7 +31,17 @@ private data class ClockProbe(
     val clientSwapped: Int,
     val wallBeforeMillis: Long,
     val wallAfterMillis: Long,
-)
+    val monotonicBeforeNanos: Long,
+    val monotonicAfterNanos: Long,
+) {
+    val monotonicAfterMillis: Long get() = TimeUnit.NANOSECONDS.toMillis(monotonicAfterNanos)
+
+    val monotonicAtAnchorMillis: Long
+        get() =
+            TimeUnit.NANOSECONDS.toMillis(
+                monotonicBeforeNanos + (monotonicAfterNanos - monotonicBeforeNanos) / 2,
+            )
+}
 
 internal fun initializeLinuxX11Threading() {
     // XRecord runs on its own thread, so libX11 must enter thread-safe mode before AWT initializes it.
@@ -216,17 +228,17 @@ internal class LinuxPhysicalKeyCapture : PlatformPhysicalKeyCapture {
             val controlIdBase = xtst.XRecordIdBaseMask(openedControlDisplay).toLong() and X_TIME_MASK
             ready.countDown()
             x11.XFlush(activeEventDisplay)
-            var nextClockProbeAt = 0L
-            var nextModifierRefreshAt = 0L
+            var nextClockProbeAt = monotonicMillis()
+            var nextModifierRefreshAt = monotonicMillis()
             if (refreshModifierKeycodes(openedControlDisplay)) {
-                nextModifierRefreshAt = System.currentTimeMillis() + MODIFIER_REFRESH_INTERVAL_MILLIS
+                nextModifierRefreshAt = monotonicMillis() + MODIFIER_REFRESH_INTERVAL_MILLIS
             } else {
-                nextModifierRefreshAt = System.currentTimeMillis() + REFRESH_RETRY_MILLIS
+                nextModifierRefreshAt = monotonicMillis() + REFRESH_RETRY_MILLIS
             }
             if (requestClockProbe(openedControlDisplay, controlIdBase)) {
-                nextClockProbeAt = System.currentTimeMillis() + CLOCK_REFRESH_INTERVAL_MILLIS
+                nextClockProbeAt = monotonicMillis() + CLOCK_REFRESH_INTERVAL_MILLIS
             } else {
-                nextClockProbeAt = System.currentTimeMillis() + REFRESH_RETRY_MILLIS
+                nextClockProbeAt = monotonicMillis() + REFRESH_RETRY_MILLIS
             }
             val eventFd = x11.XConnectionNumber(activeEventDisplay)
 
@@ -237,7 +249,7 @@ internal class LinuxPhysicalKeyCapture : PlatformPhysicalKeyCapture {
             pollFds[1].fd = wakeupPipe[0]
             pollFds[1].events = POLLIN.toShort()
             while (requested && workerGeneration == generation) {
-                if (!pollWithRetry(pollFds, generation, pollTimeoutMillis(clockProbe, nextClockProbeAt))) break
+                if (!pollWithRetry(pollFds, generation, pollTimeoutMillis(clockProbe, nextClockProbeAt, monotonicMillis()))) break
                 pollFds.forEach { it.read() }
                 if (pollFds[1].revents.toInt() != 0) {
                     drainWakeup()
@@ -248,24 +260,36 @@ internal class LinuxPhysicalKeyCapture : PlatformPhysicalKeyCapture {
                 if (events and POLLIN != 0) {
                     xtst.XRecordProcessReplies(activeEventDisplay)
                 }
-                val loopNow = System.currentTimeMillis()
-                if (loopNow >= nextModifierRefreshAt) {
+                val loopMonotonic = monotonicMillis()
+                if (loopMonotonic >= nextModifierRefreshAt) {
                     nextModifierRefreshAt =
-                        loopNow +
+                        loopMonotonic +
                         if (refreshModifierKeycodes(openedControlDisplay)) {
                             MODIFIER_REFRESH_INTERVAL_MILLIS
                         } else {
                             REFRESH_RETRY_MILLIS
                         }
                 }
-                val pendingProbe = clockProbe
-                if (pendingProbe != null && loopNow - pendingProbe.wallAfterMillis >= CLOCK_PROBE_TIMEOUT_MILLIS) {
-                    clockProbe = null
-                    nextClockProbeAt = loopNow + REFRESH_RETRY_MILLIS
+                // X Time keeps advancing across wall-clock corrections, so a changed wall offset
+                // invalidates the anchor used to order native captures against AWT events.
+                val anchor = clockAnchor
+                if (anchor != null) {
+                    val expectedWall = anchor.wallTimeAtAnchor + loopMonotonic - anchor.monotonicTimeAtAnchorMillis
+                    if (abs(System.currentTimeMillis() - expectedWall) > WALL_CLOCK_JUMP_THRESHOLD_MILLIS) {
+                        clockAnchor = null
+                        clockProbe = null
+                        pending.clear()
+                        nextClockProbeAt = loopMonotonic
+                    }
                 }
-                if (clockProbe == null && loopNow >= nextClockProbeAt) {
+                val pendingProbe = clockProbe
+                if (pendingProbe != null && loopMonotonic - pendingProbe.monotonicAfterMillis >= CLOCK_PROBE_TIMEOUT_MILLIS) {
+                    clockProbe = null
+                    nextClockProbeAt = loopMonotonic + REFRESH_RETRY_MILLIS
+                }
+                if (clockProbe == null && loopMonotonic >= nextClockProbeAt) {
                     nextClockProbeAt =
-                        loopNow +
+                        loopMonotonic +
                         if (requestClockProbe(openedControlDisplay, controlIdBase)) {
                             CLOCK_REFRESH_INTERVAL_MILLIS
                         } else {
@@ -321,12 +345,15 @@ internal class LinuxPhysicalKeyCapture : PlatformPhysicalKeyCapture {
         }
     }
 
+    private fun monotonicMillis(): Long = TimeUnit.NANOSECONDS.toMillis(System.nanoTime())
+
     private fun pollTimeoutMillis(
         probe: ClockProbe?,
         nextClockProbeAt: Long,
+        nowMonotonicMillis: Long,
     ): Int {
-        val deadline = if (probe != null) probe.wallAfterMillis + CLOCK_PROBE_TIMEOUT_MILLIS else nextClockProbeAt
-        return (deadline - System.currentTimeMillis())
+        val deadline = probe?.monotonicAfterMillis?.plus(CLOCK_PROBE_TIMEOUT_MILLIS) ?: nextClockProbeAt
+        return (deadline - nowMonotonicMillis)
             .coerceAtMost(MAX_POLL_WAIT_MILLIS.toLong())
             .coerceAtLeast(0L)
             .toInt()
@@ -367,13 +394,24 @@ internal class LinuxPhysicalKeyCapture : PlatformPhysicalKeyCapture {
         val sequence = X11.INSTANCE.XNextRequest(display).toLong() and SEQUENCE_MASK
         val focus = Memory(Native.LONG_SIZE.toLong())
         val revertTo = Memory(Int.SIZE_BYTES.toLong())
+        val monotonicBeforeNanos = System.nanoTime()
         val wallBeforeMillis = System.currentTimeMillis()
         val sent = X11.INSTANCE.XGetInputFocus(display, focus, revertTo) != 0
         // Xlib buffers requests; without a flush the probe may never reach the server.
         val flushed = X11.INSTANCE.XFlush(display) != 0
         val wallAfterMillis = System.currentTimeMillis()
+        val monotonicAfterNanos = System.nanoTime()
         if (!sent || !flushed) return false
-        clockProbe = ClockProbe(sequence.toInt(), idBase, 0, wallBeforeMillis, wallAfterMillis)
+        clockProbe =
+            ClockProbe(
+                sequence = sequence.toInt(),
+                idBase = idBase,
+                clientSwapped = 0,
+                wallBeforeMillis = wallBeforeMillis,
+                wallAfterMillis = wallAfterMillis,
+                monotonicBeforeNanos = monotonicBeforeNanos,
+                monotonicAfterNanos = monotonicAfterNanos,
+            )
         return true
     }
 
@@ -389,7 +427,7 @@ internal class LinuxPhysicalKeyCapture : PlatformPhysicalKeyCapture {
         if (sequence != probe.sequence) return
         clockProbe = null
         val wallAtAnchor = probe.wallBeforeMillis + (probe.wallAfterMillis - probe.wallBeforeMillis) / 2
-        clockAnchor = ServerClockAnchor(wallAtAnchor, serverTime)
+        clockAnchor = ServerClockAnchor(wallAtAnchor, serverTime, probe.monotonicAtAnchorMillis)
     }
 
     private fun readCard16(
@@ -493,6 +531,7 @@ internal class LinuxPhysicalKeyCapture : PlatformPhysicalKeyCapture {
         const val KEYSYMS_PER_KEYCODE = 4
         const val CLOCK_REFRESH_INTERVAL_MILLIS = 5_000L
         const val CLOCK_PROBE_TIMEOUT_MILLIS = 2_000L
+        const val WALL_CLOCK_JUMP_THRESHOLD_MILLIS = 250L
         const val MODIFIER_REFRESH_INTERVAL_MILLIS = 5_000L
         const val REFRESH_RETRY_MILLIS = 500L
         const val MAX_POLL_WAIT_MILLIS = 1_000
