@@ -215,6 +215,8 @@ internal class FcastSession(
                             if (stopped) {
                                 replayPositionMs = positionMs
                                 _state.value = _state.value.copy(positionMs = positionMs)
+                            } else if (awaitingCurrentMediaUpdate) {
+                                awaitingMediaStartPositionMs = positionMs
                             }
                         }
                     }

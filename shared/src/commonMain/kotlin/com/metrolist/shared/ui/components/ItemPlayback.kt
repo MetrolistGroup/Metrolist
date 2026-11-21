@@ -18,9 +18,11 @@ internal fun rememberItemPlayback(
     isPlaying: State<Boolean>,
     currentQueueItemId: State<String?>? = null,
     preferQueueItemId: State<Boolean>? = null,
+    occurrenceKey: String? = null,
+    currentOccurrenceKey: State<String?>? = null,
 ): State<ItemPlayback> =
-    remember(itemId, currentSongId, isPlaying, currentQueueItemId, preferQueueItemId) {
-        itemPlayback(itemId, currentSongId, isPlaying, currentQueueItemId, preferQueueItemId)
+    remember(itemId, currentSongId, isPlaying, currentQueueItemId, preferQueueItemId, occurrenceKey, currentOccurrenceKey) {
+        itemPlayback(itemId, currentSongId, isPlaying, currentQueueItemId, preferQueueItemId, occurrenceKey, currentOccurrenceKey)
     }
 
 internal fun itemPlayback(
@@ -29,15 +31,14 @@ internal fun itemPlayback(
     isPlaying: State<Boolean>,
     currentQueueItemId: State<String?>? = null,
     preferQueueItemId: State<Boolean>? = null,
+    occurrenceKey: String? = null,
+    currentOccurrenceKey: State<String?>? = null,
 ): State<ItemPlayback> =
     derivedStateOf(structuralEqualityPolicy()) {
         val queueItemId = currentQueueItemId?.value
         val prefersQueueEntry = queueItemId != null && preferQueueItemId?.value != false
-        val isCurrent =
-            if (prefersQueueEntry) {
-                itemId == queueItemId
-            } else {
-                itemId == currentSongId.value
-            }
+        val currentKey = currentOccurrenceKey?.value
+        val matchesMedia = if (prefersQueueEntry) itemId == queueItemId else itemId == currentSongId.value
+        val isCurrent = matchesMedia && (occurrenceKey == null || currentKey == null || occurrenceKey == currentKey)
         ItemPlayback(isCurrent = isCurrent, isPlaying = isCurrent && isPlaying.value)
     }
