@@ -5,6 +5,8 @@ import androidx.room3.Room
 import androidx.sqlite.driver.AndroidSQLiteDriver
 import com.metrolist.android.models.PersistPlayerState
 import com.metrolist.android.models.PlaybackPersistenceWriter
+import com.metrolist.innertubex.extraction.AudioQuality
+import com.metrolist.innertubex.extraction.ContentHints
 import com.metrolist.shared.api.musicvideo.MusicVideoResolver
 import com.metrolist.shared.db.MusicDatabase
 import com.metrolist.shared.deviceconnect.DcLocalPlaybackState
@@ -18,6 +20,7 @@ import com.metrolist.shared.playback.QueuePlaybackRequest
 import com.metrolist.shared.scrobble.ScrobbleManager
 import com.metrolist.shared.settings.Settings
 import com.metrolist.shared.youtube.playback.PlaybackResource
+import com.metrolist.shared.youtube.playback.StreamResolver
 import com.russhwolf.settings.MapSettings
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -290,12 +293,29 @@ class PendingQueueRestorePositionTest {
                 episodeResumePosition = { _, duration -> duration },
             )
         coordinator.transitions = transitions
+        val streamResolver =
+            object : StreamResolver {
+                override suspend fun resolve(
+                    videoId: String,
+                    hints: ContentHints,
+                    audioQuality: AudioQuality,
+                    sourceSong: SongItem?,
+                ): PlaybackResource = error("No stream resolution expected in this test")
+
+                override suspend fun refresh(
+                    videoId: String,
+                    hints: ContentHints,
+                    audioQuality: AudioQuality,
+                    sourceSong: SongItem?,
+                ): PlaybackResource = error("No stream resolution expected in this test")
+            }
         val video =
             AndroidVideoModeController(
                 context = context,
                 player = player,
                 scope = scope,
                 musicVideoResolver = videoResolver,
+                streamResolver = streamResolver,
                 withPlaybackLoading = { block -> block() },
                 fetchPlaybackResource = { _, _ -> null },
                 onError = {},
