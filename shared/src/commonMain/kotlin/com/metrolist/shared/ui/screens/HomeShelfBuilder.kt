@@ -41,7 +41,9 @@ object HomeShelfBuilder {
                 sourceSections.filter { section ->
                     section.hasTitle && section.items.any { canonicalHomeItemId(it) in itemIds }
                 }
-            return candidates.singleOrNull { it.browseId == shelf.browseId && (shelf.params == null || it.params == shelf.params) }
+            return candidates.singleOrNull {
+                shelf.browseId != null && it.browseId == shelf.browseId && (shelf.params == null || it.params == shelf.params)
+            }
                 ?: candidates.singleOrNull {
                     it.title == shelf.title && (shelf.label == null || it.subtitle == shelf.label) &&
                         (shelf.params == null || it.params == shelf.params)
