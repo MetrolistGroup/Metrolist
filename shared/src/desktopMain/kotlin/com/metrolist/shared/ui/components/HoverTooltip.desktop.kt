@@ -36,18 +36,12 @@ actual fun HoverTooltip(
     modifier: Modifier,
     content: @Composable () -> Unit,
 ) {
-    if (text == null) {
-        Box(modifier) {
-            content()
-        }
-        return
-    }
     val interactionSource = remember { MutableInteractionSource() }
     val hovered by interactionSource.collectIsHoveredAsState()
     val dismissed = remember { mutableStateOf(false) }
     var visible by remember { mutableStateOf(false) }
-    LaunchedEffect(hovered, dismissed.value) {
-        if (!hovered) {
+    LaunchedEffect(hovered, dismissed.value, text != null) {
+        if (!hovered || text == null) {
             visible = false
             dismissed.value = false
         } else if (dismissed.value) {
@@ -57,23 +51,27 @@ actual fun HoverTooltip(
             visible = true
         }
     }
-    val gap = with(LocalDensity.current) { 8.dp.roundToPx() }
-    val positionProvider = remember(gap) { TooltipPositionProvider(gap) }
-    Box(
-        modifier
-            .hoverable(interactionSource)
-            .pointerInput(Unit) {
-                awaitPointerEventScope {
-                    while (true) {
-                        if (awaitPointerEvent(PointerEventPass.Initial).type == PointerEventType.Press) {
-                            dismissed.value = true
+    val boxModifier =
+        if (text != null) {
+            modifier
+                .hoverable(interactionSource)
+                .pointerInput(Unit) {
+                    awaitPointerEventScope {
+                        while (true) {
+                            if (awaitPointerEvent(PointerEventPass.Initial).type == PointerEventType.Press) {
+                                dismissed.value = true
+                            }
                         }
                     }
                 }
-            },
-    ) {
+        } else {
+            modifier
+        }
+    Box(boxModifier) {
         content()
-        if (visible) {
+        if (visible && text != null) {
+            val gap = with(LocalDensity.current) { 8.dp.roundToPx() }
+            val positionProvider = remember(gap) { TooltipPositionProvider(gap) }
             PlatformPopup(
                 popupPositionProvider = positionProvider,
                 onDismissRequest = {},
