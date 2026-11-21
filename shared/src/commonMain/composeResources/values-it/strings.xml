@@ -1416,8 +1416,8 @@
     <string name="menu_sign_in">Accesso in corso…</string>
     <string name="menu_show_lyrics">Mostra testi</string>
     <string name="menu_hide_lyrics">Nascondi testi</string>
-    <string name="menu_show_playing_next">Mostra coda</string>
-    <string name="menu_hide_playing_next">Nascondi coda</string>
+    <string name="menu_show_playing_next">Mostra brani successivi</string>
+    <string name="menu_hide_playing_next">Nascondi prossimi brani</string>
     <string name="menu_fullscreen_player">Lettore a schermo intero</string>
     <string name="menu_library">Libreria</string>
     <string name="menu_enter_full_screen">Attiva modalità a schermo intero</string>
@@ -2018,7 +2018,7 @@
     <string name="foreign_import_success">Importati %1$d brani, %2$d Mi piace, %3$d playlist e %4$d riproduzioni</string>
     <string name="foreign_import_unsupported">Il file non è un backup di un'app musicale supportata</string>
     <string name="foreign_import_failed">Importazione non riuscita: %1$s</string>
-    <string name="listen_together_description">Ascolta la musica con i tuoi amici in tempo reale. Crea una stanza per ospitare, o unisciti ad una esistente con un codice</string>
+    <string name="listen_together_description">Ascolta la musica con i tuoi amici in tempo reale. Crea una stanza per ospitare o unisciti a una stanza esistente con un codice</string>
     <string name="listen_together_host_card_title">Ospita una stanza</string>
     <string name="listen_together_host_card_desc">Inizia la sessione e condividi il codice. I tuoi amici ascolteranno cosa riproduci, dal vivo.</string>
     <string name="listen_together_join_tab">Unisciti</string>
