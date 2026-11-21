@@ -498,7 +498,10 @@ fun PlayerLikeShareButtons(
                 customItem(
                     buttonGroupContent = {
                         val shareShape = ButtonGroupDefaults.connectedLeadingButtonShape
-                        HoverTooltip(text = if (isCopied) linkCopiedDesc else shareDesc) {
+                        HoverTooltip(
+                            text = if (isCopied) linkCopiedDesc else shareDesc,
+                            modifier = Modifier.animateWidth(shareInteractionSource, 12.dp),
+                        ) {
                             Surface(
                                 shape = shareShape,
                                 color = MaterialTheme.colorScheme.secondaryContainer,
@@ -506,7 +509,6 @@ fun PlayerLikeShareButtons(
                                 modifier =
                                     Modifier
                                         .size(width = buttonWidth, height = groupHeight)
-                                        .animateWidth(shareInteractionSource, 12.dp)
                                         .pointerInput(Unit) {
                                             awaitPointerEventScope {
                                                 while (true) {
@@ -569,7 +571,10 @@ fun PlayerLikeShareButtons(
             }
             customItem(
                 buttonGroupContent = {
-                    HoverTooltip(text = likeDesc) {
+                    HoverTooltip(
+                        text = likeDesc,
+                        modifier = Modifier.animateWidth(likeInteractionSource, 12.dp),
+                    ) {
                         ToggleButton(
                             checked = isLiked,
                             onCheckedChange = { onLikeClick() },
@@ -587,7 +592,6 @@ fun PlayerLikeShareButtons(
                             modifier =
                                 Modifier
                                     .size(width = buttonWidth, height = groupHeight)
-                                    .animateWidth(likeInteractionSource, 12.dp)
                                     .tvFocusHighlight(
                                         if (isTv) RoundedCornerShape(50) else ButtonGroupDefaults.connectedTrailingButtonShape,
                                         scale = 1f,
