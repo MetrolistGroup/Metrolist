@@ -860,11 +860,14 @@ fun LibraryScreen(
             showCreateDialog = false
             createName = ""
             viewModel.createPlaylist(name, local) { result ->
-                result.onSuccess { id ->
-                    navigationScope.launch {
-                        if (currentRootActive) onNavigateToPlaylist(id, null)
+                result
+                    .onSuccess { id ->
+                        navigationScope.launch {
+                            if (currentRootActive) onNavigateToPlaylist(id, null)
+                        }
+                    }.onFailure {
+                        if (currentRootActive) Toast.makeText(context, errorOccurredText, Toast.LENGTH_SHORT).show()
                     }
-                }
             }
         }
     }
