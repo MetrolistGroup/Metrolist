@@ -27,6 +27,7 @@ import com.metrolist.android.ui.utils.playSong
 import com.metrolist.android.utils.startActivitySafely
 import com.metrolist.shared.api.musicvideo.MusicVideoResolver
 import com.metrolist.shared.db.MusicDatabase
+import com.metrolist.shared.db.refreshHistoryPlaylist
 import com.metrolist.shared.generated.resources.Res
 import com.metrolist.shared.generated.resources.home_load_item_failed
 import com.metrolist.shared.generated.resources.metadata_refreshed
@@ -53,10 +54,13 @@ import com.metrolist.shared.ui.menu.BuiltinPlaylistMenu
 import com.metrolist.shared.ui.menu.loadMediaItemSongs
 import com.metrolist.shared.utils.ShareUrls
 import com.metrolist.shared.utils.evictArtworkCache
+import com.metrolist.shared.youtube.playback.PlaybackNetworkStateStore
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.getString
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.koinInject
+import com.metrolist.shared.db.entities.toSongItem as storedPlaylistSongToSongItem
 
 @Composable
 internal fun HomeItemMenu(
@@ -104,7 +108,18 @@ internal fun HomeItemMenu(
     ) {
         scope.launch {
             val songs =
-                runCatching { loadMediaItemSongs(item) }.getOrElse {
+                runCatching {
+                    if (item is PlaylistItem && item.isLocal && PlaybackNetworkStateStore.current.connected) {
+                        database.refreshHistoryPlaylist(item.id)
+                        database
+                            .dao()
+                            .playlistSongs(item.id)
+                            .first()
+                            .map { it.storedPlaylistSongToSongItem() }
+                    } else {
+                        loadMediaItemSongs(item)
+                    }
+                }.getOrElse {
                     Toast
                         .makeText(
                             context,
