@@ -10,7 +10,9 @@ internal interface PlatformPhysicalKeyCapture : AutoCloseable {
     fun consume(awtEventWhen: Long): CapturedPhysicalKey?
 }
 
-internal data class CapturedPhysicalKey(val position: PhysicalKeyPosition?)
+internal data class CapturedPhysicalKey(
+    val position: PhysicalKeyPosition?,
+)
 
 internal class OrderedPhysicalKeyCaptureBuffer(
     private val timeSourceMillis: () -> Long = System::currentTimeMillis,

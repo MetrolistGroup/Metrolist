@@ -92,6 +92,7 @@ import com.metrolist.desktop.deviceconnect.DesktopDeviceConnect
 import com.metrolist.desktop.di.composeStateModule
 import com.metrolist.desktop.input.DesktopShortcutLayer
 import com.metrolist.desktop.input.desktopScrollConfig
+import com.metrolist.desktop.input.initializeLinuxX11Threading
 import com.metrolist.desktop.state.DesktopLocaleManager
 import com.metrolist.desktop.state.app.AppState
 import com.metrolist.desktop.state.app.DesktopNavigation
@@ -802,6 +803,8 @@ fun main() {
 }
 
 fun main(args: Array<String>) {
+    // Xlib must enter thread-safe mode before AWT can initialize it on Linux/X11.
+    if (OsUtil.isLinux) initializeLinuxX11Threading()
     // The JDK reads this once when its default proxy selector initializes.
     if (OsUtil.isWindows) System.getProperties().putIfAbsent("java.net.useSystemProxies", "true")
     runCatching { System.getProperty("metrolist.cds.cache")?.let { File(it).mkdirs() } }
