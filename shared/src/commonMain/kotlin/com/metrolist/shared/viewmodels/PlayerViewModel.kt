@@ -322,6 +322,8 @@ class PlayerViewModel(
                         manualAiTranslationForSongChange(
                             isNewSong = isNewSong,
                             newSongId = song?.id,
+                            newSongIsVideo = song?.isVideoSong == true,
+                            newSongOriginalQueueItemId = song?.originalQueueItemId,
                             counterpartTrackId = _uiState.value.counterpartTrackId,
                             previousSongId = previousSongId,
                             currentValue = _uiState.value.manualAiTranslationEnabled,
@@ -2221,6 +2223,8 @@ class PlayerViewModel(
 internal fun manualAiTranslationForSongChange(
     isNewSong: Boolean,
     newSongId: String?,
+    newSongIsVideo: Boolean,
+    newSongOriginalQueueItemId: String?,
     counterpartTrackId: String?,
     previousSongId: String?,
     currentValue: Boolean,
@@ -2228,7 +2232,12 @@ internal fun manualAiTranslationForSongChange(
     if (!isNewSong) {
         currentValue
     } else {
-        currentValue && newSongId != null && newSongId == counterpartTrackId && previousSongId != newSongId
+        // The video ID is committed before fetchCounterpart resolves its audio ID, so the
+        // outward switch is identified by the original queue item carried on the video.
+        val returningToAudio = newSongId != null && newSongId == counterpartTrackId && previousSongId != newSongId
+        val switchingToVideo =
+            newSongIsVideo && newSongOriginalQueueItemId != null && newSongOriginalQueueItemId == previousSongId
+        currentValue && (returningToAudio || switchingToVideo)
     }
 
 internal fun computeSeekTarget(
