@@ -989,10 +989,11 @@ internal fun LandscapePlayerContent(
                             hapticManager.perform(HapticEvent.PRESS)
                             onOpenQueue()
                         },
-                        onLyricsClick = {
-                            hapticManager.perform(HapticEvent.PRESS)
-                            onIsLyricsVisibleChange(!lyricsVisible)
-                        }.takeIf { !isVideoModeActive },
+                        onLyricsClick =
+                            {
+                                hapticManager.perform(HapticEvent.PRESS)
+                                onIsLyricsVisibleChange(!lyricsVisible)
+                            }.takeIf { !isVideoModeActive },
                         contentColor = controlsColor,
                         horizontalPadding = 0.dp,
                         verticalPadding = if (compactHeight) 0.dp else 12.dp,
@@ -1009,10 +1010,11 @@ internal fun LandscapePlayerContent(
                     ) {
                         PlayerConnectedButtonGroup(
                             onQueueClick = onOpenQueue,
-                            onLyricsClick = {
-                                hapticManager.perform(HapticEvent.PRESS)
-                                onIsLyricsVisibleChange(!lyricsVisible)
-                            }.takeIf { !isVideoModeActive },
+                            onLyricsClick =
+                                {
+                                    hapticManager.perform(HapticEvent.PRESS)
+                                    onIsLyricsVisibleChange(!lyricsVisible)
+                                }.takeIf { !isVideoModeActive },
                             isLyricsActive = lyricsVisible,
                             isQueueActive = false,
                             modifier = Modifier.weight(1f, fill = false),
