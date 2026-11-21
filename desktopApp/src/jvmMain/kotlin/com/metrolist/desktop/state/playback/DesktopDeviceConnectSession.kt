@@ -106,6 +106,10 @@ internal class DesktopDeviceConnectSession(
 
     fun setPlaying(playing: Boolean) {
         desiredPlaying = playing
+    }
+
+    fun requestPlaying(playing: Boolean) {
+        setPlaying(playing)
         requestedPlaying = playing
     }
 
@@ -145,6 +149,7 @@ internal class DesktopDeviceConnectSession(
                 indices = indices,
                 advanceCurrentToSuccessor = true,
                 successorIndex = successorIndex,
+                expectedTrackRevision = trackRevision,
             ),
             expectedQueueRevision = revision,
             expectedQueue = expectedQueue,

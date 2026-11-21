@@ -698,7 +698,11 @@ class DeviceConnectRemote(
     ) {
         val current = canonical ?: return
         if ((command.isQueueIndexed() && expectedQueue != current.queueRevision) ||
-            (command.action == DcPlaybackAction.REPLACE_CURRENT && command.expectedTrackRevision != current.trackRevision)
+            (command.action == DcPlaybackAction.REPLACE_CURRENT && command.expectedTrackRevision != current.trackRevision) ||
+            (
+                command.action == DcPlaybackAction.REMOVE && command.expectedTrackRevision != null &&
+                    command.expectedTrackRevision != current.trackRevision
+            )
         ) {
             commandError(sender, DcSyncError.STALE_QUEUE)
             if (sender != localDeviceId()) sendSnapshot(sender)

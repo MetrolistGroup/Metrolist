@@ -3739,7 +3739,12 @@ object PlayerState {
         if (restored && removal.items.any { it.index == removal.previousCurrentIndex } &&
             queue.currentIndex.value == removal.previousCurrentIndex
         ) {
-            val startPlayingOverride = consumeLocalQueueRemovalPlaybackIntent(removal) ?: player.isPlaying.value
+            val startPlayingOverride =
+                consumeLocalQueueRemovalPlaybackIntent(removal) ?: when {
+                    castManager.state.value.isConnected -> castPlayback.playbackIntent(castManager.state.value.isPlaying)
+                    isPlaybackResolving -> desiredPlayback.value
+                    else -> player.wantsPlayback
+                }
             queue.state.value.entries
                 .getOrNull(queue.currentIndex.value)
                 ?.key
@@ -4021,7 +4026,7 @@ object PlayerState {
                 expectedQueue = queue.snapshots.value,
             )
         ) {
-            syncSession.setPlaying(playing)
+            syncSession.requestPlaying(playing)
             return
         }
         if (isListenTogetherGuest()) return

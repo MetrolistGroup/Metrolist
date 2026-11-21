@@ -32,7 +32,7 @@ Unconfirmed transfer failure restores the saved position without counting waitin
 
 ## Compatibility and queues
 
-Peers need playback version 4. Version 3 cannot join playback sessions. Authenticated optional capabilities `supportsPlaybackClock` and `supportsPlaybackPitch` default false. Never infer them from unauthenticated state.
+Peers need playback version 5. Version 4 and earlier cannot join playback sessions. Version 5 adds REMOVE successor selection and RESTORE_QUEUE playback intent. Authenticated optional capabilities `supportsPlaybackClock` and `supportsPlaybackPitch` default false. Never infer them from unauthenticated state.
 
 Send `PITCH` only to a capable target. Snapshots and scalar updates may carry pitch from 0.5 to 2; absence preserves the receiver's pitch. Speed changes preserve pitch, and pitch does not affect the clock. Older peers ignore optional JSON fields without a version bump.
 
@@ -41,6 +41,8 @@ Capable peers can send scalar `UPDATE` against an accepted `queueRevision` and n
 Legacy peers receive full state on track/scrobble-session changes and one-second progress. Clock-capable peers use immediate changes and less frequent corrections. Clocks honor speed, pause, buffering and duration. Retain scrobble sessions for transfer.
 
 `REORDER` sends a revision-checked permutation containing every queue index once. The target preserves the current occurrence, position and shuffle identity even if playback advances in transit. Android media-session bulk edits are rejected while following another device.
+
+REMOVE may carry `advanceCurrentToSuccessor`, `successorIndex` and `expectedTrackRevision`. A removal with a stale expected track revision is rejected so an intervening track change cannot apply an obsolete successor. RESTORE_QUEUE accepts `startPlaying` to restore the playback intent captured when removing entries.
 
 Radio replacement can set `preserveCurrentTrack`. A matching ready seed retains its instance and position; otherwise it starts at zero. Older targets ignore the flag and may reload using the supplied position. Queue replacement requires complete snapshots. Partial queues need negotiated continuation ownership, cancellation and acknowledgement before use.
 
