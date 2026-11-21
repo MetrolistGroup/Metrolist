@@ -375,6 +375,8 @@ A 429 never retries. Explicit upstream throttling moves to the next free model a
 
 See OpenRouter's [model catalog](https://openrouter.ai/api/v1/models), [limits](https://openrouter.ai/docs/api_reference/limits), [reasoning tokens](https://openrouter.ai/docs/guides/best-practices/reasoning-tokens), [structured outputs](https://openrouter.ai/docs/guides/features/structured-outputs), [provider selection](https://openrouter.ai/docs/guides/routing/provider-selection) and [errors](https://openrouter.ai/docs/api_reference/errors-and-debugging). Account privacy policies can filter out every provider and cause a 404; setup links to the privacy settings for that case.
 
+Kilo (`https://ai-gateway.kilo.ai/api/v1/chat/completions`) is a keyless OpenAI-compatible gateway preset whose `Authorization` header is omitted when the API key is left blank. Its default model `kilo-auto/free` is rotated server-side across active free models (anonymous limit: 200 requests/hour/IP), while free models from its public `/models` catalog remain selectable and an optional key unlocks paid models.
+
 iOS lyrics support long-press selection and the shared image editor. Images are shared as temporary PNG files that are removed when sharing finishes.
 
 ## Persistence
