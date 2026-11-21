@@ -2275,7 +2275,7 @@
     <string name="playlist_cover_updated">Copertina playlist aggiornata</string>
     <string name="playlist_cover_removed">Copertina playlist rimossa</string>
     <string name="together">Together</string>
-    <string name="legacy_shuffle_desc">Riproduce in ordine casuale tutti i brani. inclusi quelli già riprodotti, partendo dal brano attuale. Disattiva per usare la riproduzione casuale KMP, che mantiene in ordine i brani già riprodotti e mescola solo quelli successivi.</string>
+    <string name="legacy_shuffle_desc">La riproduzione casuale legacy inserisce il brano attuale per primo e mescola anche i brani già riprodotti. Disattivala per mescolare solo i brani successivi. In entrambe le modalità, gli elementi contrassegnati come auto-mix o consigliati mantengono il proprio ordine.</string>
     <string name="artist_subscriber_count">%1$s iscritti</string>
     <string name="lyrics_text_color">Colore testi</string>
     <string name="lyrics_color_follow_theme">Segui il tema</string>
