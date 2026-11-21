@@ -151,11 +151,19 @@ internal class LinuxPhysicalKeyCapture : PlatformPhysicalKeyCapture {
             ready.countDown()
             x11.XFlush(activeEventDisplay)
             val eventFd = x11.XConnectionNumber(activeEventDisplay)
-            val pollFds = arrayOf(PollFd(eventFd, POLLIN), PollFd(wakeupPipe[0], POLLIN))
+
+            @Suppress("UNCHECKED_CAST")
+            val pollFds = PollFd().toArray(2) as Array<PollFd>
+            pollFds[0].fd = eventFd
+            pollFds[0].events = POLLIN.toShort()
+            pollFds[1].fd = wakeupPipe[0]
+            pollFds[1].events = POLLIN.toShort()
             while (requested) {
                 pollFds[0].revents = 0
                 pollFds[1].revents = 0
+                pollFds.forEach { it.write() }
                 if (Posix.INSTANCE.poll(pollFds, NativeLong(pollFds.size.toLong()), -1) < 0) break
+                pollFds.forEach { it.read() }
                 if (pollFds[1].revents.toInt() != 0) {
                     drainWakeup()
                     continue
@@ -185,9 +193,8 @@ internal class LinuxPhysicalKeyCapture : PlatformPhysicalKeyCapture {
     private fun drainWakeup() {
         val wakeupFd = wakeupPipe[0]
         if (wakeupFd < 0) return
-        val buffer = ByteArray(64)
-        while (Posix.INSTANCE.read(wakeupFd, buffer, NativeLong(buffer.size.toLong())).toLong() > 0) {
-        }
+        val buffer = ByteArray(1)
+        Posix.INSTANCE.read(wakeupFd, buffer, NativeLong(buffer.size.toLong()))
     }
 
     private val callback =
@@ -355,13 +362,10 @@ private interface Posix : Library {
 }
 
 @Structure.FieldOrder("fd", "events", "revents")
-private class PollFd(
-    fd: Int,
-    events: Int,
-) : Structure() {
-    @JvmField val fd: Int = fd
+internal class PollFd : Structure() {
+    @JvmField var fd: Int = 0
 
-    @JvmField var events: Short = events.toShort()
+    @JvmField var events: Short = 0
 
     @JvmField var revents: Short = 0
 }
