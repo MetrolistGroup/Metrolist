@@ -560,11 +560,13 @@ class AnimatedArtworkService internal constructor(
         val allResults = mutableListOf<Pair<AniTunesSearchResult, String>>()
 
         fun matchingAlbums(): List<Long> {
-            if (cleanAlbum != null && !isVariantTitle) {
+            if (cleanAlbum != null) {
                 val albumMatches =
                     allResults
                         .filter { (r, _) ->
                             matchesArtist(r, cleanArtist) && (explicit == null || matchesExplicit(r, explicit, true))
+                        }.filter { (r, _) ->
+                            !isVariantTitle || matchesTitle(r, cleanTitle, title)
                         }.filter { (r, _) ->
                             val collectionName = r.collectionName
                             collectionName != null &&
@@ -638,14 +640,7 @@ class AnimatedArtworkService internal constructor(
 
         val titleMatches =
             artistMatches.filter { (r, _) ->
-                if (isVariantTitle) {
-                    r.trackName.trim().replace(smartQuotePattern, "'").equals(
-                        title.trim().replace(smartQuotePattern, "'"),
-                        ignoreCase = true,
-                    )
-                } else {
-                    matchesTitle(r, cleanTitle, title)
-                }
+                matchesTitle(r, cleanTitle, title)
             }
         val selfTitledTitle =
             if (isVariantTitle) {
@@ -806,11 +801,17 @@ class AnimatedArtworkService internal constructor(
         cleanTitle: String,
         rawTitle: String,
     ): Boolean {
-        val resultClean = cleanTitleText(result.trackName)
-        if (resultClean == cleanTitle) return true
-        if (result.trackName.trim().equals(rawTitle.trim(), ignoreCase = true)) return true
-        return false
+        if (normalizeTrackTitle(result.trackName) == normalizeTrackTitle(rawTitle)) return true
+        return !isVariantTitle(rawTitle, cleanTitle) && cleanTitleText(result.trackName) == cleanTitle
     }
+
+    private fun normalizeTrackTitle(title: String): String =
+        title
+            .trim()
+            .replace(smartQuotePattern, "'")
+            .replace('[', '(')
+            .replace(']', ')')
+            .lowercase()
 
     private fun isVariantTitle(
         rawTitle: String,
@@ -879,6 +880,7 @@ class AnimatedArtworkService internal constructor(
             .lowercase()
             .replace(smartQuotePattern, "'")
             .replace(Regex("""\s+"""), " ")
+            .replace(Regex("""\s*(?:\(\s*\+[^)]*\)|\[\s*\+[^\]]*])\s*$"""), "")
 
     private fun stripReleaseSuffixes(name: String): String {
         var stripped = name
