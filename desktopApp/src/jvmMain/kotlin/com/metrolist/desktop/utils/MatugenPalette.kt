@@ -74,7 +74,10 @@ internal fun parseMatugenPalette(text: String): MatugenPalette {
 
     fun color(key: String): Color {
         val hex = values.getProperty(key)?.trim()?.removePrefix("#")
-        val rgb = hex?.takeIf { it.length == 6 }?.toLongOrNull(16)
+        val rgb =
+            hex
+                ?.takeIf { it.length == 6 && it.all { digit -> digit in '0'..'9' || digit in 'a'..'f' || digit in 'A'..'F' } }
+                ?.toLongOrNull(16)
         requireNotNull(rgb) { "$key is missing or not a #rrggbb color" }
         return Color(0xFF000000 or rgb)
     }
