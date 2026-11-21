@@ -3,6 +3,8 @@ package com.metrolist.shared.utils
 import com.metrolist.shared.BuildConfig
 import com.metrolist.shared.settings.Settings
 import com.metrolist.shared.settings.sanitizeIosDiagnosticMessage
+import com.metrolist.shared.youtube.playback.PlaybackEventLevel
+import com.metrolist.shared.youtube.playback.PlaybackEventLog
 import platform.Foundation.NSRecursiveLock
 
 actual object Logger {
@@ -29,6 +31,7 @@ actual object Logger {
         message: String,
         throwable: Throwable?,
     ) {
+        PlaybackEventLog.captureApplicationFailure(PlaybackEventLevel.WARN, tag, message, throwable)
         if (enabled) {
             println("W/$tag: $message")
             throwable?.printStackTrace()
@@ -41,6 +44,7 @@ actual object Logger {
         message: String,
         throwable: Throwable?,
     ) {
+        PlaybackEventLog.captureApplicationFailure(PlaybackEventLevel.ERROR, tag, message, throwable)
         if (enabled) {
             println("E/$tag: $message")
             throwable?.printStackTrace()

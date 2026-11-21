@@ -93,7 +93,7 @@ class DesktopSettingsCorruptionTest {
                 PlaybackEventLog.events.value
                     .filter { it.kind == PlaybackEventKind.RECOVERY }
                     .joinToString()
-            assertTrue(diagnostics.contains("secrets.properties.corrupt-"))
+            assertTrue(diagnostics.contains("Preserved unreadable secrets.properties"))
             assertFalse(diagnostics.contains("private-session"))
             assertFalse(diagnostics.contains("private-value"))
             store.put("innerTubeCookie", "new-session")

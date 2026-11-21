@@ -10,7 +10,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asSkiaBitmap
 import androidx.compose.ui.graphics.drawscope.CanvasDrawScope
@@ -321,9 +323,16 @@ internal actual fun PlatformLiquidBackgroundCanvas(
     previousArt: LayerArt?,
     crossfadeAlpha: () -> Float,
     rotationTimeMs: () -> Long,
+    isLightTheme: Boolean,
 ) {
     val renderer = remember { IosLiquidRenderer() }
-    Canvas(modifier = modifier.fillMaxSize()) {
+    Canvas(
+        modifier =
+            modifier.fillMaxSize().drawWithContent {
+                drawContent()
+                if (isLightTheme) drawRect(Color.White.copy(alpha = 0.6f))
+            },
+    ) {
         renderer.draw(
             scope = this,
             activeArt = activeArt,

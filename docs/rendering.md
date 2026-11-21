@@ -126,3 +126,5 @@ Current-song rows use a pill container, scalloped artwork and matching content c
 Run affected [platform checks](checks.md#platform-checks). Native checks must verify taps, keyboard actions, dismissal and rendering.
 
 Native checks must cover interrupted motion, missing and portrait artwork, theme changes, reduced motion, large fonts and accessibility. Compare CPU/GPU use when changing shaders, blur or visibility work. Backend tests do not establish rendering or power behavior.
+
+Light-theme Liquid backgrounds use a white wash with dark controls. Fullscreen video backdrops retain light controls. Lyrics use the same foreground polarity for blending and contrast scrims; additive blending applies only to light text.

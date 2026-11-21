@@ -46,7 +46,22 @@ internal class DesktopCastPlayback(
 ) {
     private var handledDisconnectGeneration: Long? = null
 
+    @Volatile private var requestedPlaying: Boolean? = null
+
     @Volatile private var disconnectJob: Job? = null
+
+    init {
+        scope.launch {
+            manager.state.collect { current ->
+                val requested = requestedPlaying
+                if (requested != null) {
+                    if (!current.isConnected || (!current.isBuffering && !current.hasEnded && current.isPlaying == requested)) {
+                        requestedPlaying = null
+                    }
+                }
+            }
+        }
+    }
 
     fun shouldResumeAfterDisconnect(state: CastState): Boolean = state.mediaGeneration != handledDisconnectGeneration
 
@@ -105,11 +120,14 @@ internal class DesktopCastPlayback(
     }
 
     fun setPlaying(playing: Boolean): Job {
+        requestedPlaying = playing
         transitions.setPlaying(playing)
         return scope.launch {
             if (playing) manager.play() else manager.pause()
         }
     }
+
+    fun playbackIntent(fallback: Boolean): Boolean = requestedPlaying ?: fallback
 
     fun disconnect(currentSong: () -> SongItem?) {
         val remote = manager.state.value

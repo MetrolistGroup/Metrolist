@@ -43,7 +43,10 @@ struct MetrolistApp: App {
             let audioSession = AVAudioSession.sharedInstance()
             try audioSession.setCategory(.playback, mode: .default)
         } catch {
-            print("Audio session configuration error: \(error.localizedDescription)")
+            IosApplicationLogBridgeKt.logIosApplicationError(
+                tag: "AudioSession",
+                message: "Audio session configuration error: \(error.localizedDescription)"
+            )
         }
     }
 }

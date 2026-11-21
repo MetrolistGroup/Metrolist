@@ -51,6 +51,9 @@ data class DcPlaybackCommand(
     val order: List<Int> = emptyList(),
     val volume: Float? = null,
     val preserveCurrentTrack: Boolean = false,
+    val startPlaying: Boolean? = null,
+    val advanceCurrentToSuccessor: Boolean = false,
+    val successorIndex: Int? = null,
 )
 
 @Serializable
