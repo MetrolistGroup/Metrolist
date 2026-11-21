@@ -85,6 +85,12 @@ For example, Android's `ui/screens/HomeScreen.kt` uses the Android `HomeViewMode
 - Run the affected platform's [checks](checks.md). Format changed Kotlin with `ktlint --format` or the module's `ktlintFormat` task, then review the result.
 - Use Conventional Commits and `<type>/<short-kebab-case-description>` branch names. Do not bump `appVersion` in a feature or fix; it triggers releases.
 
+## PR disclosure
+
+Every PR body must include a visible `AI usage:` line naming all AI models used to author or modify its code or documentation, including later agent edits. Include model versions when known. An editor or agent name alone, such as Cursor or Codex, does not identify the model. Do not guess an identity that the tool does not expose. If no AI authored any changes, write `AI usage: No AI was used.`
+
+The [PR disclosure workflow](../.github/workflows/pr-ai-disclosure.yml) comments when the declaration is missing or unfilled and updates its existing comment when a declaration is provided. Do not approve or merge until the required disclosure is present and complete. The automated check verifies the declaration's presence, not whether the author named the models truthfully.
+
 ## Icons
 
 Gradient app icon sources live in `assets/app-icons/gradient/`. Its foreground, monochrome and full SVGs center the glyph in a 52 dp box on the 108 dp adaptive canvas, matching the visual size of Android's Original glyph. Render `foreground.svg` and `full.svg` with `rsvg-convert -w 512 -h 512`, then encode them as lossless WebP for Android's `drawable-nodpi` resources. Keep the Android monochrome vector's transform in sync with `monochrome.svg`. Render `full.svg` at 1024 px and convert it to an RGB PNG for iOS's `GRADIENT.appiconset/AppIcon.png`. Gradient is an optional Android and iOS icon; desktop has no alternate-icon selector.

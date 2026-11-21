@@ -31,6 +31,8 @@ Live YouTube tests are opt-in and never run in CI. See [InnerTube live tests](in
 
 ## Manual checks
 
+The [PR disclosure workflow](../.github/workflows/pr-ai-disclosure.yml) checks the PR body when it opens or changes. It posts one reminder for a missing or unfilled `AI usage:` declaration and updates that comment after the author supplies one. This is a comment-only check; review must verify the model names before approval or merge. See [PR disclosure](development.md#pr-disclosure) for the required declaration.
+
 ### Focus and navigation
 
 On desktop, enable Floating search and open it with Ctrl+K and the search bar. The popup and scrim must appear, and typing must work without another click. Dismiss with Escape, an outside click and submission, then reopen. Toggle Ctrl+K rapidly and verify navigation works after closing. Repeat on Linux JVM and native builds; an invisible popup must not intercept input.
