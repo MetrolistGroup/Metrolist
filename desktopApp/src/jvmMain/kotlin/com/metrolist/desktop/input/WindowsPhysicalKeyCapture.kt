@@ -11,6 +11,7 @@ import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.withLock
+import java.awt.event.KeyEvent as AwtKeyEvent
 
 internal const val WINDOWS_LOW_LEVEL_EXTENDED_KEY_FLAG = 0x01
 
@@ -129,7 +130,7 @@ internal class WindowsPhysicalKeyCapture : PlatformPhysicalKeyCapture {
         return User32.INSTANCE.CallNextHookEx(hook, code, message, data)
     }
 
-    override fun consume(awtEventWhen: Long): CapturedPhysicalKey? = pendingKeyCaptures.consume(awtEventWhen)
+    override fun consume(event: AwtKeyEvent): CapturedPhysicalKey? = pendingKeyCaptures.consume(event.`when`)
 
     override fun close() = setEnabled(false)
 

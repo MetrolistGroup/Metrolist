@@ -182,7 +182,7 @@ private fun installGlobalShortcutDispatcher(
                 event.id == AwtKeyEvent.KEY_PRESSED && event.keyCode.isAwtModifierKey()
             val physicalCapture =
                 if (physicalCaptureAvailable && event.id == AwtKeyEvent.KEY_PRESSED && !isModifierPress) {
-                    physicalKeyCapture?.consume(event.`when`)
+                    physicalKeyCapture?.consume(event)
                 } else {
                     null
                 }

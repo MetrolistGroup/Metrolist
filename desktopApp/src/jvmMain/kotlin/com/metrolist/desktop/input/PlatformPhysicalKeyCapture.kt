@@ -1,13 +1,14 @@
 package com.metrolist.desktop.input
 
 import java.util.ArrayDeque
+import java.awt.event.KeyEvent as AwtKeyEvent
 
 internal interface PlatformPhysicalKeyCapture : AutoCloseable {
     val isAvailable: Boolean
 
     fun setEnabled(enabled: Boolean)
 
-    fun consume(awtEventWhen: Long): CapturedPhysicalKey?
+    fun consume(event: AwtKeyEvent): CapturedPhysicalKey?
 }
 
 internal data class CapturedPhysicalKey(
@@ -20,6 +21,8 @@ internal class OrderedPhysicalKeyCaptureBuffer(
     private data class Capture(
         val position: PhysicalKeyPosition?,
         val capturedAtMillis: Long,
+        val nativeTime: Long? = null,
+        val nativeKeyCode: Int? = null,
     )
 
     private val captures = ArrayDeque<Capture>()
@@ -30,11 +33,14 @@ internal class OrderedPhysicalKeyCaptureBuffer(
     fun record(
         position: PhysicalKeyPosition?,
         capturedAtMillis: Long,
-    ) {
-        pruneExpired(capturedAtMillis)
-        while (captures.size >= MAX_PENDING_CAPTURES) captures.removeFirst()
-        captures.addLast(Capture(position, capturedAtMillis))
-    }
+    ) = addCapture(position, capturedAtMillis, null, null)
+
+    @Synchronized
+    fun record(
+        position: PhysicalKeyPosition?,
+        nativeTime: Long,
+        nativeKeyCode: Int,
+    ) = addCapture(position, timeSourceMillis(), nativeTime, nativeKeyCode)
 
     @Synchronized
     fun consume(awtEventWhen: Long): CapturedPhysicalKey? {
@@ -52,10 +58,43 @@ internal class OrderedPhysicalKeyCaptureBuffer(
     }
 
     @Synchronized
+    fun consume(
+        nativeTime: Long,
+        nativeKeyCode: Int,
+    ): CapturedPhysicalKey? {
+        pruneExpired(timeSourceMillis())
+        val iterator = captures.iterator()
+        while (iterator.hasNext()) {
+            val capture = iterator.next()
+            if (capture.nativeTime == nativeTime && capture.nativeKeyCode == nativeKeyCode) {
+                iterator.remove()
+                return CapturedPhysicalKey(capture.position)
+            }
+        }
+        return null
+    }
+
+    @Synchronized
     fun clear() = captures.clear()
 
+    private fun addCapture(
+        position: PhysicalKeyPosition?,
+        capturedAtMillis: Long,
+        nativeTime: Long?,
+        nativeKeyCode: Int?,
+    ) {
+        pruneExpired(capturedAtMillis)
+        while (captures.size >= MAX_PENDING_CAPTURES) captures.removeFirst()
+        captures.addLast(Capture(position, capturedAtMillis, nativeTime, nativeKeyCode))
+    }
+
     private fun pruneExpired(nowMillis: Long) {
-        while (captures.firstOrNull()?.let { nowMillis - it.capturedAtMillis > MAX_CAPTURE_AGE_MILLIS } == true) {
+        // Native captures are matched by exact identity, so only the pending limit bounds their age.
+        while (
+            captures.firstOrNull()?.let {
+                it.nativeTime == null && nowMillis - it.capturedAtMillis > MAX_CAPTURE_AGE_MILLIS
+            } == true
+        ) {
             captures.removeFirst()
         }
     }

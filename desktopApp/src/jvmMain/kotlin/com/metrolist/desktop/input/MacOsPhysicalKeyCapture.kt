@@ -9,6 +9,7 @@ import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.withLock
+import java.awt.event.KeyEvent as AwtKeyEvent
 
 internal class MacOsPhysicalKeyCapture : PlatformPhysicalKeyCapture {
     private val lifecycleLock = ReentrantLock()
@@ -170,7 +171,7 @@ internal class MacOsPhysicalKeyCapture : PlatformPhysicalKeyCapture {
             }
         }
 
-    override fun consume(awtEventWhen: Long): CapturedPhysicalKey? = pending.consume(awtEventWhen)
+    override fun consume(event: AwtKeyEvent): CapturedPhysicalKey? = pending.consume(event.`when`)
 
     override fun close() = setEnabled(false)
 

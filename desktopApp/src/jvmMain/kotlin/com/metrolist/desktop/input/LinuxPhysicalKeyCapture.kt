@@ -8,39 +8,77 @@ import com.sun.jna.NativeLong
 import com.sun.jna.Pointer
 import com.sun.jna.Structure
 import com.sun.jna.platform.linux.ErrNo
+import java.awt.AWTEvent
+import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.withLock
-import kotlin.math.abs
+import java.awt.event.KeyEvent as AwtKeyEvent
 
 private object X11ThreadingState {
     @Volatile var ready = false
 }
 
-private data class ServerClockAnchor(
-    val wallTimeAtAnchor: Long,
-    val serverTimeAtAnchor: Long,
-    val monotonicTimeAtAnchorMillis: Long,
+private const val X11_KEY_PRESS_EVENT = 2
+private const val X11_EVENT_TYPE_MASK = 0x7F
+private const val X11_TIME_MASK = 0xFFFF_FFFFL
+
+private data class NativeKeyEventIdentity(
+    val eventTime: Long,
+    val keyCode: Int,
 )
 
-private data class ClockProbe(
-    val sequence: Int,
-    val idBase: Long,
-    val clientSwapped: Int,
-    val wallBeforeMillis: Long,
-    val wallAfterMillis: Long,
-    val monotonicBeforeNanos: Long,
-    val monotonicAfterNanos: Long,
-) {
-    val monotonicAfterMillis: Long get() = TimeUnit.NANOSECONDS.toMillis(monotonicAfterNanos)
+private object AwtNativeKeyEventReader {
+    private val getBData by lazy { runCatching(::createGetBData).getOrNull() }
+    private val timeOffset = nativeKeyEventTimeOffset()
+    private val keyCodeOffset = timeOffset + Native.LONG_SIZE + KEY_CODE_DELTA
 
-    val monotonicAtAnchorMillis: Long
-        get() =
-            TimeUnit.NANOSECONDS.toMillis(
-                monotonicBeforeNanos + (monotonicAfterNanos - monotonicBeforeNanos) / 2,
-            )
+    fun read(event: AwtKeyEvent): NativeKeyEventIdentity? {
+        val accessor = getBData ?: return null
+        val data = runCatching { accessor(event) }.getOrNull() ?: return null
+        if (data.size < keyCodeOffset + Int.SIZE_BYTES) return null
+        val buffer = ByteBuffer.wrap(data).order(ByteOrder.nativeOrder())
+        if (buffer.getInt(0) and X11_EVENT_TYPE_MASK != X11_KEY_PRESS_EVENT) return null
+        val rawTime =
+            if (Native.LONG_SIZE == Long.SIZE_BYTES) {
+                buffer.getLong(timeOffset)
+            } else {
+                buffer.getInt(timeOffset).toLong()
+            }
+        val eventTime = rawTime and X11_TIME_MASK
+        val keyCode = buffer.getInt(keyCodeOffset) and 0xFF
+        return NativeKeyEventIdentity(eventTime, keyCode)
+    }
+
+    private fun createGetBData(): ((AwtKeyEvent) -> ByteArray?)? {
+        val awtModule = AwtKeyEvent::class.java.module
+        val callerModule = LinuxPhysicalKeyCapture::class.java.module
+        if (!awtModule.isOpen("sun.awt", callerModule) && !awtModule.isExported("sun.awt", callerModule)) return null
+        val accessorMethod = Class.forName("sun.awt.AWTAccessor").getMethod("getAWTEventAccessor")
+        if (!accessorMethod.trySetAccessible()) return null
+        val accessor = runCatching { accessorMethod.invoke(null) }.getOrNull() ?: return null
+        val dataMethod = Class.forName("sun.awt.AWTAccessor\$AWTEventAccessor").getMethod("getBData", AWTEvent::class.java)
+        if (!dataMethod.trySetAccessible()) return null
+        return { event -> runCatching { dataMethod.invoke(accessor, event) as? ByteArray }.getOrNull() }
+    }
+
+    // XKeyEvent: type, serial, send_event, display, window, root, subwindow, Time, x, y, x_root, y_root, state, keycode.
+    private fun nativeKeyEventTimeOffset(): Int {
+        val pointerSize = Native.LONG_SIZE
+        val serialOffset = alignTo(Int.SIZE_BYTES, pointerSize)
+        val sendEventOffset = serialOffset + pointerSize
+        val displayOffset = alignTo(sendEventOffset + Int.SIZE_BYTES, pointerSize)
+        return displayOffset + pointerSize * 4
+    }
+
+    private fun alignTo(
+        value: Int,
+        alignment: Int,
+    ): Int = (value + alignment - 1) / alignment * alignment
+
+    private const val KEY_CODE_DELTA = 20
 }
 
 internal fun initializeLinuxX11Threading() {
@@ -50,11 +88,7 @@ internal fun initializeLinuxX11Threading() {
 
 internal class LinuxPhysicalKeyCapture : PlatformPhysicalKeyCapture {
     private val lifecycleLock = ReentrantLock()
-    private val pending = OrderedPhysicalKeyCaptureBuffer()
-
-    @Volatile private var clockAnchor: ServerClockAnchor? = null
-
-    @Volatile private var clockProbe: ClockProbe? = null
+    private val pending = OrderedPhysicalKeyCaptureBuffer(timeSourceMillis = { monotonicMillis() })
 
     @Volatile private var suppressedModifierKeycodes: Set<Int> = emptySet()
 
@@ -111,8 +145,6 @@ internal class LinuxPhysicalKeyCapture : PlatformPhysicalKeyCapture {
                 restartOnExit = false
                 workerGeneration++
                 pending.clear()
-                clockAnchor = null
-                clockProbe = null
                 suppressedModifierKeycodes = emptySet()
                 modifierMappingReady = false
                 worker
@@ -155,8 +187,6 @@ internal class LinuxPhysicalKeyCapture : PlatformPhysicalKeyCapture {
                             if (worker === Thread.currentThread()) worker = null
                             available = false
                             pending.clear()
-                            clockAnchor = null
-                            clockProbe = null
                             suppressedModifierKeycodes = emptySet()
                             modifierMappingReady = false
                             if (shouldRestart && worker == null) startWorker()
@@ -191,8 +221,6 @@ internal class LinuxPhysicalKeyCapture : PlatformPhysicalKeyCapture {
             range = xtst.XRecordAllocRange() ?: return
             range.clear(X_RECORD_RANGE_SIZE)
             // Range members are byte ranges in Xlib's 32-byte XRecordRange structure.
-            range.setByte(CORE_REPLIES_OFFSET, X_GET_INPUT_FOCUS.toByte())
-            range.setByte(CORE_REPLIES_OFFSET + 1, X_GET_INPUT_FOCUS.toByte())
             range.setByte(DELIVERED_EVENTS_OFFSET, X_MAPPING_NOTIFY.toByte())
             range.setByte(DELIVERED_EVENTS_OFFSET + 1, X_MAPPING_NOTIFY.toByte())
             range.setByte(DEVICE_EVENTS_OFFSET, X_KEY_PRESS.toByte())
@@ -205,7 +233,7 @@ internal class LinuxPhysicalKeyCapture : PlatformPhysicalKeyCapture {
             val activeContext =
                 xtst.XRecordCreateContext(
                     openedControlDisplay,
-                    X_RECORD_FROM_SERVER_TIME,
+                    0,
                     clients,
                     1,
                     ranges,
@@ -223,22 +251,13 @@ internal class LinuxPhysicalKeyCapture : PlatformPhysicalKeyCapture {
                 }
             if (!enabled) return
 
-            // XRecordIdBaseMask returns the fixed client-ID bits from connection setup, which are
-            // the id_base reported for replies recorded from this control connection.
-            val controlIdBase = xtst.XRecordIdBaseMask(openedControlDisplay).toLong() and X_TIME_MASK
             ready.countDown()
             x11.XFlush(activeEventDisplay)
-            var nextClockProbeAt = monotonicMillis()
             var nextModifierRefreshAt = monotonicMillis()
             if (refreshModifierKeycodes(openedControlDisplay)) {
                 nextModifierRefreshAt = monotonicMillis() + MODIFIER_REFRESH_INTERVAL_MILLIS
             } else {
                 nextModifierRefreshAt = monotonicMillis() + REFRESH_RETRY_MILLIS
-            }
-            if (requestClockProbe(openedControlDisplay, controlIdBase)) {
-                nextClockProbeAt = monotonicMillis() + CLOCK_REFRESH_INTERVAL_MILLIS
-            } else {
-                nextClockProbeAt = monotonicMillis() + REFRESH_RETRY_MILLIS
             }
             val eventFd = x11.XConnectionNumber(activeEventDisplay)
 
@@ -249,7 +268,7 @@ internal class LinuxPhysicalKeyCapture : PlatformPhysicalKeyCapture {
             pollFds[1].fd = wakeupPipe[0]
             pollFds[1].events = POLLIN.toShort()
             while (requested && workerGeneration == generation) {
-                if (!pollWithRetry(pollFds, generation, pollTimeoutMillis(clockProbe, nextClockProbeAt, monotonicMillis()))) break
+                if (!pollWithRetry(pollFds, generation, MAX_POLL_WAIT_MILLIS)) break
                 pollFds.forEach { it.read() }
                 if (pollFds[1].revents.toInt() != 0) {
                     drainWakeup()
@@ -270,35 +289,7 @@ internal class LinuxPhysicalKeyCapture : PlatformPhysicalKeyCapture {
                             REFRESH_RETRY_MILLIS
                         }
                 }
-                // X Time keeps advancing across wall-clock corrections, so a changed wall offset
-                // invalidates the anchor used to order native captures against AWT events.
-                val anchor = clockAnchor
-                if (anchor != null) {
-                    val expectedWall = anchor.wallTimeAtAnchor + loopMonotonic - anchor.monotonicTimeAtAnchorMillis
-                    if (abs(System.currentTimeMillis() - expectedWall) > WALL_CLOCK_JUMP_THRESHOLD_MILLIS) {
-                        clockAnchor = null
-                        clockProbe = null
-                        pending.clear()
-                        nextClockProbeAt = loopMonotonic
-                    }
-                }
-                val pendingProbe = clockProbe
-                if (pendingProbe != null && loopMonotonic - pendingProbe.monotonicAfterMillis >= CLOCK_PROBE_TIMEOUT_MILLIS) {
-                    clockProbe = null
-                    nextClockProbeAt = loopMonotonic + REFRESH_RETRY_MILLIS
-                }
-                if (clockProbe == null && loopMonotonic >= nextClockProbeAt) {
-                    nextClockProbeAt =
-                        loopMonotonic +
-                        if (requestClockProbe(openedControlDisplay, controlIdBase)) {
-                            CLOCK_REFRESH_INTERVAL_MILLIS
-                        } else {
-                            REFRESH_RETRY_MILLIS
-                        }
-                }
-                if (!available && requested && workerGeneration == generation &&
-                    clockAnchor != null && modifierMappingReady
-                ) {
+                if (!available && requested && workerGeneration == generation && modifierMappingReady) {
                     available = true
                 }
             }
@@ -347,18 +338,6 @@ internal class LinuxPhysicalKeyCapture : PlatformPhysicalKeyCapture {
 
     private fun monotonicMillis(): Long = TimeUnit.NANOSECONDS.toMillis(System.nanoTime())
 
-    private fun pollTimeoutMillis(
-        probe: ClockProbe?,
-        nextClockProbeAt: Long,
-        nowMonotonicMillis: Long,
-    ): Int {
-        val deadline = probe?.monotonicAfterMillis?.plus(CLOCK_PROBE_TIMEOUT_MILLIS) ?: nextClockProbeAt
-        return (deadline - nowMonotonicMillis)
-            .coerceAtMost(MAX_POLL_WAIT_MILLIS.toLong())
-            .coerceAtLeast(0L)
-            .toInt()
-    }
-
     private fun refreshModifierKeycodes(display: Pointer): Boolean {
         val mapping = X11.INSTANCE.XGetModifierMapping(display) ?: return false
         try {
@@ -383,65 +362,9 @@ internal class LinuxPhysicalKeyCapture : PlatformPhysicalKeyCapture {
         keycode: Int,
     ): Boolean =
         (0 until KEYSYMS_PER_KEYCODE).any { index ->
-            val keysym = X11.INSTANCE.XKeycodeToKeysym(display, keycode, index).toLong() and X_TIME_MASK
+            val keysym = X11.INSTANCE.XKeycodeToKeysym(display, keycode, index).toLong() and X11_TIME_MASK
             keysym in AWT_MODIFIER_KEYSYMS
         }
-
-    private fun requestClockProbe(
-        display: Pointer,
-        idBase: Long,
-    ): Boolean {
-        val sequence = X11.INSTANCE.XNextRequest(display).toLong() and SEQUENCE_MASK
-        val focus = Memory(Native.LONG_SIZE.toLong())
-        val revertTo = Memory(Int.SIZE_BYTES.toLong())
-        val monotonicBeforeNanos = System.nanoTime()
-        val wallBeforeMillis = System.currentTimeMillis()
-        val sent = X11.INSTANCE.XGetInputFocus(display, focus, revertTo) != 0
-        // Xlib buffers requests; without a flush the probe may never reach the server.
-        val flushed = X11.INSTANCE.XFlush(display) != 0
-        val wallAfterMillis = System.currentTimeMillis()
-        val monotonicAfterNanos = System.nanoTime()
-        if (!sent || !flushed) return false
-        clockProbe =
-            ClockProbe(
-                sequence = sequence.toInt(),
-                idBase = idBase,
-                clientSwapped = 0,
-                wallBeforeMillis = wallBeforeMillis,
-                wallAfterMillis = wallAfterMillis,
-                monotonicBeforeNanos = monotonicBeforeNanos,
-                monotonicAfterNanos = monotonicAfterNanos,
-            )
-        return true
-    }
-
-    private fun handleClockReply(
-        data: XRecordInterceptData,
-        replyData: Pointer,
-        serverTime: Long,
-    ) {
-        val probe = clockProbe ?: return
-        if ((data.idBase.toLong() and X_ID_MASK) != probe.idBase) return
-        if (data.clientSwapped != probe.clientSwapped) return
-        val sequence = readCard16(replyData, REPLY_SEQUENCE_OFFSET, data.clientSwapped != 0)
-        if (sequence != probe.sequence) return
-        clockProbe = null
-        val wallAtAnchor = probe.wallBeforeMillis + (probe.wallAfterMillis - probe.wallBeforeMillis) / 2
-        clockAnchor = ServerClockAnchor(wallAtAnchor, serverTime, probe.monotonicAtAnchorMillis)
-    }
-
-    private fun readCard16(
-        pointer: Pointer,
-        offset: Long,
-        swapped: Boolean,
-    ): Int {
-        val first = pointer.getByte(offset).toInt() and 0xFF
-        val second = pointer.getByte(offset + 1).toInt() and 0xFF
-        val littleEndianValue = first or (second shl 8)
-        val bigEndianValue = (first shl 8) or second
-        val hostIsLittleEndian = ByteOrder.nativeOrder() == ByteOrder.LITTLE_ENDIAN
-        return if (swapped == hostIsLittleEndian) bigEndianValue else littleEndianValue
-    }
 
     private val callback =
         object : XRecordInterceptProc {
@@ -457,12 +380,6 @@ internal class LinuxPhysicalKeyCapture : PlatformPhysicalKeyCapture {
                     data.read()
                     if (data.category != RECORD_FROM_SERVER || data.dataLength.toLong() < MIN_DATUM_LENGTH) return
                     val eventData = data.data ?: return
-                    val serverTime = data.serverTime.toLong() and X_TIME_MASK
-
-                    if (eventData.getByte(0).toInt() == X_REPLY) {
-                        handleClockReply(data, eventData, serverTime)
-                        return
-                    }
 
                     when (eventData.getByte(0).toInt() and X_EVENT_TYPE_MASK) {
                         X_MAPPING_NOTIFY -> {
@@ -470,13 +387,14 @@ internal class LinuxPhysicalKeyCapture : PlatformPhysicalKeyCapture {
                         }
 
                         X_KEY_PRESS -> {
-                            if (clockAnchor == null || !modifierMappingReady) return
+                            if (!modifierMappingReady) return
                             val xKeyCode = eventData.getByte(1).toInt() and 0xFF
                             if (xKeyCode in suppressedModifierKeycodes) return
-                            // AWT consumes one capture per press it reports; unmapped and non-AWT
-                            // modifier presses stay in the FIFO as null markers.
-                            val position = linuxPhysicalPositionForX11KeyCode(xKeyCode)
-                            pending.record(position, wallTimeForServerTime(serverTime))
+                            // XRecord reports the event's server timestamp in the wire event, not in serverTime.
+                            val eventTime = eventData.getInt(WIRE_EVENT_TIME_OFFSET.toLong()).toLong() and X11_TIME_MASK
+                            // AWT reports the same native timestamp and keycode in its key event.
+                            // Unmapped presses stay in the buffer as null markers.
+                            pending.record(linuxPhysicalPositionForX11KeyCode(xKeyCode), eventTime, xKeyCode)
                         }
                     }
                 } finally {
@@ -485,14 +403,12 @@ internal class LinuxPhysicalKeyCapture : PlatformPhysicalKeyCapture {
             }
         }
 
-    private fun wallTimeForServerTime(serverTime: Long): Long {
-        val anchor = clockAnchor ?: return System.currentTimeMillis()
-        // X Time is 32-bit and wraps; a signed 32-bit delta stays correct across the wrap.
-        val delta = ((serverTime and X_TIME_MASK) - anchor.serverTimeAtAnchor).toInt().toLong()
-        return anchor.wallTimeAtAnchor + delta
+    override fun consume(event: AwtKeyEvent): CapturedPhysicalKey? {
+        // XToolkit sets KeyEvent.when when it processes the event, not when the X server generated it.
+        // The native event stores the server timestamp, which is the identity shared with XRecord.
+        val identity = AwtNativeKeyEventReader.read(event) ?: return null
+        return pending.consume(identity.eventTime, identity.keyCode)
     }
-
-    override fun consume(awtEventWhen: Long): CapturedPhysicalKey? = pending.consume(awtEventWhen)
 
     override fun close() {
         if (closed) return
@@ -508,30 +424,20 @@ internal class LinuxPhysicalKeyCapture : PlatformPhysicalKeyCapture {
 
     private companion object {
         const val X_RECORD_ALL_CLIENTS = 3L
-        const val X_RECORD_FROM_SERVER_TIME = 0x1
         const val RECORD_FROM_SERVER = 0
-        const val X_TIME_MASK = 0xFFFF_FFFFL
-        const val X_ID_MASK = 0xFFFF_FFFFL
-        const val SEQUENCE_MASK = 0xFFFFL
-        const val X_REPLY = 1
-        const val X_KEY_PRESS = 2
+        const val X_KEY_PRESS = X11_KEY_PRESS_EVENT
         const val X_MAPPING_NOTIFY = 34
-        const val X_GET_INPUT_FOCUS = 43
-        const val X_EVENT_TYPE_MASK = 0x7F
-        const val CORE_REPLIES_OFFSET = 2L
+        const val X_EVENT_TYPE_MASK = X11_EVENT_TYPE_MASK
         const val DELIVERED_EVENTS_OFFSET = 16L
         const val DEVICE_EVENTS_OFFSET = 18L
         const val X_RECORD_RANGE_SIZE = 32L
 
-        // XRecord reports data lengths in 4-byte units; core replies and events occupy 32 bytes.
+        // XRecord reports data lengths in 4-byte units; core events occupy 32 bytes.
         const val MIN_DATUM_LENGTH = 8L
-        const val REPLY_SEQUENCE_OFFSET = 2L
+        const val WIRE_EVENT_TIME_OFFSET = 8
         const val MODIFIER_COUNT = 8
         const val MAX_KEYS_PER_MODIFIER = 255
         const val KEYSYMS_PER_KEYCODE = 4
-        const val CLOCK_REFRESH_INTERVAL_MILLIS = 5_000L
-        const val CLOCK_PROBE_TIMEOUT_MILLIS = 2_000L
-        const val WALL_CLOCK_JUMP_THRESHOLD_MILLIS = 250L
         const val MODIFIER_REFRESH_INTERVAL_MILLIS = 5_000L
         const val REFRESH_RETRY_MILLIS = 500L
         const val MAX_POLL_WAIT_MILLIS = 1_000
@@ -605,14 +511,6 @@ private interface X11 : Library {
         discard: Boolean,
     ): Int
 
-    fun XNextRequest(display: Pointer): NativeLong
-
-    fun XGetInputFocus(
-        display: Pointer,
-        focus: Pointer,
-        revertTo: Pointer,
-    ): Int
-
     fun XGetModifierMapping(display: Pointer): Pointer?
 
     fun XKeycodeToKeysym(
@@ -633,8 +531,6 @@ private interface X11 : Library {
 @Suppress("FunctionName")
 private interface XTestRecord : Library {
     fun XRecordAllocRange(): Pointer?
-
-    fun XRecordIdBaseMask(display: Pointer): NativeLong
 
     fun XRecordProcessReplies(display: Pointer)
 
