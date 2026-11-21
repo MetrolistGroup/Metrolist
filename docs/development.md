@@ -463,3 +463,5 @@ Music layouts order Previous, Play/Pause, Next and Like. Play/Pause shows a loca
 - Never commit heap dumps, traces, account tokens or local configuration. They can contain private data.
 
 Automatic backups are opt-in and keep the ten newest local archives. Android uses WorkManager, desktop runs while the app is open, and iOS requests background processing that the system may defer. Backup creation and retention cleanup are serialized. Failed retention cleanup retries without creating another archive.
+
+Desktop automatic backups recheck wall-clock deadlines at most five minutes after resume, rather than waiting for a full interval of awake time.
