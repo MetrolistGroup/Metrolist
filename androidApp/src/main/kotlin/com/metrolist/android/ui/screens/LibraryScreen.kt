@@ -93,9 +93,9 @@ import com.metrolist.android.ui.menu.SongMenu
 import com.metrolist.android.ui.utils.playSong
 import com.metrolist.android.utils.startActivitySafely
 import com.metrolist.android.viewmodels.LibraryViewModel
+import com.metrolist.android.viewmodels.loadOrderedCachedSongs
 import com.metrolist.shared.constants.ThumbnailCornerRadius
 import com.metrolist.shared.db.MusicDatabase
-import com.metrolist.shared.db.entities.KIND_CACHE
 import com.metrolist.shared.db.entities.toSongItem
 import com.metrolist.shared.db.isHistoryPlaylistId
 import com.metrolist.shared.db.refreshUploadedSongs
@@ -122,9 +122,7 @@ import com.metrolist.shared.generated.resources.share_playlist
 import com.metrolist.shared.generated.resources.share_podcast
 import com.metrolist.shared.generated.resources.share_song
 import com.metrolist.shared.model.AlbumItem
-import com.metrolist.shared.model.AlbumTiny
 import com.metrolist.shared.model.ArtistItem
-import com.metrolist.shared.model.ArtistTiny
 import com.metrolist.shared.model.PlaylistItem
 import com.metrolist.shared.model.PodcastItem
 import com.metrolist.shared.model.SongItem
@@ -351,18 +349,7 @@ fun LibraryScreen(
                 }
 
                 "cached" -> {
-                    database.dao().cachedAudioByKind(KIND_CACHE).first().map { entry ->
-                        SongItem(
-                            id = entry.songId,
-                            title = entry.title,
-                            thumbnail = entry.thumbnailUrl,
-                            artists =
-                                entry.artist.split(',').mapNotNull { name ->
-                                    name.trim().takeIf { it.isNotBlank() && it != "Unknown" }?.let { ArtistTiny(null, it) }
-                                },
-                            album = entry.album?.let { AlbumTiny(null, it) },
-                        )
-                    }
+                    loadOrderedCachedSongs(database)
                 }
 
                 "top100" -> {

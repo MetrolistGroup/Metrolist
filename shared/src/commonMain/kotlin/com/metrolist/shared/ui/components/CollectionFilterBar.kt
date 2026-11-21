@@ -19,6 +19,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
@@ -44,6 +45,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
@@ -54,6 +58,7 @@ import com.metrolist.shared.generated.resources.playlist_direction_ascending
 import com.metrolist.shared.generated.resources.playlist_direction_descending
 import com.metrolist.shared.model.CollectionSort
 import com.metrolist.shared.model.SortDirection
+import com.metrolist.shared.model.allowsReordering
 import com.metrolist.shared.ui.icons.MetrolistIcons
 import com.metrolist.shared.ui.menu.ExpressiveSelectionMenu
 import com.metrolist.shared.ui.menu.trackPressPosition
@@ -61,11 +66,23 @@ import com.metrolist.shared.ui.tv.tvFocusHighlight
 import com.metrolist.shared.ui.utils.carouselScroll
 import org.jetbrains.compose.resources.stringResource
 
+internal fun resolveCollectionFilterSort(
+    sort: CollectionSort,
+    availableSorts: Set<CollectionSort>,
+): CollectionSort? =
+    when {
+        sort in availableSorts -> sort
+        CollectionSort.NEWEST in availableSorts -> CollectionSort.NEWEST
+        else -> availableSorts.firstOrNull()
+    }
+
 data class CollectionFilterBarText(
     val searchLabel: String,
     val sortLabels: Map<CollectionSort, String>,
     val sortOptions: String,
     val clear: String? = null,
+    val reorder: String = "",
+    val lock: String = reorder,
 )
 
 @Composable
@@ -80,6 +97,9 @@ fun CollectionFilterBar(
     onClear: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
     showSearch: Boolean = true,
+    reorderMode: Boolean = false,
+    canReorder: Boolean = false,
+    onReorderModeChange: (Boolean) -> Unit = {},
 ) {
     var sortExpanded by remember { mutableStateOf(false) }
     var sortMenuOffset by remember { mutableStateOf(IntOffset.Zero) }
@@ -149,20 +169,31 @@ fun CollectionFilterBar(
                 shadowElevation = 0.dp,
             )
         }
-        Row(
-            modifier =
+        val effectiveSort = resolveCollectionFilterSort(sort, text.sortLabels.keys)
+        val controlsRowModifier =
+            if (canReorder) {
+                Modifier.fillMaxWidth()
+            } else {
                 Modifier
                     .fillMaxWidth()
                     .carouselScroll(filterScrollState)
-                    .horizontalScroll(filterScrollState),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    .horizontalScroll(filterScrollState)
+            }
+        Row(
+            modifier = controlsRowModifier,
+            horizontalArrangement = Arrangement.spacedBy(if (canReorder) 12.dp else 8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Box(Modifier.trackPressPosition { sortMenuOffset = it.round() }) {
+            Box(
+                Modifier
+                    .then(if (canReorder) Modifier.weight(1f) else Modifier)
+                    .trackPressPosition { sortMenuOffset = it.round() },
+            ) {
                 SplitButtonLayout(
                     leadingButton = {
                         SplitButtonDefaults.TonalLeadingButton(
                             onClick = { sortExpanded = true },
+                            enabled = !reorderMode,
                             modifier =
                                 Modifier
                                     .tvFocusHighlight(
@@ -172,10 +203,11 @@ fun CollectionFilterBar(
                                             topEnd = 4.dp,
                                             bottomEnd = 4.dp,
                                         ),
-                                    ).menuAnchorSemantics(sortExpanded),
+                                    ).menuAnchorSemantics(sortExpanded)
+                                    .semantics { contentDescription = text.sortOptions },
                         ) {
                             Text(
-                                text = text.sortLabels.getValue(sort),
+                                text = effectiveSort?.let { text.sortLabels[it] }.orEmpty(),
                                 maxLines = 1,
                                 softWrap = false,
                                 overflow = TextOverflow.Ellipsis,
@@ -197,6 +229,7 @@ fun CollectionFilterBar(
                                     },
                                 )
                             },
+                            enabled = !reorderMode && effectiveSort?.allowsReordering() != true,
                             modifier =
                                 Modifier
                                     .tvFocusHighlight(
@@ -245,10 +278,35 @@ fun CollectionFilterBar(
                     onDismissRequest = { sortExpanded = false },
                     anchorOffset = sortMenuOffset,
                     options = text.sortLabels.keys.toList(),
-                    selectedOption = sort,
-                    optionLabel = { text.sortLabels.getValue(it) },
+                    selectedOption = effectiveSort,
+                    optionLabel = { text.sortLabels[it].orEmpty() },
                     onOptionSelected = { option -> onSortChange(option) },
                 )
+            }
+            if (canReorder) {
+                FilledTonalButton(
+                    onClick = { onReorderModeChange(!reorderMode) },
+                    enabled = reorderMode || effectiveSort?.allowsReordering() == true,
+                    modifier = Modifier.tvFocusHighlight(CircleShape).semantics { selected = reorderMode },
+                    colors =
+                        ButtonDefaults.filledTonalButtonColors(
+                            containerColor =
+                                if (reorderMode) {
+                                    MaterialTheme.colorScheme.secondary
+                                } else {
+                                    MaterialTheme.colorScheme.secondaryContainer
+                                },
+                            contentColor =
+                                if (reorderMode) {
+                                    MaterialTheme.colorScheme.onSecondary
+                                } else {
+                                    MaterialTheme.colorScheme.onSecondaryContainer
+                                },
+                        ),
+                    shapes = ButtonDefaults.shapes(),
+                ) {
+                    Text(if (reorderMode) text.lock else text.reorder, maxLines = 1, softWrap = false)
+                }
             }
             if (onClear != null) {
                 TextButton(onClick = onClear, modifier = Modifier.tvFocusHighlight(CircleShape), shapes = ButtonDefaults.shapes()) {

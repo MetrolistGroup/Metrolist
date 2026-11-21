@@ -10,11 +10,12 @@ import androidx.media3.common.MediaMetadata
 import androidx.media3.session.MediaConstants
 import com.metrolist.android.R
 import com.metrolist.android.constants.MediaSessionConstants
+import com.metrolist.android.viewmodels.loadOrderedCachedSongs
 import com.metrolist.shared.api.PlaylistPage
 import com.metrolist.shared.api.YouTubeRepository
 import com.metrolist.shared.auth.hasSupportedYouTubeAuthCookie
 import com.metrolist.shared.db.MusicDatabase
-import com.metrolist.shared.db.entities.KIND_CACHE
+import com.metrolist.shared.db.entities.CachedAudioEntity
 import com.metrolist.shared.db.entities.KIND_DOWNLOAD
 import com.metrolist.shared.db.entities.PlaylistEntity
 import com.metrolist.shared.db.entities.toSongItem
@@ -43,6 +44,7 @@ import com.metrolist.shared.state.SongLikeState
 import com.metrolist.shared.ui.components.libraryArtwork
 import com.metrolist.shared.youtube.playback.PlaybackNetworkStateStore
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
@@ -55,6 +57,7 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 import java.io.File
 import java.nio.charset.StandardCharsets
 import java.util.Base64
@@ -1250,7 +1253,11 @@ internal class AutomotiveMediaLibrary(
             }
 
             AutomotiveAutoPlaylist.CACHED -> {
-                cachedSongs(KIND_CACHE)
+                loadOrderedCachedSongs(database) { entries ->
+                    withContext(Dispatchers.IO) {
+                        entries.filter(::isCachedAudioAvailable)
+                    }
+                }
             }
 
             AutomotiveAutoPlaylist.UPLOADED -> {
@@ -1275,20 +1282,22 @@ internal class AutomotiveMediaLibrary(
             }
         }.let(::filterSongs)
 
+    private fun isCachedAudioAvailable(entry: CachedAudioEntity): Boolean {
+        val legacy = LegacyAudioFile.fromPath(context, entry.filePath)
+        return if (legacy != null) {
+            runCatching { LegacyAudioFile.read(legacy).verify() }.isSuccess
+        } else {
+            File(entry.filePath).let { it.exists() && it.length() > 0L }
+        }
+    }
+
     private suspend fun cachedSongs(kind: String): List<SongItem> {
         val cached =
             database
                 .dao()
                 .cachedAudioByKind(kind)
                 .first()
-                .filter { entry ->
-                    val legacy = LegacyAudioFile.fromPath(context, entry.filePath)
-                    if (legacy != null) {
-                        runCatching { LegacyAudioFile.read(legacy).verify() }.isSuccess
-                    } else {
-                        File(entry.filePath).let { it.exists() && it.length() > 0L }
-                    }
-                }
+                .filter(::isCachedAudioAvailable)
         if (cached.isEmpty()) return emptyList()
         val localSongs = database.dao().getSongsByIds(cached.map { it.songId }).associateBy { it.id }
         return cached.map { entry ->
