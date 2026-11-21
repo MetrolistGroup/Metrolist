@@ -33,6 +33,7 @@ import io.ktor.client.plugins.HttpTimeout
 import io.ktor.client.request.headers
 import io.ktor.client.request.prepareGet
 import io.ktor.client.statement.bodyAsChannel
+import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.isSuccess
 import io.ktor.utils.io.jvm.javaio.toInputStream
@@ -560,6 +561,12 @@ object DownloadManager {
                         if (!response.status.isSuccess()) {
                             if (response.status.value == 403 || response.status.value == 410) {
                                 throw IOException("HTTP ${response.status.value}: Stream URL expired")
+                            }
+                            if (!isImage &&
+                                response.status == HttpStatusCode.ServiceUnavailable &&
+                                response.headers[HttpHeaders.RetryAfter] == null
+                            ) {
+                                throw IOException("HTTP 503: Audio temporarily unavailable")
                             }
                             return@execute null
                         }
