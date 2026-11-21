@@ -11,7 +11,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import com.metrolist.desktop.deviceconnect.DesktopDeviceConnect
 import com.metrolist.desktop.history.HistoryEntry
-import com.metrolist.desktop.history.HistoryRepository
 import com.metrolist.desktop.history.HistoryStat
 import com.metrolist.desktop.playback.PlaybackErrorReporter
 import com.metrolist.desktop.state.app.AppState
@@ -19,7 +18,6 @@ import com.metrolist.desktop.state.app.UiState
 import com.metrolist.desktop.state.auth.AuthState
 import com.metrolist.desktop.storage.DownloadManager
 import com.metrolist.desktop.storage.SongCacheManager
-import com.metrolist.desktop.utils.AppLogger
 import com.metrolist.desktop.utils.ComposeTrayManager
 import com.metrolist.desktop.window.playbackWindowVisibility
 import com.metrolist.innertubex.extraction.AudioQuality
@@ -1280,10 +1278,6 @@ object PlayerState {
             SongMetadataState.revision.collectLatest {
                 currentTrack?.let { updateCurrentTrack(SongMetadataState.apply(it), startArtworkFetch = false) }
             }
-        }
-        scope.launch(Dispatchers.IO) {
-            runCatching { HistoryRepository.clearQueuedScrobbles() }
-                .onFailure { AppLogger.warning("PlayerState", "Failed to clear legacy queued scrobbles", it) }
         }
         scope.launch {
             snapshotFlow {
