@@ -3557,8 +3557,13 @@ object PlayerState {
         fromListenTogether: Boolean = false,
         fromRemoteControl: Boolean = false,
     ) {
+        val currentPos = currentMediaPositionMs()
+        val isLive = isLiveStream
+
+        fun previousIndex(live: Boolean): Int? =
+            queue.state.value.let { desktopPreviousQueueIndex(it.currentIndex, it.entries.lastIndex, repeatMode, live) }
         if (!fromListenTogether) {
-            _playbackReplacementGeneration.incrementAndGet()
+            if ((isLive || currentPos <= 3_000L) && previousIndex(isLive) != null) _playbackReplacementGeneration.incrementAndGet()
             _explicitPlaybackGeneration.incrementAndGet()
         }
         if (!fromListenTogether && deviceConnect.intercept(DcPlaybackCommand(DcPlaybackAction.PREVIOUS))) return
@@ -3575,12 +3580,6 @@ object PlayerState {
                 localSongChangeStartsPlayback()
             }
         cancelCrossfadeForManualAction()
-        val currentPos = currentMediaPositionMs()
-
-        fun previousIndex(isLive: Boolean): Int? =
-            queue.state.value.let { desktopPreviousQueueIndex(it.currentIndex, it.entries.lastIndex, repeatMode, isLive) }
-
-        val isLive = isLiveStream
         val restartPosition = desktopPreviousRestartPosition(pendingResumePosition, currentPos, isLive, previousIndex(isLive) != null)
         val generation = beginPlaybackTransition(resumePosition = restartPosition, preserveCast = true)
         desiredPlayback.value = startPlaying
