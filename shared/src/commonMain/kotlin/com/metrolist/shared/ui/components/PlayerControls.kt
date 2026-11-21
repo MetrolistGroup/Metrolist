@@ -87,6 +87,7 @@ import com.metrolist.shared.generated.resources.more_options
 import com.metrolist.shared.generated.resources.next
 import com.metrolist.shared.generated.resources.previous
 import com.metrolist.shared.generated.resources.share
+import com.metrolist.shared.generated.resources.unlike
 import com.metrolist.shared.settings.PlayerBackgroundStyle
 import com.metrolist.shared.settings.Settings
 import com.metrolist.shared.ui.LocalIsTv
@@ -433,7 +434,7 @@ fun PlayerLikeShareButtons(
 
     val linkCopiedDesc = stringResource(Res.string.link_copied_to_clipboard)
     val shareDesc = stringResource(Res.string.share)
-    val likeDesc = stringResource(Res.string.action_like)
+    val likeDesc = stringResource(if (isLiked) Res.string.unlike else Res.string.action_like)
     val moreDesc = stringResource(Res.string.more_options)
 
     val triggerCopied = {
@@ -497,49 +498,51 @@ fun PlayerLikeShareButtons(
                 customItem(
                     buttonGroupContent = {
                         val shareShape = ButtonGroupDefaults.connectedLeadingButtonShape
-                        Surface(
-                            shape = shareShape,
-                            color = MaterialTheme.colorScheme.secondaryContainer,
-                            contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
-                            modifier =
-                                Modifier
-                                    .size(width = buttonWidth, height = groupHeight)
-                                    .animateWidth(shareInteractionSource, 12.dp)
-                                    .pointerInput(Unit) {
-                                        awaitPointerEventScope {
-                                            while (true) {
-                                                val event = awaitPointerEvent(PointerEventPass.Initial)
-                                                isShiftPressed = event.keyboardModifiers.isShiftPressed
+                        HoverTooltip(text = if (isCopied) linkCopiedDesc else shareDesc) {
+                            Surface(
+                                shape = shareShape,
+                                color = MaterialTheme.colorScheme.secondaryContainer,
+                                contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                                modifier =
+                                    Modifier
+                                        .size(width = buttonWidth, height = groupHeight)
+                                        .animateWidth(shareInteractionSource, 12.dp)
+                                        .pointerInput(Unit) {
+                                            awaitPointerEventScope {
+                                                while (true) {
+                                                    val event = awaitPointerEvent(PointerEventPass.Initial)
+                                                    isShiftPressed = event.keyboardModifiers.isShiftPressed
+                                                }
                                             }
-                                        }
-                                    }.clip(shareShape)
-                                    .combinedClickable(
-                                        hapticFeedbackEnabled = false,
-                                        interactionSource = shareInteractionSource,
-                                        indication = ripple(),
-                                        onClick = { handleShareClick() },
-                                        onLongClick = onAltShareClick?.let { { handleAltShareClick() } },
-                                    ).tvFocusHighlight(shareShape, scale = 1f)
-                                    .semantics {
-                                        contentDescription = if (isCopied) linkCopiedDesc else shareDesc
-                                        role = Role.Button
-                                        if (onAltShareClick != null) {
-                                            onLongClick {
-                                                handleAltShareClick()
-                                                true
+                                        }.clip(shareShape)
+                                        .combinedClickable(
+                                            hapticFeedbackEnabled = false,
+                                            interactionSource = shareInteractionSource,
+                                            indication = ripple(),
+                                            onClick = { handleShareClick() },
+                                            onLongClick = onAltShareClick?.let { { handleAltShareClick() } },
+                                        ).tvFocusHighlight(shareShape, scale = 1f)
+                                        .semantics {
+                                            contentDescription = if (isCopied) linkCopiedDesc else shareDesc
+                                            role = Role.Button
+                                            if (onAltShareClick != null) {
+                                                onLongClick {
+                                                    handleAltShareClick()
+                                                    true
+                                                }
                                             }
-                                        }
-                                    },
-                        ) {
-                            Box(
-                                contentAlignment = Alignment.Center,
-                                modifier = Modifier.fillMaxSize(),
+                                        },
                             ) {
-                                Icon(
-                                    if (isCopied) MetrolistIcons.Default.Check else MetrolistIcons.Outlined.Share,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(iconSize),
-                                )
+                                Box(
+                                    contentAlignment = Alignment.Center,
+                                    modifier = Modifier.fillMaxSize(),
+                                ) {
+                                    Icon(
+                                        if (isCopied) MetrolistIcons.Default.Check else MetrolistIcons.Outlined.Share,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(iconSize),
+                                    )
+                                }
                             }
                         }
                     },
@@ -566,35 +569,37 @@ fun PlayerLikeShareButtons(
             }
             customItem(
                 buttonGroupContent = {
-                    ToggleButton(
-                        checked = isLiked,
-                        onCheckedChange = { onLikeClick() },
-                        shapes =
-                            if (isTv) {
-                                ToggleButtonDefaults.shapesFor(groupHeight)
-                            } else {
-                                ButtonGroupDefaults.connectedTrailingButtonShapes(
-                                    checkedShape = ButtonGroupDefaults.connectedTrailingButtonShape,
-                                )
-                            },
-                        contentPadding = PaddingValues(0.dp),
-                        colors = likeButtonColors,
-                        interactionSource = likeInteractionSource,
-                        modifier =
-                            Modifier
-                                .size(width = buttonWidth, height = groupHeight)
-                                .animateWidth(likeInteractionSource, 12.dp)
-                                .tvFocusHighlight(
-                                    if (isTv) RoundedCornerShape(50) else ButtonGroupDefaults.connectedTrailingButtonShape,
-                                    scale = 1f,
-                                    color = if (isLiked) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.primary,
-                                ).semantics { contentDescription = likeDesc },
-                    ) {
-                        Icon(
-                            if (isLiked) MetrolistIcons.Default.Favorite else MetrolistIcons.Outlined.FavoriteBorder,
-                            contentDescription = null,
-                            modifier = Modifier.size(iconSize),
-                        )
+                    HoverTooltip(text = likeDesc) {
+                        ToggleButton(
+                            checked = isLiked,
+                            onCheckedChange = { onLikeClick() },
+                            shapes =
+                                if (isTv) {
+                                    ToggleButtonDefaults.shapesFor(groupHeight)
+                                } else {
+                                    ButtonGroupDefaults.connectedTrailingButtonShapes(
+                                        checkedShape = ButtonGroupDefaults.connectedTrailingButtonShape,
+                                    )
+                                },
+                            contentPadding = PaddingValues(0.dp),
+                            colors = likeButtonColors,
+                            interactionSource = likeInteractionSource,
+                            modifier =
+                                Modifier
+                                    .size(width = buttonWidth, height = groupHeight)
+                                    .animateWidth(likeInteractionSource, 12.dp)
+                                    .tvFocusHighlight(
+                                        if (isTv) RoundedCornerShape(50) else ButtonGroupDefaults.connectedTrailingButtonShape,
+                                        scale = 1f,
+                                        color = if (isLiked) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.primary,
+                                    ).semantics { contentDescription = likeDesc },
+                        ) {
+                            Icon(
+                                if (isLiked) MetrolistIcons.Default.Favorite else MetrolistIcons.Outlined.FavoriteBorder,
+                                contentDescription = null,
+                                modifier = Modifier.size(iconSize),
+                            )
+                        }
                     }
                 },
                 menuContent = { menuState ->
@@ -617,24 +622,26 @@ fun PlayerLikeShareButtons(
 
         if (onMoreClick != null) {
             Spacer(Modifier.width(8.dp))
-            ToggleButton(
-                checked = isMoreActive,
-                onCheckedChange = { onMoreClick() },
-                shapes =
-                    ToggleButtonDefaults.shapesFor(groupHeight),
-                contentPadding = PaddingValues(0.dp),
-                colors = buttonColors,
-                modifier =
-                    Modifier
-                        .size(buttonWidth, groupHeight)
-                        .semantics { contentDescription = moreDesc }
-                        .navigationPopupSource(),
-            ) {
-                Icon(
-                    MetrolistIcons.Default.MoreVert,
-                    contentDescription = null,
-                    modifier = Modifier.size(iconSize),
-                )
+            HoverTooltip(text = moreDesc) {
+                ToggleButton(
+                    checked = isMoreActive,
+                    onCheckedChange = { onMoreClick() },
+                    shapes =
+                        ToggleButtonDefaults.shapesFor(groupHeight),
+                    contentPadding = PaddingValues(0.dp),
+                    colors = buttonColors,
+                    modifier =
+                        Modifier
+                            .size(buttonWidth, groupHeight)
+                            .semantics { contentDescription = moreDesc }
+                            .navigationPopupSource(),
+                ) {
+                    Icon(
+                        MetrolistIcons.Default.MoreVert,
+                        contentDescription = null,
+                        modifier = Modifier.size(iconSize),
+                    )
+                }
             }
         }
     }
