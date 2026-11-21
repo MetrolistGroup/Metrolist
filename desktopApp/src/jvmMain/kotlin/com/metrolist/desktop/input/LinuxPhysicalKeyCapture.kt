@@ -28,6 +28,10 @@ internal class LinuxPhysicalKeyCapture : PlatformPhysicalKeyCapture {
 
     @Volatile private var requested = false
 
+    // Each worker has its own generation. Disabling invalidates the current one even if focus returns
+    // before its XRecord loop observes the wakeup, so a stale worker can never resume on a disabled context.
+    @Volatile private var workerGeneration = 0L
+
     @Volatile private var available = false
 
     @Volatile private var worker: Thread? = null
@@ -70,6 +74,8 @@ internal class LinuxPhysicalKeyCapture : PlatformPhysicalKeyCapture {
         val currentWorker =
             lifecycleLock.withLock {
                 requested = false
+                restartOnExit = false
+                workerGeneration++
                 pending.clear()
                 worker
             }
@@ -97,12 +103,13 @@ internal class LinuxPhysicalKeyCapture : PlatformPhysicalKeyCapture {
     }
 
     private fun startWorker(): CountDownLatch {
+        val generation = ++workerGeneration
         val ready = CountDownLatch(1)
         worker =
             Thread(
                 {
                     try {
-                        captureX11Events(ready)
+                        captureX11Events(generation, ready)
                     } finally {
                         lifecycleLock.withLock {
                             val shouldRestart = restartOnExit && requested
@@ -122,13 +129,16 @@ internal class LinuxPhysicalKeyCapture : PlatformPhysicalKeyCapture {
         return ready
     }
 
-    private fun captureX11Events(ready: CountDownLatch) {
+    private fun captureX11Events(
+        generation: Long,
+        ready: CountDownLatch,
+    ) {
         var eventDisplay: Pointer? = null
         var controlDisplay: Pointer? = null
         var context: NativeLong? = null
         var range: Pointer? = null
         try {
-            if (!X11ThreadingState.ready) return
+            if (!X11ThreadingState.ready || !requested || workerGeneration != generation) return
             val x11 = X11.INSTANCE
             val xtst = Native.load("Xtst", XTestRecord::class.java)
             recordApi = xtst
@@ -152,9 +162,10 @@ internal class LinuxPhysicalKeyCapture : PlatformPhysicalKeyCapture {
             x11.XSync(activeControlDisplay, false)
             val enabled =
                 lifecycleLock.withLock {
+                    if (!requested || workerGeneration != generation) return@withLock false
                     controlDisplay = activeControlDisplay
                     recordContext = activeContext
-                    requested && xtst.XRecordEnableContextAsync(activeEventDisplay, activeContext, callback, null) != 0
+                    xtst.XRecordEnableContextAsync(activeEventDisplay, activeContext, callback, null) != 0
                 }
             if (!enabled) return
 
@@ -169,8 +180,8 @@ internal class LinuxPhysicalKeyCapture : PlatformPhysicalKeyCapture {
             pollFds[0].events = POLLIN.toShort()
             pollFds[1].fd = wakeupPipe[0]
             pollFds[1].events = POLLIN.toShort()
-            while (requested) {
-                if (!pollWithRetry(pollFds)) break
+            while (requested && workerGeneration == generation) {
+                if (!pollWithRetry(pollFds, generation)) break
                 pollFds.forEach { it.read() }
                 if (pollFds[1].revents.toInt() != 0) {
                     drainWakeup()
@@ -205,7 +216,10 @@ internal class LinuxPhysicalKeyCapture : PlatformPhysicalKeyCapture {
         Posix.INSTANCE.read(wakeupFd, buffer, NativeLong(buffer.size.toLong()))
     }
 
-    private fun pollWithRetry(fds: Array<PollFd>): Boolean {
+    private fun pollWithRetry(
+        fds: Array<PollFd>,
+        generation: Long,
+    ): Boolean {
         while (true) {
             fds.forEach { fd ->
                 fd.revents = 0
@@ -214,7 +228,7 @@ internal class LinuxPhysicalKeyCapture : PlatformPhysicalKeyCapture {
             val result = Posix.INSTANCE.poll(fds, NativeLong(fds.size.toLong()), -1)
             fds.forEach { it.read() }
             if (result >= 0) return true
-            if (!requested || Native.getLastError() != ErrNo.EINTR) return false
+            if (!requested || workerGeneration != generation || Native.getLastError() != ErrNo.EINTR) return false
         }
     }
 
