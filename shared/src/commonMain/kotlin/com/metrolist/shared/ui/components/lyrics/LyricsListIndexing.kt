@@ -86,7 +86,7 @@ internal fun mergeBackgroundLyricsEntries(lyrics: List<LyricsEntry>): List<Lyric
         val mainIndex = (index - 1 downTo 0).firstOrNull { !lyrics[it].isBackground }
         if (mainIndex == null) {
             val nextMainIndex = (index + 1 until lyrics.size).firstOrNull { !lyrics[it].isBackground }
-            val nextMain = nextMainIndex?.let(lyrics::get)
+            val nextMain = nextMainIndex?.let(displayLines::get)
             val sourceBackground =
                 listOfNotNull(
                     background.text.takeIf(String::isNotBlank),
@@ -239,7 +239,7 @@ internal fun mergeBackgroundLyricsEntries(lyrics: List<LyricsEntry>): List<Lyric
                     val representedByWords =
                         original != null &&
                             background.romanizedWords.orEmpty().any { roman ->
-                                roman.isBackground == original.isBackground &&
+                                (roman.isBackground == original.isBackground || background.isBackground) &&
                                     roman.startTime < raw.endTime && roman.endTime > raw.startTime
                             }
                     val representedByText =
