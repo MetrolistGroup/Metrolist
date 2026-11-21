@@ -554,7 +554,7 @@ class AnimatedArtworkService internal constructor(
         val cleanArtist = normalizeArtist(artist)
         val cleanAlbum = album?.let { stripArtworkEditionSuffix(normalizeAlbum(it)) }
         val isVariantTitle = isVariantTitle(title, cleanTitle)
-        val albumIsVariant = album != null && cleanTitleText(album) != cleanAlbum
+        val albumIsVariant = album != null && cleanTitleText(normalizeAlbum(album)) != cleanAlbum
 
         val seen = mutableSetOf<Long>()
         val allResults = mutableListOf<Pair<AniTunesSearchResult, String>>()
@@ -839,7 +839,7 @@ class AnimatedArtworkService internal constructor(
     ): Boolean {
         val collectionName = result.collectionName ?: return false
         val base = stripReleaseSuffixes(stripArtworkEditionSuffix(normalizeAlbum(collectionName)))
-        return base == cleanTitle
+        return normalizeTrackTitle(base) == normalizeTrackTitle(cleanTitle)
     }
 
     private fun cleanTitleText(title: String): String {
