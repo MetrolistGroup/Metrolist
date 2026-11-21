@@ -499,9 +499,9 @@
     <string name="backup_restore_export_desc">Экспортировать настройки, базу данных библиотеки, плейлисты, понравившиеся и историю в zip-файл</string>
     <string name="backup_restore_import_desc">Восстановить резервную копию Metrolist. Приложение перезапустится после успешного восстановления.</string>
     <string name="backup_restore_busy">Выполняется…</string>
-    <string name="backup_sensitive_title">Конфиденциальный бэкап</string>
-    <string name="backup_sensitive_message">Бэкап содержит ваши ключи API, данные входа в аккаунты, файлы cookie авторизации, токены сессий и другую конфиденциальную информацию. Любой, у кого есть этот файл, получит доступ к вашим аккаунтам. Храните его в безопасном месте и никогда не делитесь им.</string>
-    <string name="restore_in_progress">Восстановление вашего бэкапа…\nMetrolist перезапустится автоматически.</string>
+    <string name="backup_sensitive_title">Конфиденциальная резервная копия</string>
+    <string name="backup_sensitive_message">Резервные копии содержат ваши ключи API, учётные данные аккаунтов, файлы cookie авторизации, токены сессий и другую конфиденциальную информацию. Любой, у кого окажется этот файл, сможет получить доступ к вашим аккаунтам. Храните его в надёжном месте и никому не передавайте.</string>
+    <string name="restore_in_progress">Восстановление резервной копии…\nMetrolist перезапустится автоматически.</string>
     <string name="scrobble_tap_to_disconnect">Нажмите, чтобы отключиться</string>
     <string name="scrobble_enable">Скробблинг</string>
     <string name="scrobble_now_playing">Обновления Сейчас Играет</string>
@@ -523,11 +523,11 @@
     <string name="listenbrainz_connect_title">Подключить ListenBrainz</string>
     <string name="listenbrainz_user_token">Токен пользователя</string>
     <string name="restore_database_incompatible">В этой резервной копии используется версия базы данных %1$d, но приложение поддерживает версии не выше %2$d. Обновите Metrolist и повторите попытку.</string>
-    <string name="restore_failed_detail">Не удалось восстановить бэкап во время %1$s\n\nПричина: %2$s</string>
+    <string name="restore_failed_detail">Не удалось восстановить резервную копию во время %1$s\n\nПричина: %2$s</string>
     <string name="restore_error_unknown">Дополнительные детали недоступны.</string>
-    <string name="restore_stage_reading_backup">Чтение бэкап файла</string>
+    <string name="restore_stage_reading_backup">Чтение файла резервной копии</string>
     <string name="restore_stage_reading_settings">Чтение устаревших настроек</string>
-    <string name="restore_stage_validating_database">Проверка базы данных бэкапа</string>
+    <string name="restore_stage_validating_database">Проверка базы данных резервной копии</string>
     <string name="restore_stage_converting_database">Конвертирование устаревшей базы данных</string>
     <string name="restore_stage_stopping_app">Подготовка приложения к восстановлению</string>
     <string name="restore_stage_installing_database">Установка восстановленной базы данных</string>
@@ -1478,7 +1478,7 @@
     <string name="sensitive_backup">Конфиденциальный бэкап</string>
     <string name="restore_backup_confirm">Восстановить бэкап?</string>
     <string name="restore">Восстановить</string>
-    <string name="restoring_backup">Восстановление вашего бэкапа…\nMetrolist перезапустится автоматически.</string>
+    <string name="restoring_backup">Восстановление резервной копии…\nMetrolist перезапустится автоматически.</string>
     <string name="hidden_items_count">Спрятанные элементы (%1$d)</string>
     <string name="hidden_library_items">Спрятанные элементы библиотеки</string>
     <string name="delete_playlist_confirm">Удалить плейлист?</string>
