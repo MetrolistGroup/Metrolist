@@ -515,6 +515,7 @@ fun PlaylistScreen(
             listState = listState,
             contentPadding = PaddingValues(top = 16.dp, bottom = 16.dp),
             currentSongId = PlayerState.currentTrack?.id,
+            currentQueueItemId = PlayerState.currentTrack?.originalQueueItemId,
             currentSongOccurrenceKey = PlayerState.currentTrack?.playlistOccurrenceIdentity(),
             isPlaying = PlayerState.isPlaying,
             suggestions = suggestions.takeIf { searchQuery.isBlank() && !(songs.isEmpty() && isEditable) }.orEmpty(),

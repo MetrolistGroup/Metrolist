@@ -1743,7 +1743,12 @@ class MusicService :
                         isCounterpartAllowed = { !BlockedContent.isBlocked(it) },
                         resolveMusicTrack = musicVideoResolver::resolveMusicTrack,
                     )
-                playbackSong = selection.song
+                playbackSong =
+                    if (selection.song.id == sourceSong.id) {
+                        selection.song
+                    } else {
+                        selection.song.copy(originalQueueItemId = sourceSong.originalQueueItemId ?: sourceSong.id)
+                    }
                 playbackPosition = selection.positionMs
                 if (!isCurrentRequest(expectedWantVideo = wantVideo)) return@withQueueLoading false
                 if (sync.isActive && playbackSong.id != sourceSong.id) {

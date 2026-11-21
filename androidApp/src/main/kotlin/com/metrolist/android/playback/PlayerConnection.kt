@@ -299,6 +299,7 @@ class PlayerConnection(
 
     private val _currentPlaybackResource = MutableStateFlow<PlaybackResource?>(null)
     override val currentPlaybackResource: StateFlow<PlaybackResource?> = _currentPlaybackResource.asStateFlow()
+    override val videoPlaybackResource: StateFlow<PlaybackResource?> = currentPlaybackResource
 
     private val _loadError = MutableStateFlow<String?>(null)
     val loadError: StateFlow<String?> = _loadError.asStateFlow()

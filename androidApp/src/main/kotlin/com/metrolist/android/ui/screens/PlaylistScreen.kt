@@ -741,6 +741,7 @@ fun PlaylistScreen(
                                     miniPlayerInset,
                         ),
                     currentSongId = currentSong?.id,
+                    currentQueueItemId = currentSong?.originalQueueItemId,
                     currentSongOccurrenceKey = currentSong?.playlistOccurrenceIdentity(),
                     isPlaying = isPlaying,
                     suggestions = suggestions.takeIf { searchQuery.isBlank() }.orEmpty(),

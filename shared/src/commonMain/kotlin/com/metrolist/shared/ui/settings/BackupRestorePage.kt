@@ -41,6 +41,8 @@ import com.metrolist.shared.generated.resources.backup_unsupported_format
 import com.metrolist.shared.generated.resources.cancel
 import com.metrolist.shared.generated.resources.create_backup
 import com.metrolist.shared.generated.resources.create_backup_countdown
+import com.metrolist.shared.generated.resources.foreign_import_desc
+import com.metrolist.shared.generated.resources.foreign_import_title
 import com.metrolist.shared.generated.resources.restore_backup
 import com.metrolist.shared.generated.resources.restore_confirm_message
 import com.metrolist.shared.generated.resources.restore_confirm_title
@@ -61,9 +63,11 @@ enum class BackupRestoreStatus {
 fun BackupRestorePage(
     onExport: () -> Unit,
     onImport: () -> Unit,
+    onImportForeign: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
     status: BackupRestoreStatus? = null,
     failure: Throwable? = null,
+    foreignImportStatus: String? = null,
 ) {
     var showBackupWarning by remember { mutableStateOf(false) }
     var showRestoreWarning by remember { mutableStateOf(false) }
@@ -143,6 +147,18 @@ fun BackupRestorePage(
             shapes = ButtonDefaults.shapes(),
         ) {
             Text(stringResource(Res.string.restore_backup))
+        }
+        onImportForeign?.let { importForeign ->
+            Text(stringResource(Res.string.foreign_import_desc), style = MaterialTheme.typography.bodyMedium)
+            foreignImportStatus?.let { Text(it, style = MaterialTheme.typography.bodyMedium) }
+            Button(
+                onClick = importForeign,
+                modifier = Modifier.fillMaxWidth(),
+                enabled = status != BackupRestoreStatus.BUSY,
+                shapes = ButtonDefaults.shapes(),
+            ) {
+                Text(stringResource(Res.string.foreign_import_title))
+            }
         }
     }
 

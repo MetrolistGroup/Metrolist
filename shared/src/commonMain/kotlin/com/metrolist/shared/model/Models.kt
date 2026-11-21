@@ -46,6 +46,7 @@ data class SongItem(
     val customArtist: String? = null,
     val canonicalTitle: String? = null,
     val canonicalArtists: List<ArtistTiny>? = null,
+    val originalQueueItemId: String? = null,
     val explicitness: Boolean? = null,
     override val libraryAddedAt: Long? = null,
     override val libraryUpdatedAt: Long? = null,

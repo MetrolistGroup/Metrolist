@@ -804,6 +804,7 @@ fun AutoPlaylistScreen(
                             bottom = paddingValues.calculateBottomPadding() + miniPlayerInset,
                         ),
                     currentSongId = currentSong?.id,
+                    currentQueueItemId = currentSong?.originalQueueItemId,
                     currentSongOccurrenceKey = currentSong?.playlistOccurrenceIdentity(),
                     isPlaying = isPlaying,
                     onArtistClick = onArtistClick,
