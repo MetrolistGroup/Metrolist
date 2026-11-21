@@ -970,10 +970,6 @@
         <item quantity="one">%1$d minut</item>
         <item quantity="other">%1$d minuter</item>
     </plurals>
-    <plurals name="minutes_short">
-        <item quantity="one">%1$d min</item>
-        <item quantity="other">%1$d min</item>
-    </plurals>
     <plurals name="n_track">
         <item quantity="one">%1$d spår</item>
         <item quantity="other">%1$d spår</item>
@@ -997,10 +993,6 @@
     <plurals name="removed_songs_from_playlist">
         <item quantity="one">Tog bort %1$d låt från spellista</item>
         <item quantity="other">Tog bort %1$d låtar från spellista</item>
-    </plurals>
-    <plurals name="seconds_short">
-        <item quantity="one">%1$d sekund</item>
-        <item quantity="other">%1$d sekunder</item>
     </plurals>
     <plurals name="song_count">
         <item quantity="one">%1$d låt</item>
@@ -1146,7 +1138,6 @@
     <string name="ai_provider">Leverantör</string>
     <string name="ai_base_url">Basadress</string>
     <string name="ai_translation_model">Översättningsmodell</string>
-    <string name="ai_judge_detector_model">Bedömare/detektormodell</string>
     <string name="ai_target_language">Målspråk</string>
     <string name="ai_deepl_formality">Formalitet</string>
     <string name="ai_deepl_formality_default">Standard</string>
@@ -1644,7 +1635,6 @@
     <string name="settings_translation_mode_summary">Översätt orden eller skriv deras uttal med målskriftens tecken</string>
     <string name="settings_translation_provider_summary">Välj tjänsten som översätter låttexter</string>
     <string name="settings_translation_model_summary">Modell för översättning eller transkription av låttexter</string>
-    <string name="settings_detector_model_summary">Modell som avgör om låttexter behöver översättas</string>
     <string name="settings_translation_formality_summary">Välj formellt eller informellt språk för DeepL-översättningar</string>
     <string name="settings_discord_advanced_summary">Visa aktivitetsmallar och egna länkknappar</string>
     <string name="settings_discord_activity_type_summary">Välj hur Discord beskriver din musikaktivitet</string>

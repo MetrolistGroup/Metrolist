@@ -114,7 +114,11 @@ interface HistoryDao {
 
     @Transaction
     @Query(
-        "SELECT * FROM recognition_history WHERE title LIKE '%' || :query || '%' OR artist LIKE '%' || :query || '%' ORDER BY recognizedAt DESC",
+        """
+        SELECT * FROM recognition_history
+        WHERE instr(lower(title), lower(:query)) > 0 OR instr(lower(artist), lower(:query)) > 0
+        ORDER BY recognizedAt DESC
+        """,
     )
     fun searchRecognitionHistory(query: String): Flow<List<RecognitionHistory>>
 
@@ -242,6 +246,18 @@ interface HistoryDao {
         label: String,
         remoteOrder: Int,
         accountKey: String?,
+    )
+
+    @Query("UPDATE event SET remoteFeedbackToken = :token WHERE id = :id")
+    suspend fun updateHistoryEventToken(
+        id: Long,
+        token: String?,
+    )
+
+    @Query("UPDATE history_snapshot SET remoteFeedbackToken = :token WHERE eventId = :id")
+    suspend fun updateHistorySnapshotToken(
+        id: Long,
+        token: String?,
     )
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)

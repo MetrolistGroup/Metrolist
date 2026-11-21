@@ -62,6 +62,7 @@ import com.metrolist.shared.generated.resources.play
 import com.metrolist.shared.generated.resources.playlist
 import com.metrolist.shared.generated.resources.playlist_direction_ascending
 import com.metrolist.shared.generated.resources.playlist_direction_descending
+import com.metrolist.shared.generated.resources.playlist_lock
 import com.metrolist.shared.generated.resources.playlist_order_original
 import com.metrolist.shared.generated.resources.playlist_reorder
 import com.metrolist.shared.generated.resources.playlists
@@ -166,6 +167,7 @@ fun libraryContentText() =
             ),
         sortLabels =
             mapOf(
+                LibrarySortType.DOWNLOADED to stringResource(Res.string.filter_downloaded),
                 LibrarySortType.RECENTLY_ADDED to stringResource(Res.string.sort_by_create_date),
                 LibrarySortType.NAME to stringResource(Res.string.sort_by_name),
                 LibrarySortType.LAST_UPDATED to stringResource(Res.string.library_sort_updated),
@@ -287,11 +289,13 @@ fun playlistOrderControlsText() =
                 PlaylistSongSort.ALBUM to stringResource(Res.string.album),
                 PlaylistSongSort.DURATION to stringResource(Res.string.duration),
                 PlaylistSongSort.YEAR to stringResource(Res.string.sort_by_year),
+                PlaylistSongSort.LISTENING_TIME to stringResource(Res.string.history_sort_listening_time),
             ),
         sortOptions = stringResource(Res.string.sort_options),
         ascending = stringResource(Res.string.playlist_direction_ascending),
         descending = stringResource(Res.string.playlist_direction_descending),
         reorder = stringResource(Res.string.playlist_reorder),
+        lock = stringResource(Res.string.playlist_lock),
     )
 
 @Composable

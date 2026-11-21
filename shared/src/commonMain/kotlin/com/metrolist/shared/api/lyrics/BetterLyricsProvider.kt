@@ -277,7 +277,7 @@ internal fun parseTtmlToMlx(
                         )
                     }
                 val bg = bgWords?.map { MlxWord(it.text, (it.startSec * 1000).toLong(), (it.endSec * 1000).toLong(), it.hasTrailingSpace) }
-                builder.line(startMs, endMs, agentId, mainWords, bg)
+                builder.line(startMs, endMs, agentId, mainWords, bg, isBackground = line.isBackground)
             } else if (endMs != null) {
                 val bgText = bgWords?.joinToString("") { it.text + if (it.hasTrailingSpace) " " else "" }?.trim()
                 builder.line(startMs, endMs, line.text, agentId, bgText)

@@ -101,6 +101,47 @@ jobs:
       LYPRIO_BASE_URL: ${{ secrets.LYPRIO_BASE_URL }}
       LYPRIO_HMAC_KEY: ${{ secrets.LYPRIO_HMAC_KEY }}
 
+  android-izzy:
+    name: Android (IzzyOnDroid)
+    needs: prepare
+    uses: ./.github/workflows/reusable-android-build.yml
+    permissions:
+      contents: read
+    with:
+      run-verification: false
+      variant: izzy
+      upload-artifact: true
+      artifact-name: release-android-izzy
+      require-signing: true
+    # No Sentry or Lyprio secrets: the IzzyOnDroid APK must not carry them.
+    secrets:
+      GRADLE_ENCRYPTION_KEY: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
+      KEYSTORE_PATH: ${{ secrets.KEYSTORE_PATH || secrets.KEYSTORE }}
+      KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+      KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+      KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+      LASTFM_API_KEY: ${{ secrets.LASTFM_API_KEY }}
+      LASTFM_SECRET: ${{ secrets.LASTFM_SECRET }}
+
+  # x64 desktop packages are native images; ARM64 and macOS keep the JVM runtime.
+  windows-native:
+    name: Windows x64
+    needs: prepare
+    uses: ./.github/workflows/reusable-desktop-native.yml
+    permissions:
+      contents: read
+    with:
+      platform: windows-x64
+      artifact-name: release-desktop-windows
+      verify-launch: true
+      upload-sentry: true
+    secrets:
+      SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+      LASTFM_API_KEY: ${{ secrets.LASTFM_API_KEY }}
+      LASTFM_SECRET: ${{ secrets.LASTFM_SECRET }}
+      LYPRIO_BASE_URL: ${{ secrets.LYPRIO_BASE_URL }}
+      LYPRIO_HMAC_KEY: ${{ secrets.LYPRIO_HMAC_KEY }}
+
   windows:
     name: Windows
     needs: prepare
@@ -108,12 +149,31 @@ jobs:
     permissions:
       contents: read
     with:
+      architectures: '["arm64"]'
       run-verification: false
       upload-artifact: true
       artifact-prefix: release-
       upload-sentry: true
     secrets:
       GRADLE_ENCRYPTION_KEY: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
+      SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+      LASTFM_API_KEY: ${{ secrets.LASTFM_API_KEY }}
+      LASTFM_SECRET: ${{ secrets.LASTFM_SECRET }}
+      LYPRIO_BASE_URL: ${{ secrets.LYPRIO_BASE_URL }}
+      LYPRIO_HMAC_KEY: ${{ secrets.LYPRIO_HMAC_KEY }}
+
+  linux-native:
+    name: Linux x64
+    needs: prepare
+    uses: ./.github/workflows/reusable-desktop-native.yml
+    permissions:
+      contents: read
+    with:
+      platform: linux-x64
+      artifact-name: release-desktop-linux-x64
+      verify-launch: true
+      upload-sentry: true
+    secrets:
       SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
       LASTFM_API_KEY: ${{ secrets.LASTFM_API_KEY }}
       LASTFM_SECRET: ${{ secrets.LASTFM_SECRET }}
@@ -127,6 +187,7 @@ jobs:
     permissions:
       contents: read
     with:
+      architectures: '["arm64"]'
       run-verification: false
       upload-artifact: true
       artifact-prefix: release-
@@ -181,21 +242,25 @@ jobs:
 
   windows-manager:
     name: Windows manager
-    needs: prepare
+    needs: [prepare, windows-native]
     uses: ./.github/workflows/reusable-windows-manager.yml
     permissions:
       contents: read
     with:
       version: ${{ needs.prepare.outputs.version }}
-      run-verification: false
+      # Installs the native payload through the same registry contract the in-app updater reads.
+      portable-artifact: release-desktop-windows
 
   publish:
     name: Publish stable release
     needs:
       - prepare
       - android
+      - android-izzy
+      - windows-native
       - windows
       - windows-manager
+      - linux-native
       - linux
       - macos
       - ios
@@ -227,9 +292,13 @@ jobs:
           APP_VERSION: ${{ needs.prepare.outputs.version }}
         run: |
           set -euo pipefail
+          # Native packages keep the stable names the updater, manager and package recipes download.
           mv \
-            release-assets/Metrolist-Desktop-Windows.zip \
+            "release-assets/metrolist-desktop-native-windows-x64-${APP_VERSION}.zip" \
             release-assets/Metrolist-Desktop-windows.zip
+          mv \
+            "release-assets/metrolist-desktop-native-linux-x64-${APP_VERSION}.AppImage" \
+            "release-assets/metrolist-desktop-linux-x64-${APP_VERSION}.AppImage"
           mv \
             release-assets/Metrolist-Desktop-Windows-arm64.zip \
             "release-assets/metrolist-desktop-windows-arm64-${APP_VERSION}.zip"
@@ -242,6 +311,7 @@ jobs:
           expected=(
             "release-assets/Metrolist.apk"
             "release-assets/Metrolist-with-Google-Cast.apk"
+            "release-assets/Metrolist-izzy.apk"
             "release-assets/Metrolist-KMP-mapping.txt"
             "release-assets/Metrolist.ipa"
             "release-assets/metrolist-altstore.json"
@@ -375,14 +445,8 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - kind: winget
-            repository: ${{ vars.WINGET_REPOSITORY }}
-          - kind: homebrew
-            repository: ${{ vars.HOMEBREW_REPOSITORY }}
           - kind: nix
             repository: ${{ vars.NIX_REPOSITORY }}
-          - kind: flatpak
-            repository: ${{ vars.FLATPAK_REPOSITORY }}
     env:
       PACKAGING_PR_TOKEN: ${{ secrets.PACKAGING_PR_TOKEN }}
       PACKAGING_REPOSITORY: ${{ matrix.repository }}
@@ -406,10 +470,62 @@ jobs:
           GH_TOKEN: ${{ secrets.PACKAGING_PR_TOKEN }}
           PACKAGE_KIND: ${{ matrix.kind }}
           APP_VERSION: ${{ needs.prepare.outputs.version }}
-          FLATPAK_BINARY_EXCEPTION: ${{ vars.FLATPAK_BINARY_EXCEPTION }}
         run: >-
           python3 scripts/propose_distribution.py "$PACKAGE_KIND"
           --generated distribution --repository "$PACKAGING_REPOSITORY" --version "$APP_VERSION"
+
+  winget:
+    name: Submit to WinGet
+    needs: [prepare, publish]
+    runs-on: blacksmith-2vcpu-ubuntu-2604
+    timeout-minutes: 15
+    # A WinGet hiccup must not fail a published release.
+    continue-on-error: true
+    permissions:
+      contents: read
+    env:
+      WINGET_TOKEN: ${{ secrets.WINGET_TOKEN }}
+    steps:
+      - name: Open a winget-pkgs pull request
+        if: env.WINGET_TOKEN != ''
+        uses: vedantmgoyal9/winget-releaser@b7370d4d152efdce803a26cc6ca9eee58cb2ad54 # v2
+        with:
+          identifier: MetrolistGroup.Metrolist
+          version: ${{ needs.prepare.outputs.version }}
+          release-tag: ${{ github.ref_name }}
+          installers-regex: 'metrolist-installer-windows-x64-.*\.exe$'
+          token: ${{ secrets.WINGET_TOKEN }}
+
+  flatpark:
+    name: Notify flatpark
+    needs: publish
+    runs-on: blacksmith-2vcpu-ubuntu-2604
+    timeout-minutes: 5
+    continue-on-error: true
+    permissions: {}
+    steps:
+      # The release is published with GITHUB_TOKEN, so an `on: release` workflow would never run.
+      - uses: flatpark/publish-action@b67fca1b80b095541bc011967e0a35292bed14d8 # v1.0.2
+        with:
+          app-id: com.metrolist.desktop
+          tag: ${{ github.ref_name }}
+
+  homebrew:
+    name: Update the Homebrew tap
+    needs: publish
+    runs-on: blacksmith-2vcpu-ubuntu-2604
+    timeout-minutes: 5
+    continue-on-error: true
+    permissions: {}
+    env:
+      HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+    steps:
+      # The tap also polls every four hours; this only makes the update immediate.
+      - name: Dispatch the tap update
+        if: env.HOMEBREW_TAP_TOKEN != ''
+        env:
+          GH_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+        run: gh api repos/MetrolistGroup/homebrew-tap/dispatches -f event_type=metrolist-release
 
   finalize-sentry:
     name: Finalize Sentry releases
@@ -430,8 +546,11 @@ jobs:
     needs:
       - prepare
       - android
+      - android-izzy
+      - windows-native
       - windows
       - windows-manager
+      - linux-native
       - linux
       - macos
       - ios

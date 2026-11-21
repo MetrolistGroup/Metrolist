@@ -27,6 +27,18 @@ internal fun preparePlaylistBatch(
         )
     }
 
+internal fun preparePlaylistPreview(
+    playlist: SpotifyImportManager.LoadedPlaylist?,
+    fallbackTitle: String,
+    source: String,
+    provider: ImportSourceType,
+): ImportedPlaylistData =
+    if (playlist == null) {
+        ImportedPlaylistData(fallbackTitle, emptyList(), source = source, provider = provider, sourcePlaylistCount = 0)
+    } else {
+        preparePlaylistBatch(listOf(playlist), source, provider).single()
+    }
+
 internal data class PlaylistImportBatchResult(
     val completed: List<ImportProgressState.Completed>,
     val failures: List<Pair<String, Throwable>>,
@@ -37,8 +49,7 @@ internal suspend fun executePlaylistBatch(
     playlists: List<ImportedPlaylistData>,
     title: String,
     onStateUpdate: (ImportProgressState) -> Unit,
-    importPlaylist: suspend (ImportedPlaylistData, PlaylistImportManager.Destination, (ImportProgressState) -> Unit) ->
-    Result<ImportProgressState.Completed>,
+    importPlaylist: suspend (ImportedPlaylistData, (ImportProgressState) -> Unit) -> Result<ImportProgressState.Completed>,
 ): PlaylistImportBatchResult {
     val completed = mutableListOf<ImportProgressState.Completed>()
     val failures = mutableListOf<Pair<String, Throwable>>()
@@ -47,7 +58,7 @@ internal suspend fun executePlaylistBatch(
         try {
             currentCoroutineContext().ensureActive()
             val result =
-                importPlaylist(playlist, PlaylistImportManager.Destination.NewSynced) { state ->
+                importPlaylist(playlist) { state ->
                     // Keep the service request running until every playlist has been attempted.
                     if (state !is ImportProgressState.Completed && state !is ImportProgressState.Failed &&
                         state !is ImportProgressState.Cancelled

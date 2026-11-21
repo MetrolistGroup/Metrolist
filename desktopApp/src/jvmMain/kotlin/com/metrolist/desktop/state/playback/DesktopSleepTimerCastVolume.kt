@@ -1,6 +1,8 @@
 package com.metrolist.desktop.state.playback
 
+import com.metrolist.shared.cast.CastProtocol
 import com.metrolist.shared.cast.CastState
+import com.metrolist.shared.cast.dlnaVolumePercent
 
 internal class DesktopSleepTimerCastVolume {
     private var deviceId: String? = null
@@ -9,9 +11,17 @@ internal class DesktopSleepTimerCastVolume {
 
     fun requestedVolume(state: CastState): Float {
         val original = requested?.takeIf { deviceId == state.device?.id } ?: return state.volume
-        if (gain == 1f && state.volume == original) {
-            requested = null
-            deviceId = null
+        if (gain == 1f) {
+            val expectedVolume =
+                when (state.device?.protocol) {
+                    CastProtocol.DLNA, CastProtocol.SONOS -> dlnaVolumePercent(original) / 100f
+                    else -> original
+                }
+            if (state.volume == expectedVolume) {
+                requested = null
+                deviceId = null
+                return state.volume
+            }
         }
         return original
     }

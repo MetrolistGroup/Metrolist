@@ -357,9 +357,16 @@ object SongCacheManager {
                     headers.forEach { (name, value) -> header(name, value) }
                 }.execute { response ->
                     if (!response.status.isSuccess()) return@execute null
+                    val range =
+                        if (response.status.value == 206) {
+                            parseHttpByteRange(response.headers["Content-Range"])
+                                ?.takeIf { it.start == 0L && it.end == it.total - 1 } ?: return@execute null
+                        } else {
+                            null
+                        }
                     val limit = minOf(if (image) MAX_THUMBNAIL_BYTES else MAX_AUDIO_BYTES, maxBytes)
                     if (limit <= 0L) return@execute null
-                    val expected = response.headers["Content-Length"]?.toLongOrNull()
+                    val expected = range?.total ?: response.headers["Content-Length"]?.toLongOrNull()
                     if (expected != null && expected > limit) return@execute null
                     if (cacheDir.usableSpace <= (expected ?: 1024L) + 1024 * 1024) return@execute null
                     val destination = cacheFile(baseName + extension(response.headers["Content-Type"], image))
@@ -501,7 +508,7 @@ object SongCacheManager {
         awaitReady: suspend () -> Unit = {},
     ) {
         if (resource != null && !resource.isDirectFile && !resource.isSabr) return
-        if (resource?.clientName == "local") return
+        if (resource?.isMuxedProgressive == true || resource?.clientName == "local") return
         val mvId = resource?.musicVideoId
         val targetSong =
             if (mvId != null && mvId != song.id) {
@@ -625,7 +632,7 @@ object SongCacheManager {
         if (songIds.isEmpty()) return
         synchronized(indexLock) {
             songIds.forEach { jobs.remove(it)?.cancel() }
-            removeCachedSongs(_cachedSongs.value, songIds, ::safeFile, ::saveAndPublish)
+            removeCachedSongs(_cachedSongs.value, songIds, ::safeFile, save = ::saveAndPublish)
         }
     }
 
@@ -677,11 +684,14 @@ object SongCacheManager {
                     requestedBytes,
                 )
             if (evictionCount > 0) {
-                entries.take(evictionCount).forEach { entry ->
-                    safeFile(entry.filePath)?.delete()
-                    entry.thumbnailPath?.let(::safeFile)?.delete()
-                }
-                saveAndPublish(entries.drop(evictionCount))
+                val candidates = entries.take(evictionCount)
+                removeCachedSongs(
+                    candidates,
+                    candidates.mapTo(mutableSetOf()) { it.songId },
+                    ::safeFile,
+                    onDeleteFailure = { AppLogger.warning("SongCacheManager", "Could not evict a cache entry", it) },
+                    save = { retained -> saveAndPublish(retained + entries.drop(evictionCount)) },
+                )
             }
             (maximum - _cacheSizeBytes.value).coerceAtLeast(0L)
         }
@@ -706,6 +716,7 @@ internal fun removeCachedSongs(
     entries: List<CachedSongEntry>,
     songIds: Set<String>,
     safeFile: (String) -> File?,
+    onDeleteFailure: (Exception) -> Unit = { throw it },
     save: (List<CachedSongEntry>) -> Unit,
 ) {
     var failure: Exception? = null
@@ -724,5 +735,5 @@ internal fun removeCachedSongs(
             }
         }
     save(remaining)
-    failure?.let { throw it }
+    failure?.let(onDeleteFailure)
 }

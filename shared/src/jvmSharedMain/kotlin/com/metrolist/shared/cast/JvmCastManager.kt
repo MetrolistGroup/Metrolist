@@ -7,6 +7,7 @@ import com.metrolist.shared.youtube.playback.PlaybackEventKind
 import com.metrolist.shared.youtube.playback.PlaybackEventLog
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable
@@ -22,6 +23,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import java.net.BindException
 import java.net.DatagramPacket
 import java.net.DatagramSocket
 import java.net.Inet4Address
@@ -29,6 +31,7 @@ import java.net.InetAddress
 import java.net.InetSocketAddress
 import java.net.NetworkInterface
 import java.net.URI
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicLong
 import kotlin.concurrent.thread
@@ -60,6 +63,8 @@ class JvmCastManager(
     private val localAddresses: () -> List<InetAddress>,
     private val appVersion: String,
     private val settings: Settings = Settings.shared,
+    private val streamPort: Int = 57643,
+    private val streamRequestTimeoutMs: Long = 15_000L,
 ) {
     private var mdnsDiscovery: MdnsCastDiscovery? = null
     private val devicesById = linkedMapOf<String, CastDevice>()
@@ -73,6 +78,7 @@ class JvmCastManager(
     private val discoveryGeneration = AtomicLong()
     private var discoveryJob: Job? = null
     private var sessionStateJob: Job? = null
+    private var streamRequestJob: Job? = null
     private var session: CastSession? = null
     private var proxy: CastProxyServer? = null
     private var mediaGeneration = 0L
@@ -185,7 +191,7 @@ class JvmCastManager(
                         stage = "select_route"
                         val localAddress = localAddressFor(receiverAddress)
                         stage = "start_proxy"
-                        val nextProxy = CastProxyServer(receiverAddress, localAddress, media).also { proxy = it }
+                        val nextProxy = CastProxyServer(receiverAddress, localAddress, media, streamPort = streamPort).also { proxy = it }
                         stage = "create_session"
                         val nextSession: CastSession =
                             when (device.protocol) {
@@ -218,6 +224,7 @@ class JvmCastManager(
                         status = CastConnectionStatus.CONNECTED,
                         device = device,
                         isPlaying = autoplay,
+                        isBuffering = nextSession.state.value.isBuffering,
                         positionMs = positionMs.coerceAtLeast(0L),
                         durationMs = media.durationMs,
                         volume = nextSession.state.value.volume,
@@ -225,6 +232,7 @@ class JvmCastManager(
                         error = null,
                     )
                 observeSessionState(nextSession, device, nextMediaGeneration)
+                if (autoplay) watchStreamRequest(nextProxy, nextMediaGeneration)
                 true
             } catch (e: CancellationException) {
                 disconnectLocked(stopRemote = false)
@@ -244,7 +252,16 @@ class JvmCastManager(
                     stopRemote = false,
                     finalState =
                         CastState(
-                            error = CastError.CONNECTION_FAILED.takeIf { shouldCommit() },
+                            error =
+                                (
+                                    if (stage == "start_proxy" &&
+                                        error is BindException
+                                    ) {
+                                        CastError.STREAM_PORT_UNAVAILABLE
+                                    } else {
+                                        CastError.CONNECTION_FAILED
+                                    }
+                                ).takeIf { shouldCommit() },
                             mediaGeneration = nextMediaGeneration,
                         ),
                 )
@@ -257,27 +274,31 @@ class JvmCastManager(
         positionMs: Long,
         autoplay: Boolean,
         volume: Float,
+        shouldCommit: () -> Boolean = { true },
     ): Boolean =
         operationLock.withLock {
-            if (!settings.castEnabled) return@withLock false
+            if (!settings.castEnabled || !shouldCommit()) return@withLock false
             val activeSession = session ?: return@withLock false
             val device = _state.value.device ?: return@withLock false
             if (!isCastable(media, device.protocol)) {
                 showError(CastError.UNSUPPORTED_STREAM)
                 return@withLock false
             }
-            var nextProxy: CastProxyServer? = null
+            val activeProxy = proxy ?: return@withLock false
+            var stagedUrl: String? = null
             val nextMediaGeneration = mediaGeneration + 1L
             try {
-                val replacementProxy =
-                    withContext(Dispatchers.IO) {
-                        val receiverAddress = resolveReceiverAddress(device.host)
-                        CastProxyServer(receiverAddress, localAddressFor(receiverAddress), media).also { nextProxy = it }
-                    }
+                val replacementUrl = activeProxy.stageMedia(media).also { stagedUrl = it }
                 sessionStateJob?.cancelAndJoin()
                 sessionStateJob = null
+                if (!shouldCommit()) {
+                    activeProxy.discardMedia(replacementUrl)
+                    stagedUrl = null
+                    observeSessionState(activeSession, device, mediaGeneration)
+                    return@withLock false
+                }
                 activeSession.load(
-                    mediaUrl = replacementProxy.mediaUrl(),
+                    mediaUrl = replacementUrl,
                     media = media,
                     positionMs = positionMs.coerceAtLeast(0L),
                     autoplay = autoplay,
@@ -287,14 +308,13 @@ class JvmCastManager(
                 withContext(NonCancellable) {
                     markMediaActive()
                     mediaGeneration = nextMediaGeneration
-                    val oldProxy = proxy
-                    proxy = replacementProxy
-                    nextProxy = null
-                    withContext(Dispatchers.IO) { runCatching { oldProxy?.close() } }
+                    activeProxy.commitMedia(replacementUrl)
+                    stagedUrl = null
                     _state.value =
                         _state.value.copy(
                             status = CastConnectionStatus.CONNECTED,
                             isPlaying = autoplay,
+                            isBuffering = activeSession.state.value.isBuffering,
                             positionMs = positionMs.coerceAtLeast(0L),
                             durationMs = media.durationMs,
                             volume = activeSession.state.value.volume,
@@ -305,10 +325,11 @@ class JvmCastManager(
                             mediaVideoId = media.resource.musicVideoId ?: media.resource.videoId,
                         )
                     observeSessionState(activeSession, device, nextMediaGeneration)
+                    if (autoplay) watchStreamRequest(activeProxy, nextMediaGeneration)
                 }
                 true
             } catch (e: CancellationException) {
-                withContext(NonCancellable + Dispatchers.IO) { runCatching { nextProxy?.close() } }
+                stagedUrl?.let(activeProxy::discardMedia)
                 throw e
             } catch (error: Exception) {
                 PlaybackEventLog.error(
@@ -321,7 +342,7 @@ class JvmCastManager(
                     TAG,
                     "media replacement failed protocol=${device.protocol} type=${error::class.simpleName ?: "unknown"}",
                 )
-                withContext(NonCancellable + Dispatchers.IO) { runCatching { nextProxy?.close() } }
+                stagedUrl?.let(activeProxy::discardMedia)
                 val lastState = _state.value
                 disconnectLocked(
                     stopRemote = false,
@@ -335,14 +356,20 @@ class JvmCastManager(
         control {
             it.play()
             operationLock.markMediaActive()
+            proxy?.let { activeProxy -> watchStreamRequest(activeProxy, mediaGeneration) }
         }
 
-    suspend fun pause() = control { it.pause() }
+    suspend fun pause() =
+        control {
+            streamRequestJob?.cancel()
+            it.pause()
+        }
 
     suspend fun stop() {
         operationLock.withStopMarker {
+            streamRequestJob?.cancel()
             controlLocked { it.stop() }
-            _state.value = _state.value.copy(isPlaying = false, hasEnded = false)
+            _state.value = _state.value.copy(isPlaying = false, isBuffering = false, hasEnded = false)
         }
     }
 
@@ -370,6 +397,8 @@ class JvmCastManager(
     fun closeImmediately() {
         enabledJob.cancel()
         stopDiscovery()
+        streamRequestJob?.cancel()
+        streamRequestJob = null
         sessionStateJob?.cancel()
         sessionStateJob = null
         val oldSession = session
@@ -384,13 +413,30 @@ class JvmCastManager(
         _state.value = CastState()
     }
 
+    private fun watchStreamRequest(
+        activeProxy: CastProxyServer,
+        generation: Long,
+    ) {
+        streamRequestJob?.cancel()
+        streamRequestJob =
+            scope.launch {
+                delay(streamRequestTimeoutMs)
+                val current = _state.value
+                if (proxy === activeProxy && current.isConnected && current.mediaGeneration == generation &&
+                    !activeProxy.hasMediaRequest
+                ) {
+                    showError(CastError.STREAM_UNREACHABLE)
+                }
+            }
+    }
+
     private fun observeSessionState(
         activeSession: CastSession,
         device: CastDevice,
         expectedMediaGeneration: Long,
     ) {
         sessionStateJob =
-            scope.launch {
+            scope.launch(start = CoroutineStart.UNDISPATCHED) {
                 activeSession.state.collect { playback ->
                     if (
                         session !== activeSession ||
@@ -422,10 +468,12 @@ class JvmCastManager(
                             status = CastConnectionStatus.CONNECTED,
                             device = device,
                             isPlaying = playback.isPlaying,
+                            isBuffering = playback.isBuffering,
                             positionMs = playback.positionMs,
                             durationMs = playback.durationMs,
                             volume = playback.volume,
                             hasEnded = acceptedCastPlaybackEnd(playback.hasEnded, operationLock.remoteStopRequested),
+                            error = _state.value.error.takeUnless { it == CastError.STREAM_UNREACHABLE && proxy?.hasMediaRequest == true },
                             mediaGeneration = expectedMediaGeneration,
                         )
                 }
@@ -462,6 +510,8 @@ class JvmCastManager(
         val oldProxy = proxy
         session = null
         proxy = null
+        streamRequestJob?.cancel()
+        streamRequestJob = null
         sessionStateJob?.cancel()
         sessionStateJob = null
         completeCastDisconnect(
@@ -562,6 +612,9 @@ class JvmCastManager(
             devicesById.values.sortedWith(compareBy<CastDevice> { it.name.lowercase() }.thenBy { it.protocol.ordinal })
     }
 
+    // Logs each unreadable device once per session, since discovery repeats every few seconds.
+    private val failedDlnaLocations = ConcurrentHashMap.newKeySet<String>()
+
     private suspend fun discoverDlna(
         addresses: List<InetAddress>,
         generation: Long,
@@ -590,14 +643,31 @@ class JvmCastManager(
                                     port = uri.port.takeIf { it >= 0 } ?: 80,
                                     endpoint = location,
                                 )
+                            }.onFailure { error ->
+                                if (error is CancellationException) throw error
+                                if (failedDlnaLocations.add(location)) {
+                                    PlaybackEventLog.error(
+                                        PlaybackEventKind.NETWORK,
+                                        "CastDiscovery",
+                                        "DLNA device description failed",
+                                        error,
+                                    )
+                                }
                             }.getOrNull()
                         }
                     }.awaitAll()
                     .filterNotNull()
             }
+        val sonos = discovered.filter { it.protocol == CastProtocol.SONOS }
+        val visible =
+            sonos
+                .takeIf { it.isNotEmpty() }
+                ?.let { sonosGroupDevices(it) }
+                ?.let { groups -> discovered.filterNot { it.protocol == CastProtocol.SONOS } + groups }
+                ?: discovered
         synchronized(devicesLock) {
             if (!settings.castEnabled || !discovering.get() || generation != discoveryGeneration.get()) return
-            devicesById.replaceDlnaDevices(discovered)
+            devicesById.replaceDlnaDevices(visible)
             publishDevices()
         }
     }

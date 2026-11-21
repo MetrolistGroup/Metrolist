@@ -9,6 +9,7 @@ import com.metrolist.shared.settings.Settings
 import com.metrolist.shared.utils.XdgUtils
 import com.sun.jna.Library
 import com.sun.jna.Native
+import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.booleanOrNull
@@ -18,7 +19,6 @@ import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonPrimitive
 import java.io.File
 import java.util.Properties
-import java.util.concurrent.Semaphore
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicReference
 import kotlin.math.roundToInt
@@ -32,14 +32,19 @@ object WaylandScale {
     private val monitorCache = AtomicReference<List<Monitor>>(emptyList())
     private val fallbackScale = AtomicReference<Float?>(null)
     private var watcherThread: Thread? = null
-    private val refreshRequested = Semaphore(0)
+    private val monitorWatcher = MonitorRefreshWatcher()
     private val outputPattern = Regex("""Output:.*?(?=Output:|\z)""", RegexOption.DOT_MATCHES_ALL)
     private val geometryPattern = Regex("""Geometry:\s*(-?\d+),(-?\d+)\s+(\d+)x(\d+)""")
     private val scalePattern = Regex("""Scale:\s*([\d.]+)""")
 
     fun requestMonitorRefresh() {
-        if (watcherThread != null && refreshRequested.availablePermits() == 0) refreshRequested.release()
+        if (watcherThread != null) monitorWatcher.requestRefresh()
     }
+
+    fun setWindowVisible(
+        window: Any,
+        visible: Boolean,
+    ) = monitorWatcher.setWindowVisible(window, visible)
 
     interface LibC : Library {
         fun setenv(
@@ -232,17 +237,19 @@ object WaylandScale {
 
         watcherThread =
             Thread({
-                while (!Thread.interrupted()) {
+                val refresh = {
                     try {
                         refreshMonitorCache()
-                        if (refreshRequested.tryAcquire(30, TimeUnit.SECONDS)) {
-                            Thread.sleep(2000)
-                            refreshRequested.drainPermits()
-                        }
-                    } catch (e: InterruptedException) {
-                        break
+                    } catch (error: InterruptedException) {
+                        throw error
                     } catch (_: Exception) {
                     }
+                }
+                try {
+                    // The first window reads the cache before it becomes visible.
+                    refresh()
+                    runBlocking { monitorWatcher.watch(refresh) }
+                } catch (_: InterruptedException) {
                 }
             }, "WaylandMonitorWatcher").apply {
                 isDaemon = true
@@ -371,18 +378,20 @@ object WaylandScale {
         return theme?.takeIf(String::isNotBlank) to size
     }
 
+    private fun kdeConfigHome(environment: Map<String, String>): File =
+        environment["XDG_CONFIG_HOME"]?.takeIf(String::isNotBlank)?.let(::File)?.takeIf(File::isAbsolute)
+            ?: File(System.getProperty("user.home"), ".config")
+
+    internal fun readKdeCursorConfig(environment: Map<String, String> = System.getenv()): String? =
+        File(kdeConfigHome(environment), "kcminputrc").takeIf(File::isFile)?.readText()
+
     private fun applyCursorTheme() {
         try {
             val (theme, size) =
                 resolveCursorSettings(
                     environment = System.getenv(),
                     query = { runCommand("gsettings", "get", "org.gnome.desktop.interface", it) },
-                    readConfig = {
-                        val configHome =
-                            System.getenv("XDG_CONFIG_HOME")?.takeIf(String::isNotBlank)?.let(::File)
-                                ?: File(System.getProperty("user.home"), ".config")
-                        File(configHome, "kcminputrc").takeIf(File::isFile)?.readText()
-                    },
+                    readConfig = { readKdeCursorConfig() },
                 )
             if (theme == null && size == null) return
             val libc = Native.load("c", LibC::class.java) as LibC
@@ -400,10 +409,7 @@ object WaylandScale {
         wayland: Boolean = isWayland(),
         query: (String, List<String>) -> String? = { command, arguments -> runCommand(command, *arguments.toTypedArray()) },
         readConfig: () -> String? = {
-            val configHome =
-                environment["XDG_CONFIG_HOME"]?.takeIf(String::isNotBlank)?.let(::File)
-                    ?: File(System.getProperty("user.home"), ".config")
-            runCatching { File(configHome, "kdeglobals").takeIf(File::isFile)?.readText() }.getOrNull()
+            runCatching { File(kdeConfigHome(environment), "kdeglobals").takeIf(File::isFile)?.readText() }.getOrNull()
         },
     ): Float? {
         val desktop = environment["XDG_CURRENT_DESKTOP"]?.lowercase().orEmpty()

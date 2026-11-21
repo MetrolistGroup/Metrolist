@@ -5,7 +5,6 @@
 
 package com.metrolist.shared.api.lyrics
 
-import com.metrolist.shared.api.lyrics.romanizer.containsJapaneseKanji
 import com.metrolist.shared.model.AgentInfo
 import com.metrolist.shared.model.AgentType
 import com.metrolist.shared.model.LyricsEntry
@@ -15,6 +14,7 @@ import com.metrolist.shared.model.MlxMeta
 import com.metrolist.shared.model.MlxSong
 import com.metrolist.shared.model.MlxSongPart
 import com.metrolist.shared.model.WordTimestamp
+import meow.nyx.glyphmind.containsJapaneseKanji
 
 object MlxParser {
     private const val MAX_DOCUMENT_CHARS = 8 * 1024 * 1024
@@ -48,7 +48,7 @@ object MlxParser {
     private val WORD_TS = """<(\d+):(\d{2})(?:[.:](\d{1,3}))?>""".toRegex()
     private val INLINE_BG = """\s*\[bg:(.*)\]$""".toRegex()
     private val LEGACY_AGENT = """\{agent:([^}]+)\}""".toRegex()
-    private val LEGACY_PREFIX = """^(v\d+):\s*""".toRegex()
+    private val LEGACY_PREFIX = """^(v\d+|bg):\s*""".toRegex()
     private val LRC_METADATA = """^\[(?:ar|al|ti|au|by|re|ve|length|offset):.*\]$""".toRegex(RegexOption.IGNORE_CASE)
 
     fun isMlxFormat(text: String): Boolean {
@@ -352,9 +352,18 @@ object MlxParser {
         agents: Map<String, AgentInfo>,
         outSongParts: MutableList<MlxSongPart>? = null,
     ): List<LyricsEntry> {
+        val joinedLines = mutableListOf<String>()
+        for (line in lines) {
+            val previous = joinedLines.lastOrNull()?.trim()
+            if (previous != null && LINE_HEADER.matches(previous) && WORD_TS.matchAt(line.trimStart(), 0) != null) {
+                joinedLines[joinedLines.lastIndex] = previous + line.trimStart()
+            } else {
+                joinedLines.add(line)
+            }
+        }
         val result = mutableListOf<LyricsEntry>()
         val lineStarts =
-            lines
+            joinedLines
                 .flatMap {
                     LINE_HEADER
                         .findAll(it)
@@ -368,7 +377,7 @@ object MlxParser {
         var precedingLines = emptyList<Int>()
         var hasLineTimestamps = false
 
-        for (rawLine in lines) {
+        for (rawLine in joinedLines) {
             val trimmed = rawLine.trim()
             if (trimmed.isBlank() || trimmed.startsWith("//")) continue
             if (LRC_METADATA.matches(trimmed)) {
@@ -426,16 +435,23 @@ object MlxParser {
             var afterHeader = trimmed.substring(contentStart).trimStart()
             val legacyAgent = LEGACY_AGENT.find(afterHeader)?.groupValues?.get(1)
             afterHeader = LEGACY_AGENT.replace(afterHeader, "")
-            val prefix = LEGACY_PREFIX.find(afterHeader)
-            if (prefix != null) afterHeader = afterHeader.substring(prefix.range.last + 1)
+            val prefixStart =
+                WORD_TS
+                    .matchAt(afterHeader, 0)
+                    ?.range
+                    ?.last
+                    ?.plus(1) ?: 0
+            val prefix = LEGACY_PREFIX.find(afterHeader.substring(prefixStart))
+            if (prefix != null) afterHeader = afterHeader.removeRange(prefixStart, prefixStart + prefix.value.length)
+            val prefixAgent = prefix?.groupValues?.get(1)
             val standaloneBackground = headers.isEmpty() && afterHeader.startsWith("[bg:") && afterHeader.endsWith(']')
-            val isBackground = afterHeader.contains("{bg}") || legacyAgent == "bg" || standaloneBackground
+            val isBackground = afterHeader.contains("{bg}") || legacyAgent == "bg" || prefixAgent == "bg" || standaloneBackground
             afterHeader = afterHeader.replace("{bg}", "")
             if (standaloneBackground) afterHeader = afterHeader.removePrefix("[bg:").removeSuffix("]")
             val agentId =
                 headerMatch?.groupValues?.get(3)?.takeIf { it.isNotBlank() }
                     ?: legacyAgent?.takeUnless { it == "bg" }
-                    ?: prefix?.groupValues?.get(1)
+                    ?: prefixAgent?.takeUnless { it == "bg" }
                     ?: lastAgent.takeIf { isBackground }
             if (!isBackground && agentId != null) lastAgent = agentId
 
@@ -444,11 +460,12 @@ object MlxParser {
             val bgContent = bgMatch?.groupValues?.get(1)
             val nextStart = lineStarts.getOrNull(lineStarts.binarySearch(startMs).let { if (it >= 0) it + 1 else -it - 1 })
             val wordEnd = endMs ?: nextStart
-            val (mainText, mainWords) = parseContent(mainContent, startMs, wordEnd)
+            val explicitStart = startMs.takeIf { headerMatch != null }
+            val (mainText, mainWords) = parseContent(mainContent, explicitStart, wordEnd)
 
             val bgWords: List<WordTimestamp>? =
                 if (!bgContent.isNullOrBlank()) {
-                    val (_, parsed) = parseContent(bgContent, startMs, wordEnd)
+                    val (_, parsed) = parseContent(bgContent, explicitStart, wordEnd)
                     parsed?.map { it.copy(isBackground = true) }
                 } else {
                     null
@@ -474,7 +491,7 @@ object MlxParser {
                         agent = agentId,
                         endTime = endMs,
                         isBackground = isBackground,
-                        backgroundText = bgContent?.let { parseContent(it, startMs, endMs).first },
+                        backgroundText = bgContent?.let { parseContent(it, explicitStart, endMs).first },
                         songPart = currentSongPart,
                     ),
                 )
@@ -501,6 +518,10 @@ object MlxParser {
         return completed
     }
 
+    internal fun isLegacyWordLine(line: String): Boolean =
+        line.startsWith('<') && line.endsWith('>') && !WORD_TS.containsMatchIn(line) &&
+            parseLegacyWords(line.substring(1, line.lastIndex)).size == line.count { it == '|' } + 1
+
     private fun parseLegacyWords(content: String): List<WordTimestamp> {
         val segments = content.split('|')
         return segments.mapIndexedNotNull { index, segment ->
@@ -519,7 +540,7 @@ object MlxParser {
     /** Preserves syllable spacing; only trailing spaces move into WordTimestamp.hasTrailingSpace. */
     private fun parseContent(
         content: String,
-        lineStartMs: Long,
+        lineStartMs: Long?,
         lineEndMs: Long?,
     ): Pair<String, List<WordTimestamp>?> {
         val markers = WORD_TS.findAll(content).toList()
@@ -531,8 +552,9 @@ object MlxParser {
         val words = mutableListOf<WordTimestamp>()
         val textBuf = StringBuilder()
 
-        var pendingText: String? = null
+        var pendingText: String? = content.substring(0, markers.first().range.first).takeIf(String::isNotBlank)
         var pendingStartMs = 0L
+        pendingText?.let(textBuf::append)
 
         fun flushPending(endMs: Long) {
             val raw = pendingText ?: return
@@ -553,6 +575,10 @@ object MlxParser {
         for (i in markers.indices) {
             val marker = markers[i]
             val markerMs = groupsToMs(marker.groupValues[1], marker.groupValues[2], marker.groupValues[3])
+            if (i == 0) {
+                // The line tag can also start the first word in enhanced LRC.
+                pendingStartMs = lineStartMs?.coerceAtMost(markerMs) ?: markerMs
+            }
 
             val segStart = marker.range.last + 1
             val segEnd = if (i + 1 < markers.size) markers[i + 1].range.first else content.length

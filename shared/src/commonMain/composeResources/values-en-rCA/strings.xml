@@ -310,7 +310,6 @@
     <string name="settings_translation_mode_summary">Translate words or transcribe pronunciation into the target script</string>
     <string name="settings_translation_provider_summary">Choose the service that translates lyrics</string>
     <string name="settings_translation_model_summary">Model for translating or transcribing lyrics</string>
-    <string name="settings_detector_model_summary">Model that decides whether lyrics need translation</string>
     <string name="settings_translation_formality_summary">Choose formal or casual language for DeepL translations</string>
     <string name="settings_discord_advanced_summary">Show activity templates and custom link buttons</string>
     <string name="settings_discord_activity_type_summary">Choose how Discord labels your music activity</string>

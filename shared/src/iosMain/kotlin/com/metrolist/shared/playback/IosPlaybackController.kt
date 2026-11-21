@@ -340,6 +340,7 @@ internal class IosPlaybackController(
     private var radioJob: Job? = null
     private var radioContinuation: String? = null
     private var radioContinuationClassic: Boolean = Settings.shared.classicRecommendations
+    private var radioExplicitFeed = false
     private var deferredRadioBootstrap = false
     private var currentRadioSeedId: String? = null
     private var currentRadioPlaylistId: String? = null
@@ -1301,7 +1302,12 @@ internal class IosPlaybackController(
     ) {
         radioJob?.cancel()
         // Classic recommendations ask /next with the video id alone; explicit chip choices keep their playlist.
-        val requestPlaylistId = playlistId ?: if (Settings.shared.classicRecommendations) null else "RDAMVM$seedSongId"
+        val requestClassic = Settings.shared.classicRecommendations
+        val explicitFeed =
+            selectedChipId != null || params != null ||
+                (playlistId != null && playlistId != "RDAMVM$seedSongId")
+        val requestPlaylistId = playlistId ?: if (requestClassic) null else "RDAMVM$seedSongId"
+        radioExplicitFeed = explicitFeed
         if (selectedChipId == null) {
             currentRadioSeedId = seedSongId
             currentRadioPlaylistId = requestPlaylistId
@@ -1328,6 +1334,7 @@ internal class IosPlaybackController(
                             seedSongId,
                             isBootstrap = true,
                             finiteQueue = selectedChipId == null && isFiniteQueue,
+                            requestClassic = requestClassic,
                         ) ?: return@launch
                     currentRadioSeedId = seedSongId
                     currentRadioPlaylistId = requestPlaylistId
@@ -1337,7 +1344,7 @@ internal class IosPlaybackController(
                     suggestedTracks.value = page.songs
                     recommendationHistory.remember(page.songs)
                     radioContinuation = page.continuation
-                    radioContinuationClassic = Settings.shared.classicRecommendations
+                    radioContinuationClassic = requestClassic
                     val chips =
                         if (selectedChipId != null) {
                             page.chips.selectRadioQueueChip(selectedChipId)
@@ -1361,24 +1368,30 @@ internal class IosPlaybackController(
         if (!canAutoLoadMore) return
         // Continuations belong to the recommendations mode that fetched them; a
         // mode change starts a fresh radio instead of reusing the old feed.
-        if (radioContinuationClassic != Settings.shared.classicRecommendations) {
+        if (!radioExplicitFeed && radioContinuationClassic != Settings.shared.classicRecommendations) {
             radioContinuation = null
             bootstrapRecommendations(seedSongId)
             return
         }
         val continuation = radioContinuation ?: return
+        val requestClassic = Settings.shared.classicRecommendations
         if (radioJob?.isActive == true) return
         radioJob =
             scope.launch {
                 isQueueLoading.value = true
                 try {
                     val page =
-                        loadRadioRecommendations(repository().continueRadioQueue(continuation), seedSongId, isBootstrap = false)
+                        loadRadioRecommendations(
+                            repository().continueRadioQueue(continuation),
+                            seedSongId,
+                            isBootstrap = false,
+                            requestClassic = requestClassic,
+                        )
                             ?: return@launch
                     suggestedTracks.value += page.songs
                     recommendationHistory.remember(page.songs)
                     radioContinuation = page.continuation
-                    radioContinuationClassic = Settings.shared.classicRecommendations
+                    radioContinuationClassic = requestClassic
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
@@ -1395,14 +1408,15 @@ internal class IosPlaybackController(
         seedSongId: String,
         isBootstrap: Boolean,
         finiteQueue: Boolean = isFiniteQueue,
+        requestClassic: Boolean,
     ): RadioQueuePage? =
         recommendationHistory.select(
             firstPage = firstPage,
-            classic = Settings.shared.classicRecommendations,
+            classic = requestClassic,
             isCurrent = {
                 val allowed = canAutoLoadMore || (isBootstrap && !finiteQueue)
                 if (!allowed && isBootstrap) deferredRadioBootstrap = true
-                allowed
+                allowed && (radioExplicitFeed || Settings.shared.classicRecommendations == requestClassic)
             },
             filter = { songs ->
                 val retainedSuggestions = if (isBootstrap) emptyList() else suggestedTracks.value
@@ -1979,7 +1993,7 @@ internal class IosPlaybackController(
             if (radioSeed != null) {
                 bootstrapRecommendations(
                     seedSongId = radioSeed,
-                    playlistId = radioPlaylist,
+                    playlistId = radioPlaylist?.takeUnless { it == "RDAMVM$radioSeed" },
                     params = radioParams,
                 )
             }

@@ -462,7 +462,14 @@ private fun StandardPlayerProgress(colorScheme: ColorScheme) {
     val canSeek = !isListenTogetherGuest && !isLive
 
     val displayPosition = {
-        if (isDragging || pendingSeekTargetMs != null) (sliderValue * playerDuration).toLong() else playerPosition.value
+        when {
+            isDragging || pendingSeekTargetMs != null -> (sliderValue * playerDuration).toLong()
+
+            isLive -> playerPosition.value
+
+            // The seek bar's clock, so the label changes in the same repaint as a progress step.
+            else -> smoothPosition.longValue
+        }
     }
 
     Row(

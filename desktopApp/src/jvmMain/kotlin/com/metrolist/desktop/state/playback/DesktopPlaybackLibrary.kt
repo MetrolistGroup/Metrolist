@@ -8,6 +8,7 @@ import com.metrolist.desktop.history.HistoryRepository
 import com.metrolist.desktop.history.HistoryStat
 import com.metrolist.desktop.state.content.PlaylistAlbumState
 import com.metrolist.shared.api.PlaylistSongAlreadyPresentException
+import com.metrolist.shared.api.YouTubeRepository
 import com.metrolist.shared.db.MusicDatabase
 import com.metrolist.shared.db.distinctPlaylistItems
 import com.metrolist.shared.db.preserveKnownPlaylistEditability
@@ -39,6 +40,7 @@ import kotlin.time.Duration.Companion.seconds
 internal class DesktopPlaybackLibrary(
     private val scope: CoroutineScope,
     database: () -> MusicDatabase,
+    repository: () -> YouTubeRepository = { GlobalYouTubeRepository.instance },
     private val loadPlaylists: suspend (Boolean, (List<PlaylistItem>) -> Unit) -> List<PlaylistItem> = { signedIn, publishLocal ->
         val local =
             withContext(Dispatchers.IO) {
@@ -53,7 +55,7 @@ internal class DesktopPlaybackLibrary(
         if (!signedIn) {
             local
         } else {
-            val result = GlobalYouTubeRepository.instance.getUserPlaylistsResult()
+            val result = repository().getUserPlaylistsResult()
             local +
                 database()
                     .preserveKnownPlaylistEditability(result.items, result.unresolvedPlaylistEditabilityIds)
@@ -72,17 +74,18 @@ internal class DesktopPlaybackLibrary(
                 .first()
                 .mapTo(mutableSetOf()) { it.song.id }
         } else {
-            GlobalYouTubeRepository.instance.playlistSongIds(playlistId)
+            repository().playlistSongIds(playlistId)
         }
     },
     private val addLocalBatch: (suspend (String, List<SongItem>) -> PlaylistAddBatchResult)? = { playlistId, songs ->
         addSongsToLocalPlaylist(database(), playlistId, songs)
     },
     private val addSong: suspend (String, SongItem, Boolean) -> Result<Unit> = { playlistId, song, local ->
-        if (local) {
-            addSongToStoredPlaylist(database(), GlobalYouTubeRepository.instance, playlistId, song)
+        val storedDatabase = database()
+        if (local || storedDatabase.dao().findPlaylistEntity(playlistId) != null) {
+            addSongToStoredPlaylist(storedDatabase, repository(), playlistId, song, allowDuplicate = !local)
         } else {
-            GlobalYouTubeRepository.instance.addToPlaylist(playlistId, song.id, allowDuplicate = true)
+            repository().addToPlaylist(playlistId, song.id, allowDuplicate = true)
         }
     },
 ) {
@@ -141,6 +144,7 @@ internal class DesktopPlaybackLibrary(
         val generation = ++playlistRequestGeneration
         fetchUserPlaylistsJob?.cancel()
         isUserPlaylistsLoading = true
+        userPlaylists = emptyList()
         userPlaylistMembership = emptySet()
 
         fun isCurrent() = generation == playlistRequestGeneration && showAddToPlaylistSongs == songs
@@ -300,7 +304,7 @@ internal class DesktopPlaybackLibrary(
                     playlistAddTotal = 0
                 }
             if (result.isSuccess && PlaylistAlbumState.selectedPlaylistId == playlistId) {
-                PlaylistAlbumState.fetchPlaylistData(playlistId, addToHistory = false)
+                PlaylistAlbumState.fetchPlaylistData(playlistId, addToHistory = false, forceRefresh = true)
             }
             onResult(result)
         }

@@ -109,8 +109,14 @@ fun BrowseScreen(
                     BrowseState.loadMore()
                 }
             },
-            error = loadError.takeIf { sectionModel?.loadFailed == true },
-            onRetry = { sectionModel?.load() },
+            error = loadError.takeIf { sectionModel?.loadFailed ?: (section == null && BrowseState.loadFailed) },
+            onRetry = {
+                if (sectionModel != null) {
+                    sectionModel.load()
+                } else if (section == null) {
+                    BrowseState.retry()
+                }
+            },
             loadMoreError = loadError.takeIf { sectionModel?.loadMoreFailed ?: (section == null && BrowseState.loadMoreFailed) },
             hasMore = sectionModel?.hasMore ?: (section == null && BrowseState.hasMore),
             headerContent =

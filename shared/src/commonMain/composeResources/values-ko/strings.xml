@@ -474,7 +474,6 @@
     <string name="settings_translation_mode_summary">단어를 번역하거나 발음을 대상 문자로 표기</string>
     <string name="settings_translation_provider_summary">가사를 번역할 서비스 선택</string>
     <string name="settings_translation_model_summary">가사를 번역하거나 발음을 표기할 모델</string>
-    <string name="settings_detector_model_summary">가사 번역이 필요한지 판단하는 모델</string>
     <string name="settings_translation_formality_summary">DeepL 번역에 사용할 격식체 또는 비격식체 선택</string>
     <string name="settings_discord_advanced_summary">활동 템플릿 및 사용자 지정 링크 버튼 표시</string>
     <string name="settings_discord_activity_type_summary">Discord에서 음악 활동을 나타내는 방식 선택</string>

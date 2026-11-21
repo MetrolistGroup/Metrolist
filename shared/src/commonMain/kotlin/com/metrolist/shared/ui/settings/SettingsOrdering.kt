@@ -55,6 +55,7 @@ internal fun List<SettingsGroupRegistration>.prioritized(page: SettingsPageId): 
                 SettingsPageId.APPEARANCE to "theme" -> {
                     listOf(
                         "themeMode",
+                        "matugen",
                         "materialYou",
                         "themeColor",
                         "dynamicTheme",
@@ -97,6 +98,7 @@ internal fun List<SettingsGroupRegistration>.prioritized(page: SettingsPageId): 
                         "autoLoadMore",
                         "classicRecommendations",
                         "autoDownloadOnLike",
+                        "autoDownloadSavedCollections",
                         "persistentQueue",
                         "promptContinuePlayback",
                         "rememberShuffleRepeat",

@@ -18,7 +18,7 @@ Release callers pass `run-verification: false` only after the gate passes. `-Pme
 | Packaged launch smoke tests | Manual Linux, Windows and macOS packages |
 | iOS simulator backend tests | iOS verification and manual IPA builds |
 | Windows manager tests and payload installation | `build-desktop.yml` with `windows-manager=true` |
-| Shared JAR integrity and iOS dictionary checks | Linux verification; manual packaging also checks final distributables |
+| Shared JAR integrity checks | Linux verification; manual packaging also checks final distributables |
 
 Packaging jobs always keep the macOS architecture inspection, APK signature checks, archive existence and version checks, provenance, Sentry uploads, staging and publication. The stable Windows manager installer builds in parallel with portable packaging.
 
@@ -40,7 +40,7 @@ Android release packaging uses 8 vCPUs for compilation and R8; debug verificatio
 
 ## Native Image opt-in runners
 
-Native tester jobs run only on manual dispatch. Linux x64 and Windows x64 use 8 vCPUs for the roughly 10 GiB builder peak, without increasing existing JVM runner sizes. Native compilation keeps two compiler threads and a 12 GiB heap. Linux holds the Gradle lock and uses a 16 GiB scope; all platforms finish Gradle before starting Native Image. Linux ARM64 and macOS ARM64 jobs are prepared but disabled by repository variables. Native jobs add no push, PR or scheduled matrix. Measure hosted time and cost before enabling more targets or scheduling them.
+Native jobs run for nightlies, stable releases and manual dispatch. Linux x64 and Windows x64 use 8 vCPUs for the roughly 10 GiB builder peak, without increasing existing JVM runner sizes. Native compilation keeps two compiler threads and a 12 GiB heap. Linux holds the Gradle lock and uses a 16 GiB scope; all platforms finish Gradle before starting Native Image. Linux ARM64 and macOS ARM64 jobs are prepared but disabled by repository variables. Native jobs add no PR or scheduled matrix. Measure hosted time and cost before enabling more targets or scheduling them.
 
 Only checksum-verified GraalVM archives are cached by the native workflow. Its Gradle restore is read-only, with build/configuration caches disabled during input preparation. Native images, traces and profiles are not cached. See [Native Image](desktop-native-image.md) for the complete build and test path.
 
@@ -64,6 +64,6 @@ The build pins Kotlin and the Compose compiler to 2.4.21. Kotlin 2.5 [disables](
 
 `gradle.properties` does not set the internal property because KGP reports its use. Do not disable `kotlin.internal.jvm.enableKmpClasspathMetadataForIncrementalCompilation`; [Kotlin PR 7638](https://github.com/JetBrains/kotlin/pull/7638) explains why common fragments need that metadata. Fresh CI checkouts compile non-incrementally. Clean `:shared` if a local build misbehaves after changing an expect/actual pair.
 
-Room 3 requires KSP with Kotlin code generation ([Room 3 release notes](https://developer.android.com/jetpack/androidx/releases/room3#3.0.3)). [KSP2](https://github.com/google/ksp/blob/2.3.13/docs/ksp2.md) runs separately from the Kotlin compiler. Room KSP runs only in shared production source sets; `androidApp` does not apply KSP.
+Room 3 requires KSP with Kotlin code generation ([Room 3 release notes](https://developer.android.com/jetpack/androidx/releases/room3#3.0.3)). [KSP2](https://github.com/google/ksp/blob/2.3.14/docs/ksp2.md) runs separately from the Kotlin compiler. Room KSP runs only in shared production source sets; `androidApp` does not apply KSP.
 
 Kotlin's [release-cache options](https://kotlinlang.org/docs/native-improving-compilation-time.html#enable-caches-for-release-binaries) trade some compiler optimizations for build speed.

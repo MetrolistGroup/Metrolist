@@ -198,7 +198,11 @@ internal class YouTubePlaylistEdits(
             runSessionPlaylistEdit(playlistId, reconcileNotFound = false) { requestTube, id ->
                 val response = requestTube.removePlaylistThumbnail(YouTubeClient.WEB_REMIX, id)
                 check(response.status.isSuccess()) { "Remove playlist cover failed with HTTP ${response.status.value}" }
-                thumbnail = parseEditPlaylistThumbnail(response.bodyAsTextLimited(FEED_RESPONSE_LIMIT))
+                thumbnail =
+                    parseEditPlaylistThumbnail(
+                        response.bodyAsTextLimited(FEED_RESPONSE_LIMIT),
+                        validateRemovalStatus = true,
+                    )
             }
             Result.success(thumbnail)
         } catch (e: CancellationException) {
@@ -207,9 +211,21 @@ internal class YouTubePlaylistEdits(
             Result.failure(e)
         }
 
-    private fun parseEditPlaylistThumbnail(body: String): String? =
-        try {
-            val root = Json.parseToJsonElement(body).jsonObject
+    private fun parseEditPlaylistThumbnail(
+        body: String,
+        validateRemovalStatus: Boolean = false,
+    ): String? {
+        val root =
+            try {
+                Json.parseToJsonElement(body).jsonObject
+            } catch (_: Exception) {
+                return null
+            }
+        // Header-only edits can succeed, but an explicit rejection must not be treated as a missing image.
+        if (validateRemovalStatus && "status" in root) {
+            check(root["status"]?.jsonPrimitive?.contentOrNull == "STATUS_SUCCEEDED") { "Remove playlist cover was rejected" }
+        }
+        return try {
             val candidates =
                 listOfNotNull(
                     root["newHeader"]?.jsonObject,
@@ -220,6 +236,7 @@ internal class YouTubePlaylistEdits(
         } catch (_: Exception) {
             null
         }
+    }
 
     private fun largestThumbnailInTree(element: JsonObject): String? {
         var bestUrl: String? = null
@@ -419,7 +436,8 @@ internal class YouTubePlaylistEdits(
                 val response = requestTube.addToPlaylist(YouTubeClient.WEB_REMIX, id, videoId)
                 if (response.status.value == 404) throw PlaylistNotFoundException(id)
                 check(response.status.isSuccess()) { "Add song failed with HTTP ${response.status.value}" }
-                check(response.bodyLimited<JsonObject>(SMALL_RESPONSE_LIMIT)["status"]?.jsonPrimitive?.contentOrNull == "STATUS_SUCCEEDED")
+                val status = response.bodyLimited<JsonObject>(SMALL_RESPONSE_LIMIT)["status"]?.jsonPrimitive?.contentOrNull
+                check(status == "STATUS_SUCCEEDED") { "Add song failed with status ${status ?: "missing"}" }
                 if (innerTube.sessionSnapshot() != requestSession) throw CancellationException("InnerTube session changed")
                 onSongAdded(requestSession, id, videoId)
             }

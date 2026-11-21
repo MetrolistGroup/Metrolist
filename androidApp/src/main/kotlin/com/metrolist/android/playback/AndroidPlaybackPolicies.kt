@@ -73,6 +73,7 @@ import com.metrolist.shared.model.canSwitchToMusicVideo
 import com.metrolist.shared.model.isPodcast
 import com.metrolist.shared.model.isVideoSong
 import com.metrolist.shared.model.previewThumbnailUrl
+import com.metrolist.shared.model.withDownloadsPlayable
 import com.metrolist.shared.playback.MusicQueue
 import com.metrolist.shared.playback.MusicQueueSnapshot
 import com.metrolist.shared.playback.PlaybackCrossfadeState
@@ -307,6 +308,14 @@ internal fun shouldRequestQueueVideo(
     return isVideoModeActive ?: (isVideoSong && !isPodcast)
 }
 
+// With music videos turned off, a requested video plays its own audio; only Song mode trades it for the album track.
+internal fun canSwapToAudioCounterpart(
+    videoPlaybackEnabled: Boolean,
+    networkConnected: Boolean,
+    remotePlaybackActive: Boolean = false,
+    guestPlaybackLocked: Boolean = false,
+): Boolean = videoPlaybackEnabled && networkConnected && !remotePlaybackActive && !guestPlaybackLocked
+
 internal fun isQueuePlaybackModeCurrent(
     song: SongItem,
     requestedWantVideo: Boolean,
@@ -325,7 +334,8 @@ internal fun isQueuePlaybackModeCurrent(
 internal fun shouldResolveMusicTrackCounterpart(
     sourceIsVideoSong: Boolean,
     wantVideo: Boolean,
-): Boolean = sourceIsVideoSong && !wantVideo
+    videoPlaybackEnabled: Boolean,
+): Boolean = sourceIsVideoSong && !wantVideo && videoPlaybackEnabled
 
 internal enum class CastQueueReplacementResult {
     REMOTE,
@@ -491,6 +501,7 @@ private fun MediaItem.automotivePlaybackRequestGeneration(): Long? =
 internal data class AutomotiveSongResolution(
     val songs: List<SongItem>,
     val startIndex: Int,
+    val retainsRequestedStartPosition: Boolean = true,
 )
 
 internal fun resolveAutomotiveSongRequest(
@@ -767,3 +778,9 @@ internal fun generatedQueueIndicesToRemoveForRepeat(
     queue: List<SongItem>,
     currentIndex: Int,
 ): List<Int> = queue.indices.filter { it != currentIndex && queue[it].queueSourceTitle.isRecommendationGeneratedQueueSource() }
+
+internal fun downloadedAlbumQueueSongs(
+    songs: List<SongItem>,
+    downloadedSongIds: Set<String>,
+    remotePlayback: Boolean,
+): List<SongItem> = if (remotePlayback) songs else songs.withDownloadsPlayable(downloadedSongIds)

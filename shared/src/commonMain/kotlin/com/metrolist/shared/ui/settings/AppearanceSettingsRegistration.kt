@@ -34,6 +34,7 @@ import com.metrolist.shared.settings.ThemePaletteStyle
 import com.metrolist.shared.settings.YouTubeCanvasMode
 import com.metrolist.shared.settings.desktopDefaultOpenTab
 import com.metrolist.shared.settings.desktopDefaultOpenTabs
+import com.metrolist.shared.settings.isDesktopMac
 import com.metrolist.shared.settings.normalizeDefaultOpenTab
 import com.metrolist.shared.settings.updateDefaultOpenTab
 import com.metrolist.shared.ui.icons.MetrolistIcons
@@ -108,11 +109,21 @@ internal fun SettingsUiRegistryBuilder.registerAppearanceSettings(host: SharedSe
                     selectedChoiceId = settings.appIcon,
                 ) { host.onHostChoiceSelected(SettingsHostChoice.APP_ICON, it) }
             }
+            if (host.platform == SettingsPlatform.DESKTOP) {
+                switch(
+                    id = "matugen",
+                    title = stringResource(Res.string.matugen_colors),
+                    description = stringResource(Res.string.matugen_colors_description),
+                    checked = settings.matugenTheme,
+                ) { settings.matugenTheme = it }
+            }
+            val matugenActive = host.platform == SettingsPlatform.DESKTOP && settings.matugenTheme
             switch(
                 id = "materialYou",
                 title = stringResource(Res.string.material_you),
                 description = stringResource(Res.string.material_you_description),
                 checked = settings.materialYouEnabled,
+                enabled = !matugenActive,
             ) { settings.materialYouEnabled = it }
             switch(
                 id = "uiEnhancements",
@@ -120,7 +131,7 @@ internal fun SettingsUiRegistryBuilder.registerAppearanceSettings(host: SharedSe
                 description = stringResource(Res.string.ui_enhancements_description),
                 checked = settings.uiEnhancements,
             ) { settings.uiEnhancements = it }
-            if (!settings.materialYouEnabled) {
+            if (!settings.materialYouEnabled && !matugenActive) {
                 custom(
                     id = "themeColor",
                     title = stringResource(Res.string.settings_theme_color),
@@ -142,7 +153,7 @@ internal fun SettingsUiRegistryBuilder.registerAppearanceSettings(host: SharedSe
                 title = stringResource(Res.string.song_artwork_colors),
                 description = stringResource(Res.string.song_artwork_colors_description),
                 checked = settings.dynamicTheme,
-                enabled = settings.materialYouEnabled,
+                enabled = settings.materialYouEnabled && !matugenActive,
             ) { settings.dynamicTheme = it }
             choice(
                 id = "paletteStyle",
@@ -151,6 +162,7 @@ internal fun SettingsUiRegistryBuilder.registerAppearanceSettings(host: SharedSe
                 choices = paletteChoices,
                 selectedChoiceId = settings.themePaletteStyle.name,
                 description = stringResource(Res.string.settings_palette_style_summary),
+                enabled = !matugenActive,
             ) { settings.themePaletteStyle = ThemePaletteStyle.valueOf(it) }
             if (SettingsPageId.FONTS in host.availablePages) {
                 navigation(
@@ -306,7 +318,14 @@ internal fun SettingsUiRegistryBuilder.registerAppearanceSettings(host: SharedSe
                 switch(
                     id = "desktopTrayToggleOnClick",
                     title = stringResource(Res.string.desktop_tray_toggle_on_click),
-                    description = stringResource(Res.string.desktop_tray_toggle_on_click_desc),
+                    description =
+                        stringResource(
+                            if (isDesktopMac()) {
+                                Res.string.desktop_tray_toggle_on_click_desc_mac
+                            } else {
+                                Res.string.desktop_tray_toggle_on_click_desc
+                            },
+                        ),
                     checked = settings.desktopTrayToggleOnClick,
                 ) { settings.desktopTrayToggleOnClick = it }
             }
@@ -778,7 +797,7 @@ internal fun SettingsUiRegistryBuilder.registerAppearanceSettings(host: SharedSe
                     id = "canvasContentOrder",
                     title = stringResource(Res.string.canvas_content_order),
                 ) {
-                    CanvasContentOrderSetting(host.platform, canvasEnabled, settings.enableAnimatedCovers, host.onSpotifySignIn)
+                    CanvasContentOrderSetting(host.platform, canvasEnabled, settings.enableAnimatedCovers)
                 }
             }
             if (host.platform != SettingsPlatform.IOS) {

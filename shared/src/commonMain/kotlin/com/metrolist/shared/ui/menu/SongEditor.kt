@@ -11,11 +11,13 @@ internal class SongEditor(
     private val scope: CoroutineScope,
     title: String,
     artist: String,
-    private val save: suspend (String, String) -> Unit,
+    private val save: suspend (String?, String?) -> Unit,
     private val onSaved: () -> Unit,
     private val onDismiss: () -> Unit,
     private val reset: (suspend () -> Unit)? = null,
 ) {
+    private val initialTitle = title.trim()
+    private val initialArtist = artist.trim()
     var title by mutableStateOf(title)
     var artist by mutableStateOf(artist)
     var busy by mutableStateOf(false)
@@ -31,7 +33,11 @@ internal class SongEditor(
         val requestedTitle = title.trim()
         val requestedArtist = artist.trim()
         if (busy || requestedTitle.isEmpty() || requestedArtist.isEmpty()) return
-        submit { save(requestedTitle, requestedArtist) }
+        val changedTitle = requestedTitle.takeUnless { it == initialTitle }
+        val changedArtist = requestedArtist.takeUnless { it == initialArtist }
+        submit {
+            if (changedTitle != null || changedArtist != null) save(changedTitle, changedArtist)
+        }
     }
 
     fun reset() {

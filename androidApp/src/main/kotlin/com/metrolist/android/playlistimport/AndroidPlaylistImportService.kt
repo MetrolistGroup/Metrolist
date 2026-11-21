@@ -16,6 +16,7 @@ import com.metrolist.shared.playlistimport.ImportedPlaylistData
 import com.metrolist.shared.playlistimport.PlaylistImportManager
 import com.metrolist.shared.playlistimport.PlaylistImportStatusManager
 import com.metrolist.shared.playlistimport.UnifiedPlaylistImporter
+import com.metrolist.shared.state.GlobalYouTubeRepository
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
@@ -186,8 +187,14 @@ object AndroidPlaylistImportTransfer {
     ): Result<ImportProgressState.Completed> {
         val title = context.resources.getQuantityString(R.plurals.import_playlists, playlists.size)
         return runForeground(context, title, playlists.first().source, completed = { it }) { update ->
+            val destination =
+                if (GlobalYouTubeRepository.instance.canManagePlaylists()) {
+                    PlaylistImportManager.Destination.NewSynced
+                } else {
+                    PlaylistImportManager.Destination.NewLocal
+                }
             val result =
-                executePlaylistBatch(playlists, title, update) { data, destination, onStateUpdate ->
+                executePlaylistBatch(playlists, title, update) { data, onStateUpdate ->
                     UnifiedPlaylistImporter.executeImport(
                         manager = manager,
                         title = data.title,

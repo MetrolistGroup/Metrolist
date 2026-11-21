@@ -4,6 +4,8 @@
 
 All user-facing text lives in `shared/src/commonMain/composeResources/values*/strings.xml`. Add English only to `values/strings.xml`, including KMP-only keys. Translators maintain locale catalogs through [Weblate](https://translate.metrolist.cc/projects/metrolist-kmp/metrolist-kmp/). Missing translations fall back to base English at runtime.
 
+Agents and contributors edit only `values/strings.xml`. Never add, remove, rename or reorder keys in `values-*/strings.xml`, and never copy, sync or prune keys there to match the base catalog. Weblate adds new keys to locale catalogs, and its Cleanup translation files add-on drops keys removed from the base catalog; manual edits to those files conflict with its pending commits and lock the translation. The only exception is resolving a Weblate merge, where you keep Weblate's text and fix only what the validators below reject.
+
 Desktop and shared Compose code use `com.metrolist.shared.generated.resources.Res`. Android's `generateAndroidStrings` scans non-test sources in `androidApp/src` and `shared/src/androidMain` for `R.string`, `R.plurals`, `@string` and `@plurals` references. It generates only those keys for each locale. Missing referenced base keys fail the build. Do not create platform-local catalogs or translation tables.
 
 Gradle derives bundled language tags from resource directories. Hinglish uses `values-b+hi+Latn` and `hi-Latn`; saved `hin` selections migrate to that tag. `prepareComposeResourceAliases` generates `values-id` from `values-in` and `values-he` from `values-iw` for Compose. Weblate edits the original catalogs, not generated aliases.
@@ -22,13 +24,13 @@ Configure the Weblate component for these catalogs as **Compose Multiplatform Re
 
 Keep placeholders, command syntax and locale text intact. Do not copy English into translated catalogs. Preserve non-breaking spaces in existing separators and measurement units.
 
-Crash UI and report/export labels intentionally use English. Set `translatable="false"` on `crash_*` and `database_downgrade`, and remove locale overrides. Use crash-specific actions instead of changing translated generic actions. The validator rejects translated crash keys and excludes non-translatable keys from missing-key reports.
+Crash UI and report/export labels intentionally use English. Set `translatable="false"` on `crash_*` and `database_downgrade` in the base catalog; leave locale catalogs to Weblate. Use crash-specific actions instead of changing translated generic actions. The validator rejects translated crash keys and excludes non-translatable keys from missing-key reports.
 
 Imported catalogs retain source headers and the [attribution notice](translation-attribution.md). Builds read shared catalogs directly; there is no upstream translation-import step.
 
 ## Pruning
 
-`python3 scripts/find_unused_strings.py` reports unreferenced base keys. `--apply` removes them from every catalog without rewriting remaining bytes. Literal mentions protect keys; dynamic literal prefixes protect matching families. Review the result before staging. The script never changes source code.
+`python3 scripts/find_unused_strings.py` reports unreferenced base keys. `--apply` removes them from `values/strings.xml` only, without rewriting remaining bytes, and leaves locale catalogs to Weblate. Literal mentions protect keys; dynamic literal prefixes protect matching families. Review the result before staging. The script never changes source code.
 
 ## Validation
 

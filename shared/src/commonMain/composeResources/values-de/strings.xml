@@ -975,10 +975,6 @@
         <item quantity="one">%1$d Minute</item>
         <item quantity="other">%1$d Minuten</item>
     </plurals>
-    <plurals name="minutes_short">
-        <item quantity="one">%1$d Min.</item>
-        <item quantity="other">%1$d Min.</item>
-    </plurals>
     <plurals name="n_track">
         <item quantity="one">%1$d Titel</item>
         <item quantity="other">%1$d Titel</item>
@@ -998,10 +994,6 @@
     <plurals name="removed_songs_from_playlist">
         <item quantity="one">%1$d Song aus der Playlist entfernt</item>
         <item quantity="other">%1$d Songs aus der Playlist entfernt</item>
-    </plurals>
-    <plurals name="seconds_short">
-        <item quantity="one">%1$d s</item>
-        <item quantity="other">%1$d s</item>
     </plurals>
     <plurals name="song_count">
         <item quantity="one">%1$d Song</item>
@@ -1148,7 +1140,6 @@
     <string name="ai_provider">Anbieter</string>
     <string name="ai_base_url">Basis-URL</string>
     <string name="ai_translation_model">Übersetzungsmodell</string>
-    <string name="ai_judge_detector_model">Erkennungsmodell</string>
     <string name="ai_target_language">Zielsprache</string>
     <string name="ai_deepl_formality">Förmlichkeit</string>
     <string name="ai_deepl_formality_default">Standard</string>
@@ -2383,7 +2374,6 @@
     <string name="settings_translation_mode_summary">Übersetze Wörter oder übertrage ihre Aussprache in die Zielschrift</string>
     <string name="settings_translation_provider_summary">Wähle den Dienst, der Lyrics übersetzt</string>
     <string name="settings_translation_model_summary">Modell zum Übersetzen oder Transkribieren von Lyrics</string>
-    <string name="settings_detector_model_summary">Modell, das entscheidet, ob Lyrics übersetzt werden müssen</string>
     <string name="settings_translation_formality_summary">Wähle formelle oder informelle Sprache für DeepL-Übersetzungen</string>
     <string name="settings_discord_advanced_summary">Zeige Aktivitätsvorlagen und eigene Link-Schaltflächen</string>
     <string name="settings_discord_activity_type_summary">Wähle, wie Discord deine Musikaktivität bezeichnet</string>

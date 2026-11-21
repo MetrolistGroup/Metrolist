@@ -20,6 +20,7 @@ import androidx.compose.ui.graphics.skiaCanvas
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.LayoutDirection
 import coil3.toBitmap
+import com.metrolist.shared.ui.utils.softwareRendering
 import org.jetbrains.skia.FilterTileMode
 import org.jetbrains.skia.Image
 import org.jetbrains.skia.ImageFilter
@@ -30,6 +31,7 @@ import org.jetbrains.skia.RuntimeEffect
 import org.jetbrains.skia.RuntimeShaderBuilder
 import org.jetbrains.skia.SamplingMode
 import org.jetbrains.skia.Surface
+import kotlin.math.ceil
 import kotlin.math.cos
 import kotlin.math.max
 import kotlin.math.roundToInt
@@ -241,7 +243,9 @@ private class DesktopLiquidRenderer : RememberObserver {
         val height = scope.size.height
         if (width <= 0f || height <= 0f) return
 
-        if (activeSlot
+        // Software rasterisation runs the shader per window pixel (about 95 ms at 1080x720); the 128 px cache draws the same layers in about 3 ms.
+        if (!softwareRendering &&
+            activeSlot
                 .resolve(
                     activeArt,
                 )?.let { shader.draw(scope, it, previousSlot.resolve(previousArt), crossfadeAlpha, rotationTimeMs) } ==
@@ -355,6 +359,9 @@ private class ArtworkShaderRenderer : RememberObserver {
     private val builder = effect?.let { RuntimeShaderBuilder(it) }
     private val paint = Paint()
     private val textures = mutableListOf<Pair<TextureKey, BlurredTexture>>()
+    private var snapshot: Image? = null
+    private var snapshotSource: Image? = null
+    private var snapshotKey: List<Any>? = null
     var available by mutableStateOf(builder != null)
         private set
 
@@ -437,11 +444,45 @@ private class ArtworkShaderRenderer : RememberObserver {
         time: Long,
         style: ArtworkBackdropStyle? = null,
     ): Boolean {
+        if (builder == null || !available || scope.size.width <= 0f || scope.size.height <= 0f) return false
+        val w = scope.size.width
+        val h = scope.size.height
+        if (!softwareRendering || style == null) {
+            return drawShader(w, h, active, previous, alpha, time, style) { paint ->
+                scope.drawIntoCanvas { it.skiaCanvas.drawRect(Rect.makeWH(w, h), paint) }
+            }
+        }
+        // Static backdrops otherwise rerun the shader on every software repaint, such as each seek bar tick.
+        val key = listOf(w, h, style)
+        if (snapshotSource !== active || snapshotKey != key) {
+            snapshot?.close()
+            snapshot = null
+            snapshotSource = null
+            snapshotKey = null
+            Surface.makeRasterN32Premul(ceil(w).toInt(), ceil(h).toInt()).use { surface ->
+                val drawn = drawShader(w, h, active, null, 1f, time, style) { surface.canvas.drawRect(Rect.makeWH(w, h), it) }
+                if (!drawn) return false
+                snapshot = surface.makeImageSnapshot()
+                snapshotSource = active
+                snapshotKey = key
+            }
+        }
+        scope.drawIntoCanvas { it.skiaCanvas.drawImage(snapshot ?: return@drawIntoCanvas, 0f, 0f) }
+        return true
+    }
+
+    private inline fun drawShader(
+        w: Float,
+        h: Float,
+        active: Image,
+        previous: Image?,
+        alpha: Float,
+        time: Long,
+        style: ArtworkBackdropStyle?,
+        drawRect: (Paint) -> Unit,
+    ): Boolean {
         val builder = builder ?: return false
-        if (!available || scope.size.width <= 0f || scope.size.height <= 0f) return false
         return try {
-            val w = scope.size.width
-            val h = scope.size.height
             val ratio = active.width.toFloat() / active.height
             val crop = artworkCrop(w, h, ratio, style ?: ArtworkBackdropStyle(0f))
             val radius = if (style == null) 11 else artworkBlurBucket(style.blurRadiusPx, crop[3])
@@ -462,7 +503,7 @@ private class ArtworkShaderRenderer : RememberObserver {
             builder.uniform("mirror", (style?.mirrorSeam ?: 0f) * h, (style?.mirrorFadeStart ?: 0f) * h)
             builder.makeShader().use { shader ->
                 paint.shader = shader
-                scope.drawIntoCanvas { it.skiaCanvas.drawRect(Rect.makeWH(w, h), paint) }
+                drawRect(paint)
                 paint.shader = null
             }
             true
@@ -479,6 +520,10 @@ private class ArtworkShaderRenderer : RememberObserver {
     override fun onAbandoned() = close()
 
     private fun close() {
+        snapshot?.close()
+        snapshot = null
+        snapshotSource = null
+        snapshotKey = null
         textures.forEach { it.second.close() }
         textures.clear()
         paint.close()

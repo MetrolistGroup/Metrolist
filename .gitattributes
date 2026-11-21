@@ -1,0 +1,2 @@
+# Preserve bundled upstream license text verbatim.
+shared/src/commonMain/composeResources/files/licenses/glyphmind/** -whitespace

@@ -2,7 +2,7 @@
 
 ## Artwork
 
-Shared collection covers resolve through `LibraryCovers.kt`. Keep user-selected covers ahead of built-in resources. Android widgets and Android Auto use the same artwork provider for offline covers.
+Shared collection covers resolve through `LibraryCovers.kt`. Keep user-selected covers ahead of built-in resources. Android widgets and Android Auto use the same artwork provider for offline covers. Retained download covers use a stable identity that ignores cache-busting revisions, query strings, display sizes and video renditions, so a refetched URL keeps resolving to the PNG already on disk. Legacy keys remain readable and are included when pruning.
 
 Player and collection artwork use square, centered crops. Full-player video thumbnails use the same preview source as song rows, including the thumbnail without encoded letterboxing. Dedicated video shelves, episode previews and video playback keep their wide layouts. On iOS, managed playlist-cover identifiers resolve against the current Application Support directory so container relocation does not break covers. Delete only managed files after the database change succeeds.
 
@@ -11,6 +11,14 @@ The portrait full-screen artwork continuation starts before a wide thumbnail's b
 Android mini-player and expanded-player artwork slots request crop explicitly through the player platform. The loading artwork uses the same crop through the first-frame fade. Fullscreen video uses fit, including letterboxing when the screen and video have different aspect ratios. PiP has its own scaling.
 
 Android full-player artwork uses software bitmaps so Compose and image decoding can share pixels. Export code copies hardware images when a software canvas requires it.
+
+Official YouTube artwork hosts keep system DNS results, including VPN mappings; arbitrary artwork hosts still require public addresses. HTTPS certificate checks and response-size limits remain in place.
+
+Notification requests decode at 512 px but fetch the canonical source when they use its disk-cache key, so full-player requests do not reuse a smaller encoded cover. Online requests refresh undersized images left under larger cache keys by earlier notification loads; offline requests and failed online refreshes retain their cached fallback. Refreshes replace the saved disk bytes only after the new response decodes, so an invalid HTTP 200 response cannot destroy a valid offline cover. Successful image decodes record their source in memory and disk metadata. A source that remains small then reuses its verified cache across loads and restarts instead of refreshing again.
+
+Dimension-based recovery requires positive image dimensions. Prefetch requests keep cached bytes without attempting that recovery. Cache lookups preserve explicit precision and bitmap limits, including iOS now-playing artwork at 600 px.
+
+Only one refresh runs per destination key. Waiting requests check the repaired cache before fetching again.
 
 When skipping in the expanded player, keep the displayed track and decoded cover until the next cover or mini-player preview is ready. First open shows metadata immediately. Failed or missing covers advance to the new track without keeping old metadata. Keep the background fades and crossfade the title and artist together. Android's pause control follows playback intent between tracks, including a pause requested during loading.
 
@@ -51,9 +59,13 @@ Verify on API 29 and Android 12 or newer. Check standard and modern miniplayers 
 
 The cache applies Compose's `BlurEffect` filter, including its radius-to-sigma conversion, and draws the scrim into the snapshot. It keeps the original crop, scale, saturation, source background and clip. Apply the modifier directly to artwork drawing; child graphics layers can update independently of their raster parent. The shared mini-player uses this cache on desktop, native blur on Android API 31+ and iOS, and the artwork bitmap fallback on older Android. Shared shader backgrounds use their own preblurred texture cache.
 
-On GPU backends the raster path can differ from the GPU filter by one channel step from rounding. `ArtworkBlurTest` compares the raster path with the Compose/Skia RenderNode pipeline across sizes, densities, edges, backdrops and scrims.
+On GPU backends the raster path can differ from the GPU filter by one channel step from rounding.
 
-Wavy, Squiggly and Now Playing bars advance their phase from monotonic time at 30 updates per second. A phase write schedules its own rendering; waiting on the frame clock first schedules another render of the previous phase. Lifecycle and window visibility suspend hidden work. Visible unfocused windows keep animating.
+Wavy, Squiggly and Now Playing bars advance their phase from monotonic time at 30 updates per second. A phase write schedules its own rendering; waiting on the frame clock first schedules another render of the previous phase. The animated gradient background steps on the same clock's 50 ms grid, like Liquid, so its repaints can share frames with other ticks on that clock. Lifecycle and window visibility suspend hidden work. Visible unfocused windows keep animating.
+
+## Desktop software rendering
+
+Skiko's `SOFTWARE_*` backends rasterise the whole window on the CPU for every repaint, including each seek bar step. `softwareRendering` records the backend the main window actually got. When it is set, the Liquid background uses the 128 px blur cache in place of the artwork shader, which costs about 95 ms per 1080 by 720 frame on one core, and static artwork backdrops draw the shader once into a raster snapshot until artwork, size or style change. GPU backends keep the per-frame shader.
 
 ## Icons and attribution
 
@@ -67,9 +79,9 @@ Gradient artwork lives in `assets/app-icons/gradient/`; the alternate icons are 
 
 Use the theme's MotionScheme and respect system animation duration scale. Keep enter and exit transitions mounted until they finish. Interrupted transitions must resume from their current state.
 
-Shared dialogs and button popups use the theme's fast effects spec for opacity and fast spatial spec for a 0.95-to-1 scale. They do not register shared bounds or hide the opening control. Animation values are read in `graphicsLayer`, without frame-by-frame composition or measurement. Page transitions and bottom-sheet slides use their own motion.
+Shared dialogs and button popups use the theme's fast effects spec for opacity and fast spatial spec for a 0.95-to-1 scale. They do not register shared bounds or hide the opening control. Animation values are read in `graphicsLayer`, without frame-by-frame composition or measurement. Page transitions and bottom-sheet slides use their own motion. Android's devices sheet reserves its expanded height before discovery, so it slides to that height without a second resize.
 
-Popup input guards belong to each popup session. Completion and cancellation release them in `finally`; disposal clears the session. A superseded animation cannot release a newer request's guard. The closing popup is removed after its animation, while sheets keep their own dismissal lifetime.
+Popup input guards belong to each popup session. Completion and cancellation release them in `finally`; disposal clears the session. A superseded animation cannot release a newer request's guard. The closing popup is removed after its animation, while sheets keep their own dismissal lifetime. Sheets dispose their modal window once they move out of view, even while PopupContent retains the parent through its exit animation. Dismissal observation stays active when a new presentation reuses that retained sheet state. Programmatic hide calls keep the parent menu alive until Details or Equalizer takes over. A held drag can still reverse at the hidden anchor.
 
 The portrait player's canvas controls fade and expand or shrink. Its queue toolbar fades and slides; title and seek rows follow canvas and fullscreen-lyrics state. Queue-toolbar alpha uses drawing modulation so Screen-blended controls can sample the artwork.
 
@@ -77,7 +89,7 @@ Player expansion clips both content layers to the moving container. Check revers
 
 Animated artwork and lyrics run only while their content is visible. Hidden players must release frame work while keeping playback. Check resumption at the current position after backgrounding, minimizing or switching workspaces. Hyprland window handling is in [desktop rendering](desktop.md#hyprland-rendering).
 
-Desktop seek bars update their progress value once per pixel of travel, based on duration, measured width and playback speed, within 16 to 250 ms. Time labels update when the displayed second changes. WAVY and SQUIGGLY tracks keep their playing animation; lyrics have their own frame rate. Bottom-bar titles and artists scroll once per track, like the mobile mini-players; the expanded player title scrolls continuously. Each marquee frame repaints the whole window.
+Desktop seek bars update their progress value once per pixel of travel, based on duration, measured width and playback speed, within 16 to 250 ms. Time labels read the same clock as the seek bar and update when the displayed second changes, so a label change shares a repaint with a progress step. WAVY and SQUIGGLY tracks keep their playing animation; lyrics have their own frame rate. Bottom-bar titles and artists scroll once per track, like the mobile mini-players; the expanded player title scrolls continuously. Desktop marquees move in whole pixels at most 30 times a second on the playback animation clock, and stop while the window is hidden. Each step repaints the whole window.
 
 The expressive mini-player title and artist stay on one line and show an ellipsis when space runs out, before and after their marquee pass, including with custom fonts.
 
@@ -89,13 +101,13 @@ Lyrics and player lyric captions disable standard font ligatures so letters such
 
 Scrolling Add buttons keep trailing padding outside the animated label so expansion and collapse keep an inset. Their width, label fade and scroll-driven slide animate.
 
-Animation visibility is separate from playback ownership. Pausing or hiding a view must not alter the queue or playback clock. Test line changes, word timing, scrolling, selection and returning from a covered player with the affected style.
+Expressive and Braccato active lines request wall-clock frames only while playing. Their positions are snapshot state, so a paused line still redraws after a seek. Animation visibility is separate from playback ownership. Pausing or hiding a view must not alter the queue or playback clock. Test line changes, word timing, scrolling, selection and returning from a covered player with the affected style.
 
 Player lyric captions have a separate alignment setting, centered by default. They reserve two line heights and center shorter text vertically. Keep the text crossfade without a size transform and measure the full content height so incoming lines, translations and romanization remain visible.
 
 ## Themes
 
-Android publishes system dark mode to shared settings before palette resolution. Check Auto mode after a system theme change. Player action groups use Screen blending over non-solid dark backgrounds and SrcOver in light mode or over solid backgrounds.
+Android publishes system dark mode to shared settings before palette resolution. Check Auto mode after a system theme change. Player action groups use Screen blending over non-solid dark backgrounds and SrcOver in light mode or over solid backgrounds. Filled player controls pair surface-variant containers with on-surface-variant icons, including over artwork in light mode.
 
 Android status-bar icons follow the full player's foreground contrast while the player is visible. Collapsing the player, entering picture-in-picture or pausing the activity releases its override, so the app theme and artist header control the icons again.
 
@@ -111,6 +123,6 @@ Current-song rows use a pill container, scalloped artwork and matching content c
 
 ## Verification
 
-Run affected [platform checks](checks.md#platform-checks). Relevant backend suites include `VisibleWorkTest`, `PlayerArtworkHandoffTest`, `LibraryCoversTest` and `ArtworkBlurTest`. Backend tests cover popup guard release paths; native checks must verify taps, keyboard actions, dismissal and rendering.
+Run affected [platform checks](checks.md#platform-checks). Native checks must verify taps, keyboard actions, dismissal and rendering.
 
 Native checks must cover interrupted motion, missing and portrait artwork, theme changes, reduced motion, large fonts and accessibility. Compare CPU/GPU use when changing shaders, blur or visibility work. Backend tests do not establish rendering or power behavior.

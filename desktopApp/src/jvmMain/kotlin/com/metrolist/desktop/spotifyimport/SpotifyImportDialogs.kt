@@ -59,6 +59,7 @@ import com.metrolist.shared.generated.resources.import_review_playlists
 import com.metrolist.shared.generated.resources.playlist_name
 import com.metrolist.shared.generated.resources.select_all
 import com.metrolist.shared.generated.resources.spotify_import_choose_destination
+import com.metrolist.shared.generated.resources.spotify_import_create_new_local_playlist
 import com.metrolist.shared.generated.resources.spotify_import_create_new_playlist
 import com.metrolist.shared.generated.resources.spotify_import_destination_description
 import com.metrolist.shared.generated.resources.spotify_import_existing_playlists
@@ -460,6 +461,24 @@ internal fun SpotifyDestinationDialog(
                                     .fillMaxWidth()
                                     .clip(RoundedCornerShape(12.dp))
                                     .selectable(
+                                        selected = selectedDestination == Destination.NewLocal,
+                                        role = Role.RadioButton,
+                                        onClick = { onDestinationSelected(Destination.NewLocal) },
+                                    ).padding(10.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            RadioButton(selected = selectedDestination == Destination.NewLocal, onClick = null)
+                            Text(
+                                stringResource(Res.string.spotify_import_create_new_local_playlist),
+                                modifier = Modifier.padding(start = 10.dp),
+                            )
+                        }
+                        Row(
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .selectable(
                                         selected = selectedDestination == Destination.NewSynced,
                                         role = Role.RadioButton,
                                         onClick = { onDestinationSelected(Destination.NewSynced) },
@@ -469,7 +488,7 @@ internal fun SpotifyDestinationDialog(
                             RadioButton(selected = selectedDestination == Destination.NewSynced, onClick = null)
                             Text(stringResource(Res.string.spotify_import_create_new_playlist), modifier = Modifier.padding(start = 10.dp))
                         }
-                        if (selectedDestination == Destination.NewSynced) {
+                        if (selectedDestination == Destination.NewSynced || selectedDestination == Destination.NewLocal) {
                             OutlinedTextField(
                                 value = playlistName,
                                 onValueChange = onNameChange,
@@ -540,7 +559,9 @@ internal fun SpotifyDestinationDialog(
                         OutlinedButton(onClick = onBack, shapes = ButtonDefaults.shapes()) { Text(stringResource(Res.string.back)) }
                         Spacer(Modifier.width(12.dp))
                         Button(
-                            enabled = selectedDestination != Destination.NewSynced || playlistName.isNotBlank(),
+                            enabled =
+                                (selectedDestination != Destination.NewSynced && selectedDestination != Destination.NewLocal) ||
+                                    playlistName.isNotBlank(),
                             onClick = onImport,
                             shapes = ButtonDefaults.shapes(),
                         ) {

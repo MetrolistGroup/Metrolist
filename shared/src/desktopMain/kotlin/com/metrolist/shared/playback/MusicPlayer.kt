@@ -447,16 +447,7 @@ class MusicPlayer(
                             )
                         }
                     }
-                stateChanged =
-                    if (waitMs == null) {
-                        sampleChanges.receive()
-                        true
-                    } else {
-                        withTimeoutOrNull(waitMs) {
-                            sampleChanges.receive()
-                            true
-                        } == true
-                    }
+                stateChanged = sampleChanges.awaitPlaybackSample(waitMs)
             }
         }
     }
@@ -970,9 +961,12 @@ class MusicPlayer(
         }
     }
 
-    fun setVolume(level: Int) {
+    fun setVolume(level: Int) = setVolumeFraction(level / 100f)
+
+    fun setVolumeFraction(level: Float) {
+        if (!level.isFinite()) return
         synchronized(playerLock) {
-            currentVolume = (level / 100f).coerceIn(0f, 1f)
+            currentVolume = level.coerceIn(0f, 1f)
             _volume.value = currentVolume
             applyPlaybackGains()
         }
@@ -1328,6 +1322,14 @@ class MusicPlayer(
             val next = nextPlayer ?: return false
             !next.hasFailed && token.generation == nextGeneration && token.playerInstanceId == nextPlaybackInstanceId &&
                 currentPlaybackInstanceId == nextExpectedCurrentInstanceId && primaryVideoId == nextExpectedCurrentVideoId
+        }
+
+    fun startNextPlayback(token: PlaybackPreloadToken): Boolean =
+        synchronized(playerLock) {
+            if (!isPreloadedNextActive(token) || nextPlayerFailed) return false
+            nextStartsPaused = false
+            if (audioPlayer.wantsPlayback) nextPlayer?.resume()
+            true
         }
 
     fun swapToNext(
@@ -1870,12 +1872,14 @@ class MusicPlayer(
             url = url,
             requestHeaders = headers,
             mediaSize = mediaSize,
+            // Keep each ahead read small enough to finish while the decoder consumes its current range.
             chunkSize =
                 (
                     rangeChunkSizeBytes
                         .takeIf { it > 0L }
                         ?: DEFAULT_HTTP_RANGE_CHUNK_BYTES
-                ).coerceIn(1L, Int.MAX_VALUE.toLong()).toInt(),
+                ).coerceIn(1L, HTTP_AUDIO_READ_AHEAD_CHUNK_BYTES).toInt(),
+            prefetchAhead = true,
             cacheCapture = playbackCacheCapture(this),
         )
     }
@@ -1942,6 +1946,7 @@ class MusicPlayer(
     companion object {
         private const val STALL_INDICATOR_MS = 1_000L
         private const val DEFAULT_HTTP_RANGE_CHUNK_BYTES = 1_048_576L
+        private const val HTTP_AUDIO_READ_AHEAD_CHUNK_BYTES = 131_072L
         private const val RELEASE_STATS_TIMEOUT_MS = 1_000L
         private const val RECOVERY_SEEK_TIMEOUT_MS = 15_000L
     }

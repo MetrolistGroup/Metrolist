@@ -21,15 +21,25 @@ internal class WindowsCaptionHitTester {
         x: Float,
         y: Float,
         playerExpanded: Boolean,
+        overlayHitTest: (Float, Float) -> Boolean? = { _, _ -> null },
         contentHitTest: (Float, Float) -> Boolean,
     ): Int =
         when {
             maximizeButton.contains(x, y) -> HTMAXBUTTON
+
             minimizeButton.contains(x, y) -> HTMINBUTTON
+
             closeButton.contains(x, y) -> HTCLOSE
+
+            // A dialog above the expanded player owns its own controls under the caption.
+            captionBar.contains(x, y) && overlayHitTest(x, y) == true -> HTCLIENT
+
             playerExpanded && backButton.contains(x, y) -> HTCLIENT
+
             playerExpanded && captionBar.contains(x, y) -> HTCAPTION
+
             captionBar.contains(x, y) && !contentHitTest(x, y) -> HTCAPTION
+
             else -> HTCLIENT
         }
 }

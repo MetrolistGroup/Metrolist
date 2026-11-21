@@ -136,7 +136,9 @@ import com.metrolist.desktop.utils.DesktopNativeCrashRecovery
 import com.metrolist.desktop.utils.DesktopSingleInstance
 import com.metrolist.desktop.utils.DesktopStartup
 import com.metrolist.desktop.utils.DesktopUrlHandler
+import com.metrolist.desktop.utils.MatugenColors
 import com.metrolist.desktop.utils.NativeMemoryTrimmer
+import com.metrolist.desktop.utils.STOP_OMARCHY_URL
 import com.metrolist.desktop.utils.SentryManager
 import com.metrolist.desktop.utils.SkiaCacheCleaner
 import com.metrolist.desktop.utils.SystemMediaManager
@@ -147,6 +149,8 @@ import com.metrolist.desktop.utils.configureDesktopJvmErrorFile
 import com.metrolist.desktop.utils.configureLinuxWebKitRenderer
 import com.metrolist.desktop.utils.desktopRenderApiOverride
 import com.metrolist.desktop.utils.isDesktopPlatformSupported
+import com.metrolist.desktop.utils.isOmarchy
+import com.metrolist.desktop.utils.openStopOmarchy
 import com.metrolist.desktop.web.DesktopWebViewError
 import com.metrolist.desktop.window.IconResources
 import com.metrolist.desktop.window.LinuxWindowFrame
@@ -168,13 +172,19 @@ import com.metrolist.shared.generated.resources.Res
 import com.metrolist.shared.generated.resources.action_login
 import com.metrolist.shared.generated.resources.action_not_now
 import com.metrolist.shared.generated.resources.app_name
+import com.metrolist.shared.generated.resources.close
 import com.metrolist.shared.generated.resources.copy
 import com.metrolist.shared.generated.resources.desktop_display_unavailable
+import com.metrolist.shared.generated.resources.desktop_omarchy_unsupported
 import com.metrolist.shared.generated.resources.desktop_platform_unsupported
+import com.metrolist.shared.generated.resources.lastfm_session_expired_description
+import com.metrolist.shared.generated.resources.lastfm_session_expired_title
+import com.metrolist.shared.generated.resources.learn_more
 import com.metrolist.shared.generated.resources.liked_songs
 import com.metrolist.shared.generated.resources.ok
 import com.metrolist.shared.generated.resources.playback_error
 import com.metrolist.shared.generated.resources.technical_information
+import com.metrolist.shared.generated.resources.window_title_now_playing
 import com.metrolist.shared.generated.resources.youtube_session_expired_message
 import com.metrolist.shared.generated.resources.youtube_session_expired_title
 import com.metrolist.shared.scrobble.ScrobbleSessions
@@ -185,6 +195,7 @@ import com.metrolist.shared.settings.Settings
 import com.metrolist.shared.settings.defaultOpenTabRoot
 import com.metrolist.shared.settings.defaultOpenTabScreen
 import com.metrolist.shared.settings.desktopDefaultOpenTab
+import com.metrolist.shared.settings.displayName
 import com.metrolist.shared.settings.flushDesktopCredentialWarnings
 import com.metrolist.shared.settings.flushDesktopSettings
 import com.metrolist.shared.settings.recoverDesktopCredentials
@@ -210,8 +221,11 @@ import com.metrolist.shared.ui.navigation.Navigator
 import com.metrolist.shared.ui.navigation.Screen
 import com.metrolist.shared.ui.navigation.rememberNavigationState
 import com.metrolist.shared.ui.playback.LocalPlaybackController
+import com.metrolist.shared.ui.screens.SupportPrompt
+import com.metrolist.shared.ui.settings.SettingsPageId
 import com.metrolist.shared.ui.utils.LocalMouseScrollFactors
 import com.metrolist.shared.ui.utils.desktopMouseScrollFactors
+import com.metrolist.shared.ui.utils.softwareRendering
 import com.metrolist.shared.ui.utils.verticalScrollWithDrag
 import com.metrolist.shared.utils.OsUtil
 import com.metrolist.shared.utils.XdgUtils
@@ -231,6 +245,7 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import org.jetbrains.compose.resources.getString
 import org.jetbrains.compose.resources.stringResource
+import org.jetbrains.skiko.GraphicsApi
 import org.koin.core.context.GlobalContext
 import org.koin.core.context.startKoin
 import org.koin.core.context.stopKoin
@@ -240,6 +255,7 @@ import java.awt.Desktop
 import java.awt.EventQueue
 import java.awt.Frame
 import java.awt.GraphicsEnvironment
+import java.awt.Toolkit
 import java.awt.desktop.AppReopenedListener
 import java.awt.event.WindowAdapter
 import java.awt.event.WindowEvent
@@ -262,7 +278,6 @@ fun WindowScope.App(
     toggleWindowFullscreen: () -> Unit,
     checkDarkMode: (Boolean) -> Unit,
     isLinux: Boolean = false,
-    integrationsReady: Boolean = false,
 ) {
     val playbackController = remember { DesktopPlaybackController(AppState.scope) }
     val downloadStates = LibraryState.downloadStates
@@ -275,7 +290,7 @@ fun WindowScope.App(
         LocalMouseScrollFactors provides desktopMouseScrollFactors(LocalDensity.current),
         desktopScrollConfig(),
     ) {
-        AppContent(navigator, onMaximized, toggleWindowFullscreen, checkDarkMode, isLinux, integrationsReady)
+        AppContent(navigator, onMaximized, toggleWindowFullscreen, checkDarkMode, isLinux)
     }
 }
 
@@ -286,7 +301,6 @@ private fun WindowScope.AppContent(
     toggleWindowFullscreen: () -> Unit,
     checkDarkMode: (Boolean) -> Unit,
     isLinux: Boolean,
-    integrationsReady: Boolean,
 ) {
     MetrolistTheme {
         val colorScheme = MaterialTheme.colorScheme
@@ -327,6 +341,11 @@ private fun WindowScope.AppContent(
             DesktopImageLoader.create(context)
         }
         UpdateArtworkTheme()
+        SupportPrompt()
+        val matugenEnabled = Settings.shared.matugenTheme
+        LaunchedEffect(matugenEnabled) {
+            if (matugenEnabled) MatugenColors.watch()
+        }
         LaunchedEffect(colorScheme) {
             try {
                 val bg = colorScheme.background.toArgb()
@@ -462,6 +481,30 @@ private fun WindowScope.AppContent(
                     },
                 )
             }
+            PopupVisibility(visible = ScrobbleSessions.showLastFmExpiredNotice && !YouTubeSessionState.showExpiredSessionNotice) {
+                AlertDialog(
+                    onDismissRequest = ScrobbleSessions::dismissLastFmExpiredNotice,
+                    title = { Text(stringResource(Res.string.lastfm_session_expired_title)) },
+                    text = { Text(stringResource(Res.string.lastfm_session_expired_description)) },
+                    confirmButton = {
+                        TextButton(
+                            onClick = {
+                                ScrobbleSessions.dismissLastFmExpiredNotice()
+                                UiState.integrationsInitialPage = SettingsPageId.LAST_FM
+                                UiState.showIntegrationsSettings = true
+                            },
+                            shapes = ButtonDefaults.shapes(),
+                        ) {
+                            Text(stringResource(Res.string.action_login))
+                        }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = ScrobbleSessions::dismissLastFmExpiredNotice, shapes = ButtonDefaults.shapes()) {
+                            Text(stringResource(Res.string.action_not_now))
+                        }
+                    },
+                )
+            }
             PopupVisibility(visible = PlayerState.showPlayerError) {
                 AlertDialog(
                     onDismissRequest = { PlayerState.showPlayerError = false },
@@ -582,8 +625,6 @@ private fun WindowScope.AppContent(
             }
         }
 
-        if (integrationsReady) MiniplayerWindow()
-
         if (UiState.showFloatingSearch) {
             FloatingSearchOverlay(
                 colorScheme = colorScheme,
@@ -666,6 +707,8 @@ private fun configureLinuxWindowIdentity() {
     if (!OsUtil.isLinux) return
     System.setProperty("awt.app.id", "Metrolist")
     runCatching {
+        // XToolkit's constructor names the X11 class after the creating thread, so create it here and then rename it.
+        Toolkit.getDefaultToolkit()
         val xToolkit = Class.forName("sun.awt.X11.XToolkit")
         xToolkit.getDeclaredField("awtAppClassName").apply {
             isAccessible = true
@@ -759,6 +802,8 @@ fun main() {
 }
 
 fun main(args: Array<String>) {
+    // The JDK reads this once when its default proxy selector initializes.
+    if (OsUtil.isWindows) System.getProperties().putIfAbsent("java.net.useSystemProxies", "true")
     runCatching { System.getProperty("metrolist.cds.cache")?.let { File(it).mkdirs() } }
     startup.trace("main")
     val recoveryIndex = args.indexOf(DesktopCrashRecovery.ARGUMENT)
@@ -788,7 +833,32 @@ private fun exitWithStartupMessage(message: String): Nothing {
     exitProcess(1)
 }
 
+private fun exitOnOmarchy(): Nothing {
+    val message = runBlocking { getString(Res.string.desktop_omarchy_unsupported) }
+    System.err.println("$message $STOP_OMARCHY_URL")
+    if (!GraphicsEnvironment.isHeadless()) {
+        runCatching {
+            val learnMore = runBlocking { getString(Res.string.learn_more) }
+            val choice =
+                JOptionPane.showOptionDialog(
+                    null,
+                    message,
+                    runBlocking { getString(Res.string.app_name) },
+                    JOptionPane.DEFAULT_OPTION,
+                    JOptionPane.ERROR_MESSAGE,
+                    null,
+                    arrayOf(learnMore, runBlocking { getString(Res.string.close) }),
+                    learnMore,
+                )
+            if (choice == 0) openStopOmarchy()
+        }
+    }
+    DesktopSingleInstance.release()
+    exitProcess(1)
+}
+
 private fun runDesktopApp(args: Array<String>) {
+    if (OsUtil.isLinux && isOmarchy()) exitOnOmarchy()
     if (!isDesktopPlatformSupported()) {
         exitWithStartupMessage(runBlocking { getString(Res.string.desktop_platform_unsupported) })
     }
@@ -818,6 +888,9 @@ private fun runDesktopApp(args: Array<String>) {
         property = System.getProperty("skiko.renderApi"),
     )?.let { System.setProperty("skiko.renderApi", it) }
     if (OsUtil.isMac) {
+        System.setProperty("apple.awt.enableTemplateImages", "true")
+        // Without this AppKit keeps the Aqua (light) title bar even in Dark Mode.
+        System.setProperty("apple.awt.application.appearance", "system")
         if (System.getProperty("skiko.renderApi") == null && System.getenv("SKIKO_RENDER_API") == null) {
             System.setProperty("skiko.renderApi", "METAL")
         }
@@ -843,6 +916,7 @@ private fun runDesktopApp(args: Array<String>) {
         WaylandScale.detectAndApply()
         configureLinuxWindowIdentity()
     }
+    DesktopSingleInstance.startRestoreWatcher()
 
     // Initialize logging only after settings migration to avoid java.util.prefs/JUL class-init deadlocks.
     AppLogger.initialize(applicationScope)
@@ -1030,6 +1104,7 @@ private fun runDesktopApp(args: Array<String>) {
         startup.appFrame.await()
         applicationScope.launch(Dispatchers.IO) {
             if (settings.desktopOnboardingComplete) SentryManager.initialize()
+            SentryManager.reportPlaybackClientStats()
         }
         applicationScope.launch {
             observeDiscordInitialization { DiscordRpcManager.init(GlobalYouTube.client) }
@@ -1226,9 +1301,15 @@ private fun runDesktopApp(args: Array<String>) {
             }
         }
 
+        val appTitle = if (BuildConfig.DEBUG) "Metrolist Debug" else "Metrolist"
+        val windowTitle =
+            PlayerState.currentTrack?.takeIf { it.title.isNotBlank() }?.let { track ->
+                val artists = track.artists.joinToString { it.displayName }
+                if (artists.isBlank()) track.title else stringResource(Res.string.window_title_now_playing, track.title, artists)
+            } ?: appTitle
         Window(
             onCloseRequest = { minimizeToTrayOrClose() },
-            title = if (BuildConfig.DEBUG) "Metrolist Debug" else "Metrolist",
+            title = windowTitle,
             state = windowState,
             undecorated = isLinux && !useSystemWindowFrame,
             transparent = false,
@@ -1238,10 +1319,12 @@ private fun runDesktopApp(args: Array<String>) {
                 while (!window.isShowing) delay(16L)
                 startup.windowShown.complete(Unit)
                 startup.firstFrame.await()
+                val renderApi = window.findSkiaLayer()?.renderApi
+                softwareRendering = renderApi == GraphicsApi.SOFTWARE_FAST || renderApi == GraphicsApi.SOFTWARE_COMPAT
                 AppLogger.info(
                     "Main",
                     "Skiko render API: requested=${System.getenv("SKIKO_RENDER_API") ?: System.getProperty("skiko.renderApi") ?: "AUTO"} " +
-                        "actual=${window.findSkiaLayer()?.renderApi}",
+                        "actual=$renderApi",
                 )
             }
             if (!backendReady) {
@@ -1547,7 +1630,6 @@ private fun runDesktopApp(args: Array<String>) {
                                     toggleWindowFullscreen = toggleFullscreen,
                                     checkDarkMode = { areWeInDarkMode.value = it },
                                     isLinux = isLinux,
-                                    integrationsReady = integrationsReady,
                                 )
                             }
                         }
@@ -1556,6 +1638,15 @@ private fun runDesktopApp(args: Array<String>) {
             }
         }
 
-        if (integrationsReady) ComposeTrayManager.TrayIcon()
+        if (integrationsReady && Settings.shared.desktopOnboardingComplete) {
+            MiniplayerWindow()
+        }
+
+        // System tray icon (stock Compose Tray on macOS, ComposeNativeTray on Linux/Windows)
+        if (integrationsReady) {
+            with(ComposeTrayManager) {
+                TrayIcon()
+            }
+        }
     }
 }

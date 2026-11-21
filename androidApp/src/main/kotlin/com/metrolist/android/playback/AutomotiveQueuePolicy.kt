@@ -40,7 +40,21 @@ internal suspend fun offlineAutomotiveQueue(
     val playableIndices = queue.songs.indices.filter { isCached(queue.songs[it].id) }
     if (playableIndices.isEmpty()) return null
     val selected = playableIndices.firstOrNull { it >= queue.startIndex } ?: playableIndices.first()
-    return AutomotiveSongResolution(playableIndices.map(queue.songs::get), playableIndices.indexOf(selected))
+    return queue.copy(
+        songs = playableIndices.map(queue.songs::get),
+        startIndex = playableIndices.indexOf(selected),
+        retainsRequestedStartPosition = queue.retainsRequestedStartPosition && selected == queue.startIndex,
+    )
+}
+
+// Selects inside the active queue so going offline never trims it to the downloaded songs.
+internal suspend fun offlineQueueEntryIndex(
+    entries: List<MusicQueueEntry>,
+    startIndex: Int,
+    isCached: suspend (String) -> Boolean,
+): Int? {
+    val playableIndices = entries.indices.filter { isCached(entries[it].song.id) }
+    return playableIndices.firstOrNull { it >= startIndex } ?: playableIndices.firstOrNull()
 }
 
 internal suspend fun nextOfflineQueueIndex(

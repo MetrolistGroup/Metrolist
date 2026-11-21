@@ -478,7 +478,6 @@
     <string name="settings_translation_mode_summary">Μετάφραση των λέξεων ή μεταγραφή της προφοράς στο σύστημα γραφής προορισμού</string>
     <string name="settings_translation_provider_summary">Επιλέξτε την υπηρεσία που μεταφράζει τους στίχους</string>
     <string name="settings_translation_model_summary">Μοντέλο για μετάφραση ή μεταγραφή στίχων</string>
-    <string name="settings_detector_model_summary">Μοντέλο που κρίνει αν οι στίχοι χρειάζονται μετάφραση</string>
     <string name="settings_translation_formality_summary">Επιλέξτε επίσημο ή ανεπίσημο ύφος για τις μεταφράσεις DeepL</string>
     <string name="settings_discord_advanced_summary">Εμφάνιση προτύπων δραστηριότητας και προσαρμοσμένων κουμπιών συνδέσμων</string>
     <string name="settings_discord_activity_type_summary">Επιλέξτε πώς περιγράφει το Discord τη μουσική σας δραστηριότητα</string>

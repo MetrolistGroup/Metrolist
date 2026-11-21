@@ -57,7 +57,7 @@ fun <T, D : Comparable<D>> List<T>.sortedForPlaylistPicker(
                 LibraryContentSort.SONG_COUNT -> sortedByKnownValue(librarySorting.direction, songCount)
                 LibraryContentSort.PLAYTIME -> sortedByKnownValue(librarySorting.direction, playtime)
                 LibraryContentSort.MANUAL -> sortedByLibraryOrder(manualOrder, id)
-                LibraryContentSort.ARTIST, LibraryContentSort.YEAR, LibraryContentSort.LENGTH -> this
+                LibraryContentSort.ARTIST, LibraryContentSort.YEAR, LibraryContentSort.LENGTH, LibraryContentSort.DOWNLOADED -> this
             }
         }
     }

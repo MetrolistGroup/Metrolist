@@ -88,6 +88,7 @@ internal class AndroidQueueCoordinator(
         private set
     private var radioQueueContinuation: String? = null
     private var radioQueueContinuationClassic: Boolean = Settings.shared.classicRecommendations
+    private var radioQueueExplicitFeed = false
     private var radioQueuePlaylistId: String? = null
     private var radioQueueParams: String? = null
     private var isRadioQueue = false
@@ -259,6 +260,7 @@ internal class AndroidQueueCoordinator(
         queueChipsState.value = emptyList()
         isFiniteQueue = finite
         isRadioQueue = false
+        radioQueueExplicitFeed = false
         radioQueueContinuation = null
         radioQueuePlaylistId = null
         radioQueueParams = null
@@ -504,7 +506,7 @@ internal class AndroidQueueCoordinator(
                             withQueueLoading {
                                 withContext(Dispatchers.IO) {
                                     if (continuation == null) {
-                                        GlobalYouTubeRepository.instance.startRadioQueue(seedSongId)
+                                        startCurrentRadioPage(seedSongId)
                                     } else {
                                         GlobalYouTubeRepository.instance.continueRadioQueue(continuation)
                                     }
@@ -545,19 +547,27 @@ internal class AndroidQueueCoordinator(
     }
 
     // Continuations belong to the recommendations mode that fetched them.
+    private suspend fun startCurrentRadioPage(seedSongId: String): RadioQueuePage =
+        if (radioQueueExplicitFeed) {
+            GlobalYouTubeRepository.instance.startRadioQueue(seedSongId, playlistId = radioQueuePlaylistId, params = radioQueueParams)
+        } else {
+            GlobalYouTubeRepository.instance.startRadioQueue(seedSongId)
+        }
+
     private fun currentModeContinuation(): String? =
         radioQueueContinuation.takeIf {
-            radioQueueContinuationClassic == Settings.shared.classicRecommendations
+            radioQueueExplicitFeed || radioQueueContinuationClassic == Settings.shared.classicRecommendations
         }
 
     private suspend fun freshRadioPage(
         page: RadioQueuePage,
+        requestClassic: Boolean,
         replaceGeneratedSongs: Boolean = false,
         isCurrent: () -> Boolean,
     ): RadioQueuePage? =
         recommendationHistory.select(
             firstPage = page,
-            classic = Settings.shared.classicRecommendations,
+            classic = requestClassic,
             filter = { songs ->
                 val currentIndex = player.currentMediaItemIndex.value
                 val retainedIds =
@@ -635,7 +645,8 @@ internal class AndroidQueueCoordinator(
         limit: Int? = null,
     ): Boolean {
         fun isCurrent() =
-            PlaybackNetworkStateStore.current.connected &&
+            (selectedChipId != null || radioQueueExplicitFeed || requestClassic == Settings.shared.classicRecommendations) &&
+                PlaybackNetworkStateStore.current.connected &&
                 repeatMode.value == Player.REPEAT_MODE_OFF &&
                 !AndroidDeviceConnect.manager.remote.isFollowing &&
                 !AndroidListenTogetherManager.isGuestPlaybackLocked &&
@@ -646,7 +657,7 @@ internal class AndroidQueueCoordinator(
                     recommendationRequestGeneration,
                 ) && canBootstrapRecommendations()
 
-        val page = freshRadioPage(firstPage, replaceGeneratedSongs, ::isCurrent) ?: return false
+        val page = freshRadioPage(firstPage, requestClassic, replaceGeneratedSongs, ::isCurrent) ?: return false
 
         val currentIndex = player.currentMediaItemIndex.value
         val currentQueue = player.songQueue.value
@@ -677,6 +688,7 @@ internal class AndroidQueueCoordinator(
         queueChipsState.value = selectedChipId?.let(chips::selectRadioQueueChip) ?: chips
         radioQueueContinuation = page.continuation
         radioQueueContinuationClassic = requestClassic
+        if (selectedChipId != null) radioQueueExplicitFeed = true
         radioQueuePlaylistId = playlistId ?: radioQueuePlaylistId
         radioQueueParams = if (playlistId != null) params else radioQueueParams
         if (additions.isEmpty()) {
@@ -821,7 +833,7 @@ internal class AndroidQueueCoordinator(
                             if (continuation != null) {
                                 GlobalYouTubeRepository.instance.continueRadioQueue(continuation)
                             } else {
-                                GlobalYouTubeRepository.instance.startRadioQueue(seedId)
+                                startCurrentRadioPage(seedId)
                             }
                         }
                     }
@@ -885,7 +897,7 @@ internal class AndroidQueueCoordinator(
                 try {
                     withQueueLoading {
                         withContext(Dispatchers.IO) {
-                            GlobalYouTubeRepository.instance.startRadioQueue(seedSongId)
+                            startCurrentRadioPage(seedSongId)
                         }
                     }
                 } catch (e: CancellationException) {
@@ -901,8 +913,9 @@ internal class AndroidQueueCoordinator(
             return false
         }
 
-        page = freshRadioPage(page) {
-            PlaybackNetworkStateStore.current.connected && sessionId == queueSessionId &&
+        page = freshRadioPage(page, requestClassic) {
+            (radioQueueExplicitFeed || requestClassic == Settings.shared.classicRecommendations) &&
+                PlaybackNetworkStateStore.current.connected && sessionId == queueSessionId &&
                 repeatMode.value == Player.REPEAT_MODE_OFF && canBootstrapRecommendations() &&
                 !AndroidDeviceConnect.manager.remote.isFollowing && !AndroidListenTogetherManager.isGuestPlaybackLocked
         } ?: return false
@@ -1059,7 +1072,7 @@ internal class AndroidQueueCoordinator(
                 withQueueLoading {
                     withContext(Dispatchers.IO) {
                         if (nextContinuation == null) {
-                            GlobalYouTubeRepository.instance.startRadioQueue(seedId)
+                            startCurrentRadioPage(seedId)
                         } else {
                             GlobalYouTubeRepository.instance.continueRadioQueue(nextContinuation)
                         }

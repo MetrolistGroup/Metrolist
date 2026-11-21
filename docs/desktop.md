@@ -6,6 +6,10 @@ The desktop content surface has no tonal elevation. An elevated parent tints nes
 
 Desktop account buttons keep their avatar visible while the popup transforms. Popup bounds use window coordinates measured outside the animated layer. Dismissal waits for the return animation before navigation. Player overflow rows use the same Material menu item shapes as other desktop menus, with rounded ends and small inner corners.
 
+## Backup file dialogs
+
+Linux backup, restore and playlist-file imports keep FileKit when the XDG file-chooser portal is available, so Flatpak can grant access to files outside its sandbox. When the portal is unavailable, Swing and AWT fallback dialogs run on the Swing event dispatch thread. Onboarding restore uses the same picker. Other platforms keep FileKit. File reads and backup work run off the UI thread.
+
 ## Fullscreen player
 
 The fullscreen player's exit button restores the previous window placement and closes the expanded player. F and Escape keep the expanded player open when leaving native fullscreen. Artwork and video use the same expanded-player state, so switching between them keeps the window fullscreen. The video controls include a video button to return to artwork.
@@ -15,6 +19,8 @@ Windows keeps its native borderless style and placement snapshot separate from C
 On Linux and macOS, restoring a maximized window first clears native fullscreen, then reapplies the saved placement. The player button and macOS menu use the same placement setter.
 
 Windows paints behind the maximized frame insets and applies the theme background to the AWT and Skiko backing components during startup and normal use.
+
+Windows caption hit testing takes its own snapshot of Compose scene layers. Native window callbacks must not use Compose's reusable layer-copy cache, because rendering can traverse that cache at the same time. Popup order, focused-popup blocking and passive popup-source observers keep their existing hit-test behavior.
 
 Connected action groups use the shared Material shapes and spacing, with fixed corners during press and selection. The fullscreen artwork player's action buttons are 40 dp tall, and its transport buttons share one height. Overflow sizing includes minimum touch targets and the gap before the overflow button so the last visible action has the trailing corners. The bottom volume button stays round beside overflow, with a 12 dp gap before the volume segment.
 
@@ -32,9 +38,17 @@ The [Nucleus JNI implementation](https://github.com/NucleusFramework/Nucleus/blo
 
 With logging enabled, `WindowsWindow` records native minimize and restore sizes and whether restore reaches the EDT.
 
+## System tray
+
+On Linux and Windows, Metrolist uses `ComposeNativeTray` to integrate with native system notification areas (StatusNotifierItem/D-Bus on Linux and Shell_NotifyIcon on Windows). Left-clicking the tray icon toggles window visibility when `desktopTrayToggleOnClick` is enabled, and right-clicking opens the tray context menu.
+
+On macOS, Metrolist uses Compose Multiplatform's stock `Tray` backed by OpenJDK's `java.awt.SystemTray` (`CTrayIcon`) to avoid AWT/AppKit event loop deadlocks. On macOS, left-clicking opens the native status bar menu, and right-clicking triggers the window toggle action when `desktopTrayToggleOnClick` is enabled. Template rendering is explicitly enabled via the `apple.awt.enableTemplateImages` system property so macOS automatically adapts icon contrast to the menu bar appearance. Native macOS images register `CTrayIcon` and `CMenuItem` callbacks for JNI accessibility.
+
+The tray menu toggles miniplayer visibility independently of the main window. Closing the main window to the tray does not stop miniplayer controls.
+
 ## Linux audio setup
 
-Desktop uses bundled FFmpeg to decode audio and Java Sound to send PCM through ALSA. Automatic output selection tries named `default`, `pipewire` and `pulse` mixers before asking Java Sound for its default line. This also supports ALSA devices whose mixer names differ. Preferred mixers keep priority so Java Sound does not select a hardware or loopback output when a system route works.
+Desktop uses bundled FFmpeg to decode audio and Java Sound to send PCM through ALSA. Automatic output selection tries named `default`, `pipewire` and `pulse` mixers when the host exposes them. Java Sound's default line is used only when none of those system routes is listed, which supports ALSA devices with other mixer names without bypassing an available system route through a hardware or loopback output.
 
 Linux FFmpeg JARs exclude ALSA, PulseAudio, JACK and PipeWire libraries. JVM distributions, AppImages and native-image builds use the host's audio libraries, configuration and plugins. No Linux target keeps a bundled ALSA fallback. `verifyLinuxAudioLibraries` checks JVM package directories and JARs after packaging, including when other packaging checks are disabled. Native builds check their input classpath before compilation and their output directory before packaging. To check a directory, JAR or tarball directly, run `python3 scripts/desktop-native-image/verify_linux_audio.py <path>`.
 
@@ -42,7 +56,9 @@ PipeWire and PulseAudio hosts need their distribution's ALSA integration. On Arc
 
 For microcuts, export the playback event log immediately. Output-underrun records describe the buffer and time between writes; they do not identify the cause by themselves.
 
-At the end of a track, desktop waits for the remaining PCM buffer duration plus 250 ms. Pausing suspends this wait. If a mixer never reports an empty buffer, the track still completes so normal and gapless playback can advance. Crossfade keeps its existing fade and handoff.
+At the end of a track, desktop waits for the remaining PCM buffer duration plus 250 ms. Pausing suspends this wait. If a mixer never reports an empty buffer, the track still completes so normal and gapless playback can advance.
+
+Crossfade starts the prepared next player muted while the outgoing track keeps playing. Both gains follow the outgoing playback clock, with user volume, normalization and sleep-timer gain applied to each track. Pausing stops both players and holds the fade. The next track becomes current when the fade completes or the outgoing track ends; promotion then closes the outgoing player. Cancelling the fade stops the incoming player and restores the outgoing gain. Same-album gapless playback skips the fade.
 
 ## Linux login
 
@@ -66,6 +82,20 @@ Windows registers `metrolist-auth` under `HKCU\Software\Classes` for the running
 
 The embedded login is used when registration fails, when a macOS launch lacks a bundle or open-URI support, or when an unpackaged JVM launch has no native launcher. Linux registration requires working `xdg-mime` and writable user application data. Browser launch failure keeps the waiting dialog available for retry.
 
+## Matugen colors
+
+Appearance's Matugen colors switch replaces the app's color scheme with the one [Matugen](https://github.com/InioX/matugen) generates from the wallpaper. It is off by default, and nothing reads or watches the palette file while it is off. While it is on, Material You, the theme color, song artwork colors and palette style are disabled. Light, dark and pure black still follow the theme setting.
+
+Copy [`matugen-template.properties`](matugen-template.properties) into Matugen's templates directory and add it to Matugen's `config.toml`:
+
+```toml
+[templates.metrolist]
+input_path = "~/.config/matugen/templates/metrolist.properties"
+output_path = "~/.config/metrolist/matugen.properties"
+```
+
+The output path follows `XDG_CONFIG_HOME` on every platform, like `settings.properties`. Flatpak reads `~/.var/app/com.metrolist.desktop/config/metrolist/matugen.properties`. Run `matugen image /path/to/wallpaper`; the app reloads the file when Matugen rewrites it. A file with a missing or malformed color is logged and ignored, keeping the last valid palette. Deleting the file restores the normal theme.
+
 ## Display density
 
 Linux JVM and native launchers preserve `XCURSOR_THEME` and `XCURSOR_SIZE`. In KDE sessions they read Plasma's `kcminputrc` through `kreadconfig6` or `kreadconfig5`, without applying GNOME cursor defaults. Missing or automatic cursor sizes stay unset for the toolkit to resolve.
@@ -84,7 +114,7 @@ X11 detection leaves automatic AWT scaling intact so saved window sizes, minimum
 
 Desktop scroll containers use Compose Foundation's built-in wheel animation. Startup leaves `compose.scrolling.smooth.enabled` at its enabled default, including on Windows. The shared carousel modifier lets the container handle wheel input, so lists, rows, grids and scroll pages share Foundation's tick accumulation and precise-input handling. Foundation also settles carousel and pager snapping after wheel input. Android uses its own wheel handler and settling delay.
 
-In Compose 1.13.0-beta02, Foundation recognizes fractional wheel rotation as precise input on Linux and macOS, but its Windows config classifies all AWT wheel events as non-precise. `DesktopScrollConfig.kt` applies the same fractional-rotation check on Windows and delegates all other behavior to Foundation. The config API is internal in this pinned version; check it when upgrading Compose. See the pinned [Foundation sources](https://repo.maven.apache.org/maven2/org/jetbrains/compose/foundation/foundation-desktop/1.13.0-beta02/foundation-desktop-1.13.0-beta02-sources.jar), `DesktopScrollable.desktop.kt`.
+In Compose 1.13.0-rc01, Foundation recognizes fractional wheel rotation as precise input on Linux and macOS, but its Windows config classifies all AWT wheel events as non-precise. `DesktopScrollConfig.kt` applies the same fractional-rotation check on Windows and delegates all other behavior to Foundation. The config API is internal in this pinned version; check it when upgrading Compose. See the pinned [Foundation sources](https://repo.maven.apache.org/maven2/org/jetbrains/compose/foundation/foundation-desktop/1.13.0-rc01/foundation-desktop-1.13.0-rc01-sources.jar), `DesktopScrollable.desktop.kt`.
 
 Mouse drags continue scrolling at the release velocity with the container's fling behavior. This also applies to Linux touchscreens that report touches as mouse input. Lists, grids and scroll columns use Compose's default deceleration; carousels and pagers keep their snap behavior. Movement thresholds and direction locking preserve taps and gestures handled by child controls. Precise touchpad input must track the gesture directly.
 
@@ -92,7 +122,7 @@ Mouse drags continue scrolling at the release velocity with the container's flin
 
 Horizontal Home rows show arrow buttons at each edge that has more content. The buttons fade at the scroll limits and animate scrolling. Artwork and video shelves use Material carousel snapping; Speed Dial and song grids scroll freely. Home chips and moods use the same controls. Android and iOS do not show these buttons.
 
-Compose 1.13.0-beta02's `CarouselState` inherits scroll flags that always return true. The controls read its internal pager's measured limits so arrows follow scrolling, window resizing and content changes. Check this accessor when upgrading Compose.
+Compose 1.13.0-rc01's `CarouselState` inherits scroll flags that always return true. The controls read its internal pager's measured limits so arrows follow scrolling, window resizing and content changes. Check this accessor when upgrading Compose.
 
 Desktop category pages such as Moods & genres fit as many columns as the available width allows, with a minimum chip width of 240 dp. Chips in the final row share its full width. Category-only pages use 6 dp gaps in both directions.
 
@@ -102,7 +132,7 @@ Scrolling changes need checks with physical wheel, touchpad and touchscreen inpu
 
 `desktopApp/src/jvmMain/kotlin/com/metrolist/desktop/window/HyprlandRenderVisibility.kt` tracks each window's workspace visibility. Before hiding a GL layer, it copies the retained frame to Java-owned pixels for compositor transitions. Live rendering resumes when visible or when compositor state is unknown. Pinned windows and windows visible on another monitor keep rendering.
 
-Run `HyprlandRetainedFrameTest` for retained-image changes. Native compositor and driver behavior need a Hyprland session.
+Retained-image changes need a Hyprland session to check native compositor and driver behavior.
 
 ## Linux ARM64
 
@@ -125,7 +155,7 @@ Bytedeco publishes no `windows-arm64` FFmpeg natives. `scripts/build_windows_arm
 ./gradlew :desktopApp:packageReleaseDmg
 ```
 
-The AppImage script writes `dist/Metrolist.AppImage` and accepts `GRADLE` to select the Gradle command. The DMG task requires macOS and writes under `desktopApp/build/compose/binaries/main-release/dmg/`. Packages include their own runtime.
+The AppImage script writes `dist/Metrolist.AppImage` and accepts `GRADLE` to select the Gradle command. The DMG task requires macOS and writes under `desktopApp/build/compose/binaries/main-release/dmg/`. The bundle declares macOS 15.0 as its minimum because Bytedeco's FFmpeg dylibs target macOS 15; older systems could open the app but failed to load FFmpeg at playback. Packages include their own runtime.
 
 The AppImage script and Windows and macOS release workflows pass `-Pmetrolist.debug=false` so release packages use the release title and settings.
 
@@ -151,7 +181,7 @@ Linux cannot validate DMG packaging or Rosetta. Before release, inspect Finder b
 
 ### Flatpak
 
-The local manifest is `flatpak/com.metrolist.desktop.yaml`, with app ID `com.metrolist.desktop`. It builds the working tree and needs initialized submodules.
+The local manifest is `flatpak/com.metrolist.desktop.yaml`, with app ID `com.metrolist.desktop`. It builds the committed `main` branch with its submodules, so commit changes before building.
 
 ```sh
 make flatpak-deps
@@ -160,7 +190,7 @@ make flatpak-run-installed
 make flatpak-bundle
 ```
 
-`make flatpak-run` uses the build directory without installation. Keep the manifest's GNOME runtime version and `FLATPAK_RUNTIME_VERSION` in `Makefile` synchronized. The [distribution reference](distribution.md#flatpak-and-flathub) covers the separate offline recipe and Flathub requirements.
+`make flatpak-run` uses the build directory without installation. Keep the manifest's GNOME runtime version and `FLATPAK_RUNTIME_VERSION` in `Makefile` synchronized. The [distribution reference](distribution.md#flatpak) covers flatpark, which ships the Flatpak users install.
 
 ## Runtime and CDS
 
@@ -183,6 +213,8 @@ AppImage packaging uses `createReleaseRuntimeImage`. A second jpackage runtime l
 ### Startup
 
 `Main.kt` runs crash-report handoff, JVM crash-file configuration, allocator setup, CDS cache creation, platform/display checks and the single-instance lock before the window. Pending backup restore and settings/credential migration finish before database access or logging. Saved locale, geometry, window frame and Wayland scale also apply before creating the window. Secure-store reads stay in this settings step; they must not race restore or credential migration.
+
+Windows startup enables the [JDK system proxy selector](https://docs.oracle.com/en/java/javase/25/docs/api/java.base/java/net/doc-files/net-properties.html) before creating network clients. This lets shared HTTP clients use the Windows proxy configuration, including a local proxy configured by Clash/Mihomo. Explicit JVM proxy properties take precedence, and an explicit `java.net.useSystemProxies` value is preserved. Test Home, search, sign-in and playback on Windows with the reporter's proxy mode and port before treating a TLS connection reset as resolved.
 
 The CDS directory is created before crash recovery or a JVM relaunch can exit. Otherwise HotSpot fails with `Unable to create shared archive file` followed by an unrecoverable archive-loading error. The Linux wrapper resolves the HotSpot error-file path from an absolute `XDG_STATE_HOME` before starting the VM, which avoids a crash-path relaunch for custom profiles. Other launcher overrides keep the relaunch guard. Windows uses `$USERPROFILE/.local/state/metrolist/logs` by default and guards custom profiles.
 
@@ -237,7 +269,7 @@ A successful run prints `PASS isolated Secret Service`. KDE Wallet, macOS Keycha
 
 ## Render backend
 
-The hidden desktop Devtools page has a Render backend setting and a Restart app action. Auto keeps the platform defaults, including OpenGL on Linux and Metal on macOS. Launchers and Gradle run tasks leave `SKIKO_RENDER_API` unset unless the user supplies it, so their defaults do not block the preference. Direct3D appears only on Windows, Metal only on macOS, and OpenGL is hidden on Windows ARM64. Software is available on each desktop platform.
+The hidden desktop Devtools page has a Render backend setting and a Restart app action. Auto keeps the platform defaults, including OpenGL on Linux and Metal on macOS. Launchers and Gradle run tasks leave `SKIKO_RENDER_API` unset unless the user supplies it, so their defaults do not block the preference. Direct3D appears only on Windows, Metal only on macOS, and OpenGL is hidden on Windows ARM64. Software is available on each desktop platform. Skiko maps `SOFTWARE` to `SOFTWARE_COMPAT` on macOS and `SOFTWARE_FAST` elsewhere. In Linux playback measurements, COMPAT costs about three times the CPU per frame because it copies each frame through Java2D.
 
 The preference takes effect on restart, before AWT and Skiko initialize. An explicit `SKIKO_RENDER_API` or `-Dskiko.renderApi` takes priority. Skiko uses its own fallback when a selected renderer cannot initialize. With logging enabled, the first painted window logs the requested and actual APIs as `Skiko render API: requested=... actual=...`. Include that line when reporting backend comparisons.
 

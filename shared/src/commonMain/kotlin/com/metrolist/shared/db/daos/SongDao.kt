@@ -40,6 +40,16 @@ data class SongCustomMetadata(
     val customArtist: String?,
 )
 
+data class SongLibraryMembership(
+    val id: String,
+    val inLibrary: Boolean,
+)
+
+data class SongPlayTime(
+    val id: String,
+    val totalPlayTime: Long,
+)
+
 data class SongDuration(
     val id: String,
     val duration: Long,
@@ -162,7 +172,20 @@ interface SongDao {
 
     @Transaction
     @Query(
-        "SELECT song.* FROM song WHERE title LIKE '%' || :query || '%' OR customTitle LIKE '%' || :query || '%' OR albumName LIKE '%' || :query || '%' OR customArtist LIKE '%' || :query || '%' OR EXISTS (SELECT 1 FROM song_artist_map JOIN artist ON artist.id = song_artist_map.artistId WHERE song_artist_map.songId = song.id AND artist.name LIKE '%' || :query || '%') ORDER BY song.rowid",
+        """
+        SELECT song.* FROM song
+        WHERE instr(lower(song.title), lower(:query)) > 0
+           OR instr(lower(song.customTitle), lower(:query)) > 0
+           OR instr(lower(song.albumName), lower(:query)) > 0
+           OR instr(lower(song.customArtist), lower(:query)) > 0
+           OR EXISTS (
+               SELECT 1 FROM song_artist_map
+               JOIN artist ON artist.id = song_artist_map.artistId
+               WHERE song_artist_map.songId = song.id
+                 AND instr(lower(artist.name), lower(:query)) > 0
+           )
+        ORDER BY song.rowid
+        """,
     )
     fun storedSearchSongs(query: String): Flow<List<Song>>
 
@@ -664,6 +687,12 @@ interface SongDao {
 
     @Query("SELECT id, duration FROM song WHERE duration > 0")
     fun knownSongDurations(): Flow<List<SongDuration>>
+
+    @Query("SELECT id, inLibrary IS NOT NULL AS inLibrary FROM song")
+    fun songLibraryMemberships(): Flow<List<SongLibraryMembership>>
+
+    @Query("SELECT id, totalPlayTime FROM song WHERE totalPlayTime > 0")
+    fun songPlayTimes(): Flow<List<SongPlayTime>>
 
     @Transaction
     suspend fun upsert(song: SongEntity) {

@@ -64,7 +64,7 @@ fun <T> BoxScope.ExpressiveSelectionMenu(
                 modifier = Modifier.heightIn(max = 480.dp).verticalScrollWithDrag(rememberScrollState()),
             ) {
                 options.forEachIndexed { index, option ->
-                    val shapes = MenuDefaults.itemShape(index, options.size)
+                    val shapes = groupedMenuItemShapes(index, options.size)
                     val onClick = {
                         haptic.perform(HapticEvent.PRESS)
                         onOptionSelected(option)

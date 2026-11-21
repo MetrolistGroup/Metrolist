@@ -14,6 +14,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import com.metrolist.desktop.state.auth.AuthState
 import com.metrolist.shared.db.MusicDatabase
 import com.metrolist.shared.generated.resources.Res
 import com.metrolist.shared.generated.resources.import_error_generic
@@ -258,7 +259,7 @@ internal fun DesktopAccountImportFlow(
                 onContinue = {
                     if (previewPlaylists.size == 1) {
                         destinationName = previewPlaylists.single().name
-                        destination = Destination.NewSynced
+                        destination = if (AuthState.isSignedIn) Destination.NewSynced else Destination.NewLocal
                         stage = DesktopAccountImportStage.DESTINATION
                     } else {
                         importExecutor.importBatch(previewPlaylists)

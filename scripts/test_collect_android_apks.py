@@ -42,6 +42,13 @@ class CollectAndroidApksTest(unittest.TestCase):
             with self.assertRaises(ValueError):
                 collect(root, root / "bad", "14.0.0-rc0", "debug")
 
+    def test_izzy_apk_name(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            self.metadata(root, "izzy", ["universal"])
+            collect(root, root / "dist", "14.0.0-rc0", "izzy")
+            self.assertEqual({"Metrolist-izzy.apk"}, {path.name for path in (root / "dist").iterdir()})
+
     def test_nightly_build_metadata_version(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

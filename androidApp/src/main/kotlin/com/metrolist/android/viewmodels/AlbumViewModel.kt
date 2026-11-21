@@ -7,6 +7,7 @@ import com.metrolist.shared.api.YouTubeRepository
 import com.metrolist.shared.db.MusicDatabase
 import com.metrolist.shared.model.AlbumItem
 import com.metrolist.shared.model.SongItem
+import com.metrolist.shared.settings.BlockedContent
 import com.metrolist.shared.settings.Settings
 import com.metrolist.shared.state.AlbumLikeState
 import com.metrolist.shared.state.GlobalYouTubeRepository
@@ -64,17 +65,28 @@ class AlbumViewModel(
     ) {
         if (savingFavorite) return
         savingFavorite = true
-        val cursor = albumPage.value?.takeIf { it.album.id == album.id }?.playlistPage
+        val cursor =
+            albumPage.value
+                ?.takeIf { it.album.id == album.id }
+                ?.playlistPage
+                ?.takeIf { it.hasMore }
         AlbumLikeState.toggleAlbumLike(album, songs) { result ->
             savingFavorite = false
             result
                 .onSuccess { liked ->
                     if (selectedAlbumId.value == album.id) _isFavorite.value = liked
-                    if (shouldAutoDownloadLikedAlbum(liked, Settings.shared.autoDownloadOnLike, songs.size)) {
+                    if (shouldAutoDownloadLikedAlbum(liked, Settings.shared.autoDownloadSavedCollections, songs.size, cursor != null)) {
                         applicationScope.launch(Dispatchers.IO) {
                             try {
-                                val allSongs = cursor?.let { GlobalYouTubeRepository.instance.completePlaylistPage(it).songs } ?: songs
-                                downloadManager.downloadAll(allSongs)
+                                val allSongs =
+                                    songsForLikedAlbumDownload(songs, cursor != null) {
+                                        GlobalYouTubeRepository.instance
+                                            .completePlaylistPage(
+                                                checkNotNull(cursor),
+                                                applyContentFilters = false,
+                                            ).songs
+                                    }
+                                if (allSongs.isNotEmpty()) downloadManager.downloadAll(allSongs)
                             } catch (e: CancellationException) {
                                 throw e
                             } catch (e: Exception) {
@@ -111,4 +123,11 @@ internal fun shouldAutoDownloadLikedAlbum(
     isLiked: Boolean,
     autoDownloadOnLike: Boolean,
     songCount: Int,
-): Boolean = isLiked && autoDownloadOnLike && songCount > 0
+    hasMoreSongs: Boolean,
+): Boolean = isLiked && autoDownloadOnLike && (songCount > 0 || hasMoreSongs)
+
+internal suspend fun songsForLikedAlbumDownload(
+    visibleSongs: List<SongItem>,
+    hasMoreSongs: Boolean,
+    loadComplete: suspend () -> List<SongItem>,
+): List<SongItem> = BlockedContent.filterPlayableSongs(if (hasMoreSongs) loadComplete() else visibleSongs)

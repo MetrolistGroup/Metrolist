@@ -967,10 +967,6 @@
         <item quantity="one">%1$d minuutti</item>
         <item quantity="other">%1$d minuuttia</item>
     </plurals>
-    <plurals name="minutes_short">
-        <item quantity="one">%1$d min</item>
-        <item quantity="other">%1$d min</item>
-    </plurals>
     <plurals name="n_track">
         <item quantity="one">%1$d kappale</item>
         <item quantity="other">%1$d kappaletta</item>
@@ -994,10 +990,6 @@
     <plurals name="removed_songs_from_playlist">
         <item quantity="one">Poistettu %1$d kappale soittolistasta</item>
         <item quantity="other">Poistettu %1$d kappaletta soittolistasta</item>
-    </plurals>
-    <plurals name="seconds_short">
-        <item quantity="one">%1$d s</item>
-        <item quantity="other">%1$d s</item>
     </plurals>
     <plurals name="song_count">
         <item quantity="one">%1$d kappale</item>
@@ -1094,7 +1086,6 @@
     <string name="recognize_music">Tunnista musiikkia</string>
     <string name="lyrics_animation_style">Sanoitusten animaatiot</string>
     <string name="not_playing">Mikään ei soi</string>
-    <string name="ai_judge_detector_model">Tunnistusmalli</string>
     <string name="listen_together_room_code">Huonekoodi</string>
     <string name="account_logout_webview_failed">Kirjauduttu ulos, mutta WebView:n kirjautumisprofiilia ei voitu poistaa.</string>
     <string name="spotify_session_sign_in">Kirjaudu sisään Spotifyhin jatkaaksesi</string>
@@ -2152,7 +2143,7 @@
     <string name="settings_device_connect_overview">Lähellä olevat laitteet, pariliitos ja etätoisto</string>
     <string name="settings_release_overview">Julkaisutiedot ja asennusvaihtoehdot</string>
     <string name="settings_notification_access_summary">Valitse, mitkä ilmoitukset Android sallii Metrolistille</string>
-    <string name="settings_crash_reports_summary">Lue ja jaa tallennettuja kaatumisraportteja</string>
+    <string name="settings_crash_reports_summary">Read and share saved crash reports</string>
     <string name="settings_content_language_summary">YouTube Musicin haun ja suositusten kieli</string>
     <string name="settings_content_country_summary">YouTube Musicin listojen ja suositusten alue</string>
     <string name="settings_artist_icon_summary">Valitse profiilikuvat YouTubesta, Apple Musicista, Last.fm:stä tai omista kuvista</string>
@@ -2176,7 +2167,6 @@
     <string name="settings_translation_mode_summary">Käännä sanat tai kirjoita niiden ääntämys kohdekirjoitusjärjestelmällä</string>
     <string name="settings_translation_provider_summary">Valitse sanoitukset kääntävä palvelu</string>
     <string name="settings_translation_model_summary">Sanoitusten kääntämiseen tai ääntämyksen kirjoittamiseen käytettävä malli</string>
-    <string name="settings_detector_model_summary">Malli, joka päättää, tarvitsevatko sanoitukset käännöksen</string>
     <string name="settings_translation_formality_summary">Valitse DeepL-käännöksille muodollinen tai epämuodollinen kieli</string>
     <string name="settings_discord_advanced_summary">Näytä toimintamallipohjat ja omat linkkipainikkeet</string>
     <string name="settings_discord_activity_type_summary">Valitse, miten Discord kuvaa musiikkitoimintaasi</string>
@@ -2216,5 +2206,42 @@
     <string name="sleep_timer_set_default">Aseta oletukseksi</string>
     <string name="lyrics_curated_by">(Lisännyt %1$s)</string>
     <string name="player_canvas_desc">Toista Spotifyn ja Youtuben Canvas-videoita laajennetun soittimen taustana, kun mahdollista. Käyttää enemmän tallennustilaa ja dataa.</string>
-    <string name="disable_animated_artwork_on_mobile_data">Älä lataa animoituja kansikuvia mobiilidatalla</string>
+    <string name="disable_animated_artwork_on_mobile_data">Älä näytä animoituja kansikuvia mobiilidataa käytettäessä</string>
+    <string name="disable_animated_artwork_on_mobile_data_desc">Näytä staattisia kansikuvia mobiilidataa käytettäessä, jopa animaatioiden ollessa välimuistissa</string>
+    <string name="hide_recent_searches">Piilota "viimeisimmistä hauista"</string>
+    <string name="hide_from_home">Piilota Kodista</string>
+    <string name="hidden_from_home">%1$s piilotettu Kodista</string>
+    <string name="hidden_home_items">Piilotettu Kodista</string>
+    <string name="hidden_home_items_desc">Näytä ja poista Kodista piilotettujen artistien ja podcastien piilotus.</string>
+    <string name="hidden_home_items_empty">Kodista ei ole piilotettu kohteita</string>
+    <string name="show_on_home">Näytä Kodissa</string>
+    <string name="show_again">Näytä uudelleen</string>
+    <string name="restore_hidden_item_title">Näytä uudelleen?</string>
+    <string name="restore_hidden_item_message">Näytä "%1$s" uudelleen?</string>
+    <string name="unblock_artist_title">Poista artistin esto?</string>
+    <string name="unblock_artist_message">Sallitaanko "%1$s" uudestaan jonoissa, suosituksissa ja tilastoissa?</string>
+    <string name="credits_multiplatform_developer">Useamman alustan kehittäjä</string>
+    <string name="credits_collaborators_section">Kehittäjät</string>
+    <string name="credits_leads_section">Johto</string>
+    <string name="credits_creator_section">Luoja</string>
+    <string name="advanced">Edistynyt</string>
+    <string name="integration_on">Käytössä</string>
+    <string name="integration_off">Ei käytössä</string>
+    <string name="integration_on_account">Käytössä · %1$s</string>
+    <string name="integration_on_signed_out">Käytössä · Ei kirjauduttu sisään</string>
+    <string name="discord_integration_description">Näytä kuuntelemasi musiikki Discord-profiilissasi</string>
+    <string name="device_connect_peer_details">%1$s\n%2$s</string>
+    <string name="listen_together_server_label">%1$s · %2$s</string>
+    <string name="settings_sound">Ääni</string>
+    <string name="devtools_render_backend">Render backend</string>
+    <string name="devtools_render_backend_description">Changes take effect after a restart. Environment and JVM render API overrides take priority. Skiko may fall back if the selected backend cannot initialize.</string>
+    <string name="devtools_render_backend_auto">Auto</string>
+    <string name="devtools_render_backend_direct3d">Direct3D</string>
+    <string name="devtools_render_backend_opengl">OpenGL</string>
+    <string name="devtools_render_backend_software">Software</string>
+    <string name="devtools_render_backend_metal">Metal</string>
+    <string name="theme_palette_content">Sisältö</string>
+    <string name="settings_more_options">Muut asetukset</string>
+    <string name="app_icon_gradient">Liukuväri</string>
+    <string name="appearance_floating_bottom_nav">Kelluva navigointipalkki</string>
 </resources>

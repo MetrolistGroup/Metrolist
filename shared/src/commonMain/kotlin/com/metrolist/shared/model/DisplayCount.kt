@@ -1,5 +1,8 @@
 package com.metrolist.shared.model
 
+val PlaylistItem.exactSongCount: Int?
+    get() = parseDisplayCount(songCount)
+
 internal fun parseDisplayCount(text: String?): Int? {
     val value = text?.trim() ?: return null
     val start = value.indexOfFirst(Char::isDigit).takeIf { it >= 0 } ?: return null

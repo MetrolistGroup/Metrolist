@@ -338,7 +338,7 @@ internal fun bleedCanvas(
 ): IntArray {
     val canvas = IntArray(width * height)
     art.copyInto(canvas, 0, 0, width * min(artHeight, height))
-    val stripRows = (artHeight * BLEED_SOURCE).roundToInt().coerceIn(2, artHeight)
+    val stripRows = (artHeight * BLEED_SOURCE).roundToInt().coerceIn(minOf(2, artHeight), artHeight)
     val below = height - artHeight
     for (y in artHeight until height) {
         // Position in the flipped strip, where 0 is the cover's last row; Catmull-Rom between the four nearest strip rows.

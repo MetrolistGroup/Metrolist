@@ -6,7 +6,6 @@
 package com.metrolist.shared.ui.menu
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -94,6 +93,7 @@ import com.metrolist.shared.state.GlobalYouTubeRepository
 import com.metrolist.shared.ui.components.Scrollbar
 import com.metrolist.shared.ui.components.images.AsyncImage
 import com.metrolist.shared.ui.components.loadingShimmer
+import com.metrolist.shared.ui.components.playbackMarquee
 import com.metrolist.shared.ui.icons.MetrolistIcons
 import com.metrolist.shared.ui.screens.statisticsDuration
 import com.metrolist.shared.ui.statistics.StatisticsFormatter
@@ -355,7 +355,7 @@ private fun SongDetailsHeader(
                 fontWeight = FontWeight.SemiBold,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.basicMarquee(),
+                modifier = Modifier.playbackMarquee(),
             )
             Text(
                 text = subtitle,
@@ -363,7 +363,7 @@ private fun SongDetailsHeader(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.basicMarquee(),
+                modifier = Modifier.playbackMarquee(),
             )
         }
     }

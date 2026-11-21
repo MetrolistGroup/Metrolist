@@ -63,6 +63,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.semantics.contentDescription
@@ -93,6 +94,8 @@ import com.metrolist.shared.generated.resources.retry
 import com.metrolist.shared.generated.resources.save
 import com.metrolist.shared.generated.resources.save_episode
 import com.metrolist.shared.generated.resources.saved
+import com.metrolist.shared.generated.resources.search_episodes
+import com.metrolist.shared.generated.resources.search_no_results
 import com.metrolist.shared.generated.resources.share
 import com.metrolist.shared.generated.resources.show_less
 import com.metrolist.shared.generated.resources.show_more
@@ -103,6 +106,7 @@ import com.metrolist.shared.settings.Settings
 import com.metrolist.shared.ui.components.AlertDialog
 import com.metrolist.shared.ui.components.ContainedLoadingIndicator
 import com.metrolist.shared.ui.components.EpisodePlayedIndicator
+import com.metrolist.shared.ui.components.ExpandableSearchBar
 import com.metrolist.shared.ui.components.ExpandableText
 import com.metrolist.shared.ui.components.ModalBottomSheet
 import com.metrolist.shared.ui.components.SongThumbnailPlayingIndicator
@@ -112,8 +116,10 @@ import com.metrolist.shared.ui.components.loadingShimmer
 import com.metrolist.shared.ui.icons.MetrolistIcons
 import com.metrolist.shared.ui.menu.CursorDropdownMenu
 import com.metrolist.shared.ui.menu.contextMenuAnchor
+import com.metrolist.shared.ui.menu.groupedMenuItemShapes
 import com.metrolist.shared.ui.menu.onSecondaryClick
 import com.metrolist.shared.ui.menu.rememberCursorContextMenuState
+import com.metrolist.shared.ui.navigation.NavigationBackHandler
 import com.metrolist.shared.ui.navigation.navigationPopupSource
 import com.metrolist.shared.ui.theme.gridCellShape
 import com.metrolist.shared.ui.theme.uiEnhanced
@@ -161,6 +167,22 @@ fun PodcastContent(
                 ?.index
                 ?.let { layout.totalItemsCount == page.episodes.size + 2 && it >= layout.totalItemsCount - 5 } == true
         }.collect { nearEnd -> if (nearEnd) onLoadMore() }
+    }
+    var searchOpen by remember(page?.podcast?.id) { mutableStateOf(false) }
+    var searchQuery by remember(page?.podcast?.id) { mutableStateOf("") }
+    val closeSearch = {
+        searchOpen = false
+        searchQuery = ""
+    }
+    NavigationBackHandler(enabled = searchOpen, onBack = closeSearch)
+    val episodes =
+        remember(page?.episodes, searchQuery) {
+            val term = searchQuery.trim()
+            page?.episodes.orEmpty().let { all -> if (term.isEmpty()) all else all.filter { it.title.contains(term, ignoreCase = true) } }
+        }
+    // Searching covers the whole podcast, so keep loading pages until none remain.
+    LaunchedEffect(searchQuery.isNotBlank(), page?.continuation, isLoading, error) {
+        if (searchQuery.isNotBlank() && page?.continuation != null && !isLoading && error == null) onLoadMore?.invoke()
     }
     var detailsEpisode by remember { mutableStateOf<EpisodeItem?>(null) }
     detailsEpisode?.let { episode ->
@@ -237,20 +259,42 @@ fun PodcastContent(
                     verticalArrangement = Arrangement.spacedBy(2.dp),
                 ) {
                     item(key = "podcast_header") {
-                        PodcastHeader(
-                            page = page,
-                            isSaving = isSaving,
-                            onPlay = onPlay,
-                            onToggleSaved = onToggleSaved,
-                            onMenuClick = onPodcastMenuClick,
-                            onChannelClick = onChannelClick,
-                        )
+                        Column {
+                            PodcastHeader(
+                                page = page,
+                                isSaving = isSaving,
+                                onPlay = onPlay,
+                                onToggleSaved = onToggleSaved,
+                                onSearchClick = { if (searchOpen) closeSearch() else searchOpen = true },
+                                onMenuClick = onPodcastMenuClick,
+                                onChannelClick = onChannelClick,
+                            )
+                            ExpandableSearchBar(
+                                visible = searchOpen,
+                                query = searchQuery,
+                                onQueryChange = { searchQuery = it },
+                                onClose = closeSearch,
+                                placeholder = stringResource(Res.string.search_episodes),
+                                modifier = Modifier.padding(bottom = 12.dp),
+                            )
+                        }
                     }
-                    itemsIndexed(page.episodes, key = { _, it -> it.id }) { index, episode ->
+                    if (episodes.isEmpty() && searchQuery.isNotBlank() && (page.continuation == null || onLoadMore == null)) {
+                        item(key = "podcast_search_empty") {
+                            Text(
+                                stringResource(Res.string.search_no_results),
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier.fillMaxWidth().padding(24.dp),
+                            )
+                        }
+                    }
+                    itemsIndexed(episodes, key = { _, it -> it.id }) { index, episode ->
                         EpisodeRow(
                             episode = episode,
                             isFirst = index == 0,
-                            isLast = index == page.episodes.lastIndex,
+                            isLast = index == episodes.lastIndex,
                             isActive = episode.id == currentEpisodeId,
                             isPlaying = isPlaying,
                             onClick = { onEpisodeClick(episode) },
@@ -328,6 +372,7 @@ private fun PodcastHeader(
     isSaving: Boolean,
     onPlay: () -> Unit,
     onToggleSaved: () -> Unit,
+    onSearchClick: () -> Unit,
     onMenuClick: () -> Unit,
     onChannelClick: ((String) -> Unit)?,
 ) {
@@ -395,6 +440,13 @@ private fun PodcastHeader(
                         )
                     }
                 }
+            }
+            FilledTonalIconButton(
+                onClick = onSearchClick,
+                modifier = Modifier.size(36.dp),
+                shapes = IconButtonDefaults.shapes(),
+            ) {
+                Icon(MetrolistIcons.Default.Search, stringResource(Res.string.search_episodes))
             }
             FilledTonalIconButton(
                 onClick = onMenuClick,
@@ -531,9 +583,12 @@ private fun EpisodeRow(
                         Icon(MetrolistIcons.Default.MoreVert, stringResource(Res.string.episode_actions), Modifier.size(20.dp))
                     }
                     val menuContent: @Composable ColumnScope.() -> Unit = {
+                        val menuItemCount = if (onDownload == null) 4 else 5
                         DropdownMenuGroup(shapes = MenuDefaults.groupShape(0, 1)) {
                             EpisodeAction(
-                                stringResource(if (episode.saved) Res.string.remove_from_saved_episodes else Res.string.save_episode),
+                                shape = groupedMenuItemShapes(0, menuItemCount).shape,
+                                text =
+                                    stringResource(if (episode.saved) Res.string.remove_from_saved_episodes else Res.string.save_episode),
                             ) {
                                 showMenu = false
                                 onToggleSaved()
@@ -552,7 +607,10 @@ private fun EpisodeRow(
                                     onDownload()
                                 }
                             }
-                            EpisodeAction(stringResource(Res.string.share)) {
+                            EpisodeAction(
+                                stringResource(Res.string.share),
+                                shape = groupedMenuItemShapes(menuItemCount - 1, menuItemCount).shape,
+                            ) {
                                 showMenu = false
                                 onShare()
                             }
@@ -707,7 +765,8 @@ private fun EpisodeDetails(
 private fun EpisodeAction(
     text: String,
     enabled: Boolean = true,
+    shape: Shape = MenuDefaults.middleItemShape,
     onClick: () -> Unit,
 ) {
-    DropdownMenuItem(text = { Text(text) }, onClick = onClick, enabled = enabled)
+    DropdownMenuItem(text = { Text(text) }, onClick = onClick, enabled = enabled, shape = shape)
 }

@@ -9,6 +9,7 @@ package com.metrolist.shared.deviceconnect
 
 import com.metrolist.shared.utils.Logger
 import com.metrolist.shared.utils.MdnsDiscoverySession
+import java.net.Inet4Address
 import java.net.Inet6Address
 import java.net.InetAddress
 import java.net.NetworkInterface
@@ -50,7 +51,7 @@ actual class DeviceDiscoveryController actual constructor(
     private val devicesById = ConcurrentHashMap<String, DiscoveredDevice>()
     private val discoveryLock = Any()
     private var discovering = false
-    private val fetchingServices = mutableSetOf<String>()
+    private val lookups = DesktopDiscoveryLookups()
 
     private var session: MdnsDiscoverySession<InetAddress, JmDNS>? = null
 
@@ -71,7 +72,7 @@ actual class DeviceDiscoveryController actual constructor(
         Logger.i(LOG_TAG, "mDNS register metrolist-$deviceId-$serviceInstanceId port=$port.")
         val register: (JmDNS) -> Unit = { jmDns ->
             jmDns.registerService(
-                ServiceInfo.create(serviceType(), "metrolist-$deviceId-$serviceInstanceId", port, 0, 0, properties),
+                ServiceInfo.create(serviceType(), "metrolist-$deviceId-${instanceName(jmDns.inetAddress)}", port, 0, 0, properties),
             )
         }
         registration = register
@@ -117,8 +118,8 @@ actual class DeviceDiscoveryController actual constructor(
         }
         session =
             MdnsDiscoverySession(
-                addresses = ::deviceConnectLanAddresses,
-                create = { JmDNS.create(it, "Metrolist") },
+                addresses = ::desktopDeviceConnectDiscoveryAddresses,
+                create = { JmDNS.create(it, "Metrolist-${instanceName(it)}") },
                 configure = { jmDns ->
                     instances += jmDns
                     registration?.invoke(jmDns)
@@ -135,7 +136,7 @@ actual class DeviceDiscoveryController actual constructor(
                             instances.clear()
                             listeners.clear()
                             activeServiceKeys.clear()
-                            fetchingServices.clear()
+                            lookups.clear()
                             devicesByService.clear()
                             devicesById.values.toList().also { devicesById.clear() }
                         }
@@ -177,6 +178,7 @@ actual class DeviceDiscoveryController actual constructor(
                             if (!discovering || listeners[jmDns] !== this) return
                             val key = serviceKey(jmDns, event.name)
                             activeServiceKeys.remove(key)
+                            lookups.remove(key)
                             val device = devicesByService.remove(key) ?: return
                             if (!devicesById.remove(device.deviceId, device)) return
                             val replacement = desktopDiscoveryReplacement(device, devicesByService.values)
@@ -233,11 +235,11 @@ actual class DeviceDiscoveryController actual constructor(
                     val deviceId = info.getPropertyString(DEVICE_CONNECT_DEVICE_ID_TXT_KEY).orEmpty()
                     if (deviceId == localDeviceId && deviceId.isNotBlank()) return
                     if (deviceId.isBlank() && allowFetch) {
-                        // One fetch per service at a time; events that arrive meanwhile are covered by it.
+                        // A lookup can emit another incomplete callback, even after it returns.
                         val key = serviceKey(jmDns, event.name)
                         if (!synchronized(discoveryLock) {
                                 discovering && listeners[jmDns] === this &&
-                                    fetchingServices.size < 32 && fetchingServices.add(key)
+                                    key in activeServiceKeys && lookups.start(key)
                             }
                         ) {
                             return
@@ -256,11 +258,11 @@ actual class DeviceDiscoveryController actual constructor(
                                                 Logger.w(LOG_TAG, "mDNS full record fetch for ${event.name} failed: ${it.message}", it)
                                             }.getOrNull()
                                     }
-                                synchronized(discoveryLock) { fetchingServices.remove(key) }
+                                synchronized(discoveryLock) { lookups.finish(key) }
                                 if (full != null) resolved(event, full, allowFetch = false)
                             }
                         } catch (_: RejectedExecutionException) {
-                            synchronized(discoveryLock) { fetchingServices.remove(key) }
+                            synchronized(discoveryLock) { lookups.remove(key) }
                         }
                         return
                     }
@@ -312,7 +314,7 @@ actual class DeviceDiscoveryController actual constructor(
                 discovering = false
                 listeners.entries.toList().also {
                     listeners.clear()
-                    fetchingServices.clear()
+                    lookups.clear()
                     fetchExecutor.queue.clear()
                     activeServiceKeys.clear()
                     devicesByService.clear()
@@ -335,10 +337,52 @@ actual class DeviceDiscoveryController actual constructor(
 
     private fun serviceType() = "${DeviceConnectManager.SERVICE_TYPE}local."
 
+    private fun instanceName(address: InetAddress) =
+        "$serviceInstanceId-${NetworkInterface.getByInetAddress(address).index}-${if (address is Inet4Address) 4 else 6}"
+
     private fun serviceKey(
         jmDns: JmDNS,
         serviceName: String,
     ) = "${System.identityHashCode(jmDns)}:$serviceName"
+}
+
+internal fun desktopDeviceConnectDiscoveryAddresses(): List<InetAddress> =
+    runCatching {
+        deviceConnectLanInterfaces().flatMap { selectDesktopDiscoveryAddresses(it.inetAddresses.toList()) }
+    }.getOrDefault(emptyList())
+
+internal fun selectDesktopDiscoveryAddresses(addresses: List<InetAddress>): List<InetAddress> {
+    val lan = addresses.filter(::isDeviceConnectLanAddress).sortedBy { it.hostAddress }
+    val ipv6 = lan.filterIsInstance<Inet6Address>()
+    return listOfNotNull(
+        lan.filterIsInstance<Inet4Address>().firstOrNull(),
+        ipv6.firstOrNull { !it.isLinkLocalAddress } ?: ipv6.firstOrNull(),
+    )
+}
+
+internal class DesktopDiscoveryLookups {
+    private val attempted = mutableSetOf<String>()
+    private val pending = mutableSetOf<String>()
+
+    fun start(key: String): Boolean {
+        if (pending.size >= 32 || !attempted.add(key)) return false
+        pending.add(key)
+        return true
+    }
+
+    fun finish(key: String) {
+        pending.remove(key)
+    }
+
+    fun remove(key: String) {
+        attempted.remove(key)
+        pending.remove(key)
+    }
+
+    fun clear() {
+        attempted.clear()
+        pending.clear()
+    }
 }
 
 internal fun desktopDiscoveryReplacement(

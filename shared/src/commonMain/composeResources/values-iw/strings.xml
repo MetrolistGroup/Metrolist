@@ -490,7 +490,6 @@
     <string name="settings_translation_mode_summary">תרגום המילים או תעתוק ההגייה שלהן לכתב היעד</string>
     <string name="settings_translation_provider_summary">בחירת השירות שמתרגם את מילות השירים</string>
     <string name="settings_translation_model_summary">המודל לתרגום או לתעתוק מילות השירים</string>
-    <string name="settings_detector_model_summary">המודל שקובע אם יש צורך לתרגם את מילות השירים</string>
     <string name="settings_translation_formality_summary">בחירת שפה רשמית או יומיומית לתרגומי DeepL</string>
     <string name="settings_discord_advanced_summary">הצגת תבניות פעילות וכפתורי קישור מותאמים אישית</string>
     <string name="settings_discord_activity_type_summary">בחירת האופן שבו Discord מתאר את הפעילות המוזיקלית שלך</string>

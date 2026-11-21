@@ -183,7 +183,7 @@ internal class AndroidQueueTransitions(
         }
 
         scope.launch {
-            snapshotFlow { Settings.shared.videoViewerVisible }
+            snapshotFlow { Triple(Settings.shared.videoViewerVisible, Settings.shared.crossfadeEnabled, Settings.shared.crossfadeGapless) }
                 .distinctUntilChanged()
                 .collect { cancelNextTrackPreload() }
         }
@@ -260,9 +260,14 @@ internal class AndroidQueueTransitions(
                         positionMs = 0L,
                         wantVideo = wantNextVideo,
                         cachedAudio = cachedAudio,
+                        sourceIsDownloaded = cachedAudio != null && audioCacheManager.isDownloaded(sourceSong.id),
                         allowCounterpartLookup =
-                            PlaybackNetworkStateStore.current.connected && !AndroidDeviceConnect.manager.remote.isActive &&
-                                !AndroidListenTogetherManager.isGuestPlaybackLocked,
+                            canSwapToAudioCounterpart(
+                                videoPlaybackEnabled = Settings.shared.musicVideoPlaybackEnabled,
+                                networkConnected = PlaybackNetworkStateStore.current.connected,
+                                remotePlaybackActive = AndroidDeviceConnect.manager.remote.isActive,
+                                guestPlaybackLocked = AndroidListenTogetherManager.isGuestPlaybackLocked,
+                            ),
                         isCounterpartAllowed = { !BlockedContent.isBlocked(it) },
                         resolveMusicTrack = musicVideoResolver::resolveMusicTrack,
                     )
@@ -289,6 +294,8 @@ internal class AndroidQueueTransitions(
                             startPaused = true,
                             queueSongId = nextSong.id,
                             positionMs = playbackPositionMs,
+                            playbackSong = playbackSong,
+                            sourceSong = sourceSong,
                             onFailure = preloadFailureHandler(resource, playbackSong, wantNextVideo),
                         )
                     }
@@ -305,6 +312,8 @@ internal class AndroidQueueTransitions(
                                 startPaused = true,
                                 queueSongId = nextSong.id,
                                 positionMs = playbackPositionMs,
+                                playbackSong = playbackSong,
+                                sourceSong = sourceSong,
                                 onFailure = preloadFailureHandler(resource, playbackSong, wantNextVideo),
                             )
                         }
@@ -361,12 +370,16 @@ internal class AndroidQueueTransitions(
         if (player.currentSong.value == null) return
         val nextSong = nextTrackPreloadSong ?: player.songQueue.value.firstOrNull { it.id == token.queueSongId } ?: return
         if (expectedInstanceId != player.currentPlaybackInstanceId) return
+        if (!isPreloadedPlaybackModeCurrent()) {
+            cancelNextTrackPreload()
+            return
+        }
         isCrossfading = true
         crossfadeCompletionGuard.arm(expectedInstanceId)
         crossfadeJob?.cancel()
         crossfadeJob =
             scope.launch {
-                if (!player.startNextPlayback()) {
+                if (!isPreloadedPlaybackModeCurrent() || !player.startNextPlayback()) {
                     val advanceAfterAbort = crossfadeCompletionGuard.takeConsumedCompletion()
                     crossfadeCompletionGuard.clear()
                     cancelNextTrackPreload(resetAttempt = false)
@@ -377,12 +390,13 @@ internal class AndroidQueueTransitions(
                 val endPositionMs = player.duration.value
                 val renderWaitStartedAt = SystemClock.elapsedRealtime()
                 while (
-                    isActive && player.isPreloadedPlaybackActive(token) && !player.isNextPlaybackRendering &&
+                    isActive && isPreloadedPlaybackModeCurrent() && player.isPreloadedPlaybackActive(token) &&
+                    !player.isNextPlaybackRendering &&
                     SystemClock.elapsedRealtime() - renderWaitStartedAt < NEXT_RENDER_WAIT_TIMEOUT_MS
                 ) {
                     delay(CROSSFADE_UPDATE_INTERVAL_MS.milliseconds)
                 }
-                if (!player.isPreloadedPlaybackActive(token) || !player.isNextPlaybackRendering) {
+                if (!isPreloadedPlaybackModeCurrent() || !player.isPreloadedPlaybackActive(token) || !player.isNextPlaybackRendering) {
                     val advanceAfterAbort = crossfadeCompletionGuard.takeConsumedCompletion()
                     crossfadeCompletionGuard.clear()
                     cancelNextTrackPreload()
@@ -409,7 +423,7 @@ internal class AndroidQueueTransitions(
                         cancelNextTrackPreload()
                         return@launch
                     }
-                    if (!player.isPreloadedPlaybackActive(token)) {
+                    if (!isPreloadedPlaybackModeCurrent() || !player.isPreloadedPlaybackActive(token)) {
                         val advanceAfterAbort = crossfadeCompletionGuard.takeConsumedCompletion()
                         player.setTransitionVolume(100f)
                         crossfadeController.cancel()
@@ -442,7 +456,7 @@ internal class AndroidQueueTransitions(
                 crossfadeController.complete()
                 var advanceAfterAbort = false
                 if (
-                    expectedInstanceId == player.currentPlaybackInstanceId &&
+                    expectedInstanceId == player.currentPlaybackInstanceId && isPreloadedPlaybackModeCurrent() &&
                     player.swapToPreloadedQueueNext(token, resource, preloadedQueueSongForPromotion())
                 ) {
                     crossfadeCompletionGuard.discardConsumedCompletion()
@@ -579,6 +593,10 @@ internal class AndroidQueueTransitions(
 
     fun startPreloadedNextAtEof(completedPlaybackInstanceId: Long): Boolean {
         val token = nextTrackPreloadToken ?: return false
+        if (!isPreloadedPlaybackModeCurrent()) {
+            cancelNextTrackPreload()
+            return false
+        }
         if (nextTrackPreloadResource == null || nextTrackPreloadExpectedInstanceId != completedPlaybackInstanceId ||
             player.songQueue.value
                 .getOrNull(player.currentMediaItemIndex.value + 1)
@@ -594,7 +612,7 @@ internal class AndroidQueueTransitions(
     fun consumePreloadedNext(completedPlaybackInstanceId: Long): Boolean {
         val token = nextTrackPreloadToken ?: return false
         val resource = nextTrackPreloadResource ?: return false
-        if (nextTrackPreloadExpectedInstanceId != completedPlaybackInstanceId ||
+        if (!isPreloadedPlaybackModeCurrent() || nextTrackPreloadExpectedInstanceId != completedPlaybackInstanceId ||
             AndroidDeviceConnect.manager.remote.isActive || AndroidListenTogetherManager.isGuestPlaybackLocked
         ) {
             cancelNextTrackPreload()
@@ -610,6 +628,17 @@ internal class AndroidQueueTransitions(
         nextTrackPreloadAttempt = null
         if (swapped) crossfadeController.cancel() else player.cancelNext()
         return swapped
+    }
+
+    private fun isPreloadedPlaybackModeCurrent(): Boolean {
+        val sourceSong = nextTrackPreloadSourceSong ?: return false
+        val attempt = nextTrackPreloadAttempt ?: return false
+        return isQueuePlaybackModeCurrent(
+            song = sourceSong,
+            requestedWantVideo = attempt.wantVideo,
+            currentVideoViewerVisible = Settings.shared.videoViewerVisible,
+            videoPlaybackEnabled = Settings.shared.musicVideoPlaybackEnabled,
+        )
     }
 
     private fun preloadedQueueSongForPromotion(): SongItem? {

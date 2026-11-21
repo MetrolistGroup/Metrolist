@@ -31,21 +31,38 @@ class SpotifyImportManager(
     @Volatile
     private var closed = false
 
+    private var sessionGeneration = 0L
+
     val isAuthenticated: Boolean get() = client != null
 
     suspend fun authenticate(spDc: String) {
         require(spDc.isNotBlank()) { "Spotify login did not return a session cookie" }
-        check(!closed) { "Spotify import is closed" }
+        val generation =
+            synchronized(this) {
+                check(!closed) { "Spotify import is closed" }
+                ++sessionGeneration
+            }
         val candidate = clientFactory()
         try {
             candidate.loginWithSession(spDc)
+            var installed = false
             val previous =
                 synchronized(this) {
                     check(!closed) { "Spotify import is closed" }
-                    client.also { client = candidate }
+                    if (generation != sessionGeneration) {
+                        null
+                    } else {
+                        installed = true
+                        client.also {
+                            saveStoredSession(sessionJson.encodeToString(candidate.session))
+                            client = candidate
+                        }
+                    }
                 }
+            if (!installed) {
+                throw CancellationException("Spotify authentication was superseded")
+            }
             previous?.close()
-            persistSession(candidate.session)
         } catch (error: CancellationException) {
             candidate.close()
             throw error
@@ -57,23 +74,15 @@ class SpotifyImportManager(
     }
 
     suspend fun loadPlaylists(): List<PlaylistMeta> =
-        try {
-            val active = authenticatedClient()
-            playlistsForImport(active.listPlaylists()).also { persistSession(active.session) }
-        } catch (error: CancellationException) {
-            throw error
-        } catch (error: Exception) {
-            logFailure("Loading playlists failed", error)
-            invalidateExpiredSession(error)
-            throw error
+        withAuthenticatedClient("Loading playlists failed") { active ->
+            playlistsForImport(active.listPlaylists()).also { persistSessionIfCurrent(active) }
         }
 
     suspend fun loadPlaylist(
         playlist: PlaylistMeta,
         onTrackProgress: ((loaded: Int, total: Int) -> Unit)? = null,
     ): LoadedPlaylist =
-        try {
-            val active = authenticatedClient()
+        withAuthenticatedClient("Loading playlist failed") { active ->
             val tracks =
                 when (playlist.source) {
                     PlaylistSource.LIKED_SONGS -> {
@@ -88,7 +97,7 @@ class SpotifyImportManager(
                         )
                     }
                 }
-            persistSession(active.session)
+            persistSessionIfCurrent(active)
             val importTracks = tracksForImport(tracks.take(MAX_IMPORT_TRACKS))
             check(importTracks.isNotEmpty()) { "The Spotify playlist has no importable tracks" }
             LoadedPlaylist(
@@ -98,12 +107,6 @@ class SpotifyImportManager(
                 tracks = importTracks,
                 reachedTrackLimit = tracks.size > MAX_IMPORT_TRACKS,
             )
-        } catch (error: CancellationException) {
-            throw error
-        } catch (error: Exception) {
-            logFailure("Loading playlist failed", error)
-            invalidateExpiredSession(error)
-            throw error
         }
 
     suspend fun loadPlaylistsForImport(
@@ -142,37 +145,53 @@ class SpotifyImportManager(
     }
 
     suspend fun restorePersistedSession(): Boolean {
-        check(!closed) { "Spotify import is closed" }
-        if (client != null) return true
+        val generation =
+            synchronized(this) {
+                check(!closed) { "Spotify import is closed" }
+                if (client != null) return true
+                sessionGeneration
+            }
         val stored = loadStoredSession()?.takeIf(String::isNotBlank) ?: return false
         val session =
             runCatching { sessionJson.decodeFromString<SpotifySession>(stored) }
                 .getOrElse {
-                    saveStoredSession("")
+                    clearStoredSessionIfCurrent(generation)
                     return false
                 }
         if (!session.hasLoginCookie) {
-            saveStoredSession("")
+            clearStoredSessionIfCurrent(generation)
             return false
         }
         val candidate = clientFactory()
         try {
             candidate.attachSession(session)
             candidate.ensureAuth()
+            var installed = false
             val previous =
                 synchronized(this) {
                     check(!closed) { "Spotify import is closed" }
-                    client.also { client = candidate }
+                    if (generation != sessionGeneration || client != null) {
+                        null
+                    } else {
+                        installed = true
+                        client.also {
+                            saveStoredSession(sessionJson.encodeToString(candidate.session))
+                            client = candidate
+                        }
+                    }
                 }
+            if (!installed) {
+                candidate.close()
+                return false
+            }
             previous?.close()
-            persistSession(candidate.session)
             return true
         } catch (error: CancellationException) {
             candidate.close()
             throw error
         } catch (error: SpotifySessionExpiredException) {
             candidate.close()
-            saveStoredSession("")
+            clearStoredSessionIfCurrent(generation)
             return false
         } catch (error: Exception) {
             candidate.close()
@@ -181,15 +200,22 @@ class SpotifyImportManager(
     }
 
     fun logout() {
-        val previous = synchronized(this) { client.also { client = null } }
+        val previous =
+            synchronized(this) {
+                sessionGeneration++
+                client.also {
+                    client = null
+                    saveStoredSession("")
+                }
+            }
         previous?.close()
-        saveStoredSession("")
     }
 
     override fun close() {
         val closingClient =
             synchronized(this) {
                 closed = true
+                sessionGeneration++
                 client.also { client = null }
             }
         closingClient?.close()
@@ -198,11 +224,36 @@ class SpotifyImportManager(
     private suspend fun authenticatedClient(): SpotifyClient =
         client ?: restorePersistedSession().let { client } ?: error("Sign in to Spotify first")
 
-    private fun invalidateExpiredSession(error: Throwable) {
+    private suspend fun <T> withAuthenticatedClient(
+        failureMessage: String,
+        operation: suspend (SpotifyClient) -> T,
+    ): T {
+        val active = authenticatedClient()
+        return try {
+            operation(active)
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: Exception) {
+            logFailure(failureMessage, error)
+            invalidateExpiredSession(error, active)
+            throw error
+        }
+    }
+
+    private fun invalidateExpiredSession(
+        error: Throwable,
+        active: SpotifyClient,
+    ) {
         if (error is SpotifySessionExpiredException) {
-            val expiredClient = synchronized(this) { client.also { client = null } }
+            val expiredClient =
+                synchronized(this) {
+                    client.takeIf { it === active }?.also {
+                        sessionGeneration++
+                        client = null
+                        saveStoredSession("")
+                    }
+                }
             expiredClient?.close()
-            saveStoredSession("")
         }
     }
 
@@ -219,8 +270,18 @@ class SpotifyImportManager(
         PlaybackEventLog.error(PlaybackEventKind.IMPORT, "SpotifyImport", message, error)
     }
 
-    private fun persistSession(session: SpotifySession) {
-        saveStoredSession(sessionJson.encodeToString(session))
+    private fun persistSessionIfCurrent(active: SpotifyClient) {
+        synchronized(this) {
+            if (!closed && client === active) {
+                saveStoredSession(sessionJson.encodeToString(active.session))
+            }
+        }
+    }
+
+    private fun clearStoredSessionIfCurrent(generation: Long) {
+        synchronized(this) {
+            if (!closed && generation == sessionGeneration && client == null) saveStoredSession("")
+        }
     }
 
     data class LoadedPlaylist(

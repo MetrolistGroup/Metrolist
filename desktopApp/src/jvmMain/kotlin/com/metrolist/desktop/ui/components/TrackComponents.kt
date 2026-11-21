@@ -12,7 +12,6 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.background
-import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.hoverable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -106,6 +105,7 @@ import com.metrolist.shared.ui.components.animateCurrentSongColors
 import com.metrolist.shared.ui.components.animatedCurrentSongArtworkShape
 import com.metrolist.shared.ui.components.currentSongSemantics
 import com.metrolist.shared.ui.components.images.AsyncImage
+import com.metrolist.shared.ui.components.playbackMarquee
 import com.metrolist.shared.ui.components.rememberCurrentSongArtworkRotation
 import com.metrolist.shared.ui.icons.MetrolistIcons
 import com.metrolist.shared.ui.icons.SongStatusIcons
@@ -176,7 +176,7 @@ fun SongMetadataRow(
             color = contentColor,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.basicMarquee(),
+            modifier = Modifier.playbackMarquee(),
         )
 
         SongDownloadBadge(song.id, colorScheme)
@@ -449,7 +449,7 @@ fun YTListItem(
                         style = MaterialTheme.typography.bodyMedium.copy(color = colorScheme.onSurfaceVariant),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.basicMarquee(),
+                        modifier = Modifier.playbackMarquee(),
                     )
                 }
             }

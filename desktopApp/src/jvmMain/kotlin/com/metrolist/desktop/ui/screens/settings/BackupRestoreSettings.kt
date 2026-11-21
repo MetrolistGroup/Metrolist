@@ -55,6 +55,8 @@ import com.metrolist.desktop.spotifyimport.DesktopTidalImportFlow
 import com.metrolist.desktop.state.app.AppState
 import com.metrolist.desktop.state.content.LibraryContentState
 import com.metrolist.desktop.state.playback.validatedLocalMediaUrl
+import com.metrolist.desktop.utils.pickDesktopFile
+import com.metrolist.desktop.utils.saveDesktopFile
 import com.metrolist.shared.backup.defaultBackupFilename
 import com.metrolist.shared.backup.foreignImportMessage
 import com.metrolist.shared.backup.importForeignBackup
@@ -184,11 +186,6 @@ import com.metrolist.shared.ui.menu.CsvColumnMappingDialog
 import com.metrolist.shared.ui.utils.DragScrollableColumn
 import com.metrolist.shared.ui.utils.verticalScrollWithDrag
 import com.metrolist.shared.utils.XdgUtils
-import io.github.vinceglb.filekit.FileKit
-import io.github.vinceglb.filekit.dialogs.FileKitDialogSettings
-import io.github.vinceglb.filekit.dialogs.FileKitType
-import io.github.vinceglb.filekit.dialogs.openFilePicker
-import io.github.vinceglb.filekit.dialogs.openFileSaver
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -429,6 +426,8 @@ fun BackupRestoreSettingsScreen(colorScheme: ColorScheme) {
                         if (dup != null) {
                             duplicateWarning = dup
                             pendingDuplicateDestination = destination
+                            // The destination picker cleared it; "Import anyway" needs it again.
+                            pendingImportData = data
                             PlaylistImportStatusManager.clear(statusId)
                             return@launch
                         }
@@ -623,11 +622,8 @@ fun BackupRestoreSettingsScreen(colorScheme: ColorScheme) {
                             onClick = {
                                 scope.launch {
                                     runCatching {
-                                        FileKit.openFilePicker(
-                                            type = FileKitType.File(listOf("zip", "backup")),
-                                            dialogSettings = FileKitDialogSettings(title = restorePickerTitle),
-                                        )
-                                    }.onSuccess { selected -> restoreFile = selected?.file }
+                                        pickDesktopFile(restorePickerTitle, listOf("zip", "backup"))
+                                    }.onSuccess { selected -> restoreFile = selected }
                                         .onFailure { status = getString(Res.string.could_not_open_file_picker, it.message ?: "") }
                                 }
                             },
@@ -642,10 +638,9 @@ fun BackupRestoreSettingsScreen(colorScheme: ColorScheme) {
                                 scope.launch {
                                     val file =
                                         runCatching {
-                                            FileKit.openFilePicker(dialogSettings = FileKitDialogSettings(title = restorePickerTitle))
+                                            pickDesktopFile(restorePickerTitle)
                                         }.onFailure { status = getString(Res.string.could_not_open_file_picker, it.message ?: "") }
-                                            .getOrNull()
-                                            ?.file ?: return@launch
+                                            .getOrNull() ?: return@launch
                                     isBusy = true
                                     val result =
                                         withContext(Dispatchers.IO) {
@@ -730,12 +725,12 @@ fun BackupRestoreSettingsScreen(colorScheme: ColorScheme) {
                             onClick = {
                                 scope.launch {
                                     runCatching {
-                                        FileKit.openFilePicker(
-                                            type = FileKitType.File(listOf("csv", "tsv", "m3u", "m3u8", "json", "txt")),
-                                            dialogSettings = FileKitDialogSettings(title = getString(Res.string.import_action_choose_file)),
+                                        pickDesktopFile(
+                                            getString(Res.string.import_action_choose_file),
+                                            listOf("csv", "tsv", "m3u", "m3u8", "json", "txt"),
                                         )
                                     }.onSuccess { selected ->
-                                        val file = selected?.file ?: return@onSuccess
+                                        val file = selected ?: return@onSuccess
                                         scope.launch(Dispatchers.Default) {
                                             runCatching {
                                                 val content = withContext(Dispatchers.IO) { file.inputStream().use(::readPlaylistText) }
@@ -794,14 +789,13 @@ fun BackupRestoreSettingsScreen(colorScheme: ColorScheme) {
                         showBackupWarning = false
                         scope.launch {
                             runCatching {
-                                FileKit.openFileSaver(
+                                saveDesktopFile(
+                                    title = createBackupDialogTitle,
                                     suggestedName = defaultBackupFilename(backupFilenamePrefix),
-                                    defaultExtension = "zip",
-                                    allowedExtensions = setOf("zip"),
-                                    dialogSettings = FileKitDialogSettings(title = createBackupDialogTitle),
+                                    extension = "zip",
                                 )
                             }.onSuccess { selected ->
-                                val destination = selected?.file ?: return@onSuccess
+                                val destination = selected ?: return@onSuccess
                                 val result = withContext(Dispatchers.IO) { DesktopBackupRestoreManager.backup(destination) }
                                 status = result.fold({ backupCreated }, { getString(Res.string.backup_failed, it.message ?: "") })
                             }.onFailure { status = getString(Res.string.could_not_open_file_picker, it.message ?: "") }

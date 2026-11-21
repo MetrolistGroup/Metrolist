@@ -118,34 +118,6 @@ fun playbackCrossfadeGains(progress: Float): Pair<Float, Float> {
     return (1f - shaped).coerceAtLeast(0f) to shaped.coerceAtMost(1f.nextDown())
 }
 
-fun playbackFadeThroughGains(progress: Float): Pair<Float, Float> {
-    if (!progress.isFinite()) return 1f to 0f
-    if (progress <= 0f) return 1f to 0f
-    if (progress >= 1f) return 0f to 1f
-    val pauseHalfWidth = CROSSFADE_CENTER_PAUSE_PROGRESS / 2f
-    val outgoingEnd = 0.5f - pauseHalfWidth
-    val incomingStart = 0.5f + pauseHalfWidth
-    return when {
-        progress < outgoingEnd -> {
-            (1f - crossfadeLinearProgress(progress / outgoingEnd)).coerceAtLeast(0f) to 0f
-        }
-
-        progress > incomingStart -> {
-            0f to crossfadeLinearProgress((progress - incomingStart) / (1f - incomingStart)).coerceIn(0f, 1f.nextDown())
-        }
-
-        else -> {
-            0f to 0f
-        }
-    }
-}
-
-fun shouldPromotePlaybackCrossfade(incomingGain: Float): Boolean = incomingGain.isFinite() && incomingGain > 0f
-
-private const val CROSSFADE_CENTER_PAUSE_PROGRESS = 0.01f
-
-internal fun crossfadeLinearProgress(progress: Float): Float = progress.coerceIn(0f, 1f)
-
 fun playbackNormalizationGain(
     loudnessDb: Double?,
     enabled: Boolean,

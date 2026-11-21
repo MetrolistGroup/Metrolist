@@ -7,6 +7,7 @@ import com.metrolist.shared.model.PlaylistSongSort
 import com.metrolist.shared.model.SongItem
 import com.metrolist.shared.model.SortDirection
 import com.metrolist.shared.model.filterForPlaylistSearch
+import com.metrolist.shared.model.isReordering
 import com.metrolist.shared.model.presentCollection
 import com.metrolist.shared.model.sortedForLikedPlaylist
 import com.metrolist.shared.model.sortedForPlaylist
@@ -28,10 +29,20 @@ internal data class AutoPlaylistPresentationInput(
     val playlistSort: PlaylistSongSort,
     val playlistDirection: SortDirection,
     val topDirection: SortDirection,
-    val reorder: Boolean,
+    val reorder: Boolean = false,
     val likedSongRecency: List<String> = emptyList(),
+    val listeningTimes: Map<String, Long> = emptyMap(),
     val downloadFilter: DownloadPlaylistFilterState = DownloadPlaylistFilterState(),
 )
+
+internal fun AutoPlaylistPresentationInput.withSongSorting(
+    locked: Boolean,
+    listeningTimes: () -> Map<String, Long>,
+): AutoPlaylistPresentationInput =
+    copy(
+        reorder = playlistSort.isReordering(locked, type == "liked"),
+        listeningTimes = if (playlistSort == PlaylistSongSort.LISTENING_TIME) listeningTimes() else emptyMap(),
+    )
 
 internal suspend fun prepareAutoPlaylistSongs(
     input: AutoPlaylistPresentationInput,
@@ -60,12 +71,22 @@ internal suspend fun prepareAutoPlaylistSongs(
                 }
 
                 "liked" -> {
-                    val ordered = if (reorder) songs else songs.sortedForLikedPlaylist(playlistSort, playlistDirection, likedSongRecency)
+                    val ordered =
+                        if (reorder) {
+                            songs
+                        } else {
+                            songs.sortedForLikedPlaylist(
+                                playlistSort,
+                                playlistDirection,
+                                likedSongRecency,
+                                listeningTimes,
+                            )
+                        }
                     ordered.filterForPlaylistSearch(query)
                 }
 
                 "uploaded" -> {
-                    songs.sortedForPlaylist(playlistSort, playlistDirection).filterForPlaylistSearch(query)
+                    songs.sortedForPlaylist(playlistSort, playlistDirection, listeningTimes = listeningTimes).filterForPlaylistSearch(query)
                 }
 
                 else -> {

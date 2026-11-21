@@ -52,6 +52,7 @@ import androidx.compose.ui.unit.dp
 import com.metrolist.desktop.backup.DesktopBackupRestoreManager
 import com.metrolist.desktop.state.DesktopLocaleManager
 import com.metrolist.desktop.state.appLanguageChoices
+import com.metrolist.desktop.utils.pickDesktopFile
 import com.metrolist.shared.generated.resources.Res
 import com.metrolist.shared.generated.resources.app_name
 import com.metrolist.shared.generated.resources.back
@@ -96,10 +97,6 @@ import com.metrolist.shared.ui.settings.SettingsPlatform
 import com.metrolist.shared.ui.settings.SharedSettingsHost
 import com.metrolist.shared.ui.utils.verticalScrollWithDrag
 import com.metrolist.shared.utils.isCrashReportingAvailable
-import io.github.vinceglb.filekit.FileKit
-import io.github.vinceglb.filekit.dialogs.FileKitDialogSettings
-import io.github.vinceglb.filekit.dialogs.FileKitType
-import io.github.vinceglb.filekit.dialogs.openFilePicker
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -146,10 +143,7 @@ fun DesktopOnboarding(onComplete: (sendCrashReports: Boolean, openLogin: Boolean
                 error = null
                 val selected =
                     runCatching {
-                        FileKit.openFilePicker(
-                            type = FileKitType.File(listOf("zip", "backup")),
-                            dialogSettings = FileKitDialogSettings(title = restorePickerTitle),
-                        )
+                        pickDesktopFile(restorePickerTitle, listOf("zip", "backup"))
                     }.getOrElse {
                         if (it is CancellationException) throw it
                         error = getString(Res.string.onboarding_backup_picker_error, it.message ?: "")
@@ -157,7 +151,7 @@ fun DesktopOnboarding(onComplete: (sendCrashReports: Boolean, openLogin: Boolean
                     } ?: return@launch
 
                 withContext(Dispatchers.IO) {
-                    DesktopBackupRestoreManager.stageRestoreAndRestart(selected.file) {
+                    DesktopBackupRestoreManager.stageRestoreAndRestart(selected) {
                         Settings.shared.desktopOnboardingComplete = true
                         if (isCrashReportingAvailable()) {
                             Settings.shared.desktopPendingOnboardingSentryConsent = sendCrashReports.toString()

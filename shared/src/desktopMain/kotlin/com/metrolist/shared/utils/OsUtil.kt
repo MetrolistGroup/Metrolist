@@ -6,8 +6,9 @@
 package com.metrolist.shared.utils
 
 object OsUtil {
-    val isLinux: Boolean get() = System.getProperty("os.name").lowercase().contains("linux")
-    val isMac: Boolean get() = System.getProperty("os.name").lowercase().contains("mac")
-    val isWindows: Boolean get() = System.getProperty("os.name").lowercase().contains("win")
-    val name: String get() = System.getProperty("os.name")
+    val name: String = System.getProperty("os.name")
+    private val normalizedName = name.lowercase()
+    val isLinux: Boolean = normalizedName.contains("linux")
+    val isMac: Boolean = normalizedName.contains("mac")
+    val isWindows: Boolean = normalizedName.contains("win")
 }

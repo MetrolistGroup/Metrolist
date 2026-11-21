@@ -68,7 +68,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.rotate
@@ -154,6 +153,7 @@ import com.metrolist.shared.ui.tv.RequestTvFocus
 import com.metrolist.shared.ui.tv.tvFocusHighlight
 import com.metrolist.shared.ui.utils.DragScrollableColumn
 import com.metrolist.shared.ui.utils.artistArtworkShape
+import com.metrolist.shared.ui.utils.artworkBlur
 import com.metrolist.shared.ui.utils.carouselScroll
 import com.metrolist.shared.ui.utils.desktopArrowScroll
 import com.metrolist.shared.ui.utils.supportsNativeBlur
@@ -1227,7 +1227,7 @@ private fun TopResultCard(
                         modifier =
                             Modifier
                                 .matchParentSize()
-                                .blur(56.dp)
+                                .artworkBlur(56.dp, MaterialTheme.colorScheme.surfaceBright)
                                 .graphicsLayer(alpha = 0.38f),
                         contentScale = ContentScale.Crop,
                     )

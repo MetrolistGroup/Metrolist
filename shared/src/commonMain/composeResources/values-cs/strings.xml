@@ -1016,12 +1016,6 @@
         <item quantity="many">%1$d minut</item>
         <item quantity="other">%1$d minut</item>
     </plurals>
-    <plurals name="minutes_short">
-        <item quantity="one">%1$d min</item>
-        <item quantity="few">%1$d min</item>
-        <item quantity="many">%1$d min</item>
-        <item quantity="other">%1$d min</item>
-    </plurals>
     <plurals name="n_track">
         <item quantity="one">%1$d skladba</item>
         <item quantity="few">%1$d skladby</item>
@@ -1057,12 +1051,6 @@
         <item quantity="few">Odstraněny %1$d skladby z playlistu</item>
         <item quantity="many">Odstraněno %1$d skladeb z playlistu</item>
         <item quantity="other">Odstraněno %1$d skladeb z playlistu</item>
-    </plurals>
-    <plurals name="seconds_short">
-        <item quantity="one">%1$d s</item>
-        <item quantity="few">%1$d s</item>
-        <item quantity="many">%1$d s</item>
-        <item quantity="other">%1$d s</item>
     </plurals>
     <plurals name="song_count">
         <item quantity="one">%1$d skladba</item>
@@ -1219,7 +1207,6 @@
     <string name="ai_provider">Poskytovatel</string>
     <string name="ai_base_url">Základní URL</string>
     <string name="ai_translation_model">Překladový model</string>
-    <string name="ai_judge_detector_model">Model detektoru</string>
     <string name="ai_target_language">Cílový jazyk</string>
     <string name="ai_deepl_formality">Formálnost</string>
     <string name="ai_deepl_formality_default">Výchozí</string>
@@ -2277,7 +2264,6 @@
     <string name="settings_translation_mode_summary">Překládat slova nebo přepsat jejich výslovnost do cílového písma</string>
     <string name="settings_translation_provider_summary">Vyberte službu, která překládá texty</string>
     <string name="settings_translation_model_summary">Model pro překlad nebo přepis textů</string>
-    <string name="settings_detector_model_summary">Model, který rozhoduje, zda texty potřebují překlad</string>
     <string name="settings_translation_formality_summary">Vyberte formální nebo neformální jazyk překladů DeepL</string>
     <string name="settings_discord_advanced_summary">Zobrazit šablony aktivity a vlastní tlačítka s odkazy</string>
     <string name="settings_discord_activity_type_summary">Vyberte, jak Discord označuje vaši hudební aktivitu</string>
@@ -2328,4 +2314,7 @@
     <string name="listen_together_server_label">%1$s · %2$s</string>
     <string name="settings_sound">Zvuk</string>
     <string name="song_count_with_hidden">%1$s, %2$s</string>
+    <string name="charts">Žebříčky</string>
+    <string name="leave_room">Opustit místnost</string>
+    <string name="room_code">Kód místnosti</string>
 </resources>

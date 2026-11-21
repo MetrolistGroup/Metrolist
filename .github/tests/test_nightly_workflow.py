@@ -27,12 +27,17 @@ class NightlyWorkflowTest(unittest.TestCase):
         self.assertIn('concurrency:\n  group: nightly\n  cancel-in-progress: true', workflow)
         self.assertIn('permissions:\n  contents: read', workflow)
         jobs = dict(re.findall(r'(?ms)^  ([\w-]+):\n(.*?)(?=^  [\w-]+:|\Z)', workflow.split('jobs:\n', 1)[1]))
-        self.assertEqual({'version', 'android', 'linux', 'windows', 'publish'}, jobs.keys())
-        self.assertIn('needs: [version, android, linux, windows]', jobs['publish'])
+        self.assertEqual({'version', 'notes', 'android', 'linux', 'windows', 'publish'}, jobs.keys())
+        self.assertIn('needs: [version, notes, android, linux, windows]', jobs['publish'])
         self.assertIn("if: github.ref == 'refs/heads/main'", jobs['version'])
         self.assertNotIn('    if:', jobs['publish'])
         self.assertIn('contents: write', jobs['publish'])
         self.assertNotIn('secrets.', jobs['publish'])
+        # The model key stays in a read-only job.
+        self.assertIn('secrets.OPENROUTER_API_KEY', jobs['notes'])
+        self.assertIn('contents: read', jobs['notes'])
+        self.assertNotIn('contents: write', jobs['notes'])
+        self.assertNotIn('git/refs', workflow)
         for job in ('android', 'linux', 'windows'):
             self.assertIn('needs: version', jobs[job])
             self.assertIn('app-version: ${{ needs.version.outputs.value }}', jobs[job])
@@ -48,9 +53,9 @@ class NightlyWorkflowTest(unittest.TestCase):
             self.assertIn('uses: ./.github/workflows/reusable-desktop-native.yml', jobs[job])
             self.assertIn(f'platform: {job}-x64', jobs[job])
         downloads = re.findall(r'(?ms)uses: actions/download-artifact@[^\n]+\n        with:\n          name: ([^\n]+)', jobs['publish'])
-        self.assertEqual(['nightly-android', 'desktop-native-linux-x64', 'desktop-native-windows-x64'], downloads)
-        self.assertIn('fetch-depth: 0', jobs['publish'])
-        self.assertIn('persist-credentials: false', jobs['publish'])
+        self.assertEqual(['nightly-notes', 'nightly-android', 'desktop-native-linux-x64', 'desktop-native-windows-x64'], downloads)
+        self.assertIn('fetch-depth: 0', jobs['notes'])
+        self.assertIn('persist-credentials: false', jobs['notes'])
         for action in re.findall(r'uses: (actions/[^\s]+)', workflow):
             self.assertRegex(action, r'@[0-9a-f]{40}$')
 
@@ -109,14 +114,39 @@ class NightlyWorkflowTest(unittest.TestCase):
     def git(self, directory, *args):
         return subprocess.check_output(['git', *args], cwd=directory, text=True).strip()
 
-    def test_notes_use_previous_tag_first_parent_and_limit(self):
+    def fake_bin(self, root, previous, release, completion):
+        """Fake gh (nightly body and latest release) and curl (OpenRouter reply, or failure when None)."""
+        bin_dir = root / 'bin'
+        bin_dir.mkdir(exist_ok=True)
+        (root / 'requests.txt').write_text('')
+        gh = bin_dir / 'gh'
+        gh.write_text(textwrap.dedent(f'''\
+            #!/usr/bin/env bash
+            if [[ "$3" == nightly ]]; then
+              [[ -n "{previous}" ]] || exit 1
+              printf '%s\\n' "{previous}"
+            else
+              [[ -n "{release}" ]] || exit 1
+              printf '%s\\n' "{release}"
+            fi
+            '''))
+        curl = bin_dir / 'curl'
+        reply = 'exit 22' if completion is None else f"printf '%s' {json.dumps(json.dumps({'choices': [{'message': {'content': completion}}]}))}"
+        curl.write_text(f'#!/usr/bin/env bash\ncat >> {root}/requests.txt\necho >> {root}/requests.txt\n{reply}\n')
+        for tool in (gh, curl):
+            tool.chmod(0o755)
+        return {'PATH': f'{bin_dir}:{os.environ["PATH"]}'}
+
+    def test_notes_cover_previous_nightly_and_latest_release(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             self.git(root, 'init', '-q', '-b', 'main')
             self.git(root, 'config', 'user.email', 'nightly@example.invalid')
             self.git(root, 'config', 'user.name', 'Nightly test')
-            self.git(root, 'commit', '-q', '--allow-empty', '-m', 'previous nightly')
-            self.git(root, 'tag', '-a', 'nightly', '-m', 'previous nightly')
+            env = {'GIT_COMMITTER_DATE': '2026-01-01T00:00:00Z'}
+            subprocess.check_call(['git', 'commit', '-q', '--allow-empty', '-m', 'before release'], cwd=root, env={**os.environ, **env})
+            self.git(root, 'commit', '-q', '--allow-empty', '-m', 'after release')
+            previous = self.git(root, 'rev-parse', 'HEAD')
             for index in range(52):
                 self.git(root, 'commit', '-q', '--allow-empty', '-m', f'main change {index}')
             self.git(root, 'checkout', '-q', '-b', 'feature')
@@ -124,20 +154,48 @@ class NightlyWorkflowTest(unittest.TestCase):
             self.git(root, 'checkout', '-q', 'main')
             self.git(root, 'merge', '-q', '--no-ff', 'feature', '-m', 'merge feature')
             sha = self.git(root, 'rev-parse', 'HEAD')
-            result = self.run_step('Write nightly notes', root, GITHUB_SHA=sha)
-            self.assertEqual(0, result.returncode, result.stderr)
-            notes = (root / 'nightly-notes.md').read_text()
-            self.assertTrue(notes.startswith(f'Version 14.0.0+abcdef0, built from [{sha}](https://github.com/test/repo/commit/{sha})'))
-            self.assertEqual(50, len(re.findall(r'^\* ', notes, re.MULTILINE)))
-            self.assertIn('merge feature', notes)
-            self.assertNotIn('side branch detail', notes)
-            self.assertNotIn('* previous nightly', notes)
-            self.git(root, 'tag', '-f', 'nightly', sha)
-            self.assertEqual(0, self.run_step('Write nightly notes', root, GITHUB_SHA=sha).returncode)
-            self.assertNotIn('* ', (root / 'nightly-notes.md').read_text())
-            self.git(root, 'tag', '-d', 'nightly')
-            self.assertEqual(0, self.run_step('Write nightly notes', root, GITHUB_SHA=sha).returncode)
-            self.assertIn('merge feature', (root / 'nightly-notes.md').read_text())
+            release = 'v1.0.0\t2026-06-01T00:00:00Z'
+            notes_file = root / 'nightly-notes.md'
+
+            def notes(previous_sha, release_info, completion=None, key=''):
+                bins = self.fake_bin(root, previous_sha and f'{previous_sha}', release_info, completion)
+                result = self.run_step('Write nightly notes', root, GITHUB_SHA=sha, OPENROUTER_API_KEY=key,
+                                       OPENROUTER_MODEL='test/model', PROMPT='prompt', **bins)
+                self.assertEqual(0, result.returncode, result.stderr)
+                return notes_file.read_text()
+
+            text = notes(previous, release)
+            self.assertTrue(text.startswith(f'Version 14.0.0+abcdef0, built from [{sha}](https://github.com/test/repo/commit/{sha})'))
+            since_nightly, since_release = text.split('## Changes since previous nightly\n', 1)[1].split('## Changes since v1.0.0\n')
+            self.assertEqual(50, len(re.findall(r'^\* ', since_nightly, re.MULTILINE)))
+            self.assertIn('merge feature', since_nightly)
+            self.assertNotIn('side branch detail', text)
+            self.assertNotIn('after release', since_nightly)
+            self.assertIn('Only the latest 50', since_release)
+            self.assertNotIn('Summarised', text)
+            self.assertEqual('', (root / 'requests.txt').read_text())
+
+            # A previous build that is no longer in main's history is ignored.
+            text = notes('f' * 40, release)
+            self.assertNotIn('previous nightly', text)
+            self.assertIn('## Changes since v1.0.0', text)
+            self.assertIn('No changes.', notes(sha, ''))
+            self.assertNotIn('## ', notes('', ''))
+
+            text = notes(previous, release, completion='### Fixed\n\n* Playback resumes. (abc1234)', key='secret')
+            self.assertEqual(2, text.count('### Fixed'))
+            self.assertNotIn('* main change', text)
+            self.assertIn('Summarised from commit messages by test/model.', text)
+            request = json.loads((root / 'requests.txt').read_text().splitlines()[0])
+            self.assertEqual('test/model', request['model'])
+            self.assertEqual({'effort': 'low'}, request['reasoning'])
+            self.assertEqual('prompt', request['messages'][0]['content'])
+            self.assertIn('* merge feature', request['messages'][1]['content'])
+
+            # A failed request falls back to the commit list.
+            text = notes(previous, release, completion=None, key='secret')
+            self.assertIn('* merge feature', text)
+            self.assertNotIn('Summarised', text)
 
     def test_publication_replaces_old_assets_and_never_marks_latest(self):
         for existing in (False, True):
@@ -147,15 +205,14 @@ class NightlyWorkflowTest(unittest.TestCase):
                 self.git(root, 'config', 'user.email', 'nightly@example.invalid')
                 self.git(root, 'config', 'user.name', 'Nightly test')
                 self.git(root, 'commit', '-q', '--allow-empty', '-m', 'source')
-                if existing:
-                    self.git(root, 'tag', 'nightly')
                 assets = ['Metrolist.apk',
                           'Metrolist-Desktop-linux-x64.AppImage',
                           'Metrolist-Desktop-windows.zip']
                 (root / 'nightly-assets').mkdir()
                 for name in assets:
                     (root / 'nightly-assets' / name).write_bytes(b'package')
-                (root / 'nightly-notes.md').write_text('Built from source\n')
+                (root / 'artifacts/notes').mkdir(parents=True)
+                (root / 'artifacts/notes/nightly-notes.md').write_text('Built from source\n')
                 (root / 'state.json').write_text(json.dumps({
                     'exists': existing, 'assets': ['legacy.apk', 'obsolete.zip'] if existing else [],
                     'calls': [], 'draft': False,
@@ -190,7 +247,7 @@ class NightlyWorkflowTest(unittest.TestCase):
                         assert state['draft']
                         state['assets'] = [Path(p).name for p in args[3:] if not p.startswith('--')]
                     else:
-                        assert args[:2] == ['api', '--method'], args
+                        raise AssertionError(args)
                     Path('state.json').write_text(json.dumps(state))
                     sys.exit(status)
                     '''))
@@ -202,16 +259,14 @@ class NightlyWorkflowTest(unittest.TestCase):
                 self.assertEqual(set(assets), set(state['assets']))
                 calls = state['calls']
                 if existing:
-                    self.assertIn('PATCH', calls[0])
-                    self.assertIn('force=true', calls[0])
-                    self.assertIn('sha=abcdef0123456789', calls[0])
                     self.assertEqual(['legacy.apk', 'obsolete.zip'],
                                      [call[3] for call in calls if call[:2] == ['release', 'delete-asset']])
                 else:
-                    self.assertIn('POST', calls[0])
-                    self.assertIn('ref=refs/tags/nightly', calls[0])
                     create = next(call for call in calls if call[:2] == ['release', 'create'])
-                    self.assertIn('--verify-tag', create)
+                    self.assertIn('abcdef0123456789', create)
+                self.assertIn('--target', calls[-1])
+                self.assertIn('abcdef0123456789', calls[-1])
+                self.assertIn('artifacts/notes/nightly-notes.md', calls[-1])
                 self.assertIn('--draft=false', calls[-1])
 
 

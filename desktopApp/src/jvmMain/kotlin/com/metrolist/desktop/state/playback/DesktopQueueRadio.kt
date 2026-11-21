@@ -80,7 +80,9 @@ internal class DesktopQueueRadio(
         playImmediately: Boolean,
         shouldCommit: () -> Boolean,
     ): SongItem? {
-        fun canLoad() = autoLoadMore() && shouldCommit()
+        val classic = Settings.shared.classicRecommendations
+
+        fun canLoad() = autoLoadMore() && shouldCommit() && Settings.shared.classicRecommendations == classic
         if (!canLoad()) return null
         return mutex.withLock {
             if (!canLoad()) return@withLock null
@@ -89,7 +91,6 @@ internal class DesktopQueueRadio(
             }
             if (seed.id.isBlank()) return@withLock null
             try {
-                val classic = Settings.shared.classicRecommendations
                 // Continuations and the buffer belong to the mode that fetched them.
                 if (radioClassicMode != classic) {
                     radioClassicMode = classic

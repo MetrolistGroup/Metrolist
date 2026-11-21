@@ -20,7 +20,7 @@ jobs:
   build:
     name: Windows manager
     runs-on: blacksmith-2vcpu-windows-2025
-    timeout-minutes: 15
+    timeout-minutes: 20
     permissions:
       contents: read
     steps:
@@ -43,6 +43,15 @@ jobs:
         with:
           name: ${{ inputs.portable-artifact }}
           path: release-input
+
+      - name: Locate portable payload
+        if: inputs.run-verification
+        shell: pwsh
+        run: |
+          # JVM and native packages name their ZIPs differently.
+          $zips = @(Get-ChildItem release-input -Filter *.zip)
+          if ($zips.Count -ne 1) { throw "Expected one portable ZIP, found $($zips.Count)" }
+          "PORTABLE_PAYLOAD=$($zips[0].FullName)" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
 
       - name: Set up Go
         uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
@@ -82,7 +91,7 @@ jobs:
         shell: pwsh
         env:
           APP_VERSION: ${{ inputs.version }}
-        run: go run ./cmd/validate-payload "../release-input/Metrolist-Desktop-Windows.zip" "$env:APP_VERSION"
+        run: go run ./cmd/validate-payload "$env:PORTABLE_PAYLOAD" "$env:APP_VERSION"
 
       - name: Embed Windows resources
         working-directory: manager-source
@@ -111,7 +120,7 @@ jobs:
           APP_VERSION: ${{ inputs.version }}
         run: |
           $env:METROLIST_MANAGER_E2E_BINARY = (Resolve-Path "dist/metrolist-installer-windows-x64-$env:APP_VERSION.exe").Path
-          $env:METROLIST_MANAGER_E2E_PAYLOAD = (Resolve-Path "../release-input/Metrolist-Desktop-Windows.zip").Path
+          $env:METROLIST_MANAGER_E2E_PAYLOAD = $env:PORTABLE_PAYLOAD
           $env:METROLIST_MANAGER_E2E_VERSION = $env:APP_VERSION
           go test -run TestEndToEndInstallUpdateAndUninstall -count=1 -v .
 

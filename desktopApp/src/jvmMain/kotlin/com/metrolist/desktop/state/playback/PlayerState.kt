@@ -122,6 +122,7 @@ import com.metrolist.shared.youtube.playback.PlaybackNetworkStateStore
 import com.metrolist.shared.youtube.playback.PlaybackResource
 import com.metrolist.shared.youtube.playback.WebPoTokenHealth
 import com.metrolist.shared.youtube.playback.formatPlaybackLogDetails
+import com.metrolist.shared.youtube.playback.matchingLiveState
 import com.metrolist.shared.youtube.playback.playbackErrorResource
 import com.metrolist.shared.youtube.playback.throwableDiagnostics
 import com.metrolist.shared.youtube.playback.toPlaybackLogDetails
@@ -468,15 +469,16 @@ object PlayerState {
         val enabled: Boolean,
     )
 
-    @Volatile
-    internal var playbackTransitionGeneration = 0L
-    private var playbackTransitionJob: Job? = null
+    private val playbackTransitions = DesktopPlaybackTransitions(scope)
+    internal val playbackTransitionGeneration: Long get() = playbackTransitions.generation
+    private var playbackTransitionJob: Job?
+        get() = playbackTransitions.job
         set(job) {
-            field = job
+            playbackTransitions.job = job
             val generation = playbackTransitionGeneration
             job?.invokeOnCompletion {
                 scope.launch {
-                    if (field === job && isCurrentPlaybackTransition(generation)) isPlaybackResolving = false
+                    if (playbackTransitionJob === job && isCurrentPlaybackTransition(generation)) isPlaybackResolving = false
                 }
             }
         }
@@ -667,15 +669,17 @@ object PlayerState {
         allowAutomaticCache: Boolean = true,
         resumePosition: Pair<String, Long>? = null,
         preservePreparedNext: Boolean = false,
+        preserveCast: Boolean = false,
+        preserveCurrent: Boolean = false,
     ): Long {
+        val generation = playbackTransitions.begin()
+        if (preserveCurrent) return generation
         flushPodcastProgress()
         pendingResumePosition = resumePosition
-        val generation = ++playbackTransitionGeneration
         radio.cancelPrefetch()
         isPlaybackResolving = true
         restoration.invalidate()
         automaticCacheAllowedForCurrentTrack = allowAutomaticCache
-        playbackTransitionJob?.cancel()
         automaticCacheJob?.cancel()
         if (!preservePreparedNext) transitions.cancel()
         streamRecoveryBudgets.clear()
@@ -685,7 +689,9 @@ object PlayerState {
         showPlayerError = false
         playerErrorMessage = ""
         playerErrorDetails = ""
-        if (castManager.state.value.status != CastConnectionStatus.DISCONNECTED) {
+        if (castManager.state.value.status != CastConnectionStatus.DISCONNECTED &&
+            (!preserveCast || !castManager.state.value.isConnected)
+        ) {
             scope.launch { castManager.disconnect() }
         }
         return generation
@@ -701,7 +707,10 @@ object PlayerState {
             withContext(Dispatchers.IO) { block() }
         } finally {
             scope.launch {
-                if (isCurrentPlaybackTransition(generation)) isPlaybackResolving = false
+                if (isCurrentPlaybackTransition(generation)) {
+                    isPlaybackResolving = false
+                    playbackTransitions.finish(generation)
+                }
             }
         }
 
@@ -1171,7 +1180,14 @@ object PlayerState {
         generation: Long,
     ): PlaybackResource? {
         var failure: Throwable? = null
-        val resource = fetchPlaybackResource(song, showError = true, onFailure = { failure = it })
+        val resource =
+            if (castManager.state.value.isConnected) {
+                withContext(Dispatchers.Main) {
+                    castPlayback.resolveTrack(song, onFailure = { failure = it }) { isCurrentPlaybackTransition(generation) }
+                }
+            } else {
+                fetchPlaybackResource(song, showError = true, onFailure = { failure = it })
+            }
         if (resource == null) {
             withContext(Dispatchers.Main) {
                 if (isCurrentPlaybackTransition(generation)) {
@@ -1757,7 +1773,7 @@ object PlayerState {
             var wasConnected = false
             var handledEndGeneration: Long? = null
             var checkpointSeekGeneration: Long? = null
-            castManager.state.collect { castState ->
+            combine(castManager.state, playbackTransitions.pendingState) { _, _ -> castManager.state.value }.collect { castState ->
                 val connectionLost =
                     wasConnected && !castState.isConnected &&
                         (castState.error != null || !Settings.shared.castEnabled) &&
@@ -1789,16 +1805,18 @@ object PlayerState {
                     persistPlaybackState(flushPodcast = false)
                 }
                 checkpointSeekGeneration = checkpoint?.seekGeneration
-                if (shouldHandleCastPlaybackEnd(castState, handledEndGeneration)) {
-                    handledEndGeneration = castState.mediaGeneration
-                    advanceCastQueue()
+                val latest = castManager.state.value
+                if (shouldHandleCastPlaybackEnd(latest, handledEndGeneration)) {
+                    if (playbackTransitions.advance(latest, queue.state.value) { advanceCastQueue() }) {
+                        handledEndGeneration = latest.mediaGeneration
+                    }
                 }
             }
         }
         scope.launch {
             combine(player.currentPosition, player.bufferedPosition, player.duration) { position, buffered, duration ->
                 Triple(position, buffered, duration)
-            }.collectLatest { (playerPosition, buffered, playerDuration) ->
+            }.collect { (playerPosition, buffered, playerDuration) ->
                 if (!castManager.state.value.isConnected) {
                     val position = pendingResumePosition?.second ?: playerPosition
                     val duration = if (pendingResumePosition != null) (queue.currentItem()?.duration ?: 0L) * 1000L else playerDuration
@@ -2428,12 +2446,25 @@ object PlayerState {
 
     internal val mediaControls =
         combine(
-            snapshotFlow { Triple(currentTrack != null, isPlaybackResolving, isListenTogetherGuest()) },
+            snapshotFlow { Triple(currentTrack, isPlaybackResolving, isListenTogetherGuest()) },
             queue.state,
             playbackPosition,
             snapshotFlow { repeatMode to Settings.shared.autoLoadMore },
-        ) { (hasTrack, loading, guest), queueState, position, (repeat, autoplay) ->
-            desktopMediaControls(hasTrack, loading, guest, queueState.entries.size, queueState.currentIndex, position, repeat, autoplay)
+            combine(player.currentSong, player.currentPlaybackResource) { song, resource ->
+                song?.isLive == true || resource?.isLive == true
+            },
+        ) { (track, loading, guest), queueState, position, (repeat, autoplay), backendIsLive ->
+            desktopMediaControls(
+                hasTrack = track != null,
+                loading = loading,
+                guest = guest,
+                queueSize = queueState.entries.size,
+                currentIndex = queueState.currentIndex,
+                positionMs = position,
+                isLiveStream = track?.isLive == true || backendIsLive,
+                repeatMode = repeat,
+                autoLoadMore = autoplay,
+            )
         }.stateIn(scope, SharingStarted.Eagerly, DesktopMediaControls())
 
     var showMiniplayer by Settings.shared::showMiniplayer
@@ -2483,7 +2514,7 @@ object PlayerState {
     fun stopCastDiscovery() = castManager.stopDiscovery()
 
     private val castPlayback by lazy {
-        DesktopCastPlayback(scope, player, queue, video::stopVideo, castManager) { song, castProtocol ->
+        DesktopCastPlayback(scope, player, queue, video::stopVideo, castManager, playbackTransitions) { song, castProtocol, onFailure ->
             if (castProtocol != null) {
                 fetchPlaybackResource(
                     song.id,
@@ -2491,9 +2522,10 @@ object PlayerState {
                     song = song,
                     forceDirect = true,
                     audioQuality = castAudioQuality(castProtocol),
+                    onFailure = onFailure,
                 )
             } else {
-                fetchPlaybackResource(song, showError = true)
+                fetchPlaybackResource(song, showError = true, onFailure = onFailure)
             }
         }
     }
@@ -2506,17 +2538,19 @@ object PlayerState {
         ) {
             restoreCastTimerVolume()
         }
-        castPlayback.castTo(device) {
-            DesktopCastHandoffState(
-                currentTrack,
-                currentArtworkUrl,
-                currentMediaPositionMs(),
-                playbackDuration.value,
-                isPlaying,
-                volume,
-                player.currentPlaybackInstanceId,
-            )
-        }
+        if (playbackTransitions.pending) return
+        playbackTransitionJob =
+            castPlayback.castTo(device) {
+                DesktopCastHandoffState(
+                    currentTrack,
+                    currentArtworkUrl,
+                    currentMediaPositionMs(),
+                    playbackDuration.value,
+                    isPlaying,
+                    volume,
+                    player.currentPlaybackInstanceId,
+                )
+            }
     }
 
     fun disconnectCast() {
@@ -2539,31 +2573,12 @@ object PlayerState {
     private suspend fun resumeLocalAfterCast(
         positionMs: Long,
         resumePlayback: Boolean,
-    ) = castPlayback.resumeLocal({ currentTrack }, positionMs, resumePlayback)
+    ) {
+        if (!playbackTransitions.disconnect()) castPlayback.resumeLocal({ currentTrack }, positionMs, resumePlayback)
+    }
 
-    private suspend fun advanceCastQueue() {
-        if (sleepTimerStopAfterCurrentSong) {
-            setPlaybackPlaying(false)
-            clearSleepTimer()
-            return
-        }
-        val decision =
-            castPlayback.advance(currentTrack, repeatMode) {
-                loadRecommendations(candidateLimit = 4, playImmediately = false)
-            } ?: return
-        val song = decision.song ?: return
-        when (decision.action) {
-            PlaybackQueueAction.PLAY_NEXT -> queue.getNext()
-            PlaybackQueueAction.RESTART_QUEUE -> queue.skipTo(0)
-            else -> Unit
-        }
-        if (castManager.state.value.isConnected) {
-            player.beginPendingPlayback(song)
-            updateCurrentTrack(song, startArtworkFetch = true)
-        } else {
-            playTrackInternal(song, emptyList())
-        }
-        queueChanged()
+    private fun advanceCastQueue() {
+        skipNext(fromEOF = true)
     }
 
     internal fun replaceUpcomingQueueFromListenTogether(songs: List<SongItem>) {
@@ -2696,22 +2711,31 @@ object PlayerState {
         song: SongItem,
         showError: Boolean = false,
         onFailure: (Throwable) -> Unit = {},
-    ): PlaybackResource? {
-        val wantVideo =
-            shouldRequestDesktopVideo(
-                showVideoViewer = UiState.showVideoViewer,
-                showVideoFullscreen = UiState.showVideoFullscreen,
-                isVideoSong = song.isVideoSong,
-                synchronizedPlayback = keepsCanonicalMedia(),
-                videoPlaybackEnabled = Settings.shared.musicVideoPlaybackEnabled,
-            )
-        val hints = song.toContentHints().copy(wantVideo = wantVideo)
-        val resource = fetchPlaybackResource(song.id, hints, showError && !wantVideo, song, onFailure = onFailure)
-        if (resource == null && wantVideo) {
-            return fetchPlaybackResource(song.id, hints.copy(wantVideo = false), showError, song, onFailure = onFailure)
-        }
-        return resource
-    }
+    ): PlaybackResource? =
+        selectDesktopPlaybackResource(
+            song = song,
+            showVideoViewer = UiState.showVideoViewer,
+            showVideoFullscreen = UiState.showVideoFullscreen,
+            synchronizedPlayback = keepsCanonicalMedia(),
+            videoPlaybackEnabled = Settings.shared.musicVideoPlaybackEnabled,
+            forcedClientId = forcedPlaybackClientId(),
+            showError = showError,
+            storedAudio = {
+                withContext(Dispatchers.IO) {
+                    DownloadManager.getLocalPlaybackResource(song.id, song)
+                        ?: try {
+                            SongCacheManager.getCachedPlaybackResource(song.id, song)
+                        } catch (error: CancellationException) {
+                            throw error
+                        } catch (_: Exception) {
+                            null
+                        }
+                }
+            },
+            fetchByHints = { hints, reportError ->
+                fetchPlaybackResource(song.id, hints, reportError, song, onFailure = onFailure)
+            },
+        )
 
     internal suspend fun fetchPlaybackResource(
         videoId: String,
@@ -2821,7 +2845,7 @@ object PlayerState {
     ) {
         cancelCrossfadeForManualAction()
         val restorePosition = pendingResumePosition?.takeIf { list?.isEmpty() == true && it.first == track.id }
-        val generation = beginPlaybackTransition(resumePosition = restorePosition)
+        val generation = beginPlaybackTransition(resumePosition = restorePosition, preserveCast = true)
         desiredPlayback.value = !startPaused
         playbackTransitionJob =
             scope.launch {
@@ -2853,6 +2877,7 @@ object PlayerState {
                         ?: podcastResumePosition(playableTrack)
                 if (!isCurrentPlaybackTransition(generation)) return@launch
                 pendingResumePosition = resumePosition?.let { playableTrack.id to it }
+                if (playCastTrack(playableTrack, generation, !startPaused, resumePosition ?: 0L)) return@launch
                 val preparePaused = startPaused || resumePosition != null
                 val forcedClientId = forcedPlaybackClientId()
                 val localResource =
@@ -2905,17 +2930,13 @@ object PlayerState {
                 } else {
                     val resource = withContext(Dispatchers.IO) { fetchSelectedPlaybackResource(playableTrack, generation) }
                     if (resource != null && isCurrentPlaybackTransition(generation)) {
-                        val liveTrack =
-                            if (resource.isLive && !playableTrack.isLive) {
-                                val updated = playableTrack.copy(musicVideoType = MUSIC_VIDEO_TYPE_LIVE, duration = null)
-                                queue.replaceCurrent(updated)
-                                withContext(Dispatchers.Main) {
-                                    updateCurrentTrack(updated, startArtworkFetch = false)
-                                }
-                                updated
-                            } else {
-                                playableTrack
+                        val liveTrack = playableTrack.matchingLiveState(resource)
+                        if (liveTrack !== playableTrack) {
+                            queue.replaceCurrent(liveTrack)
+                            withContext(Dispatchers.Main) {
+                                updateCurrentTrack(liveTrack, startArtworkFetch = false)
                             }
+                        }
                         val played =
                             withContext(Dispatchers.IO) {
                                 player.playPending(liveTrack, resource, pendingTransitionId, preparePaused)
@@ -3056,14 +3077,8 @@ object PlayerState {
             } else {
                 val resource = fetchPlaybackResource(playableTrack, showError = true)
                 if (resource != null && isCurrent()) {
-                    val liveTrack =
-                        if (resource.isLive && !playableTrack.isLive) {
-                            val updated = playableTrack.copy(musicVideoType = MUSIC_VIDEO_TYPE_LIVE, duration = null)
-                            (stagedQueue ?: queue).replaceCurrent(updated)
-                            updated
-                        } else {
-                            playableTrack
-                        }
+                    val liveTrack = playableTrack.matchingLiveState(resource)
+                    if (liveTrack !== playableTrack) (stagedQueue ?: queue).replaceCurrent(liveTrack)
                     if (!prepareTrack(liveTrack, resource)) {
                         withContext(Dispatchers.Main) {
                             if (isCurrent()) video.setResolving(false)
@@ -3118,6 +3133,33 @@ object PlayerState {
         return withContext(Dispatchers.IO) { PodcastLibrary.resumePosition(database, song, durationMs = durationMs) }
     }
 
+    private suspend fun playCastTrack(
+        song: SongItem,
+        generation: Long,
+        startPlaying: Boolean,
+        positionMs: Long = 0L,
+        resource: PlaybackResource? = null,
+    ): Boolean =
+        when (castPlayback.replaceTrack(song, positionMs, startPlaying, resource) { isCurrentPlaybackTransition(generation) }) {
+            DesktopCastTrackResult.LOCAL -> {
+                false
+            }
+
+            DesktopCastTrackResult.SUPERSEDED -> {
+                true
+            }
+
+            DesktopCastTrackResult.LOADED -> {
+                player.beginPendingPlayback(song)
+                updateCurrentTrack(song, startArtworkFetch = true)
+                markVideoUnavailable()
+                pendingResumePosition = null
+                isPlaybackResolving = false
+                playbackTransitions.finish(generation)
+                true
+            }
+        }
+
     private suspend fun playQueueTrack(
         song: SongItem,
         resource: PlaybackResource,
@@ -3127,15 +3169,22 @@ object PlayerState {
         val previousSongId = player.currentSong.value?.id
         val position = podcastResumePosition(song, (song.duration ?: resource.durationSeconds)?.times(1000L) ?: 0L)
         if (!isCurrentPlaybackTransition(generation)) return
-        pendingResumePosition = position?.let { song.id to it }
-        withContext(Dispatchers.IO) { player.play(song, resource, startPaused = !startPlaying || position != null) }
+        pendingResumePosition = song.id to (position ?: 0L)
+        if (playCastTrack(song, generation, startPlaying, position ?: 0L, resource)) return
+        withContext(Dispatchers.IO) {
+            player.play(
+                song,
+                resource,
+                startPaused = !playbackTransitions.playbackIntent(desiredPlayback.value) || position != null,
+            )
+        }
         if (!isCurrentPlaybackTransition(generation)) return
         if (completeDesktopPlaybackResume(
                 positionMs = pendingResumePosition?.second,
                 prepared = player.playbackReady,
                 currentTransition = true,
-                desiredPlaying = { desiredPlayback.value },
-                seek = player::seekTo,
+                desiredPlaying = { playbackTransitions.playbackIntent(desiredPlayback.value) },
+                seek = { if (it > 0L || position != null) player.seekTo(it) },
                 setPlaying = player::setPlaying,
             )
         ) {
@@ -3173,11 +3222,15 @@ object PlayerState {
 
         val startPlaying =
             if (fromEOF || fromFailure || fromListenTogether || fromRemoteControl || castManager.state.value.isConnected) {
-                fromEOF || fromFailure || player.wantsPlayback
+                fromEOF || fromFailure || (
+                    castManager.state.value
+                        .takeIf { it.isConnected }
+                        ?.isPlaying ?: player.wantsPlayback
+                )
             } else {
                 localSongChangeStartsPlayback()
             }
-        if (!fromEOF && queue.peekNext()?.let(::isSongBlocked) != true &&
+        if (!castManager.state.value.isConnected && !fromEOF && queue.peekNext()?.let(::isSongBlocked) != true &&
             transitions.promoteNext(startPlaying) {
                 beginPlaybackTransition(preservePreparedNext = true)
                 desiredPlayback.value = startPlaying
@@ -3185,6 +3238,7 @@ object PlayerState {
             }
         ) {
             isPlaybackResolving = false
+            playbackTransitions.finish(playbackTransitionGeneration)
             val resource = player.currentPlaybackResource.value
             val song = player.currentSong.value
             if (resource?.hasVideo == true && song != null) {
@@ -3198,7 +3252,7 @@ object PlayerState {
             }
             return
         }
-        val generation = beginPlaybackTransition()
+        val generation = beginPlaybackTransition(preserveCast = true)
         desiredPlayback.value = startPlaying
         playbackTransitionJob =
             scope.launch {
@@ -3215,9 +3269,12 @@ object PlayerState {
                     )
                 if (decision.action == PlaybackQueueAction.REPLAY_CURRENT) {
                     val replaySong = decision.song ?: return@launch
+                    if (playCastTrack(replaySong, generation, startPlaying)) return@launch
                     val resource = withContext(Dispatchers.IO) { fetchSelectedPlaybackResource(replaySong, generation) }
                     if (resource != null && isCurrentPlaybackTransition(generation)) {
-                        withContext(Dispatchers.IO) { player.play(replaySong, resource, startPaused = !startPlaying) }
+                        withContext(Dispatchers.IO) {
+                            player.play(replaySong, resource, startPaused = !playbackTransitions.playbackIntent(desiredPlayback.value))
+                        }
                         onTrackPlaybackStarted(replaySong, resource, generation)
                         finalizeHistory(nextSong = replaySong)
                         scrobbleManager.onPlaybackInstanceStart(replaySong)
@@ -3240,9 +3297,17 @@ object PlayerState {
                     var resolveFailure: Throwable? = null
                     val next =
                         resolveNextQueueOccurrence(queue, { isCurrentPlaybackTransition(generation) }) { target ->
-                            withContext(
-                                Dispatchers.IO,
-                            ) { fetchPlaybackResource(target, showError = true, onFailure = { resolveFailure = it }) }
+                            val targetKey = queue.state.value.let { it.entries.getOrNull(it.currentIndex + 1)?.key }
+                            if (castManager.state.value.isConnected) {
+                                castPlayback.resolveTrack(target, onFailure = { resolveFailure = it }) {
+                                    isCurrentPlaybackTransition(generation) &&
+                                        queue.state.value.let { it.entries.getOrNull(it.currentIndex + 1)?.key } == targetKey
+                                }
+                            } else {
+                                withContext(Dispatchers.IO) {
+                                    fetchPlaybackResource(target, showError = true, onFailure = { resolveFailure = it })
+                                }
+                            }
                         }
                     if (next != null) {
                         val resource = next.second
@@ -3327,40 +3392,33 @@ object PlayerState {
             if (fromListenTogether || fromRemoteControl ||
                 castManager.state.value.isConnected
             ) {
-                player.wantsPlayback
+                castManager.state.value
+                    .takeIf { it.isConnected }
+                    ?.isPlaying ?: player.wantsPlayback
             } else {
                 localSongChangeStartsPlayback()
             }
         cancelCrossfadeForManualAction()
         val currentPos = currentMediaPositionMs()
-        val restartPosition = desktopPreviousRestartPosition(pendingResumePosition, currentPos, isLiveStream, queue.hasPrevious())
-        val generation = beginPlaybackTransition(resumePosition = restartPosition)
+
+        fun previousIndex(isLive: Boolean): Int? =
+            queue.state.value.let { desktopPreviousQueueIndex(it.currentIndex, it.entries.lastIndex, repeatMode, isLive) }
+
+        val isLive = isLiveStream
+        val restartPosition = desktopPreviousRestartPosition(pendingResumePosition, currentPos, isLive, previousIndex(isLive) != null)
+        val generation = beginPlaybackTransition(resumePosition = restartPosition, preserveCast = true)
         desiredPlayback.value = startPlaying
         playbackTransitionJob =
             scope.launch {
-                val isLive = isLiveStream
-                if (isLive) {
-                    val prev = queue.getPrevious()
-                    if (prev != null) {
-                        val resource = withContext(Dispatchers.IO) { fetchSelectedPlaybackResource(prev, generation) }
-                        if (resource != null && isCurrentPlaybackTransition(generation)) {
-                            playQueueTrack(prev, resource, generation, startPlaying)
-                        }
+                val live = isLiveStream
+                val previous = if (live || currentPos <= 3_000L) previousIndex(live)?.let(queue::skipTo) else null
+                if (previous != null) {
+                    val resource = withContext(Dispatchers.IO) { fetchSelectedPlaybackResource(previous, generation) }
+                    if (resource != null && isCurrentPlaybackTransition(generation)) {
+                        playQueueTrack(previous, resource, generation, startPlaying)
                     }
-                    return@launch
-                }
-                if (currentPos > 3000) {
+                } else if (!live) {
                     seekToPositionInternal(0)
-                } else {
-                    val prev = queue.getPrevious()
-                    if (prev != null) {
-                        val resource = withContext(Dispatchers.IO) { fetchSelectedPlaybackResource(prev, generation) }
-                        if (resource != null && isCurrentPlaybackTransition(generation)) {
-                            playQueueTrack(prev, resource, generation, startPlaying)
-                        }
-                    } else {
-                        seekToPositionInternal(0)
-                    }
                 }
             }
     }
@@ -3615,6 +3673,48 @@ object PlayerState {
         SongLikeState.toggleLike(song)
     }
 
+    private val radioPlayback by lazy {
+        DesktopRadioPlayback(
+            scope,
+            beginTransition = { preserveCurrent -> beginPlaybackTransition(preserveCast = true, preserveCurrent = preserveCurrent) },
+            replaceQueue = { song, generation ->
+                initialRecommendationsGeneration = generation
+                replaceQueue(listOf(song))
+            },
+            play = play@{ song, generation, startPlaying, positionMs ->
+                desiredPlayback.value = playbackTransitions.playbackIntent(startPlaying)
+                if (!playCastTrack(song, generation, startPlaying, positionMs)) {
+                    pendingResumePosition = song.id to positionMs
+                    val resource = withContext(Dispatchers.IO) { fetchSelectedPlaybackResource(song, generation) }
+                    if (resource != null && isCurrentPlaybackTransition(generation)) {
+                        withContext(Dispatchers.IO) {
+                            player.play(
+                                song,
+                                resource,
+                                startPaused = !playbackTransitions.playbackIntent(desiredPlayback.value) || positionMs > 0L,
+                            )
+                        }
+                        if (!isCurrentPlaybackTransition(generation)) return@play
+                        if (completeDesktopPlaybackResume(
+                                positionMs = pendingResumePosition?.second,
+                                prepared = player.playbackReady,
+                                currentTransition = true,
+                                desiredPlaying = { playbackTransitions.playbackIntent(desiredPlayback.value) },
+                                seek = { if (it > 0L) player.seekTo(it) },
+                                setPlaying = player::setPlaying,
+                            )
+                        ) {
+                            pendingResumePosition = null
+                        }
+                        onTrackPlaybackStarted(song, resource, generation)
+                    }
+                }
+            },
+            recommendations = { song, generation -> freshRadioRecommendations(song.id, generation) },
+            appendRecommendations = ::appendRadioRecommendations,
+        )
+    }
+
     fun startRadio(song: SongItem) {
         if (deviceConnect.intercept(
                 DcPlaybackCommand(
@@ -3632,38 +3732,12 @@ object PlayerState {
         if (isListenTogetherGuest() || isSongBlocked(song)) return
 
         cancelCrossfadeForManualAction()
-        val preserveCurrent = player.currentSong.value?.id == song.id && player.playbackReady && !isPlaybackResolving
-        val generation =
-            if (preserveCurrent) {
-                playbackTransitionJob?.cancel()
-                ++playbackTransitionGeneration
-            } else {
-                beginPlaybackTransition()
-            }
-        initialRecommendationsGeneration = generation
-        replaceQueue(listOf(song))
         playbackTransitionJob =
-            scope.launch {
-                val recommendations =
-                    async(Dispatchers.IO) {
-                        try {
-                            freshRadioRecommendations(song.id, generation)
-                        } catch (error: CancellationException) {
-                            throw error
-                        } catch (_: Exception) {
-                            emptyList()
-                        }
-                    }
-                if (!preserveCurrent) {
-                    desiredPlayback.value = true
-                    val resource = withContext(Dispatchers.IO) { fetchSelectedPlaybackResource(song, generation) }
-                    if (resource != null && isCurrentPlaybackTransition(generation)) {
-                        withContext(Dispatchers.IO) { player.play(song, resource) }
-                        onTrackPlaybackStarted(song, resource, generation)
-                    }
-                }
-                appendRadioRecommendations(recommendations.await(), generation)
-            }
+            radioPlayback.start(
+                song,
+                localPrepared = player.currentSong.value?.id == song.id && player.playbackReady && !isPlaybackResolving,
+                remote = castManager.state.value,
+            )
     }
 
     private suspend fun freshRadioRecommendations(
@@ -3710,7 +3784,7 @@ object PlayerState {
             return
         }
         cancelCrossfadeForManualAction()
-        val generation = beginPlaybackTransition()
+        val generation = beginPlaybackTransition(preserveCast = true)
         initialRecommendationsGeneration = generation
         playbackTransitionJob =
             scope.launch {
@@ -3759,6 +3833,11 @@ object PlayerState {
                     if (!isCurrentPlaybackTransition(generation) || isSongBlocked(target)) return@launch
                     if (isCurrentPlaybackTransition(generation)) {
                         replaceQueue(listOf(target), 0)
+                        if (playCastTrack(target, generation, true)) {
+                            val songs = recommendations.await()
+                            if (Settings.shared.autoLoadMore) appendRadioRecommendations(songs, generation)
+                            return@launch
+                        }
                         val resource = withContext(Dispatchers.IO) { fetchPlaybackResource(target, showError = false) }
                         if (resource != null && isCurrentPlaybackTransition(generation)) {
                             withContext(Dispatchers.IO) { player.play(target, resource) }
@@ -3837,13 +3916,14 @@ object PlayerState {
             return
         }
         if (isListenTogetherGuest()) return
+        playbackTransitions.setPlaying(playing)
         if (playing) playInternal() else pauseInternal()
     }
 
     fun stop() {
         if (deviceConnect.intercept(DcPlaybackCommand(DcPlaybackAction.PAUSE))) return
         if (isListenTogetherGuest()) return
-        ++playbackTransitionGeneration
+        playbackTransitions.begin()
         playbackTransitionJob?.cancel()
         playbackTransitionJob = null
         isPlaybackResolving = false
@@ -3868,12 +3948,12 @@ object PlayerState {
     }
 
     private fun playInternal() {
+        desiredPlayback.value = true
         if (castManager.state.value.isConnected) {
-            if (!castManager.state.value.isPlaying) scope.launch { castManager.play() }
+            castPlayback.setPlaying(true)
             return
         }
         invalidatePersistedRestore()
-        desiredPlayback.value = true
         video.resetSeek()
         if (interruptedNetworkPlaybackInstanceId == player.currentPlaybackInstanceId) {
             interruptedNetworkPlaybackInstanceId = null
@@ -3893,12 +3973,12 @@ object PlayerState {
     }
 
     private fun pauseInternal() {
+        desiredPlayback.value = false
         if (castManager.state.value.isConnected) {
-            if (castManager.state.value.isPlaying) scope.launch { castManager.pause() }
+            castPlayback.setPlaying(false)
             return
         }
         invalidatePersistedRestore()
-        desiredPlayback.value = false
         video.resetSeek()
         player.setPlaying(false)
         video.pause()
@@ -4039,7 +4119,7 @@ object PlayerState {
     ) {
         automaticCacheJob?.cancel()
         if (
-            (!resource.isDirectFile && !resource.isSabr) || resource.clientName == "local" ||
+            (!resource.isDirectFile && !resource.isSabr) || resource.isMuxedProgressive || resource.clientName == "local" ||
             !automaticCacheAllowedForCurrentTrack ||
             !automaticCachingEnabled()
         ) {

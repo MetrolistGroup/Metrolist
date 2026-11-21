@@ -11,7 +11,24 @@ on:
         required: false
         default: ''
         type: string
+      artifact-name:
+        description: Workflow artifact name for the package, desktop-native-<platform> when empty
+        required: false
+        default: ''
+        type: string
+      verify-launch:
+        description: Run the strict packaged launch smoke, which dispatches always run
+        required: false
+        default: false
+        type: boolean
+      upload-sentry:
+        description: Require Sentry credentials and upload desktop source context
+        required: false
+        default: false
+        type: boolean
     secrets:
+      SENTRY_AUTH_TOKEN:
+        required: false
       LASTFM_API_KEY:
         required: true
       LASTFM_SECRET:
@@ -26,18 +43,25 @@ permissions:
 
 jobs:
   package:
-    # Only dispatches and tester push callers may build native packages.
+    # Only dispatches and push callers (nightly and release tags) may build native packages.
     if: >-
       (github.event_name == 'workflow_dispatch' || github.event_name == 'push') &&
       (inputs.platform == 'linux-x64' || inputs.platform == 'windows-x64' ||
       inputs.platform == 'macos-arm64' || inputs.platform == 'linux-arm64')
-    name: ${{ inputs.platform }} native tester
+    name: ${{ inputs.platform }} native
     runs-on: ${{ fromJSON('{"linux-x64":"blacksmith-8vcpu-ubuntu-2404","windows-x64":"blacksmith-8vcpu-windows-2025","macos-arm64":"blacksmith-6vcpu-macos-15","linux-arm64":"blacksmith-8vcpu-ubuntu-2404-arm"}')[inputs.platform] }}
     timeout-minutes: 45
     env:
       NATIVE_PLATFORM: ${{ inputs.platform }}
       NATIVE_WORK: ''
     steps:
+      - name: Validate Sentry configuration
+        if: inputs.upload-sentry
+        shell: bash
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+        run: test -n "$SENTRY_AUTH_TOKEN" || { echo "SENTRY_AUTH_TOKEN is required when Sentry upload is enabled" >&2; exit 1; }
+
       - name: Set native output directory and version
         shell: bash
         env:
@@ -145,8 +169,16 @@ jobs:
           python scripts/desktop-native-image/package.py --platform "$NATIVE_PLATFORM" \
             --image "$NATIVE_WORK/image" --output "$NATIVE_WORK/packages"
 
+      - name: Upload desktop Sentry source context
+        if: inputs.upload-sentry
+        uses: ./.github/actions/upload-desktop-sentry
+        with:
+          sentry-auth-token: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          source-revision: ${{ github.sha }}
+          binaries: desktopApp/build/libs
+
       - name: Strict native launch smoke
-        if: github.event_name == 'workflow_dispatch'
+        if: github.event_name == 'workflow_dispatch' || inputs.verify-launch
         shell: bash
         env:
           PACKAGE: ${{ steps.package.outputs.path }}
@@ -169,7 +201,7 @@ jobs:
       - name: Upload native package
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
-          name: desktop-native-${{ inputs.platform }}
+          name: ${{ inputs.artifact-name || format('desktop-native-{0}', inputs.platform) }}
           path: ${{ steps.package.outputs.path }}
           if-no-files-found: error
           retention-days: 4

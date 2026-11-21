@@ -17,7 +17,6 @@ import com.metrolist.shared.generated.resources.Res
 import com.metrolist.shared.generated.resources.search_history_removal_failed
 import com.metrolist.shared.model.SearchFilter
 import com.metrolist.shared.ui.navigation.Screen
-import com.metrolist.shared.utils.parseYouTubeUrl
 import com.metrolist.shared.viewmodels.SearchViewModel
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.getString
@@ -59,18 +58,26 @@ object SearchState {
     fun search(query: String): Boolean {
         val normalized = query.trim()
         if (normalized.isBlank()) return false
-        val parsed = parseYouTubeUrl(normalized)
-        if (parsed != null) {
+        val link = resolveDesktopSearchLink(normalized)
+        if (link != null) {
             UiState.showSettings = false
             UiState.showSignIn = false
             UiState.showSwitchChannel = false
             PlaylistAlbumState.selectedLocalPlaylist = null
             controller.resetSearch()
-            when (parsed) {
-                is YouTubeUrlParser.ParsedUrl.Video -> PlayerState.playFromId(parsed.id)
-                is YouTubeUrlParser.ParsedUrl.Playlist -> PlaylistAlbumState.fetchPlaylistData(parsed.id)
-                is YouTubeUrlParser.ParsedUrl.Album -> PlaylistAlbumState.fetchAlbumData(parsed.id)
-                is YouTubeUrlParser.ParsedUrl.Artist -> ArtistState.fetchArtistData(parsed.id)
+            when (link) {
+                is DesktopSearchLink.Podcast -> {
+                    PodcastState.fetch(link.id)
+                }
+
+                is DesktopSearchLink.Media -> {
+                    when (val destination = link.destination) {
+                        is YouTubeUrlParser.ParsedUrl.Video -> PlayerState.playFromId(destination.id)
+                        is YouTubeUrlParser.ParsedUrl.Playlist -> PlaylistAlbumState.fetchPlaylistData(destination.id)
+                        is YouTubeUrlParser.ParsedUrl.Album -> PlaylistAlbumState.fetchAlbumData(destination.id)
+                        is YouTubeUrlParser.ParsedUrl.Artist -> ArtistState.fetchArtistData(destination.id)
+                    }
+                }
             }
             return true
         }

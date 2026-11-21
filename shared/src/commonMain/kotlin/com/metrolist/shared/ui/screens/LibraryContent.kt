@@ -160,6 +160,7 @@ enum class LibraryFilter {
 }
 
 enum class LibrarySortType {
+    DOWNLOADED,
     RECENTLY_ADDED,
     NAME,
     LAST_UPDATED,
@@ -277,6 +278,12 @@ fun LibraryContent(
         }
     var reorderOrder by remember(manualOrder) { mutableStateOf(manualOrder) }
     val reorderEnabled = effectiveSortType == LibrarySortType.MANUAL && searchQuery.isBlank()
+    val artistAliases =
+        if (effectiveSortType == LibrarySortType.NAME && (effectiveFilter == null || effectiveFilter == LibraryFilter.ARTISTS)) {
+            ArtistNameAliases.aliases
+        } else {
+            emptyMap()
+        }
     val presentationInput =
         remember(
             items,
@@ -288,6 +295,7 @@ fun LibraryContent(
             contentFilterVersion,
             searchQuery,
             contentMatchedSongs,
+            artistAliases,
         ) {
             LibraryPresentationInput(
                 items,
@@ -299,6 +307,7 @@ fun LibraryContent(
                 contentFilterVersion,
                 searchQuery,
                 contentMatchedSongs,
+                artistAliases,
             )
         }
     val cachedItems = remember(presentation, presentationInput) { presentation.cached(presentationInput) }
@@ -844,6 +853,10 @@ private fun LibraryHeader(
 
 private fun LibrarySortType.isAvailableFor(filter: LibraryFilter?): Boolean =
     when (this) {
+        LibrarySortType.DOWNLOADED -> {
+            filter == LibraryFilter.TRACKS
+        }
+
         LibrarySortType.ARTIST, LibrarySortType.YEAR, LibrarySortType.LENGTH -> {
             filter == LibraryFilter.ALBUMS
         }
@@ -1062,14 +1075,22 @@ internal fun sortLibraryItems(
     sort: LibrarySortType,
     manualOrder: String,
     direction: SortDirection = sort.defaultDirection,
+    artistAliases: Map<String, String> = emptyMap(),
 ): List<YTItem> =
     when (sort) {
+        LibrarySortType.DOWNLOADED -> {
+            items.sortedByLibraryMetadata(direction) { (it as? SongItem)?.downloadedAt }
+        }
+
         LibrarySortType.RECENTLY_ADDED -> {
             items.sortedByLibraryMetadata(direction, YTItem::libraryAddedAt)
         }
 
         LibrarySortType.NAME -> {
-            items.sortedByLibraryMetadata(direction) { it.title.lowercase() }
+            items.sortedByLibraryMetadata(direction) { item ->
+                val title = if (item is ArtistItem) ArtistNameAliases.resolve(artistAliases, item.id, item.title) else item.title
+                title.lowercase()
+            }
         }
 
         LibrarySortType.LAST_UPDATED -> {
@@ -1127,7 +1148,7 @@ internal fun <T : Comparable<T>> List<YTItem>.sortedByLibraryMetadata(
 internal val LibrarySortType.defaultDirection: SortDirection
     get() =
         if (this in
-            setOf(LibrarySortType.RECENTLY_ADDED, LibrarySortType.LAST_UPDATED)
+            setOf(LibrarySortType.RECENTLY_ADDED, LibrarySortType.LAST_UPDATED, LibrarySortType.DOWNLOADED)
         ) {
             SortDirection.DESCENDING
         } else {
@@ -1138,7 +1159,7 @@ private fun librarySongCount(item: YTItem): Int? =
     when (item) {
         is ArtistItem -> item.songCount
         is AlbumItem -> item.songCount
-        is PlaylistItem -> item.songCount?.toIntOrNull()
+        is PlaylistItem -> parseDisplayCount(item.songCount)
         else -> null
     }
 
@@ -1169,6 +1190,7 @@ internal fun prepareLibraryItems(
     direction: SortDirection,
     query: String,
     contentMatchedSongs: List<SongItem>,
+    artistAliases: Map<String, String> = emptyMap(),
 ): List<YTItem> {
     val visibleItems =
         items
@@ -1180,7 +1202,7 @@ internal fun prepareLibraryItems(
         } else {
             visibleItems.filterForLibrarySearch(query) + contentMatchedSongs.filterForLibrary(filter, hiddenItemKeys)
         }
-    return sortLibraryItems(matches.distinctBy { it::class to it.id }, sort, manualOrder, direction)
+    return sortLibraryItems(matches.distinctBy { it::class to it.id }, sort, manualOrder, direction, artistAliases)
 }
 
 internal fun dispatchLibraryItemClick(

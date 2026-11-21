@@ -7,6 +7,10 @@ inputs:
   source-revision:
     description: Exact commit used to build the package
     required: true
+  binaries:
+    description: Directory whose JARs carry the packaged Sentry debug identity
+    required: false
+    default: desktopApp/build/compose/binaries
 runs:
   using: composite
   steps:
@@ -57,6 +61,7 @@ runs:
       shell: bash
       env:
         SOURCE_REVISION: ${{ inputs.source-revision }}
+        BINARIES: ${{ inputs.binaries }}
       run: |
         set -euo pipefail
         [[ "$(git rev-parse HEAD)" == "$SOURCE_REVISION" ]] || {
@@ -68,7 +73,7 @@ runs:
         bundle_id="$(awk -F= '$1 == "io.sentry.bundle-ids" { print $2; exit }' "$meta")"
         [[ "$bundle_id" =~ ^[0-9a-fA-F-]{36}$ ]] || { echo "Invalid Sentry JVM bundle ID" >&2; exit 1; }
         python3 .github/actions/upload-desktop-sentry/verify_metadata.py \
-          "$meta" desktopApp/build/compose/binaries
+          "$meta" "$BINARIES"
 
     - name: Upload JVM source context
       shell: bash

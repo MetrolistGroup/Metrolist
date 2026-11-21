@@ -12,7 +12,7 @@ import native_image
 from serialization_metadata import MANIFEST, NAMED_COMPANION, POLYMORPHIC, SERIALIZABLE, SERIALIZER, generate, read_class
 
 
-def class_file(name, fields=(), methods=(), annotations=()):
+def class_file(name, fields=(), methods=(), annotations=(), parent='java/lang/Object'):
     pool = []
 
     def utf(value):
@@ -25,7 +25,7 @@ def class_file(name, fields=(), methods=(), annotations=()):
         pool.append(b'\x07' + struct.pack('>H', index))
         return len(pool)
 
-    this, parent = clazz(name), clazz('java/lang/Object')
+    this, parent = clazz(name), clazz(parent)
 
     def members(values):
         result = struct.pack('>H', len(values))
@@ -97,6 +97,19 @@ class SerializationMetadataTest(unittest.TestCase):
             self.assertEqual(len(manifest.splitlines()), 8)
             self.assertNotIn(directory, json.dumps(result))
             self.assertEqual(json.loads((output / 'reachability-metadata.json').read_text()), result)
+
+    def test_protobuf_lite_messages_register_fields_and_allocation(self):
+        message = 'com/metrolist/music/listentogether/proto/Listentogether$Envelope'
+        builder = message + '$Builder'
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            jar = root / 'proto.jar'
+            with zipfile.ZipFile(jar, 'w') as archive:
+                archive.writestr(message + '.class', class_file(message, [('payload_', 'Ljava/lang/Object;', 2)], parent='com/google/protobuf/GeneratedMessageLite'))
+                archive.writestr(builder + '.class', class_file(builder, parent='com/google/protobuf/GeneratedMessageLite$Builder'))
+            entries = {entry['type']: entry for entry in generate([jar], root / 'config')['reflection']}
+            self.assertEqual(entries, {message.replace('/', '.'): {
+                'type': message.replace('/', '.'), 'allDeclaredFields': True, 'unsafeAllocated': True}})
 
     def test_class_directories_precedence_and_reproducible_output(self):
         with tempfile.TemporaryDirectory() as directory:

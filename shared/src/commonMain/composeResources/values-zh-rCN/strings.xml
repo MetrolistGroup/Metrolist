@@ -3,7 +3,7 @@
     <string name="home">首页</string>
     <string name="offline_mode">离线模式</string>
     <string name="songs">歌曲</string>
-    <string name="artists">音乐人</string>
+    <string name="artists">艺人</string>
     <string name="albums">专辑</string>
     <string name="playlists">播放列表</string>
     <plurals name="n_selected">
@@ -54,7 +54,7 @@
     <string name="downloads_completed">下载已完成</string>
     <string name="downloads_finished">下载已完成</string>
     <string name="completed_downloads">已完成下载</string>
-    <string name="download_completion_summary">%1$d 已下载，%2$d 失败</string>
+    <string name="download_completion_summary">%1$d 首已下载，%2$d 首失败</string>
     <plurals name="download_notification_progress">
         <item quantity="other">已下载 %1$d / %2$d 首歌曲，%3$d 首失败</item>
     </plurals>
@@ -63,7 +63,7 @@
     <string name="download_cancel_all">全部取消</string>
     <string name="remove_download">移除下载</string>
     <string name="add_to_playlist">添加到播放列表</string>
-    <string name="view_artist">浏览音乐人</string>
+    <string name="view_artist">查看艺人</string>
     <string name="view_song_info">查看歌曲信息</string>
     <string name="view_album">浏览专辑</string>
     <string name="refetch">刷新</string>
@@ -90,7 +90,7 @@
     <string name="select_songs">选择歌曲</string>
     <string name="edit_song">编辑歌曲</string>
     <string name="song_title">歌名</string>
-    <string name="song_artists">音乐人</string>
+    <string name="song_artists">歌曲艺人</string>
     <string name="save">保存</string>
     <string name="edit_playlist">编辑播放列表</string>
     <string name="create_playlist">新建播放列表</string>
@@ -98,7 +98,7 @@
     <string name="duplicates">重复项</string>
     <string name="add_anyway">仍要添加</string>
     <plurals name="n_artist">
-        <item quantity="other">%1$d 位音乐人</item>
+        <item quantity="other">%1$d 位艺人</item>
     </plurals>
     <plurals name="n_album">
         <item quantity="other">%1$d 张专辑</item>
@@ -234,7 +234,7 @@
     <string name="discord_status_authorizing">正在授权…</string>
     <string name="discord_status_not_initialized">未初始化</string>
     <string name="discord_status_authorized">已授权</string>
-    <string name="discord_error_denied">Discord 授权被拒绝。</string>
+    <string name="discord_error_denied">Discord 拒绝了授权。</string>
     <string name="discord_error_connection_failed">无法连接到 Discord。Metrolist 将自动重试。</string>
     <string name="discord_error_no_browser">没有可用的应用来打开 Discord 授权。</string>
     <string name="discord_error_token_exchange_failed">令牌交换失败。请重试。</string>
@@ -373,11 +373,11 @@
     <string name="history_duration_desc">保存到历史记录前的最短播放时间</string>
     <string name="privacy_blocklists">屏蔽列表</string>
     <string name="blocked_artists">已屏蔽艺人</string>
-    <string name="blocked_artists_desc">从队列、推荐和统计中屏蔽的艺术家</string>
-    <string name="blocked_artists_empty">没有屏蔽的艺术家</string>
-    <string name="blocked_artists_empty_desc">从播放器菜单中屏蔽艺术家，避免他们出现在播放和推荐中</string>
+    <string name="blocked_artists_desc">从队列、推荐和统计中屏蔽的艺人</string>
+    <string name="blocked_artists_empty">没有屏蔽的艺人</string>
+    <string name="blocked_artists_empty_desc">从播放器菜单中屏蔽艺人，避免他们出现在播放和推荐中</string>
     <plurals name="blocked_artists_count">
-        <item quantity="other">%1$d 位艺术家已屏蔽</item>
+        <item quantity="other">%1$d 位艺人已屏蔽</item>
     </plurals>
     <string name="android_auto_pinned_playlists">已置顶驾驶播放列表</string>
     <string name="android_auto_pinned_playlists_desc">选择最多六个播放列表，在车载主页优先显示，以便一键播放。选择顺序将保留。</string>
@@ -395,7 +395,7 @@
     <string name="lyrics_timing_unsynced">未同步歌词</string>
     <string name="lyrics_timing_line_synced">逐行同步歌词</string>
     <string name="lyrics_timing_word_synced">逐字同步歌词</string>
-    <string name="artist">音乐人</string>
+    <string name="artist">艺人</string>
     <string name="no_playable_items">未找到可播放的项目</string>
     <string name="player_not_ready">播放器尚未就绪</string>
     <string name="no_recognized_songs_yet">未识别到歌曲</string>
@@ -548,7 +548,7 @@
     <string name="dislike_all">全部点踩</string>
     <string name="import_error_playlist_tracks_unavailable">无法从 %1$s 加载播放列表中的歌曲。请导出播放列表并粘贴歌曲列表。</string>
     <string name="import_error_album_tracks_unavailable">无法从 %1$s 加载专辑中的歌曲。请导出专辑并粘贴歌曲列表。</string>
-    <string name="verified_artists">已认证音乐人</string>
+    <string name="verified_artists">已认证艺人</string>
     <string name="onboarding_welcome_privacy_description">开始收听前，请先设置您的隐私偏好。</string>
     <string name="import_notification_progress_channel_name">播放列表导入进度</string>
     <string name="cast_discovery_failed">无法搜索 Cast 设备。请关闭并重新打开设备选择器以重试。</string>
@@ -692,7 +692,6 @@
     <string name="sponsorblock_skipped">已跳过推广片段</string>
     <string name="episode_played">已播放</string>
     <string name="lastfm_service_error">暂时无法登录 Last.fm。请稍后重试。</string>
-
     <string name="settings_appearance_overview">主题、字体和播放器外观</string>
     <string name="settings_android_auto_overview">车载播放列表和快速添加的目标列表</string>
     <string name="settings_about_overview">贡献者、社区链接和许可证</string>
@@ -737,7 +736,6 @@
     <string name="settings_translation_mode_summary">翻译文字，或用目标文字系统转写发音</string>
     <string name="settings_translation_provider_summary">选择翻译歌词的服务</string>
     <string name="settings_translation_model_summary">用于翻译或转写歌词的模型</string>
-    <string name="settings_detector_model_summary">判断歌词是否需要翻译的模型</string>
     <string name="settings_translation_formality_summary">选择 DeepL 翻译使用正式或非正式用语</string>
     <string name="settings_discord_advanced_summary">显示活动模板和自定义链接按钮</string>
     <string name="settings_discord_activity_type_summary">选择 Discord 描述音乐活动的方式</string>
@@ -760,4 +758,41 @@
     <string name="settings_resume_prompt_summary">应用启动时，在继续播放已保存的队列前询问</string>
     <string name="settings_player_layout_summary">更改封面和播放控件的布局</string>
     <string name="settings_filter_q_summary">Q 控制所选滤波器的带宽或共振</string>
+    <string name="discord_enable_rich_presence">Discord Rich Presence</string>
+    <string name="discord_rich_presence">Rich Presence</string>
+    <string name="sleep_timer_minute">分钟</string>
+    <string name="sleep_timer_finish_current_song">定时结束时，在当前歌曲结束时停止定时器</string>
+    <string name="credits_android_developer">Android 开发者</string>
+    <string name="sleep_timer_set_default">设为默认</string>
+    <string name="restore_hidden_item_title">再次显示？</string>
+    <string name="downloads_empty">没有正在进行的下载</string>
+    <string name="unblock_artist_message">允许“%1$s”再次出现在队列、推荐和统计中吗？</string>
+    <string name="advanced">高级</string>
+    <string name="credits_android_lead">首席 Android 开发者</string>
+    <string name="show_again">再次显示</string>
+    <string name="playlist_cover_update_failed">无法更新播放列表封面</string>
+    <string name="credits_multiplatform_developer">多平台开发者</string>
+    <string name="download_paused">已暂停</string>
+    <plurals name="downloads_failed_banner">
+        <item quantity="other">%1$d 首下载失败</item>
+    </plurals>
+    <string name="sleep_timer_advanced_options">高级选项</string>
+    <string name="credits_windows_developer">Windows 开发者</string>
+    <string name="lyrics_curated_by">（由 %1$s 提交）</string>
+    <string name="lyrics_song_artist">歌曲艺人</string>
+    <plurals name="download_queue_pending">
+        <item quantity="other">下载队列中有 %1$d 首歌曲</item>
+    </plurals>
+    <string name="downloads_empty_hint">您保存以供离线收听的歌曲在下载过程中将显示在此处。</string>
+    <string name="remove_all_downloads">移除所有下载</string>
+    <string name="restore_hidden_item_message">再次显示“%1$s”？</string>
+    <string name="sleep_timer_hour">小时</string>
+    <string name="unblock_artist_title">取消屏蔽艺人？</string>
+    <string name="choose_from_library">从图库中选择</string>
+    <string name="remove_custom_image">移除自定义图片</string>
+    <string name="credits_collaborators_section">协作者</string>
+    <string name="edit_playlist_cover_note_wait">选择图片后，请稍等片刻，新封面将显示在您的播放列表中</string>
+    <string name="edit_playlist_cover">编辑播放列表封面</string>
+    <string name="edit_playlist_cover_note">您的账号必须绑定电话号码并在 YouTube Music 上完成验证才能更改播放列表封面</string>
+    <string name="discord_state">状态</string>
 </resources>

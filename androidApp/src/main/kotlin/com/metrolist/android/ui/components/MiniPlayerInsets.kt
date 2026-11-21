@@ -8,6 +8,11 @@ internal data class MiniPlayerInsets(
     val contentBottomInset: Dp,
 )
 
+internal fun calculateNavigationContentInset(
+    availableHeight: Dp,
+    navigationContentHeight: Dp,
+): Dp = (availableHeight - navigationContentHeight).coerceAtLeast(0.dp)
+
 internal fun calculateMiniPlayerInsets(
     systemBottomInset: Dp,
     navigationBottomInset: Dp,

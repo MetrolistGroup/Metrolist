@@ -35,6 +35,7 @@ import org.jetbrains.skia.Bitmap
 import org.jetbrains.skia.ColorAlphaType
 import org.jetbrains.skia.ColorSpace
 import org.jetbrains.skia.ColorType
+import org.jetbrains.skia.Image
 import org.jetbrains.skia.ImageInfo
 import java.io.InputStream
 import java.util.concurrent.TimeUnit
@@ -57,6 +58,23 @@ enum class VideoColorRange {
     FULL,
 }
 
+internal fun applyVideoDecoderConfiguration(
+    looping: Boolean,
+    optimalThreads: String,
+    options: MutableMap<String, String>,
+    videoOptions: MutableMap<String, String>,
+): Int {
+    if (looping) {
+        options.remove("hwaccel")
+        videoOptions["threads"] = "1"
+    } else {
+        options["hwaccel"] = "auto"
+        videoOptions["threads"] = optimalThreads
+    }
+    videoOptions["flags"] = "low_delay"
+    return 1
+}
+
 actual class VideoFrame(
     val width: Int,
     val height: Int,
@@ -72,6 +90,12 @@ actual class VideoFrame(
     private val imageLock: Any = Any(),
 ) {
     private var closed = false
+    private val planeImages = ArrayList<Pair<Bitmap, Image>>(3)
+
+    /** Call inside [drawSafely]. Window repaints between decoded frames reuse this copy instead of copying the planes again. */
+    fun planeImage(bitmap: Bitmap): Image =
+        planeImages.firstOrNull { it.first === bitmap }?.second
+            ?: Image.makeFromBitmap(bitmap).also { planeImages += bitmap to it }
 
     fun drawSafely(block: VideoFrame.() -> Unit): Boolean =
         synchronized(imageLock) {
@@ -87,6 +111,9 @@ actual class VideoFrame(
         synchronized(imageLock) {
             if (closed) return
             closed = true
+            // Recorded pictures hold their own references to these images.
+            planeImages.forEach { it.second.close() }
+            planeImages.clear()
         }
     }
 }
@@ -99,6 +126,16 @@ actual class VideoPlayer actual constructor(
     private val onRenderedFirstFrame: () -> Unit,
     private val looping: Boolean,
 ) {
+    private fun FFmpegFrameGrabber.configureVideoDecoder() {
+        imageScalingFlags =
+            applyVideoDecoderConfiguration(
+                looping,
+                OPTIMAL_VIDEO_THREADS,
+                options,
+                videoOptions,
+            )
+    }
+
     private var grabber: FFmpegFrameGrabber? = null
     private var seekableSource: SeekableMediaSource? = null
 
@@ -395,19 +432,13 @@ actual class VideoPlayer actual constructor(
             val useInput = grabberInput != null && (grabberInput !is LoopingVideoInput || grabberInput.prepare())
             if (useInput) {
                 FFmpegFrameGrabber(grabberInput as InputStream).apply {
-                    options["hwaccel"] = "auto"
                     options["probesize"] = "500000"
                     options["analyzeduration"] = "500000"
-                    videoOptions["threads"] = OPTIMAL_VIDEO_THREADS
-                    videoOptions["flags"] = "low_delay"
-                    imageScalingFlags = 1
+                    configureVideoDecoder()
                 }
             } else {
                 FFmpegFrameGrabber(url).apply {
-                    options["hwaccel"] = "auto"
-                    videoOptions["threads"] = OPTIMAL_VIDEO_THREADS
-                    videoOptions["flags"] = "low_delay"
-                    imageScalingFlags = 1
+                    configureVideoDecoder()
                     if (url.startsWith("http://") || url.startsWith("https://")) {
                         options["reconnect"] = "1"
                         options["reconnect_streamed"] = "1"
@@ -444,12 +475,9 @@ actual class VideoPlayer actual constructor(
         streamSourceDescription = if (source is HttpRangeInputStream) "HTTP Range (Direct Chunked)" else "SABR Video Stream"
         return prepare(positionProvider, source, null) {
             FFmpegFrameGrabber(input).apply {
-                options["hwaccel"] = "auto"
                 options["probesize"] = "500000"
                 options["analyzeduration"] = "500000"
-                videoOptions["threads"] = OPTIMAL_VIDEO_THREADS
-                videoOptions["flags"] = "low_delay"
-                imageScalingFlags = 1
+                configureVideoDecoder()
             }
         }
     }

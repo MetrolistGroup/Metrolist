@@ -145,8 +145,11 @@ class PlaylistImportManager(
         return result
     }
 
-    private fun CsvTrack.matchKey(): String =
-        listOf(title.trim().lowercase(), artist.trim().lowercase(), directReference.orEmpty()).joinToString("\u0000")
+    private fun CsvTrack.matchKey(): String {
+        val identity = listOfNotNull(title.trim().lowercase(), artist.trim().lowercase(), directReference.orEmpty(), videoId)
+        val albumIdentity = album.trim().lowercase().takeIf(String::isNotEmpty)
+        return (identity + if (albumIdentity == null) emptyList() else listOf("album", albumIdentity)).joinToString("\u0000")
+    }
 
     suspend fun loadYouTubePlaylist(
         input: String,
@@ -662,22 +665,38 @@ class PlaylistImportManager(
             return scheme == null || scheme.equals("file", ignoreCase = true)
         }
 
+        private val FEATURE_CREDIT =
+            Regex("""\s*[(\[](?:feat\.?|ft\.?|featuring|with)\s[^)\]]*[)\]]|\s+(?:feat\.?|ft\.?|featuring)\s.*$""", RegexOption.IGNORE_CASE)
+
+        private val ARTIST_CREDIT_SEPARATOR =
+            Regex("""\s*(?:,|&|\+|/|;|\b(?:featuring|feat|ft|with|vs|and|x)\b\.?)\s*""", RegexOption.IGNORE_CASE)
+
         internal fun bestTrackMatch(
             track: CsvTrack,
             candidates: List<SongItem>,
         ): SongItem? {
             fun normalized(value: String): String = value.lowercase().filter(Char::isLetterOrDigit)
-            val title = normalized(track.title)
+
+            // YouTube Music titles credit guests ("Starboy (feat. Daft Punk)") that Spotify lists as co-artists.
+            fun normalizedTitle(value: String): String = normalized(value.replace(FEATURE_CREDIT, ""))
+            val title = normalizedTitle(track.title)
             if (title.isEmpty()) return null
+
+            fun normalizedArtist(value: String): String = value.split(ARTIST_CREDIT_SEPARATOR).joinToString(",") { normalized(it) }
             val artist = normalized(track.artist)
+            val sourceArtists = ",${normalizedArtist(track.artist)},"
             val album = normalized(track.album)
             return candidates
                 .filter { song ->
-                    normalized(song.title) == title &&
+                    normalizedTitle(song.title) == title &&
                         (
                             artist.isEmpty() || normalized(song.artists.joinToString { it.name }) == artist ||
                                 track.artist.split(',').any { sourceArtist ->
                                     song.artists.any { normalized(it.name) == normalized(sourceArtist) }
+                                } ||
+                                // Preserve commas within names without matching substrings of other artists.
+                                song.artists.any {
+                                    normalized(it.name).length >= 3 && ",${normalizedArtist(it.name)}," in sourceArtists
                                 }
                         ) &&
                         (

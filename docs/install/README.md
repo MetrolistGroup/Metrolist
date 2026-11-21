@@ -17,7 +17,7 @@ The [release workflow](../../.github/workflows/release.yml) defines these packag
 | macOS | `metrolist-desktop-macos-arm64-VERSION.dmg`, `metrolist-desktop-macos-x64-VERSION.dmg` |
 | Linux | `metrolist-desktop-linux-x64-VERSION.AppImage`, `metrolist-desktop-linux-arm64-VERSION.AppImage` |
 
-The workflows do not publish MSI, DEB, RPM or Flatpak files. DEB/RPM Gradle targets and a local Flatpak build exist, but they are not release downloads. See the [desktop reference](../desktop.md#native-packages) for local packaging.
+The workflows do not publish MSI, DEB, RPM or Flatpak files. DEB/RPM Gradle targets and a local Flatpak build exist, but they are not release downloads; the Flatpak comes from [flatpark](linux.md#flatpak). See the [desktop reference](../desktop.md#native-packages) for local packaging.
 
 ## Verify a download
 

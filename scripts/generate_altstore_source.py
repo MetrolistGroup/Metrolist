@@ -11,7 +11,7 @@ import json
 from pathlib import Path
 
 BUNDLE_ID = "com.metrolist.MetrolistApp"
-MIN_OS_VERSION = "17.0"
+MIN_OS_VERSION = "15.0"
 
 
 def source(repository: str, version: str, ipa: Path, date: str) -> dict:

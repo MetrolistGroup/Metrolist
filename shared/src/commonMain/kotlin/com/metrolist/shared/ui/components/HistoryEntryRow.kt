@@ -43,6 +43,7 @@ import com.metrolist.shared.generated.resources.edit
 import com.metrolist.shared.generated.resources.more_options
 import com.metrolist.shared.ui.components.images.AsyncImage
 import com.metrolist.shared.ui.icons.MetrolistIcons
+import com.metrolist.shared.ui.menu.groupedMenuItemShapes
 import com.metrolist.shared.ui.menu.onSecondaryClick
 import com.metrolist.shared.ui.navigation.navigationPopupSource
 import com.metrolist.shared.ui.theme.ComponentShapes
@@ -177,10 +178,12 @@ fun HistoryEntryRow(
                         expanded = menuExpanded,
                         onDismissRequest = { menuExpanded = false },
                     ) {
+                        val menuItemCount = listOfNotNull(onEdit, onSongMenu).size + 1
                         DropdownMenuGroup(shapes = MenuDefaults.groupShape(0, 1)) {
                             if (onEdit != null) {
                                 DropdownMenuItem(
                                     text = { Text(editText) },
+                                    shape = groupedMenuItemShapes(0, menuItemCount).shape,
                                     onClick = {
                                         menuExpanded = false
                                         onEdit()
@@ -194,8 +197,26 @@ fun HistoryEntryRow(
                                     },
                                 )
                             }
+                            if (onSongMenu != null) {
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(Res.string.more_options)) },
+                                    shape = groupedMenuItemShapes(if (onEdit == null) 0 else 1, menuItemCount).shape,
+                                    onClick = {
+                                        menuExpanded = false
+                                        onSongMenu()
+                                    },
+                                    leadingIcon = {
+                                        Icon(
+                                            MetrolistIcons.Outlined.MoreVert,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(18.dp),
+                                        )
+                                    },
+                                )
+                            }
                             DropdownMenuItem(
                                 text = { Text(deleteText) },
+                                shape = groupedMenuItemShapes(menuItemCount - 1, menuItemCount).shape,
                                 onClick = {
                                     menuExpanded = false
                                     onDelete()
@@ -213,7 +234,7 @@ fun HistoryEntryRow(
                     }
                 }
             }
-            onSongMenu?.takeUnless { isSelectMode }?.let { open ->
+            onSongMenu?.takeUnless { isSelectMode || showInlineMenu }?.let { open ->
                 IconButton(modifier = Modifier.navigationPopupSource(), onClick = open, shapes = IconButtonDefaults.shapes()) {
                     Icon(MetrolistIcons.Default.MoreVert, stringResource(Res.string.more_options))
                 }

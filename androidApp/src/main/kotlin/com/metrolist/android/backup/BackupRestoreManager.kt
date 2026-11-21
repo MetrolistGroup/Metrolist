@@ -52,6 +52,7 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import java.io.File
+import java.util.UUID
 import java.util.zip.ZipEntry
 import java.util.zip.ZipInputStream
 import java.util.zip.ZipOutputStream
@@ -145,12 +146,11 @@ class BackupRestoreManager(
                 Settings.shared.flush()
                 database.useReaderConnection { }
                 val databasePath = context.getDatabasePath(BACKUP_DATABASE_ENTRY).path
-                val snapshot = File(context.cacheDir, "backup-$BACKUP_DATABASE_ENTRY").canonicalFile
-                val archive = File(context.cacheDir, "metrolist-backup.zip.tmp").canonicalFile
-                check(snapshot.parentFile?.let { it.mkdirs() || it.isDirectory } != false) { "Could not create backup directory" }
-                snapshot.delete()
-                archive.delete()
+                val staging = File(context.cacheDir, "metrolist-backup-${UUID.randomUUID()}")
+                check(staging.mkdir()) { "Could not create backup directory" }
                 try {
+                    val snapshot = File(staging, BACKUP_DATABASE_ENTRY)
+                    val archive = File(staging, "backup.zip")
                     createDatabaseSnapshot(File(databasePath), snapshot)
                     ZipOutputStream(archive.outputStream().buffered()).use { zip ->
                         zip.putNextEntry(ZipEntry(BACKUP_MANIFEST_ENTRY))
@@ -182,8 +182,7 @@ class BackupRestoreManager(
                         output.flush()
                     } ?: error("Could not open backup destination")
                 } finally {
-                    snapshot.delete()
-                    archive.delete()
+                    staging.deleteRecursively()
                 }
             }
         }

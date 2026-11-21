@@ -400,7 +400,7 @@ fun FrameWindowScope.WindowsWindowFrame(
             ComposeWindowProcedure(
                 window = window,
                 hitTest = { x, y ->
-                    captionHitTest.hitTest(x, y, PlayerState.isExpanded, layoutHitTestOwner::hitTest)
+                    captionHitTest.hitTest(x, y, PlayerState.isExpanded, layoutHitTestOwner::overlayHitTest, layoutHitTestOwner::hitTest)
                 },
                 onWindowInsetUpdate = { paddingInset.insets = it },
             )

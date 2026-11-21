@@ -10,7 +10,7 @@ import java.io.File
 object XdgUtils {
     fun getXdgDataHome(): File {
         val env = System.getenv("XDG_DATA_HOME")
-        return if (env != null && !env.isEmpty()) {
+        return if (env != null && File(env).isAbsolute) {
             File(env)
         } else {
             File(System.getProperty("user.home"), ".local/share")
@@ -19,7 +19,7 @@ object XdgUtils {
 
     fun getXdgCacheHome(): File {
         val env = System.getenv("XDG_CACHE_HOME")
-        return if (env != null && !env.isEmpty()) {
+        return if (env != null && File(env).isAbsolute) {
             File(env)
         } else {
             File(System.getProperty("user.home"), ".cache")
@@ -28,7 +28,7 @@ object XdgUtils {
 
     fun getXdgStateHome(): File {
         val env = System.getenv("XDG_STATE_HOME")
-        return if (env != null && !env.isEmpty()) {
+        return if (env != null && File(env).isAbsolute) {
             File(env)
         } else {
             File(System.getProperty("user.home"), ".local/state")
@@ -37,7 +37,7 @@ object XdgUtils {
 
     fun getXdgConfigHome(): File {
         val env = System.getenv("XDG_CONFIG_HOME")
-        return if (env != null && !env.isEmpty()) {
+        return if (env != null && File(env).isAbsolute) {
             File(env)
         } else {
             File(System.getProperty("user.home"), ".config")

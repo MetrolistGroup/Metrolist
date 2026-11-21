@@ -482,7 +482,6 @@
     <string name="settings_translation_mode_summary">Превеждане на думите или изписване на произношението с целевата писменост</string>
     <string name="settings_translation_provider_summary">Изберете услугата, която превежда текстовете</string>
     <string name="settings_translation_model_summary">Модел за превод или транскрипция на текстовете</string>
-    <string name="settings_detector_model_summary">Модел, който решава дали текстовете имат нужда от превод</string>
     <string name="settings_translation_formality_summary">Изберете официален или неофициален език за преводите на DeepL</string>
     <string name="settings_discord_advanced_summary">Показване на шаблони за активност и собствени бутони с връзки</string>
     <string name="settings_discord_activity_type_summary">Изберете как Discord описва музикалната ви активност</string>
