@@ -147,7 +147,7 @@ object HomeShelfBuilder {
                             style = HomeShelfStyle.SONG_GRID,
                             headerAction = HomeShelfHeaderAction.PLAY_ALL,
                             rows = 4,
-                            browseId = "FEmusic_quickpicks",
+                            browseId = sourceSections.firstOrNull { it.browseId?.startsWith("FEmusic_quickpicks") == true }?.browseId,
                         ),
                     )
                 }
