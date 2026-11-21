@@ -1022,6 +1022,7 @@ class PlayerViewModel(
             artists = song.artists,
             thumbnail = song.thumbnail,
             duration = song.duration.toDurationMillis(),
+            isLocal = song.isLocal,
             spotifyAnimatedCoverUrl = spotify,
             appleMusicAnimatedCoverUrl = apple,
             appleMusicTallAnimatedCoverUrl = appleTall,

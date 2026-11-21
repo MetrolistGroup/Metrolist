@@ -2526,6 +2526,8 @@
     <string name="share_podcast">Share podcast</string>
     <!-- Translators: Imperative action label for share song in the multiple app screens. -->
     <string name="share_song">Share song</string>
+    <!-- Translators: Button label for sharing selected lyrics as a vertical story card. -->
+    <string name="share_song_to_story">Share to story</string>
     <!-- Translators: Imperative action label for shuffle artist in the search. -->
     <!-- Translators: Imperative action label for shuffle playlist in the search. -->
     <string name="shuffle_playlist">Shuffle playlist</string>
@@ -4947,6 +4949,7 @@
     <string name="secondary_text_color">Secondary text color</string>
     <string name="lyrics_share_artwork_failed">Artwork could not be loaded. You can still share with a solid background.</string>
     <string name="lyrics_share_failed">Could not create or export the image. Try again.</string>
+    <string name="lyrics_share_story_style">Customize image</string>
     <string name="lyrics_share_color">%1$s: #%2$s</string>
     <string name="lyrics_share_save_image">Save PNG</string>
     <string name="lyrics_share_text">"%1$s"\n\n%2$s - %3$s\n%4$s</string>
@@ -5554,4 +5557,6 @@
     <string name="ai_setup_privacy_settings">Open privacy settings</string>
     <string name="ai_setup_sign_in_again">Sign in again</string>
     <string name="ai_setup_key_limits">Review key limits</string>
+    <string name="lyrics_share_square_image">Square image</string>
+    <string name="lyrics_share_story_image">Story image</string>
 </resources>

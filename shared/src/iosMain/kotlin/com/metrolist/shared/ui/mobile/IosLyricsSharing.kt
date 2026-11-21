@@ -9,7 +9,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asSkiaBitmap
 import com.metrolist.shared.generated.resources.Res
-import com.metrolist.shared.generated.resources.share
+import com.metrolist.shared.generated.resources.share_song_to_story
 import com.metrolist.shared.ui.components.lyrics.LyricsShareDialog
 import com.metrolist.shared.ui.settings.IosNativeFiles
 import com.metrolist.shared.viewmodels.PlayerViewModel
@@ -49,7 +49,9 @@ internal fun iosLyricsShareAction(
             title = song.title,
             artist = song.artists.joinToString { it.name },
             artworkUrl = song.displayThumbnail,
-            exportLabel = stringResource(Res.string.share),
+            exportLabel = stringResource(Res.string.share_song_to_story),
+            storyMode = true,
+            isLocal = song.isLocal,
             onExport = { shareLyricsImage(presenter, it) },
             onShareText = { IosNativeFiles.shareText(presenter, it) },
             onDismiss = { selectedText = null },
