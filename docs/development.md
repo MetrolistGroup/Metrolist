@@ -463,3 +463,5 @@ Music layouts order Previous, Play/Pause, Next and Like. Play/Pause shows a loca
 - Never commit heap dumps, traces, account tokens or local configuration. They can contain private data.
 
 Automatic backups are opt-in and keep the ten newest local archives. Android uses WorkManager, desktop runs while the app is open, and iOS requests background processing that the system may defer. Backup creation and retention cleanup are serialized. Failed retention cleanup retries without creating another archive.
+
+MLX preserves primary and inline background word groups inside background-marked rows. Sharing retains distinct foreground and background vocals even when they sing the same phrase.

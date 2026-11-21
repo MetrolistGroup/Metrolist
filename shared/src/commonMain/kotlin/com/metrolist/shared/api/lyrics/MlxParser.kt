@@ -487,7 +487,7 @@ object MlxParser {
                             header?.groupValues?.get(1)?.let(::tsToMs)
                                 ?: mainWords?.firstOrNull()?.startTime?.let { (it * 1000).toLong() } ?: startMs,
                         text = mainText,
-                        words = if (isBackground) allWords?.map { it.copy(isBackground = true) } else allWords,
+                        words = allWords,
                         agent = agentId,
                         endTime = endMs,
                         isBackground = isBackground,
