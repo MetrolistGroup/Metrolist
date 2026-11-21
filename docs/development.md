@@ -185,6 +185,8 @@ Tapping a search result inside a playlist, album or stored collection queues the
 
 Start radio for the current song keeps its audio and position while replacing the queue. It resumes a paused song unless **Keep paused when changing songs** is on; the system media Start radio action always resumes it. While casting, the receiver keeps its playback state. A different seed starts from the beginning. On Android, Start radio turns repeat off so recommendations can populate the queue.
 
+With **Classic recommendations** enabled, radio asks `/next` with the video id alone instead of a generated playlist, keeps YouTube's recommendation order without skipping previously recommended songs, and serves the rest of a fetched page before requesting the next one. Continuations belong to the mode that fetched them; changing the setting mid-queue restarts the feed in the selected mode. Songs related to qualified plays are stored locally to feed Home Quick picks; seeds without a YouTube id, such as local files, skip that fetch.
+
 Desktop manual Next can promote an already prepared successor with the chosen play/pause intent. Active crossfades and podcasts use ordinary advancement so cancellation and resume positions apply.
 
 Android and desktop **Add to queue** and **Play next** respect **Prevent duplicate tracks in queue** when starting an empty or dismissed queue: the first occurrence of each track is kept in batch order. The first track is prepared paused.
@@ -459,3 +461,5 @@ Music layouts order Previous, Play/Pause, Next and Like. Play/Pause shows a loca
 - For protobuf errors, initialize `metroproto` and run `./gradlew :shared:desktopTest` to regenerate and test the codecs.
 - If the configuration cache is stale, rerun the failing command with `--no-configuration-cache`.
 - Never commit heap dumps, traces, account tokens or local configuration. They can contain private data.
+
+Automatic backups are opt-in and keep the ten newest local archives. Android uses WorkManager, desktop runs while the app is open, and iOS requests background processing that the system may defer. Backup creation and retention cleanup are serialized. Failed retention cleanup retries without creating another archive.

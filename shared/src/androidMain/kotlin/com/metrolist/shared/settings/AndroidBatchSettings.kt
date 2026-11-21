@@ -2,7 +2,6 @@
 
 package com.metrolist.shared.settings
 
-import android.util.Log
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.MutablePreferences
 import androidx.datastore.preferences.core.Preferences
@@ -57,7 +56,7 @@ internal class AndroidBatchSettings(
                 if (pendingSnapshot === pending) pendingSnapshot = null
             }
         } catch (error: Exception) {
-            Log.e("Settings", "Could not persist preferences", error)
+            logSettingsFailure("Could not persist preferences", error)
             throw error
         }
     }

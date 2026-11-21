@@ -439,6 +439,7 @@ dependencies {
 
     implementation(libs.activity)
     implementation(libs.lifecycle.process)
+    implementation(libs.androidx.work.runtime)
     implementation(libs.material3)
     implementation(libs.androidx.navigation3.ui)
     implementation(libs.androidx.navigation3.runtime)

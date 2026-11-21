@@ -8,6 +8,7 @@ import com.metrolist.shared.api.musicvideo.MusicVideoResolver
 import com.metrolist.shared.api.musicvideo.MusicVideoResult
 import com.metrolist.shared.db.MusicDatabase
 import com.metrolist.shared.db.entities.Event
+import com.metrolist.shared.db.entities.RelatedSongMap
 import com.metrolist.shared.db.upsertHistorySong
 import com.metrolist.shared.db.withDatabaseTransaction
 import com.metrolist.shared.deviceconnect.DcScrobbleSession
@@ -93,6 +94,8 @@ import kotlin.time.Clock
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.TimeMark
 import kotlin.time.TimeSource
+
+private const val RELATED_SONGS_LIMIT = 20
 
 internal class IosPlaybackController(
     private val player: MusicPlayer,
@@ -367,6 +370,8 @@ internal class IosPlaybackController(
     private val recommendationHistory = RadioRecommendationHistory()
     private var radioJob: Job? = null
     private var radioContinuation: String? = null
+    private var radioContinuationClassic: Boolean = Settings.shared.classicRecommendations
+    private var radioExplicitFeed = false
     private var deferredRadioBootstrap = false
     private var currentRadioSeedId: String? = null
     private var currentRadioPlaylistId: String? = null
@@ -827,7 +832,7 @@ internal class IosPlaybackController(
                                 if (radioContinuation != null) {
                                     continueRadioIfNeeded(seedId)
                                 } else {
-                                    bootstrapRecommendations(seedId, currentRadioPlaylistId ?: "RDAMVM$seedId", currentRadioParams)
+                                    bootstrapRecommendations(seedId, currentRadioPlaylistId, currentRadioParams)
                                 }
                                 radioJob?.join()
                             }
@@ -847,7 +852,7 @@ internal class IosPlaybackController(
             ) { idx, q, _, _ -> idx to q }.collect { (idx, q) ->
                 if (deferredRadioBootstrap && canAutoLoadMore && radioJob?.isActive != true) {
                     currentRadioSeedId?.let { seedId ->
-                        bootstrapRecommendations(seedId, currentRadioPlaylistId ?: "RDAMVM$seedId", currentRadioParams)
+                        bootstrapRecommendations(seedId, currentRadioPlaylistId, currentRadioParams)
                     }
                 }
                 if (q.isNotEmpty() && idx >= q.size - 3) {
@@ -1464,14 +1469,19 @@ internal class IosPlaybackController(
 
     private fun bootstrapRecommendations(
         seedSongId: String,
-        playlistId: String = "RDAMVM$seedSongId",
+        playlistId: String? = null,
         params: String? = null,
         selectedChipId: String? = null,
     ) {
         radioJob?.cancel()
+        // Classic recommendations ask /next with the video id alone; explicit chip choices keep their playlist.
+        val requestClassic = Settings.shared.classicRecommendations
+        val explicitFeed = selectedChipId != null || params != null || (playlistId != null && playlistId != "RDAMVM$seedSongId")
+        radioExplicitFeed = explicitFeed
+        val requestPlaylistId = playlistId ?: if (requestClassic) null else "RDAMVM$seedSongId"
         if (selectedChipId == null) {
             currentRadioSeedId = seedSongId
-            currentRadioPlaylistId = playlistId
+            currentRadioPlaylistId = requestPlaylistId
             currentRadioParams = params
             radioContinuation = null
             suggestedTracks.value = emptyList()
@@ -1489,21 +1499,23 @@ internal class IosPlaybackController(
                         loadRadioRecommendations(
                             repository().startRadioQueue(
                                 videoId = seedSongId,
-                                playlistId = playlistId,
+                                playlistId = requestPlaylistId,
                                 params = params,
                             ),
                             seedSongId,
                             isBootstrap = true,
+                            requestClassic = requestClassic,
                             finiteQueue = selectedChipId == null && isFiniteQueue,
                         ) ?: return@launch
                     currentRadioSeedId = seedSongId
-                    currentRadioPlaylistId = playlistId
+                    currentRadioPlaylistId = requestPlaylistId
                     currentRadioParams = params
                     if (selectedChipId != null) isFiniteQueue = false
                     deferredRadioBootstrap = false
                     suggestedTracks.value = page.songs
                     recommendationHistory.remember(page.songs)
                     radioContinuation = page.continuation
+                    radioContinuationClassic = requestClassic
                     val chips =
                         if (selectedChipId != null) {
                             page.chips.selectRadioQueueChip(selectedChipId)
@@ -1525,18 +1537,32 @@ internal class IosPlaybackController(
 
     private fun continueRadioIfNeeded(seedSongId: String) {
         if (!canAutoLoadMore) return
+        // Continuations belong to the recommendations mode that fetched them; a
+        // mode change starts a fresh radio instead of reusing the old feed.
+        if (!radioExplicitFeed && radioContinuationClassic != Settings.shared.classicRecommendations) {
+            radioContinuation = null
+            bootstrapRecommendations(seedSongId)
+            return
+        }
         val continuation = radioContinuation ?: return
         if (radioJob?.isActive == true) return
+        val requestClassic = Settings.shared.classicRecommendations
         radioJob =
             scope.launch {
                 isQueueLoading.value = true
                 try {
                     val page =
-                        loadRadioRecommendations(repository().continueRadioQueue(continuation), seedSongId, isBootstrap = false)
+                        loadRadioRecommendations(
+                            repository().continueRadioQueue(continuation),
+                            seedSongId,
+                            isBootstrap = false,
+                            requestClassic = requestClassic,
+                        )
                             ?: return@launch
                     suggestedTracks.value += page.songs
                     recommendationHistory.remember(page.songs)
                     radioContinuation = page.continuation
+                    radioContinuationClassic = requestClassic
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
@@ -1553,11 +1579,15 @@ internal class IosPlaybackController(
         seedSongId: String,
         isBootstrap: Boolean,
         finiteQueue: Boolean = isFiniteQueue,
+        requestClassic: Boolean,
     ): RadioQueuePage? =
         recommendationHistory.select(
             firstPage = firstPage,
+            classic = requestClassic,
             isCurrent = {
-                val allowed = canAutoLoadMore || (isBootstrap && !finiteQueue)
+                val allowed =
+                    (radioExplicitFeed || requestClassic == Settings.shared.classicRecommendations) &&
+                        (canAutoLoadMore || (isBootstrap && !finiteQueue))
                 if (!allowed && isBootstrap) deferredRadioBootstrap = true
                 allowed
             },
@@ -1712,6 +1742,39 @@ internal class IosPlaybackController(
         } catch (error: Exception) {
             logIosPlaybackError("Failed to record local play for ${song.id}", error)
             Logger.w("IosPlaybackController", "Failed to record local play id=${song.id}")
+        }
+        if (Settings.shared.classicRecommendations) recordRelatedSongs(song.id)
+    }
+
+    /** Stores the songs YouTube relates to [songId], feeding the classic local Quick picks. */
+    private suspend fun recordRelatedSongs(songId: String) {
+        // Local files have no YouTube watch id, so their relations cannot be fetched.
+        if (songId.startsWith("local_")) return
+        try {
+            val dao = database.dao()
+            if (dao.hasRelatedSongs(songId)) return
+            val related =
+                repository()
+                    .startRadioQueue(songId)
+                    .songs
+                    .filter { it.id.isNotBlank() && it.id != songId }
+                    .distinctBy { it.id }
+                    .take(RELATED_SONGS_LIMIT)
+            if (related.isEmpty()) return
+            database.withDatabaseTransaction {
+                // Recheck inside the transaction: overlapping qualified plays of the
+                // same seed could both pass the check above before either write.
+                if (dao.hasRelatedSongs(songId)) return@withDatabaseTransaction
+                related.forEach { relatedSong ->
+                    dao.upsertHistorySong(relatedSong)
+                    dao.insert(RelatedSongMap(songId = songId, relatedSongId = relatedSong.id))
+                }
+            }
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: Exception) {
+            logIosPlaybackError("Failed to record related songs for $songId", error)
+            Logger.w("IosPlaybackController", "Failed to record related songs id=$songId")
         }
     }
 
@@ -2114,7 +2177,7 @@ internal class IosPlaybackController(
             if (radioSeed != null) {
                 bootstrapRecommendations(
                     seedSongId = radioSeed,
-                    playlistId = radioPlaylist ?: "RDAMVM$radioSeed",
+                    playlistId = radioPlaylist,
                     params = radioParams,
                 )
             }

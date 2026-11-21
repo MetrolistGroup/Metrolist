@@ -1,6 +1,6 @@
 package com.metrolist.shared.deviceconnect
 
-internal const val DEVICE_CONNECT_PLAYBACK_VERSION = 4
+internal const val DEVICE_CONNECT_PLAYBACK_VERSION = 5
 internal const val DEVICE_CONNECT_PLAYBACK_CHUNK_BYTES = 24 * 1024
 internal const val DEVICE_CONNECT_MAX_PLAYBACK_BYTES = 8 * 1024 * 1024
 internal const val DEVICE_CONNECT_PLAYBACK_TIMEOUT_MS = 10_000L

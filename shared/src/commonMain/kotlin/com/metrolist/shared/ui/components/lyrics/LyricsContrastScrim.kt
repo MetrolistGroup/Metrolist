@@ -35,15 +35,16 @@ internal fun lyricsContrastScrimAlpha(
     backgrounds: List<Color>,
 ): Float {
     val textLuminance = textColor.luminance()
+    val scrimColor = if (textLuminance > 0.5f) Color.Black else Color.White
 
     fun readable(alpha: Float): Boolean =
         backgrounds.all { background ->
             val luminance =
-                Color.Black
+                scrimColor
                     .copy(alpha = alpha)
                     .compositeOver(background)
                     .luminance()
-            (textLuminance + 0.05f) / (luminance + 0.05f) >= 4.5f
+            (maxOf(textLuminance, luminance) + 0.05f) / (minOf(textLuminance, luminance) + 0.05f) >= 4.5f
         }
 
     if (readable(0f)) return 0f
@@ -88,6 +89,7 @@ fun LyricsContrastScrim(
     artworkSaturation: Float = 1f,
     isLiquid: Boolean = false,
     visible: Boolean = true,
+    foregroundColor: Color = Color.White,
 ) {
     AnimatedVisibility(
         visible = visible,
@@ -95,7 +97,7 @@ fun LyricsContrastScrim(
         enter = EnterTransition.None,
         exit = fadeOut(tween(500)),
     ) {
-        val textColor = resolveLyricsTextColor(Color.White)
+        val textColor = resolveLyricsTextColor(foregroundColor)
         val context = LocalPlatformContext.current
         val prepared = LocalPlayerTrackArtwork.current?.takeIf { it.url == artworkUrl }?.bitmap
         val bitmap =
@@ -142,7 +144,11 @@ fun LyricsContrastScrim(
             } else {
                 backgroundColors
             }
-        val alpha = lyricsContrastScrimAlpha(textColor, backgrounds)
-        if (alpha > 0f) Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = alpha)))
+        val lightText = textColor.luminance() > 0.5f
+        // Black bounds the darkest artwork behind dark lyrics, including failed image loads.
+        val contrastBackgrounds = if (lightText) backgrounds else listOf(Color.Black)
+        val alpha = lyricsContrastScrimAlpha(textColor, contrastBackgrounds)
+        val scrimColor = if (lightText) Color.Black else Color.White
+        if (alpha > 0f) Box(Modifier.fillMaxSize().background(scrimColor.copy(alpha = alpha)))
     }
 }

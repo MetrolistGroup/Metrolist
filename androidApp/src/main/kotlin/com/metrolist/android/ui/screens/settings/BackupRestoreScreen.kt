@@ -60,6 +60,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.DialogProperties
 import androidx.sqlite.driver.AndroidSQLiteDriver
 import com.metrolist.android.R
+import com.metrolist.android.backup.AutomaticBackupWorker
 import com.metrolist.android.backup.BackupRestoreManager
 import com.metrolist.android.playlistimport.AmazonMusicLoginScreen
 import com.metrolist.android.playlistimport.AndroidPlaylistImportTransfer
@@ -77,6 +78,7 @@ import com.metrolist.android.spotifyimport.SpotifyPlaylistPreviewSheet
 import com.metrolist.android.spotifyimport.androidSpotifyImportManager
 import com.metrolist.android.ui.component.AdaptiveModalBottomSheet
 import com.metrolist.shared.amazonmusicimport.AmazonMusicImportManager
+import com.metrolist.shared.backup.AutoBackupFrequency
 import com.metrolist.shared.backup.defaultBackupFilename
 import com.metrolist.shared.backup.foreignImportMessage
 import com.metrolist.shared.backup.importForeignBackup
@@ -86,6 +88,15 @@ import com.metrolist.shared.deezerimport.DeezerImportManager
 import com.metrolist.shared.generated.resources.Res
 import com.metrolist.shared.generated.resources.action_backup
 import com.metrolist.shared.generated.resources.action_restore
+import com.metrolist.shared.generated.resources.automatic_backup
+import com.metrolist.shared.generated.resources.automatic_backup_daily
+import com.metrolist.shared.generated.resources.automatic_backup_description
+import com.metrolist.shared.generated.resources.automatic_backup_frequency
+import com.metrolist.shared.generated.resources.automatic_backup_location
+import com.metrolist.shared.generated.resources.automatic_backup_monthly
+import com.metrolist.shared.generated.resources.automatic_backup_restore
+import com.metrolist.shared.generated.resources.automatic_backup_restore_empty
+import com.metrolist.shared.generated.resources.automatic_backup_weekly
 import com.metrolist.shared.generated.resources.back
 import com.metrolist.shared.generated.resources.backup_create_failed
 import com.metrolist.shared.generated.resources.backup_create_success
@@ -166,6 +177,7 @@ import com.metrolist.shared.generated.resources.or_choose_existing_playlist
 import com.metrolist.shared.generated.resources.playlist
 import com.metrolist.shared.generated.resources.playlist_imports_title
 import com.metrolist.shared.generated.resources.playlist_name
+import com.metrolist.shared.generated.resources.restore_backup
 import com.metrolist.shared.generated.resources.restore_confirm_message
 import com.metrolist.shared.generated.resources.restore_confirm_title
 import com.metrolist.shared.generated.resources.restore_database_incompatible
@@ -195,6 +207,7 @@ import com.metrolist.shared.playlistimport.ImportedPlaylistData
 import com.metrolist.shared.playlistimport.PlaylistImportManager
 import com.metrolist.shared.playlistimport.PlaylistImportStatusManager
 import com.metrolist.shared.playlistimport.UnifiedPlaylistImporter
+import com.metrolist.shared.settings.Settings
 import com.metrolist.shared.spotifyimport.SpotifyImportManager
 import com.metrolist.shared.state.GlobalYouTubeRepository
 import com.metrolist.shared.tidalimport.TidalImportManager
@@ -285,6 +298,7 @@ fun BackupRestoreScreen(onNavigateBack: () -> Unit) {
     val importProviderAppleMusicText = stringResource(Res.string.import_provider_apple_music)
 
     val context = LocalContext.current
+    val appSettings = Settings.shared
     val database: MusicDatabase = koinInject()
     val applicationScope: CoroutineScope = koinInject()
     val scope = rememberCoroutineScope()
@@ -293,6 +307,13 @@ fun BackupRestoreScreen(onNavigateBack: () -> Unit) {
         remember(context, database) {
             BackupRestoreManager(context.applicationContext, database)
         }
+    LaunchedEffect(appSettings.autoBackupEnabled, appSettings.autoBackupFrequency) {
+        AutomaticBackupWorker.schedule(
+            context.applicationContext,
+            appSettings.autoBackupEnabled,
+            AutoBackupFrequency.fromSetting(appSettings.autoBackupFrequency),
+        )
+    }
     val playlistImportManager =
         remember(database) {
             PlaylistImportManager(database, GlobalYouTubeRepository.instance)
@@ -318,6 +339,9 @@ fun BackupRestoreScreen(onNavigateBack: () -> Unit) {
     val controlsEnabled = !isBusy && activeImport?.isRunning != true
 
     var restoreUri by remember { mutableStateOf<Uri?>(null) }
+    var automaticBackups by remember { mutableStateOf(emptyList<File>()) }
+    var showAutomaticBackupPicker by remember { mutableStateOf(false) }
+    var automaticBackupToRestore by remember { mutableStateOf<File?>(null) }
     var restoreError by remember { mutableStateOf<String?>(null) }
     var showBackupWarning by remember { mutableStateOf(false) }
     var warningSeconds by remember { mutableIntStateOf(5) }
@@ -847,6 +871,79 @@ fun BackupRestoreScreen(onNavigateBack: () -> Unit) {
             },
             dismissButton = {
                 TextButton(onClick = { restoreUri = null }, shapes = ButtonDefaults.shapes()) {
+                    Text(androidStringResource(android.R.string.cancel))
+                }
+            },
+        )
+    }
+
+    PopupVisibility(visible = showAutomaticBackupPicker) {
+        AlertDialog(
+            onDismissRequest = { showAutomaticBackupPicker = false },
+            title = { Text(stringResource(Res.string.automatic_backup_restore)) },
+            text = {
+                if (automaticBackups.isEmpty()) {
+                    Text(stringResource(Res.string.automatic_backup_restore_empty))
+                } else {
+                    LazyColumn {
+                        items(automaticBackups, key = File::getName) { backup ->
+                            TextButton(
+                                onClick = {
+                                    automaticBackupToRestore = backup
+                                    showAutomaticBackupPicker = false
+                                },
+                            ) {
+                                Text(backup.name)
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showAutomaticBackupPicker = false
+                        runCatching {
+                            restoreLauncher.launch(arrayOf("application/zip", "application/octet-stream", "*/*"))
+                        }
+                    },
+                ) {
+                    Text(stringResource(Res.string.restore_backup))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showAutomaticBackupPicker = false }) {
+                    Text(androidStringResource(android.R.string.cancel))
+                }
+            },
+        )
+    }
+
+    PopupContent(automaticBackupToRestore) { backup ->
+        AlertDialog(
+            onDismissRequest = { automaticBackupToRestore = null },
+            title = { Text(stringResource(Res.string.restore_confirm_title)) },
+            text = { Text(stringResource(Res.string.restore_confirm_message)) },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        automaticBackupToRestore = null
+                        scope.launch {
+                            isBusy = true
+                            isRestoring = true
+                            playlistCollectionJob?.cancelAndJoin()
+                            val result = manager.restore(backup)
+                            isBusy = false
+                            isRestoring = false
+                            result.exceptionOrNull()?.let { error -> restoreError = error.restoreMessage() }
+                        }
+                    },
+                ) {
+                    Text(stringResource(Res.string.action_restore))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { automaticBackupToRestore = null }) {
                     Text(androidStringResource(android.R.string.cancel))
                 }
             },
@@ -1785,6 +1882,35 @@ fun BackupRestoreScreen(onNavigateBack: () -> Unit) {
         title = stringResource(Res.string.backup_restore_title),
         onNavigateBack = onNavigateBack,
     ) {
+        val frequency = AutoBackupFrequency.fromSetting(appSettings.autoBackupFrequency)
+        SettingsSubScreenGroup(
+            title = stringResource(Res.string.automatic_backup),
+            description = stringResource(Res.string.automatic_backup_location),
+            items =
+                listOf(
+                    SettingsSubScreenItem(
+                        title = stringResource(Res.string.automatic_backup),
+                        description = stringResource(Res.string.automatic_backup_description),
+                        checked = appSettings.autoBackupEnabled,
+                        onClick = { appSettings.autoBackupEnabled = !appSettings.autoBackupEnabled },
+                    ),
+                    listChooserSettingsItem(
+                        title = stringResource(Res.string.automatic_backup_frequency),
+                        options = AutoBackupFrequency.entries,
+                        selectedOption = frequency,
+                        optionToString = { selectedFrequency ->
+                            stringResource(
+                                when (selectedFrequency) {
+                                    AutoBackupFrequency.DAILY -> Res.string.automatic_backup_daily
+                                    AutoBackupFrequency.WEEKLY -> Res.string.automatic_backup_weekly
+                                    AutoBackupFrequency.MONTHLY -> Res.string.automatic_backup_monthly
+                                },
+                            )
+                        },
+                        enabled = appSettings.autoBackupEnabled,
+                    ) { selectedFrequency -> appSettings.autoBackupFrequency = selectedFrequency.name },
+                ),
+        )
         if (isBusy) LinearWavyProgressIndicator(Modifier.fillMaxWidth())
         SettingsSubScreenGroup(
             title = stringResource(Res.string.backup_restore_title),
@@ -1815,10 +1941,23 @@ fun BackupRestoreScreen(onNavigateBack: () -> Unit) {
                             },
                         enabled = controlsEnabled,
                         onClick = {
-                            runCatching {
-                                restoreLauncher.launch(
-                                    arrayOf("application/zip", "application/octet-stream", "*/*"),
-                                )
+                            scope.launch {
+                                automaticBackups =
+                                    withContext(Dispatchers.IO) {
+                                        File(context.filesDir, "automatic-backups")
+                                            .listFiles { file -> file.isFile && file.extension == "zip" }
+                                            .orEmpty()
+                                            .sortedByDescending(File::lastModified)
+                                    }
+                                if (automaticBackups.isNotEmpty()) {
+                                    showAutomaticBackupPicker = true
+                                } else {
+                                    runCatching {
+                                        restoreLauncher.launch(
+                                            arrayOf("application/zip", "application/octet-stream", "*/*"),
+                                        )
+                                    }
+                                }
                             }
                         },
                     ),

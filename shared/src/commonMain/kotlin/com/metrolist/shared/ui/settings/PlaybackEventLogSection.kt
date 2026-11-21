@@ -34,12 +34,12 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.metrolist.shared.generated.resources.Res
+import com.metrolist.shared.generated.resources.application_failure_log_raw_description
+import com.metrolist.shared.generated.resources.application_failure_log_raw_empty
 import com.metrolist.shared.generated.resources.clear
 import com.metrolist.shared.generated.resources.copy
 import com.metrolist.shared.generated.resources.devtools_playback_log_count
 import com.metrolist.shared.generated.resources.devtools_playback_log_title
-import com.metrolist.shared.generated.resources.playback_event_log_raw_description
-import com.metrolist.shared.generated.resources.playback_event_log_raw_empty
 import com.metrolist.shared.generated.resources.share
 import com.metrolist.shared.ui.icons.MetrolistIcons
 import com.metrolist.shared.ui.utils.DragScrollableColumn
@@ -63,7 +63,7 @@ fun PlaybackEventLogSection(
     val previews by produceState(emptyList<Pair<Long, String>>(), events, formatTimestamp) {
         value =
             withContext(Dispatchers.Default) {
-                events.takeLast(300).map { it.id to it.previewText(formatTimestamp) }
+                events.takeLast(100).map { it.id to it.previewText(formatTimestamp) }
             }
     }
 
@@ -75,7 +75,7 @@ fun PlaybackEventLogSection(
             modifier = Modifier.padding(start = 16.dp, top = 8.dp, end = 32.dp, bottom = 4.dp),
         )
         Text(
-            text = stringResource(Res.string.playback_event_log_raw_description),
+            text = stringResource(Res.string.application_failure_log_raw_description),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(start = 16.dp, end = 24.dp, bottom = 4.dp),
@@ -153,7 +153,7 @@ fun PlaybackEventLogSection(
                 if (events.isEmpty()) {
                     item {
                         Text(
-                            stringResource(Res.string.playback_event_log_raw_empty),
+                            stringResource(Res.string.application_failure_log_raw_empty),
                             color = Color.White,
                             style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
                         )

@@ -46,6 +46,7 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.layout.onSizeChanged
@@ -194,7 +195,15 @@ fun PlayerCoreContent(
 
             val isSolid = Settings.shared.playerBackgroundStyle == PlayerBackgroundStyle.SOLID
             val textBackgroundColor by animateColorAsState(
-                targetValue = if (isSolid) MaterialTheme.colorScheme.onSurface else Color.White,
+                targetValue =
+                    when {
+                        isSolid -> MaterialTheme.colorScheme.onSurface
+
+                        Settings.shared.playerBackgroundStyle == PlayerBackgroundStyle.LIQUID &&
+                            MaterialTheme.colorScheme.surface.luminance() >= 0.5f -> Color.Black
+
+                        else -> Color.White
+                    },
                 label = "PlayerContentTextColor",
             )
 
@@ -497,7 +506,15 @@ fun PlayerProgressSection() {
 
     val isSolid = Settings.shared.playerBackgroundStyle == PlayerBackgroundStyle.SOLID
     val textSecondaryColor by animateColorAsState(
-        targetValue = if (isSolid) MaterialTheme.colorScheme.onSurfaceVariant else Color.White.copy(alpha = 0.7f),
+        targetValue =
+            when {
+                isSolid -> MaterialTheme.colorScheme.onSurfaceVariant
+
+                Settings.shared.playerBackgroundStyle == PlayerBackgroundStyle.LIQUID &&
+                    MaterialTheme.colorScheme.surface.luminance() >= 0.5f -> Color.Black.copy(alpha = 0.7f)
+
+                else -> Color.White.copy(alpha = 0.7f)
+            },
         label = "PlayerProgressDurationColor",
     )
 
