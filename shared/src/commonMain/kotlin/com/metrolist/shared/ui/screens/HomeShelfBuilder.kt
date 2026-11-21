@@ -136,6 +136,9 @@ object HomeShelfBuilder {
             }
 
             if (isVisible("quick_picks", text.quickPicks)) {
+                val quickPicksSections = sourceSections.filter { it.browseId?.startsWith("FEmusic_quickpicks") == true }
+                val quickPicksSection =
+                    quickPicksSections.firstOrNull { it.title == text.quickPicks } ?: quickPicksSections.firstOrNull()
                 val uniqueQuickPicks =
                     state.quickPicks
                         .distinctBy(::canonicalHomeItemId)
@@ -149,7 +152,8 @@ object HomeShelfBuilder {
                             style = HomeShelfStyle.SONG_GRID,
                             headerAction = HomeShelfHeaderAction.PLAY_ALL,
                             rows = 4,
-                            browseId = sourceSections.firstOrNull { it.browseId?.startsWith("FEmusic_quickpicks") == true }?.browseId,
+                            browseId = quickPicksSection?.browseId,
+                            params = quickPicksSection?.params,
                         ),
                     )
                 }
