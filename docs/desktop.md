@@ -26,7 +26,7 @@ Connected action groups use the shared Material shapes and spacing, with fixed c
 
 ## Keyboard shortcuts
 
-Non-QWERTY shortcut matching uses the physical key position while the app window is active. Windows captures scan codes with a low-level keyboard hook. macOS listens for key events through a listen-only event tap and requires Input Monitoring permission in System Settings > Privacy & Security. Linux captures physical keys only with the X11 toolkit, including XWayland, and requires the Xtst runtime library. Native Wayland has no physical-key capture. When capture is denied or unavailable, shortcuts fall back to AWT's key code and character; non-QWERTY layouts may then behave according to the produced character instead of the physical key position. A captured key without a mapped physical position does not match a physical-position shortcut.
+On non-QWERTY layouts, mapped symbol shortcuts (backquote, minus, equals, numpad plus, comma and slash) match the physical key position while the app window is active; letter shortcuts match the character the layout produces. Windows captures scan codes with a low-level keyboard hook. macOS listens for key events through a listen-only event tap and requires Input Monitoring permission in System Settings > Privacy & Security. Linux captures physical keys only with the X11 toolkit, including XWayland, and requires the Xtst runtime library. Native Wayland has no physical-key capture. When capture is denied or unavailable, those symbol shortcuts fall back to AWT's key code and character; non-QWERTY layouts may then behave according to the produced character. A captured key without a mapped physical position does not match a physical-position shortcut.
 
 ## Miniplayer
 

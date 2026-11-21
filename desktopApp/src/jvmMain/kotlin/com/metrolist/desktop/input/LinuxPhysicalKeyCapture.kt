@@ -26,9 +26,25 @@ internal class LinuxPhysicalKeyCapture : PlatformPhysicalKeyCapture {
 
     @Volatile private var recordApi: XTestRecord? = null
 
+    @Volatile private var controlDisplay: Pointer? = null
+
+    @Volatile private var recordContext: NativeLong? = null
+
+    @Volatile private var closed = false
+
+    private val wakeupPipe = IntArray(2) { -1 }
+
+    init {
+        if (Posix.INSTANCE.pipe(wakeupPipe) != 0) {
+            wakeupPipe[0] = -1
+            wakeupPipe[1] = -1
+        }
+    }
+
     override val isAvailable: Boolean get() = available
 
     override fun setEnabled(enabled: Boolean) {
+        if (closed) return
         if (enabled) {
             val ready =
                 lifecycleLock.withLock {
@@ -47,6 +63,23 @@ internal class LinuxPhysicalKeyCapture : PlatformPhysicalKeyCapture {
                 pending.clear()
                 worker
             }
+        val activeContext = recordContext
+        if (currentWorker?.isAlive == true && activeContext != null) {
+            // Use a separate connection so this caller never shares Xlib state with the capture thread.
+            runCatching {
+                val display = X11.INSTANCE.XOpenDisplay(null) ?: return@runCatching
+                try {
+                    recordApi?.XRecordDisableContext(display, activeContext)
+                    X11.INSTANCE.XSync(display, false)
+                } finally {
+                    X11.INSTANCE.XCloseDisplay(display)
+                }
+            }
+        }
+        val wakeupFd = wakeupPipe[1]
+        if (currentWorker?.isAlive == true && wakeupFd >= 0) {
+            runCatching { Posix.INSTANCE.write(wakeupFd, byteArrayOf(1), NativeLong(1)) }
+        }
         currentWorker?.join(1_000)
         lifecycleLock.withLock {
             if (worker === currentWorker && currentWorker?.isAlive != true) worker = null
@@ -102,43 +135,58 @@ internal class LinuxPhysicalKeyCapture : PlatformPhysicalKeyCapture {
             clients.setNativeLong(0, NativeLong(X_RECORD_ALL_CLIENTS))
             val ranges = Memory(Native.POINTER_SIZE.toLong())
             ranges.setPointer(0, range)
-            val recordContext = xtst.XRecordCreateContext(activeControlDisplay, 0, clients, 1, ranges, 1)
-            if (recordContext.toLong() == 0L) return
-            context = recordContext
+            val activeContext = xtst.XRecordCreateContext(activeControlDisplay, 0, clients, 1, ranges, 1)
+            if (activeContext.toLong() == 0L) return
+            context = activeContext
             x11.XSync(activeControlDisplay, false)
-            if (xtst.XRecordEnableContextAsync(activeEventDisplay, recordContext, callback, null) == 0) return
+            val enabled =
+                lifecycleLock.withLock {
+                    controlDisplay = activeControlDisplay
+                    recordContext = activeContext
+                    requested && xtst.XRecordEnableContextAsync(activeEventDisplay, activeContext, callback, null) != 0
+                }
+            if (!enabled) return
 
             available = true
             ready.countDown()
             x11.XFlush(activeEventDisplay)
+            val eventFd = x11.XConnectionNumber(activeEventDisplay)
+            val pollFds = arrayOf(PollFd(eventFd, POLLIN), PollFd(wakeupPipe[0], POLLIN))
             while (requested) {
-                xtst.XRecordProcessReplies(activeEventDisplay)
-                try {
-                    Thread.sleep(REPLY_POLL_INTERVAL_MILLIS)
-                } catch (_: InterruptedException) {
-                    Thread.currentThread().interrupt()
-                    break
+                pollFds[0].revents = 0
+                pollFds[1].revents = 0
+                if (Posix.INSTANCE.poll(pollFds, NativeLong(pollFds.size.toLong()), -1) < 0) break
+                if (pollFds[1].revents.toInt() != 0) {
+                    drainWakeup()
+                    continue
                 }
+                val events = pollFds[0].revents.toInt()
+                if (events and (POLLERR or POLLHUP or POLLNVAL) != 0) break
+                if (events and POLLIN != 0) xtst.XRecordProcessReplies(activeEventDisplay)
             }
         } catch (_: UnsatisfiedLinkError) {
             available = false
         } finally {
             ready.countDown()
             val activeContext = context
-            eventDisplay?.let { display ->
-                activeContext?.let { recordContext ->
-                    runCatching { recordApi?.XRecordDisableContext(display, recordContext) }
-                }
-            }
-            controlDisplay?.let { display ->
-                activeContext?.let { recordContext ->
-                    runCatching { recordApi?.XRecordFreeContext(display, recordContext) }
-                }
+            val activeControlDisplay = controlDisplay
+            controlDisplay = null
+            recordContext = null
+            if (activeContext != null && activeControlDisplay != null) {
+                runCatching { recordApi?.XRecordFreeContext(activeControlDisplay, activeContext) }
             }
             range?.let { runCatching { X11.INSTANCE.XFree(it) } }
             eventDisplay?.let { runCatching { X11.INSTANCE.XCloseDisplay(it) } }
-            controlDisplay?.let { runCatching { X11.INSTANCE.XCloseDisplay(it) } }
+            activeControlDisplay?.let { runCatching { X11.INSTANCE.XCloseDisplay(it) } }
             recordApi = null
+        }
+    }
+
+    private fun drainWakeup() {
+        val wakeupFd = wakeupPipe[0]
+        if (wakeupFd < 0) return
+        val buffer = ByteArray(64)
+        while (Posix.INSTANCE.read(wakeupFd, buffer, NativeLong(buffer.size.toLong())).toLong() > 0) {
         }
     }
 
@@ -168,7 +216,17 @@ internal class LinuxPhysicalKeyCapture : PlatformPhysicalKeyCapture {
 
     override fun consume(awtEventWhen: Long): CapturedPhysicalKey? = pending.consume(awtEventWhen)
 
-    override fun close() = setEnabled(false)
+    override fun close() {
+        if (closed) return
+        setEnabled(false)
+        lifecycleLock.withLock {
+            if (closed) return
+            closed = true
+            wakeupPipe.forEach { fd ->
+                if (fd >= 0) runCatching { Posix.INSTANCE.close(fd) }
+            }
+        }
+    }
 
     private companion object {
         const val X_RECORD_ALL_CLIENTS = 3L
@@ -177,7 +235,10 @@ internal class LinuxPhysicalKeyCapture : PlatformPhysicalKeyCapture {
         const val X_EVENT_TYPE_MASK = 0x7F
         const val DEVICE_EVENTS_OFFSET = 18L
         const val X_RECORD_RANGE_SIZE = 32L
-        const val REPLY_POLL_INTERVAL_MILLIS = 5L
+        const val POLLIN = 0x1
+        const val POLLERR = 0x8
+        const val POLLHUP = 0x10
+        const val POLLNVAL = 0x20
         val X_MODIFIER_KEYCODES = setOf(37, 50, 62, 64, 66, 92, 105, 108, 133, 134)
     }
 }
@@ -212,6 +273,8 @@ private class XRecordInterceptData(
 private interface X11 : Library {
     fun XOpenDisplay(displayName: String?): Pointer?
 
+    fun XConnectionNumber(display: Pointer): Int
+
     fun XCloseDisplay(display: Pointer): Int
 
     fun XFlush(display: Pointer): Int
@@ -232,6 +295,8 @@ private interface X11 : Library {
 private interface XTestRecord : Library {
     fun XRecordAllocRange(): Pointer?
 
+    fun XRecordProcessReplies(display: Pointer)
+
     fun XRecordCreateContext(
         display: Pointer,
         datumFlags: Int,
@@ -248,8 +313,6 @@ private interface XTestRecord : Library {
         closure: Pointer?,
     ): Int
 
-    fun XRecordProcessReplies(display: Pointer)
-
     fun XRecordDisableContext(
         display: Pointer,
         context: NativeLong,
@@ -261,4 +324,44 @@ private interface XTestRecord : Library {
     ): Int
 
     fun XRecordFreeData(data: Pointer)
+}
+
+private interface Posix : Library {
+    fun pipe(fds: IntArray): Int
+
+    fun poll(
+        fds: Array<PollFd>,
+        count: NativeLong,
+        timeout: Int,
+    ): Int
+
+    fun read(
+        fd: Int,
+        buffer: ByteArray,
+        count: NativeLong,
+    ): NativeLong
+
+    fun write(
+        fd: Int,
+        buffer: ByteArray,
+        count: NativeLong,
+    ): NativeLong
+
+    fun close(fd: Int): Int
+
+    companion object {
+        val INSTANCE: Posix = Native.load("c", Posix::class.java)
+    }
+}
+
+@Structure.FieldOrder("fd", "events", "revents")
+private class PollFd(
+    fd: Int,
+    events: Int,
+) : Structure() {
+    @JvmField val fd: Int = fd
+
+    @JvmField var events: Short = events.toShort()
+
+    @JvmField var revents: Short = 0
 }
