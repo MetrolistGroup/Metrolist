@@ -86,7 +86,7 @@
     <string name="bitrate">Přenosová rychlost</string>
     <string name="sample_rate">Vzorkovací frekvence</string>
     <string name="loudness">Hlučnost</string>
-    <string name="loudness_value">%1$s dB</string>
+    <string name="loudness_value">%1$s dB</string>
     <string name="volume">Hlasitost</string>
     <string name="file_size">Velikost souboru</string>
     <string name="unknown">Neznámé</string>
@@ -116,22 +116,22 @@
         <item quantity="other">%1$d alb</item>
     </plurals>
     <plurals name="n_week">
-        <item quantity="one">%1$d týden</item>
-        <item quantity="few">%1$d týdny</item>
-        <item quantity="many">%1$d týdnů</item>
-        <item quantity="other">%1$d týdnů</item>
+        <item quantity="one">%1$d týden</item>
+        <item quantity="few">%1$d týdny</item>
+        <item quantity="many">%1$d týdnů</item>
+        <item quantity="other">%1$d týdnů</item>
     </plurals>
     <plurals name="n_month">
-        <item quantity="one">%1$d měsíc</item>
-        <item quantity="few">%1$d měsíce</item>
-        <item quantity="many">%1$d měsíců</item>
-        <item quantity="other">%1$d měsíců</item>
+        <item quantity="one">%1$d měsíc</item>
+        <item quantity="few">%1$d měsíce</item>
+        <item quantity="many">%1$d měsíců</item>
+        <item quantity="other">%1$d měsíců</item>
     </plurals>
     <plurals name="n_year">
-        <item quantity="one">%1$d rok</item>
-        <item quantity="few">%1$d roky</item>
-        <item quantity="many">%1$d let</item>
-        <item quantity="other">%1$d let</item>
+        <item quantity="one">%1$d rok</item>
+        <item quantity="few">%1$d roky</item>
+        <item quantity="many">%1$d let</item>
+        <item quantity="other">%1$d let</item>
     </plurals>
     <string name="undo">Zrušit</string>
     <string name="lyrics_not_found">Text skladby nenalezen</string>
@@ -150,10 +150,10 @@
     <string name="queue_loading">Načítání fronty…</string>
     <string name="calculating">Vypočítavám…</string>
     <plurals name="queue_track_count_duration">
-        <item quantity="one">%1$d skladba · %2$s</item>
-        <item quantity="few">%1$d skladby · %2$s</item>
-        <item quantity="many">%1$d skladeb · %2$s</item>
-        <item quantity="other">%1$d skladeb · %2$s</item>
+        <item quantity="one">%1$d skladba · %2$s</item>
+        <item quantity="few">%1$d skladby · %2$s</item>
+        <item quantity="many">%1$d skladeb · %2$s</item>
+        <item quantity="other">%1$d skladeb · %2$s</item>
     </plurals>
     <string name="suggested_tracks">Navrhované</string>
     <string name="playback_notification_channel_name">Přehrávání</string>
@@ -987,10 +987,10 @@
         <item quantity="other">Před %1$d minutami</item>
     </plurals>
     <plurals name="hours">
-        <item quantity="one">%1$d hodina</item>
-        <item quantity="few">%1$d hodiny</item>
-        <item quantity="many">%1$d hodin</item>
-        <item quantity="other">%1$d hodin</item>
+        <item quantity="one">%1$d hodina</item>
+        <item quantity="few">%1$d hodiny</item>
+        <item quantity="many">%1$d hodin</item>
+        <item quantity="other">%1$d hodin</item>
     </plurals>
     <plurals name="listening_times">
         <item quantity="one">%1$skrát</item>
@@ -1011,10 +1011,10 @@
         <item quantity="other">Navrhněte %1$d skladeb hostiteli. Pouze hostitel je schopen nahradit frontu.</item>
     </plurals>
     <plurals name="minutes">
-        <item quantity="one">%1$d minuta</item>
-        <item quantity="few">%1$d minuty</item>
-        <item quantity="many">%1$d minut</item>
-        <item quantity="other">%1$d minut</item>
+        <item quantity="one">%1$d minuta</item>
+        <item quantity="few">%1$d minuty</item>
+        <item quantity="many">%1$d minut</item>
+        <item quantity="other">%1$d minut</item>
     </plurals>
     <plurals name="n_track">
         <item quantity="one">%1$d skladba</item>
@@ -1119,10 +1119,10 @@
     <string name="subscribe">Odebírat</string>
     <string name="subscribed">Odebíráno</string>
     <plurals name="seconds">
-        <item quantity="one">%1$d sekunda</item>
-        <item quantity="few">%1$d sekundy</item>
-        <item quantity="many">%1$d sekund</item>
-        <item quantity="other">%1$d sekund</item>
+        <item quantity="one">%1$d sekunda</item>
+        <item quantity="few">%1$d sekundy</item>
+        <item quantity="many">%1$d sekund</item>
+        <item quantity="other">%1$d sekund</item>
     </plurals>
     <string name="beta_tag">[BETA]</string>
     <string name="crossfade">Prolínání</string>
@@ -1613,7 +1613,7 @@
     <string name="device_connect_device_type_desktop">Počítač</string>
     <string name="device_connect_device_type_android_auto">Android Auto</string>
     <string name="device_connect_device_type_unknown">Neznámé zařízení</string>
-    <string name="device_connect_device_type_and_model">%1$s · %2$s</string>
+    <string name="device_connect_device_type_and_model">%1$s · %2$s</string>
     <string name="settings_disable_wayland_fix">Vypnout Wayland opravu měřítka (Wayland scale fix)</string>
     <string name="device_connect_pair_code_message">Ověřte, zda se tento kód shoduje na zařízení %1$s, potom potvrďte na obou zařízeních.</string>
     <string name="device_connect_pair_code_accessibility">Párovací kód: %1$s</string>
@@ -1921,7 +1921,7 @@
     <string name="equalizer_invalid_profile">Tento soubor není parametrický EQ profil</string>
     <string name="equalizer_autoeq_unavailable">Nepodařilo se načíst AutoEQ profily</string>
     <string name="skip_silence_instant">Okamžité přeskočení ticha</string>
-    <string name="skip_silence_instant_desc">Po 2 sekundách ticha přeskočí až o 15 sekund. Může přeskočit tiché části zvuku.</string>
+    <string name="skip_silence_instant_desc">Po 2 sekundách ticha přeskočí až o 15 sekund. Může přeskočit tiché části zvuku.</string>
     <string name="share_lyrics">Sdílet text písně</string>
     <string name="share_as_text">Sdílet jako text</string>
     <string name="customize_colors">Přizpůsobit barvy</string>
@@ -2077,16 +2077,16 @@
     <string name="pause_music_when_media_is_muted_desc">Pozastavit přehrávání při ztlumení hlasitosti médií zařízení. Po obnovení hlasitosti aplikace přehrávání opět spustí.</string>
     <string name="no_episode_description">Popis této epizody není k dispozici.</string>
     <plurals name="episode_duration_hours">
-        <item quantity="one">%1$d hod.</item>
-        <item quantity="few">%1$d hod.</item>
-        <item quantity="many">%1$d hod.</item>
-        <item quantity="other">%1$d hod.</item>
+        <item quantity="one">%1$d hod.</item>
+        <item quantity="few">%1$d hod.</item>
+        <item quantity="many">%1$d hod.</item>
+        <item quantity="other">%1$d hod.</item>
     </plurals>
     <plurals name="episode_duration_minutes">
-        <item quantity="one">%1$d min.</item>
-        <item quantity="few">%1$d min.</item>
-        <item quantity="many">%1$d min.</item>
-        <item quantity="other">%1$d min.</item>
+        <item quantity="one">%1$d min.</item>
+        <item quantity="few">%1$d min.</item>
+        <item quantity="many">%1$d min.</item>
+        <item quantity="other">%1$d min.</item>
     </plurals>
     <string name="varispeed">Povolit variabilní rychlost (varispeed)</string>
     <string name="varispeed_description">Propojit výšku tónu s rychlostí přehrávání pro zrychlení a zpomalení jako u páskového záznamu</string>
@@ -2206,7 +2206,7 @@
     <string name="backup_invalid_data">Zálohu se nepodařilo přečíst nebo ověřit. Může být poškozená nebo obsahovat nepodporovaná data.</string>
     <string name="search_history_removal_failed">Nepodařilo se vymazat historii vyhledávání účtu. Zkuste to znovu po připojení.</string>
     <string name="top_period_all_time">Za celou dobu</string>
-    <string name="top_period_past_24_hours">Posledních 24 hodin</string>
+    <string name="top_period_past_24_hours">Posledních 24 hodin</string>
     <string name="top_period_past_week">Poslední týden</string>
     <string name="top_period_past_month">Poslední měsíc</string>
     <string name="top_period_past_year">Poslední rok</string>
