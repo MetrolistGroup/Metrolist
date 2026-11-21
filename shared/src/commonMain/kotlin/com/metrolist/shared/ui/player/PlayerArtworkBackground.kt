@@ -606,7 +606,6 @@ private fun LandscapeFullscreenThumbnailBackground(
             }
         }
 
-        Box(Modifier.fillMaxSize().background(backdropScrim.copy(alpha = 0.6f)))
         Box(
             modifier =
                 Modifier
@@ -767,6 +766,7 @@ private fun LandscapeFullscreenThumbnailBackground(
                 }
             }
         }
+        Box(Modifier.fillMaxSize().background(backdropScrim.copy(alpha = 0.6f)))
     }
 }
 

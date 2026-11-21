@@ -128,3 +128,5 @@ Run affected [platform checks](checks.md#platform-checks). Native checks must ve
 Native checks must cover interrupted motion, missing and portrait artwork, theme changes, reduced motion, large fonts and accessibility. Compare CPU/GPU use when changing shaders, blur or visibility work. Backend tests do not establish rendering or power behavior.
 
 Light-theme Liquid backgrounds use a white wash with dark controls. Fullscreen video backdrops retain light controls. Lyrics use the same foreground polarity for blending and contrast scrims; additive blending applies only to light text.
+
+The landscape fullscreen contrast wash covers the sharp artwork as well as its backdrop, so tablet controls remain legible when opening the queue narrows the player pane.
