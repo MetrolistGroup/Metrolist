@@ -285,8 +285,7 @@ object DownloadManager {
         _downloadStates.value =
             loaded
                 .filter { entry ->
-                    isValidSongId(entry.songId) &&
-                        safePersistedFile(entry.audioFilePath)?.let { it.isFile && it.length() >= MIN_AUDIO_BYTES } == true
+                    isValidSongId(entry.songId) && availableDownloadAudio(entry) != null
                 }.associate { it.songId to DownloadState.DOWNLOADED }
         scope.launch {
             database?.let {
@@ -640,10 +639,10 @@ object DownloadManager {
 
     private fun getDownloadMetadata(songId: String): DownloadedFile? = _downloadedFiles.value.find { it.songId == songId }
 
-    fun getLocalAudioPath(songId: String): String? =
-        getDownloadMetadata(songId)?.let { metadata ->
-            safePersistedFile(metadata.audioFilePath)?.takeIf { it.isFile && it.length() >= MIN_AUDIO_BYTES }?.absolutePath
-        }
+    internal fun availableDownloadAudio(metadata: DownloadedFile): File? =
+        safePersistedFile(metadata.audioFilePath)?.takeIf { it.isFile && it.length() >= MIN_AUDIO_BYTES }
+
+    fun getLocalAudioPath(songId: String): String? = getDownloadMetadata(songId)?.let(::availableDownloadAudio)?.absolutePath
 
     suspend fun getLocalPlaybackResource(
         songId: String,

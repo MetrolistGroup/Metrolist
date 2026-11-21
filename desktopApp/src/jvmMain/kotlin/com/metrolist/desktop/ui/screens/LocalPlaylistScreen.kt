@@ -214,8 +214,9 @@ private fun DownloadedPlaylistScreen() {
     val snapshot by produceState(emptyList<SongItem>() to emptyMap<String, CollectionMeta>(), files) {
         value =
             withContext(Dispatchers.IO) {
-                val storedSongs = database.dao().getSongsByIds(files.map { it.songId })
-                downloadedCollectionSnapshot(files, storedSongs)
+                val availableFiles = files.filter { DownloadManager.availableDownloadAudio(it) != null }
+                val storedSongs = database.dao().getSongsByIds(availableFiles.map { it.songId })
+                downloadedCollectionSnapshot(availableFiles, storedSongs)
             }
     }
     LocalPlaylistLayout(
