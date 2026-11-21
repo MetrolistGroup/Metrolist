@@ -1869,9 +1869,9 @@ class HomeViewModel(
                 addAll(trending)
                 addAll(keepListening)
                 addAll(forgottenFavorites)
-                addAll(speedDialItems)
                 addAll(sections.flatMap(HomeSection::items))
                 addAll(data.orEmpty().flatMap(HomeSection::items))
+                addAll(speedDialItems)
                 addAll(chipFeeds.flatMap { feed -> feed.sections.flatMap(HomeSection::items) })
             }.mapNotNull { item ->
                 when (item) {
@@ -2145,7 +2145,7 @@ internal fun HomeViewModel.HomeUiState.withCurrentHomeLoadState(currentState: Ho
         isLoading = currentState.isLoading,
         isRefreshing = currentState.isRefreshing,
         isRevalidating = currentState.isRevalidating,
-        isContentLoading = currentState.isContentLoading,
+        isContentLoading = currentState.isContentLoading || isContentLoading,
         isLoadingMore = currentState.isLoadingMore,
         isAllContentPending = currentState.isAllContentPending,
     )
