@@ -2609,8 +2609,8 @@
     <string name="listen_together_custom_server_maintainer">Utilisateur</string>
     <string name="learn_more">En savoir plus</string>
     <string name="updates_nightly_builds_desc"></string>
-    <string name="search_episodes"></string>
-    <string name="duration_three_units"></string>
+    <string name="search_episodes">Rechercher des épisodes</string>
+    <string name="duration_three_units">%1$s, %2$s, %3$s</string>
     <string name="recently_played">Écoutés récemment</string>
     <string name="search_online_short">En ligne</string>
     <string name="matugen_colors_description"></string>
