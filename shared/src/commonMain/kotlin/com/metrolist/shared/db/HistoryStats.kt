@@ -37,6 +37,7 @@ data class HistoryStatGroup(
     val lastPlayedAt: Long,
     val lastEventId: Long,
     val duration: Long?,
+    val measuredPlayCount: Int = 0,
 )
 
 data class HistoryArtistCredit(
@@ -76,6 +77,7 @@ private fun historyStatsQuery(
     suffix: String = "",
     songIds: List<String>? = null,
     suffixArgs: List<String> = emptyList(),
+    mergeSourcesByDay: Boolean = false,
 ): RoomRawQuery {
     val args = mutableListOf<Any>(sinceMs, untilMs)
     val filters = mutableListOf("e.timestamp BETWEEN ? AND ?")
@@ -98,9 +100,20 @@ private fun historyStatsQuery(
     }
     args.addAll(suffixArgs)
     val where = filters.joinToString(" AND ")
+    val tables = "JOIN song s ON s.id = e.songId LEFT JOIN history_snapshot h ON h.eventId = e.id"
     val sql =
-        "$select FROM event e JOIN song s ON s.id = e.songId " +
-            "LEFT JOIN history_snapshot h ON h.eventId = e.id WHERE $where $suffix"
+        if (mergeSourcesByDay) {
+            // YouTube's date groups cannot identify individual local plays. Keep the larger count without deleting either source.
+            val day = "strftime('%Y-%m-%d', timestamp / 1000, 'unixepoch', 'localtime')"
+            "WITH eligible AS (SELECT e.* FROM event e $tables WHERE $where), " +
+                "ranked AS (SELECT *, ROW_NUMBER() OVER (PARTITION BY songId, $day, source = 'YOUTUBE' " +
+                "ORDER BY timestamp DESC, remoteOrder DESC, id DESC) AS sourceRank, " +
+                "SUM(CASE WHEN source != 'YOUTUBE' THEN 1 ELSE 0 END) OVER (PARTITION BY songId, $day) AS localCount FROM eligible), " +
+                "merged AS (SELECT * FROM ranked WHERE source != 'YOUTUBE' OR sourceRank > localCount) " +
+                "$select FROM merged e $tables $suffix"
+        } else {
+            "$select FROM event e $tables WHERE $where $suffix"
+        }
     return RoomRawQuery(sql) { statement ->
         args.forEachIndexed { index, value ->
             when (value) {
@@ -210,6 +223,7 @@ private suspend fun MusicDatabase.statGroups(
     untilMs: Long,
     catalogArtistIds: Boolean,
     songsOnly: Boolean = false,
+    mergeSourcesByDay: Boolean = false,
 ): List<HistoryStatGroup> =
     run {
         dao().historyStatGroups(
@@ -221,7 +235,9 @@ private suspend fun MusicDatabase.statGroups(
                 CASE WHEN h.eventId IS NOT NULL THEN h.albumId ELSE s.albumId END AS albumId,
                 CASE WHEN h.eventId IS NOT NULL THEN h.thumbnailUrl ELSE s.thumbnailUrl END AS thumbnailUrl,
                 CASE WHEN h.eventId IS NOT NULL THEN h.duration ELSE s.duration END AS duration,
-                COUNT(*) AS playCount, SUM(CASE WHEN e.playTimeKnown THEN e.playTime ELSE 0 END) AS playTimeMs, MAX(e.id) AS lastEventId, MAX(e.timestamp) AS lastPlayedAt""",
+                COUNT(*) AS playCount, SUM(CASE WHEN e.playTimeKnown THEN e.playTime ELSE 0 END) AS playTimeMs,
+                SUM(CASE WHEN e.playTimeKnown AND e.playTime > 0 THEN 1 ELSE 0 END) AS measuredPlayCount,
+                MAX(e.id) AS lastEventId, MAX(e.timestamp) AS lastPlayedAt""",
                 sinceMs,
                 untilMs,
                 catalogArtistIds,
@@ -230,6 +246,7 @@ private suspend fun MusicDatabase.statGroups(
                 } else {
                     "GROUP BY e.songId, h.title, h.artists, h.artistNamesJson, h.album, h.albumId, h.thumbnailUrl, h.duration, (h.eventId IS NOT NULL) ORDER BY lastPlayedAt DESC"
                 },
+                mergeSourcesByDay = mergeSourcesByDay,
             ),
         )
     }
@@ -404,25 +421,42 @@ suspend fun MusicDatabase.historyStatisticsSnapshot(
     untilMs: Long,
     catalogArtistIds: Boolean = false,
     localTime: Boolean = true,
+): HistoryStatisticsSnapshot = statisticsSnapshot(sinceMs, untilMs, catalogArtistIds, localTime, mergeSourcesByDay = false)
+
+suspend fun MusicDatabase.wrappedStatisticsSnapshot(
+    sinceMs: Long,
+    untilMs: Long,
+): HistoryStatisticsSnapshot = statisticsSnapshot(sinceMs, untilMs, catalogArtistIds = true, localTime = true, mergeSourcesByDay = true)
+
+private suspend fun MusicDatabase.statisticsSnapshot(
+    sinceMs: Long,
+    untilMs: Long,
+    catalogArtistIds: Boolean,
+    localTime: Boolean,
+    mergeSourcesByDay: Boolean,
 ): HistoryStatisticsSnapshot =
     withContext(Dispatchers.Default) {
         withHistoryStatExclusions(sinceMs, untilMs) {
-            val groups = statGroups(sinceMs, untilMs, catalogArtistIds)
+            val groups = statGroups(sinceMs, untilMs, catalogArtistIds, mergeSourcesByDay = mergeSourcesByDay)
             val metadata = artistMetadata(groups)
             val songs =
                 groups
                     .groupBy { it.songId }
                     .values
                     .map { plays ->
-                        plays.first().copy(playCount = plays.sumOf { it.playCount }, playTimeMs = plays.sumOf { it.playTimeMs })
+                        plays.first().copy(
+                            playCount = plays.sumOf { it.playCount },
+                            playTimeMs = plays.sumOf { it.playTimeMs },
+                            measuredPlayCount = plays.sumOf { it.measuredPlayCount },
+                        )
                     }.sortedWith(compareByDescending<HistoryStatGroup> { it.playCount }.thenByDescending { it.lastPlayedAt })
             HistoryStatisticsSnapshot(
                 songs,
                 artistStatistics(groups, metadata),
                 albumStatistics(groups, metadata.groupBy({ it.songId }, { it.name }), catalogArtistIds),
                 HistoryTotals(groups.sumOf { it.playCount }, groups.sumOf { it.playTimeMs }),
-                timeBuckets(sinceMs, untilMs, false, localTime, catalogArtistIds),
-                timeBuckets(sinceMs, untilMs, true, localTime, catalogArtistIds),
+                if (mergeSourcesByDay) emptyList() else timeBuckets(sinceMs, untilMs, false, localTime, catalogArtistIds),
+                if (mergeSourcesByDay) emptyList() else timeBuckets(sinceMs, untilMs, true, localTime, catalogArtistIds),
                 songItems = statisticsSongs(songs.take(500)),
             )
         }

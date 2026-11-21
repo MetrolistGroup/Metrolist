@@ -166,6 +166,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.guava.await
 import kotlinx.coroutines.guava.future
 import kotlinx.coroutines.isActive
@@ -296,8 +297,9 @@ class MusicService :
     var media3Player: Player? = null
         private set
     private var mediaSession: MediaLibrarySession? = null
-    internal var playbackCommandGeneration = 0L
-        private set
+    private val playbackCommandEvents = MutableStateFlow(0L)
+    internal val playbackCommands = playbackCommandEvents.asStateFlow()
+    internal val playbackCommandGeneration: Long get() = playbackCommandEvents.value
     private lateinit var playbackRestoreJob: Job
     private lateinit var automotiveLibrary: AutomotiveMediaLibrary
     private val automotiveRootChildrenLimit = ConcurrentHashMap<MediaSession.ControllerInfo, Int>()
@@ -731,7 +733,7 @@ class MusicService :
     }
 
     internal fun onPlaybackCommand() {
-        playbackCommandGeneration++
+        playbackCommandEvents.update { it + 1 }
         playbackBenchmark.cancel()
         pauseOnMute.cancelResume()
     }

@@ -49,6 +49,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.FilledIconButton
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -128,6 +129,7 @@ import com.metrolist.shared.generated.resources.statistics_play_count_duration
 import com.metrolist.shared.generated.resources.statistics_plays
 import com.metrolist.shared.generated.resources.statistics_plays_label
 import com.metrolist.shared.generated.resources.statistics_time
+import com.metrolist.shared.generated.resources.wrapped
 import com.metrolist.shared.ui.components.ExpressiveFilterChip
 import com.metrolist.shared.ui.components.HeaderPlaybackButtons
 import com.metrolist.shared.ui.components.LoadingScreen
@@ -228,6 +230,7 @@ fun StatisticsScreen(
     bottomContentPadding: Dp = 0.dp,
     onArtistVisible: (suspend (StatisticsItem) -> Unit)? = null,
     artistLookupGeneration: Int = 0,
+    onOpenWrapped: (() -> Unit)? = null,
 ) {
     var detail by remember { mutableStateOf<StatisticsDetail?>(null) }
     val openDetail: (StatisticsDetail) -> Unit = onOpenDetail ?: { detail = it }
@@ -299,6 +302,11 @@ fun StatisticsScreen(
                             ) {
                                 onNavigateBack?.let { BackButton(it) }
                                 Spacer(Modifier.weight(1f))
+                                onOpenWrapped?.let { open ->
+                                    FilledTonalButton(onClick = open, shapes = ButtonDefaults.shapes()) {
+                                        Text(stringResource(Res.string.wrapped))
+                                    }
+                                }
                             }
                             StatisticsRefreshIndicator(state.isLoading && state.hasLoaded)
                             state.errorMessage?.let {

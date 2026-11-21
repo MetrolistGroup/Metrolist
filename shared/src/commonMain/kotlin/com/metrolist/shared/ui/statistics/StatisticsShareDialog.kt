@@ -68,12 +68,14 @@ internal fun StatisticsShareDialog(
     exportLabel: String,
     onExport: suspend (ImageBitmap) -> Boolean,
     onDismiss: () -> Unit,
+    title: String? = null,
+    timeLabel: String? = null,
 ) {
     val scope = rememberCoroutineScope()
     val measurer = rememberTextMeasurer(cacheSize = 0)
     val direction = LocalLayoutDirection.current
     val appName = stringResource(Res.string.app_name)
-    val title = stringResource(Res.string.statistics)
+    val imageTitle = title ?: stringResource(Res.string.statistics)
     val sections =
         listOf(
             stringResource(Res.string.statistics_top_tracks) to state.tracks,
@@ -97,7 +99,7 @@ internal fun StatisticsShareDialog(
             stringResource(Res.string.statistics_no_data)
         }
     val playsLabel = stringResource(Res.string.statistics_plays_label)
-    val timeLabel = stringResource(Res.string.statistics_time)
+    val imageTimeLabel = timeLabel ?: stringResource(Res.string.statistics_time)
     var bitmap by remember { mutableStateOf<ImageBitmap?>(null) }
     var busy by remember { mutableStateOf(false) }
     var failed by remember { mutableStateOf(false) }
@@ -106,7 +108,7 @@ internal fun StatisticsShareDialog(
         period,
         summary,
         appName,
-        title,
+        imageTitle,
         sections,
         direction,
         colors,
@@ -114,7 +116,7 @@ internal fun StatisticsShareDialog(
         heroShape,
         duration,
         playsLabel,
-        timeLabel,
+        imageTimeLabel,
     ) {
         bitmap = null
         failed = false
@@ -157,13 +159,13 @@ internal fun StatisticsShareDialog(
                 withContext(Dispatchers.Default) {
                     renderStatisticsImage(
                         appName,
-                        title,
+                        imageTitle,
                         period,
                         summary,
                         state.totalPlays.toString(),
                         duration,
                         playsLabel,
-                        timeLabel,
+                        imageTimeLabel,
                         sections,
                         artwork,
                         artworkShapes,

@@ -13,6 +13,7 @@ import com.metrolist.shared.playback.SleepTimerState
 import com.metrolist.shared.youtube.playback.PlaybackResource
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.flowOf
 
 enum class PlaybackError {
     STREAM_UNAVAILABLE,
@@ -65,6 +66,9 @@ data class PlaybackUiState(
 
 interface PlaybackController {
     val state: StateFlow<PlaybackUiState>
+    val wrappedSoundtrackAllowed: Flow<Boolean> get() = flowOf(false)
+    val playbackCommandGeneration: Long get() = 0L
+    val playbackCommands: Flow<Long> get() = flowOf(0L)
     val listState: Flow<PlaybackListState> get() = state.listStates()
     val canSkipNext: Boolean get() = state.value.canSkipNext()
     val canSkipPrevious: Boolean get() = state.value.canSkipPrevious

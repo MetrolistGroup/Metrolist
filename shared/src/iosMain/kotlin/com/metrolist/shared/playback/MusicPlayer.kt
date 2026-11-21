@@ -61,6 +61,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
@@ -202,6 +203,8 @@ class MusicPlayer internal constructor(
     private var player: AVPlayer = initialPlayer ?: newPlayer()
     internal var playbackCache: IosPlaybackCache? = null
     internal val sabrPreparationFailures = MutableSharedFlow<IosAudioCaptureFailure>(extraBufferCapacity = 8)
+    private val playbackCommandEvents = MutableStateFlow(0L)
+    internal val playbackCommands = playbackCommandEvents.asStateFlow()
     internal var audioCaptureFailure: IosAudioCaptureFailure? = null
         private set
     private var playbackCapture: IosPlaybackCapture? = null
@@ -1082,6 +1085,7 @@ class MusicPlayer internal constructor(
     }
 
     fun pause() {
+        playbackCommandEvents.update { it + 1 }
         failedPlaybackWanted = false
         _currentPosition.value = currentPositionMs()
         pauseOnMute.cancelResume()
@@ -1117,6 +1121,7 @@ class MusicPlayer internal constructor(
     }
 
     fun resume() {
+        playbackCommandEvents.update { it + 1 }
         pauseOnMute.cancelResume()
         if (isQueueTransitionPending) return
         if (_currentPlaybackResource.value == null || _loadError.value != null) {
