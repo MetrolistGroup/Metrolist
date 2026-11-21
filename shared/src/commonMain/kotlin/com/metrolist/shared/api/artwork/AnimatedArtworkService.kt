@@ -41,31 +41,104 @@ import kotlin.io.encoding.Base64
 import kotlin.time.Clock
 import kotlin.time.Duration.Companion.milliseconds
 
-private val artworkEditionSuffix =
-    Regex(
-        """(?:\s*[-–—]\s*(explicit|clean(?:ed)?)|\s*[\[(]\s*(explicit|clean(?:ed)?)\s*(?:\]|\)))\s*$""",
-        RegexOption.IGNORE_CASE,
-    )
+private fun artworkAlbumSuffix(
+    album: String,
+    endIndex: Int,
+): Pair<Int, String>? {
+    var end = endIndex
+    while (end > 0 && album[end - 1].isWhitespace()) end--
+    if (end == 0) return null
+    val closing = album[end - 1]
+    var start: Int
+    val label: String
+    if (closing == ')' || closing == ']') {
+        val opening = if (closing == ')') '(' else '['
+        var depth = 1
+        start = end - 2
+        while (start >= 0) {
+            when (album[start]) {
+                closing -> depth++
+                opening -> depth--
+            }
+            if (depth == 0) break
+            start--
+        }
+        if (start < 0) return null
+        var contentStart = start + 1
+        while (contentStart < end - 1 && album[contentStart].isWhitespace()) contentStart++
+        label =
+            if (contentStart < end - 1 && album[contentStart] == '+') {
+                "+"
+            } else {
+                album.substring(contentStart, end - 1).trimEnd().lowercase()
+            }
+    } else {
+        var wordStart = end
+        while (wordStart > 0 && album[wordStart - 1].isLetter()) wordStart--
+        if (wordStart == end) return null
+        label = album.substring(wordStart, end).lowercase()
+        start = wordStart
+        while (start > 0 && album[start - 1].isWhitespace()) start--
+        if (start == 0 || album[start - 1] !in "-–—") return null
+        start--
+    }
+    when (label) {
+        "+", "explicit", "clean", "cleaned", "single", "ep" -> Unit
+        else -> return null
+    }
+    while (start > 0 && album[start - 1].isWhitespace()) start--
+    return start to label
+}
+
+private fun stripReleaseSuffixes(name: String): String {
+    var end = name.length
+    while (true) {
+        val (start, label) = artworkAlbumSuffix(name, end) ?: break
+        if (label != "single" && label != "ep") break
+        end = start
+    }
+    return name.substring(0, end).trimEnd()
+}
+
+private fun stripArtworkAlbumNotes(album: String): String {
+    var end = album.length
+    val retainedSuffixes = mutableListOf<IntRange>()
+    while (true) {
+        val (start, label) = artworkAlbumSuffix(album, end) ?: break
+        if (label != "+") retainedSuffixes.add(start until end)
+        end = start
+    }
+    return buildString(album.length) {
+        append(album, 0, end)
+        for (suffix in retainedSuffixes.asReversed()) append(album, suffix.first, suffix.last + 1)
+    }.trim()
+}
 
 internal fun resolveArtworkExplicitness(
     album: String?,
     trackExplicitness: Boolean?,
 ): Boolean? {
     if (album.isNullOrBlank()) return trackExplicitness
-    val edition =
-        artworkEditionSuffix
-            .find(album)
-            ?.groupValues
-            ?.drop(1)
-            ?.firstOrNull(String::isNotBlank)
-    return when {
-        edition.equals("explicit", ignoreCase = true) -> true
-        edition != null -> false
+    val name = stripReleaseSuffixes(stripArtworkAlbumNotes(album))
+    if (name.isBlank()) return trackExplicitness
+    return when (artworkAlbumSuffix(name, name.length)?.second) {
+        "explicit" -> true
+        "clean", "cleaned" -> false
         else -> null
     }
 }
 
-internal fun stripArtworkEditionSuffix(album: String): String = album.replace(artworkEditionSuffix, "").trim()
+internal fun stripArtworkEditionSuffix(album: String): String {
+    val name = album.trim()
+    val withoutRelease = stripReleaseSuffixes(name)
+    val suffix = artworkAlbumSuffix(withoutRelease, withoutRelease.length)
+    val base =
+        when (suffix?.second) {
+            "explicit", "clean", "cleaned" -> withoutRelease.substring(0, suffix.first)
+            else -> withoutRelease
+        }
+    return (base + name.substring(withoutRelease.length)).trim()
+}
 
 internal fun matchesAppleMusicExplicitness(
     trackExplicitness: String?,
@@ -116,7 +189,7 @@ class AnimatedArtworkService internal constructor(
         private const val TAG = "AnimatedArtwork"
         private const val UA = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36"
 
-        private const val CACHE_KEY_VERSION = "v9"
+        private const val CACHE_KEY_VERSION = "v11"
         private const val CACHE_MAX_AGE_SECONDS = 30L * 24 * 60 * 60
         private const val CACHE_MISS_MAX_AGE_SECONDS = 60L
         private const val MAX_COVER_CACHE_ENTRIES = 1_000
@@ -127,6 +200,7 @@ class AnimatedArtworkService internal constructor(
         private const val MAX_HTML_RESPONSE_BYTES = 4 * 1024 * 1024
         private const val MAX_SCRIPT_RESPONSE_BYTES = 16 * 1024 * 1024
         private const val MAX_PLAYLIST_RESPONSE_BYTES = 1024 * 1024
+        private const val MAX_METADATA_CHARS = 4_096
 
         private val titleCleanupPatterns =
             listOf(
@@ -365,6 +439,9 @@ class AnimatedArtworkService internal constructor(
         album: String? = null,
         explicit: Boolean? = null,
     ): AnimatedCoverResult? {
+        if (title.length > MAX_METADATA_CHARS || artist.length > MAX_METADATA_CHARS || (album?.length ?: 0) > MAX_METADATA_CHARS) {
+            return null
+        }
         if (!Settings.shared.enableAnimatedCovers || !Settings.shared.isAnimatedArtworkAllowedOnNetwork()) return null
 
         cacheLoadJob.join()
@@ -517,8 +594,8 @@ class AnimatedArtworkService internal constructor(
         explicit: Boolean? = null,
     ): String {
         val cleanArtist = escapeCacheComponent(artist.lowercase().trim())
-        val cleanAlbum = album?.lowercase()?.trim()
-        val rawTitleNormalized = title.trim().replace(smartQuotePattern, "'").lowercase()
+        val cleanAlbum = normalizeAlbumOrNull(album)
+        val rawTitleNormalized = normalizeTitleText(title)
         val key =
             when {
                 !cleanAlbum.isNullOrBlank() && rawTitleNormalized == cleanTitleText(title) -> {
@@ -552,19 +629,20 @@ class AnimatedArtworkService internal constructor(
     ): List<Long> {
         val cleanTitle = cleanTitleText(title)
         val cleanArtist = normalizeArtist(artist)
-        val cleanAlbum = album?.let { stripArtworkEditionSuffix(normalizeAlbum(it)) }
+        val cleanAlbum = normalizeAlbumOrNull(album)
         val isVariantTitle = isVariantTitle(title, cleanTitle)
-        val albumIsVariant = album != null && cleanTitleText(album) != cleanAlbum
 
         val seen = mutableSetOf<Long>()
         val allResults = mutableListOf<Pair<AniTunesSearchResult, String>>()
 
         fun matchingAlbums(): List<Long> {
-            if (cleanAlbum != null && !isVariantTitle) {
+            if (cleanAlbum != null) {
                 val albumMatches =
                     allResults
                         .filter { (r, _) ->
                             matchesArtist(r, cleanArtist) && (explicit == null || matchesExplicit(r, explicit, true))
+                        }.filter { (r, _) ->
+                            !isVariantTitle || matchesTitle(r, cleanTitle, title)
                         }.filter { (r, _) ->
                             val collectionName = r.collectionName
                             collectionName != null &&
@@ -572,7 +650,7 @@ class AnimatedArtworkService internal constructor(
                                     stripReleaseSuffixes(normalizeAlbum(collectionName)) != cleanTitle ||
                                         stripReleaseSuffixes(cleanAlbum) == cleanTitle
                                 ) &&
-                                albumNamesMatch(collectionName, cleanAlbum, strict = albumIsVariant)
+                                albumNamesMatch(collectionName, cleanAlbum)
                         }
                 if (albumMatches.isNotEmpty()) {
                     val exactAlbumMatches =
@@ -609,6 +687,7 @@ class AnimatedArtworkService internal constructor(
         val hasGoodMatch =
             allResults.any { (r, _) ->
                 matchesArtist(r, cleanArtist) && matchesTitle(r, cleanTitle, title) &&
+                    (cleanAlbum == null || r.collectionName?.let { albumNamesMatch(it, cleanAlbum) } == true) &&
                     (explicit == null || matchesExplicit(r, explicit, cleanAlbum != null))
             }
         if (!hasGoodMatch || allResults.size < 5) {
@@ -638,23 +717,16 @@ class AnimatedArtworkService internal constructor(
 
         val titleMatches =
             artistMatches.filter { (r, _) ->
-                if (isVariantTitle) {
-                    r.trackName.trim().replace(smartQuotePattern, "'").equals(
-                        title.trim().replace(smartQuotePattern, "'"),
-                        ignoreCase = true,
-                    )
-                } else {
-                    matchesTitle(r, cleanTitle, title)
-                }
+                matchesTitle(r, cleanTitle, title)
             }
         val selfTitledTitle =
             if (isVariantTitle) {
-                title.trim().replace(smartQuotePattern, "'").lowercase()
+                normalizeTitleText(title)
             } else {
                 cleanTitle
             }
         val selfTitledMatches = titleMatches.filter { (r, _) -> isSelfTitledRelease(r, selfTitledTitle) }
-        if (selfTitledMatches.isNotEmpty() && (cleanAlbum == null || isVariantTitle)) {
+        if (selfTitledMatches.isNotEmpty() && cleanAlbum == null) {
             YtLogger.d(TAG, "Resolved animated artwork via title match (${selfTitledMatches.size} candidates)")
             return selfTitledMatches.mapNotNull { it.first.collectionId }.distinct().take(MAX_COLLECTION_CANDIDATES)
         }
@@ -806,29 +878,33 @@ class AnimatedArtworkService internal constructor(
         cleanTitle: String,
         rawTitle: String,
     ): Boolean {
-        val resultClean = cleanTitleText(result.trackName)
-        if (resultClean == cleanTitle) return true
-        if (result.trackName.trim().equals(rawTitle.trim(), ignoreCase = true)) return true
-        return false
+        if (normalizeTrackTitle(result.trackName) == normalizeTrackTitle(rawTitle)) return true
+        return !isVariantTitle(rawTitle, cleanTitle) && cleanTitleText(result.trackName) == cleanTitle
     }
+
+    private fun normalizeTitleText(title: String): String =
+        title
+            .trim()
+            .replace(smartQuotePattern, "'")
+            .replace(Regex("""\s+"""), " ")
+            .lowercase()
+
+    private fun normalizeTrackTitle(title: String): String = normalizeTitleText(title).replace('[', '(').replace(']', ')')
 
     private fun isVariantTitle(
         rawTitle: String,
         cleanTitle: String,
     ): Boolean {
-        val rawNormalized = rawTitle.trim().replace(smartQuotePattern, "'").lowercase()
+        val rawNormalized = normalizeTitleText(rawTitle)
         return rawNormalized != cleanTitle
     }
 
     private fun albumNamesMatch(
         itunesAlbum: String,
         targetAlbum: String,
-        strict: Boolean = false,
     ): Boolean {
         val a = stripArtworkEditionSuffix(normalizeAlbum(itunesAlbum))
         val b = stripArtworkEditionSuffix(normalizeAlbum(targetAlbum))
-        if (a == b) return true
-        if (strict) return false
         return stripReleaseSuffixes(a) == stripReleaseSuffixes(b)
     }
 
@@ -838,12 +914,11 @@ class AnimatedArtworkService internal constructor(
     ): Boolean {
         val collectionName = result.collectionName ?: return false
         val base = stripReleaseSuffixes(stripArtworkEditionSuffix(normalizeAlbum(collectionName)))
-        return base == cleanTitle
+        return normalizeTrackTitle(base) == normalizeTrackTitle(cleanTitle)
     }
 
     private fun cleanTitleText(title: String): String {
-        var cleaned = title.trim()
-        cleaned = cleaned.replace(smartQuotePattern, "'")
+        var cleaned = normalizeTitleText(title)
         for (pattern in titleCleanupPatterns) {
             cleaned = cleaned.replace(pattern, "")
         }
@@ -873,27 +948,14 @@ class AnimatedArtworkService internal constructor(
             .firstOrNull()
             ?.trim() ?: artistName.trim().lowercase()
 
-    private fun normalizeAlbum(name: String): String =
-        name
-            .trim()
-            .lowercase()
-            .replace(smartQuotePattern, "'")
-            .replace(Regex("""\s+"""), " ")
+    private fun normalizeAlbumOrNull(album: String?): String? =
+        album?.let { stripArtworkEditionSuffix(normalizeAlbum(it)) }?.takeIf { stripReleaseSuffixes(it).isNotBlank() }
 
-    private fun stripReleaseSuffixes(name: String): String {
-        var stripped = name
-        listOf(
-            Regex("""\s*[-–—]\s*single\s*$"""),
-            Regex("""\s*\(\s*single\s*\)\s*$"""),
-            Regex("""\s*\[\s*single\s*]\s*$"""),
-            Regex("""\s*[-–—]\s*ep\s*$"""),
-            Regex("""\s*\(\s*ep\s*\)\s*$"""),
-            Regex("""\s*\[\s*ep\s*]\s*$"""),
-        ).forEach { regex ->
-            stripped = regex.replace(stripped, "")
-        }
-        return stripped.trim()
-    }
+    private fun normalizeAlbum(name: String): String =
+        normalizeTitleText(name)
+            .let(::stripArtworkAlbumNotes)
+            .replace('[', '(')
+            .replace(']', ')')
 
     private suspend fun getDevToken(country: String): String? {
         val storefront = country.lowercase().takeIf(String::isNotBlank) ?: return null
