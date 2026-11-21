@@ -79,7 +79,7 @@
     <string name="sort_by_name">Nume</string>
     <string name="sort_by_year">An</string>
     <string name="media_id">ID media</string>
-    <string name="mime_type">MIME type</string>
+    <string name="mime_type">Tip MIME</string>
     <string name="codecs">Codecuri</string>
     <string name="bitrate">Rată de biți</string>
     <string name="sample_rate">Rată de eșantionare</string>
@@ -2188,7 +2188,7 @@
     <string name="episode_played">Redat</string>
     <string name="lastfm_service_error">Autentificarea la Last.fm nu este disponibilă. Te rugăm să încerci din nou mai târziu.</string>
     <string name="settings_reset_to_default">Resetează la valorile prestabilite</string>
-    <string name="remove_all_downloads">Șterge toate descărcările</string>
+    <string name="remove_all_downloads">Elimină toate descărcările</string>
     <string name="disable_animated_artwork_on_mobile_data">Dezactivează copertele animate atunci când ești pe date mobile</string>
     <string name="disable_animated_artwork_on_mobile_data_desc">Afișează coperți statice pe date mobile chiar și când acestea sunt în cache</string>
     <string name="hide_recent_searches">Ascunde „Din căutări recente”</string>
@@ -2618,5 +2618,5 @@
     <string name="density_massive">Masivă (200%)</string>
     <string name="density_huge">Imensă (175%)</string>
     <string name="density_extra_large">Foarte mare (150%)</string>
-    <string name="add_to_library"></string>
+    <string name="add_to_library">Adaugă în bibliotecă</string>
 </resources>
