@@ -83,7 +83,7 @@ internal fun ProcessBuilder.prepareDesktopRelaunch(): ProcessBuilder =
             val launcherIndex = command.indexOf("/usr/bin/open")
             val argsIndex = command.indexOf("--args")
             if (launcherIndex >= 0 && argsIndex > launcherIndex) {
-                val environmentOptions = environment().keys.sorted().flatMap { listOf("--env", it) }
+                val environmentOptions = environment().toSortedMap().flatMap { (name, value) -> listOf("--env", "$name=$value") }
                 command(command.take(argsIndex) + environmentOptions + command.drop(argsIndex))
             }
         }
