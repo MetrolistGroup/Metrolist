@@ -8,6 +8,8 @@ Player and collection artwork use square, centered crops. Full-player video thum
 
 Apple Music animated covers match versioned tracks against their full catalog titles before using the album artwork. Track and album qualifiers treat brackets and parentheses equally. Consecutive album notes beginning with `+` in trailing parentheses or brackets are ignored before matching names and detecting explicit or clean editions. Single and EP suffixes may differ across catalogs, while release labels such as Taylor's Version and Deluxe remain significant. A known album must match; only tracks without an album can fall back to a self-titled release. The updated matcher discards stored lookup results from the previous rules.
 
+Artwork lookups reject title, artist or album fields longer than 4,096 characters before normalization. Album suffix parsing is iterative and does not use recursive regular-expression matching.
+
 The portrait full-screen artwork continuation starts before a wide thumbnail's bottom edge. Its preview and detailed blur keep their fades, with no uncovered band between the image and continuation.
 
 Android mini-player video crops to its artwork slot. Expanded-player video fits its aspect ratio within the available space, with the player background outside the frame and controls inside it. The loading artwork keeps its crop through the first-frame fade. Fullscreen video uses fit, including letterboxing when the screen and video have different aspect ratios. PiP has its own scaling.

@@ -41,42 +41,77 @@ import kotlin.io.encoding.Base64
 import kotlin.time.Clock
 import kotlin.time.Duration.Companion.milliseconds
 
-private val artworkEditionSuffix =
-    Regex(
-        """(?:\s*[-–—]\s*(explicit|clean(?:ed)?)|\s*[\[(]\s*(explicit|clean(?:ed)?)\s*(?:\]|\)))\s*$""",
-        RegexOption.IGNORE_CASE,
-    )
-
-private val artworkAlbumNoteSuffix = Regex("""(?:\s*(?:\(\s*\+[^)]*\)|\[\s*\+[^\]]*]))+\s*$""")
-
-private val artworkReleaseSuffix =
-    Regex(
-        """\s*(?:[-–—]\s*(?:single|ep)|\(\s*(?:single|ep)\s*\)|\[\s*(?:single|ep)\s*])\s*$""",
-        RegexOption.IGNORE_CASE,
-    )
+private fun artworkAlbumSuffix(
+    album: String,
+    endIndex: Int,
+): Pair<Int, String>? {
+    var end = endIndex
+    while (end > 0 && album[end - 1].isWhitespace()) end--
+    if (end == 0) return null
+    val closing = album[end - 1]
+    var start: Int
+    val label: String
+    if (closing == ')' || closing == ']') {
+        val opening = if (closing == ')') '(' else '['
+        var depth = 1
+        start = end - 2
+        while (start >= 0) {
+            when (album[start]) {
+                closing -> depth++
+                opening -> depth--
+            }
+            if (depth == 0) break
+            start--
+        }
+        if (start < 0) return null
+        var contentStart = start + 1
+        while (contentStart < end - 1 && album[contentStart].isWhitespace()) contentStart++
+        label =
+            if (contentStart < end - 1 && album[contentStart] == '+') {
+                "+"
+            } else {
+                album.substring(contentStart, end - 1).trimEnd().lowercase()
+            }
+    } else {
+        var wordStart = end
+        while (wordStart > 0 && album[wordStart - 1].isLetter()) wordStart--
+        if (wordStart == end) return null
+        label = album.substring(wordStart, end).lowercase()
+        start = wordStart
+        while (start > 0 && album[start - 1].isWhitespace()) start--
+        if (start == 0 || album[start - 1] !in "-–—") return null
+        start--
+    }
+    when (label) {
+        "+", "explicit", "clean", "cleaned", "single", "ep" -> Unit
+        else -> return null
+    }
+    while (start > 0 && album[start - 1].isWhitespace()) start--
+    return start to label
+}
 
 private fun stripReleaseSuffixes(name: String): String {
-    var stripped = name.trimEnd()
+    var end = name.length
     while (true) {
-        val suffix = artworkReleaseSuffix.find(stripped) ?: return stripped
-        stripped = stripped.removeRange(suffix.range).trimEnd()
+        val (start, label) = artworkAlbumSuffix(name, end) ?: break
+        if (label != "single" && label != "ep") break
+        end = start
     }
+    return name.substring(0, end).trimEnd()
 }
 
 private fun stripArtworkAlbumNotes(album: String): String {
-    var name = album.trimEnd()
-    var retainedSuffixes = ""
+    var end = album.length
+    val retainedSuffixes = mutableListOf<IntRange>()
     while (true) {
-        val note = artworkAlbumNoteSuffix.find(name)
-        if (note != null) {
-            name = name.removeRange(note.range).trimEnd()
-            continue
-        }
-        val suffix = artworkEditionSuffix.find(name) ?: artworkReleaseSuffix.find(name) ?: break
-        retainedSuffixes = suffix.value + retainedSuffixes
-        name = name.removeRange(suffix.range).trimEnd()
+        val (start, label) = artworkAlbumSuffix(album, end) ?: break
+        if (label != "+") retainedSuffixes.add(start until end)
+        end = start
     }
-    return (name + retainedSuffixes).trim()
+    return buildString(album.length) {
+        append(album, 0, end)
+        for (suffix in retainedSuffixes.asReversed()) append(album, suffix.first, suffix.last + 1)
+    }.trim()
 }
 
 internal fun resolveArtworkExplicitness(
@@ -86,15 +121,9 @@ internal fun resolveArtworkExplicitness(
     if (album.isNullOrBlank()) return trackExplicitness
     val name = stripReleaseSuffixes(stripArtworkAlbumNotes(album))
     if (name.isBlank()) return trackExplicitness
-    val edition =
-        artworkEditionSuffix
-            .find(name)
-            ?.groupValues
-            ?.drop(1)
-            ?.firstOrNull(String::isNotBlank)
-    return when {
-        edition.equals("explicit", ignoreCase = true) -> true
-        edition != null -> false
+    return when (artworkAlbumSuffix(name, name.length)?.second) {
+        "explicit" -> true
+        "clean", "cleaned" -> false
         else -> null
     }
 }
@@ -102,7 +131,13 @@ internal fun resolveArtworkExplicitness(
 internal fun stripArtworkEditionSuffix(album: String): String {
     val name = album.trim()
     val withoutRelease = stripReleaseSuffixes(name)
-    return (withoutRelease.replace(artworkEditionSuffix, "") + name.substring(withoutRelease.length)).trim()
+    val suffix = artworkAlbumSuffix(withoutRelease, withoutRelease.length)
+    val base =
+        when (suffix?.second) {
+            "explicit", "clean", "cleaned" -> withoutRelease.substring(0, suffix.first)
+            else -> withoutRelease
+        }
+    return (base + name.substring(withoutRelease.length)).trim()
 }
 
 internal fun matchesAppleMusicExplicitness(
@@ -165,6 +200,7 @@ class AnimatedArtworkService internal constructor(
         private const val MAX_HTML_RESPONSE_BYTES = 4 * 1024 * 1024
         private const val MAX_SCRIPT_RESPONSE_BYTES = 16 * 1024 * 1024
         private const val MAX_PLAYLIST_RESPONSE_BYTES = 1024 * 1024
+        private const val MAX_METADATA_CHARS = 4_096
 
         private val titleCleanupPatterns =
             listOf(
@@ -403,6 +439,9 @@ class AnimatedArtworkService internal constructor(
         album: String? = null,
         explicit: Boolean? = null,
     ): AnimatedCoverResult? {
+        if (title.length > MAX_METADATA_CHARS || artist.length > MAX_METADATA_CHARS || (album?.length ?: 0) > MAX_METADATA_CHARS) {
+            return null
+        }
         if (!Settings.shared.enableAnimatedCovers || !Settings.shared.isAnimatedArtworkAllowedOnNetwork()) return null
 
         cacheLoadJob.join()
