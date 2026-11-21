@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -108,6 +109,7 @@ data class PlayerControlAction(
     val text: String? = null,
     val wide: Boolean = false,
     val trailingText: String? = null,
+    val tooltip: String? = null,
 )
 
 @Composable
@@ -231,129 +233,145 @@ fun PlayerPrimaryControls(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.Center,
     ) {
-        FilledTonalButton(
-            onClick = { onSkipPrevious?.invoke() },
-            enabled = onSkipPrevious != null,
-            shapes = ButtonDefaults.shapes(shape = sideShape),
-            interactionSource = prevInteractionSource,
-            colors =
-                ButtonDefaults.filledTonalButtonColors(
-                    containerColor = sideButtonContainerColor.copy(alpha = 0.8f),
-                    contentColor = sideButtonContentColor,
-                ),
-            contentPadding = PaddingValues(horizontal = 0.dp, vertical = 0.dp),
-            modifier =
-                Modifier
-                    .height(effectiveSideButtonHeight)
-                    .pointerHoverIcon(PointerIcon.Hand)
-                    .weight(backButtonWeight)
-                    .tvFocusHighlight(sideShape, scale = 1f)
-                    .playerControlBlend(),
-        ) {
-            Icon(MetrolistIcons.Rounded.SkipPrevious, previousText, modifier = Modifier.size(iconSize))
+        HoverTooltip(text = previousText, modifier = Modifier.weight(backButtonWeight)) {
+            FilledTonalButton(
+                onClick = { onSkipPrevious?.invoke() },
+                enabled = onSkipPrevious != null,
+                shapes = ButtonDefaults.shapes(shape = sideShape),
+                interactionSource = prevInteractionSource,
+                colors =
+                    ButtonDefaults.filledTonalButtonColors(
+                        containerColor = sideButtonContainerColor.copy(alpha = 0.8f),
+                        contentColor = sideButtonContentColor,
+                    ),
+                contentPadding = PaddingValues(horizontal = 0.dp, vertical = 0.dp),
+                modifier =
+                    Modifier
+                        .height(effectiveSideButtonHeight)
+                        .pointerHoverIcon(PointerIcon.Hand)
+                        .fillMaxWidth()
+                        .tvFocusHighlight(sideShape, scale = 1f)
+                        .playerControlBlend(),
+            ) {
+                Icon(MetrolistIcons.Rounded.SkipPrevious, previousText, modifier = Modifier.size(iconSize))
+            }
         }
 
         Spacer(Modifier.width(if (isCompact) 6.dp else 8.dp))
 
-        FilledTonalButton(
-            onClick = {
-                haptics.toggle(!isPlaying)
-                onTogglePlay()
-            },
-            shapes = ButtonDefaults.shapes(shape = playShape),
-            interactionSource = playPauseInteractionSource,
-            colors =
-                ButtonDefaults.filledTonalButtonColors(
-                    containerColor = centerButtonContainerColor,
-                    contentColor = centerButtonContentColor,
-                ),
-            contentPadding = PaddingValues(horizontal = 0.dp, vertical = 0.dp),
-            modifier =
-                Modifier
-                    .height(buttonHeight)
-                    .pointerHoverIcon(PointerIcon.Hand)
-                    .widthIn(min = minPlayWidth)
-                    .weight(playPauseWeight)
-                    .tvFocusHighlight(playShape, scale = 1f, color = centerButtonContentColor)
-                    .then(
-                        if (playPauseFocusRequester != null) {
-                            Modifier.focusRequester(playPauseFocusRequester)
-                        } else {
-                            Modifier
-                        },
-                    ),
+        HoverTooltip(
+            text =
+                if (showLabels) {
+                    null
+                } else if (isLoading) {
+                    loadingText
+                } else if (isPlaying) {
+                    pauseText
+                } else {
+                    playText
+                },
+            modifier = Modifier.weight(playPauseWeight),
         ) {
-            if (isLoading && showLoadingIndicator) {
-                LoadingIndicator(
-                    modifier =
-                        Modifier.size(if (isCompact) 20.dp else 28.dp).semantics {
-                            contentDescription = loadingText
-                        },
-                    color = LocalContentColor.current,
-                )
-            } else {
-                Row(
-                    modifier = Modifier.padding(horizontal = if (isCompact) 0.dp else 8.dp),
-                    horizontalArrangement = Arrangement.Center,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Icon(
-                        if (isPlaying) MetrolistIcons.Rounded.Pause else MetrolistIcons.Rounded.PlayArrow,
-                        if (showLabels) {
-                            null
-                        } else if (isPlaying) {
-                            pauseText
-                        } else {
-                            playText
-                        },
-                        modifier =
-                            Modifier.size(
-                                if (isCompact) {
-                                    20.dp
-                                } else if (showLabels) {
-                                    28.dp
-                                } else {
-                                    IconButtonDefaults.largeIconSize
-                                },
-                            ),
-                    )
-                    if (showLabels) {
-                        val playPauseText = if (isPlaying) pauseText else playText
-                        val labelEffectsSpec = MaterialTheme.motionScheme.fastEffectsSpec<Float>()
-                        val labelSpatialSpec = MaterialTheme.motionScheme.fastSpatialSpec<IntSize>()
-                        Spacer(Modifier.width(if (isCompact) 6.dp else 10.dp))
-                        AnimatedContent(
-                            targetState = playPauseText,
-                            modifier =
-                                Modifier.weight(1f, fill = false).clearAndSetSemantics {
-                                    text = AnnotatedString(playPauseText)
-                                },
-                            transitionSpec = {
-                                (fadeIn(labelEffectsSpec) togetherWith fadeOut(labelEffectsSpec))
-                                    .using(SizeTransform { _, _ -> labelSpatialSpec })
+            FilledTonalButton(
+                onClick = {
+                    haptics.toggle(!isPlaying)
+                    onTogglePlay()
+                },
+                shapes = ButtonDefaults.shapes(shape = playShape),
+                interactionSource = playPauseInteractionSource,
+                colors =
+                    ButtonDefaults.filledTonalButtonColors(
+                        containerColor = centerButtonContainerColor,
+                        contentColor = centerButtonContentColor,
+                    ),
+                contentPadding = PaddingValues(horizontal = 0.dp, vertical = 0.dp),
+                modifier =
+                    Modifier
+                        .height(buttonHeight)
+                        .pointerHoverIcon(PointerIcon.Hand)
+                        .widthIn(min = minPlayWidth)
+                        .fillMaxWidth()
+                        .tvFocusHighlight(playShape, scale = 1f, color = centerButtonContentColor)
+                        .then(
+                            if (playPauseFocusRequester != null) {
+                                Modifier.focusRequester(playPauseFocusRequester)
+                            } else {
+                                Modifier
                             },
-                            contentAlignment = Alignment.Center,
-                            label = "playPauseLabel",
-                        ) { labelText ->
-                            Text(
-                                labelText,
-                                style =
-                                    (if (isCompact) MaterialTheme.typography.labelLarge else MaterialTheme.typography.titleLarge).copy(
-                                        lineHeightStyle = LineHeightStyle(LineHeightStyle.Alignment.Center, LineHeightStyle.Trim.Both),
-                                    ),
-                                autoSize =
+                        ),
+            ) {
+                if (isLoading && showLoadingIndicator) {
+                    LoadingIndicator(
+                        modifier =
+                            Modifier.size(if (isCompact) 20.dp else 28.dp).semantics {
+                                contentDescription = loadingText
+                            },
+                        color = LocalContentColor.current,
+                    )
+                } else {
+                    Row(
+                        modifier = Modifier.padding(horizontal = if (isCompact) 0.dp else 8.dp),
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Icon(
+                            if (isPlaying) MetrolistIcons.Rounded.Pause else MetrolistIcons.Rounded.PlayArrow,
+                            if (showLabels) {
+                                null
+                            } else if (isPlaying) {
+                                pauseText
+                            } else {
+                                playText
+                            },
+                            modifier =
+                                Modifier.size(
                                     if (isCompact) {
-                                        null
+                                        20.dp
+                                    } else if (showLabels) {
+                                        28.dp
                                     } else {
-                                        TextAutoSize.StepBased(
-                                            minFontSize = MaterialTheme.typography.labelSmall.fontSize,
-                                            maxFontSize = MaterialTheme.typography.titleLarge.fontSize,
-                                        )
+                                        IconButtonDefaults.largeIconSize
                                     },
-                                fontWeight = FontWeight.SemiBold,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                            )
+                                ),
+                        )
+                        if (showLabels) {
+                            val playPauseText = if (isPlaying) pauseText else playText
+                            val labelEffectsSpec = MaterialTheme.motionScheme.fastEffectsSpec<Float>()
+                            val labelSpatialSpec = MaterialTheme.motionScheme.fastSpatialSpec<IntSize>()
+                            Spacer(Modifier.width(if (isCompact) 6.dp else 10.dp))
+                            AnimatedContent(
+                                targetState = playPauseText,
+                                modifier =
+                                    Modifier.weight(1f, fill = false).clearAndSetSemantics {
+                                        text = AnnotatedString(playPauseText)
+                                    },
+                                transitionSpec = {
+                                    (fadeIn(labelEffectsSpec) togetherWith fadeOut(labelEffectsSpec))
+                                        .using(SizeTransform { _, _ -> labelSpatialSpec })
+                                },
+                                contentAlignment = Alignment.Center,
+                                label = "playPauseLabel",
+                            ) { labelText ->
+                                Text(
+                                    labelText,
+                                    style =
+                                        (if (isCompact) MaterialTheme.typography.labelLarge else MaterialTheme.typography.titleLarge).copy(
+                                            lineHeightStyle = LineHeightStyle(LineHeightStyle.Alignment.Center, LineHeightStyle.Trim.Both),
+                                        ),
+                                    autoSize =
+                                        if (isCompact) {
+                                            null
+                                        } else {
+                                            TextAutoSize.StepBased(
+                                                minFontSize = MaterialTheme.typography.labelSmall.fontSize,
+                                                maxFontSize = MaterialTheme.typography.titleLarge.fontSize,
+                                            )
+                                        },
+                                    fontWeight = FontWeight.SemiBold,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                )
+                            }
                         }
                     }
                 }
@@ -362,26 +380,28 @@ fun PlayerPrimaryControls(
 
         Spacer(Modifier.width(if (isCompact) 6.dp else 8.dp))
 
-        FilledTonalButton(
-            onClick = { onSkipNext?.invoke() },
-            enabled = onSkipNext != null,
-            shapes = ButtonDefaults.shapes(shape = sideShape),
-            interactionSource = nextInteractionSource,
-            colors =
-                ButtonDefaults.filledTonalButtonColors(
-                    containerColor = sideButtonContainerColor.copy(alpha = 0.85f),
-                    contentColor = sideButtonContentColor,
-                ),
-            contentPadding = PaddingValues(horizontal = 0.dp, vertical = 0.dp),
-            modifier =
-                Modifier
-                    .height(effectiveSideButtonHeight)
-                    .pointerHoverIcon(PointerIcon.Hand)
-                    .weight(nextButtonWeight)
-                    .tvFocusHighlight(sideShape, scale = 1f)
-                    .playerControlBlend(),
-        ) {
-            Icon(MetrolistIcons.Rounded.SkipNext, nextText, modifier = Modifier.size(iconSize))
+        HoverTooltip(text = nextText, modifier = Modifier.weight(nextButtonWeight)) {
+            FilledTonalButton(
+                onClick = { onSkipNext?.invoke() },
+                enabled = onSkipNext != null,
+                shapes = ButtonDefaults.shapes(shape = sideShape),
+                interactionSource = nextInteractionSource,
+                colors =
+                    ButtonDefaults.filledTonalButtonColors(
+                        containerColor = sideButtonContainerColor.copy(alpha = 0.85f),
+                        contentColor = sideButtonContentColor,
+                    ),
+                contentPadding = PaddingValues(horizontal = 0.dp, vertical = 0.dp),
+                modifier =
+                    Modifier
+                        .height(effectiveSideButtonHeight)
+                        .pointerHoverIcon(PointerIcon.Hand)
+                        .fillMaxWidth()
+                        .tvFocusHighlight(sideShape, scale = 1f)
+                        .playerControlBlend(),
+            ) {
+                Icon(MetrolistIcons.Rounded.SkipNext, nextText, modifier = Modifier.size(iconSize))
+            }
         }
     }
 }

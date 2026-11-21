@@ -95,6 +95,7 @@ fun VintagePlayerControls(
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
     val scale = remember { Animatable(1f) }
+    val loadingText = stringResource(Res.string.loading)
 
     LaunchedEffect(isPressed) {
         if (!isPressed) {
@@ -141,114 +142,133 @@ fun VintagePlayerControls(
             val primaryButtonModifier = if (hasSecondaryControls) Modifier.weight(1f, fill = false) else Modifier
 
             if (onShuffleClick != null) {
-                IconToggleButton(
-                    checked = isShuffled,
-                    onCheckedChange = { onShuffleClick() },
-                    enabled = enabled,
-                    colors =
-                        IconButtonDefaults.iconToggleButtonColors(
-                            contentColor = sideButtonColor.copy(alpha = 0.6f),
-                            checkedContentColor = MaterialTheme.colorScheme.primary,
-                        ),
-                    modifier = Modifier.tvFocusHighlight(CircleShape),
-                    shapes = IconButtonDefaults.toggleableShapes(),
+                HoverTooltip(text = stringResource(Res.string.shuffle)) {
+                    IconToggleButton(
+                        checked = isShuffled,
+                        onCheckedChange = { onShuffleClick() },
+                        enabled = enabled,
+                        colors =
+                            IconButtonDefaults.iconToggleButtonColors(
+                                contentColor = sideButtonColor.copy(alpha = 0.6f),
+                                checkedContentColor = MaterialTheme.colorScheme.primary,
+                            ),
+                        modifier = Modifier.tvFocusHighlight(CircleShape),
+                        shapes = IconButtonDefaults.toggleableShapes(),
+                    ) {
+                        Icon(
+                            imageVector = MetrolistIcons.Rounded.Shuffle,
+                            contentDescription = stringResource(Res.string.shuffle),
+                            modifier = Modifier.size(24.dp),
+                        )
+                    }
+                }
+            }
+
+            HoverTooltip(text = text.previous, modifier = primaryButtonModifier) {
+                IconButton(
+                    onClick = { onSkipPrevious?.invoke() },
+                    enabled = enabled && onSkipPrevious != null,
+                    colors = IconButtonDefaults.iconButtonColors(contentColor = sideButtonColor),
+                    modifier = Modifier.size(buttonSize).tvFocusHighlight(CircleShape),
+                    shapes = IconButtonDefaults.shapes(),
                 ) {
                     Icon(
-                        imageVector = MetrolistIcons.Rounded.Shuffle,
-                        contentDescription = stringResource(Res.string.shuffle),
-                        modifier = Modifier.size(24.dp),
+                        imageVector = MetrolistIcons.Rounded.SkipPrevious,
+                        contentDescription = text.previous,
+                        modifier = Modifier.size(iconSize),
                     )
                 }
             }
 
-            IconButton(
-                onClick = { onSkipPrevious?.invoke() },
-                enabled = enabled && onSkipPrevious != null,
-                colors = IconButtonDefaults.iconButtonColors(contentColor = sideButtonColor),
-                modifier = primaryButtonModifier.size(buttonSize).tvFocusHighlight(CircleShape),
-                shapes = IconButtonDefaults.shapes(),
+            HoverTooltip(
+                text =
+                    if (isLoading) {
+                        loadingText
+                    } else if (isPlaying) {
+                        text.pause
+                    } else {
+                        text.play
+                    },
+                modifier = primaryButtonModifier,
             ) {
-                Icon(
-                    imageVector = MetrolistIcons.Rounded.SkipPrevious,
-                    contentDescription = text.previous,
-                    modifier = Modifier.size(iconSize),
-                )
+                IconButton(
+                    onClick = {
+                        haptic.perform(hapticType)
+                        onTogglePlay()
+                    },
+                    modifier =
+                        Modifier
+                            .size(playButtonSize)
+                            .scale(scale.value)
+                            .tvFocusHighlight(CircleShape)
+                            .then(
+                                if (playPauseFocusRequester != null) Modifier.focusRequester(playPauseFocusRequester) else Modifier,
+                            ),
+                    enabled = enabled,
+                    interactionSource = interactionSource,
+                    shapes = IconButtonDefaults.shapes(),
+                ) {
+                    if (isLoading && showLoadingIndicator) {
+                        LoadingIndicator(
+                            modifier =
+                                Modifier
+                                    .size(
+                                        (playIconSize * 0.6f).coerceIn(20.dp, 40.dp),
+                                    ).semantics { contentDescription = loadingText },
+                            color = sideButtonColor,
+                        )
+                    } else {
+                        Icon(
+                            imageVector = if (isPlaying) MetrolistIcons.Rounded.Pause else MetrolistIcons.Rounded.PlayArrow,
+                            contentDescription = if (isPlaying) text.pause else text.play,
+                            modifier = Modifier.size((playIconSize + 8.dp).coerceAtMost(playButtonSize)),
+                            tint = sideButtonColor,
+                        )
+                    }
+                }
             }
 
-            IconButton(
-                onClick = {
-                    haptic.perform(hapticType)
-                    onTogglePlay()
-                },
-                modifier =
-                    primaryButtonModifier
-                        .size(playButtonSize)
-                        .scale(scale.value)
-                        .tvFocusHighlight(CircleShape)
-                        .then(
-                            if (playPauseFocusRequester != null) Modifier.focusRequester(playPauseFocusRequester) else Modifier,
-                        ),
-                enabled = enabled,
-                interactionSource = interactionSource,
-                shapes = IconButtonDefaults.shapes(),
-            ) {
-                if (isLoading && showLoadingIndicator) {
-                    val loadingText = stringResource(Res.string.loading)
-                    LoadingIndicator(
-                        modifier =
-                            Modifier
-                                .size(
-                                    (playIconSize * 0.6f).coerceIn(20.dp, 40.dp),
-                                ).semantics { contentDescription = loadingText },
-                        color = sideButtonColor,
-                    )
-                } else {
+            HoverTooltip(text = text.next, modifier = primaryButtonModifier) {
+                IconButton(
+                    onClick = { onSkipNext?.invoke() },
+                    enabled = enabled && onSkipNext != null,
+                    colors = IconButtonDefaults.iconButtonColors(contentColor = sideButtonColor),
+                    modifier = Modifier.size(buttonSize).tvFocusHighlight(CircleShape),
+                    shapes = IconButtonDefaults.shapes(),
+                ) {
                     Icon(
-                        imageVector = if (isPlaying) MetrolistIcons.Rounded.Pause else MetrolistIcons.Rounded.PlayArrow,
-                        contentDescription = if (isPlaying) text.pause else text.play,
-                        modifier = Modifier.size((playIconSize + 8.dp).coerceAtMost(playButtonSize)),
-                        tint = sideButtonColor,
+                        imageVector = MetrolistIcons.Rounded.SkipNext,
+                        contentDescription = text.next,
+                        modifier = Modifier.size(iconSize),
                     )
                 }
-            }
-
-            IconButton(
-                onClick = { onSkipNext?.invoke() },
-                enabled = enabled && onSkipNext != null,
-                colors = IconButtonDefaults.iconButtonColors(contentColor = sideButtonColor),
-                modifier = primaryButtonModifier.size(buttonSize).tvFocusHighlight(CircleShape),
-                shapes = IconButtonDefaults.shapes(),
-            ) {
-                Icon(
-                    imageVector = MetrolistIcons.Rounded.SkipNext,
-                    contentDescription = text.next,
-                    modifier = Modifier.size(iconSize),
-                )
             }
 
             if (onRepeatClick != null) {
                 val repeatDescription = repeatContentDescription(repeatMode)
-                IconButton(
-                    onClick = onRepeatClick,
-                    enabled = enabled,
-                    colors =
-                        IconButtonDefaults.iconButtonColors(
-                            contentColor =
-                                if (repeatMode != RepeatMode.OFF) {
-                                    MaterialTheme.colorScheme.primary
-                                } else {
-                                    sideButtonColor.copy(alpha = 0.6f)
-                                },
-                        ),
-                    modifier = Modifier.tvFocusHighlight(CircleShape).semantics { stateDescription = repeatDescription },
-                    shapes = IconButtonDefaults.shapes(),
-                ) {
-                    Icon(
-                        imageVector =
-                            if (repeatMode == RepeatMode.ONE) MetrolistIcons.Rounded.RepeatOne else MetrolistIcons.Rounded.Repeat,
-                        contentDescription = stringResource(Res.string.repeat),
-                        modifier = Modifier.size(24.dp),
-                    )
+                HoverTooltip(text = repeatDescription) {
+                    IconButton(
+                        onClick = onRepeatClick,
+                        enabled = enabled,
+                        colors =
+                            IconButtonDefaults.iconButtonColors(
+                                contentColor =
+                                    if (repeatMode != RepeatMode.OFF) {
+                                        MaterialTheme.colorScheme.primary
+                                    } else {
+                                        sideButtonColor.copy(alpha = 0.6f)
+                                    },
+                            ),
+                        modifier = Modifier.tvFocusHighlight(CircleShape).semantics { stateDescription = repeatDescription },
+                        shapes = IconButtonDefaults.shapes(),
+                    ) {
+                        Icon(
+                            imageVector =
+                                if (repeatMode == RepeatMode.ONE) MetrolistIcons.Rounded.RepeatOne else MetrolistIcons.Rounded.Repeat,
+                            contentDescription = stringResource(Res.string.repeat),
+                            modifier = Modifier.size(24.dp),
+                        )
+                    }
                 }
             }
         }
