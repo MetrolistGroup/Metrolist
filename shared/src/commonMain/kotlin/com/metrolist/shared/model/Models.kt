@@ -51,6 +51,7 @@ data class SongItem(
     override val libraryAddedAt: Long? = null,
     override val libraryUpdatedAt: Long? = null,
     val playlistLocalMappingId: Int? = null,
+    val playlistOccurrenceId: String? = null,
     val playbackPositionMs: Long? = null,
     val playbackProgressPercent: Int? = null,
     override val isUnavailable: Boolean = false,

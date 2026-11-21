@@ -5,6 +5,7 @@ import com.metrolist.desktop.state.app.UiState
 import com.metrolist.desktop.state.playback.PlayerState
 import com.metrolist.shared.cast.CastDevice
 import com.metrolist.shared.model.SongItem
+import com.metrolist.shared.model.playlistOccurrenceIdentity
 import com.metrolist.shared.ui.playback.PlaybackController
 import com.metrolist.shared.ui.playback.PlaybackListState
 import com.metrolist.shared.ui.playback.PlaybackUiState
@@ -20,7 +21,12 @@ class DesktopPlaybackController(
 ) : PlaybackController {
     override val listState =
         combine(PlayerState.player.currentSong, PlayerState.player.isPlaying) { song, playing ->
-            PlaybackListState(song?.id, playing, originalQueueItemId = song?.originalQueueItemId)
+            PlaybackListState(
+                song?.id,
+                playing,
+                originalQueueItemId = song?.originalQueueItemId,
+                currentSongOccurrenceKey = song?.playlistOccurrenceIdentity(),
+            )
         }.distinctUntilChanged()
 
     private val baseState =

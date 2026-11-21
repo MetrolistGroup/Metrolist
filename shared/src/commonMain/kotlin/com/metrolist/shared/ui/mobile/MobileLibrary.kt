@@ -1013,6 +1013,7 @@ internal fun MobileSongCollectionScreen(
                 cover = if (localPlaylistId == null && customCover == null) libraryCover(type) else null,
                 currentSongId = playbackState.currentSongId,
                 currentQueueItemId = playbackState.originalQueueItemId,
+                currentSongOccurrenceKey = playbackState.currentSongOccurrenceKey,
                 isPlaying = playbackState.isPlaying,
                 contentPadding = PaddingValues(bottom = bottomContentPadding),
                 modifier = modifier.fillMaxSize(),

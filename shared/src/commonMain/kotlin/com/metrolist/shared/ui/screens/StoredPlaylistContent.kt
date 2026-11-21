@@ -402,6 +402,7 @@ fun StoredPlaylistContent(
         listState = listState,
         currentSongId = playbackState.currentSongId,
         currentQueueItemId = playbackState.originalQueueItemId,
+        currentSongOccurrenceKey = playbackState.currentSongOccurrenceKey,
         isPlaying = playbackState.isPlaying,
         header =
             headerAction?.let { action ->

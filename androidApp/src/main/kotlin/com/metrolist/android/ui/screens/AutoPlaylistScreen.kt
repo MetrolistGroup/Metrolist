@@ -149,6 +149,7 @@ import com.metrolist.shared.model.indexOfPlaylistOccurrence
 import com.metrolist.shared.model.isReordering
 import com.metrolist.shared.model.moveCachedSong
 import com.metrolist.shared.model.moveSelection
+import com.metrolist.shared.model.playlistOccurrenceIdentity
 import com.metrolist.shared.model.presentCollection
 import com.metrolist.shared.model.reconcileCachedCustomOrder
 import com.metrolist.shared.model.toSongItem
@@ -922,6 +923,7 @@ fun AutoPlaylistScreen(
                         ),
                     currentSongId = currentSong?.id,
                     currentQueueItemId = currentSong?.originalQueueItemId,
+                    currentSongOccurrenceKey = currentSong?.playlistOccurrenceIdentity(),
                     isPlaying = isPlaying,
                     onArtistClick = onArtistClick,
                     reorderMode = reorderMode,
