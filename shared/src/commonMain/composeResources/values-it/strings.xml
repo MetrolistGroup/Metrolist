@@ -344,7 +344,7 @@
     <string name="app_font_reset_description">Usa il font di sistema e rimuovi il font importato</string>
     <string name="app_font_downloading">Download di %1$s…</string>
     <string name="app_font_active">Attivo</string>
-    <string name="app_font_installed">Installato · Tocca per usare</string>
+    <string name="app_font_installed">Installato · Tocca per usare</string>
     <string name="app_font_download_and_use">Tocca per scaricare e usare</string>
     <string name="app_font_download_error">Impossibile scaricare %1$s. Controlla la connessione e riprova.</string>
     <string name="app_font_import_custom">Importa un file TTF o OTF</string>
@@ -371,7 +371,7 @@
     <string name="appearance_show_search_tab">Scheda Cerca</string>
     <string name="appearance_show_library_tab">Scheda Libreria</string>
     <string name="mysterious_fourth_tab">La misteriosa quarta scheda</string>
-    <string name="mysterious_fourth_tab_description">Home, Cerca e Libreria sono nascoste. Apri il menù dell'account, quindi Impostazioni per mostrarle di nuovo.</string>
+    <string name="mysterious_fourth_tab_description">Home, Cerca e Libreria sono nascoste. Apri il menu dell'account, quindi Impostazioni per mostrarle di nuovo.</string>
     <string name="appearance_slim_bottom_nav">Barra di navigazione inferiore compatta</string>
     <string name="appearance_slim_bottom_nav_description">Nascondi le etichette dalla barra di navigazione</string>
     <string name="appearance_swipe_song_gesture">Gesti di scorrimento sui brani</string>
@@ -420,7 +420,7 @@
     <string name="blocked_artists">Artisti bloccati</string>
     <string name="blocked_artists_desc">Artisti esclusi da code, consigli e statistiche</string>
     <string name="blocked_artists_empty">Nessun artista bloccato</string>
-    <string name="blocked_artists_empty_desc">Blocca un artista dal menù di riproduzione per escluderlo dalla riproduzione e dai consigli</string>
+    <string name="blocked_artists_empty_desc">Blocca un artista dal menu di riproduzione per escluderlo dalla riproduzione e dai consigli</string>
     <plurals name="blocked_artists_count">
         <item quantity="one">%1$d artista bloccato</item>
         <item quantity="many">%1$d artisti bloccati</item>
@@ -438,7 +438,7 @@
     <string name="android_auto_youtube_playlist">Playlist di YouTube</string>
     <string name="android_auto_driving_playlists">Playlist per la guida</string>
     <string name="my_top_100">La mia top 100</string>
-    <string name="uploaded_playlist_name">Caricata</string>
+    <string name="uploaded_playlist_name">Caricati</string>
     <string name="prompt_continue_playback">Chiedi prima di continuare la riproduzione</string>
     <string name="continue_playback_title">Continuare la riproduzione?</string>
     <string name="continue_playback_message">Continuare la riproduzione di “%1$s”?</string>
@@ -507,7 +507,7 @@
     <string name="listenbrainz_connect_title">Connetti ListenBrainz</string>
     <string name="listenbrainz_user_token">Token utente</string>
     <string name="restore_database_incompatible">Questo backup utilizza la versione %1$d del database, ma l'app supporta fino alla versione %2$d. Aggiorna Metrolist e riprova.</string>
-    <string name="restore_failed_detail">Impossibile ripristinare il backup durante %1$s\n\nMotivo: %2$s</string>
+    <string name="restore_failed_detail">Impossibile ripristinare il backup durante %1$s.\n\nMotivo: %2$s</string>
     <string name="restore_error_unknown">Nessun dettaglio aggiuntivo disponibile.</string>
     <string name="restore_stage_reading_backup">Lettura del file di backup</string>
     <string name="restore_stage_reading_settings">Lettura delle impostazioni precedenti</string>
@@ -530,7 +530,7 @@
     <string name="hide_short_songs">Nascondi i brani brevi</string>
     <string name="hide_short_songs_desc">Nascondi anteprime, audio degli Shorts e altri brani più brevi della durata impostata</string>
     <string name="minimum_song_duration">Durata minima dei brani</string>
-    <string name="minimum_song_duration_desc">Nascondi brani più brevi di %1$d secondi</string>
+    <string name="minimum_song_duration_desc">Nascondi brani più brevi di %1$d secondi</string>
     <string name="block_ai_slop_artists">Blocca gli artisti IA noti</string>
     <string name="block_ai_slop_artists_desc">Nascondi i canali elencati in Override92/AiSList. La lista CC BY-NC 4.0 si aggiorna quotidianamente e rimane disponibile offline.</string>
     <string name="listen_together_entry_subtitle">Ascolta la musica con i tuoi amici in tempo reale.</string>
@@ -569,7 +569,7 @@
     <string name="lyrics_timing_line_synced">Sincronizzato</string>
     <string name="lyrics_timing_word_synced">Sillaba</string>
     <string name="lyrics_providers_loading">Ricerca dei provider dei testi…</string>
-    <string name="use_rounded_rect_play_button">Pulsante riproduci rettangolare arrotondato</string>
+    <string name="use_rounded_rect_play_button">Pulsante Riproduci rettangolare arrotondato</string>
     <string name="artwork">Copertina</string>
     <string name="updates_title">Aggiornamento app</string>
     <string name="updates_check">Cerca aggiornamenti</string>
@@ -767,7 +767,7 @@
     <string name="device_connect_offline">Offline</string>
     <string name="device_connect_device_type_desktop">Computer</string>
     <string name="device_connect_device_type_android_auto">Android Auto</string>
-    <string name="device_connect_device_type_wear_os">Smartwatch</string>
+    <string name="device_connect_device_type_wear_os">Wear OS</string>
     <string name="device_connect_device_type_ios">iOS</string>
     <string name="device_connect_device_type_android_phone">Smartphone Android</string>
     <string name="device_connect_device_type_and_model">%1$s · %2$s</string>
@@ -2262,7 +2262,7 @@
     <string name="lyrics_plus_lighter">Più chiaro</string>
     <string name="lyrics_plus_lighter_desc">Rendi più luminosi i testi con una fusione più chiara sugli sfondi liquidi</string>
     <string name="privacy_diagnostics">Diagnostica</string>
-    <string name="scrobble_create_account">Crea account</string>
+    <string name="scrobble_create_account">Crea un account</string>
     <string name="player_type_classic">Classico</string>
     <string name="slider_standard">Standard</string>
     <string name="device_connect_account_unresolved">Identità account non disponibile. Accedi di nuovo su entrambi i dispositivi e seleziona lo stesso canale YouTube.</string>
@@ -2606,7 +2606,7 @@
     <string name="listen_together_custom_server_name">Server personalizzato</string>
     <string name="add_to_library">Aggiungi alla libreria</string>
     <string name="spotify_import_create_new_local_playlist">Crea una nuova playlist locale</string>
-    <string name="updates_nightly_builds_desc">Ricevi una nuova versione ad ogni cambiamento. Le versioni nightly potrebbero essere instabili.</string>
+    <string name="updates_nightly_builds_desc">Ricevi una nuova versione a ogni cambiamento. Le versioni nightly potrebbero essere instabili.</string>
     <string name="window_title_now_playing">%1$s • %2$s</string>
     <string name="desktop_omarchy_unsupported">Metrolist non supporta Omarchy. Usa un'altra distribuzione Linux, Windows 10 o versioni successive, oppure macOS.</string>
     <string name="listen_together_custom_server_maintainer">Utente</string>
@@ -2645,11 +2645,11 @@
     <string name="classic_recommendations">Consigli classici</string>
     <string name="classic_recommendations_desc">Crea Scelte rapide dalla tua cronologia di ascolto e riproduci in ordine la coda personalizzata di YouTube, come in Metrolist 13</string>
     <string name="classic_recommendations_desc_desktop">Riproduci in ordine la coda personalizzata di YouTube, come in Metrolist 13</string>
-    <string name="devtools_playback_log_title">Registro eventi dell'applicazione</string>
+    <string name="devtools_playback_log_title">Log degli eventi dell'app</string>
     <string name="devtools_playback_log_count">%1$d eventi acquisiti</string>
-    <string name="devtools_playback_log_cleared">Registro dell'applicazione cancellato</string>
-    <string name="devtools_playback_log_export_failed">Impossibile esportare il registro dell'applicazione</string>
-    <string name="devtools_playback_log_share_title">Esporta registro applicazione</string>
+    <string name="devtools_playback_log_cleared">Log dell'app eliminato</string>
+    <string name="devtools_playback_log_export_failed">Impossibile esportare il log dell'app</string>
+    <string name="devtools_playback_log_share_title">Esporta il log dell'app</string>
     <string name="automatic_backup">Backup automatico</string>
     <string name="automatic_backup_description">Salva automaticamente un backup locale e mantieni le 10 copie più recenti.</string>
     <string name="automatic_backup_frequency">Frequenza backup</string>
