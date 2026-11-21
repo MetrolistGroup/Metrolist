@@ -170,7 +170,7 @@
     <string name="persistent_queue_desc">Restaurează ultima ta coadă atunci când aplicația pornește</string>
     <string name="auto_load_more">Adaugă automat melodii similare</string>
     <string name="auto_load_more_desc">Adaugă automat melodii similare în cozile radioului și mixurilor când acestea se apropie de final</string>
-    <string name="skip_silence">Sari peste momentele fără sunet</string>
+    <string name="skip_silence">Omite liniștea</string>
     <string name="audio_normalization">Normalizare audio</string>
     <string name="auto_skip_next_on_error">Sari la următoarea melodie atunci când sunt întâmpinate erori</string>
     <string name="auto_skip_next_on_error_desc">Treci la melodia următoare în cazul în care redarea eșuează</string>
@@ -2632,4 +2632,6 @@
     <string name="widget_track_description">%1$s, %2$s</string>
     <string name="widget_play_item">Redă %1$s</string>
     <string name="classic_recommendations">Recomandări clasice</string>
+    <string name="classic_recommendations_desc">Creează selecții rapide din propriul istoric de ascultare și redă în ordine lista personală YouTube „Urmează”, la fel ca în Metrolist 13</string>
+    <string name="classic_recommendations_desc_desktop">Redă în ordine lista personală YouTube „Urmează”, la fel ca în Metrolist 13</string>
 </resources>
