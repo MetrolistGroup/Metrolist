@@ -19,7 +19,7 @@
     <string name="forgotten_favorites">Вы давно не слушали</string>
     <string name="keep_listening">Слушать дальше</string>
     <string name="similar_to">Похоже на</string>
-    <string name="new_releases">Новинки</string>
+    <string name="new_releases">Новые релизы</string>
     <string name="podcasts_for_you">Подкасты для вас</string>
     <string name="recap">Итоги</string>
     <string name="home_unavailable">Главная страница недоступна</string>
@@ -34,12 +34,12 @@
     <string name="filter_downloaded">Скачанные</string>
     <string name="filter_all">Все</string>
     <string name="filter_videos">Видео</string>
-    <string name="filter_community_playlists">Плейлисты сообщества</string>
-    <string name="filter_featured_playlists">Избранные плейлисты</string>
+    <string name="filter_community_playlists">Пользовательские плейлисты</string>
+    <string name="filter_featured_playlists">Плейлисты YouTube Music</string>
     <string name="other_versions">Другие версии</string>
     <string name="liked_songs">Понравившиеся треки</string>
-    <string name="downloaded_songs">Скачанные песни</string>
-    <string name="retry">Повтор</string>
+    <string name="downloaded_songs">Скачанные треки</string>
+    <string name="retry">Повторить попытку</string>
     <string name="shuffle">Перемешать</string>
     <string name="reset">Сбросить</string>
     <string name="mix">Микс</string>
@@ -48,7 +48,7 @@
     <string name="start_radio">Запустить радио</string>
     <string name="play">Играть</string>
     <string name="pause">Пауза</string>
-    <string name="play_next">Играть следующее</string>
+    <string name="play_next">Играть следующим</string>
     <string name="add_to_queue">Добавить в очередь</string>
     <string name="remove_from_library">Удалить из библиотеки</string>
     <string name="action_download">Скачать</string>
@@ -253,7 +253,7 @@
     <string name="restore_failed">Не удалось восстановить бэкап</string>
     <string name="dismiss">Скрыть</string>
     <string name="preview">Предпросмотр</string>
-    <string name="about">О приложении</string>
+    <string name="about">Информация</string>
     <string name="credits_android_lead">Ведущий Android-разработчик</string>
     <string name="credits_desktop_lead">Ведущий десктоп-разработчик</string>
     <string name="credits_creator">Создатель Metrolist</string>
@@ -308,7 +308,7 @@
     <string name="settings_privacy_description">История, ограничения скриншотов</string>
     <string name="settings_storage_data">Хранилище и данные</string>
     <string name="settings_backup_restore_description">Сделайте бэкап своей библиотеки или импортируйте её из других приложений</string>
-    <string name="settings_application_about">О приложении</string>
+    <string name="settings_application_about">Приложение и информация</string>
     <string name="settings_open_supported_links_title">Открывать поддерживаемые ссылки</string>
     <string name="settings_updates_title">Обновления</string>
     <string name="settings_updates_available_description">Доступно новое обновление Metrolist</string>
@@ -355,7 +355,7 @@
     <string name="app_font_active">Активен</string>
     <string name="app_font_installed">Установлено · Нажмите для использования</string>
     <string name="app_font_download_and_use">Нажмите чтобы скачать и использовать</string>
-    <string name="app_font_download_error">Не удалось скачать %1$s. Проверьте ваше подключение и повторите попытку.</string>
+    <string name="app_font_download_error">Не удалось скачать %1$s. Проверьте соединение и повторите попытку.</string>
     <string name="app_font_import_custom">Импортировать TTF или OTF файл</string>
     <string name="appearance_mini_player">Мини-плеер</string>
     <string name="appearance_mini_player_type">Тип мини-плеера</string>
@@ -522,7 +522,7 @@
     <string name="listenbrainz_now_playing_description">Показывает текущий трек в ListenBrainz</string>
     <string name="listenbrainz_connect_title">Подключить ListenBrainz</string>
     <string name="listenbrainz_user_token">Токен пользователя</string>
-    <string name="restore_database_incompatible">Этот бэкап использует версию базы данных %1$d, но это приложение поддерживает версии до %2$d. Обновите Metrolist и попробуйте снова.</string>
+    <string name="restore_database_incompatible">В этой резервной копии используется версия базы данных %1$d, но приложение поддерживает версии не выше %2$d. Обновите Metrolist и повторите попытку.</string>
     <string name="restore_failed_detail">Не удалось восстановить бэкап во время %1$s\n\nПричина: %2$s</string>
     <string name="restore_error_unknown">Дополнительные детали недоступны.</string>
     <string name="restore_stage_reading_backup">Чтение бэкап файла</string>
@@ -542,7 +542,7 @@
     <string name="hide_non_musical_videos">Скрыть видео не музыкального характера</string>
     <string name="hide_non_musical_videos_desc">Оставляет официальные клипы и скрывает другие видео, например, влоги и трейлеры</string>
     <string name="hide_podcasts">Скрыть подкасты</string>
-    <string name="hide_podcasts_desc">Скрывает подкасты и эпизоды из обзора, поиска и воспроизведения</string>
+    <string name="hide_podcasts_desc">Скрывает подкасты и выпуски из обзора, поиска и воспроизведения</string>
     <string name="hide_short_songs">Скрыть короткие песни</string>
     <string name="hide_short_songs_desc">Скрывает превью, аудио Shorts, и другие треки длительностью ниже порога</string>
     <string name="minimum_song_duration">Мин. длительность песни</string>
@@ -604,7 +604,7 @@
     <string name="updates_date">Дата</string>
     <string name="updates_changelog">Список изменений</string>
     <string name="updates_install">Установить</string>
-    <string name="updates_retry">Попробуйте снова</string>
+    <string name="updates_retry">Попробовать ещё раз</string>
     <string name="updates_available_title">Metrolist %1$s доступна</string>
     <string name="updates_available_message">Нажмите Обновить, чтобы скачать обновление и перейти в установщик Android.</string>
     <string name="updates_changelog_preview">Что нового</string>
@@ -620,7 +620,7 @@
     <string name="updates_installer_failed">Установщик пакетов Android недоступен или установка приложений ограничена на этом устройстве.</string>
     <string name="updates_release_unavailable">В этом релизе нет совместимого APK.</string>
     <string name="updates_release_notes_title">Что нового в Metrolist %1$s</string>
-    <string name="device_connect_title">Подключение устройств</string>
+    <string name="device_connect_title">Device Connect</string>
     <string name="device_connect_summary">Подключите доверенные устройства в локальной сети. Соединения защищены шифрованием.</string>
     <string name="device_connect_beta">Бета</string>
     <string name="device_connect_enable">Включить</string>
@@ -668,7 +668,7 @@
     <string name="artist_latest_release">Последний релиз</string>
     <string name="artist_link">Ссылка на исполнителя</string>
     <string name="artist_refresh">Обновить исполнителя</string>
-    <string name="authentication_data_extraction_failed">Не удалось извлечь данные аутентификации. Попробуйте снова.</string>
+    <string name="authentication_data_extraction_failed">Не удалось извлечь данные аутентификации. Повторите попытку.</string>
     <string name="automatic">Автоматически</string>
     <string name="block">Заблокировать</string>
     <string name="block_artist">Заблокировать исполнителя</string>
@@ -696,7 +696,7 @@
     <string name="delete_all_recent_from_searches_question">Удалить все песни из недавних поисков?</string>
     <string name="delete_all_recent_searches_question">Удалить все недавние поиски?</string>
     <string name="delete_downloaded_audio">Удалить скачанное аудио</string>
-    <string name="delete_downloaded_episodes">Удалить скачанные эпизоды</string>
+    <string name="delete_downloaded_episodes">Удалить скачанные выпуски</string>
     <string name="delete_failed">Не удалось удалить</string>
     <string name="delete_playlist">Удалить плейлист</string>
     <string name="delete_playlist_question">Удалить плейлист?</string>
@@ -713,8 +713,8 @@
     <string name="duplicate_song">Дубликат песни</string>
     <string name="duration">Длительность</string>
     <string name="edit_song_description">Отредактируйте название песни и исполнителя</string>
-    <string name="episode">Эпизод</string>
-    <string name="episode_actions">Действия эпизода</string>
+    <string name="episode">Выпуск</string>
+    <string name="episode_actions">Действия с выпуском</string>
     <string name="error_occurred">Произошла ошибка</string>
     <string name="expand">Развернуть</string>
     <string name="collapse">Свернуть</string>
@@ -853,8 +853,8 @@
     <string name="remove_from_device">Удалить с устройства</string>
     <string name="remove_from_favorites">Удалить из Любимых</string>
     <string name="remove_from_recent_question">Удалить из недавних?</string>
-    <string name="remove_from_saved_episodes">Удалить из сохраненных эпизодов</string>
-    <string name="remove_from_speed_dial">Удалить из Быстрого набора</string>
+    <string name="remove_from_saved_episodes">Удалить из сохраненных выпусков</string>
+    <string name="remove_from_speed_dial">Удалить из Быстрого выбора</string>
     <string name="remove_recent_search_description">Удалить %1$s из недавних поисков?</string>
     <string name="remove_recent_search_item_description">Удалить %1$s из недавних поисков?</string>
     <string name="remove_recent_search_question">Удалить недавний поиск?</string>
@@ -868,7 +868,7 @@
     <string name="required">Обязательно</string>
     <string name="saved">Сохранено</string>
     <string name="saved_to_library">Сохранено в библиотеку</string>
-    <string name="save_episode">Сохранить эпизод</string>
+    <string name="save_episode">Сохранить выпуск</string>
     <string name="search_recognized_songs">Поиск песен</string>
     <string name="search_songs">Поиск песен</string>
     <string name="search_songs_artists_podcasts">Поиск песен, исполнителей, подкастов</string>
@@ -1092,7 +1092,7 @@
     <string name="seek_duration_description">Секунды для пропуска при помощи стрелок</string>
     <string name="gradient">Градиент</string>
     <string name="prevent_duplicate_tracks_in_queue">Предотвращать дубликаты треков в очереди</string>
-    <string name="prevent_duplicate_tracks_in_queue_desc">Если трек уже есть в очереди, при повторном добавлении убрать старую запись</string>
+    <string name="prevent_duplicate_tracks_in_queue_desc">Удалять старую запись, если добавляемый трек уже есть в очереди</string>
     <string name="skip_silence_desc">Перемотка сквозь тихие части песен</string>
     <string name="token_login_title">Токен входа</string>
     <string name="token_login_show_token">Показать токен</string>
@@ -1233,7 +1233,7 @@
     <string name="discord_advanced_mode">Расширенный режим</string>
     <string name="speed_dial">Быстрый выбор</string>
     <string name="pin_to_speed_dial">Закрепить в Быстрый выбор</string>
-    <string name="unpin_from_speed_dial">Открепить из Быстрого набора</string>
+    <string name="unpin_from_speed_dial">Открепить из Быстрого выбора</string>
     <string name="view_podcast">Просмотреть подкаст</string>
     <string name="auto_playlist">Автоплейлист</string>
     <string name="restore_confirm_title">Восстановить бэкап?</string>
@@ -1268,12 +1268,12 @@
     <string name="migrated">Перенесено</string>
     <string name="ready_to_migrate">Готово к переносу</string>
     <string name="discord_logout">Выйти</string>
-    <string name="new_episodes">Новые эпизоды</string>
-    <string name="episodes_for_later">Эпизоды на потом</string>
-    <string name="downloaded_episodes">Скачанные эпизоды</string>
+    <string name="new_episodes">Новые выпуски</string>
+    <string name="episodes_for_later">Сохраненные выпуски</string>
+    <string name="downloaded_episodes">Скачанные выпуски</string>
     <string name="no_subscribed_channels">Нет подписанных каналов</string>
-    <string name="no_downloaded_episodes">Нет скачанных эпизодов</string>
-    <string name="filter_episodes">Эпизоды</string>
+    <string name="no_downloaded_episodes">Нет скачанных выпусков</string>
+    <string name="filter_episodes">Выпуски</string>
     <string name="filter_channels">Каналы</string>
     <string name="app_language">Язык приложения</string>
     <string name="app_language_system">По умолчанию системы</string>
@@ -1840,13 +1840,13 @@
     <string name="settings_disable_wayland_fix_description">Выключает автоматическое определение масштабирования для сессий Wayland. Требуется перезапуск.</string>
     <string name="device_connect_signed_out_pairing">Вы вышли из аккаунта. Сравните код сопряжения на обоих устройствах перед подтверждением.</string>
     <string name="device_connect_paired">Сопряжено</string>
-    <string name="shortcut_toggle_device_connect">Переключить панель подключения устройств</string>
+    <string name="shortcut_toggle_device_connect">Переключить панель Device Connect</string>
     <string name="device_connect_unshareable_queue">Эта очередь содержит локальные файлы и недоступна для обмена.</string>
     <string name="device_connect_this_device_label">Это устройство</string>
     <string name="device_connect_pair">Сопрячь</string>
     <string name="device_connect_offline">Офлайн</string>
     <string name="lyrics_show_translations">Переводы</string>
-    <string name="device_connect_sync_stale_queue">Очередь изменилась. Попробуйте снова.</string>
+    <string name="device_connect_sync_stale_queue">Очередь изменилась. Повторите попытку.</string>
     <string name="animated_cover_resolution_desc">Клипы одного разрешения используют исходное разрешение</string>
     <string name="youtube_canvas_quality">Качество фона YouTube</string>
     <string name="youtube_canvas_quality_desc">Разрешение клипов YouTube, используемых в качестве фона</string>
@@ -1942,15 +1942,15 @@
     <string name="onboarding_notifications_denied">Уведомления отключены. Вы можете включить их позже в настройках приложения в Android или выбрать «Нет», чтобы продолжить.</string>
     <string name="mini_player_video_prerequisite">Сначала включите «Воспроизводить музыкальные видео» в настройках воспроизведения</string>
     <string name="download_folder_access_failed">Не удалось сохранить разрешение на доступ к этой папке. Выберите папку с доступом для чтения и записи.</string>
-    <string name="download_migration_failed">Некоторые скачанные файлы не удалось переместить, и они остались в прежнем расположении. Проверьте доступ к хранилищу и свободное место, затем повторите попытку.</string>
+    <string name="download_migration_failed">Некоторые скачанные файлы не удалось переместить, поэтому они остались на прежнем месте. Проверьте доступ к хранилищу и наличие свободного места, затем повторите попытку.</string>
     <string name="download_error_storage_full">Недостаточно места в хранилище. Освободите место и повторите попытку.</string>
-    <string name="download_error_storage_access">Нет доступа к папке скачивания. Выберите её заново в настройках хранилища и повторите попытку.</string>
+    <string name="download_error_storage_access">Нет доступа к папке скачивания. Выберите её снова в настройках хранилища и повторите попытку.</string>
     <string name="download_error_network">Не удалось подключиться. Проверьте соединение и повторите попытку.</string>
-    <string name="download_error_generic">Не удалось скачать. Повторите попытку.</string>
+    <string name="download_error_generic">Не удалось выполнить скачивание. Повторите попытку.</string>
     <string name="amazon_music_marketplace">Выберите региональный рынок Amazon Music</string>
     <string name="import_cancelled_partial">Импорт отменён. Место назначения: %2$s. Сохранено треков: не менее %1$d. Чтобы продолжить, начните импорт заново и выберите это место назначения.</string>
     <string name="recognition_history_save_failed">Не удалось сохранить эту песню в истории распознавания.</string>
-    <string name="device_connect_server_failed">Не удалось запустить подключение устройств. Проверьте сеть и повторите попытку.</string>
+    <string name="device_connect_server_failed">Не удалось запустить Device Connect. Проверьте сеть и повторите попытку.</string>
     <string name="device_connect_discovery_failed">Не удалось обнаружить устройства. Проверьте доступ к локальной сети и повторите поиск.</string>
     <string name="home_offline_empty">Вы не в сети, и содержимое главной страницы не сохранено. Подключитесь к интернету и обновите страницу, чтобы загрузить рекомендации.</string>
     <string name="home_load_failed">Не удалось загрузить главную страницу. Проверьте соединение и повторите попытку.</string>
@@ -1992,7 +1992,7 @@
         <item quantity="other">%1$d прослушивания</item>
     </plurals>
     <string name="queue_youtube_history_paused_desc">Возобновите запись истории прослушиваний, чтобы ставить прослушивания не в сети в очередь на отправку</string>
-    <string name="search_online_failed">Не удалось выполнить поиск в сети. Проверьте соединение и повторите попытку.</string>
+    <string name="search_online_failed">Не удалось выполнить поиск в интернете. Проверьте соединение и повторите попытку.</string>
     <string name="search_load_more_failed">Не удалось загрузить больше результатов.</string>
     <string name="discord_error_gateway_configuration">Discord отклонил настройки подключения. Обновите Metrolist перед повторной попыткой.</string>
     <string name="discord_preview_buttons_adjusted">Discord сокращает длинные подписи кнопок и пропускает кнопки со слишком длинными ссылками. Здесь показаны кнопки, которые будут отправлены.</string>
@@ -2033,7 +2033,7 @@
     <string name="backup_unsupported_database">Эта версия Metrolist не поддерживает версию базы данных в этой резервной копии.</string>
     <string name="backup_too_large">Резервная копия превышает допустимый размер или количество записей.</string>
     <string name="backup_invalid_data">Не удалось прочитать или проверить резервную копию. Возможно, она повреждена или содержит неподдерживаемые данные.</string>
-    <string name="search_history_removal_failed">Не удалось очистить историю поиска аккаунта. Повторите попытку после подключения к сети.</string>
+    <string name="search_history_removal_failed">Не удалось очистить историю поиска в аккаунте. Повторите попытку после подключения к сети.</string>
     <string name="top_period_all_time">За всё время</string>
     <string name="top_period_past_24_hours">За последние 24 часа</string>
     <string name="top_period_past_week">За последнюю неделю</string>
@@ -2043,7 +2043,7 @@
     <string name="metroeq_q_value">Q: %1$s</string>
     <string name="metroeq_frequency_value">%1$s Гц</string>
     <string name="sponsorblock_podcasts">SponsorBlock (подкасты)</string>
-    <string name="sponsorblock_podcasts_description">Пропускать спонсорские вставки, саморекламу и призывы к взаимодействию только в эпизодах подкастов. (https://sponsor.ajay.app)</string>
+    <string name="sponsorblock_podcasts_description">Пропускать спонсорские вставки, саморекламу и напоминания о взаимодействии только в выпусках подкастов. (https://sponsor.ajay.app)</string>
     <string name="sponsorblock_skipped">Рекламный сегмент пропущен</string>
     <string name="episode_played">Прослушано</string>
     <string name="lastfm_service_error">Вход в Last.fm недоступен. Повторите попытку позже.</string>
@@ -2069,7 +2069,7 @@
     <string name="settings_notification_access_summary">Выберите, какие уведомления Android разрешает для Metrolist</string>
     <string name="settings_crash_reports_summary">Читайте сохранённые отчёты о сбоях и делитесь ими</string>
     <string name="settings_content_language_summary">Язык поиска и рекомендаций YouTube Music</string>
-    <string name="settings_content_country_summary">Регион чартов и рекомендаций YouTube Music</string>
+    <string name="settings_content_country_summary">Регион для хит-парадов и рекомендаций YouTube Music</string>
     <string name="settings_artist_icon_summary">Выберите изображения профиля из YouTube, Apple Music, Last.fm или свои</string>
     <string name="settings_artist_banner_summary">Выберите баннеры из YouTube, Apple Music, Last.fm или свои</string>
     <string name="settings_auto_playlist_summary">Показывать этот автоматический плейлист в библиотеке</string>
@@ -2139,7 +2139,7 @@
     <string name="lyrics_youtube_captions">Субтитры YouTube</string>
     <string name="edit_playlist_cover">Изменить обложку альбома</string>
     <string name="edit_playlist_cover_note">Чтобы изменить обложку плейлиста, ваша учетная запись должна быть привязана к номеру телефона и подтверждена в YouTube Music</string>
-    <string name="edit_playlist_cover_note_wait">После выбора изображения подождите немного, пока новая обложка появится в вашем плейлистe</string>
+    <string name="edit_playlist_cover_note_wait">После выбора изображения подождите немного, пока новая обложка появится в вашем плейлисте</string>
     <string name="choose_from_library">Выбрать из библиотеки</string>
     <string name="remove_custom_image">Удалить изменённую обложку</string>
     <string name="playlist_cover_update_failed">Не удалось обновить обложку альбома</string>
@@ -2245,7 +2245,7 @@
     <string name="ai_test_connection_running">Проверка…</string>
     <string name="ai_test_connection_description">Отправить пробный запрос на перевод текста песни с текущими настройками</string>
     <string name="ai_test_connection_success">Подключение установлено.</string>
-    <string name="ai_test_connection_failed">Сбой подключения. Проверьте свои учетные данные и модели.</string>
+    <string name="ai_test_connection_failed">Сбой подключения. Проверьте свои учётные данные и модели.</string>
     <string name="ai_test_missing_credentials">Перед проверкой добавьте учетные данные.</string>
     <string name="ai_test_detection_result">Обнаружение: требуется перевод = %1$s</string>
     <string name="ai_test_translation_result">Пример перевода: %1$s</string>
@@ -2256,7 +2256,7 @@
     <string name="move_to_top">Переместить вверх</string>
     <string name="playback_error_message">Ошибка воспроизведения: %1$s</string>
     <string name="playback_unable_to_play_queued_track">Не удалось воспроизвести этот трек из очереди.</string>
-    <string name="recognition_network_error">Не удалось подключиться к службе распознавания. Проверьте подключение к Интернету и попробуйте ещё раз.</string>
+    <string name="recognition_network_error">Не удалось подключиться к службе распознавания. Проверьте подключение к интернету и повторите попытку.</string>
     <string name="recognition_service_temporarily_unavailable">Сервис распознавания музыки временно недоступен</string>
     <string name="seek_seconds_addup">Прогрессивная перемотка</string>
     <string name="seek_seconds_addup_desc">Увеличивать шаг перемотки при каждом быстром нажатии</string>
@@ -2274,7 +2274,7 @@
     <string name="device_connect_direct_title">Подключиться по IP-адресу</string>
     <string name="device_connect_direct_address">IP-адрес и порт</string>
     <string name="device_connect_direct_hint">Это устройство прослушивает порт %1$d. Введите IP-адрес (LAN или VPN) и порт другого устройства в формате IPv4:порт или [IPv6]:порт. Сверьте код сопряжения на обоих устройствах.</string>
-    <string name="device_connect_direct_failed">Не удалось установить соединение или завершить сопряжение. Проверьте адрес, порт прослушивания, доступ к VPN и разрешение на сопряжение, а затем повторите попытку.</string>
+    <string name="device_connect_direct_failed">Не удалось установить соединение или завершить сопряжение. Проверьте адрес, порт прослушивания, доступ к VPN и подтверждение сопряжения, а затем повторите попытку.</string>
     <string name="device_connect_default_device">Устройство воспроизведения по умолчанию</string>
     <string name="device_connect_default_device_description">Запустить воспроизведение на этом сопряженном устройстве при его подключении. Выберите «Нет», чтобы сбросить настройку по умолчанию.</string>
     <string name="listen_together_suggestion_auto_approved">Предложение песни одобрено автоматически</string>
@@ -2315,7 +2315,7 @@
     <string name="android_auto_quick_add_playlist">Быстрое добавление плейлиста</string>
     <string name="android_auto_quick_add_playlist_not_set">Выберите плейлист с для быстрого добавления в настройках Android Auto.</string>
     <string name="artist_lastfm_listeners">Слушатели Last.fm</string>
-    <string name="artist_lastfm_scrobbles">Скробблы Last.fm: 1 250</string>
+    <string name="artist_lastfm_scrobbles">Скробблы Last.fm</string>
     <string name="artist_lastfm_biography">Биография на Last.fm</string>
     <string name="artist_lastfm_read_more">Узнать больше на Last.fm</string>
     <string name="artist_similar_artists">Похожие исполнители на Last.fm</string>
@@ -2352,7 +2352,7 @@
     <string name="lyrics_editor_import">Импортировать/вставить JSON или LRC</string>
     <string name="lyrics_editor_import_error">Не удалось импортировать эти тексты песен. Используйте MLX v2 JSON или LRC.</string>
     <string name="lyrics_editor_invalid_timestamp">Неверная метка времени в строке %1$d. Используйте формат [мм:сс.cc]. Ваш черновик будет сохранен до тех пор, пока вы не исправите ошибку.</string>
-    <string name="lyrics_editor_save_error">Не удалось сохранить текст песни. Попробуйте снова, прежде чем выйти из редактора.</string>
+    <string name="lyrics_editor_save_error">Не удалось сохранить текст песни. Повторите попытку, прежде чем выйти из редактора.</string>
     <string name="lyrics_editor_limit_error">Этот текст превышает допустимый размер. Ваш черновик сохранен. Сократите его перед экспортом или синхронизацией.</string>
     <string name="song_count_with_hidden">%1$s, %2$s</string>
     <plurals name="n_hidden_song">
@@ -2361,7 +2361,7 @@
         <item quantity="many">%1$d спрятано</item>
         <item quantity="other">%1$d спрятано</item>
     </plurals>
-    <string name="no_episode_description">Описание этого эпизода отсутствует.</string>
+    <string name="no_episode_description">Описание для этого выпуска отсутствует.</string>
     <plurals name="episode_duration_hours">
         <item quantity="one">%1$d ч</item>
         <item quantity="few">%1$d ч</item>
@@ -2386,7 +2386,7 @@
     <string name="text_color">Цвет текста</string>
     <string name="secondary_text_color">Вторичный цвет текста</string>
     <string name="lyrics_share_artwork_failed">Не удалось загрузить изображение. Вы всё равно можете поделиться на однотонном фоне.</string>
-    <string name="lyrics_share_failed">Не удалось создать или экспортировать изображение. Попробуйте ещё раз.</string>
+    <string name="lyrics_share_failed">Не удалось создать или экспортировать изображение. Повторите попытку.</string>
     <string name="lyrics_share_color">%1$s: #%2$s</string>
     <string name="lyrics_share_save_image">Сохранить в формате PNG</string>
     <string name="lyrics_share_text">"%1$s"\n\n%2$s - %3$s\n%4$s</string>
@@ -2427,11 +2427,11 @@
     <string name="processing">Обработка…</string>
     <string name="no_match_found">Соответствий не найдено</string>
     <string name="recognition_error">Ошибка распознавания</string>
-    <string name="try_again">Попробуйте ещё раз</string>
+    <string name="try_again">Попробовать ещё раз</string>
     <string name="play_on_app">Воспроизвести в Metrolist</string>
     <string name="re_listen">Прослушать ещё раз</string>
     <string name="stands_with_palestine">Этот проект поддерживает Палестину</string>
-    <string name="about_play_favorite_song">Хотите включить их любимую песню?</string>
+    <string name="about_play_favorite_song">Включить любимую песню этого участника?</string>
     <string name="recognition_match_found">Найдено совпадение</string>
     <string name="recognition_listening_hint">Поднесите телефон к источнику музыки</string>
     <string name="no_recognized_songs_hint">Здесь будут отображаться песни, которые вы распознаете.</string>
@@ -2536,7 +2536,7 @@
     <string name="metroeq_save_as">Сохранить как</string>
     <string name="metroeq_preset_bass">Усиление низких частот</string>
     <string name="metroeq_presets">Пресеты</string>
-    <string name="download_error_incomplete">YouTube не предоставил полный аудиофайл. Попробуйте снова или воспользуйтесь другой сетью.</string>
+    <string name="download_error_incomplete">YouTube не предоставил полный аудиофайл. Повторите попытку позже или воспользуйтесь другой сетью.</string>
     <string name="global_lyrics_offset">Глобальное смещение текста песни</string>
     <string name="global_lyrics_offset_description">Это смещение применяется ко всем песням в дополнение к настройкам для каждой отдельной песни. Положительные значения отображают текст раньше. Отрицательные значения — позже.</string>
     <string name="tempo_pitch_presets">Сохраненные пресеты</string>
@@ -2547,10 +2547,10 @@
     <string name="system_equalizer_unavailable">Системный эквалайзер недоступен. Запустите локальное воспроизведение и убедитесь, что на устройстве установлен эквалайзер.</string>
     <string name="download_filter_in_playlist">В плейлисте</string>
     <string name="download_filter_not_in_playlist">Нет в плейлисте</string>
-    <string name="download_filter_unavailable">Не удалось загрузить плейлист полностью. Отображаются все загруженные файлы. Попробуйте еще раз применить фильтр плейлиста.</string>
+    <string name="download_filter_unavailable">Не удалось загрузить плейлист полностью. Отображаются все загруженные файлы. Повторите попытку, чтобы применить фильтр плейлиста.</string>
     <string name="statistics_share">Поделиться статистикой прослушивания</string>
     <string name="statistics_save_image">Сохранить изображение со статистикой</string>
-    <string name="statistics_share_failed">Не удалось создать или поделиться изображением со статистикой. Пожалуйста, попробуйте ещё раз.</string>
+    <string name="statistics_share_failed">Не удалось создать или поделиться изображением со статистикой. Повторите попытку.</string>
     <string name="queue_move">Переместить</string>
     <string name="queue_multi_select">Множественный выбор</string>
     <string name="queue_move_hint">Перемещение: нажмите «ОК», чтобы выбрать или разместить трек, «Вверх»/«Вниз» — для его перемещения, а «Назад» — для завершения.</string>
@@ -2603,19 +2603,19 @@
     <string name="ai_setup_limits">Бесплатные модели позволяют отправлять до %1$d запросов в минуту и %2$d в день, либо %4$d в день после покупки не менее %3$d кредитов.</string>
     <string name="ai_setup_create_account">Создайте аккаунт</string>
     <string name="ai_setup_view_limits">Проверьте текущие лимиты</string>
-    <string name="ai_setup_browser_failed">Не удалось открыть браузер. Попробуйте ещё раз.</string>
+    <string name="ai_setup_browser_failed">Не удалось открыть браузер. Повторите попытку.</string>
     <string name="ai_setup_sign_in">Войдите в OpenRouter</string>
     <string name="ai_setup_configure">Выберите модель и язык</string>
     <string name="ai_setup_model_description">Эта модель бесплатно переводит тексты песен в рамках ограничений OpenRouter. Для одной песни может потребоваться более одного запроса. В расширенных настройках вы можете выбрать платные модели и других провайдеров.</string>
     <string name="ai_setup_verify_description">"Готово" отправляет короткий запрос вашей выбранной бесплатной модели. Перевод включается только после успешного теста.</string>
     <string name="ai_setup_verifying">Проверка перевода…</string>
-    <string name="ai_setup_privacy_hint">Ваша политика обработки данных в OpenRouter не распространяется на эту модель. Ознакомьтесь с параметрами «бесплатная модель» и «провайдер» в настройках конфиденциальности OpenRouter, а затем повторите попытку.</string>
-    <string name="ai_setup_key_hint">Войдите в OpenRouter заново, чтобы заменить недействительный или просроченный ключ, а затем повторите попытку.</string>
-    <string name="ai_setup_credit_hint">Проверьте баланс счета и кредитный лимит на вашем ключе OpenRouter. У ключа OAuth может быть собственный лимит. Повторите попытку после устранения проблемы с лимитом.</string>
+    <string name="ai_setup_privacy_hint">Политика обработки данных OpenRouter не разрешает использовать эндпоинты этой модели. Проверьте параметры бесплатных моделей и провайдеров в настройках конфиденциальности OpenRouter, а затем повторите попытку.</string>
+    <string name="ai_setup_key_hint">Войдите в OpenRouter заново, чтобы заменить недействительный ключ или ключ с истёкшим сроком действия, а затем повторите попытку.</string>
+    <string name="ai_setup_credit_hint">Проверьте баланс счёта и лимит расходов для вашего ключа OpenRouter. У ключа OAuth может быть собственный лимит. Повторите попытку после устранения проблемы с лимитом.</string>
     <string name="ai_setup_rate_hint">Подождите и попробуйте ещё раз или выберите другую бесплатную модель. OpenRouter ограничивает количество бесплатных запросов в минуту и в день. Смена модели может не позволить обойти ограничение, установленное для вашей учетной записи.</string>
     <string name="ai_setup_daily_hint">Попробуйте завтра или пополните баланс в OpenRouter, чтобы увеличить свой бесплатный дневной лимит. Смена модели не позволит обойти этот лимит.</string>
-    <string name="ai_setup_minute_hint">Дождитесь сброса минутного лимита OpenRouter, а затем повторите попытку. Смена модели не позволит обойти этот лимит.</string>
-    <string name="ai_setup_busy_hint">Доступные бесплатные модели временно заняты. Попробуйте позже.</string>
+    <string name="ai_setup_minute_hint">Дождитесь сброса поминутного лимита OpenRouter, а затем повторите попытку. Смена модели не позволит обойти этот лимит.</string>
+    <string name="ai_setup_busy_hint">Доступные бесплатные модели временно заняты. Повторите попытку позже.</string>
     <string name="ai_setup_model_hint">Выберите другую бесплатную модель или попробуйте позже, когда эта модель станет доступной.</string>
     <string name="ai_setup_network_hint">Проверьте подключение к Интернету и попробуйте ещё раз.</string>
     <string name="ai_setup_response_hint">Модель не выдала пригодный для использования перевод. Попробуйте ещё раз или выберите другую бесплатную модель.</string>
@@ -2632,7 +2632,7 @@
     <string name="channel_switch_recovery_hint">Не удалось загрузить ваши каналы YouTube. Войдите заново, чтобы обновить сессию, а затем выберите канал.</string>
     <string name="channel_switch_browse_hint">Откройте меню с аватаром на странице YouTube Music, выберите свой канал, а затем выберите %1$s.</string>
     <string name="lyrics_curated_by">(прислано %1$s)</string>
-    <string name="hidden_home_items_desc">Отображать и от-скрывать исполнителей и подкасты, скрытые на главной странице. Вручную закреплённые элементы "Быстрого набора" остаются видимыми.</string>
+    <string name="hidden_home_items_desc">Отображать скрытых на главной странице исполнителей и подкасты и отменять их скрытие. Вручную закреплённые элементы Быстрого выбора остаются видимыми.</string>
     <string name="active_lyrics_alignment">Выравнивание текущей строки текста песни</string>
     <string name="desktop_minimize_to_tray">Сворачивать в трей</string>
     <string name="desktop_minimize_to_tray_desc">При закрытии окна Metrolist будет сворачиваться в трей вместо завершения работы</string>
@@ -2649,8 +2649,8 @@
     <string name="blocked_songs_empty">Нет заблокированных песен</string>
     <string name="content_undo_hint">Это действие можно отменить здесь: %1$s.</string>
     <string name="content_undo_path">%1$s &gt; %2$s &gt; %3$s</string>
-    <string name="account_keyring_required">Для восстановления аккаунта Metrolist нужен доступ к системной связке ключей. Разблокируйте её. Metrolist повторит попытку автоматически.</string>
-    <string name="account_linux_keyring_required">Для восстановления аккаунта Metrolist нужна системная связка ключей. Установите libsecret-tools или соответствующий пакет вашего дистрибутива, содержащий команду secret-tool, и убедитесь, что связка ключей запущена и разблокирована. Metrolist повторит попытку автоматически.</string>
+    <string name="account_keyring_required">Для восстановления аккаунта Metrolist нужен доступ к системной связке ключей. Разблокируйте её. Metrolist автоматически повторит попытку.</string>
+    <string name="account_linux_keyring_required">Для восстановления аккаунта Metrolist нужна системная связка ключей. Установите libsecret-tools или соответствующий пакет вашего дистрибутива, содержащий команду secret-tool, и убедитесь, что связка ключей запущена и разблокирована. Metrolist автоматически повторит попытку.</string>
     <string name="density_massive">Гигантский (200%)</string>
     <string name="density_huge">Огромный (175%)</string>
     <string name="density_extra_large">Очень крупный (150%)</string>
@@ -2670,4 +2670,29 @@
     <string name="desktop_tray_toggle_on_click_desc_mac">Щелчок правой кнопкой мыши по значку в трее откроет или скроет окно Metrolist</string>
     <string name="desktop_omarchy_unsupported">Metrolist не работает на Omarchy. Используйте другой дистрибутив Linux, Windows 10 и выше или macOS.</string>
     <string name="learn_more">Узнать больше</string>
+    <string name="duration_three_units">%1$s %2$s %3$s</string>
+    <string name="matugen_colors_description">Использовать палитру обоев, которую Matugen записывает в ~/.config/metrolist/matugen.properties</string>
+    <string name="duration_two_units">%1$s %2$s</string>
+    <plurals name="days">
+        <item quantity="one">%1$d день</item>
+        <item quantity="few">%1$d дня</item>
+        <item quantity="many">%1$d дней</item>
+        <item quantity="other">%1$d дней</item>
+    </plurals>
+    <string name="account_downloading_nightly_update">Загрузка ночной сборки</string>
+    <string name="account_nightly_update_available">Доступна новая ночная сборка</string>
+    <string name="tray_hide_miniplayer">Скрыть мини-плеер</string>
+    <string name="updates_nightly_builds_desc">После каждого изменения будет создаваться новая сборка. Ночные сборки могут быть нестабильными.</string>
+    <string name="playlist_lock">Блокировка</string>
+    <string name="search_episodes">Поиск выпусков</string>
+    <string name="updates_nightly_builds">Ночные сборки</string>
+    <string name="add_to_library">Добавить в библиотеку</string>
+    <string name="support_prompt_title">Нравится приложение?</string>
+    <string name="support_prompt_message">Помогите развитию Metrolist, поддержав его разработчиков. Нажмите на любого из них, чтобы открыть страницу поддержки.</string>
+    <string name="support_prompt_never_show">Больше не показывать</string>
+    <string name="updates_force_install">Всё равно установить</string>
+    <string name="lastfm_session_expired_title">Сеанс Last.fm истёк</string>
+    <string name="lastfm_session_expired">Войти в Last.fm снова</string>
+    <string name="lastfm_session_expired_description">Текущий сеанс Last.fm больше не действителен. Прослушивания сохраняются и будут отправлены после входа.</string>
+    <string name="matugen_colors">Цвета Matugen</string>
 </resources>

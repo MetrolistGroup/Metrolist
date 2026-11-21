@@ -4,10 +4,7 @@ import com.metrolist.shared.BuildConfig
 import com.metrolist.shared.settings.canonicalAppLanguageTag
 import com.metrolist.shared.utils.SystemLocale
 import com.metrolist.shared.utils.desktopSystemLocale
-import java.io.File
-import java.net.JarURLConnection
 import java.util.Locale
-import java.util.jar.JarFile
 
 data class DesktopLanguage(
     val tag: String,
@@ -18,8 +15,11 @@ data class DesktopLanguage(
 object DesktopLocaleManager {
     const val SYSTEM = "SYSTEM"
     private val bundledTags: List<String> by lazy {
-        val staticTags = BuildConfig.BUNDLED_LANGUAGE_TAGS.split(',').filter(String::isNotBlank)
-        (staticTags + discoverBundledLanguages()).distinct().sorted()
+        BuildConfig.BUNDLED_LANGUAGE_TAGS
+            .split(',')
+            .filter(String::isNotBlank)
+            .distinct()
+            .sorted()
     }
     val systemLocale: Locale = desktopSystemLocale
 
@@ -62,97 +62,5 @@ object DesktopLocaleManager {
         bundledTags.firstOrNull { it.equals(normalized, ignoreCase = true) }?.let { return it }
         val language = Locale.forLanguageTag(normalized).language
         return bundledTags.firstOrNull { it.equals(language, ignoreCase = true) }
-    }
-
-    private fun discoverBundledLanguages(): List<String> {
-        val langs = mutableSetOf<String>()
-
-        val classLoader = DesktopLocaleManager::class.java.classLoader
-        val resourceUrls = classLoader.getResources("composeResources")
-        while (resourceUrls.hasMoreElements()) {
-            val resourceUrl = resourceUrls.nextElement()
-            when (resourceUrl.protocol) {
-                "file" -> {
-                    val basePath = File(resourceUrl.toURI())
-                    collectFromDirectory(basePath, langs)
-                }
-
-                "jar" -> {
-                    val connection = resourceUrl.openConnection() as? JarURLConnection
-                    if (connection != null) {
-                        connection.useCaches = false
-                        connection.jarFile.use { jar -> collectFromJar(jar, langs) }
-                    }
-                }
-            }
-        }
-
-        return langs.sorted()
-    }
-
-    private fun collectFromDirectory(
-        basePath: File,
-        langs: MutableSet<String>,
-    ) {
-        if (!basePath.isDirectory) return
-        basePath.listFiles()?.forEach { child ->
-            when {
-                !child.isDirectory -> {
-                    return@forEach
-                }
-
-                child.name == "values-xml" -> {
-                    return@forEach
-                }
-
-                child.name == "values" -> {
-                    return@forEach
-                }
-
-                child.name.startsWith("values-") -> {
-                    val tag = languageTagFromValuesDirectory(child.name)
-                    if (tag.isNotBlank()) langs.add(tag)
-                    return@forEach
-                }
-
-                else -> {
-                    collectFromDirectory(child, langs)
-                }
-            }
-        }
-    }
-
-    private fun collectFromJar(
-        jar: JarFile,
-        langs: MutableSet<String>,
-    ) {
-        val seenDirs = mutableSetOf<String>()
-        val entries = jar.entries()
-        while (entries.hasMoreElements()) {
-            val entry = entries.nextElement()
-            val valuesDir = valuesDirectory(entry.name) ?: continue
-            if (!seenDirs.add(valuesDir)) continue
-            if (valuesDir == "values-xml") continue
-            if (valuesDir != "values") {
-                val tag = languageTagFromValuesDirectory(valuesDir)
-                if (tag.isNotBlank()) langs.add(tag)
-            }
-        }
-    }
-
-    private fun valuesDirectory(entryPath: String): String? {
-        val segments = entryPath.split('/')
-        return segments.firstOrNull { it == "values" || it.startsWith("values-") }
-    }
-
-    internal fun languageTagFromValuesDirectory(valuesDirectory: String): String {
-        val qualifier = valuesDirectory.removePrefix("values-")
-        val languageTag =
-            if (qualifier.startsWith("b+")) {
-                qualifier.removePrefix("b+").replace('+', '-')
-            } else {
-                qualifier.replace(Regex("-r(?=[A-Z]{2}(?:$|-))"), "-")
-            }
-        return Locale.forLanguageTag(languageTag).toLanguageTag()
     }
 }

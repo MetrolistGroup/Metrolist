@@ -26,6 +26,7 @@ import java.util.Base64
 import java.util.Locale
 import java.util.Properties
 import java.util.zip.ZipFile
+import javax.xml.parsers.DocumentBuilderFactory
 
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
@@ -246,13 +247,22 @@ tasks.matching { it.name == "lintAnalyzeAndroidHostTest" || it.name == "generate
 
 val appVersion = providers.gradleProperty("appVersion").get()
 val innerTubeXVersion = providers.gradleProperty("innerTubeXVersion").get()
+val bundledLanguageParser =
+    DocumentBuilderFactory
+        .newInstance()
+        .apply { setFeature("http://apache.org/xml/features/disallow-doctype-decl", true) }
+        .newDocumentBuilder()
 val bundledLanguageTags =
     file("src/commonMain/composeResources")
         .listFiles()
         .orEmpty()
         .asSequence()
         .filter { it.isDirectory && it.name.startsWith("values-") && it.name != "values-xml" }
-        .map { directory ->
+        .filter { directory ->
+            val catalog = File(directory, "strings.xml").takeIf(File::isFile) ?: return@filter false
+            val root = bundledLanguageParser.parse(catalog).documentElement
+            root.getElementsByTagName("string").length > 0 || root.getElementsByTagName("plurals").length > 0
+        }.map { directory ->
             val qualifier = directory.name.removePrefix("values-")
             val languageTag =
                 if (qualifier.startsWith("b+")) {

@@ -8,7 +8,7 @@ Agents and contributors edit only `values/strings.xml`. Never add, remove, renam
 
 Desktop and shared Compose code use `com.metrolist.shared.generated.resources.Res`. Android's `generateAndroidStrings` scans non-test sources in `androidApp/src` and `shared/src/androidMain` for `R.string`, `R.plurals`, `@string` and `@plurals` references. It generates only those keys for each locale. Missing referenced base keys fail the build. Do not create platform-local catalogs or translation tables.
 
-Gradle derives bundled language tags from resource directories. Hinglish uses `values-b+hi+Latn` and `hi-Latn`; saved `hin` selections migrate to that tag. `prepareComposeResourceAliases` generates `values-id` from `values-in` and `values-he` from `values-iw` for Compose. Weblate edits the original catalogs, not generated aliases.
+Gradle derives bundled language tags from resource directories containing translated entries. Empty Weblate catalogs stay in the repository but do not appear in app-language choices. Desktop uses the same generated tags. Hinglish uses `values-b+hi+Latn` and `hi-Latn`; saved `hin` selections migrate to that tag. `prepareComposeResourceAliases` generates `values-id` from `values-in` and `values-he` from `values-iw` for Compose. Weblate edits the original catalogs, not generated aliases.
 
 Content-language and country preferences use the selected code or system locale. UI resource fallback does not authorize a hardcoded content-language default.
 
