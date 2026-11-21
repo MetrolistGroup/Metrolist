@@ -56,6 +56,15 @@ private fun redactIpv6Addresses(text: String): String {
             continue
         }
 
+        if (!isIpv6Address(text.substring(index, candidateEnd))) {
+            val portSeparator = text.lastIndexOf(':', candidateEnd - 1)
+            if (portSeparator > index &&
+                text.substring(portSeparator + 1, candidateEnd).all { it in '0'..'9' } &&
+                isIpv6Address(text.substring(index, portSeparator))
+            ) {
+                candidateEnd = portSeparator
+            }
+        }
         val address = text.substring(index, candidateEnd)
         if (isIpv6Address(address)) {
             redacted.append("<redacted-ip>")
@@ -72,7 +81,8 @@ private fun isIpv6AddressStart(
     index: Int,
 ): Boolean {
     if (!isIpv6LiteralCharacter(text[index])) return false
-    return index == 0 || !isIpv6TokenCharacter(text[index - 1])
+    return index == 0 || !isIpv6TokenCharacter(text[index - 1]) ||
+        (text[index - 1] == ':' && text.substring(0, index - 1).takeLastWhile(::isIpv6ScopeCharacter).any { !isHexDigit(it) })
 }
 
 private fun isIpv6Address(value: String): Boolean {
