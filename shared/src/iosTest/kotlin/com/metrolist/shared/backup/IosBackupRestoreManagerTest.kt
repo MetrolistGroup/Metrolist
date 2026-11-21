@@ -26,6 +26,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
+import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 import com.russhwolf.settings.Settings as SettingsStore
 
@@ -95,6 +96,158 @@ class IosBackupRestoreManagerTest {
                     restored.close()
                 }
                 assertEquals(emptyList(), fs.list(directory).map { it.name }.filter { it.startsWith("target.db.restore-staged-") })
+            } finally {
+                fs.deleteRecursively(directory)
+            }
+        }
+
+    @Test
+    fun importsPrismCompanionsAtOriginalArchivePaths() =
+        runTest {
+            Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+            val directory = "${NSTemporaryDirectory()}prism-import-${NSUUID().UUIDString}".toPath()
+            val fs = FileSystem.SYSTEM
+            fs.createDirectories(directory)
+            val source = directory / "prism.db"
+            val target = directory / "library.db"
+            val archive = directory / "prism.zip"
+            val companion = """{"lists":[{"title":"Companion only","songs":[{"id":"abcdefghijk","title":"Companion song"}]}]}"""
+            try {
+                BundledSQLiteDriver().open(source.toString()).use { connection ->
+                    connection
+                        .prepare(
+                            "CREATE TABLE songs (id TEXT, title TEXT, artistName TEXT, durationSec INTEGER, liked INTEGER, likedAt INTEGER, lastPlayed INTEGER)",
+                        ).use { it.step() }
+                    connection
+                        .prepare(
+                            "CREATE TABLE play_events (id TEXT, songId TEXT, timestamp INTEGER, playedMs INTEGER)",
+                        ).use { it.step() }
+                }
+                fs.write(archive) {
+                    val sink = this
+                    val output =
+                        object : OutputStream() {
+                            override fun write(b: Int) {
+                                sink.writeByte(b)
+                            }
+
+                            override fun write(
+                                b: ByteArray,
+                                off: Int,
+                                len: Int,
+                            ) {
+                                sink.write(b, off, len)
+                            }
+
+                            override fun close() = Unit
+                        }
+                    ZipOutputStream(output).use { zip ->
+                        zip.putNextEntry(ZipEntry("databases/prism.db"))
+                        zip.write(fs.read(source) { readByteArray() })
+                        zip.closeEntry()
+                        zip.putNextEntry(ZipEntry("files/library/prism.json"))
+                        zip.write(companion.encodeToByteArray())
+                        zip.closeEntry()
+                        zip.putNextEntry(ZipEntry("shared_prefs/artist_prefs.xml"))
+                        zip.write(
+                            """<map><string name="favorites">[{"id":"UCstarred","name":"Star &amp; Artist","thumbnail":null,"at":1700000000000}]</string></map>"""
+                                .encodeToByteArray(),
+                        )
+                        zip.closeEntry()
+                    }
+                }
+                val database = getIosDatabaseBuilder(target.toString()).build()
+                try {
+                    IosBackupRestoreManager(target.toString(), Settings(MapSettings()))
+                        .importForeignBackup(archive.toString(), database)
+                        .getOrThrow()
+                    assertTrue(database.dao().getSongById("abcdefghijk") != null)
+                    assertTrue(database.dao().findPlaylistByName("Companion only") != null)
+                    assertEquals("Star & Artist", database.dao().getArtistById("UCstarred")?.name)
+                    assertEquals(null, database.dao().getArtistById("UCstarred")?.thumbnailUrl)
+                } finally {
+                    database.close()
+                }
+            } finally {
+                fs.deleteRecursively(directory)
+            }
+        }
+
+    @Test
+    fun prismFavoritesPreserveMixedTextAndCdata() {
+        val library = ForeignLibrary(ForeignLibraryFamily.PRISM, emptyList(), emptyList(), emptyList(), emptyList(), emptyList())
+        val xml = """<map><string name="favorites">[{"id":"UCmixed","name":"Artist <![CDATA[</string>]]> Name"}]</string></map>"""
+
+        assertEquals(
+            "Artist </string> Name",
+            library
+                .withPrismArtistPreferences(xml)
+                .artists
+                .single()
+                .name,
+        )
+    }
+
+    @Test
+    fun rejectsZip64LocatorBeforeImportOrRestoreOpensArchive() =
+        runTest {
+            Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+            val directory = "${NSTemporaryDirectory()}zip64-rejection-${NSUUID().UUIDString}".toPath()
+            val fs = FileSystem.SYSTEM
+            fs.createDirectories(directory)
+            val target = directory / "library.db"
+            val archive = directory / "zip64.zip"
+            val zip64WithEmptyOrdinaryDirectory =
+                ByteArray(42).apply {
+                    this[0] = 0x50
+                    this[1] = 0x4b
+                    this[2] = 0x06
+                    this[3] = 0x07
+                    this[20] = 0x50
+                    this[21] = 0x4b
+                    this[22] = 0x05
+                    this[23] = 0x06
+                }
+            val zip64WithLongComment =
+                ByteArray(20 + 22 + 65_516).apply {
+                    this[0] = 0x50
+                    this[1] = 0x4b
+                    this[2] = 0x06
+                    this[3] = 0x07
+                    this[20] = 0x50
+                    this[21] = 0x4b
+                    this[22] = 0x05
+                    this[23] = 0x06
+                    this[40] = 0xec.toByte()
+                    this[41] = 0xff.toByte()
+                }
+            try {
+                fs.write(archive) { write(zip64WithEmptyOrdinaryDirectory) }
+                val longCommentArchive = directory / "zip64-long-comment.zip"
+                fs.write(longCommentArchive) { write(zip64WithLongComment) }
+                val database = getIosDatabaseBuilder(target.toString()).build()
+                try {
+                    val manager = IosBackupRestoreManager(target.toString(), Settings(MapSettings()))
+                    var databaseClosed = false
+                    for (path in listOf(archive, longCommentArchive)) {
+                        val importFailure = manager.importForeignBackup(path.toString(), database).exceptionOrNull()
+                        assertNotNull(importFailure)
+                        assertTrue(importFailure.causeMessages().contains("ZIP64"))
+
+                        val restoreFailure =
+                            manager
+                                .restore(
+                                    path.toString(),
+                                    closeDatabase = { databaseClosed = true },
+                                    reopenDatabase = {},
+                                ).exceptionOrNull()
+                        assertNotNull(restoreFailure)
+                        assertTrue(restoreFailure.causeMessages().contains("ZIP64"))
+                    }
+                    assertFalse(databaseClosed)
+                } finally {
+                    database.close()
+                }
             } finally {
                 fs.deleteRecursively(directory)
             }
@@ -223,3 +376,8 @@ class IosBackupRestoreManagerTest {
         }
     }
 }
+
+private fun Throwable.causeMessages(): String =
+    generateSequence(this) { it.cause }
+        .mapNotNull(Throwable::message)
+        .joinToString(" ")

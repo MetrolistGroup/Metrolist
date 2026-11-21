@@ -65,7 +65,6 @@ import com.metrolist.android.playback.launchSystemEqualizer
 import com.metrolist.android.ui.component.rememberMetroEqProfilePicker
 import com.metrolist.android.ui.download.rememberDownloadPermissionGate
 import com.metrolist.shared.db.MusicDatabase
-import com.metrolist.shared.db.entities.KIND_DOWNLOAD
 import com.metrolist.shared.generated.resources.Res
 import com.metrolist.shared.generated.resources.action_download
 import com.metrolist.shared.generated.resources.back
@@ -128,9 +127,7 @@ import com.metrolist.shared.ui.navigation.rememberNavigationMotion
 import com.metrolist.shared.ui.theme.ComponentShapes
 import com.metrolist.shared.utils.formatPlaybackSpeed
 import com.metrolist.shared.viewmodels.PlayerViewModel
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import org.jetbrains.compose.resources.getString
 import org.jetbrains.compose.resources.pluralStringResource
 import org.jetbrains.compose.resources.stringResource
@@ -239,7 +236,7 @@ fun PlayerMenu(
             if (songId == null) {
                 false
             } else {
-                withContext(Dispatchers.IO) { database.dao().cachedAudio(songId)?.kind == KIND_DOWNLOAD }
+                audioCacheManager.isDownloaded(songId)
             }
     }
 

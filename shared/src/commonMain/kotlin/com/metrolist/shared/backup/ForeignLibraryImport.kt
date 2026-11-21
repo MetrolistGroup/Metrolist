@@ -19,7 +19,7 @@ import com.metrolist.shared.db.entities.toSongItem
 import com.metrolist.shared.db.upsertHistorySong
 import com.metrolist.shared.db.withDatabaseTransaction
 import com.metrolist.shared.generated.resources.Res
-import com.metrolist.shared.generated.resources.foreign_import_failed
+import com.metrolist.shared.generated.resources.foreign_import_error_generic
 import com.metrolist.shared.generated.resources.foreign_import_success
 import com.metrolist.shared.generated.resources.foreign_import_unsupported
 import com.metrolist.shared.model.AlbumTiny
@@ -673,7 +673,7 @@ suspend fun Result<ForeignImportSummary>.foreignImportMessage(): String =
             if (it is UnsupportedForeignLibraryException) {
                 getString(Res.string.foreign_import_unsupported)
             } else {
-                getString(Res.string.foreign_import_failed, it.message.orEmpty())
+                getString(Res.string.foreign_import_error_generic)
             }
         },
     )

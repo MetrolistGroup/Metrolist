@@ -740,6 +740,7 @@ fun PlaylistScreen(
                                     miniPlayerInset,
                         ),
                     currentSongId = currentSong?.id,
+                    currentQueueItemId = currentSong?.originalQueueItemId,
                     isPlaying = isPlaying,
                     suggestions = suggestions.takeIf { searchQuery.isBlank() }.orEmpty(),
                     downloadedSongIds = downloadedSongIds,
