@@ -374,6 +374,17 @@ fun WindowScope.TopBarWithPlayer(
                 )
                 navItems()
                 DevtoolsButton(colorScheme)
+                if (showSearchInTopBar) {
+                    IconButton(
+                        onClick = { UiState.showFloatingSearch = true },
+                        shapes = IconButtonDefaults.shapes(),
+                    ) {
+                        Icon(
+                            MetrolistIcons.Default.Search,
+                            contentDescription = stringResource(Res.string.search),
+                        )
+                    }
+                }
             }
 
             if (currentTrack != null) {

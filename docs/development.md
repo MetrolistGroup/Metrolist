@@ -375,6 +375,8 @@ A 429 never retries. Explicit upstream throttling moves to the next free model a
 
 See OpenRouter's [model catalog](https://openrouter.ai/api/v1/models), [limits](https://openrouter.ai/docs/api_reference/limits), [reasoning tokens](https://openrouter.ai/docs/guides/best-practices/reasoning-tokens), [structured outputs](https://openrouter.ai/docs/guides/features/structured-outputs), [provider selection](https://openrouter.ai/docs/guides/routing/provider-selection) and [errors](https://openrouter.ai/docs/api_reference/errors-and-debugging). Account privacy policies can filter out every provider and cause a 404; setup links to the privacy settings for that case.
 
+Kilo (`https://ai-gateway.kilo.ai/api/v1/chat/completions`) is a keyless OpenAI-compatible gateway preset whose `Authorization` header is omitted when the API key is left blank. Its default model `kilo-auto/free` is rotated server-side across active free models (anonymous limit: 200 requests/hour/IP), while free models from its public `/models` catalog remain selectable and an optional key unlocks paid models.
+
 iOS lyrics support long-press selection and the shared image editor. Images are shared as temporary PNG files that are removed when sharing finishes.
 
 ## Persistence
@@ -443,7 +445,7 @@ Queue transitions and preloading prefer downloaded or cached audio, matching man
 
 ## Android music widgets
 
-The music player defaults to 4x2 cells with a 250x110 dp fallback and a 2:1 preview. Shorter placements keep metadata beside the four controls when possible and drop the cover first; smaller ones use the controls-only and square variants. A three-column placement can shrink to 180 dp and uses artwork, metadata, Like and Play/Pause with 48 dp touch targets. Wider short placements retain the four controls and the action label. Short rows use icon controls when scaled metadata does not fit their height. Layout selection uses available dp and font scale, with size-specific RemoteViews on Android 12+ and portrait/landscape layouts before that. Keep existing widget IDs and actions valid.
+The music player defaults to 4x2 cells with a 250x110 dp fallback and a 2:1 preview. Shorter placements keep metadata beside the four controls when possible and drop the cover first; smaller ones use the controls-only and square variants. A three-column placement can shrink to 180 dp and uses artwork, metadata, Like and Play/Pause with 48 dp touch targets. Wider short placements retain the four controls and the action label. Short rows use icon controls when scaled metadata does not fit; at the default font scale, compact and wide rows switch to controls-only below 56 dp. The compact row layouts use 4 dp top and bottom padding to fit that cutoff. Layout selection uses available dp and font scale, with size-specific RemoteViews on Android 12+ and portrait/landscape layouts before that. Keep existing widget IDs and actions valid.
 
 Turntable requests a fixed 2x2 placement with 110 dp minimums and draws artwork and controls in a centered square. Recognizer requests 4x1 cells with a 250x40 dp fallback; its card wraps its content so taller hosts do not stretch it, and narrow hosts get the mic-only variant.
 

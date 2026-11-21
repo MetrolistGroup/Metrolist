@@ -321,9 +321,10 @@ object SongLikeState {
         songs: List<SongItem>,
         ids: Set<String> = songs.mapTo(hashSetOf(), SongItem::id),
     ) {
-        updateLikedSongRecency(songs)
-        _likedSongsFlow.value = songs
-        likedSongs = songs
+        val librarySongs = songs.map { it.copy(originalQueueItemId = null) }
+        updateLikedSongRecency(librarySongs)
+        _likedSongsFlow.value = librarySongs
+        likedSongs = librarySongs
         likedSongIds = ids
     }
 
@@ -596,8 +597,9 @@ object SongLikeState {
             val index = currentList.indexOfFirst { it.id == song.id }
             val liked = !isLiked(song.id)
 
+            val likedSong = song.copy(originalQueueItemId = null)
             if (liked) {
-                currentList.add(0, song)
+                currentList.add(0, likedSong)
                 removeDislike(song.id, sync = false)
             } else if (index >= 0) {
                 currentList.removeAt(index)
@@ -606,7 +608,7 @@ object SongLikeState {
             updateLikedSongs(currentList)
             saveLikedSongs()
             syncLike(song.id, liked)
-            if (liked) _newLikes.tryEmit(song)
+            if (liked) _newLikes.tryEmit(likedSong)
             return liked
         }
 
@@ -616,7 +618,7 @@ object SongLikeState {
         remoteSyncGate.withLock {
             activateOrderAccount()
             val ids = _likedSongsFlow.value.mapTo(hashSetOf(), SongItem::id)
-            val added = songs.filter { it.id.isNotBlank() && ids.add(it.id) }
+            val added = songs.map { it.copy(originalQueueItemId = null) }.filter { it.id.isNotBlank() && ids.add(it.id) }
             if (added.isEmpty()) return 0
             updateLikedSongs(added.asReversed() + _likedSongsFlow.value, ids)
             added.forEach { removeDislike(it.id, sync = false) }

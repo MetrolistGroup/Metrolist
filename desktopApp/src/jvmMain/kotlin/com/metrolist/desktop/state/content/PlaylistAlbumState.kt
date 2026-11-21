@@ -11,6 +11,7 @@ import androidx.compose.runtime.setValue
 import com.metrolist.desktop.state.app.AppState
 import com.metrolist.desktop.state.app.DesktopNavigation
 import com.metrolist.desktop.state.playback.PlayerState
+import com.metrolist.desktop.storage.DownloadManager
 import com.metrolist.innertubex.InnerTube
 import com.metrolist.innertubex.InnerTubeHttpException
 import com.metrolist.shared.api.PlaylistNotFoundException
@@ -42,6 +43,7 @@ import com.metrolist.shared.playlist.setStoredPlaylistCover
 import com.metrolist.shared.playlist.updateStoredPlaylist
 import com.metrolist.shared.playlist.uploadStoredPlaylistCover
 import com.metrolist.shared.settings.BlockedContent
+import com.metrolist.shared.settings.Settings
 import com.metrolist.shared.state.GlobalYouTube
 import com.metrolist.shared.state.GlobalYouTubeRepository
 import com.metrolist.shared.ui.navigation.Screen
@@ -328,14 +330,65 @@ object PlaylistAlbumState {
                     withContext(Dispatchers.IO) {
                         setStoredPlaylistBookmarked(database, GlobalYouTubeRepository.instance, id, playlist, bookmarked, songCount)
                     }
-                if (selectedPlaylistId != id) return@launch
                 if (result.isSuccess) {
-                    isPlaylistBookmarked = bookmarked
-                    LibraryContentState.fetchLibraryData()
-                } else {
+                    if (selectedPlaylistId == id) {
+                        isPlaylistBookmarked = bookmarked
+                        LibraryContentState.fetchLibraryData()
+                    }
+                    if (bookmarked && Settings.shared.autoDownloadSavedCollections) {
+                        downloadBookmarkedPlaylist(id)
+                    }
+                } else if (selectedPlaylistId == id) {
                     AppState.snackbarHostState.showSnackbar(getString(Res.string.error_occurred))
                 }
             }
+    }
+
+    private fun downloadBookmarkedPlaylist(id: String) {
+        val activeLoad = playlistLoadJob.takeIf { selectedPlaylistId == id }
+        AppState.scope.launch {
+            try {
+                activeLoad?.join()
+                val playlist =
+                    withContext(Dispatchers.IO) {
+                        database.dao().playlist(id).first()
+                            ?: database.dao().playlistByBrowseId(id.removePrefix("VL")).first()
+                            ?: database.dao().playlistByBrowseId(id).first()
+                    }
+                val storedSongs =
+                    playlist
+                        ?.let {
+                            withContext(Dispatchers.IO) {
+                                database
+                                    .dao()
+                                    .playlistSongs(it.id)
+                                    .first()
+                                    .map { song -> song.toSongItem() }
+                            }
+                        }.orEmpty()
+                val songs =
+                    if (playlist?.playlist?.isLocal == true) {
+                        storedSongs
+                    } else if (playlist != null && hasCompleteStoredPlaylist(playlist.playlist, storedSongs)) {
+                        storedSongs
+                    } else {
+                        withContext(Dispatchers.IO) {
+                            val repository = GlobalYouTubeRepository.instance
+                            val firstPage = database.loadAndCachePlaylistPage(repository, id)
+                            if (firstPage.hasMore) {
+                                repository.completePlaylistPage(firstPage, applyContentFilters = false).songs
+                            } else {
+                                firstPage.songs
+                            }
+                        }
+                    }
+                DownloadManager.downloadAll(BlockedContent.filterSongs(songs))
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                AppState.snackbarHostState.showSnackbar(getString(Res.string.error_occurred))
+            }
+        }
     }
 
     fun restoreAlbum(id: String): Boolean {
