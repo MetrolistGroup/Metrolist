@@ -101,9 +101,11 @@ class PlaybackControllerPlayerSession(
     override val queueTitle = derive { it.queueTitle }
     override val queueChips: StateFlow<List<RadioQueueChip>> = derive { it.queueChips }
     override val isVideoModeActive = derive { it.isVideoModeActive }
+    override val retimeLyricsOnVideoMode: Boolean get() = controller.state.value.retimeLyricsOnVideoMode
     override val isVideoModeResolving = derive { it.isVideoResolving }
     override val isVideoViewerVisible: StateFlow<Boolean> = MutableStateFlow(true).asStateFlow()
     override val currentPlaybackResource = derive { it.currentPlaybackResource }
+    override val videoPlaybackResource = derive { it.videoPlaybackResource }
     override val sleepTimerState: StateFlow<SleepTimerState> = derive { it.sleepTimerState }
     override val castDevices: StateFlow<List<CastDevice>> = derive { it.castDevices }
     override val castState: StateFlow<CastState> = derive { it.castState }

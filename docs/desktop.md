@@ -316,3 +316,5 @@ A useful report also includes the app version, the song's YouTube Music URL, the
 Desktop checks the public Metrolist release list and keeps cached notes after failures. Registered Windows installations can download and verify stable installers. Portable installations, other systems and prereleases open the release page.
 
 Restore accepts `.zip` and `.backup` with the same validation. Preserve original databases, sidecars and settings until installation succeeds or rollback completes. Failed restart-helper launch disarms restore and reports the error. Use disposable profiles for recovery checks.
+
+Packaged macOS restarts use LaunchServices through `/usr/bin/open -n -a` so the new process retains its app and Dock identity. Application arguments follow `--args`; profile and JVM environment values are passed as `--env NAME=VALUE`, after removing `_JPACKAGE_LAUNCHER`. On macOS, verify a restart after restore with a custom profile directory and check that crash-log configuration survives.

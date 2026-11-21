@@ -43,6 +43,7 @@ import com.metrolist.shared.playback.PlayerSession
 import com.metrolist.shared.settings.BlockedContent
 import com.metrolist.shared.settings.HiddenLibraryItems
 import com.metrolist.shared.state.AlbumLikeState
+import com.metrolist.shared.state.AlbumLikeToggleAlreadyInProgressException
 import com.metrolist.shared.state.GlobalYouTubeRepository
 import com.metrolist.shared.state.SongLikeState
 import com.metrolist.shared.storage.trackedDownloadPlaylistId
@@ -383,7 +384,11 @@ internal fun MobileItemMenu(
                                 scope.launch {
                                     try {
                                         AlbumLikeState.toggleAlbumLike(item, resolveSongs()) { result ->
-                                            if (result.isFailure) onError(errorText)
+                                            if (result.exceptionOrNull() !is AlbumLikeToggleAlreadyInProgressException &&
+                                                result.isFailure
+                                            ) {
+                                                onError(errorText)
+                                            }
                                         }
                                     } catch (error: CancellationException) {
                                         throw error

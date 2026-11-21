@@ -227,6 +227,7 @@ fun StatisticsScreen(
     modifier: Modifier = Modifier,
     bottomContentPadding: Dp = 0.dp,
     onArtistVisible: (suspend (StatisticsItem) -> Unit)? = null,
+    artistLookupGeneration: Int = 0,
 ) {
     var detail by remember { mutableStateOf<StatisticsDetail?>(null) }
     val openDetail: (StatisticsDetail) -> Unit = onOpenDetail ?: { detail = it }
@@ -286,6 +287,7 @@ fun StatisticsScreen(
                     errorMessage = state.errorMessage,
                     contentPadding = PaddingValues(bottom = bottomContentPadding),
                     onArtistVisible = onArtistVisible,
+                    artistLookupGeneration = artistLookupGeneration,
                 )
             } else {
                 Surface(Modifier.fillMaxSize()) {
@@ -392,7 +394,7 @@ fun StatisticsScreen(
                                         item {
                                             StatisticsCarousel(artistCount(state.artistCount), state.artists, artistsState, onItemClick, {
                                                 openDetail(StatisticsDetail.ARTISTS)
-                                            }, onItemMenu, onArtistVisible)
+                                            }, onItemMenu, onArtistVisible, artistLookupGeneration)
                                         }
                                         item { StatisticsCard(stringResource(Res.string.statistics_overview)) { SummaryGrid(state) } }
                                         item {
@@ -692,6 +694,7 @@ fun StatisticsDetailScreen(
     contentPadding: PaddingValues = PaddingValues(0.dp),
     modifier: Modifier = Modifier,
     onArtistVisible: (suspend (StatisticsItem) -> Unit)? = null,
+    artistLookupGeneration: Int = 0,
 ) {
     val listState = rememberLazyListState()
     val alpha by animateFloatAsState(if (isLoading) 0.7f else 1f, MaterialTheme.motionScheme.defaultEffectsSpec())
@@ -740,7 +743,7 @@ fun StatisticsDetailScreen(
                     }
                 }
                 itemsIndexed(items, key = { _, item -> item.id }) { index, item ->
-                    LaunchedEffect(item.id) { if (item.circularArtwork) onArtistVisible?.invoke(item) }
+                    LaunchedEffect(item.id, artistLookupGeneration) { if (item.circularArtwork) onArtistVisible?.invoke(item) }
                     val interactions = remember { MutableInteractionSource() }
                     val pressed by interactions.collectIsPressedAsState()
                     val shape = segmentedGroupShape(index == 0, index == items.lastIndex, pressed)
@@ -883,6 +886,7 @@ private fun StatisticsCarousel(
     onOpenDetail: () -> Unit,
     onItemMenu: ((StatisticsItem) -> Unit)? = null,
     onItemVisible: (suspend (StatisticsItem) -> Unit)? = null,
+    artistLookupGeneration: Int = 0,
 ) {
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -932,7 +936,7 @@ private fun StatisticsCarousel(
                 horizontalArrangement = Arrangement.spacedBy(GridTileSpacing),
             ) {
                 itemsIndexed(items.take(500), key = { _, item -> item.id }) { index, item ->
-                    LaunchedEffect(item.id) { onItemVisible?.invoke(item) }
+                    LaunchedEffect(item.id, artistLookupGeneration) { onItemVisible?.invoke(item) }
                     val shape = statisticsArtworkShape(item, index)
                     Column(
                         Modifier
