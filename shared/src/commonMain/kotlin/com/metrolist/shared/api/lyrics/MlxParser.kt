@@ -60,7 +60,14 @@ object MlxParser {
         return hasMlxHeader && parse(text).lines.any { it.text.isNotBlank() }
     }
 
-    fun parse(text: String): MlxDocument {
+    fun parse(text: String): MlxDocument = parse(text, applyLrcOffset = true)
+
+    internal fun parseWithoutLrcOffset(text: String): MlxDocument = parse(text, applyLrcOffset = false)
+
+    private fun parse(
+        text: String,
+        applyLrcOffset: Boolean,
+    ): MlxDocument {
         if (text.length > MAX_DOCUMENT_CHARS) return emptyDocument()
         if (text.trimStart().startsWith('{')) {
             return MlxJsonParser.parse(text)?.withValidatedRomanization() ?: emptyDocument()
@@ -189,7 +196,9 @@ object MlxParser {
             lines = finalLines,
             songParts = resolvedSongParts,
             colors = parseColors(sections["colors"] ?: emptyList()),
-        ).withLrcOffset(lrcOffsetMs(text)).withValidatedRomanization()
+        ).let { document ->
+            if (applyLrcOffset) document.withLrcOffset(lrcOffsetMs(text)) else document
+        }.withValidatedRomanization()
     }
 
     private fun MlxDocument.withValidatedRomanization(): MlxDocument {
