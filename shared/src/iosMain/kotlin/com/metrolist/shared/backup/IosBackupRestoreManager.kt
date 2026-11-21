@@ -21,6 +21,8 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.withContext
@@ -58,6 +60,8 @@ private const val MAX_FOREIGN_ARCHIVE_ENTRIES = 4096
 private const val MAX_ZIP_CENTRAL_DIRECTORY_BYTES = 16L * 1024 * 1024
 private const val PRISM_ARCHIVE_DIRECTORY = ".prism/"
 private const val PRISM_ARTIST_PREFERENCES = "shared_prefs/artist_prefs.xml"
+
+internal val iosBackupOperationMutex = Mutex()
 
 /** File-based backup API; copy document-provider URLs into the app container before calling. */
 @OptIn(ExperimentalForeignApi::class, BetaInteropApi::class)
@@ -129,11 +133,11 @@ class IosBackupRestoreManager(
 
     suspend fun backup(destinationPath: String): Result<Unit> =
         withContext(Dispatchers.IO) {
-            operationMutex.lock()
+            iosBackupOperationMutex.lock()
             try {
                 backupLocked(destinationPath)
             } finally {
-                operationMutex.unlock()
+                iosBackupOperationMutex.unlock()
             }
         }
 
@@ -293,25 +297,32 @@ class IosBackupRestoreManager(
         return FileSystem.SYSTEM.read(file) { readByteArray(SQLITE_HEADER.size.toLong()).contentEquals(SQLITE_HEADER) }
     }
 
-    private fun backupLocked(destinationPath: String): Result<Unit> {
+    private suspend fun backupLocked(destinationPath: String): Result<Unit> {
+        val coroutineContext = currentCoroutineContext()
+        val checkActive = { coroutineContext.ensureActive() }
         val fileManager = NSFileManager.defaultManager
         val snapshotPath = temporaryPath("backup-snapshot")
         val archivePath = "$destinationPath.${NSUUID().UUIDString}.tmp"
         val previousPath = "$destinationPath.${NSUUID().UUIDString}.previous"
         return try {
+            check(!FileSystem.SYSTEM.exists(recoveryPath)) { "An interrupted restore still needs recovery" }
             val destination = resolveFilePath(destinationPath)
             val protectedPaths =
                 listOf(databasePath, "$databasePath-wal", "$databasePath-shm", "$databasePath-journal")
                     .map(::resolveFilePath)
                     .toSet()
             check(destination !in protectedPaths) { "Backup destination cannot replace the live database or its sidecars" }
+            checkActive()
             snapshotDatabase(databasePath, snapshotPath)
+            checkActive()
             val version = databaseVersion(snapshotPath)
+            checkActive()
             val settingsBytes = json.encodeToString(PortableSettings.serializer(), settings.exportBackupSettings()).encodeToByteArray()
             check(settingsBytes.size <= BackupArchiveLimits.SETTINGS_BYTES) { "Backup settings are too large" }
             check(fileManager.createFileAtPath(archivePath, contents = null, attributes = null)) { "Could not create backup archive" }
             IosFileOutputStream(archivePath).use { output ->
                 ZipOutputStream(output).use { zip ->
+                    checkActive()
                     zip.writeEntry(
                         BACKUP_MANIFEST_ENTRY,
                         json
@@ -321,8 +332,11 @@ class IosBackupRestoreManager(
                             ).encodeToByteArray(),
                     )
                     zip.writeEntry(BACKUP_SETTINGS_ENTRY, settingsBytes)
+                    checkActive()
                     zip.putNextEntry(ZipEntry(BACKUP_DATABASE_ENTRY))
-                    IosFileInputStream(snapshotPath).use { input -> input.copyTo(zip, BackupArchiveLimits.DATABASE_BYTES) }
+                    IosFileInputStream(snapshotPath).use { input ->
+                        input.copyTo(zip, BackupArchiveLimits.DATABASE_BYTES, checkActive)
+                    }
                     zip.closeEntry()
                 }
             }
@@ -350,11 +364,11 @@ class IosBackupRestoreManager(
         reopenDatabase: suspend () -> Unit,
     ): Result<Unit> =
         withContext(Dispatchers.IO) {
-            operationMutex.lock()
+            iosBackupOperationMutex.lock()
             try {
                 restoreLocked(sourcePath, closeDatabase, reopenDatabase)
             } finally {
-                operationMutex.unlock()
+                iosBackupOperationMutex.unlock()
             }
         }
 
@@ -1021,7 +1035,6 @@ class IosBackupRestoreManager(
         const val MAX_ARCHIVE_BYTES = BackupArchiveLimits.TOTAL_UNCOMPRESSED_BYTES + 2L * 1024 * 1024
 
         // shortcut: One lock serializes all databases; use per-database locks if multiple profiles are supported.
-        val operationMutex = Mutex()
     }
 }
 
@@ -1037,10 +1050,12 @@ private fun ZipOutputStream.writeEntry(
 private fun InputStream.copyTo(
     output: OutputStream,
     limit: Long,
+    checkActive: () -> Unit = {},
 ): Long {
     val buffer = ByteArray(64 * 1024)
     var total = 0L
     while (true) {
+        checkActive()
         val count = read(buffer)
         if (count < 0) return total
         check(count > 0) { "Backup entry read made no progress" }

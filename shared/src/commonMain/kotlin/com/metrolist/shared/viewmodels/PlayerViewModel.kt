@@ -1022,6 +1022,7 @@ class PlayerViewModel(
             artists = song.artists,
             thumbnail = song.thumbnail,
             duration = song.duration.toDurationMillis(),
+            isLocal = song.isLocal,
             spotifyAnimatedCoverUrl = spotify,
             appleMusicAnimatedCoverUrl = apple,
             appleMusicTallAnimatedCoverUrl = appleTall,
@@ -1811,6 +1812,7 @@ class PlayerViewModel(
         album: String? = null,
         providerOrder: String = Settings.shared.lyricsProviderOrder,
         isCustomQuery: Boolean = false,
+        selectedProvider: LyricsProvider? = null,
     ) {
         _uiState.value.lyricsProviderSearch?.cancel()
         val resolvedDuration =
@@ -1824,7 +1826,7 @@ class PlayerViewModel(
                         ?.takeIf { it > 0L }
             }
         val search =
-            LyricsProviderSearch(viewModelScope, providerOrder) { provider ->
+            LyricsProviderSearch(viewModelScope, providerOrder, selectedProvider) { provider ->
                 lyricsRepository.getProviderResults(
                     videoId = songId.takeUnless { isCustomQuery && provider != LyricsProvider.USER },
                     title = title,

@@ -417,6 +417,7 @@ internal fun MobileSongCollectionScreen(
         localPlaylistId?.let { database.dao().playlist(it) } ?: flowOf(null)
     }.collectAsState(null)
     val isStoredCollection = localPlaylistId == null && type in setOf("downloaded", "cached")
+    val isCachedCollection = localPlaylistId == null && type == "cached"
     val isLikedCollection = localPlaylistId == null && type == "liked"
     val isTopCollection = localPlaylistId == null && type == "top100"
     var topPeriod by remember(type) { mutableStateOf(TopPlaylistPeriod.ALL_TIME) }
@@ -442,8 +443,15 @@ internal fun MobileSongCollectionScreen(
             defaultCollectionSort,
             defaultCollectionDirection,
         )
-    val collectionSort = collectionSorting.sort
+    val collectionSort =
+        collectionSorting.sort.let { saved ->
+            if (isCachedCollection || saved != CollectionSort.MANUAL) saved else CollectionSort.NEWEST
+        }
     val collectionDirection = collectionSorting.direction
+    val cachedCustomOrder =
+        remember(isCachedCollection, Settings.shared.cachedSongsCustomOrder) {
+            if (isCachedCollection) Settings.shared.cachedSongsOrder() else emptyList()
+        }
     val countIds =
         remember(isStoredCollection, collectionSort, collectionEntries) {
             if (isStoredCollection && collectionSort == CollectionSort.MOST_PLAYED) collectionEntries.map { it.songId } else emptyList()
@@ -649,18 +657,25 @@ internal fun MobileSongCollectionScreen(
             playlistSortDirection,
             playlistReorderMode,
             isStoredCollection,
+            isCachedCollection,
             metadata,
             downloadFilterState,
             collectionQuery,
             collectionSort,
             collectionDirection,
+            cachedCustomOrder,
         ) {
             if (isStoredCollection) {
                 (
                     downloadFilterState?.apply(
                         baseSongs,
                     ) ?: baseSongs
-                ).presentCollection(collectionQuery, collectionSort, collectionDirection) {
+                ).presentCollection(
+                    collectionQuery,
+                    collectionSort,
+                    collectionDirection,
+                    customOrder = if (isCachedCollection) cachedCustomOrder else emptyList(),
+                ) {
                     metadata[it.id]
                 }
             } else if (isTopCollection) {
@@ -927,7 +942,12 @@ internal fun MobileSongCollectionScreen(
                             Column {
                                 CollectionFilterBar(
                                     showSearch = false,
-                                    text = collectionFilterBarText(),
+                                    text =
+                                        collectionFilterBarText(
+                                            includeManual =
+                                                isCachedCollection &&
+                                                    (collectionSort == CollectionSort.MANUAL || cachedCustomOrder.isNotEmpty()),
+                                        ),
                                     query = collectionQuery,
                                     onQueryChange = { collectionQuery = it },
                                     sort = collectionSort,
@@ -993,6 +1013,7 @@ internal fun MobileSongCollectionScreen(
                 cover = if (localPlaylistId == null && customCover == null) libraryCover(type) else null,
                 currentSongId = playbackState.currentSongId,
                 currentQueueItemId = playbackState.originalQueueItemId,
+                currentSongOccurrenceKey = playbackState.currentSongOccurrenceKey,
                 isPlaying = playbackState.isPlaying,
                 contentPadding = PaddingValues(bottom = bottomContentPadding),
                 modifier = modifier.fillMaxSize(),

@@ -4,6 +4,7 @@
  */
 
 import AVFoundation
+import BackgroundTasks
 import Combine
 import Foundation
 import Sentry
@@ -12,6 +13,8 @@ import SwiftUI
 
 @main
 struct MetrolistApp: App {
+    @UIApplicationDelegateAdaptor(AutomaticBackupAppDelegate.self) private var appDelegate
+
     init() {
         IosCrashRecovery.shared.install()
         NSSetUncaughtExceptionHandler { exception in
@@ -43,7 +46,72 @@ struct MetrolistApp: App {
             let audioSession = AVAudioSession.sharedInstance()
             try audioSession.setCategory(.playback, mode: .default)
         } catch {
-            print("Audio session configuration error: \(error.localizedDescription)")
+            IosApplicationLogBridgeKt.logIosApplicationError(
+                tag: "AudioSession",
+                message: "Audio session configuration error: \(error.localizedDescription)"
+            )
+        }
+    }
+}
+
+private final class AutomaticBackupAppDelegate: NSObject, UIApplicationDelegate {
+    private static let taskIdentifier = "com.metrolist.automatic-backup"
+    private let settingsChanged = Notification.Name("com.metrolist.automaticBackupSettingsChanged")
+
+    func application(
+        _ application: UIApplication,
+        didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil,
+    ) -> Bool {
+        BGTaskScheduler.shared.register(forTaskWithIdentifier: Self.taskIdentifier, using: nil) { [weak self] task in
+            guard let task = task as? BGProcessingTask else {
+                task.setTaskCompleted(success: false)
+                return
+            }
+            self?.run(task)
+        }
+        NotificationCenter.default.addObserver(self, selector: #selector(schedule), name: settingsChanged, object: nil)
+        schedule()
+        return true
+    }
+
+    @objc private func schedule() {
+        BGTaskScheduler.shared.cancel(taskRequestWithIdentifier: Self.taskIdentifier)
+        guard !IosCrashRecovery.shared.hasPendingReport,
+              IosAutomaticBackupBridgeKt.iosAutomaticBackupEnabled() else { return }
+
+        let interval = TimeInterval(IosAutomaticBackupBridgeKt.iosAutomaticBackupIntervalMillis()) / 1000
+        let lastSuccess = TimeInterval(IosAutomaticBackupBridgeKt.iosAutomaticBackupLastSuccessEpochMillis()) / 1000
+        let request = BGProcessingTaskRequest(identifier: Self.taskIdentifier)
+        request.earliestBeginDate = IosAutomaticBackupBridgeKt.iosAutomaticBackupNeedsCleanup()
+            ? Date(timeIntervalSinceNow: 5 * 60)
+            : Date(timeIntervalSince1970: lastSuccess + interval)
+        request.requiresNetworkConnectivity = false
+        request.requiresExternalPower = false
+        try? BGTaskScheduler.shared.submit(request)
+    }
+
+    private func run(_ task: BGProcessingTask) {
+        guard !IosCrashRecovery.shared.hasPendingReport else {
+            task.setTaskCompleted(success: false)
+            return
+        }
+        let completionLock = NSLock()
+        var didComplete = false
+        let complete: (Bool) -> Void = { [weak self] succeeded in
+            completionLock.lock()
+            let shouldComplete = !didComplete
+            didComplete = true
+            completionLock.unlock()
+            guard shouldComplete else { return }
+            task.setTaskCompleted(success: succeeded)
+            self?.schedule()
+        }
+        task.expirationHandler = {
+            IosAutomaticBackupBridgeKt.cancelIosAutomaticBackup()
+            complete(false)
+        }
+        IosAutomaticBackupBridgeKt.createIosAutomaticBackup { succeeded in
+            complete(succeeded.boolValue)
         }
     }
 }

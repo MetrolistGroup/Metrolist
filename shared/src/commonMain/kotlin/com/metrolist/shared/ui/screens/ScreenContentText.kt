@@ -250,21 +250,28 @@ fun libraryAutoPlaylists(hasNewUploads: Boolean = false): List<LibraryAutoPlayli
 }
 
 @Composable
-fun collectionFilterBarText(includeClear: Boolean = false) =
-    CollectionFilterBarText(
-        searchLabel = stringResource(Res.string.stored_search_songs),
-        sortLabels =
-            mapOf(
-                CollectionSort.NEWEST to stringResource(Res.string.sort_by_create_date),
-                CollectionSort.TITLE to stringResource(Res.string.title),
-                CollectionSort.ARTIST to stringResource(Res.string.artist),
-                CollectionSort.SIZE to stringResource(Res.string.file_size),
-                CollectionSort.LAST_USED to stringResource(Res.string.stored_sort_last_used),
-                CollectionSort.MOST_PLAYED to stringResource(Res.string.collection_sort_most_played),
-            ),
-        sortOptions = stringResource(Res.string.sort_options),
-        clear = stringResource(Res.string.clear).takeIf { includeClear },
-    )
+fun collectionFilterBarText(
+    includeClear: Boolean = false,
+    includeManual: Boolean = false,
+) = CollectionFilterBarText(
+    searchLabel = stringResource(Res.string.stored_search_songs),
+    sortLabels =
+        buildMap {
+            put(CollectionSort.NEWEST, stringResource(Res.string.sort_by_create_date))
+            put(CollectionSort.TITLE, stringResource(Res.string.title))
+            put(CollectionSort.ARTIST, stringResource(Res.string.artist))
+            put(CollectionSort.SIZE, stringResource(Res.string.file_size))
+            put(CollectionSort.LAST_USED, stringResource(Res.string.stored_sort_last_used))
+            put(CollectionSort.MOST_PLAYED, stringResource(Res.string.collection_sort_most_played))
+            if (includeManual) {
+                put(CollectionSort.MANUAL, stringResource(Res.string.manual))
+            }
+        },
+    sortOptions = stringResource(Res.string.sort_options),
+    clear = stringResource(Res.string.clear).takeIf { includeClear },
+    reorder = if (includeManual) stringResource(Res.string.playlist_reorder) else "",
+    lock = if (includeManual) stringResource(Res.string.playlist_lock) else "",
+)
 
 @Composable
 fun playlistContentText(useTrackCount: Boolean = false) =

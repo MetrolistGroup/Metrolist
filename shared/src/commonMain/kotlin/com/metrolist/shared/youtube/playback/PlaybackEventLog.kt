@@ -1,12 +1,14 @@
 package com.metrolist.shared.youtube.playback
 
+import com.metrolist.shared.playback.findPlaybackHttpStatusCode
+import com.metrolist.shared.utils.redactDiagnosticText
 import kotlin.time.Clock
 import kotlin.time.Instant
 
 object PlaybackEventLog {
     const val MAX_EVENTS = 500
-
     val events = PlaybackEventBuffer(MAX_EVENTS)
+    private var lastStructuredFailure: StructuredFailure? = null
 
     fun debug(
         kind: PlaybackEventKind,
@@ -83,19 +85,31 @@ object PlaybackEventLog {
         profileId: String? = null,
         details: Map<String, String> = emptyMap(),
         error: Throwable? = null,
+        describePlaybackError: Boolean = true,
     ) {
         val timestampMs = Clock.System.now().toEpochMilliseconds()
+        val diagnosticMessage =
+            redactDiagnosticText(
+                when {
+                    error == null -> message
+                    describePlaybackError -> mergeMessage(message, error)
+                    else -> "$message (${error::class.simpleName ?: "failure"})"
+                },
+            )
+        val diagnosticDetails =
+            (if (error == null) details else details + throwableDiagnostics(error))
+                .mapValues { (_, value) -> redactDiagnosticText(value) }
         events.append { id ->
             PlaybackEvent(
                 id = id,
                 timestampMs = timestampMs,
                 level = level,
                 kind = kind,
-                message = mergeMessage(message, error),
+                message = diagnosticMessage,
                 videoId = videoId,
                 clientName = clientName,
                 profileId = profileId,
-                details = if (error == null) details else details + throwableDiagnostics(error),
+                details = diagnosticDetails,
             )
         }
     }
@@ -107,14 +121,17 @@ object PlaybackEventLog {
         error: Throwable,
     ) {
         val timestampMs = Clock.System.now().toEpochMilliseconds()
+        lastStructuredFailure = StructuredFailure(tag, error::class.simpleName, error.hashCode(), timestampMs)
+        val diagnosticMessage = redactDiagnosticText("[$tag] $message (${error::class.simpleName ?: "failure"})")
+        val diagnosticDetails = throwableDiagnostics(error).mapValues { (_, value) -> redactDiagnosticText(value) }
         events.append { id ->
             PlaybackEvent(
                 id = id,
                 timestampMs = timestampMs,
                 level = PlaybackEventLevel.ERROR,
                 kind = kind,
-                message = "[$tag] $message (${error::class.simpleName ?: "failure"})",
-                details = throwableDiagnostics(error),
+                message = diagnosticMessage,
+                details = diagnosticDetails,
             )
         }
     }
@@ -138,7 +155,54 @@ object PlaybackEventLog {
         )
     }
 
+    fun captureApplicationFailure(
+        level: PlaybackEventLevel,
+        tag: String,
+        message: String,
+        error: Throwable? = null,
+    ) {
+        if (level != PlaybackEventLevel.WARN && level != PlaybackEventLevel.ERROR) return
+        val structuredFailure = lastStructuredFailure
+        lastStructuredFailure = null
+        if (error != null && structuredFailure?.matches(tag, error) == true) return
+        val failureDetails = error?.let(::safeFailureDetails).orEmpty()
+        record(
+            level = level,
+            kind = kindForYtTag(tag).takeUnless { it == PlaybackEventKind.TRACE } ?: PlaybackEventKind.OTHER,
+            message = "[$tag] $message${failureDetails.takeIf { it.isNotEmpty() }?.let { " ($it)" }.orEmpty()}",
+            describePlaybackError = false,
+        )
+    }
+
+    private fun safeFailureDetails(error: Throwable): String {
+        val causes =
+            generateSequence(error) { current -> current.cause?.takeUnless { it === current } }
+                .take(5)
+                .mapNotNull { it::class.simpleName }
+                .distinct()
+                .toList()
+        val status = error.findPlaybackHttpStatusCode()
+        return (causes + listOfNotNull(status?.let { "HTTP $it" })).joinToString(" caused by ")
+    }
+
+    private data class StructuredFailure(
+        val tag: String,
+        val exceptionType: String?,
+        val errorHashCode: Int,
+        val timestampMs: Long,
+    ) {
+        fun matches(
+            tag: String,
+            error: Throwable,
+        ): Boolean =
+            this.tag == tag &&
+                exceptionType == error::class.simpleName &&
+                errorHashCode == error.hashCode() &&
+                Clock.System.now().toEpochMilliseconds() - timestampMs in 0..1_000
+    }
+
     fun clear() {
+        lastStructuredFailure = null
         events.clear()
     }
 
@@ -150,7 +214,7 @@ object PlaybackEventLog {
         val snapshot = allEvents.takeLast(maxEvents.coerceAtLeast(0))
         val header =
             buildString {
-                appendLine("Metrolist playback event log")
+                appendLine("Metrolist application event log")
                 appendLine("Exported: ${Instant.fromEpochMilliseconds(Clock.System.now().toEpochMilliseconds())}")
                 appendLine("Events: ${snapshot.size} of ${allEvents.size}")
                 appendLine("Environment:")

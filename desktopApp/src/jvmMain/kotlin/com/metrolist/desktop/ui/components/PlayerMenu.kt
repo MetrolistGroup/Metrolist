@@ -9,6 +9,7 @@ package com.metrolist.desktop.ui.components
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -104,6 +105,7 @@ import com.metrolist.shared.ui.equalizer.EqualizerDialog
 import com.metrolist.shared.ui.icons.MetrolistIcons
 import com.metrolist.shared.ui.menu.CursorDropdownMenu
 import com.metrolist.shared.ui.menu.LyricsProviderDialog
+import com.metrolist.shared.ui.menu.LyricsRefreshDialog
 import com.metrolist.shared.ui.menu.LyricsSearchDialog
 import com.metrolist.shared.ui.menu.MediaContextMenu
 import com.metrolist.shared.ui.menu.albumNavigationMenuAction
@@ -152,8 +154,11 @@ fun LyricsActionsMenuCard(
         }
     }
 
-    var showSearchDialog by remember { mutableStateOf(false) }
-    var showProviderDialog by remember { mutableStateOf(false) }
+    val lyricsTrack = PlayerState.currentTrack
+    var showSearchDialog by remember(lyricsTrack?.id) { mutableStateOf(false) }
+    var showProviderDialog by remember(lyricsTrack?.id) { mutableStateOf(false) }
+    var showRefreshMenu by remember(lyricsTrack?.id) { mutableStateOf(false) }
+    var providerDialogFromRefetch by remember(lyricsTrack?.id) { mutableStateOf(false) }
     PopupVisibility(visible = showSearchDialog) {
         val currentTrack = PlayerState.currentTrack
         LyricsSearchDialog(
@@ -168,7 +173,37 @@ fun LyricsActionsMenuCard(
             onSearch = { title, artist ->
                 currentTrack?.let { LyricsState.fetchProviderResults(it, title, artist) }
                 showSearchDialog = false
+                providerDialogFromRefetch = false
                 showProviderDialog = true
+            },
+        )
+    }
+
+    PopupVisibility(visible = showRefreshMenu) {
+        LyricsRefreshDialog(
+            onDismiss = { showRefreshMenu = false },
+            onAutomatic = {
+                lyricsTrack?.let { track ->
+                    LyricsState.fetchLyrics(
+                        track,
+                        skipCache = true,
+                        customTitle = LyricsState.queryTitle,
+                        customArtist = LyricsState.queryArtist,
+                    )
+                }
+                onDismiss()
+            },
+            onProvider = { provider ->
+                lyricsTrack?.let { track ->
+                    LyricsState.fetchProviderResults(
+                        track,
+                        customTitle = LyricsState.queryTitle,
+                        customArtist = LyricsState.queryArtist,
+                        selectedProvider = provider,
+                    )
+                    providerDialogFromRefetch = true
+                    showProviderDialog = true
+                }
             },
         )
     }
@@ -177,9 +212,16 @@ fun LyricsActionsMenuCard(
         LyricsProviderDialog(
             search = LyricsState.providerSearch,
             noResultsText = stringResource(Res.string.no_provider_results_found),
-            onDismiss = { showProviderDialog = false },
+            onDismiss = {
+                showProviderDialog = false
+                if (providerDialogFromRefetch) {
+                    providerDialogFromRefetch = false
+                    showRefreshMenu = true
+                }
+            },
             onSelect = { result ->
-                PlayerState.currentTrack?.let { LyricsState.selectProviderResult(it, result) }
+                lyricsTrack?.let { LyricsState.selectProviderResult(it, result) }
+                providerDialogFromRefetch = false
                 showProviderDialog = false
                 onDismiss()
             },
@@ -213,15 +255,7 @@ fun LyricsActionsMenuCard(
                     colorScheme = colorScheme,
                     modifier = Modifier.weight(1f),
                 ) {
-                    PlayerState.currentTrack?.let {
-                        LyricsState.fetchLyrics(
-                            it,
-                            skipCache = true,
-                            customTitle = LyricsState.queryTitle,
-                            customArtist = LyricsState.queryArtist,
-                        )
-                    }
-                    onDismiss()
+                    showRefreshMenu = true
                 }
                 LyricsActionChip(
                     icon = MetrolistIcons.Outlined.Search,

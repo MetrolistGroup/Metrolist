@@ -21,8 +21,9 @@ fun List<RadioQueueChip>.selectRadioQueueChip(selectedChipId: String): List<Radi
 
 fun varyRadioRecommendations(
     songs: List<SongItem>,
+    classic: Boolean,
     random: Random = Random.Default,
-): List<SongItem> = songs.shuffled(random)
+): List<SongItem> = if (classic) songs else songs.shuffled(random)
 
 fun buildRadioQueueRecommendations(
     songs: List<SongItem>,

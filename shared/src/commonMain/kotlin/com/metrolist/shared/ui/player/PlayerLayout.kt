@@ -84,6 +84,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
@@ -887,7 +888,11 @@ internal fun LandscapePlayerContent(
             textBackgroundColor
         }
     val controlsSurface by animateColorAsState(
-        if (artworkBehindControls) Color.Black.copy(alpha = 0.6f) else MaterialTheme.colorScheme.surfaceContainer,
+        if (artworkBehindControls) {
+            (if (controlsColor.luminance() < 0.5f) Color.White else Color.Black).copy(alpha = 0.6f)
+        } else {
+            MaterialTheme.colorScheme.surfaceContainer
+        },
         MaterialTheme.motionScheme.defaultEffectsSpec(),
     )
     val hapticManager = rememberMetrolistHaptics()

@@ -100,6 +100,7 @@ import com.metrolist.shared.model.canSwitchToAudioTrack
 import com.metrolist.shared.model.isLive
 import com.metrolist.shared.model.isPodcast
 import com.metrolist.shared.model.isVideoSong
+import com.metrolist.shared.model.playlistOccurrenceIdentity
 import com.metrolist.shared.model.previewThumbnailUrl
 import com.metrolist.shared.playback.MusicQueueEntry
 import com.metrolist.shared.playback.PauseOnMuteController
@@ -1809,7 +1810,10 @@ class MusicService :
                     if (selection.song.id == sourceSong.id) {
                         selection.song
                     } else {
-                        selection.song.copy(originalQueueItemId = sourceSong.originalQueueItemId ?: sourceSong.id)
+                        selection.song.copy(
+                            originalQueueItemId = sourceSong.originalQueueItemId ?: sourceSong.id,
+                            playlistOccurrenceId = sourceSong.playlistOccurrenceIdentity(),
+                        )
                     }
                 playbackPosition = selection.positionMs
                 if (!isCurrentRequest(expectedWantVideo = wantVideo)) return@withQueueLoading false

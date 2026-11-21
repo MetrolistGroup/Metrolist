@@ -1,14 +1,12 @@
 package com.metrolist.android.widget
 
+import com.metrolist.android.viewmodels.loadOrderedCachedSongs
 import com.metrolist.shared.db.MusicDatabase
-import com.metrolist.shared.db.entities.KIND_CACHE
 import com.metrolist.shared.db.entities.toSongItem
 import com.metrolist.shared.db.historySong
 import com.metrolist.shared.db.recentVisibleHistory
 import com.metrolist.shared.db.refreshHistoryPlaylist
 import com.metrolist.shared.db.refreshUploadedSongs
-import com.metrolist.shared.model.AlbumTiny
-import com.metrolist.shared.model.ArtistTiny
 import com.metrolist.shared.model.BuiltinPlaylist
 import com.metrolist.shared.model.SongItem
 import com.metrolist.shared.model.toSongItem
@@ -73,18 +71,7 @@ internal suspend fun MusicDatabase.widgetBuiltinSongs(builtin: BuiltinPlaylist):
         }
 
         BuiltinPlaylist.CACHED -> {
-            dao.cachedAudioByKind(KIND_CACHE).first().map { entry ->
-                SongItem(
-                    id = entry.songId,
-                    title = entry.title,
-                    thumbnail = entry.thumbnailUrl,
-                    artists =
-                        entry.artist.split(",").mapNotNull { name ->
-                            name.trim().takeIf { it.isNotBlank() && it != "Unknown" }?.let { ArtistTiny(null, it) }
-                        },
-                    album = entry.album?.let { AlbumTiny(null, it) },
-                )
-            }
+            loadOrderedCachedSongs(this)
         }
 
         BuiltinPlaylist.UPLOADED -> {

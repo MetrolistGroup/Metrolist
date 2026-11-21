@@ -100,6 +100,7 @@ import com.metrolist.shared.model.SongItem
 import com.metrolist.shared.model.canEdit
 import com.metrolist.shared.model.filterForPlaylistSearch
 import com.metrolist.shared.model.isReordering
+import com.metrolist.shared.model.playlistOccurrenceIdentity
 import com.metrolist.shared.model.playlistOccurrenceKey
 import com.metrolist.shared.model.sortedForPlaylist
 import com.metrolist.shared.playlist.PlaylistPartiallyUpdatedException
@@ -515,6 +516,7 @@ fun PlaylistScreen(
             contentPadding = PaddingValues(top = 16.dp, bottom = 16.dp),
             currentSongId = PlayerState.currentTrack?.id,
             currentQueueItemId = PlayerState.currentTrack?.originalQueueItemId,
+            currentSongOccurrenceKey = PlayerState.currentTrack?.playlistOccurrenceIdentity(),
             isPlaying = PlayerState.isPlaying,
             suggestions = suggestions.takeIf { searchQuery.isBlank() && !(songs.isEmpty() && isEditable) }.orEmpty(),
             onArtistClick = ArtistState::fetchArtistData,

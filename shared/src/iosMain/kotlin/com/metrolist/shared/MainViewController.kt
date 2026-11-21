@@ -47,6 +47,7 @@ import com.metrolist.shared.backup.BackupArchiveLimits
 import com.metrolist.shared.backup.IosBackupRestoreManager
 import com.metrolist.shared.backup.defaultBackupFilename
 import com.metrolist.shared.backup.foreignImportMessage
+import com.metrolist.shared.backup.notifyIosAutomaticBackupSettingsChanged
 import com.metrolist.shared.crash.IosCrashRecovery
 import com.metrolist.shared.db.MusicDatabase
 import com.metrolist.shared.discord.IosDiscordPresenceEffect
@@ -576,6 +577,7 @@ fun MetrolistIOSApp() {
                                             onImportForeign = ::importForeignBackup,
                                             status = backupStatus,
                                             failure = backupFailure,
+                                            onAutoBackupSettingsChanged = ::notifyIosAutomaticBackupSettingsChanged,
                                             foreignImportStatus = foreignImportStatus,
                                         )
                                         Text(
@@ -639,6 +641,7 @@ fun MainViewController(): UIViewController {
                     CrashLogsScreen(IosCrashRecovery, onClose = {
                         IosCrashRecovery.acknowledge()
                         MetrolistPlatform.initialize()
+                        notifyIosAutomaticBackupSettingsChanged()
                         configureIosImageLoader()
                         showingReport = false
                     }, onShare = { IosNativeFiles.shareText(presenter, it) })

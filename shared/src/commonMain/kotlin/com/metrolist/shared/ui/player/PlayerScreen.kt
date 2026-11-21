@@ -750,13 +750,23 @@ fun PlayerScreen(
             !uiState.isLyricsVisible
     val textBackgroundColor by animateColorAsState(
         targetValue =
-            if (isCanvasBackdropVisible) {
+            if (
+                isCanvasBackdropVisible ||
+                (
+                    usesFullscreenThumbnail && currentSong?.displayThumbnail != null && !uiState.isLyricsVisible &&
+                        !(
+                            isLandscape && !showVideoSurface && playerBackground == PlayerBackgroundStyle.LIQUID &&
+                                MaterialTheme.colorScheme.surface.luminance() >= 0.5f
+                        )
+                )
+            ) {
                 Color.White
             } else {
                 when (playerBackground) {
                     PlayerBackgroundStyle.BLURRED_ARTWORK,
-                    PlayerBackgroundStyle.LIQUID,
                     -> if (currentSong?.displayThumbnail != null) Color.White else MaterialTheme.colorScheme.onSurface
+
+                    PlayerBackgroundStyle.LIQUID -> if (MaterialTheme.colorScheme.surface.luminance() >= 0.5f) Color.Black else Color.White
 
                     PlayerBackgroundStyle.GRADIENT,
                     PlayerBackgroundStyle.ANIMATED_GRADIENT,
@@ -1116,6 +1126,7 @@ fun PlayerScreen(
                                         artworkWhiteAlpha = 0.12f,
                                         isLiquid = isLiquid,
                                         visible = uiState.isLyricsVisible,
+                                        foregroundColor = textBackgroundColor,
                                     )
                                 }
                             }
@@ -2008,7 +2019,17 @@ fun PlayerScreen(
                                                             } else {
                                                                 MaterialTheme.typography.titleMedium
                                                             },
-                                                        color = textBackgroundColor.copy(alpha = 0.7f),
+                                                        color =
+                                                            textBackgroundColor.copy(
+                                                                alpha =
+                                                                    if (playerBackground == PlayerBackgroundStyle.LIQUID &&
+                                                                        MaterialTheme.colorScheme.surface.luminance() >= 0.5f
+                                                                    ) {
+                                                                        1f
+                                                                    } else {
+                                                                        0.7f
+                                                                    },
+                                                            ),
                                                         modifier =
                                                             Modifier
                                                                 .then(

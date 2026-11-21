@@ -83,6 +83,7 @@ import com.metrolist.desktop.state.content.PlaylistAlbumState
 import com.metrolist.desktop.state.content.PodcastState
 import com.metrolist.desktop.state.playback.ListenTogetherState
 import com.metrolist.desktop.state.playback.PlayerState
+import com.metrolist.desktop.storage.CachedSongEntry
 import com.metrolist.desktop.storage.DownloadManager
 import com.metrolist.desktop.storage.DownloadState
 import com.metrolist.desktop.storage.SongCacheManager
@@ -91,6 +92,7 @@ import com.metrolist.desktop.storage.playlistDownloadState
 import com.metrolist.desktop.utils.exportCollection
 import com.metrolist.shared.api.playlistSongs
 import com.metrolist.shared.db.MusicDatabase
+import com.metrolist.shared.db.collectionPlayCounts
 import com.metrolist.shared.db.loadAndCachePlaylist
 import com.metrolist.shared.db.refreshHistoryPlaylist
 import com.metrolist.shared.generated.resources.Res
@@ -145,15 +147,18 @@ import com.metrolist.shared.model.AlbumItem
 import com.metrolist.shared.model.ArtistItem
 import com.metrolist.shared.model.ArtistTiny
 import com.metrolist.shared.model.BuiltinPlaylist
+import com.metrolist.shared.model.CollectionSort
 import com.metrolist.shared.model.EpisodeItem
 import com.metrolist.shared.model.PlaylistItem
 import com.metrolist.shared.model.PodcastItem
 import com.metrolist.shared.model.SongItem
 import com.metrolist.shared.model.YTItem
+import com.metrolist.shared.model.presentCollectionWithPlayCounts
 import com.metrolist.shared.model.previewThumbnailUrl
 import com.metrolist.shared.model.speedDialItemId
 import com.metrolist.shared.model.toSongItem
 import com.metrolist.shared.settings.BlockedContent
+import com.metrolist.shared.settings.Settings
 import com.metrolist.shared.state.GlobalYouTubeRepository
 import com.metrolist.shared.state.SongLikeState
 import com.metrolist.shared.ui.components.AlertDialog
@@ -182,11 +187,14 @@ import com.metrolist.shared.ui.menu.rememberCursorContextMenuState
 import com.metrolist.shared.ui.menu.rememberDeleteUploadAction
 import com.metrolist.shared.ui.menu.songMediaMenuModel
 import com.metrolist.shared.ui.playback.LocalPlaybackController
+import com.metrolist.shared.ui.playback.PlaybackController
+import com.metrolist.shared.ui.screens.PendingCollectionPlayState
 import com.metrolist.shared.ui.theme.ComponentShapes
 import com.metrolist.shared.utils.CollectionExportFormat
 import com.metrolist.shared.utils.ShareUrls
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -195,6 +203,73 @@ import org.jetbrains.compose.resources.pluralStringResource
 import org.jetbrains.compose.resources.stringResource
 import org.koin.core.context.GlobalContext
 import com.metrolist.shared.db.entities.toSongItem as localSongItem
+
+private val sharedMenuPlayState = PendingCollectionPlayState()
+private val sharedMenuQueueAdditions = MenuQueueAdditionCoordinator()
+
+private class MenuQueueAdditionCoordinator {
+    private val lock = Any()
+    private var tail: Job? = null
+    private var activeReplacementGeneration: Long? = null
+
+    fun cancel() {
+        synchronized(lock) {
+            activeReplacementGeneration = null
+            tail?.cancel()
+            tail = null
+        }
+    }
+
+    fun enqueue(
+        item: YTItem,
+        existingSongs: List<SongItem>,
+        playback: PlaybackController,
+        invoke: MediaMenuPlaybackActions.() -> Unit,
+    ) {
+        val expectedReplacementGeneration = playback.reserveQueueAdditionGeneration()
+        synchronized(lock) {
+            if (activeReplacementGeneration != expectedReplacementGeneration) {
+                tail?.cancel()
+                tail = null
+                activeReplacementGeneration = expectedReplacementGeneration
+            }
+            val previous = tail
+            val job =
+                AppState.scope.launch {
+                    previous?.join()
+                    if (playback.playbackReplacementGeneration != expectedReplacementGeneration) return@launch
+                    val loadedSongs =
+                        try {
+                            loadMediaSongs(item, existingSongs)
+                        } catch (e: CancellationException) {
+                            throw e
+                        } catch (_: Exception) {
+                            AppState.scope.launch {
+                                AppState.snackbarHostState.showSnackbar(getString(Res.string.error_unknown))
+                            }
+                            return@launch
+                        }
+                    if (loadedSongs.isEmpty() ||
+                        playback.playbackReplacementGeneration != expectedReplacementGeneration
+                    ) {
+                        return@launch
+                    }
+                    val guardedPlayback = ReservedPlaybackController(playback, expectedReplacementGeneration)
+                    MediaMenuPlaybackActions(
+                        item,
+                        guardedPlayback,
+                        withSongs = { action -> action(loadedSongs) },
+                    ).invoke()
+                }
+            tail = job
+            job.invokeOnCompletion {
+                synchronized(lock) {
+                    if (tail === job) tail = null
+                }
+            }
+        }
+    }
+}
 
 @Composable
 fun SongContextMenu(
@@ -207,6 +282,7 @@ fun SongContextMenu(
     onMoveDown: (() -> Unit)? = null,
     onHideFromLibrary: (() -> Unit)? = null,
     additionalActions: List<PlayerMenuAction> = emptyList(),
+    onPlaybackAction: () -> Unit = {},
     onDismiss: () -> Unit,
 ) {
     var showDetails by remember(song.id) { mutableStateOf(false) }
@@ -246,21 +322,31 @@ fun SongContextMenu(
             isPinned = isPinned,
             downloadState = downloadState,
             downloadProgress = ((LibraryState.downloadProgress[song.id] ?: 0f) * 100).toInt(),
-            onPlay = { playback.play(song) },
+            onPlay = {
+                sharedMenuPlayState.cancel()
+                sharedMenuQueueAdditions.cancel()
+                onPlaybackAction()
+                playback.play(song)
+            },
             onLike = {
                 PlayerState.toggleLike(song)
                 onDismiss()
             },
             onDislike = { PlayerState.toggleDislike(song) },
-            onStartRadio = { playback.startRadio(song) },
+            onStartRadio = {
+                sharedMenuPlayState.cancel()
+                sharedMenuQueueAdditions.cancel()
+                onPlaybackAction()
+                playback.startRadio(song)
+            },
             onAddToPlaylist = {
                 showAddToPlaylist(song)
                 onDismiss()
             },
             onShare = { shareSong(song) },
             onSuggestToHost = { suggestToHost(song) },
-            onPlayNext = { playback.playNext(listOf(song)) },
-            onAddToQueue = { playback.addToQueue(listOf(song)) },
+            onPlayNext = { sharedMenuQueueAdditions.enqueue(song, listOf(song), playback) { playNext() } },
+            onAddToQueue = { sharedMenuQueueAdditions.enqueue(song, listOf(song), playback) { addToQueue() } },
             onTogglePin = {
                 if (isPinned) HomeState.unpinSpeedDialItem(song.id) else HomeState.pinSpeedDialItem(song)
             },
@@ -410,6 +496,9 @@ fun PlaylistContextMenu(
     pinnedId: String? = null,
     fallbackIcon: ImageVector? = null,
     additionalActions: List<PlayerMenuAction> = emptyList(),
+    downloadSongs: List<SongItem> = songs,
+    pendingPlayState: PendingCollectionPlayState? = null,
+    onPlaybackAction: () -> Unit = {},
 ) {
     val playlist = localizedBuiltinPlaylist(playlist)
     var showExportDialog by remember(playlist.id) { mutableStateOf(false) }
@@ -417,6 +506,12 @@ fun PlaylistContextMenu(
     val isDownloadedCollection = playlist.id == "auto:downloaded"
     val actionSongs =
         if (isDownloadedCollection && songs.isEmpty()) LibraryState.downloadedFiles.map { it.toSongItem() } else songs
+    val downloadActionSongs =
+        if (isDownloadedCollection && downloadSongs.isEmpty()) {
+            LibraryState.downloadedFiles.map { it.toSongItem() }
+        } else {
+            downloadSongs.ifEmpty { actionSongs }
+        }
     MediaContextMenu(expanded = expanded, offset = offset, onDismiss = onDismiss) {
         val playback = LocalPlaybackController.current
         val isPinned = HomeState.uiState.speedDialPinnedIds.any { speedDialItemId(it) == speedDialItemId(playlist.id) }
@@ -434,7 +529,7 @@ fun PlaylistContextMenu(
         }
         val isAuto = playlist.id.startsWith("auto:")
         val isLocal = playlist.isLocal || isAuto
-        val loadedSongs = actionSongs.takeIf { it.isNotEmpty() }
+        val loadedSongs = downloadActionSongs.takeIf { it.isNotEmpty() }
         val loadedDownloadState = loadedSongs?.let { playlistDownloadState(it, LibraryState.downloadStates) }
         val downloadKey = "playlist:${playlist.id.removePrefix("VL")}"
         val downloadedKeys =
@@ -464,12 +559,6 @@ fun PlaylistContextMenu(
             }
         val downloadProgress =
             loadedSongs?.let { playlistDownloadProgress(it, LibraryState.downloadStates, LibraryState.downloadProgress) } ?: 0
-        val playbackActions =
-            MediaMenuPlaybackActions(
-                playlist,
-                playback,
-                withSongs = { action -> withMediaSongs(playlist, actionSongs, action) },
-            )
         playlistMediaMenuModel(
             playlist = playlist,
             isFavorite = isFavorite,
@@ -479,21 +568,43 @@ fun PlaylistContextMenu(
             fallbackIcon = fallbackIcon,
             downloadState = downloadState,
             downloadProgress = downloadProgress,
-            onPlay = playbackActions::play,
-            onShuffle = playbackActions::shuffle,
+            onPlay = {
+                launchTrackedMenuPlayback(
+                    playlist,
+                    actionSongs,
+                    playback,
+                    pendingPlayState = pendingPlayState,
+                    onPlaybackAction = onPlaybackAction,
+                    invoke = MediaMenuPlaybackActions::play,
+                )
+            },
+            onShuffle = {
+                launchTrackedMenuPlayback(
+                    playlist,
+                    actionSongs,
+                    playback,
+                    pendingPlayState = pendingPlayState,
+                    onPlaybackAction = onPlaybackAction,
+                    invoke = MediaMenuPlaybackActions::shuffle,
+                )
+            },
             onShare =
                 if (isLocal) {
                     null
                 } else {
                     { AppState.copyToClipboard(ShareUrls.playlist(playlist.id)) }
                 },
-            onPlayNext = playbackActions::playNext,
-            onAddToQueue = playbackActions::addToQueue,
+            onPlayNext = {
+                launchTrackedMenuQueueAction(playlist, actionSongs, playback, MediaMenuPlaybackActions::playNext)
+            },
+            onAddToQueue = {
+                launchTrackedMenuQueueAction(playlist, actionSongs, playback, MediaMenuPlaybackActions::addToQueue)
+            },
             onTogglePin = {
                 if (isPinned) HomeState.unpinSpeedDialItem(playlist.id) else HomeState.pinSpeedDialItem(playlist)
             },
             onDownload = {
-                withMediaSongs(playlist, actionSongs) { playlistSongs ->
+                withMediaSongs(playlist, downloadActionSongs) { playlistSongs ->
                     if (downloadState == MediaDownloadState.DOWNLOADED) {
                         if (isDownloadedCollection) {
                             removal.request(playlistSongs.map(SongItem::id))
@@ -659,6 +770,7 @@ fun EpisodeContextMenu(
     additionalActions: List<PlayerMenuAction> = emptyList(),
 ) {
     MediaContextMenu(expanded = expanded, offset = offset, onDismiss = onDismiss) {
+        val playback = LocalPlaybackController.current
         val song = episode.toSongItem()
         val isGuest = PlayerState.isListenTogetherGuest()
         MediaMenuModel(
@@ -673,6 +785,8 @@ fun EpisodeContextMenu(
                         enabled =
                             !isGuest && !episode.isUnavailable,
                     ) {
+                        sharedMenuPlayState.cancel()
+                        sharedMenuQueueAdditions.cancel()
                         PlayerState.playTrack(song)
                         onDismiss()
                     },
@@ -705,7 +819,7 @@ fun EpisodeContextMenu(
                                 stringResource(Res.string.play_next),
                                 enabled = !episode.isUnavailable,
                             ) {
-                                PlayerState.playNext(song)
+                                sharedMenuQueueAdditions.enqueue(song, listOf(song), playback) { playNext() }
                                 onDismiss()
                             },
                             PlayerMenuAction(
@@ -713,7 +827,7 @@ fun EpisodeContextMenu(
                                 stringResource(Res.string.add_to_queue),
                                 enabled = !episode.isUnavailable,
                             ) {
-                                PlayerState.addToQueue(song)
+                                sharedMenuQueueAdditions.enqueue(song, listOf(song), playback) { addToQueue() }
                                 onDismiss()
                             },
                         )
@@ -873,16 +987,86 @@ internal fun songDownloadAction(
     }
 }
 
+private class ReservedPlaybackController(
+    private val delegate: PlaybackController,
+    private val expectedGeneration: Long,
+) : PlaybackController by delegate {
+    override fun play(
+        song: SongItem,
+        queue: List<SongItem>,
+        songsOnly: Boolean,
+    ) = delegate.playAtGeneration(expectedGeneration, song, queue, songsOnly)
+
+    override fun playQueue(
+        songs: List<SongItem>,
+        startIndex: Int,
+        queueTitle: String?,
+    ) = delegate.playQueueAtGeneration(expectedGeneration, songs, startIndex, queueTitle)
+
+    override fun shuffleQueue(
+        songs: List<SongItem>,
+        queueTitle: String?,
+        songsOnly: Boolean,
+    ) = delegate.shuffleQueueAtGeneration(expectedGeneration, songs, queueTitle, songsOnly)
+
+    override fun playNext(songs: List<SongItem>) = delegate.playNextAtGeneration(expectedGeneration, songs)
+
+    override fun addToQueue(songs: List<SongItem>) = delegate.addToQueueAtGeneration(expectedGeneration, songs)
+}
+
+private fun launchTrackedMenuPlayback(
+    item: YTItem,
+    existingSongs: List<SongItem>,
+    playback: PlaybackController,
+    pendingPlayState: PendingCollectionPlayState? = null,
+    onPlaybackAction: () -> Unit = {},
+    invoke: MediaMenuPlaybackActions.() -> Unit,
+) {
+    val expectedGeneration = playback.reserveExplicitPlaybackGeneration()
+
+    onPlaybackAction()
+    sharedMenuPlayState.cancel()
+    sharedMenuQueueAdditions.cancel()
+    pendingPlayState?.cancel()
+    var launched: Job? = null
+    val reservedPlayback = ReservedPlaybackController(playback, expectedGeneration)
+    val guardedActions =
+        MediaMenuPlaybackActions(
+            item,
+            reservedPlayback,
+            withSongs = { action ->
+                launched =
+                    withMediaSongs(item, existingSongs) { loadedSongs ->
+                        if (playback.explicitPlaybackGeneration == expectedGeneration) {
+                            action(loadedSongs)
+                        }
+                    }
+            },
+        )
+    guardedActions.invoke()
+    sharedMenuPlayState.track(launched)
+    pendingPlayState?.track(launched)
+}
+
+private fun launchTrackedMenuQueueAction(
+    item: YTItem,
+    existingSongs: List<SongItem>,
+    playback: PlaybackController,
+    invoke: MediaMenuPlaybackActions.() -> Unit,
+) {
+    sharedMenuQueueAdditions.enqueue(item, existingSongs, playback, invoke)
+}
+
 private fun withMediaSongs(
     item: YTItem,
     existingSongs: List<SongItem>,
     action: (List<SongItem>) -> Unit,
-) {
+): Job? {
     if (existingSongs.isNotEmpty()) {
         action(existingSongs)
-        return
+        return null
     }
-    AppState.scope.launch {
+    return AppState.scope.launch {
         try {
             loadMediaSongs(item, existingSongs).takeIf { it.isNotEmpty() }?.let(action)
         } catch (e: CancellationException) {
@@ -900,7 +1084,8 @@ private suspend fun loadMediaSongs(
     if (existingSongs.isNotEmpty()) return existingSongs
     return withContext(Dispatchers.IO) {
         if (item is PlaylistItem && item.id.startsWith("auto:")) {
-            val dao = GlobalContext.get().get<MusicDatabase>().dao()
+            val database = GlobalContext.get().get<MusicDatabase>()
+            val dao = database.dao()
             when (item.id.removePrefix("auto:")) {
                 "liked" -> {
                     SongLikeState.awaitCompleteLikes().orEmpty()
@@ -919,15 +1104,34 @@ private suspend fun loadMediaSongs(
                 }
 
                 "cached" -> {
-                    SongCacheManager.getCachedSongs().map { entry ->
-                        SongItem(
-                            id = entry.songId,
-                            title = entry.title,
-                            artists = listOf(ArtistTiny(null, entry.artist)),
-                            thumbnail = null,
-                            album = null,
+                    val sorting = Settings.shared.cachedCollectionSorting()
+                    val customOrder = if (sorting.sort == CollectionSort.MANUAL) Settings.shared.cachedSongsOrder() else emptyList()
+                    val entries = SongCacheManager.getCachedSongs()
+                    val playCounts =
+                        if (sorting.sort == CollectionSort.MOST_PLAYED && entries.isNotEmpty()) {
+                            database.collectionPlayCounts(entries.map(CachedSongEntry::songId)).first()
+                        } else {
+                            emptyMap()
+                        }
+                    val metadata = SongCacheManager.cachedCollectionMetadata(entries)
+                    entries
+                        .map { entry ->
+                            SongItem(
+                                id = entry.songId,
+                                title = entry.title,
+                                artists = listOf(ArtistTiny(null, entry.artist)),
+                                thumbnail = null,
+                                album = null,
+                                isExplicit = entry.explicitness == true,
+                                explicitness = entry.explicitness,
+                            )
+                        }.presentCollectionWithPlayCounts(
+                            sort = sorting.sort,
+                            direction = sorting.direction,
+                            customOrder = customOrder,
+                            metadata = metadata,
+                            playCounts = playCounts,
                         )
-                    }
                 }
 
                 else -> {

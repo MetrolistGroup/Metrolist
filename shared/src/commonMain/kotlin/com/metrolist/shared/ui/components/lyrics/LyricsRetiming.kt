@@ -8,6 +8,7 @@
 package com.metrolist.shared.ui.components.lyrics
 
 import com.metrolist.shared.model.LyricsEntry
+import com.metrolist.shared.model.WordTimestamp
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.roundToLong
@@ -108,6 +109,12 @@ internal fun buildLyricsTimelineItems(
 ): List<LyricsTimelineItem> {
     if (processedItems.isEmpty() || lyrics.isEmpty()) return emptyList()
     val out = ArrayList<LyricsTimelineItem>(processedItems.size)
+    val nextMainLineIndices = IntArray(lyrics.size) { -1 }
+    var nextMainLineIndex = -1
+    for (index in lyrics.lastIndex downTo 0) {
+        nextMainLineIndices[index] = nextMainLineIndex
+        if (!lyrics[index].isBackground) nextMainLineIndex = index
+    }
 
     for (listIdx in processedItems.indices) {
         when (val item = processedItems[listIdx]) {
@@ -129,13 +136,15 @@ internal fun buildLyricsTimelineItems(
             is LyricsListItem.Line -> {
                 val entry = item.entry
                 val lineIdx = item.index
+                val nextMainLine = lyrics.getOrNull(nextMainLineIndices.getOrElse(lineIdx) { -1 })
                 val words = entry.words
                 val romanWords = entry.romanizedWords
                 val startMs = entry.timelineStartMs()
                 val wordsEndMs =
                     max(
-                        words?.maxOfOrNull { (it.endTime * 1000.0).roundToLong() } ?: Long.MIN_VALUE,
-                        romanWords?.maxOfOrNull { (it.endTime * 1000.0).roundToLong() } ?: Long.MIN_VALUE,
+                        words?.filterNot(WordTimestamp::isLineTimed)?.maxOfOrNull { (it.endTime * 1000.0).roundToLong() } ?: Long.MIN_VALUE,
+                        romanWords?.filterNot(WordTimestamp::isLineTimed)?.maxOfOrNull { (it.endTime * 1000.0).roundToLong() }
+                            ?: Long.MIN_VALUE,
                     )
                 val explicitEndMs =
                     when {
@@ -146,7 +155,7 @@ internal fun buildLyricsTimelineItems(
                     }
                 val rawEndMs =
                     explicitEndMs ?: run {
-                        val nextLineStart = lyrics.getOrNull(lineIdx + 1)?.time
+                        val nextLineStart = nextMainLine?.time
                         if (nextLineStart != null && nextLineStart > startMs) {
                             if (nextLineStart - startMs >= LYRICS_GAP_MIN_MS) startMs + 4000L else nextLineStart
                         } else {
@@ -154,7 +163,7 @@ internal fun buildLyricsTimelineItems(
                         }
                     }
                 val nextIndicator = processedItems.getOrNull(listIdx + 1) as? LyricsListItem.Indicator
-                val nextLineStartMs = lyrics.getOrNull(lineIdx + 1)?.timelineStartMs()
+                val nextLineStartMs = nextMainLine?.timelineStartMs()
                 val endMs =
                     when {
                         nextIndicator != null -> {
@@ -186,7 +195,9 @@ internal fun buildLyricsTimelineItems(
                                     .isNotBlank()
                         } == true
 
-                val mainWordsSource = words?.takeIf { it.isNotEmpty() } ?: romanWords.orEmpty()
+                val mainWordsSource =
+                    words?.filterNot { it.isBackground }?.takeIf { it.isNotEmpty() }
+                        ?: romanWords.orEmpty().filterNot { it.isBackground }
                 val mainWordsFiltered =
                     mainWordsSource.filter { !it.isBackground && !it.isLineTimed && it.endTime > it.startTime }
                 val ranges = LongArray(mainWordsFiltered.size * 2)

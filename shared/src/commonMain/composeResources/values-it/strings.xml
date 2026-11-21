@@ -20,7 +20,7 @@
     <string name="similar_to">Simile a</string>
     <string name="new_releases">Nuove uscite</string>
     <string name="podcasts_for_you">Podcast per te</string>
-    <string name="recap">Riepilogo</string>
+    <string name="recap">Recap</string>
     <string name="home_unavailable">Home non disponibile</string>
     <string name="today">Oggi</string>
     <string name="yesterday">Ieri</string>
@@ -58,9 +58,9 @@
     <string name="completed_downloads">Download completati</string>
     <string name="download_completion_summary">%1$d scaricati, %2$d non riusciti</string>
     <plurals name="download_notification_progress">
-        <item quantity="one">Scaricato %1$d su %2$d brano, %3$d fallito</item>
-        <item quantity="many">Scaricati %1$d su %2$d brani, %3$d falliti</item>
-        <item quantity="other">Scaricati %1$d su %2$d brani, %3$d falliti</item>
+        <item quantity="one">Scaricato %1$d brano su %2$d, %3$d non riusciti</item>
+        <item quantity="many">Scaricati %1$d brani su %2$d, %3$d non riusciti</item>
+        <item quantity="other">Scaricati %1$d brani su %2$d, %3$d non riusciti</item>
     </plurals>
     <string name="download_pause_all">Sospendi tutto</string>
     <string name="download_resume_all">Riprendi tutto</string>
@@ -112,19 +112,19 @@
         <item quantity="other">%1$d album</item>
     </plurals>
     <plurals name="n_week">
-        <item quantity="one">%1$d settimana</item>
-        <item quantity="many">%1$d settimane</item>
-        <item quantity="other">%1$d settimane</item>
+        <item quantity="one">%1$d settimana</item>
+        <item quantity="many">%1$d settimane</item>
+        <item quantity="other">%1$d settimane</item>
     </plurals>
     <plurals name="n_month">
-        <item quantity="one">%1$d mese</item>
-        <item quantity="many">%1$d mesi</item>
-        <item quantity="other">%1$d mesi</item>
+        <item quantity="one">%1$d mese</item>
+        <item quantity="many">%1$d mesi</item>
+        <item quantity="other">%1$d mesi</item>
     </plurals>
     <plurals name="n_year">
-        <item quantity="one">%1$d anno</item>
-        <item quantity="many">%1$d anni</item>
-        <item quantity="other">%1$d anni</item>
+        <item quantity="one">%1$d anno</item>
+        <item quantity="many">%1$d anni</item>
+        <item quantity="other">%1$d anni</item>
     </plurals>
     <string name="undo">Annulla</string>
     <string name="lyrics_not_found">Testo non trovato</string>
@@ -703,8 +703,8 @@
     <string name="downloaded_songs_empty_hint">Clicca sul pulsante di download su qualsiasi brano per salvarlo per l'ascolto offline.</string>
     <string name="imported_playlist">Playlist importata</string>
     <string name="import_error_unsupported_link">Questo link non è riconosciuto o supportato.</string>
-    <string name="bitrate_value">%1$d kbps</string>
-    <string name="sample_rate_value">%1$d Hz</string>
+    <string name="bitrate_value">%1$d kbps</string>
+    <string name="sample_rate_value">%1$d Hz</string>
     <string name="import_error_unsupported_playlist_entries">Questa playlist contiene file locali o link diretti a cui Android non può accedere. Importa una playlist contenente link di YouTube, oppure scegli i file locali sul computer.</string>
     <string name="import_error_local_files_require_local_playlist">I file audio locali possono essere importati solo in una playlist locale.</string>
     <string name="import_error_file_read_failed">Impossibile leggere il file della playlist. Selezionalo di nuovo e concedi l’accesso ai file.</string>
@@ -923,9 +923,9 @@
     <string name="library_sort_updated">Aggiornati</string>
     <string name="playlist_direction_descending">Ordine: decrescente</string>
     <plurals name="hours">
-        <item quantity="one">%1$d ora</item>
-        <item quantity="many">%1$d ore</item>
-        <item quantity="other">%1$d ore</item>
+        <item quantity="one">%1$d ora</item>
+        <item quantity="many">%1$d ore</item>
+        <item quantity="other">%1$d ore</item>
     </plurals>
     <plurals name="added_songs_to_playlist">
         <item quantity="one">Aggiunto %1$d brano a %2$s</item>
@@ -1081,9 +1081,9 @@
         <item quantity="other">Suggerisci %1$d brani all'host. Solo l'host può sostituire la coda della stanza.</item>
     </plurals>
     <plurals name="minutes">
-        <item quantity="one">%1$d minuto</item>
-        <item quantity="many">%1$d minuti</item>
-        <item quantity="other">%1$d minuti</item>
+        <item quantity="one">%1$d minuto</item>
+        <item quantity="many">%1$d minuti</item>
+        <item quantity="other">%1$d minuti</item>
     </plurals>
     <plurals name="n_track">
         <item quantity="one">%1$d brano</item>
@@ -1169,9 +1169,9 @@
     <string name="subscribe">Iscriviti</string>
     <string name="subscribed">Iscritto</string>
     <plurals name="seconds">
-        <item quantity="one">%1$d secondo</item>
-        <item quantity="many">%1$d secondi</item>
-        <item quantity="other">%1$d secondi</item>
+        <item quantity="one">%1$d secondo</item>
+        <item quantity="many">%1$d secondi</item>
+        <item quantity="other">%1$d secondi</item>
     </plurals>
     <string name="beta_tag">[BETA]</string>
     <string name="crossfade">Dissolvenza</string>
@@ -1370,7 +1370,7 @@
     <string name="import_source_youtube_music">YouTube Music</string>
     <string name="video_stats_mv_source">Fonte video musicale</string>
     <string name="video_stats_stream_source">Fonte stream</string>
-    <string name="settings_seconds_value">%1$d secondi</string>
+    <string name="settings_seconds_value">%1$d secondi</string>
     <string name="settings_playback_speed_locked_listen_together">La velocità di riproduzione è fissata quando si utilizza Listen Together</string>
     <string name="settings_diagnostic_logging">Log di diagnostica</string>
     <string name="settings_diagnostic_logging_description">Scrive la diagnostica dell'applicazione su un file di log locale</string>
@@ -1732,11 +1732,11 @@
     <string name="import_tidal_picker_title">Scegli dalla libreria di Tidal</string>
     <string name="import_amazon_picker_title">Scegli dalla libreria di Amazon Music</string>
     <string name="import_deezer_picker_description">Scegli le playlist che vuoi importare</string>
-    <string name="import_deezer_selected_count">%1$d selezionate</string>
+    <string name="import_deezer_selected_count">%1$d selezionati</string>
     <string name="import_tidal_picker_description">Scegli le playlist che vuoi importare</string>
-    <string name="import_tidal_selected_count">%1$d selezionate</string>
+    <string name="import_tidal_selected_count">%1$d selezionati</string>
     <string name="import_amazon_picker_description">Scegli le playlist che vuoi importare</string>
-    <string name="import_amazon_selected_count">%1$d selezionate</string>
+    <string name="import_amazon_selected_count">%1$d selezionati</string>
     <string name="import_notifier_title">Sto importando le playlist</string>
     <string name="import_status_fetching_metadata">Recupero metadati delle playlist…</string>
     <string name="import_status_fetching_tracks">Caricamento brani: %1$d / %2$s…</string>
@@ -1816,7 +1816,7 @@
     <string name="canvas_source_youtube_music_video">Video musicale da YouTube</string>
     <string name="seek_duration_description_android">Secondi da saltare toccando due volte sulla copertina o usando i comandi di salto</string>
     <string name="seek_duration_description_skip_controls">Secondi da saltare con i comandi di salto</string>
-    <string name="seek_feedback_seconds">%1$d s</string>
+    <string name="seek_feedback_seconds">%1$d s</string>
     <string name="seek_feedback_description">%1$s, %2$s</string>
     <string name="keep_screen_on">Mantieni lo schermo acceso</string>
     <string name="keep_screen_on_both">%1$s + %2$s</string>
@@ -1984,8 +1984,8 @@
     <string name="file_size_unit_terabyte">TB</string>
     <string name="partial_song_count">≥ %1$s</string>
     <string name="http_status_code">HTTP %1$d</string>
-    <string name="lyrics_offset_decrease">−%1$d ms</string>
-    <string name="lyrics_offset_increase">+%1$d ms</string>
+    <string name="lyrics_offset_decrease">−%1$d ms</string>
+    <string name="lyrics_offset_increase">+%1$d ms</string>
     <string name="milliseconds_unit">ms</string>
     <string name="playlist_add_progress">Elaborati %1$d di %2$d brani</string>
     <string name="playlist_add_stopped">%1$d brani completati o già presenti; %2$d restano non confermati. Le aggiunte completate sono state mantenute.</string>
@@ -2033,14 +2033,14 @@
     <string name="pause_music_when_media_is_muted_desc">Metti in pausa la riproduzione quando il volume è azzerato e riprendi quando è attivato.</string>
     <string name="no_episode_description">Nessuna descrizione disponibile per questo episodio.</string>
     <plurals name="episode_duration_hours">
-        <item quantity="one">%1$d h</item>
-        <item quantity="many">%1$d h</item>
-        <item quantity="other">%1$d h</item>
+        <item quantity="one">%1$d h</item>
+        <item quantity="many">%1$d h</item>
+        <item quantity="other">%1$d h</item>
     </plurals>
     <plurals name="episode_duration_minutes">
-        <item quantity="one">%1$d min</item>
-        <item quantity="many">%1$d min</item>
-        <item quantity="other">%1$d min</item>
+        <item quantity="one">%1$d min</item>
+        <item quantity="many">%1$d min</item>
+        <item quantity="other">%1$d min</item>
     </plurals>
     <string name="varispeed">Varispeed</string>
     <string name="varispeed_description">Collega la tonalità alla velocità per accelerare e rallentare come su un nastro</string>
@@ -2170,7 +2170,7 @@
     <string name="video_stats_codec_bitrate_value">%1$s (%2$d kbps)</string>
     <string name="video_stats_resolution_optimal_value">%1$s (Ottimale: %2$s)</string>
     <string name="video_stats_fps_value">%1$s / %2$s nominali</string>
-    <string name="video_stats_dropped_frames_value">%1$d / %2$d persi (%3$s%)</string>
+    <string name="video_stats_dropped_frames_value">%1$d / %2$d persi (%3$s%)</string>
     <string name="video_stats_av_sync_value">%1$s ms (PTS: %2$s | Audio: %3$s)</string>
     <string name="video_stats_latency_value">%1$s ms</string>
     <string name="video_stats_media_stream_value">%1$s / %2$s MB (%3$s%)</string>
@@ -2384,7 +2384,7 @@
     <string name="sleep_timer_hour">Ora</string>
     <string name="sleep_timer_minute">Minuto</string>
     <string name="sleep_timer_advanced_options">Opzioni avanzate</string>
-    <string name="sleep_timer_finish_current_song">Ferma il timer alla fine del brano quando il tempo scade</string>
+    <string name="sleep_timer_finish_current_song">Ferma il timer alla fine del brano attuale</string>
     <string name="sleep_timer_set_default">Imposta come predefinito</string>
     <string name="edit_in_metroeq">Modifica in MetroEQ</string>
     <string name="album_order_original">Ordine album</string>
