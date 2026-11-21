@@ -2634,4 +2634,5 @@
     <string name="classic_recommendations">Recomandări clasice</string>
     <string name="classic_recommendations_desc">Creează selecții rapide din propriul istoric de ascultare și redă în ordine lista personală YouTube „Urmează”, la fel ca în Metrolist 13</string>
     <string name="classic_recommendations_desc_desktop">Redă în ordine lista personală YouTube „Urmează”, la fel ca în Metrolist 13</string>
+    <string name="clearing_search_history">Se șterge istoricul căutărilor…</string>
 </resources>
