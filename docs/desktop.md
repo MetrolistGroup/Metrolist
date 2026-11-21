@@ -24,6 +24,10 @@ Windows caption hit testing takes its own snapshot of Compose scene layers. Nati
 
 Connected action groups use the shared Material shapes and spacing, with fixed corners during press and selection. The fullscreen artwork player's action buttons are 40 dp tall, and its transport buttons share one height. Overflow sizing includes minimum touch targets and the gap before the overflow button so the last visible action has the trailing corners. The bottom volume button stays round beside overflow, with a 12 dp gap before the volume segment.
 
+## Hover tooltips
+
+Desktop transport controls and action buttons use `HoverTooltip` to display localized labels on hover after a 500 ms delay. Dismissal clears immediately on pointer press, pointer exit, or when tooltip text transitions to null. Wrapped controls remain mounted within a single `Box(modifier)` across null and non-null transitions so dynamic state in the wrapped subtree is preserved. On Android and iOS, `HoverTooltip` renders as a direct passthrough without pointer listeners.
+
 ## Miniplayer
 
 The Linux miniplayer and player top bar use the main window's X11 drag handler, which avoids Compose's JBR window-move lookup. When Java does not export its X11 peer APIs, the handler falls back to pointer-based window positioning. The player top bar uses it with both system and custom window frames. Both JVM and native packages use this handler. Linux keeps the miniplayer window opaque, because some backends stop drawing transparent undecorated windows, so both layouts use square corners there.
