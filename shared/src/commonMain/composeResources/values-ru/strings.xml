@@ -246,11 +246,11 @@
     <string name="hide_explicit_desc">Скрывает нецензурные песни при просмотре, поиске и воспроизведении</string>
     <string name="explicit_only">Только нецензурные песни</string>
     <string name="explicit_only_desc">Скрывает песни, не помеченные, как нецензурные</string>
-    <string name="action_backup">Бэкап</string>
+    <string name="action_backup">Создать резервную копию</string>
     <string name="action_restore">Восстановить</string>
-    <string name="backup_create_success">Бэкап создан</string>
-    <string name="backup_create_failed">Не удалось создать бэкап</string>
-    <string name="restore_failed">Не удалось восстановить бэкап</string>
+    <string name="backup_create_success">Резервная копия создана</string>
+    <string name="backup_create_failed">Не удалось создать резервную копию</string>
+    <string name="restore_failed">Не удалось восстановить резервную копию</string>
     <string name="dismiss">Скрыть</string>
     <string name="preview">Предпросмотр</string>
     <string name="about">Информация</string>
@@ -307,7 +307,7 @@
     <string name="settings_privacy_security">Конфиденциальность и безопасность</string>
     <string name="settings_privacy_description">История, ограничения скриншотов</string>
     <string name="settings_storage_data">Хранилище и данные</string>
-    <string name="settings_backup_restore_description">Сделайте бэкап своей библиотеки или импортируйте её из других приложений</string>
+    <string name="settings_backup_restore_description">Создать резервную копию библиотеки или импортировать её из других приложений</string>
     <string name="settings_application_about">Приложение и информация</string>
     <string name="settings_open_supported_links_title">Открывать поддерживаемые ссылки</string>
     <string name="settings_updates_title">Обновления</string>
@@ -438,7 +438,7 @@
         <item quantity="other">%1$d исполнителей заблокированы</item>
     </plurals>
     <string name="android_auto_pinned_playlists">Закрепленные плейлисты для вождения</string>
-    <string name="android_auto_pinned_playlists_desc">Выберите до 6-ти плейлистов для отображения первыми на главном экране автомобиля для воспроизведения в один клик. Порядок выбора сохраняется.</string>
+    <string name="android_auto_pinned_playlists_desc">Выберите до шести плейлистов, которые будут отображаться первыми на главном экране автомобиля для запуска в одно касание. Порядок выбора сохраняется.</string>
     <string name="android_auto_pinned_playlists_count">Закреплено: %1$d из %2$d</string>
     <string name="android_auto_choose_pinned_playlists">Выбрать плейлисты для вождения</string>
     <string name="android_auto_pinned_playlist_mode">Воспроизведение плейлиста</string>
@@ -459,7 +459,7 @@
     <string name="voice_search_prompt">Что вы хотите послушать?</string>
     <string name="voice_search_unavailable">Голосовой поиск недоступен на этом устройстве.</string>
     <string name="voice_search_setting_desc">Используйте кнопку микрофона для голосового поиска. Удерживайте элемент навигации Поиск для распознавания музыки, играющей поблизости.</string>
-    <string name="backup_restore_title">Бэкап и импорт</string>
+    <string name="backup_restore_title">Резервные копии и импорт</string>
     <string name="spotify_sign_in">Войти в Spotify</string>
     <string name="spotify_sign_in_again">Войти снова</string>
     <string name="spotify_choose_playlists_supporting">Выберите плейлисты, которые вы хотите перенести в Metrolist.</string>
@@ -496,9 +496,9 @@
         <item quantity="many">Импортировано %1$d треков</item>
         <item quantity="other">Импортировано %1$d треков</item>
     </plurals>
-    <string name="backup_restore_export_desc">Экспортирует настройки, базу данных библиотеки, плейлисты, понравившиеся и историю в zip файл</string>
-    <string name="backup_restore_import_desc">Восстановите бэкап Metrolist. Приложение перезапустится после успешного восстановления.</string>
-    <string name="backup_restore_busy">Выполнение…</string>
+    <string name="backup_restore_export_desc">Экспортировать настройки, базу данных библиотеки, плейлисты, понравившиеся и историю в zip-файл</string>
+    <string name="backup_restore_import_desc">Восстановить резервную копию Metrolist. Приложение перезапустится после успешного восстановления.</string>
+    <string name="backup_restore_busy">Выполняется…</string>
     <string name="backup_sensitive_title">Конфиденциальный бэкап</string>
     <string name="backup_sensitive_message">Бэкап содержит ваши ключи API, данные входа в аккаунты, файлы cookie авторизации, токены сессий и другую конфиденциальную информацию. Любой, у кого есть этот файл, получит доступ к вашим аккаунтам. Храните его в безопасном месте и никогда не делитесь им.</string>
     <string name="restore_in_progress">Восстановление вашего бэкапа…\nMetrolist перезапустится автоматически.</string>
@@ -1587,7 +1587,7 @@
     <string name="app_data">Данные приложения</string>
     <string name="backup_picker_title">Восстановить бэкап Metrolist</string>
     <string name="create_backup_dialog_title">Создать бэкап Metrolist</string>
-    <string name="backup_created">Бэкап создан</string>
+    <string name="backup_created">Резервная копия создана</string>
     <string name="backup_failed">Ошибка бэкапа: %1$s</string>
     <string name="could_not_open_file_picker">Не удалось открыть выбор файла: %1$s</string>
     <string name="restore_replaces_data">Это заменяет ваши данные настройки, учетные данные, аккаунты и данные библиотеки. Metrolist перезапустится автоматически.</string>
@@ -2184,9 +2184,9 @@
     <string name="lyrics_plus_lighter_desc">Сделайте текст ярче с помощью плавного перехода «plus-lighter» на liquid-фонах</string>
     <string name="privacy_diagnostics">Диагностика</string>
     <string name="foreign_import_title">Импорт из другого приложения</string>
-    <string name="foreign_import_desc">Импортируйте понравившиеся, плейлисты и историю прослушивания из резервной копии InnerTune, OuterTune, ViMusic, RiMusic, Kreate, SimpMusic или Prism. Приложение сохранит вашу текущую библиотеку.</string>
+    <string name="foreign_import_desc">Импортировать понравившиеся, плейлисты и историю прослушивания из резервной копии InnerTune, OuterTune, ViMusic, RiMusic, Kreate, SimpMusic или Prism. Приложение сохранит вашу текущую библиотеку.</string>
     <string name="foreign_import_success">Импортировано %1$d песен, %2$d лайков, %3$d плейлистов и %4$d прослушиваний</string>
-    <string name="foreign_import_unsupported">Этот файл не является резервной копией из поддерживаемого музыкального приложения</string>
+    <string name="foreign_import_unsupported">Этот файл не является резервной копией поддерживаемого музыкального приложения</string>
     <string name="foreign_import_failed">Ошибка импорта: %1$s</string>
     <string name="scrobble_create_account">Создать аккаунт</string>
     <string name="listen_together_description">Слушайте музыку с друзьями в реальном времени. Создайте комнату, чтобы стать хостом, или присоединитесь к существующей комнате с помощью кода</string>
@@ -2695,4 +2695,28 @@
     <string name="lastfm_session_expired">Войти в Last.fm снова</string>
     <string name="lastfm_session_expired_description">Текущий сеанс Last.fm больше не действителен. Прослушивания сохраняются и будут отправлены после входа.</string>
     <string name="matugen_colors">Цвета Matugen</string>
+    <string name="classic_recommendations">Классические рекомендации</string>
+    <string name="devtools_playback_log_title">Журнал событий приложения</string>
+    <string name="devtools_playback_log_count">Записано событий: %1$d</string>
+    <string name="devtools_playback_log_cleared">Журнал приложения очищен</string>
+    <string name="devtools_playback_log_export_failed">Не удалось экспортировать журнал приложения</string>
+    <string name="devtools_playback_log_share_title">Экспорт журнала приложения</string>
+    <string name="automatic_backup">Автоматическое резервное копирование</string>
+    <string name="automatic_backup_description">Автоматически сохранять локальные резервные копии и хранить 10 последних.</string>
+    <string name="automatic_backup_frequency">Частота резервного копирования</string>
+    <string name="automatic_backup_daily">Ежедневно</string>
+    <string name="automatic_backup_weekly">Еженедельно</string>
+    <string name="automatic_backup_monthly">Ежемесячно</string>
+    <string name="automatic_backup_location">Резервные копии хранятся на этом устройстве. Мобильные операционные системы могут откладывать их создание. На компьютере резервное копирование выполняется, пока открыт Metrolist.</string>
+    <string name="automatic_backup_restore">Восстановить автоматическую резервную копию</string>
+    <string name="automatic_backup_restore_empty">Нет доступных автоматических резервных копий.</string>
+    <string name="automatic_backup_restore_desc">Выберите сохранённую автоматическую резервную копию для восстановления.</string>
+    <string name="foreign_import_error_generic">Не удалось импортировать резервную копию</string>
+    <string name="ai_api_key_optional">Необязательно. Бесплатные модели работают без ключа</string>
+    <string name="share_song_to_story">Поделиться в истории</string>
+    <string name="lyrics_share_story_style">Настроить изображение</string>
+    <string name="application_failure_log_raw_description">Здесь записываются события воспроизведения и сбои приложения. События интерфейса не записываются.</string>
+    <string name="application_failure_log_raw_empty">Событий пока не записано.</string>
+    <string name="lyrics_share_square_image">Квадратное изображение</string>
+    <string name="lyrics_share_story_image">Изображение для истории</string>
 </resources>
