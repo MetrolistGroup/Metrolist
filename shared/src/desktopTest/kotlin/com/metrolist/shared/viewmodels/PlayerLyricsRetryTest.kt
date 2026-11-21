@@ -1337,6 +1337,18 @@ class PlayerLyricsRetryTest {
                     assertTrue(saved.isUserSelected)
                     assertEquals(selected.lyrics, saved.lyrics)
                     assertTrue(seenCalls.all { it.endsWith("|Real Song||null|null|null") })
+
+                    seenCalls.clear()
+                    vm.loadLyricsProviderResults(
+                        songId = song.id,
+                        title = "Real Song",
+                        isCustomQuery = true,
+                        selectedProvider = LyricsProvider.LRCLIB,
+                    )
+                    val refresh = requireNotNull(vm.uiState.value.lyricsProviderSearch)
+                    refresh.groups.first { groups -> groups.none { it.loading } }
+                    assertEquals(listOf("LRCLIB|Real Song||null|null|null"), seenCalls.toList())
+                    assertEquals("Real Song", vm.uiState.value.lyricsQueryTitle)
                 }
             } finally {
                 slowRelease.complete(Unit)

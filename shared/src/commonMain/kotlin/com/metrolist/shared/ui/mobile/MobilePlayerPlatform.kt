@@ -369,7 +369,7 @@ internal class MobilePlayerPlatform(
                     isCustomQuery = isCustomQuery,
                 )
             },
-            onLoadProviders = { customTitle, customArtist ->
+            onLoadProviders = { customTitle, customArtist, provider ->
                 val resolvedTitle = customTitle?.takeIf { it.isNotBlank() } ?: current.title
                 val resolvedArtist = customArtist?.trim() ?: artist
                 val isCustomQuery =
@@ -382,6 +382,7 @@ internal class MobilePlayerPlatform(
                     duration = current.duration,
                     album = current.album,
                     isCustomQuery = isCustomQuery,
+                    selectedProvider = provider,
                 )
             },
             onSelectProvider = { result -> viewModel.selectLyricsProviderResult(current.id, result) },

@@ -18,6 +18,23 @@ import kotlin.test.assertTrue
 @OptIn(ExperimentalCoroutinesApi::class)
 class LyricsProviderSearchTest {
     @Test
+    fun searchesOnlyTheSelectedProviderEvenWhenItReturnsNothing() =
+        runTest {
+            val calls = mutableListOf<LyricsProvider>()
+            val search =
+                LyricsProviderSearch(this, "BETTERLYRICS,LRCLIB", selectedProvider = LyricsProvider.LRCLIB) { provider ->
+                    calls += provider
+                    emptyList()
+                }
+            runCurrent()
+            assertEquals(listOf(LyricsProvider.LRCLIB), calls)
+            val group = search.groups.value.single()
+            assertEquals(LyricsProvider.LRCLIB, group.provider)
+            assertFalse(group.loading)
+            assertFalse(group.hasResults)
+        }
+
+    @Test
     fun searchesAllProvidersInParallelOnOpenIncludingDisabledOnes() =
         runTest {
             val calls = mutableListOf<LyricsProvider>()
