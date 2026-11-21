@@ -497,7 +497,11 @@ class LibraryViewModel(
                     Settings.shared.lastLibraryRefreshAccount = accountKey
                     YouTubeSyncState.succeeded("library")
                 } else {
-                    onRefreshFailed(accountKey, retryAttempt)
+                    onRefreshFailed(
+                        accountKey,
+                        retryAttempt,
+                        showLibraryLoadError = !musicResult.complete || podcastsResult.isFailure,
+                    )
                 }
                 localReloads.trySend(Unit)
                 countResolutionJob =
@@ -577,10 +581,15 @@ class LibraryViewModel(
     private fun onRefreshFailed(
         accountKey: String,
         retryAttempt: Int,
+        showLibraryLoadError: Boolean = true,
     ) {
         val retryDelay = syncRetryDelays.getOrNull(retryAttempt)
         _uiState.update {
-            it.copy(isLoading = retryDelay != null && it.items.isEmpty(), isRefreshing = false, error = retryDelay == null)
+            it.copy(
+                isLoading = retryDelay != null && it.items.isEmpty(),
+                isRefreshing = false,
+                error = retryDelay == null && showLibraryLoadError,
+            )
         }
         if (retryDelay == null) {
             YouTubeSyncState.failed("library") { if (currentLibraryAccountKey() == accountKey) refresh(force = true) }
