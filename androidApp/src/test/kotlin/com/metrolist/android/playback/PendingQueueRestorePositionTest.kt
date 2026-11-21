@@ -31,8 +31,8 @@ import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -86,27 +86,38 @@ class PendingQueueRestorePositionTest {
     }
 
     @Test
-    fun aTransientEmptyQueueKeepsTheSavedQueueAndPosition() {
-        val state = pausedQueueState()
-        var stored = ""
-        var position = ""
-        val writer =
-            PlaybackPersistenceWriter(
-                writePosition = { position = it },
-                writeStoredValue = { stored = it },
-            )
-        writer.write(writer.request(state))
-        val savedState = stored
-        val savedPosition = position
+    fun aTransientEmptyQueueKeepsTheSavedQueueAndPosition() =
+        runTest {
+            val state = pausedQueueState()
+            var stored = ""
+            var position = ""
+            val writer =
+                PlaybackPersistenceWriter(
+                    writePosition = { position = it },
+                    writeStoredValue = { stored = it },
+                )
+            writer.write(writer.request(state))
+            val savedState = stored
+            val savedPosition = position
 
-        assertFalse(shouldPersistPlaybackState(state, null))
-        writer.write(writer.request(null))
+            val lifecycle = PlaybackPersistenceLifecycle()
+            lifecycle.restore {}
+            val decision =
+                decidePlaybackCheckpoint(
+                    writer = writer,
+                    lifecycle = lifecycle,
+                    persistentQueue = true,
+                    previous = state,
+                    state = { null },
+                )
 
-        assertEquals(savedState, stored)
-        assertEquals(savedPosition, position)
-        assertTrue(stored.isNotBlank())
-        assertTrue(position.isNotBlank())
-    }
+            assertNull(decision.request)
+            assertEquals(state, decision.state)
+            assertEquals(savedState, stored)
+            assertEquals(savedPosition, position)
+            assertTrue(stored.isNotBlank())
+            assertTrue(position.isNotBlank())
+        }
 
     @Test
     fun anExplicitClearRemovesTheSavedQueueAndPosition() {
@@ -166,6 +177,17 @@ class PendingQueueRestorePositionTest {
         runTest {
             val persistence = savedPlayback()
             createDeviceConnectFixture(queuedSnapshot(), persistence::clear).use { fixture ->
+                fixture.subject.port.setControllerPlayback(DcLocalPlaybackState(finite = false), provisional = true)
+                fixture.subject.port.setControllerPlayback(DcLocalPlaybackState(finite = false))
+            }
+            persistence.assertCleared()
+        }
+
+    @Test
+    fun aConfirmedEmptyControllerSnapshotClearsWhenTheLocalQueueWasAlreadyEmpty() =
+        runTest {
+            val persistence = savedPlayback()
+            createDeviceConnectFixture(onQueueCleared = persistence::clear).use { fixture ->
                 fixture.subject.port.setControllerPlayback(DcLocalPlaybackState(finite = false), provisional = true)
                 fixture.subject.port.setControllerPlayback(DcLocalPlaybackState(finite = false))
             }

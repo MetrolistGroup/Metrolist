@@ -2627,16 +2627,18 @@ class MusicService :
 
     private fun savePlaybackState() {
         if (!playbackPersistenceLifecycle.restoring) queueCoordinator.saveShuffleMode()
-        if (!playbackPersistenceLifecycle.canSave(Settings.shared.persistentQueue)) return
-        if (!Settings.shared.persistentQueue) {
-            clearPersistedPlaybackState()
-            return
-        }
-        val state = buildPersistPlayerState() ?: return
-        if (!shouldPersistPlaybackState(lastPersistenceState, state)) return
-        pendingPlaybackClear = null
-        lastPersistenceState = state
-        playbackPersistenceRequests.trySend(playbackPersistenceWriter.request(state))
+        val decision =
+            decidePlaybackCheckpoint(
+                writer = playbackPersistenceWriter,
+                lifecycle = playbackPersistenceLifecycle,
+                persistentQueue = Settings.shared.persistentQueue,
+                previous = lastPersistenceState,
+                state = ::buildPersistPlayerState,
+            )
+        val request = decision.request ?: return
+        pendingPlaybackClear = request.takeIf { it.clear }
+        lastPersistenceState = decision.state
+        playbackPersistenceRequests.trySend(request)
     }
 
     private fun saveFinalPlaybackState(): Job? {
