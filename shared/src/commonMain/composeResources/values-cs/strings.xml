@@ -2421,8 +2421,8 @@
     <plurals name="import_review_playlists">
         <item quantity="one">Zkontrolovat %1$s playlist</item>
         <item quantity="few">Zkontrolovat %1$s playlisty</item>
-        <item quantity="many">Zkontrolovat %1$s playlistu</item>
-        <item quantity="other">Zkontrolovat %1$s playlistů</item>
+        <item quantity="many">Zkontrolovat %1$s playlisty</item>
+        <item quantity="other">Zkontrolovat %1$s playlisty</item>
     </plurals>
     <plurals name="import_playlists_notice">
         <item quantity="one">Importuji %1$s z jednoho playlistu. Import poběží na pozadí a po dokončení vás upozorní.</item>
