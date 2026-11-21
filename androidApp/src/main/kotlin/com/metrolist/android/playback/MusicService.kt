@@ -2749,6 +2749,7 @@ class MusicService :
             val restoredSongs = restoredQueue.displayedItems
             if (restoredSongs.isEmpty()) {
                 Settings.shared.pendingContinuePlayback = false
+                clearPersistedPlaybackState()
                 return
             }
             val restored = queueCoordinator.restorePersistedQueue(state, restoredQueue, expectedQueueSessionId, restoreModes)
@@ -2761,6 +2762,7 @@ class MusicService :
         } catch (e: Exception) {
             Timber.e(e, "Failed to restore playback")
             Settings.shared.pendingContinuePlayback = false
+            clearPersistedPlaybackState()
         }
     }
 
