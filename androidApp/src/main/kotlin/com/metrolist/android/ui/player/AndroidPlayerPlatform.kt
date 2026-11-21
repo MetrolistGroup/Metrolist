@@ -249,6 +249,7 @@ class AndroidPlayerPlatform(
             modifier = modifier,
             cornerRadius = cornerRadius,
             fillContainer = fillContainer,
+            cropVideoToFill = false,
             useSurfaceView = useSurfaceView,
             showControls = showControls,
             onFullscreenClick = onFullscreenClick,
