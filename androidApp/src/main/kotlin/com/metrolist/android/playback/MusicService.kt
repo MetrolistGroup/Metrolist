@@ -1553,28 +1553,31 @@ class MusicService :
                                     excludedProfiles = excluded,
                                 )
                             }
-                        player.prepareAndPlay(
-                            song = song,
-                            resource = fresh,
-                            positionMs = player.getRealtimePositionMs(),
-                            resumePlayback = player.wantsPlayback,
-                            positionMsProvider = player::getRealtimePositionMs,
-                            playWhenReadyProvider = { player.wantsPlayback },
-                            shouldCommit = {
-                                recoveryContext.isActive && player.currentPlaybackInstanceId == failedPlaybackInstanceId &&
-                                    player.latestQueuePlaybackRequestId == queueRequestId && player.currentSong.value?.id == videoId
-                            },
-                            onPrepareFailure = { error ->
-                                error?.let { lastFailure = it }
-                                hints = song.toAndroidContentHints(wantVideo = fresh.hasVideo)
-                            },
-                            recoveryPlaybackInstanceId = failedPlaybackInstanceId,
-                            seekSource =
-                                PlaybackSeekSource(
-                                    "recovery",
-                                    mapOf("reason" to failure.stage, "category" to failure.category.name),
-                                ),
-                        )
+                        val committed =
+                            player.prepareAndPlay(
+                                song = song,
+                                resource = fresh,
+                                positionMs = player.getRealtimePositionMs(),
+                                resumePlayback = player.wantsPlayback,
+                                positionMsProvider = player::getRealtimePositionMs,
+                                playWhenReadyProvider = { player.wantsPlayback },
+                                shouldCommit = {
+                                    recoveryContext.isActive && player.currentPlaybackInstanceId == failedPlaybackInstanceId &&
+                                        player.latestQueuePlaybackRequestId == queueRequestId && player.currentSong.value?.id == videoId
+                                },
+                                onPrepareFailure = { error ->
+                                    error?.let { lastFailure = it }
+                                    hints = song.toAndroidContentHints(wantVideo = fresh.hasVideo)
+                                },
+                                recoveryPlaybackInstanceId = failedPlaybackInstanceId,
+                                seekSource =
+                                    PlaybackSeekSource(
+                                        "recovery",
+                                        mapOf("reason" to failure.stage, "category" to failure.category.name),
+                                    ),
+                            )
+                        if (committed) videoMode.onQueuePlaybackStarted(song, fresh.hasVideo, fresh)
+                        committed
                     } catch (cancelled: CancellationException) {
                         throw cancelled
                     } catch (error: Exception) {
