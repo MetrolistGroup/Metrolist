@@ -1402,6 +1402,8 @@
     <string name="foreign_import_unsupported">This file is not a backup from a supported music app</string>
     <!-- Translators: Error shown when importing another app's backup fails. %1$s is the technical error message. -->
     <string name="foreign_import_failed">Import failed: %1$s</string>
+    <!-- Translators: Generic error shown when importing another app's backup fails. -->
+    <string name="foreign_import_error_generic">The backup could not be imported</string>
     <!-- Translators: Heading for sensitive in the Backup & Restore. -->
     <string name="backup_sensitive_title">Sensitive backup</string>
     <!-- Translators: Dialog or notice body text for sensitive in the Backup & Restore. -->
@@ -4663,6 +4665,8 @@
     <string name="import_provider_file">File or text</string>
     <!-- Translators: Supporting text beneath the provider file option in the playlist import. -->
     <string name="import_provider_file_desc">Import playlist files (CSV, TSV, M3U, M3U8, JSON)</string>
+    <!-- Translators: Supporting text beneath a streaming provider option in the iOS playlist import. -->
+    <!-- Translators: Label for free text input in the playlist import page. -->
     <!-- Translators: Imperative action label for connect spotify account in the playlist import. -->
     <string name="import_connect_spotify_account">Sign in with Spotify account</string>
     <!-- Translators: Imperative action label for spotify account playlists in the playlist import. -->
