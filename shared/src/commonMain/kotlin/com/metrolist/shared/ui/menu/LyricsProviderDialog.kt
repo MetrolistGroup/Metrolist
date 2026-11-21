@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
@@ -37,6 +38,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
@@ -202,7 +204,7 @@ fun LyricsProviderDialog(
                 onClick = { selectedResult?.let { search?.select(it, onSelect) } },
                 enabled = selectedResult != null && search != null,
             ) {
-                Text(stringResource(Res.string.next))
+                Text(stringResource(Res.string.apply))
             }
         },
     )
@@ -231,7 +233,7 @@ private fun LyricsResultCard(
                     .fillMaxWidth()
                     .animateContentSize()
                     .tvFocusHighlight()
-                    .clickable(onClick = onSelect)
+                    .selectable(selected = selected, role = Role.RadioButton, onClick = onSelect)
                     .padding(12.dp),
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
