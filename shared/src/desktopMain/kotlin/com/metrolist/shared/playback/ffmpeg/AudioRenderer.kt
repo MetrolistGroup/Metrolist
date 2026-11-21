@@ -197,9 +197,10 @@ class AudioRenderer internal constructor(
         outputSpeed: Float,
         isCurrent: () -> Boolean = { true },
     ): Boolean {
-        val mappedData = mapPcm16ChannelCount(data, channelCount, outputChannelCount)
+        // Pending and replay buffers stay in the source layout; a replacement line may negotiate a different width.
+        val inputFrameSize = channelCount * Short.SIZE_BYTES
         var offset = 0
-        while (offset < mappedData.size) {
+        while (offset < data.size) {
             val result =
                 synchronized(safeLock) {
                     while (!closed && generation == outputGeneration && !isPlaying) {
@@ -224,14 +225,6 @@ class AudioRenderer internal constructor(
                         }
                         return@synchronized OutputWriteResult(inputBytesWritten = 0)
                     }
-                    val currentVol = if (volume == 0f || !hardwareVolumeApplied) volume else 1f
-                    val boost = normalizationGain
-                    val outputData =
-                        if (currentVol != 1f || boost > 1f) {
-                            applyVolume(mappedData, currentVol, boost)
-                        } else {
-                            mappedData
-                        }
                     val availableBytes =
                         try {
                             line.available()
@@ -242,9 +235,9 @@ class AudioRenderer internal constructor(
                             }
                             throw error
                         }
-                    val writableBytes =
-                        minOf(outputData.size - offset, availableBytes) / outputFrameSize * outputFrameSize
-                    if (writableBytes == 0) {
+                    val writableFrames =
+                        minOf((data.size - offset) / inputFrameSize, availableBytes / outputFrameSize)
+                    if (writableFrames == 0) {
                         val bufferedFrames = (line.bufferSize - availableBytes).coerceAtLeast(0) / outputFrameSize
                         val waitMs = (bufferedFrames * 500L / sampleRate).coerceIn(1L, 20L)
                         try {
@@ -259,8 +252,23 @@ class AudioRenderer internal constructor(
                             positionClock.changeSpeed(writtenFrameCount, outputSpeed)
                             positionSpeed = outputSpeed
                         }
+                        val writableInputBytes = writableFrames * inputFrameSize
+                        val mappedData =
+                            mapPcm16ChannelCount(
+                                data.copyOfRange(offset, offset + writableInputBytes),
+                                channelCount,
+                                outputChannelCount,
+                            )
+                        val currentVol = if (volume == 0f || !hardwareVolumeApplied) volume else 1f
+                        val boost = normalizationGain
+                        val outputData =
+                            if (currentVol != 1f || boost > 1f) {
+                                applyVolume(mappedData, currentVol, boost)
+                            } else {
+                                mappedData
+                            }
                         try {
-                            line.write(outputData, offset, writableBytes)
+                            line.write(outputData, 0, outputData.size)
                         } catch (error: Exception) {
                             if (!line.isOpen) {
                                 reopenOutputLineIfClosed()
@@ -268,15 +276,17 @@ class AudioRenderer internal constructor(
                             }
                             throw error
                         }.let { writtenBytes ->
-                            if (writtenBytes > 0) {
-                                rememberWrittenOutput(outputData, offset, writtenBytes)
-                                writtenFrameCount += writtenBytes / outputFrameSize
+                            val writtenFrames = writtenBytes / outputFrameSize
+                            val writtenInputBytes = writtenFrames * inputFrameSize
+                            if (writtenInputBytes > 0) {
+                                rememberWrittenOutput(data, offset, writtenInputBytes)
+                                writtenFrameCount += writtenFrames
                                 discardPlayedOutput()
                                 hasWrittenAudio = true
                                 expectingOutput = true
                                 lastWriteAtNs = System.nanoTime()
                             }
-                            OutputWriteResult(inputBytesWritten = writtenBytes)
+                            OutputWriteResult(inputBytesWritten = writtenInputBytes)
                         }
                     }
                 }
@@ -368,7 +378,8 @@ class AudioRenderer internal constructor(
             return
         }
         val playedFrames = (currentOutputFrame().coerceAtMost(writtenFrameCount) - pendingOutputBaseFrame).coerceAtLeast(0L)
-        var bytesToDiscard = (playedFrames * outputFrameSize).coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
+        val storedFrameSize = channelCount * Short.SIZE_BYTES
+        var bytesToDiscard = (playedFrames * storedFrameSize).coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
         while (bytesToDiscard > 0 && pendingOutputChunks.isNotEmpty()) {
             val first = pendingOutputChunks.first()
             val available = first.size - pendingOutputChunkOffset
@@ -380,7 +391,7 @@ class AudioRenderer internal constructor(
                 pendingOutputChunkOffset = 0
             }
         }
-        val discardedFrames = playedFrames - bytesToDiscard / outputFrameSize
+        val discardedFrames = playedFrames - bytesToDiscard / storedFrameSize
         pendingOutputBaseFrame += discardedFrames
         if (pendingOutputChunks.isEmpty()) {
             pendingOutputBaseFrame = writtenFrameCount
@@ -390,9 +401,7 @@ class AudioRenderer internal constructor(
 
     private fun writePendingReplayOutput(): Int {
         val chunk = replayOutputChunks.getOrNull(replayOutputChunkIndex) ?: return 0
-        val currentVol = if (volume == 0f || !hardwareVolumeApplied) volume else 1f
-        val boost = normalizationGain
-        val outputData = if (currentVol != 1f || boost > 1f) applyVolume(chunk, currentVol, boost) else chunk
+        val storedFrameSize = channelCount * Short.SIZE_BYTES
         val availableBytes =
             try {
                 line.available()
@@ -403,11 +412,22 @@ class AudioRenderer internal constructor(
                 }
                 throw error
             }
-        val writableBytes = minOf(outputData.size - replayOutputChunkOffset, availableBytes) / outputFrameSize * outputFrameSize
-        if (writableBytes <= 0) return 0
+        val writableFrames =
+            minOf((chunk.size - replayOutputChunkOffset) / storedFrameSize, availableBytes / outputFrameSize)
+        if (writableFrames == 0) return 0
+        val writableInputBytes = writableFrames * storedFrameSize
+        val mappedData =
+            mapPcm16ChannelCount(
+                chunk.copyOfRange(replayOutputChunkOffset, replayOutputChunkOffset + writableInputBytes),
+                channelCount,
+                outputChannelCount,
+            )
+        val currentVol = if (volume == 0f || !hardwareVolumeApplied) volume else 1f
+        val boost = normalizationGain
+        val outputData = if (currentVol != 1f || boost > 1f) applyVolume(mappedData, currentVol, boost) else mappedData
         val writtenBytes =
             try {
-                line.write(outputData, replayOutputChunkOffset, writableBytes)
+                line.write(outputData, 0, outputData.size)
             } catch (error: Exception) {
                 if (!line.isOpen) {
                     reopenOutputLineIfClosed()
@@ -416,7 +436,7 @@ class AudioRenderer internal constructor(
                 throw error
             }
         if (writtenBytes > 0) {
-            replayOutputChunkOffset += writtenBytes
+            replayOutputChunkOffset += writtenBytes / outputFrameSize * storedFrameSize
             if (replayOutputChunkOffset >= chunk.size) {
                 replayOutputChunkIndex++
                 replayOutputChunkOffset = 0
