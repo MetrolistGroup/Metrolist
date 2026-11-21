@@ -106,6 +106,7 @@ internal fun PlayerBottomControls(
     onShowPlayerMenu: () -> Unit,
     isLyricsVisible: Boolean,
     onIsLyricsVisibleChange: (Boolean) -> Unit,
+    showLyrics: Boolean = true,
     isVideoAvailable: Boolean = false,
     onFullscreenClick: (() -> Unit)? = null,
     isFullscreen: Boolean = false,
@@ -169,12 +170,13 @@ internal fun PlayerBottomControls(
         ) {
             PlayerConnectedButtonGroup(
                 onQueueClick = onOpenQueue,
-                onLyricsClick = {
-                    Logger.d("Haptics", "Trigger PlayerScreen lyrics button click")
-                    hapticManager.toggle(!isLyricsVisible)
-                    onIsLyricsVisibleChange(!isLyricsVisible)
-                },
-                isLyricsActive = isLyricsVisible,
+                onLyricsClick =
+                    {
+                        Logger.d("Haptics", "Trigger PlayerScreen lyrics button click")
+                        hapticManager.toggle(!isLyricsVisible)
+                        onIsLyricsVisibleChange(!isLyricsVisible)
+                    }.takeIf { showLyrics },
+                isLyricsActive = showLyrics && isLyricsVisible,
                 isQueueActive = false,
                 modifier = Modifier.weight(1f, fill = false),
                 compact = false,

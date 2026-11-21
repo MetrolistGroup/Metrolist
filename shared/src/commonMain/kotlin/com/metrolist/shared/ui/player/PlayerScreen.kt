@@ -482,6 +482,8 @@ fun PlayerScreen(
             isInPipMode = LocalIsInPipMode.current,
         )
     val uiState by viewModel.uiState.collectWhilePlayerActive(isPlayerContentVisible && isScreenVisible)
+    val lyricsVisible = uiState.isLyricsVisible && !uiState.isVideoModeActive
+    val lyricsExpanded = lyricsVisible && uiState.isLyricsExpanded
     val windowSize = LocalWindowInfo.current.containerSize
     val isLandscape = windowSize.width > windowSize.height
     val isImmersive = Settings.shared.immersivePlayer
@@ -510,7 +512,7 @@ fun PlayerScreen(
     val toggleDisplayedLike = { if (displaysPlayingSong) viewModel.toggleLike() }
     val shareDisplayedSong = { if (displaysPlayingSong) viewModel.shareSong() }
     val copyDisplayedSongLink = { if (displaysPlayingSong) viewModel.copySongLink() }
-    SideEffect { onLyricsVisibleChange(uiState.isLyricsVisible) }
+    SideEffect { onLyricsVisibleChange(lyricsVisible) }
 
     val platform = LocalPlayerPlatform.current
     val playerConnection = LocalPlayerSession.current
@@ -588,6 +590,12 @@ fun PlayerScreen(
     var showSleepTimerDialog by remember { mutableStateOf(false) }
     var showLyricsMenu by remember { mutableStateOf(false) }
     var showLyricsOffsetEditor by rememberSaveable(currentSong?.id) { mutableStateOf(false) }
+    LaunchedEffect(uiState.isVideoModeActive) {
+        if (uiState.isVideoModeActive) {
+            showLyricsMenu = false
+            showLyricsOffsetEditor = false
+        }
+    }
     val hapticManager = rememberMetrolistHaptics()
     var seekFeedback by remember { mutableStateOf<SeekFeedback?>(null) }
     var seekFeedbackVisible by remember { mutableStateOf(false) }
@@ -612,7 +620,9 @@ fun PlayerScreen(
         when {
             showLyricsOffsetEditor -> showLyricsOffsetEditor = false
             uiState.isQueueVisible -> viewModel.setQueueVisible(false)
-            isFullscreen && !uiState.isLyricsVisible -> viewModel.toggleFullscreen()
+            lyricsExpanded -> viewModel.setLyricsExpanded(false)
+            lyricsVisible -> viewModel.setLyricsVisible(false)
+            isFullscreen -> viewModel.toggleFullscreen()
             else -> onClose()
         }
     }
@@ -639,7 +649,7 @@ fun PlayerScreen(
         !isInPipMode &&
             (
                 (isFullscreen && isPlayerContentVisible) ||
-                    (bottomSheetState.isExpanded && (isImmersive || uiState.isLyricsExpanded))
+                    (bottomSheetState.isExpanded && (isImmersive || lyricsExpanded))
             )
 
     val playerType = Settings.shared.playerType
@@ -678,10 +688,10 @@ fun PlayerScreen(
     val isArtworkCover = currentCanvasLayer?.source == CanvasContentSource.APPLE_MUSIC
     val renderAnimatedCover = artworkAllowedOnNetwork && canvasLayers.shouldRender(currentCanvasLayer, playerContentState)
     val artworkOverlayContent by rememberUpdatedState<@Composable (Modifier) -> Unit> { artworkModifier ->
-        if (renderAnimatedCover && isArtworkCover && (!isTv || !uiState.isLyricsVisible)) {
+        if (renderAnimatedCover && isArtworkCover && (!isTv || !lyricsVisible)) {
             canvasLayers.Render(
                 current = currentCanvasLayer,
-                playing = isPlaying && !uiState.isLyricsVisible,
+                playing = isPlaying && !lyricsVisible,
                 onError = { layer -> viewModel.retryMusicVideoCanvas(layer.songId, layer.url) },
                 modifier = artworkModifier,
             )
@@ -712,7 +722,7 @@ fun PlayerScreen(
     val useRoundedRectPlayButton = Settings.shared.useRoundedRectPlayButton
     val playPauseFocusRequester = remember { FocusRequester() }
     val showControlsInFullscreen = !Settings.shared.lyricsHideStatusBarInFullscreen
-    val controlsVisible = !uiState.isLyricsExpanded || showControlsInFullscreen
+    val controlsVisible = !lyricsExpanded || showControlsInFullscreen
     var wasLyricsOffsetEditorOpen by remember { mutableStateOf(false) }
     LaunchedEffect(showLyricsOffsetEditor) {
         if (wasLyricsOffsetEditorOpen && !showLyricsOffsetEditor && isTv && bottomSheetState.isExpanded && controlsVisible) {
@@ -740,14 +750,14 @@ fun PlayerScreen(
             presentationAllowed = playerContentState.isVisible,
         )
     val showVideoSurface =
-        shouldPresentMusicVideo && !uiState.isLyricsVisible &&
+        shouldPresentMusicVideo && !lyricsVisible &&
             currentSong?.id == uiState.currentSong?.id
 
     val isCanvasBackdropVisible =
         usesCanvasThumbnail &&
             !bottomSheetState.isCollapsed &&
             !showVideoSurface &&
-            !uiState.isLyricsVisible
+            !lyricsVisible
     val textBackgroundColor by animateColorAsState(
         targetValue =
             if (
@@ -787,8 +797,12 @@ fun PlayerScreen(
 
     var canvasMinimalUi by rememberSaveable { mutableStateOf(false) }
     if (!isCanvasBackdropVisible || !allowArtworkExpansion) canvasMinimalUi = false
-    val shouldFetchLyrics = playerContentState.isActive && (uiState.isLyricsVisible || uiState.isSubtitleActive)
-    val shouldLoadLyrics = shouldFetchLyrics || (playerContentState.isActive && (Settings.shared.showLyricsOnPlayer || canvasMinimalUi))
+    val shouldFetchLyrics =
+        playerContentState.isActive && !uiState.isVideoModeActive &&
+            (lyricsVisible || uiState.isSubtitleActive)
+    val shouldLoadLyrics =
+        !uiState.isVideoModeActive &&
+            (shouldFetchLyrics || (playerContentState.isActive && (Settings.shared.showLyricsOnPlayer || canvasMinimalUi)))
 
     LaunchedEffect(
         currentSong?.id,
@@ -799,7 +813,7 @@ fun PlayerScreen(
         Settings.shared.preferWordSyncedLyrics,
     ) {
         if (shouldLoadLyrics && currentSong != null) {
-            viewModel.loadLyrics(currentSong)
+            viewModel.loadLyrics(currentSong, forceAiTranslation = uiState.manualAiTranslationEnabled)
         }
     }
 
@@ -886,8 +900,6 @@ fun PlayerScreen(
                 }
             val useTabletLayout = isTv && useLandscapeLayout && minOf(screenWidth, maxHeight) >= 600.dp
             val compactPortraitHeight = !useLandscapeLayout && maxHeight < 560.dp
-            // Short split-screen windows shrink the centred artwork to a sliver; show it beside the title as lyrics do.
-            val artworkBesideTitle = !useLandscapeLayout && !isTv && !usesFullscreenThumbnail && maxHeight < ArtworkBesideTitleMaxHeight
             val primaryControlSize = if (compactPortraitHeight) 64.dp else 72.dp
             val showFullscreenThumbnailBackground = usesFullscreenThumbnail
             val navigationBarBottomPadding = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
@@ -910,20 +922,20 @@ fun PlayerScreen(
                 )
 
             fun openQueueSheet() {
-                if (!useLandscapeLayout && uiState.isLyricsExpanded) {
+                if (!useLandscapeLayout && lyricsExpanded) {
                     viewModel.setLyricsVisible(false)
                 }
                 queueSheetState.expandSoft()
             }
 
-            LaunchedEffect(useLandscapeLayout, queueSheetState.isSettledExpanded) {
-                if (!useLandscapeLayout && queueSheetState.isSettledExpanded && uiState.isLyricsExpanded) {
+            LaunchedEffect(useLandscapeLayout, queueSheetState.isSettledExpanded, lyricsExpanded) {
+                if (!useLandscapeLayout && queueSheetState.isSettledExpanded && lyricsExpanded) {
                     viewModel.setLyricsVisible(false)
                 }
             }
 
-            LaunchedEffect(useLandscapeLayout, uiState.isLyricsExpanded) {
-                if (useLandscapeLayout && uiState.isLyricsExpanded) {
+            LaunchedEffect(useLandscapeLayout, lyricsExpanded) {
+                if (useLandscapeLayout && lyricsExpanded) {
                     viewModel.setLyricsExpanded(false)
                 }
             }
@@ -1001,13 +1013,13 @@ fun PlayerScreen(
                 isVideoModeResolving &&
                     showVideoButton &&
                     !isFullscreen &&
-                    (useLandscapeLayout || !uiState.isLyricsVisible) &&
+                    (useLandscapeLayout || !lyricsVisible) &&
                     !canvasMinimalUi
             val artworkCrossfade = if (contentActive) platform.artworkCrossfade(currentSong?.id) else PlayerArtworkCrossfade()
             val crossfadeNextArtworkUrl = artworkCrossfade.nextArtworkUrl
             val artworkCrossfadeProgress = artworkCrossfade.progressProvider
 
-            val canvasVisible = artworkAllowedOnNetwork && contentActive && !showVideoSurface && !uiState.isLyricsVisible
+            val canvasVisible = artworkAllowedOnNetwork && contentActive && !showVideoSurface && !lyricsVisible
             DisposableEffect(viewModel, canvasVisible) {
                 viewModel.setCanvasVisible(canvasVisible)
                 onDispose { viewModel.setCanvasVisible(false) }
@@ -1023,7 +1035,7 @@ fun PlayerScreen(
                 shrinkVertically(animationSpec = canvasSpatialSpec) +
                     fadeOut(animationSpec = canvasEffectsSpec)
             val playerControlsTransition =
-                updateTransition(uiState.isLyricsExpanded to canvasMinimalUi, label = "playerControls")
+                updateTransition(lyricsExpanded to canvasMinimalUi, label = "playerControls")
 
             var playerRootCoordinates by remember { mutableStateOf<LayoutCoordinates?>(null) }
             var playerRootHeightPx by remember { mutableFloatStateOf(0f) }
@@ -1084,18 +1096,18 @@ fun PlayerScreen(
                                     PlayerBlurredArtworkBackground(
                                         thumbnailUrl = backgroundUrl,
                                         alpha = 1f,
-                                        isLyricsVisible = uiState.isLyricsVisible,
+                                        isLyricsVisible = lyricsVisible,
                                     )
                                 }
                             } else if (playerBackground == PlayerBackgroundStyle.LIQUID && currentSong?.displayThumbnail != null &&
-                                !(showFullscreenThumbnailBackground && !uiState.isLyricsVisible && !showVideoSurface)
+                                !(showFullscreenThumbnailBackground && !lyricsVisible && !showVideoSurface)
                             ) {
                                 LiquidBackground(
                                     artworkUrl = currentSong.displayThumbnail,
                                     modifier = Modifier.fillMaxSize(),
                                     animate = LocalPlayerBackgroundAnimating.current,
                                 )
-                            } else if (uiState.isLyricsVisible) {
+                            } else if (lyricsVisible) {
                                 LyricsPlayerBackground(
                                     playerBackground = playerBackground,
                                     thumbnailUrl = currentSong?.displayThumbnail,
@@ -1125,12 +1137,12 @@ fun PlayerScreen(
                                         artworkScrimAlpha = 0.3f,
                                         artworkWhiteAlpha = 0.12f,
                                         isLiquid = isLiquid,
-                                        visible = uiState.isLyricsVisible,
+                                        visible = lyricsVisible,
                                         foregroundColor = textBackgroundColor,
                                     )
                                 }
                             }
-                            if (!uiState.isLyricsVisible) {
+                            if (!lyricsVisible) {
                                 if (showFullscreenThumbnailBackground && currentSong?.displayThumbnail != null && !showVideoSurface) {
                                     FullscreenBackgroundBounds(fullscreenTransitionBounds) { transitionBounds ->
                                         FullscreenThumbnailBackground(
@@ -1146,7 +1158,7 @@ fun PlayerScreen(
                                             canvasTall = currentCanvasLayer?.tall == true,
                                             artworkCrossfade = artworkCrossfade,
                                             canvasContent =
-                                                if (renderAnimatedCover && !uiState.isLyricsVisible && isArtworkCover) {
+                                                if (renderAnimatedCover && !lyricsVisible && isArtworkCover) {
                                                     { modifier, onFrame ->
                                                         canvasLayers.Render(
                                                             current = currentCanvasLayer,
@@ -1404,7 +1416,7 @@ fun PlayerScreen(
                                         .padding(top = 16.dp),
                             ) {
                                 AnimatedContent(
-                                    targetState = uiState.isLyricsVisible,
+                                    targetState = lyricsVisible,
                                     transitionSpec = {
                                         fadeIn(animationSpec = tween(400, delayMillis = 90))
                                             .togetherWith(fadeOut(animationSpec = tween(400)))
@@ -1809,7 +1821,6 @@ fun PlayerScreen(
                                                     } else if (
                                                         !usesFullscreenThumbnail &&
                                                         !usesCanvasThumbnail &&
-                                                        !artworkBesideTitle &&
                                                         currentSong?.displayThumbnail != null &&
                                                         !(
                                                             isVideoModeActive &&
@@ -1841,7 +1852,7 @@ fun PlayerScreen(
                                                                     modifier = Modifier.fillMaxSize(),
                                                                     contentScale = ContentScale.Crop,
                                                                 )
-                                                                if (!uiState.isLyricsVisible) artworkOverlay(Modifier.fillMaxSize())
+                                                                if (!lyricsVisible) artworkOverlay(Modifier.fillMaxSize())
                                                             }
                                                         }
                                                     }
@@ -1857,7 +1868,9 @@ fun PlayerScreen(
                                                     songId = currentSong?.id,
                                                     timingOffsetMs = uiState.lyricsOffsetMs,
                                                     isPlaying = isPlaying,
-                                                    showLyrics = Settings.shared.showLyricsOnPlayer || canvasMinimalUi,
+                                                    showLyrics =
+                                                        !uiState.isVideoModeActive &&
+                                                            (Settings.shared.showLyricsOnPlayer || canvasMinimalUi),
                                                     textColor =
                                                         if (usesFullscreenThumbnail || canvasMinimalUi) {
                                                             Color.White
@@ -1875,7 +1888,7 @@ fun PlayerScreen(
                                 }
 
                                 AnimatedVisibility(
-                                    visible = uiState.isLyricsVisible && showLyricsOffsetEditor,
+                                    visible = lyricsVisible && showLyricsOffsetEditor,
                                     enter = expandVertically() + fadeIn(),
                                     exit = shrinkVertically() + fadeOut(),
                                 ) {
@@ -1900,7 +1913,7 @@ fun PlayerScreen(
                                     ) {
                                         AnimatedVisibility(
                                             visible =
-                                                (usesCanvasThumbnail || uiState.isLyricsVisible || artworkBesideTitle) &&
+                                                (usesCanvasThumbnail || lyricsVisible) &&
                                                     currentSong?.displayThumbnail != null,
                                             enter = expandHorizontally(clip = false) + fadeIn(),
                                             exit = shrinkHorizontally(clip = false) + fadeOut(),
@@ -1947,7 +1960,7 @@ fun PlayerScreen(
                                                                 modifier = Modifier.fillMaxSize(),
                                                                 contentScale = ContentScale.Crop,
                                                             )
-                                                            if (uiState.isLyricsVisible) artworkOverlay(Modifier.fillMaxSize())
+                                                            if (lyricsVisible) artworkOverlay(Modifier.fillMaxSize())
                                                         }
                                                     }
                                                 }
@@ -2064,8 +2077,8 @@ fun PlayerScreen(
                                     ) {
                                         if (playerType == PlayerType.CLASSIC) {
                                             VintageClassicActionButtons(
-                                                isLyricsVisible = uiState.isLyricsVisible,
-                                                isLyricsExpanded = uiState.isLyricsExpanded,
+                                                isLyricsVisible = lyricsVisible,
+                                                isLyricsExpanded = lyricsExpanded,
                                                 shareDescription = stringResource(Res.string.share),
                                                 expandDescription = stringResource(Res.string.expand),
                                                 collapseDescription = stringResource(Res.string.collapse),
@@ -2074,10 +2087,10 @@ fun PlayerScreen(
                                                 onToggleLyricsExpanded = {
                                                     Logger.d(
                                                         "Haptics",
-                                                        "Trigger PlayerScreen lyrics expand click expanded=${!uiState.isLyricsExpanded}",
+                                                        "Trigger PlayerScreen lyrics expand click expanded=${!lyricsExpanded}",
                                                     )
                                                     hapticManager.perform(HapticEvent.PRESS)
-                                                    viewModel.setLyricsExpanded(!uiState.isLyricsExpanded)
+                                                    viewModel.setLyricsExpanded(!lyricsExpanded)
                                                 },
                                                 onShowLyricsMenu = {
                                                     hapticManager.perform(HapticEvent.PRESS)
@@ -2097,15 +2110,15 @@ fun PlayerScreen(
                                             )
                                         } else {
                                             PlayerActionRow(
-                                                isLyricsVisible = uiState.isLyricsVisible,
-                                                isLyricsExpanded = uiState.isLyricsExpanded,
+                                                isLyricsVisible = lyricsVisible,
+                                                isLyricsExpanded = lyricsExpanded,
                                                 onToggleLyricsExpanded = {
                                                     Logger.d(
                                                         "Haptics",
-                                                        "Trigger PlayerScreen lyrics expand click expanded=${!uiState.isLyricsExpanded}",
+                                                        "Trigger PlayerScreen lyrics expand click expanded=${!lyricsExpanded}",
                                                     )
                                                     hapticManager.perform(HapticEvent.PRESS)
-                                                    viewModel.setLyricsExpanded(!uiState.isLyricsExpanded)
+                                                    viewModel.setLyricsExpanded(!lyricsExpanded)
                                                 },
                                                 onShowLyricsMenu = { showLyricsMenu = true },
                                                 isLiked = isLiked,
@@ -2361,10 +2374,11 @@ fun PlayerScreen(
                                                 hapticManager.perform(HapticEvent.PRESS)
                                                 openQueueSheet()
                                             },
-                                            onLyricsClick = {
-                                                hapticManager.toggle(!uiState.isLyricsVisible)
-                                                viewModel.setLyricsVisible(!uiState.isLyricsVisible)
-                                            },
+                                            onLyricsClick =
+                                                {
+                                                    hapticManager.toggle(!lyricsVisible)
+                                                    viewModel.setLyricsVisible(!lyricsVisible)
+                                                }.takeIf { !uiState.isVideoModeActive },
                                             contentColor = textBackgroundColor,
                                             modifier = Modifier.padding(bottom = navigationBarBottomPadding),
                                         )
@@ -2379,7 +2393,8 @@ fun PlayerScreen(
                                             navigationBarBottomPadding = navigationBarBottomPadding,
                                             onOpenQueue = ::openQueueSheet,
                                             onShowPlayerMenu = { showPlayerMenu = true },
-                                            isLyricsVisible = uiState.isLyricsVisible,
+                                            isLyricsVisible = lyricsVisible,
+                                            showLyrics = !uiState.isVideoModeActive,
                                             onIsLyricsVisibleChange = { visible -> viewModel.setLyricsVisible(visible) },
                                             isVideoAvailable = uiState.isVideoAvailable,
                                             isListenTogetherGuest = isListenTogetherGuest,
@@ -2563,7 +2578,7 @@ fun PlayerScreen(
                         )
                     }
 
-                    PopupVisibility(visible = showLyricsMenu) {
+                    PopupVisibility(visible = showLyricsMenu && !uiState.isVideoModeActive) {
                         platform.LyricsMenu(
                             viewModel = viewModel,
                             onDismiss = { showLyricsMenu = false },
@@ -2588,4 +2603,3 @@ private fun FullscreenBackgroundBounds(
 }
 
 private val MinPortraitPlayerHeight = 420.dp
-private val ArtworkBesideTitleMaxHeight = 600.dp

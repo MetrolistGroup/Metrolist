@@ -227,6 +227,7 @@ class PlayerViewModel(
             song?.let(SongMetadataState::apply)
         }.onEach { song ->
             val isNewSong = song?.id != lastProcessedSongId
+            val previousSongId = lastProcessedSongId
             if (isNewSong) {
                 canvasPlaybackRecovery.reset()
                 lastProcessedSongId = song?.id
@@ -317,7 +318,14 @@ class PlayerViewModel(
                     lyricsQueryArtist = if (isNewSong) null else _uiState.value.lyricsQueryArtist,
                     lyricsOffsetMs = if (isNewSong) 0 else _uiState.value.lyricsOffsetMs,
                     lyricsProviderSearch = if (isNewSong) null else _uiState.value.lyricsProviderSearch,
-                    manualAiTranslationEnabled = if (isNewSong) false else _uiState.value.manualAiTranslationEnabled,
+                    manualAiTranslationEnabled =
+                        manualAiTranslationForSongChange(
+                            isNewSong = isNewSong,
+                            newSongId = song?.id,
+                            counterpartTrackId = _uiState.value.counterpartTrackId,
+                            previousSongId = previousSongId,
+                            currentValue = _uiState.value.manualAiTranslationEnabled,
+                        ),
                     lyricsTranslationProgress = if (isNewSong) LyricsTranslationProgress() else _uiState.value.lyricsTranslationProgress,
                     mvVideoId = if (isNewSong) null else _uiState.value.mvVideoId,
                     mvPositionMap = if (isNewSong) null else _uiState.value.mvPositionMap,
@@ -564,7 +572,15 @@ class PlayerViewModel(
                 val currentSong = _uiState.value.currentSong
                 if (currentSong != null) {
                     syncLyricsOffsetForVideoMode(currentSong.id, isActive)
-                    retimeLyricsIfVideoModeActive(currentSong.id)
+                    if (isActive) {
+                        lyricsRequestId++
+                        lyricsFetchJob?.cancel()
+                        retimeLyricsJob?.cancel()
+                        lyricsRequestKey = null
+                        _uiState.value = _uiState.value.copy(isLyricsLoading = false)
+                    } else {
+                        retimeLyricsIfVideoModeActive(currentSong.id)
+                    }
                 }
             }.launchIn(viewModelScope)
 
@@ -669,7 +685,7 @@ class PlayerViewModel(
                             syncLyricsOffsetForVideoMode(song.id, false)
                         }
                     }
-                    retimeLyricsIfVideoModeActive(song.id)
+                    if (!_uiState.value.isVideoModeActive) retimeLyricsIfVideoModeActive(song.id)
                 }
             }
     }
@@ -1409,6 +1425,7 @@ class PlayerViewModel(
         isCustomQuery: Boolean = false,
         cacheOnly: Boolean = false,
     ) {
+        if (_uiState.value.isVideoModeActive && !isCustomQuery) return
         val requestKey =
             "$songId\u0000$title\u0000$artist\u0000$isCustomQuery\u0000$forceAiTranslation\u0000" +
                 "${Settings.shared.lyricsProviderOrder}\u0000${Settings.shared.lyricsEnabledProviders}\u0000${Settings.shared.preferWordSyncedLyrics}"
@@ -1612,6 +1629,7 @@ class PlayerViewModel(
     ) {
         if (lyricsRequestCacheOnly || !isCurrentLyricsRequest(songId, requestId)) return
         val currentSong = _uiState.value.currentSong ?: return
+        if (_uiState.value.isVideoModeActive && !currentSong.isVideoSong) return
         val rawLyrics = _uiState.value.rawLyrics ?: return
         val isVideoContext = (_uiState.value.isVideoModeActive && playerConnection.retimeLyricsOnVideoMode) || currentSong.isVideoSong
         val isUserSelected = _uiState.value.lyricsUserSelected
@@ -2199,6 +2217,19 @@ class PlayerViewModel(
         private const val TAG = "PlayerViewModel"
     }
 }
+
+internal fun manualAiTranslationForSongChange(
+    isNewSong: Boolean,
+    newSongId: String?,
+    counterpartTrackId: String?,
+    previousSongId: String?,
+    currentValue: Boolean,
+): Boolean =
+    if (!isNewSong) {
+        currentValue
+    } else {
+        currentValue && newSongId != null && newSongId == counterpartTrackId && previousSongId != newSongId
+    }
 
 internal fun computeSeekTarget(
     currentMs: Long,
