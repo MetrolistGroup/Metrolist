@@ -246,7 +246,7 @@
     <string name="hide_explicit_desc">Скрывает нецензурные песни при просмотре, поиске и воспроизведении</string>
     <string name="explicit_only">Только нецензурные песни</string>
     <string name="explicit_only_desc">Скрывает песни, не помеченные, как нецензурные</string>
-    <string name="action_backup">Создать резервную копию</string>
+    <string name="action_backup">Резервировать</string>
     <string name="action_restore">Восстановить</string>
     <string name="backup_create_success">Резервная копия создана</string>
     <string name="backup_create_failed">Не удалось создать резервную копию</string>
@@ -1236,8 +1236,8 @@
     <string name="unpin_from_speed_dial">Открепить из Быстрого выбора</string>
     <string name="view_podcast">Просмотреть подкаст</string>
     <string name="auto_playlist">Автоплейлист</string>
-    <string name="restore_confirm_title">Восстановить бэкап?</string>
-    <string name="restore_confirm_message">Это восстановит ваши данные приложения из бэкапа.</string>
+    <string name="restore_confirm_title">Восстановить резервную копию?</string>
+    <string name="restore_confirm_message">Данные приложения будут восстановлены из резервной копии.</string>
     <string name="uploading">Загрузка…</string>
     <string name="upload_failed">Загрузка не удалась</string>
     <string name="onboarding_welcome_description">Настройте приватность и системные разрешения перед вашим первым прослушиванием.</string>
@@ -1261,7 +1261,7 @@
     <string name="onboarding_finish_title">Всё готово</string>
     <string name="onboarding_finish_description">Настройка завершена. Начните прослушивание, или сначала перенесите свой аккаунт и его данные.</string>
     <string name="finish">Завершить</string>
-    <string name="onboarding_restore_backup">Восстановить из бэкапа</string>
+    <string name="onboarding_restore_backup">Восстановить из резервной копии</string>
     <string name="onboarding_settings_hint">Перейдите в Настройки в меню в правом верхнем углу, чтобы настроить Metrolist под себя.</string>
     <string name="onboarding_no_saved_accounts">Связанные аккаунты не найдены.</string>
     <string name="onboarding_account_picture">%1$s фото профиля</string>
@@ -1473,7 +1473,7 @@
     <string name="export_logs">Экспорт логов</string>
     <string name="create_backup">Создать бэкап</string>
     <string name="create_backup_desc">Экспортирует все настройки, аккаунты, учетные данные и данные библиотеки</string>
-    <string name="restore_backup">Восстановить бэкап</string>
+    <string name="restore_backup">Восстановить резервную копию</string>
     <string name="restore_backup_desc">Восстанавливает бэкап Metrolist с Android или компьютера и перезапускается</string>
     <string name="sensitive_backup">Конфиденциальный бэкап</string>
     <string name="restore_backup_confirm">Восстановить бэкап?</string>
@@ -1485,9 +1485,9 @@
     <string name="join_room">Войти в комнату</string>
     <string name="privacy_policy">Прочитать нашу политику конфиденциальности</string>
     <string name="log_in">Войти</string>
-    <string name="restore_from_backup">Восстановить из бэкапа</string>
-    <string name="onboarding_backup_picker_title">Восстановить бэкап Metrolist</string>
-    <string name="onboarding_backup_picker_error">Не удалось открыть выбор бэкапа: %1$s</string>
+    <string name="restore_from_backup">Восстановить из резервной копии</string>
+    <string name="onboarding_backup_picker_title">Восстановить резервную копию Metrolist</string>
+    <string name="onboarding_backup_picker_error">Не удалось открыть окно выбора резервной копии: %1$s</string>
     <string name="onboarding_backup_restore_failed">Не удалось восстановить бэкап: %1$s</string>
     <string name="edit_sidebar">Редактировать боковую панель</string>
     <string name="exit_fullscreen">Выйти из полноэкранного режима</string>
@@ -1585,7 +1585,7 @@
         <item quantity="other">%1$d песен</item>
     </plurals>
     <string name="app_data">Данные приложения</string>
-    <string name="backup_picker_title">Восстановить бэкап Metrolist</string>
+    <string name="backup_picker_title">Восстановить резервную копию Metrolist</string>
     <string name="create_backup_dialog_title">Создать бэкап Metrolist</string>
     <string name="backup_created">Резервная копия создана</string>
     <string name="backup_failed">Ошибка бэкапа: %1$s</string>
@@ -2184,7 +2184,7 @@
     <string name="lyrics_plus_lighter_desc">Сделайте текст ярче с помощью плавного перехода «plus-lighter» на liquid-фонах</string>
     <string name="privacy_diagnostics">Диагностика</string>
     <string name="foreign_import_title">Импорт из другого приложения</string>
-    <string name="foreign_import_desc">Импортировать понравившиеся, плейлисты и историю прослушивания из резервной копии InnerTune, OuterTune, ViMusic, RiMusic, Kreate, SimpMusic или Prism. Приложение сохранит вашу текущую библиотеку.</string>
+    <string name="foreign_import_desc">Импортировать понравившиеся, плейлисты и историю прослушивания из резервной копии InnerTune, OuterTune, ViMusic, RiMusic, Kreate, SimpMusic или Prism. Приложение сохранит текущую библиотеку.</string>
     <string name="foreign_import_success">Импортировано %1$d песен, %2$d лайков, %3$d плейлистов и %4$d прослушиваний</string>
     <string name="foreign_import_unsupported">Этот файл не является резервной копией поддерживаемого музыкального приложения</string>
     <string name="foreign_import_failed">Ошибка импорта: %1$s</string>
