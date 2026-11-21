@@ -123,8 +123,13 @@ import com.metrolist.shared.generated.resources.metroeq_custom_profile
 import com.metrolist.shared.generated.resources.metroeq_delete_profile_confirm
 import com.metrolist.shared.generated.resources.metroeq_frequency_value
 import com.metrolist.shared.generated.resources.metroeq_peak_reduction
+import com.metrolist.shared.generated.resources.metroeq_preset_acoustic
 import com.metrolist.shared.generated.resources.metroeq_preset_bass
+import com.metrolist.shared.generated.resources.metroeq_preset_commute
+import com.metrolist.shared.generated.resources.metroeq_preset_electronic
 import com.metrolist.shared.generated.resources.metroeq_preset_flat
+import com.metrolist.shared.generated.resources.metroeq_preset_loudness
+import com.metrolist.shared.generated.resources.metroeq_preset_pop
 import com.metrolist.shared.generated.resources.metroeq_preset_rock
 import com.metrolist.shared.generated.resources.metroeq_preset_treble
 import com.metrolist.shared.generated.resources.metroeq_preset_v_shape
@@ -149,6 +154,7 @@ import com.metrolist.shared.generated.resources.wizard_multiple_variants
 import com.metrolist.shared.generated.resources.wizard_no_models
 import com.metrolist.shared.ui.components.AlertDialog
 import com.metrolist.shared.ui.components.ContainedLoadingIndicator
+import com.metrolist.shared.ui.components.ExpressiveFilterChip
 import com.metrolist.shared.ui.components.ExpressiveSwitch
 import com.metrolist.shared.ui.components.PopupContent
 import com.metrolist.shared.ui.components.PopupVisibility
@@ -160,6 +166,7 @@ import com.metrolist.shared.ui.navigation.navigationPopupSource
 import com.metrolist.shared.ui.playback.retainPlaybackKeyFocus
 import com.metrolist.shared.ui.settings.LocalSettingsPageBottomPadding
 import com.metrolist.shared.ui.utils.DragScrollableColumn
+import com.metrolist.shared.ui.utils.carouselScroll
 import com.metrolist.shared.ui.utils.verticalScrollWithDrag
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -359,6 +366,24 @@ private fun ProfilesPage(
                 )
             }
         }
+        val presetChipsScrollState = rememberScrollState()
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .carouselScroll(presetChipsScrollState)
+                .horizontalScroll(presetChipsScrollState)
+                .padding(horizontal = 16.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            EqualizerPreset.entries.forEach { choice ->
+                val title = presetName(choice)
+                ExpressiveFilterChip(
+                    selected = preset == choice,
+                    onClick = { changeProfile { EqualizerProfiles.activatePreset(choice, title) } },
+                    label = { Text(title) },
+                )
+            }
+        }
         error?.let {
             Text(
                 stringResource(it),
@@ -534,10 +559,15 @@ private fun presetName(preset: EqualizerPreset): String =
     stringResource(
         when (preset) {
             EqualizerPreset.FLAT -> Res.string.metroeq_preset_flat
+            EqualizerPreset.COMMUTE -> Res.string.metroeq_preset_commute
             EqualizerPreset.BASS -> Res.string.metroeq_preset_bass
             EqualizerPreset.TREBLE -> Res.string.metroeq_preset_treble
             EqualizerPreset.VOCAL -> Res.string.metroeq_preset_vocal
+            EqualizerPreset.POP -> Res.string.metroeq_preset_pop
             EqualizerPreset.ROCK -> Res.string.metroeq_preset_rock
+            EqualizerPreset.ELECTRONIC -> Res.string.metroeq_preset_electronic
+            EqualizerPreset.ACOUSTIC -> Res.string.metroeq_preset_acoustic
+            EqualizerPreset.LOUDNESS -> Res.string.metroeq_preset_loudness
             EqualizerPreset.V_SHAPE -> Res.string.metroeq_preset_v_shape
         },
     )

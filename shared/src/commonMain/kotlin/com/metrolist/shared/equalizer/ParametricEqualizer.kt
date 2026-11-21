@@ -232,10 +232,21 @@ class ParametricEqualizer(
             for (i in frameStart until frameEnd) peak = maxOf(peak, abs(processingBuffer[i]))
             val gain = limiterGain(peak, outputGain)
             lastGain = gain
-            for (i in frameStart until frameEnd) processingBuffer[i] *= gain
+            for (i in frameStart until frameEnd) {
+                processingBuffer[i] = softClip(processingBuffer[i] * gain)
+            }
             frameStart = frameEnd
         }
         gainReductionDb = -20.0 * log10(lastGain / outputGain)
+    }
+
+    private fun softClip(sample: Double): Double {
+        val magnitude = abs(sample)
+        if (magnitude <= SOFT_CLIP_THRESHOLD) return sample
+        val diff = magnitude - SOFT_CLIP_THRESHOLD
+        val range = 1.0 - SOFT_CLIP_THRESHOLD
+        val compressed = SOFT_CLIP_THRESHOLD + range * kotlin.math.tanh(diff / range)
+        return if (sample < 0.0) -compressed else compressed
     }
 
     private fun limiterGain(
@@ -304,7 +315,8 @@ class ParametricEqualizer(
 
     private companion object {
         const val LIMITER_CEILING = 0.98
-        const val PEAK_HOLD_SECONDS = 0.05
-        const val LIMITER_RELEASE_SECONDS = 0.15
+        const val SOFT_CLIP_THRESHOLD = 0.88
+        const val PEAK_HOLD_SECONDS = 0.03
+        const val LIMITER_RELEASE_SECONDS = 0.10
     }
 }
