@@ -2512,8 +2512,11 @@ object PlayerState {
     private val castTimerVolume = DesktopSleepTimerCastVolume()
 
     private val related =
-        DesktopRelatedSongs(scope, { currentTrack?.id }) {
-            BlockedContent.filterPlayableSongs(GlobalYouTubeRepository.instance.startRadio(it)).drop(1).take(25)
+        DesktopRelatedSongs(scope, { currentTrack?.id }) { videoId ->
+            BlockedContent
+                .filterPlayableSongs(GlobalYouTubeRepository.instance.startRadio(videoId))
+                .filterNot { it.id == videoId }
+                .take(25)
         }
     var relatedSongs: List<SongItem>
         get() = related.songs
