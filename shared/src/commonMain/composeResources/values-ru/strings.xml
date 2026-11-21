@@ -355,7 +355,7 @@
     <string name="app_font_active">Активен</string>
     <string name="app_font_installed">Установлено · Нажмите для использования</string>
     <string name="app_font_download_and_use">Нажмите чтобы скачать и использовать</string>
-    <string name="app_font_download_error">Не удалось скачать %1$s. Проверьте ваше подключение и повторите попытку.</string>
+    <string name="app_font_download_error">Не удалось скачать %1$s. Проверьте соединение и повторите попытку.</string>
     <string name="app_font_import_custom">Импортировать TTF или OTF файл</string>
     <string name="appearance_mini_player">Мини-плеер</string>
     <string name="appearance_mini_player_type">Тип мини-плеера</string>
@@ -522,7 +522,7 @@
     <string name="listenbrainz_now_playing_description">Показывает текущий трек в ListenBrainz</string>
     <string name="listenbrainz_connect_title">Подключить ListenBrainz</string>
     <string name="listenbrainz_user_token">Токен пользователя</string>
-    <string name="restore_database_incompatible">Этот бэкап использует версию базы данных %1$d, но это приложение поддерживает версии до %2$d. Обновите Metrolist и попробуйте снова.</string>
+    <string name="restore_database_incompatible">В этой резервной копии используется версия базы данных %1$d, но приложение поддерживает версии не выше %2$d. Обновите Metrolist и повторите попытку.</string>
     <string name="restore_failed_detail">Не удалось восстановить бэкап во время %1$s\n\nПричина: %2$s</string>
     <string name="restore_error_unknown">Дополнительные детали недоступны.</string>
     <string name="restore_stage_reading_backup">Чтение бэкап файла</string>
@@ -604,7 +604,7 @@
     <string name="updates_date">Дата</string>
     <string name="updates_changelog">Список изменений</string>
     <string name="updates_install">Установить</string>
-    <string name="updates_retry">Попробуйте снова</string>
+    <string name="updates_retry">Попробовать снова</string>
     <string name="updates_available_title">Metrolist %1$s доступна</string>
     <string name="updates_available_message">Нажмите Обновить, чтобы скачать обновление и перейти в установщик Android.</string>
     <string name="updates_changelog_preview">Что нового</string>
@@ -620,7 +620,7 @@
     <string name="updates_installer_failed">Установщик пакетов Android недоступен или установка приложений ограничена на этом устройстве.</string>
     <string name="updates_release_unavailable">В этом релизе нет совместимого APK.</string>
     <string name="updates_release_notes_title">Что нового в Metrolist %1$s</string>
-    <string name="device_connect_title">Подключение устройств</string>
+    <string name="device_connect_title">Device Connect</string>
     <string name="device_connect_summary">Подключите доверенные устройства в локальной сети. Соединения защищены шифрованием.</string>
     <string name="device_connect_beta">Бета</string>
     <string name="device_connect_enable">Включить</string>
@@ -1840,7 +1840,7 @@
     <string name="settings_disable_wayland_fix_description">Выключает автоматическое определение масштабирования для сессий Wayland. Требуется перезапуск.</string>
     <string name="device_connect_signed_out_pairing">Вы вышли из аккаунта. Сравните код сопряжения на обоих устройствах перед подтверждением.</string>
     <string name="device_connect_paired">Сопряжено</string>
-    <string name="shortcut_toggle_device_connect">Переключить панель подключения устройств</string>
+    <string name="shortcut_toggle_device_connect">Переключить панель Device Connect</string>
     <string name="device_connect_unshareable_queue">Эта очередь содержит локальные файлы и недоступна для обмена.</string>
     <string name="device_connect_this_device_label">Это устройство</string>
     <string name="device_connect_pair">Сопрячь</string>
@@ -1944,13 +1944,13 @@
     <string name="download_folder_access_failed">Не удалось сохранить разрешение на доступ к этой папке. Выберите папку с доступом для чтения и записи.</string>
     <string name="download_migration_failed">Некоторые скачанные файлы не удалось переместить, и они остались в прежнем расположении. Проверьте доступ к хранилищу и свободное место, затем повторите попытку.</string>
     <string name="download_error_storage_full">Недостаточно места в хранилище. Освободите место и повторите попытку.</string>
-    <string name="download_error_storage_access">Нет доступа к папке скачивания. Выберите её заново в настройках хранилища и повторите попытку.</string>
+    <string name="download_error_storage_access">Нет доступа к папке скачивания. Выберите её снова в настройках хранилища и повторите попытку.</string>
     <string name="download_error_network">Не удалось подключиться. Проверьте соединение и повторите попытку.</string>
-    <string name="download_error_generic">Не удалось скачать. Повторите попытку.</string>
+    <string name="download_error_generic">Не удалось выполнить скачивание. Повторите попытку.</string>
     <string name="amazon_music_marketplace">Выберите региональный рынок Amazon Music</string>
     <string name="import_cancelled_partial">Импорт отменён. Место назначения: %2$s. Сохранено треков: не менее %1$d. Чтобы продолжить, начните импорт заново и выберите это место назначения.</string>
     <string name="recognition_history_save_failed">Не удалось сохранить эту песню в истории распознавания.</string>
-    <string name="device_connect_server_failed">Не удалось запустить подключение устройств. Проверьте сеть и повторите попытку.</string>
+    <string name="device_connect_server_failed">Не удалось запустить Device Connect. Проверьте сеть и повторите попытку.</string>
     <string name="device_connect_discovery_failed">Не удалось обнаружить устройства. Проверьте доступ к локальной сети и повторите поиск.</string>
     <string name="home_offline_empty">Вы не в сети, и содержимое главной страницы не сохранено. Подключитесь к интернету и обновите страницу, чтобы загрузить рекомендации.</string>
     <string name="home_load_failed">Не удалось загрузить главную страницу. Проверьте соединение и повторите попытку.</string>
@@ -1992,7 +1992,7 @@
         <item quantity="other">%1$d прослушивания</item>
     </plurals>
     <string name="queue_youtube_history_paused_desc">Возобновите запись истории прослушиваний, чтобы ставить прослушивания не в сети в очередь на отправку</string>
-    <string name="search_online_failed">Не удалось выполнить поиск в сети. Проверьте соединение и повторите попытку.</string>
+    <string name="search_online_failed">Не удалось выполнить поиск в интернете. Проверьте соединение и повторите попытку.</string>
     <string name="search_load_more_failed">Не удалось загрузить больше результатов.</string>
     <string name="discord_error_gateway_configuration">Discord отклонил настройки подключения. Обновите Metrolist перед повторной попыткой.</string>
     <string name="discord_preview_buttons_adjusted">Discord сокращает длинные подписи кнопок и пропускает кнопки со слишком длинными ссылками. Здесь показаны кнопки, которые будут отправлены.</string>
@@ -2033,7 +2033,7 @@
     <string name="backup_unsupported_database">Эта версия Metrolist не поддерживает версию базы данных в этой резервной копии.</string>
     <string name="backup_too_large">Резервная копия превышает допустимый размер или количество записей.</string>
     <string name="backup_invalid_data">Не удалось прочитать или проверить резервную копию. Возможно, она повреждена или содержит неподдерживаемые данные.</string>
-    <string name="search_history_removal_failed">Не удалось очистить историю поиска аккаунта. Повторите попытку после подключения к сети.</string>
+    <string name="search_history_removal_failed">Не удалось очистить историю поиска в аккаунте. Повторите попытку после подключения к сети.</string>
     <string name="top_period_all_time">За всё время</string>
     <string name="top_period_past_24_hours">За последние 24 часа</string>
     <string name="top_period_past_week">За последнюю неделю</string>
@@ -2245,7 +2245,7 @@
     <string name="ai_test_connection_running">Проверка…</string>
     <string name="ai_test_connection_description">Отправить пробный запрос на перевод текста песни с текущими настройками</string>
     <string name="ai_test_connection_success">Подключение установлено.</string>
-    <string name="ai_test_connection_failed">Сбой подключения. Проверьте свои учетные данные и модели.</string>
+    <string name="ai_test_connection_failed">Сбой подключения. Проверьте свои учётные данные и модели.</string>
     <string name="ai_test_missing_credentials">Перед проверкой добавьте учетные данные.</string>
     <string name="ai_test_detection_result">Обнаружение: требуется перевод = %1$s</string>
     <string name="ai_test_translation_result">Пример перевода: %1$s</string>
@@ -2256,7 +2256,7 @@
     <string name="move_to_top">Переместить вверх</string>
     <string name="playback_error_message">Ошибка воспроизведения: %1$s</string>
     <string name="playback_unable_to_play_queued_track">Не удалось воспроизвести этот трек из очереди.</string>
-    <string name="recognition_network_error">Не удалось подключиться к службе распознавания. Проверьте подключение к Интернету и попробуйте ещё раз.</string>
+    <string name="recognition_network_error">Не удалось подключиться к службе распознавания. Проверьте подключение к интернету и повторите попытку.</string>
     <string name="recognition_service_temporarily_unavailable">Сервис распознавания музыки временно недоступен</string>
     <string name="seek_seconds_addup">Прогрессивная перемотка</string>
     <string name="seek_seconds_addup_desc">Увеличивать шаг перемотки при каждом быстром нажатии</string>
@@ -2274,7 +2274,7 @@
     <string name="device_connect_direct_title">Подключиться по IP-адресу</string>
     <string name="device_connect_direct_address">IP-адрес и порт</string>
     <string name="device_connect_direct_hint">Это устройство прослушивает порт %1$d. Введите IP-адрес (LAN или VPN) и порт другого устройства в формате IPv4:порт или [IPv6]:порт. Сверьте код сопряжения на обоих устройствах.</string>
-    <string name="device_connect_direct_failed">Не удалось установить соединение или завершить сопряжение. Проверьте адрес, порт прослушивания, доступ к VPN и разрешение на сопряжение, а затем повторите попытку.</string>
+    <string name="device_connect_direct_failed">Не удалось установить соединение или завершить сопряжение. Проверьте адрес, порт прослушивания, доступ к VPN и подтверждение сопряжения, а затем повторите попытку.</string>
     <string name="device_connect_default_device">Устройство воспроизведения по умолчанию</string>
     <string name="device_connect_default_device_description">Запустить воспроизведение на этом сопряженном устройстве при его подключении. Выберите «Нет», чтобы сбросить настройку по умолчанию.</string>
     <string name="listen_together_suggestion_auto_approved">Предложение песни одобрено автоматически</string>
@@ -2427,7 +2427,7 @@
     <string name="processing">Обработка…</string>
     <string name="no_match_found">Соответствий не найдено</string>
     <string name="recognition_error">Ошибка распознавания</string>
-    <string name="try_again">Попробуйте ещё раз</string>
+    <string name="try_again">Попробовать снова</string>
     <string name="play_on_app">Воспроизвести в Metrolist</string>
     <string name="re_listen">Прослушать ещё раз</string>
     <string name="stands_with_palestine">Этот проект поддерживает Палестину</string>
@@ -2536,7 +2536,7 @@
     <string name="metroeq_save_as">Сохранить как</string>
     <string name="metroeq_preset_bass">Усиление низких частот</string>
     <string name="metroeq_presets">Пресеты</string>
-    <string name="download_error_incomplete">YouTube не предоставил полный аудиофайл. Попробуйте снова или воспользуйтесь другой сетью.</string>
+    <string name="download_error_incomplete">YouTube не предоставил полный аудиофайл. Повторите попытку позже или воспользуйтесь другой сетью.</string>
     <string name="global_lyrics_offset">Глобальное смещение текста песни</string>
     <string name="global_lyrics_offset_description">Это смещение применяется ко всем песням в дополнение к настройкам для каждой отдельной песни. Положительные значения отображают текст раньше. Отрицательные значения — позже.</string>
     <string name="tempo_pitch_presets">Сохраненные пресеты</string>
@@ -2603,19 +2603,19 @@
     <string name="ai_setup_limits">Бесплатные модели позволяют отправлять до %1$d запросов в минуту и %2$d в день, либо %4$d в день после покупки не менее %3$d кредитов.</string>
     <string name="ai_setup_create_account">Создайте аккаунт</string>
     <string name="ai_setup_view_limits">Проверьте текущие лимиты</string>
-    <string name="ai_setup_browser_failed">Не удалось открыть браузер. Попробуйте ещё раз.</string>
+    <string name="ai_setup_browser_failed">Не удалось открыть браузер. Повторите попытку.</string>
     <string name="ai_setup_sign_in">Войдите в OpenRouter</string>
     <string name="ai_setup_configure">Выберите модель и язык</string>
     <string name="ai_setup_model_description">Эта модель бесплатно переводит тексты песен в рамках ограничений OpenRouter. Для одной песни может потребоваться более одного запроса. В расширенных настройках вы можете выбрать платные модели и других провайдеров.</string>
     <string name="ai_setup_verify_description">"Готово" отправляет короткий запрос вашей выбранной бесплатной модели. Перевод включается только после успешного теста.</string>
     <string name="ai_setup_verifying">Проверка перевода…</string>
     <string name="ai_setup_privacy_hint">Ваша политика обработки данных в OpenRouter не распространяется на эту модель. Ознакомьтесь с параметрами «бесплатная модель» и «провайдер» в настройках конфиденциальности OpenRouter, а затем повторите попытку.</string>
-    <string name="ai_setup_key_hint">Войдите в OpenRouter заново, чтобы заменить недействительный или просроченный ключ, а затем повторите попытку.</string>
+    <string name="ai_setup_key_hint">Войдите в OpenRouter заново, чтобы заменить недействительный ключ или ключ с истёкшим сроком действия, а затем повторите попытку.</string>
     <string name="ai_setup_credit_hint">Проверьте баланс счета и кредитный лимит на вашем ключе OpenRouter. У ключа OAuth может быть собственный лимит. Повторите попытку после устранения проблемы с лимитом.</string>
     <string name="ai_setup_rate_hint">Подождите и попробуйте ещё раз или выберите другую бесплатную модель. OpenRouter ограничивает количество бесплатных запросов в минуту и в день. Смена модели может не позволить обойти ограничение, установленное для вашей учетной записи.</string>
     <string name="ai_setup_daily_hint">Попробуйте завтра или пополните баланс в OpenRouter, чтобы увеличить свой бесплатный дневной лимит. Смена модели не позволит обойти этот лимит.</string>
     <string name="ai_setup_minute_hint">Дождитесь сброса минутного лимита OpenRouter, а затем повторите попытку. Смена модели не позволит обойти этот лимит.</string>
-    <string name="ai_setup_busy_hint">Доступные бесплатные модели временно заняты. Попробуйте позже.</string>
+    <string name="ai_setup_busy_hint">Доступные бесплатные модели временно заняты. Повторите попытку позже.</string>
     <string name="ai_setup_model_hint">Выберите другую бесплатную модель или попробуйте позже, когда эта модель станет доступной.</string>
     <string name="ai_setup_network_hint">Проверьте подключение к Интернету и попробуйте ещё раз.</string>
     <string name="ai_setup_response_hint">Модель не выдала пригодный для использования перевод. Попробуйте ещё раз или выберите другую бесплатную модель.</string>
