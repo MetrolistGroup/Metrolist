@@ -3,7 +3,6 @@ package com.metrolist.shared.settings
 import android.content.Context
 import android.os.Looper
 import android.util.AtomicFile
-import android.util.Log
 import com.metrolist.shared.constants.AiSlopBlocklistCacheKey
 import com.russhwolf.settings.Settings
 import java.io.File
@@ -31,7 +30,7 @@ internal class AndroidFileSettings(
                 try {
                     migrateLargeSetting(delegate, key, file.exists()) { write(file, it) }
                 } catch (error: Exception) {
-                    Log.e("Settings", "Could not migrate blob $key", error)
+                    logSettingsFailure("Could not migrate blob $key", error)
                 }
             }
         }
@@ -50,7 +49,7 @@ internal class AndroidFileSettings(
                     writeFailures.remove(key)
                 } catch (error: Exception) {
                     writeFailures[key] = error
-                    Log.e("Settings", "Could not persist settings blob", error)
+                    logSettingsFailure("Could not persist settings blob", error)
                     throw error
                 }
             }

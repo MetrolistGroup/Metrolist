@@ -14,6 +14,7 @@ import android.content.pm.PackageManager
 import android.os.Build
 import android.os.SystemClock
 import android.service.quicksettings.TileService
+import android.util.Log
 import android.webkit.WebView
 import androidx.compose.runtime.snapshots.Snapshot
 import androidx.core.app.NotificationChannelCompat
@@ -67,6 +68,8 @@ import com.metrolist.shared.state.coreModule
 import com.metrolist.shared.utils.isCrashReportingAvailable
 import com.metrolist.shared.youtube.di.sharedModule
 import com.metrolist.shared.youtube.playback.AndroidContextProvider
+import com.metrolist.shared.youtube.playback.PlaybackEventLevel
+import com.metrolist.shared.youtube.playback.PlaybackEventLog
 import com.metrolist.shared.youtube.playback.PlaybackNetworkStateStore
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
@@ -85,6 +88,8 @@ import org.koin.android.ext.koin.androidContext
 import org.koin.core.context.startKoin
 import timber.log.Timber
 import java.io.File
+import java.io.PrintWriter
+import java.io.StringWriter
 import com.metrolist.shared.BuildConfig as SharedBuildConfig
 
 class App :
@@ -150,6 +155,7 @@ class App :
     @OptIn(ExperimentalResourceApi::class)
     override fun onCreate() {
         super.onCreate()
+        Timber.plant(AppFailureTree())
         instance = this
         AndroidContextProvider.applicationContext = applicationContext
         val processName = currentProcessName()
@@ -425,6 +431,38 @@ class App :
     }
 
     override fun newImageLoader(context: Context): ImageLoader = createAppImageLoader(context)
+}
+
+private class AppFailureTree : Timber.Tree() {
+    override fun isLoggable(
+        tag: String?,
+        priority: Int,
+    ): Boolean = priority == Log.WARN || priority == Log.ERROR
+
+    override fun log(
+        priority: Int,
+        tag: String?,
+        message: String,
+        t: Throwable?,
+    ) {
+        val level =
+            when (priority) {
+                Log.ERROR -> PlaybackEventLevel.ERROR
+                Log.WARN -> PlaybackEventLevel.WARN
+                else -> return
+            }
+        if (message.startsWith("[YtLogger] ")) return
+        val messageWithoutThrowable =
+            t?.let { throwable ->
+                val stackTrace =
+                    StringWriter(256)
+                        .also { writer ->
+                            throwable.printStackTrace(PrintWriter(writer, false))
+                        }.toString()
+                message.removeSuffix("\n$stackTrace").removeSuffix(stackTrace).removeSuffix("\n")
+            } ?: message
+        PlaybackEventLog.captureApplicationFailure(level, tag ?: "Android", messageWithoutThrowable, t)
+    }
 }
 
 private fun currentProcessName(): String =

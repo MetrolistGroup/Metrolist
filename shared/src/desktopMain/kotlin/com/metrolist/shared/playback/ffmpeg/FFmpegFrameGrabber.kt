@@ -103,7 +103,7 @@ class FFmpegFrameGrabber : FrameGrabber {
                         if (t !is InterruptedIOException &&
                             t !is kotlin.coroutines.cancellation.CancellationException
                         ) {
-                            Logger.w("FFmpegGrabber", "Error on InputStream.read(): $t")
+                            Logger.w("FFmpegGrabber", "Error on InputStream.read()", t)
                         }
                         -1
                     }
@@ -180,7 +180,7 @@ class FFmpegFrameGrabber : FrameGrabber {
                         }
                         if (whence == AVSEEK_SIZE) size else 0L
                     } catch (t: Throwable) {
-                        Logger.w("FFmpegGrabber", "Error on InputStream.reset() or skip(): $t")
+                        Logger.w("FFmpegGrabber", "Error on InputStream.reset() or skip()", t)
                         -1L
                     }
                 }
@@ -373,7 +373,7 @@ class FFmpegFrameGrabber : FrameGrabber {
             try {
                 if (closeInputStream) is_.close()
             } catch (ex: IOException) {
-                Logger.w("FFmpegGrabber", "Error on InputStream.close(): $ex")
+                Logger.w("FFmpegGrabber", "Error on InputStream.close()", ex)
             } finally {
                 inputStreamAddress?.let { inputStreams.remove(it) }
                 inputStreamAddress = null

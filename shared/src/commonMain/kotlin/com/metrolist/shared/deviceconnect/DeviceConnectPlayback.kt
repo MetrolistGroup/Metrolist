@@ -52,6 +52,9 @@ data class DcPlaybackCommand(
     val volume: Float? = null,
     val preserveCurrentTrack: Boolean = false,
     val explicitRadioQueue: Boolean = false,
+    val startPlaying: Boolean? = null,
+    val advanceCurrentToSuccessor: Boolean = false,
+    val successorIndex: Int? = null,
 )
 
 @Serializable

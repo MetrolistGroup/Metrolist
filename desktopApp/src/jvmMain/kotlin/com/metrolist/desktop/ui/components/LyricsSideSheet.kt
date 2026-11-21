@@ -43,6 +43,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
@@ -110,6 +111,9 @@ internal fun DesktopLyricsContent(
     val activeSeedColor = UiState.seedColor
 
     val isImmersiveBg = Settings.shared.playerBackgroundStyle != PlayerBackgroundStyle.SOLID
+    val isLightLiquidBg =
+        Settings.shared.playerBackgroundStyle == PlayerBackgroundStyle.LIQUID && colorScheme.surface.luminance() >= 0.5f
+    val immersiveForeground = if (isLightLiquidBg) Color.Black else Color.White
 
     val textBackgroundColor by animateColorAsState(
         targetValue =
@@ -117,8 +121,9 @@ internal fun DesktopLyricsContent(
                 PlayerBackgroundStyle.BLURRED_ARTWORK,
                 PlayerBackgroundStyle.GRADIENT,
                 PlayerBackgroundStyle.ANIMATED_GRADIENT,
-                PlayerBackgroundStyle.LIQUID,
                 -> Color.White
+
+                PlayerBackgroundStyle.LIQUID -> immersiveForeground
 
                 PlayerBackgroundStyle.SOLID -> colorScheme.onSurface
             },
@@ -127,17 +132,26 @@ internal fun DesktopLyricsContent(
 
     val headerBg =
         if (isImmersiveBg) {
-            Color.White.copy(alpha = 0.14f)
+            immersiveForeground.copy(alpha = 0.14f)
         } else {
             colorScheme.surfaceContainerHigh
         }
-    val headerTextColor = if (isImmersiveBg) Color.White else colorScheme.onSurface
-    val headerIconTint = if (isImmersiveBg) Color.White.copy(alpha = 0.85f) else colorScheme.onSurfaceVariant
+    val headerTextColor = if (isImmersiveBg) immersiveForeground else colorScheme.onSurface
+    val headerIconTint = if (isImmersiveBg) immersiveForeground.copy(alpha = 0.85f) else colorScheme.onSurfaceVariant
 
     Surface(
         modifier = modifier.fillMaxHeight(),
         shape = RoundedCornerShape(16.dp),
-        color = if (isImmersiveBg) Color.Black else colorScheme.surface,
+        color =
+            if (isImmersiveBg) {
+                if (isLightLiquidBg) {
+                    Color.White
+                } else {
+                    Color.Black
+                }
+            } else {
+                colorScheme.surface
+            },
         tonalElevation = 1.dp,
     ) {
         val drawerContent = @Composable {
@@ -154,6 +168,7 @@ internal fun DesktopLyricsContent(
                     artworkUrl = PlayerState.currentArtworkUrl.takeIf { hasArtwork },
                     artworkScrimAlpha = 0.45f,
                     isLiquid = style == PlayerBackgroundStyle.LIQUID,
+                    foregroundColor = textBackgroundColor,
                 )
             }
             Column(modifier = Modifier.fillMaxSize()) {

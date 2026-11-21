@@ -20,6 +20,7 @@ import com.metrolist.shared.db.entities.ArtistEntity
 import com.metrolist.shared.db.entities.EpisodeListeningProgress
 import com.metrolist.shared.db.entities.PlaylistSongMap
 import com.metrolist.shared.db.entities.PodcastEntity
+import com.metrolist.shared.db.entities.RelatedSongMap
 import com.metrolist.shared.db.entities.Song
 import com.metrolist.shared.db.entities.SongAlbumMap
 import com.metrolist.shared.db.entities.SongArtistMap
@@ -662,6 +663,12 @@ interface SongDao {
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insert(song: SongEntity): Long
+
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insert(map: RelatedSongMap): Long
+
+    @Query("SELECT EXISTS(SELECT 1 FROM related_song_map WHERE songId = :songId)")
+    suspend fun hasRelatedSongs(songId: String): Boolean
 
     @Update
     suspend fun update(song: SongEntity)

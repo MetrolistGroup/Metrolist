@@ -20,7 +20,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asAndroidBitmap
@@ -484,12 +486,19 @@ internal actual fun PlatformLiquidBackgroundCanvas(
     previousArt: LayerArt?,
     crossfadeAlpha: () -> Float,
     rotationTimeMs: () -> Long,
+    isLightTheme: Boolean,
 ) {
     val renderer = remember { AndroidLiquidRenderer() }
     val activeBitmap = remember(activeArt) { layerArtToBitmap(activeArt) }
     val previousBitmap = remember(previousArt) { previousArt?.let { layerArtToBitmap(it) } }
 
-    Canvas(modifier = modifier.fillMaxSize()) {
+    Canvas(
+        modifier =
+            modifier.fillMaxSize().drawWithContent {
+                drawContent()
+                if (isLightTheme) drawRect(Color.White.copy(alpha = 0.6f))
+            },
+    ) {
         renderer.draw(
             scope = this,
             activeBitmap = activeBitmap,
