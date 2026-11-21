@@ -94,6 +94,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.currentStateAsState
 import com.metrolist.shared.generated.resources.Res
+import com.metrolist.shared.generated.resources.clearing_search_history
 import com.metrolist.shared.generated.resources.explicit
 import com.metrolist.shared.generated.resources.loading
 import com.metrolist.shared.generated.resources.more_options
@@ -285,6 +286,7 @@ fun SearchContent(
                         SearchEmptyState(
                             recentSearchItems = if (Settings.shared.hideRecentSearches) emptyList() else uiState.recentSearchItems,
                             searchHistory = uiState.searchHistory,
+                            isClearingSearchHistory = uiState.isClearingSearchHistory,
                             onRecentItemClick = onItemClick,
                             onVideoItemClick = onVideoItemClick,
                             onHistoryItemClick = onHistoryItemClick,
@@ -351,6 +353,7 @@ private fun SearchEnterMotion(
 private fun SearchEmptyState(
     recentSearchItems: List<YTItem>,
     searchHistory: List<String>,
+    isClearingSearchHistory: Boolean,
     onRecentItemClick: (YTItem) -> Unit,
     onVideoItemClick: (YTItem) -> Unit,
     onHistoryItemClick: (String) -> Unit,
@@ -473,7 +476,7 @@ private fun SearchEmptyState(
             }
         }
 
-        if (searchHistory.isNotEmpty()) {
+        if (searchHistory.isNotEmpty() || isClearingSearchHistory) {
             item {
                 Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.TopCenter) {
                     Column(Modifier.widthIn(max = 1400.dp).fillMaxWidth()) {
@@ -481,6 +484,7 @@ private fun SearchEmptyState(
                             title = text.recentSearches,
                             onClearClick = { confirmClearHistory = true },
                             text = text,
+                            clearing = isClearingSearchHistory,
                         )
                         Spacer(Modifier.height(12.dp))
                         Column(
@@ -555,6 +559,7 @@ private fun RecentSectionTitle(
     title: String,
     onClearClick: () -> Unit,
     text: SearchContentText,
+    clearing: Boolean = false,
 ) {
     Row(
         modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 8.dp),
@@ -567,12 +572,19 @@ private fun RecentSectionTitle(
             color = MaterialTheme.colorScheme.primary,
             modifier = Modifier.weight(1f),
         )
-        IconButton(onClick = onClearClick, shapes = IconButtonDefaults.shapes()) {
-            Icon(
-                imageVector = MetrolistIcons.Default.Close,
-                contentDescription = text.clearSection(title),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+        if (clearing) {
+            ContainedLoadingIndicator(
+                modifier = Modifier.size(48.dp),
+                label = stringResource(Res.string.clearing_search_history),
             )
+        } else {
+            IconButton(onClick = onClearClick, shapes = IconButtonDefaults.shapes()) {
+                Icon(
+                    imageVector = MetrolistIcons.Default.Close,
+                    contentDescription = text.clearSection(title),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
         }
     }
 }

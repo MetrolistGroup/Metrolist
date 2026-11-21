@@ -654,6 +654,8 @@
     <string name="pause_search_history">Pause search history</string>
     <!-- Translators: Imperative action label for clear search history in the Home and browse screens and settings. -->
     <string name="clear_search_history">Clear search history</string>
+    <!-- Translators: Progress label shown while saved search queries are being cleared. -->
+    <string name="clearing_search_history">Clearing search history…</string>
     <!-- Translators: Supporting text beneath the clear search history option in the settings. -->
     <string name="settings_clear_search_history_description">Remove saved searches from this device and YouTube</string>
     <!-- Translators: Dialog or notice body text for clear search history confirm in the settings. -->
