@@ -501,6 +501,7 @@ class CastProtocolTest {
             val address = InetAddress.getLoopbackAddress()
             val server = ServerSocket(0, 1, address).apply { soTimeout = 5_000 }
             val finishReplay = CompletableDeferred<Unit>()
+            val replaySeek = CompletableDeferred<Unit>()
             val receiver =
                 async(Dispatchers.IO) {
                     server.accept().use { socket ->
@@ -522,6 +523,20 @@ class CastProtocolTest {
                         sendPacket(output, 7, """{"volume":0.25}""")
                         finishReplay.await()
                         sendPacket(output, 19, """{"event":{"type":1,"item":{"url":"http://localhost/second"}}}""")
+                        replaySeek.await()
+                        sendPacket(output, 19, """{"event":{"type":1,"item":{"url":"http://localhost/second"}}}""")
+                        sendPacket(output, 7, """{"volume":0.4}""")
+                        val (replayOpcode, replayBody) = readPacket(input)
+                        assertEquals(1, replayOpcode)
+                        assertEquals(
+                            "12.0",
+                            Json
+                                .parseToJsonElement(replayBody)
+                                .jsonObject["time"]
+                                ?.jsonPrimitive
+                                ?.content,
+                        )
+                        sendPacket(output, 7, """{"volume":0.45}""")
                         assertEquals(4, readPacket(input).first)
                         sendPacket(output, 6, """{"state":1,"time":0,"duration":60}""")
                         sendPacket(output, 7, """{"volume":0.5}""")
@@ -555,6 +570,11 @@ class CastProtocolTest {
                     assertFalse(session.state.value.hasEnded)
                     finishReplay.complete(Unit)
                     session.state.first { it.hasEnded }
+                    session.seekTo(12_000)
+                    replaySeek.complete(Unit)
+                    session.state.first { it.volume == 0.4f }
+                    session.play()
+                    session.state.first { it.volume == 0.45f }
                     session.stop()
                     session.state.first { it.volume == 0.5f }
                     assertFalse(session.state.value.isPlaying)

@@ -386,6 +386,7 @@ internal class FcastSession(
                 synchronized(mediaStateLock) {
                     if (closed || stopRequested || !isCurrentFcastMediaItemEndEvent(body, currentMediaUrl)) return
                     val current = _state.value
+                    if (current.hasEnded) return
                     replayPositionMs = 0L
                     _state.value =
                         current.copy(
