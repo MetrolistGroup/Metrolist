@@ -401,6 +401,7 @@ fun StoredPlaylistContent(
         cover = libraryCover(id.removePrefix("local:")).takeIf { customCover == null },
         listState = listState,
         currentSongId = playbackState.currentSongId,
+        currentQueueItemId = playbackState.originalQueueItemId,
         isPlaying = playbackState.isPlaying,
         header =
             headerAction?.let { action ->

@@ -20,7 +20,7 @@ class DesktopPlaybackController(
 ) : PlaybackController {
     override val listState =
         combine(PlayerState.player.currentSong, PlayerState.player.isPlaying) { song, playing ->
-            PlaybackListState(song?.id, playing)
+            PlaybackListState(song?.id, playing, originalQueueItemId = song?.originalQueueItemId)
         }.distinctUntilChanged()
 
     private val baseState =

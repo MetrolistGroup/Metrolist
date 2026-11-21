@@ -1,6 +1,7 @@
 package com.metrolist.shared.ui.playback
 
 import androidx.compose.runtime.staticCompositionLocalOf
+import com.metrolist.shared.api.musicvideo.CounterpartPositionMap
 import com.metrolist.shared.cast.CastDevice
 import com.metrolist.shared.cast.CastState
 import com.metrolist.shared.model.RadioQueueChip
@@ -35,8 +36,11 @@ data class PlaybackUiState(
     val suggestedTracks: List<SongItem> = emptyList(),
     val sleepTimerState: SleepTimerState = SleepTimerState(),
     val isVideoModeActive: Boolean = false,
+    val retimeLyricsOnVideoMode: Boolean = true,
     val isVideoAvailable: Boolean = false,
     val isVideoResolving: Boolean = false,
+    val videoPlaybackResource: PlaybackResource? = null,
+    val videoPositionMap: CounterpartPositionMap? = null,
     val castState: CastState = CastState(),
     val castDevices: List<CastDevice> = emptyList(),
     val bufferedPositionMs: Long = 0L,
@@ -204,6 +208,8 @@ interface PlaybackController {
     fun toggleVideoMode() = Unit
 
     fun setVideoMode(wantVideo: Boolean) = Unit
+
+    fun reportVideoPlaybackFailure() = setVideoMode(false)
 
     fun startCastDiscovery() = Unit
 
