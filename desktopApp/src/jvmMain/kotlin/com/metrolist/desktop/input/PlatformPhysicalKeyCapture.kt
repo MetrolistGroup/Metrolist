@@ -24,12 +24,16 @@ internal class OrderedPhysicalKeyCaptureBuffer(
 
     private val captures = ArrayDeque<Capture>()
 
+    fun record(position: PhysicalKeyPosition?) = record(position, timeSourceMillis())
+
     @Synchronized
-    fun record(position: PhysicalKeyPosition?) {
-        val now = timeSourceMillis()
-        pruneExpired(now)
+    fun record(
+        position: PhysicalKeyPosition?,
+        capturedAtMillis: Long,
+    ) {
+        pruneExpired(capturedAtMillis)
         while (captures.size >= MAX_PENDING_CAPTURES) captures.removeFirst()
-        captures.addLast(Capture(position, now))
+        captures.addLast(Capture(position, capturedAtMillis))
     }
 
     @Synchronized

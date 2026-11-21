@@ -17,6 +17,11 @@ private object X11ThreadingState {
     @Volatile var ready = false
 }
 
+private data class ServerClockAnchor(
+    val wallTimeAtAnchor: Long,
+    val serverTimeAtAnchor: Long,
+)
+
 internal fun initializeLinuxX11Threading() {
     // XRecord runs on its own thread, so libX11 must enter thread-safe mode before AWT initializes it.
     X11ThreadingState.ready = runCatching { X11.INSTANCE.XInitThreads() != 0 }.getOrDefault(false)
@@ -25,6 +30,10 @@ internal fun initializeLinuxX11Threading() {
 internal class LinuxPhysicalKeyCapture : PlatformPhysicalKeyCapture {
     private val lifecycleLock = ReentrantLock()
     private val pending = OrderedPhysicalKeyCaptureBuffer()
+
+    @Volatile private var clockAnchor: ServerClockAnchor? = null
+
+    @Volatile private var replyWallStartMillis = 0L
 
     @Volatile private var requested = false
 
@@ -77,6 +86,7 @@ internal class LinuxPhysicalKeyCapture : PlatformPhysicalKeyCapture {
                 restartOnExit = false
                 workerGeneration++
                 pending.clear()
+                clockAnchor = null
                 worker
             }
         val activeContext = recordContext
@@ -117,6 +127,8 @@ internal class LinuxPhysicalKeyCapture : PlatformPhysicalKeyCapture {
                             if (worker === Thread.currentThread()) worker = null
                             available = false
                             pending.clear()
+                            clockAnchor = null
+                            replyWallStartMillis = 0L
                             if (shouldRestart && worker == null) startWorker()
                         }
                     }
@@ -156,7 +168,15 @@ internal class LinuxPhysicalKeyCapture : PlatformPhysicalKeyCapture {
             clients.setNativeLong(0, NativeLong(X_RECORD_ALL_CLIENTS))
             val ranges = Memory(Native.POINTER_SIZE.toLong())
             ranges.setPointer(0, range)
-            val activeContext = xtst.XRecordCreateContext(activeControlDisplay, 0, clients, 1, ranges, 1)
+            val activeContext =
+                xtst.XRecordCreateContext(
+                    activeControlDisplay,
+                    X_RECORD_FROM_SERVER_TIME,
+                    clients,
+                    1,
+                    ranges,
+                    1,
+                )
             if (activeContext.toLong() == 0L) return
             context = activeContext
             x11.XSync(activeControlDisplay, false)
@@ -189,7 +209,10 @@ internal class LinuxPhysicalKeyCapture : PlatformPhysicalKeyCapture {
                 }
                 val events = pollFds[0].revents.toInt()
                 if (events and (POLLERR or POLLHUP or POLLNVAL) != 0) break
-                if (events and POLLIN != 0) xtst.XRecordProcessReplies(activeEventDisplay)
+                if (events and POLLIN != 0) {
+                    replyWallStartMillis = System.currentTimeMillis()
+                    xtst.XRecordProcessReplies(activeEventDisplay)
+                }
             }
         } catch (_: UnsatisfiedLinkError) {
             available = false
@@ -242,19 +265,41 @@ internal class LinuxPhysicalKeyCapture : PlatformPhysicalKeyCapture {
                 try {
                     val data = XRecordInterceptData(dataPointer)
                     data.read()
+                    val serverTime = data.serverTime.toLong() and X_TIME_MASK
+                    if (data.category == RECORD_START_OF_DATA) {
+                        // StartOfData is the first datum and brackets server time with the local clock
+                        // while ProcessReplies is active, so later events can be timestamped without
+                        // depending on how long the callback was delayed.
+                        val start = replyWallStartMillis
+                        val wallNow = System.currentTimeMillis()
+                        val wallAtAnchor = if (start > 0L) start + (wallNow - start) / 2 else wallNow
+                        clockAnchor = ServerClockAnchor(wallAtAnchor, serverTime)
+                        return
+                    }
+
                     val eventData = data.data ?: return
                     if (data.category != RECORD_FROM_SERVER || data.dataLength.toLong() <= 0L) return
                     if (eventData.getByte(0).toInt() and X_EVENT_TYPE_MASK != X_KEY_PRESS) return
 
                     val xKeyCode = eventData.getByte(1).toInt() and 0xFF
                     if (xKeyCode !in X_MODIFIER_KEYCODES) {
-                        pending.record(linuxPhysicalPositionForX11KeyCode(xKeyCode))
+                        pending.record(
+                            linuxPhysicalPositionForX11KeyCode(xKeyCode),
+                            wallTimeForServerTime(serverTime),
+                        )
                     }
                 } finally {
                     recordApi?.XRecordFreeData(dataPointer)
                 }
             }
         }
+
+    private fun wallTimeForServerTime(serverTime: Long): Long {
+        val anchor = clockAnchor ?: return System.currentTimeMillis()
+        // X Time is 32-bit and wraps; a signed 32-bit delta stays correct across the wrap.
+        val delta = ((serverTime and X_TIME_MASK) - anchor.serverTimeAtAnchor).toInt().toLong()
+        return anchor.wallTimeAtAnchor + delta
+    }
 
     override fun consume(awtEventWhen: Long): CapturedPhysicalKey? = pending.consume(awtEventWhen)
 
@@ -272,7 +317,10 @@ internal class LinuxPhysicalKeyCapture : PlatformPhysicalKeyCapture {
 
     private companion object {
         const val X_RECORD_ALL_CLIENTS = 3L
+        const val X_RECORD_FROM_SERVER_TIME = 0x1
         const val RECORD_FROM_SERVER = 0
+        const val RECORD_START_OF_DATA = 4
+        const val X_TIME_MASK = 0xFFFF_FFFFL
         const val X_KEY_PRESS = 2
         const val X_EVENT_TYPE_MASK = 0x7F
         const val DEVICE_EVENTS_OFFSET = 18L
