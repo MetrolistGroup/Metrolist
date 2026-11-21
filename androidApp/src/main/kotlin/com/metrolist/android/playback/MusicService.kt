@@ -497,6 +497,7 @@ class MusicService :
                 player = player,
                 scope = serviceScope,
                 musicVideoResolver = musicVideoResolver,
+                streamResolver = streamResolver,
                 withPlaybackLoading = { block -> withQueueLoading(isPlaybackLoading = true, block = block) },
                 fetchPlaybackResource = { song, wantVideo -> fetchPlaybackResource(song, wantVideo).resource },
                 onError = ::showPlaybackErrorToast,
@@ -1368,8 +1369,8 @@ class MusicService :
             streamRecoveryBudget = PlaybackRecoveryBudget.starting(SystemClock.elapsedRealtime())
         }
 
-        val hints = song.toAndroidContentHints(wantVideo = Settings.shared.videoViewerVisible)
         var failedResource = player.currentPlaybackResource.value
+        var hints = song.toAndroidContentHints(wantVideo = failedResource?.hasVideo ?: Settings.shared.videoViewerVisible)
         var lastFailure = failure.cause ?: IllegalStateException(failure.message)
         var lastHttpStatusCode = failure.httpStatusCode ?: lastFailure.findMedia3HttpStatusCode()
         var failureCategory =
@@ -1510,6 +1511,7 @@ class MusicService :
             }
 
             failedResource = freshResource
+            hints = song.toAndroidContentHints(wantVideo = freshResource.hasVideo)
             lastFailure = prepareFailure ?: IllegalStateException("Refreshed stream could not be prepared")
             lastHttpStatusCode = lastFailure.findMedia3HttpStatusCode() ?: lastFailure.findPlaybackHttpStatusCode()
             failureCategory =
@@ -1551,25 +1553,31 @@ class MusicService :
                                     excludedProfiles = excluded,
                                 )
                             }
-                        player.prepareAndPlay(
-                            song = song,
-                            resource = fresh,
-                            positionMs = player.getRealtimePositionMs(),
-                            resumePlayback = player.wantsPlayback,
-                            positionMsProvider = player::getRealtimePositionMs,
-                            playWhenReadyProvider = { player.wantsPlayback },
-                            shouldCommit = {
-                                recoveryContext.isActive && player.currentPlaybackInstanceId == failedPlaybackInstanceId &&
-                                    player.latestQueuePlaybackRequestId == queueRequestId && player.currentSong.value?.id == videoId
-                            },
-                            onPrepareFailure = { it?.let { error -> lastFailure = error } },
-                            recoveryPlaybackInstanceId = failedPlaybackInstanceId,
-                            seekSource =
-                                PlaybackSeekSource(
-                                    "recovery",
-                                    mapOf("reason" to failure.stage, "category" to failure.category.name),
-                                ),
-                        )
+                        val committed =
+                            player.prepareAndPlay(
+                                song = song,
+                                resource = fresh,
+                                positionMs = player.getRealtimePositionMs(),
+                                resumePlayback = player.wantsPlayback,
+                                positionMsProvider = player::getRealtimePositionMs,
+                                playWhenReadyProvider = { player.wantsPlayback },
+                                shouldCommit = {
+                                    recoveryContext.isActive && player.currentPlaybackInstanceId == failedPlaybackInstanceId &&
+                                        player.latestQueuePlaybackRequestId == queueRequestId && player.currentSong.value?.id == videoId
+                                },
+                                onPrepareFailure = { error ->
+                                    error?.let { lastFailure = it }
+                                    hints = song.toAndroidContentHints(wantVideo = fresh.hasVideo)
+                                },
+                                recoveryPlaybackInstanceId = failedPlaybackInstanceId,
+                                seekSource =
+                                    PlaybackSeekSource(
+                                        "recovery",
+                                        mapOf("reason" to failure.stage, "category" to failure.category.name),
+                                    ),
+                            )
+                        if (committed) videoMode.onQueuePlaybackStarted(song, fresh.hasVideo, fresh)
+                        committed
                     } catch (cancelled: CancellationException) {
                         throw cancelled
                     } catch (error: Exception) {
