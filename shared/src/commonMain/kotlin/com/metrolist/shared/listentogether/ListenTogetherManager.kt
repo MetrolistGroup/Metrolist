@@ -1216,7 +1216,7 @@ class ListenTogetherManager(
                 return
             }
             if (reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
-                cleanupRoom(clearSession = true)
+                if (sessionReconnectRejected) cleanupRoom(clearSession = true)
                 _connectionState.value = ListenTogetherConnectionState.ERROR
                 emitFailure(ListenTogetherText.CONNECTION_FAILED)
                 return
