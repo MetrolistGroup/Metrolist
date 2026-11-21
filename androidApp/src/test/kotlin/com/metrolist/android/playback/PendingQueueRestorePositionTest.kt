@@ -161,6 +161,17 @@ class PendingQueueRestorePositionTest {
             persistence.assertCleared()
         }
 
+    @Test
+    fun aFirstConfirmedEmptyControllerSnapshotClearsAfterProvisionalEmptyState() =
+        runTest {
+            val persistence = savedPlayback()
+            createDeviceConnectFixture(queuedSnapshot(), persistence::clear).use { fixture ->
+                fixture.subject.port.setControllerPlayback(DcLocalPlaybackState(finite = false), provisional = true)
+                fixture.subject.port.setControllerPlayback(DcLocalPlaybackState(finite = false))
+            }
+            persistence.assertCleared()
+        }
+
     private class SavedPlayback(
         private val writer: PlaybackPersistenceWriter,
         private val stored: AtomicReference<String>,

@@ -65,6 +65,7 @@ internal class AndroidDeviceConnectPlayback(
     }
 
     private var controllerPlayback: DcLocalPlaybackState? = null
+    private var provisionalControllerClearPending = false
     private var appliedSyncSessionId: String? = null
     private var appliedSyncTrackRevision: Long? = null
     val port: DeviceConnectPlaybackPort =
@@ -243,37 +244,46 @@ internal class AndroidDeviceConnectPlayback(
                     if (!playbackReleased && shouldCommit()) snapshot() else null
                 }
 
-            override suspend fun setControllerPlayback(playback: DcLocalPlaybackState?) =
-                withContext(Dispatchers.Main.immediate) {
-                    if (playbackReleased) return@withContext
-                    val clearsQueue = shouldClearPersistedPlaybackForControllerState(controllerPlayback, playback)
-                    if (playback != null && controllerPlayback?.queue != playback.queue) {
-                        transitions.cancelNextTrackPreload()
-                        video.clearVideoMode()
-                        queue.resetQueueSession(
-                            playback.queue.originalItems
-                                .firstOrNull()
-                                ?.id,
-                            playback.title,
-                            playback.finite,
-                        )
-                        queue.setExplicitRadioQueue(playback.explicitRadioQueue)
-                        queue.setTitle(playback.title)
-                        repeatMode.value = playback.repeatMode.toPlayerRepeatMode()
-                        if (player.queueSnapshots.value != playback.queue) player.restoreQueue(playback.queue)
-                        shuffleModeEnabled.value = playback.queue.isShuffled
-                        syncTargetLoaded = false
-                    }
-                    if (playback != null) queue.setExplicitRadioQueue(playback.explicitRadioQueue)
-                    controllerPlayback = playback
-                    player.setControllerPlayback(playback)
-                    if (clearsQueue) onQueueCleared()
-                    if (playback !=
-                        null
-                    ) {
-                        scrobbleManager.setReportingEnabled(false, player.currentSong.value, playback.playing, playback.scrobbleSession)
-                    }
+            override suspend fun setControllerPlayback(
+                playback: DcLocalPlaybackState?,
+                provisional: Boolean,
+            ) = withContext(Dispatchers.Main.immediate) {
+                if (playbackReleased) return@withContext
+                val localQueue = player.queueSnapshot()
+                val confirmedEmpty = !provisional && playback?.queue?.displayedItems?.isEmpty() == true
+                val clearsQueue =
+                    shouldClearPersistedPlaybackForControllerState(controllerPlayback, playback) ||
+                        (provisionalControllerClearPending && confirmedEmpty)
+                provisionalControllerClearPending =
+                    provisional && playback?.queue?.displayedItems?.isEmpty() == true &&
+                    localQueue.displayedItems.isNotEmpty()
+                if (playback != null && controllerPlayback?.queue != playback.queue) {
+                    transitions.cancelNextTrackPreload()
+                    video.clearVideoMode()
+                    queue.resetQueueSession(
+                        playback.queue.originalItems
+                            .firstOrNull()
+                            ?.id,
+                        playback.title,
+                        playback.finite,
+                    )
+                    queue.setExplicitRadioQueue(playback.explicitRadioQueue)
+                    queue.setTitle(playback.title)
+                    repeatMode.value = playback.repeatMode.toPlayerRepeatMode()
+                    if (player.queueSnapshots.value != playback.queue) player.restoreQueue(playback.queue)
+                    shuffleModeEnabled.value = playback.queue.isShuffled
+                    syncTargetLoaded = false
                 }
+                if (playback != null) queue.setExplicitRadioQueue(playback.explicitRadioQueue)
+                controllerPlayback = playback
+                player.setControllerPlayback(playback)
+                if (clearsQueue) onQueueCleared()
+                if (playback !=
+                    null
+                ) {
+                    scrobbleManager.setReportingEnabled(false, player.currentSong.value, playback.playing, playback.scrobbleSession)
+                }
+            }
 
             override suspend fun setPlaying(playing: Boolean) =
                 withContext(Dispatchers.Main.immediate) {

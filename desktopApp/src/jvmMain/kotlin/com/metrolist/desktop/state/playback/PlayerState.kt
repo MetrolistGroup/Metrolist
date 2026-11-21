@@ -578,45 +578,47 @@ object PlayerState {
                 applyDeviceConnectSnapshot(snapshot, positionMs, shouldCommit)
             }
 
-            override suspend fun setControllerPlayback(playback: DcLocalPlaybackState?) =
-                withContext(Dispatchers.Main) {
-                    if (playback != null) {
-                        if (externalReportingEnabled) return@withContext
-                        if (controllerPlayback == null) {
-                            beginPlaybackTransition(allowAutomaticCache = false)
-                            stopVideo()
-                        }
-                        isPlaybackResolving = !playback.ready
-                        if (controllerPlayback?.queue != playback.queue) {
-                            queue.restore(playback.queue)
-                            shuffleEnabled = playback.queue.isShuffled
-                            queueChanged()
-                        }
-                        localRepeatMode = RepeatMode.valueOf(playback.repeatMode.name)
-                        syncSession.applyPlayback(playback)
-                        syncSession.setReady(false)
-                        desiredPlayback.value = playback.playing
-                        val track = playback.queue.displayedItems.getOrNull(playback.queue.currentIndex)
-                        if (controllerPlayback?.queue?.displayedItems?.getOrNull(controllerPlayback?.queue?.currentIndex ?: -1) !=
-                            track
-                        ) {
-                            updateCurrentTrack(track)
-                        }
+            override suspend fun setControllerPlayback(
+                playback: DcLocalPlaybackState?,
+                provisional: Boolean,
+            ) = withContext(Dispatchers.Main) {
+                if (playback != null) {
+                    if (externalReportingEnabled) return@withContext
+                    if (controllerPlayback == null) {
+                        beginPlaybackTransition(allowAutomaticCache = false)
+                        stopVideo()
                     }
-                    if (playback == null && controllerPlayback != null) {
-                        isPlaybackResolving = false
-                        desiredPlayback.value = false
+                    isPlaybackResolving = !playback.ready
+                    if (controllerPlayback?.queue != playback.queue) {
+                        queue.restore(playback.queue)
+                        shuffleEnabled = playback.queue.isShuffled
+                        queueChanged()
                     }
-                    controllerPlayback = playback
-                    remoteVolume = playback?.volume
-                    volumeState.value = volume
-                    player.setControllerPlayback(playback)
-                    if (playback !=
-                        null
+                    localRepeatMode = RepeatMode.valueOf(playback.repeatMode.name)
+                    syncSession.applyPlayback(playback)
+                    syncSession.setReady(false)
+                    desiredPlayback.value = playback.playing
+                    val track = playback.queue.displayedItems.getOrNull(playback.queue.currentIndex)
+                    if (controllerPlayback?.queue?.displayedItems?.getOrNull(controllerPlayback?.queue?.currentIndex ?: -1) !=
+                        track
                     ) {
-                        scrobbleManager.setReportingEnabled(false, player.currentSong.value, playback.playing, playback.scrobbleSession)
+                        updateCurrentTrack(track)
                     }
                 }
+                if (playback == null && controllerPlayback != null) {
+                    isPlaybackResolving = false
+                    desiredPlayback.value = false
+                }
+                controllerPlayback = playback
+                remoteVolume = playback?.volume
+                volumeState.value = volume
+                player.setControllerPlayback(playback)
+                if (playback !=
+                    null
+                ) {
+                    scrobbleManager.setReportingEnabled(false, player.currentSong.value, playback.playing, playback.scrobbleSession)
+                }
+            }
 
             override suspend fun setPlaying(playing: Boolean) =
                 withContext(Dispatchers.Main) {

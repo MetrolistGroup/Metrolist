@@ -2655,6 +2655,7 @@ class MusicService :
             return launchFinalPersistence(playbackPersistenceWriter.request(pendingState))
         }
         pendingPlaybackClear = null
+        lastPersistenceState = state
         return launchFinalPersistence(playbackPersistenceWriter.request(state))
     }
 
