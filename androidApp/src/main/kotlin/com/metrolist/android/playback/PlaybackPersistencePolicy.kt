@@ -36,7 +36,9 @@ internal fun shouldPersistPlaybackState(
     previous: PersistPlayerState?,
     current: PersistPlayerState?,
 ): Boolean {
-    if (previous == null || current == null) return previous != current
+    // An empty live queue is not a clear: it may be a transient state during restoration or teardown.
+    if (current == null) return false
+    if (previous == null) return true
     return (!current.playWhenReady && current.currentPosition != previous.currentPosition) ||
         abs(current.currentPosition - previous.currentPosition) >= 5_000 ||
         current.copy(currentPosition = previous.currentPosition) != previous

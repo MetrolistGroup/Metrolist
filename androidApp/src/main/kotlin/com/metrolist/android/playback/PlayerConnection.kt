@@ -1369,6 +1369,7 @@ class PlayerConnection(
                 expectedQueue = expectedQueue,
             )
         ) {
+            if (after.displayedItems.isEmpty()) musicService?.clearPersistedPlaybackState()
             queueUndo =
                 (
                     queueUndo ?: QueueUndo(
@@ -1389,6 +1390,7 @@ class PlayerConnection(
             return removal
         }
         val localRemoval = player.removeQueueItems(validIndices) ?: return null
+        if (player.queueSnapshot().displayedItems.isEmpty()) musicService?.clearPersistedPlaybackState()
         queueUndo =
             (queueUndo ?: QueueUndo(emptyList(), expectedQueue, expectedQueue, null, null))
                 .append(localRemoval, expectedQueue, player.queueSnapshot(), null, null)
