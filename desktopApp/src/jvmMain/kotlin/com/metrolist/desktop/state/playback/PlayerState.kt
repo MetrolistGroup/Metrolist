@@ -3569,8 +3569,13 @@ object PlayerState {
         fromListenTogether: Boolean = false,
         fromRemoteControl: Boolean = false,
     ) {
+        val currentPos = currentMediaPositionMs()
+        val isLive = isLiveStream
+
+        val previousIndex =
+            queue.state.value.let { desktopPreviousQueueIndex(it.currentIndex, it.entries.lastIndex, repeatMode, isLive) }
         if (!fromListenTogether) {
-            _playbackReplacementGeneration.incrementAndGet()
+            if ((isLive || currentPos <= 3_000L) && previousIndex != null) _playbackReplacementGeneration.incrementAndGet()
             _explicitPlaybackGeneration.incrementAndGet()
         }
         if (!fromListenTogether && deviceConnect.intercept(DcPlaybackCommand(DcPlaybackAction.PREVIOUS))) return
@@ -3587,25 +3592,18 @@ object PlayerState {
                 localSongChangeStartsPlayback()
             }
         cancelCrossfadeForManualAction()
-        val currentPos = currentMediaPositionMs()
-
-        fun previousIndex(isLive: Boolean): Int? =
-            queue.state.value.let { desktopPreviousQueueIndex(it.currentIndex, it.entries.lastIndex, repeatMode, isLive) }
-
-        val isLive = isLiveStream
-        val restartPosition = desktopPreviousRestartPosition(pendingResumePosition, currentPos, isLive, previousIndex(isLive) != null)
+        val restartPosition = desktopPreviousRestartPosition(pendingResumePosition, currentPos, isLive, previousIndex != null)
         val generation = beginPlaybackTransition(resumePosition = restartPosition, preserveCast = true)
         desiredPlayback.value = startPlaying
         playbackTransitionJob =
             scope.launch {
-                val live = isLiveStream
-                val previous = if (live || currentPos <= 3_000L) previousIndex(live)?.let(queue::skipTo) else null
+                val previous = if (isLive || currentPos <= 3_000L) previousIndex?.let(queue::skipTo) else null
                 if (previous != null) {
                     val resource = withContext(Dispatchers.IO) { fetchSelectedPlaybackResource(previous, generation) }
                     if (resource != null && isCurrentPlaybackTransition(generation)) {
                         playQueueTrack(previous, resource, generation, startPlaying)
                     }
-                } else if (!live) {
+                } else if (!isLive) {
                     seekToPositionInternal(0)
                 }
             }
