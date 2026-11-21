@@ -131,6 +131,7 @@ import com.metrolist.shared.ui.selection.rememberSelectionState
 import com.metrolist.shared.utils.XdgUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.jetbrains.compose.resources.getString
@@ -385,6 +386,27 @@ fun PlaylistScreen(
             }
     }
     val navigator = LocalNavigator.current
+    val playbackScope = rememberCoroutineScope()
+    val latestPlaylistPlayback = remember(route) { mutableStateOf<Any?>(null) }
+
+    fun withCompletePlaylistPlayback(action: (List<SongItem>) -> Unit) {
+        if (!playbackScope.isActive || navigator.state.currentRoute != route) return
+        val request = Any()
+        latestPlaylistPlayback.value = request
+        val generation = PlayerState.explicitPlaybackGeneration
+        val navigationChange = navigator.state.containers.change
+        PlaylistAlbumState.withCompletePlaylist { all ->
+            if (
+                playbackScope.isActive &&
+                navigator.state.currentRoute == route &&
+                navigator.state.containers.change === navigationChange &&
+                latestPlaylistPlayback.value === request &&
+                PlayerState.explicitPlaybackGeneration == generation
+            ) {
+                action(all)
+            }
+        }
+    }
 
     Box(
         Modifier
@@ -443,7 +465,7 @@ fun PlaylistScreen(
             onEdit = null,
             text = playlistContentText(),
             onPlayAll = {
-                PlaylistAlbumState.withCompletePlaylist { all ->
+                withCompletePlaylistPlayback { all ->
                     val queue =
                         all
                             .sortedForPlaylist(
@@ -455,7 +477,7 @@ fun PlaylistScreen(
                 }
             },
             onShuffle = {
-                PlaylistAlbumState.withCompletePlaylist { all ->
+                withCompletePlaylistPlayback { all ->
                     PlayerState.shuffleQueue(
                         all
                             .sortedForPlaylist(
@@ -478,7 +500,7 @@ fun PlaylistScreen(
                 } else if (selection.active) {
                     selection.toggle(occurrenceKey(song))
                 } else {
-                    PlaylistAlbumState.withCompletePlaylist { all ->
+                    withCompletePlaylistPlayback { all ->
                         PlayerState.playTrack(
                             song,
                             if (reorderMode) all else all.sortedForPlaylist(sortMode, sortDirection, listeningTimes = listeningTimes),
