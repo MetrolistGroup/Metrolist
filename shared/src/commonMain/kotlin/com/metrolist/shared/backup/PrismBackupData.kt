@@ -53,10 +53,7 @@ internal fun ForeignLibrary.withPrismBackupData(readEntry: (String) -> String?):
     val artists = artists.toMutableList()
     val albums = albums.toMutableList()
 
-    val parsedEntries = mutableMapOf<String, JsonObject>()
-
-    fun read(entry: String): JsonObject? =
-        parsedEntries[entry] ?: readEntry(entry)?.let { Json.parseToJsonElement(it).jsonObject.also { parsedEntries[entry] = it } }
+    fun read(entry: String): JsonObject? = readEntry(entry)?.let { Json.parseToJsonElement(it).jsonObject }
 
     fun members(collection: JsonObject): List<String> =
         collection.objects("songs").map { item ->
@@ -100,22 +97,26 @@ internal fun ForeignLibrary.withPrismBackupData(readEntry: (String) -> String?):
         library.objects("albums").forEach { album -> albums += album.bookmark("title", album.long("savedAt") ?: now) }
     }
     read(PRISM_REMOTE_LIBRARY)?.let { library ->
-        library.objects("playlists").filter { it.text("kind") == "playlist" && !it.boolean("isMix") }.forEach { item ->
-            val sourceId = item.getValue("id").jsonPrimitive.content
-            val id = sourceId.removePrefix("VL")
-            if (id.isBlank() || id in setOf("LM", "SE")) return@forEach
-            val pageName = sourceId.replace(Regex("[^A-Za-z0-9_-]"), "_")
-            val page = read("files/offline/pages/$pageName.json")?.takeIf { !it.boolean("album") }
-            playlists +=
-                ForeignPlaylist(
-                    name = item.getValue("title").jsonPrimitive.content,
-                    browseId = id,
-                    songIds = page?.let(::members).orEmpty(),
-                    isEditable = page?.boolean("owned") == true,
-                    description = page?.text("description"),
-                    thumbnailUrl = item.text("thumbnail"),
-                )
-        }
+        library
+            .objects("playlists")
+            .filter { it.text("kind") == "playlist" && !it.boolean("isMix") }
+            .distinctBy { it.getValue("id").jsonPrimitive.content }
+            .forEach { item ->
+                val sourceId = item.getValue("id").jsonPrimitive.content
+                val id = sourceId.removePrefix("VL")
+                if (id.isBlank() || id in setOf("LM", "SE")) return@forEach
+                val pageName = sourceId.replace(Regex("[^A-Za-z0-9_-]"), "_")
+                val page = read("files/offline/pages/$pageName.json")?.takeIf { !it.boolean("album") }
+                playlists +=
+                    ForeignPlaylist(
+                        name = item.getValue("title").jsonPrimitive.content,
+                        browseId = id,
+                        songIds = page?.let(::members).orEmpty(),
+                        isEditable = page?.boolean("owned") == true,
+                        description = page?.text("description"),
+                        thumbnailUrl = item.text("thumbnail"),
+                    )
+            }
         library.objects("artists").filter { it.text("kind") == "artist" }.forEach { artists += it.bookmark("title", now) }
         library.objects("albums").filter { it.text("kind") == "album" }.forEach { albums += it.bookmark("title", now) }
     }

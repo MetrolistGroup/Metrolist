@@ -200,7 +200,6 @@ class IosBackupRestoreManager(
                         val limit = minOf(entryLimit, BackupArchiveLimits.TOTAL_UNCOMPRESSED_BYTES - total)
                         requireBackupSize(entry.size, limit)
                         val target = if (shouldStage) "$stagingPath/$name" else null
-                        if (target != null) check(!fs.exists(target.toPath())) { "Backup contains duplicate file names" }
                         val copied =
                             archive.getInputStream(entry).use { input ->
                                 if (target ==
@@ -208,12 +207,27 @@ class IosBackupRestoreManager(
                                 ) {
                                     input.copyTo(DiscardOutputStream, limit)
                                 } else {
-                                    IosFileOutputStream(target).use { output -> input.copyTo(output, limit) }
+                                    val prefix = ByteArray(SQLITE_HEADER.size)
+                                    var prefixSize = 0
+                                    while (prefixSize < prefix.size) {
+                                        val count = input.read(prefix, prefixSize, prefix.size - prefixSize)
+                                        if (count <= 0) break
+                                        prefixSize += count
+                                    }
+                                    if (isSidecar || (prefixSize == prefix.size && prefix.contentEquals(SQLITE_HEADER))) {
+                                        check(!fs.exists(target.toPath())) { "Backup contains duplicate file names" }
+                                        IosFileOutputStream(target).use { output ->
+                                            output.write(prefix, 0, prefixSize)
+                                            prefixSize + input.copyTo(output, limit - prefixSize)
+                                        }
+                                    } else {
+                                        prefixSize + input.copyTo(DiscardOutputStream, limit - prefixSize)
+                                    }
                                 }
                             }
                         total += copied
                         requireBackupSize(total, BackupArchiveLimits.TOTAL_UNCOMPRESSED_BYTES)
-                        if (target != null && !isSidecar && hasSqliteHeader(target)) {
+                        if (target != null && fs.exists(target.toPath()) && !isSidecar && hasSqliteHeader(target)) {
                             databases += target
                         } else if (target != null && !isSidecar) {
                             fs.delete(target.toPath(), mustExist = false)
