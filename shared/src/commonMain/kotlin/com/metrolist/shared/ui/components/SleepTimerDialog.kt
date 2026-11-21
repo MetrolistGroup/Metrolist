@@ -282,6 +282,7 @@ fun SleepTimerDialog(
                         }
                         Surface(
                             onClick = {
+                                resetSignal++
                                 durationMs?.let {
                                     Settings.shared.sleepTimerDefaults =
                                         SleepTimerDefaults((it / 60_000L).toInt(), finishCurrentSong, fadeOut)
@@ -461,6 +462,9 @@ private fun DurationField(
                         },
                         onVerticalDrag = { change, dragAmount ->
                             change.consume()
+                            if (lastDragMark == null) {
+                                velocityTracker.addPosition(change.previousUptimeMillis, change.previousPosition)
+                            }
                             velocityTracker.addPointerInputChange(change)
                             lastDragMark = TimeSource.Monotonic.markNow()
                             accumulatedDrag += dragAmount
