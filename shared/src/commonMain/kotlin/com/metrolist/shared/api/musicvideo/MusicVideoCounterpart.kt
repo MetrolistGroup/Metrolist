@@ -21,6 +21,14 @@ data class CounterpartSegment(
 data class CounterpartPositionMap(
     val segments: List<CounterpartSegment>,
 ) {
+    fun containsSourcePosition(positionMs: Long): Boolean {
+        val position = positionMs.coerceAtLeast(0L)
+        return segments.any { segment ->
+            val offset = position - segment.sourceStartMs
+            offset >= 0 && offset < segment.durationMs
+        }
+    }
+
     fun mappedPosition(positionMs: Long): Long? {
         val position = positionMs.coerceAtLeast(0L)
         for (segment in segments) {

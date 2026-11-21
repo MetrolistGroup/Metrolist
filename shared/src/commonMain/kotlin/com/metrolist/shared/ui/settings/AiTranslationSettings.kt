@@ -269,13 +269,15 @@ internal fun AiModelPicker(
 
                     is ModelsState.Loaded -> {
                         val shown =
-                            current.models.filter { !freeOnly || (it.free && it.id.endsWith(":free")) }.filter {
-                                typed.isEmpty() ||
-                                    it.id.contains(
-                                        typed,
-                                        true,
-                                    ) || it.name.contains(typed, true)
-                            }
+                            current.models
+                                .filter { model -> !freeOnly || preset.allowsFreeModel(model) }
+                                .filter {
+                                    typed.isEmpty() ||
+                                        it.id.contains(
+                                            typed,
+                                            true,
+                                        ) || it.name.contains(typed, true)
+                                }
                         if (shown.isEmpty() && typed.isNotEmpty()) {
                             item(key = "empty") {
                                 Text(

@@ -122,6 +122,74 @@ class CastProtocolTest {
     }
 
     @Test
+    fun rejectedUpstreamRangeLogsStatusAndRangesWithoutTheMediaUrl() {
+        PlaybackEventLog.clear()
+        val address = InetAddress.getLoopbackAddress()
+        val upstreamRequests = mutableListOf<Request>()
+        val upstream =
+            OkHttpClient
+                .Builder()
+                .addInterceptor { chain ->
+                    upstreamRequests += chain.request()
+                    Response
+                        .Builder()
+                        .request(chain.request())
+                        .protocol(Protocol.HTTP_1_1)
+                        .code(416)
+                        .message("Range Not Satisfiable")
+                        .header("Content-Range", "bytes */10")
+                        .body("".toResponseBody())
+                        .build()
+                }.build()
+        val media =
+            CastMedia(
+                SongItem("id", "Title", null, emptyList(), null),
+                null,
+                PlaybackResource(
+                    "id",
+                    "https://r1.googlevideo.com/videoplayback?sig=secret",
+                    emptyMap(),
+                    null,
+                    null,
+                    contentLengthBytes = 10L,
+                    mimeType = "audio/mp4",
+                ),
+                0L,
+            )
+        val proxy = CastProxyServer(address, address, media)
+        CastProxyServer::class.java
+            .getDeclaredField("client")
+            .apply { isAccessible = true }
+            .set(proxy, upstream)
+
+        try {
+            val path = URI(proxy.mediaUrl()).rawPath
+            Socket(address, proxy.port).use { receiver ->
+                receiver.soTimeout = 5_000
+                receiver.getOutputStream().write(
+                    "GET $path HTTP/1.1\r\nHost: localhost\r\nRange: bytes=3-7\r\n\r\n".toByteArray(),
+                )
+                assertTrue(
+                    receiver
+                        .getInputStream()
+                        .bufferedReader()
+                        .readText()
+                        .startsWith("HTTP/1.1 502"),
+                )
+            }
+
+            val event = PlaybackEventLog.events.value.last()
+            assertEquals("416", event.details["upstreamHttpStatus"])
+            assertEquals("bytes=3-7", event.details["requestedRange"])
+            assertEquals("bytes */10", event.details["upstreamContentRange"])
+            assertEquals("bytes=3-7", upstreamRequests.single().header("Range"))
+            assertFalse(PlaybackEventLog.exportText().contains("sig=secret"))
+        } finally {
+            proxy.close()
+        }
+    }
+
+    @Test
     fun proxyRecoversAllWorkersFromReceiversThatStopReading() {
         val address = InetAddress.getLoopbackAddress()
         val bytes = ByteArray(16 * 1024 * 1024)

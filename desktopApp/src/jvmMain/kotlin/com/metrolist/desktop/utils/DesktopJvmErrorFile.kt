@@ -15,8 +15,8 @@ internal fun configureDesktopJvmErrorFile() {
         if (configured?.substringAfter('=')?.let { File(it).path } == pattern) return
 
         ProcessBuilder(desktopRestartCommand())
-            .prepareDesktopRelaunch()
             .withJvmErrorFile(directory)
+            .prepareDesktopRelaunch()
             .inheritIO()
             .start()
         exitProcess(0)

@@ -10,6 +10,7 @@ import com.metrolist.shared.model.SongItem
 import com.metrolist.shared.settings.BlockedContent
 import com.metrolist.shared.settings.Settings
 import com.metrolist.shared.state.AlbumLikeState
+import com.metrolist.shared.state.AlbumLikeToggleAlreadyInProgressException
 import com.metrolist.shared.state.GlobalYouTubeRepository
 import com.metrolist.shared.viewmodels.AlbumViewModel
 import kotlinx.coroutines.CancellationException
@@ -95,7 +96,7 @@ class AlbumViewModel(
                         }
                     }
                 }.onFailure {
-                    _favoriteFailed.value = true
+                    if (it !is AlbumLikeToggleAlreadyInProgressException) _favoriteFailed.value = true
                 }
         }
     }
