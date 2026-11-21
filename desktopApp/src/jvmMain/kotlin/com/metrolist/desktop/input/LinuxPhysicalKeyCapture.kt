@@ -570,7 +570,7 @@ private interface XRecordInterceptProc : Callback {
 }
 
 @Structure.FieldOrder("idBase", "serverTime", "clientSequence", "category", "clientSwapped", "data", "dataLength")
-private class XRecordInterceptData(
+internal class XRecordInterceptData(
     pointer: Pointer,
 ) : Structure(pointer) {
     @JvmField var idBase: NativeLong = NativeLong(0)

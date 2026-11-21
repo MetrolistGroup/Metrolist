@@ -144,6 +144,8 @@ internal class WindowsPhysicalKeyCapture : PlatformPhysicalKeyCapture {
                 0x11,
                 0x12,
                 0x14,
+                // Windows reports the Japanese Kana Lock key as VK_KANA (0x15), which AWT maps to VK_KANA_LOCK.
+                0x15,
                 0x5B,
                 0x5C,
                 0xA0,
