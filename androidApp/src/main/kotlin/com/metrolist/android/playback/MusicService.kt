@@ -1564,7 +1564,10 @@ class MusicService :
                                 recoveryContext.isActive && player.currentPlaybackInstanceId == failedPlaybackInstanceId &&
                                     player.latestQueuePlaybackRequestId == queueRequestId && player.currentSong.value?.id == videoId
                             },
-                            onPrepareFailure = { it?.let { error -> lastFailure = error } },
+                            onPrepareFailure = { error ->
+                                error?.let { lastFailure = it }
+                                hints = song.toAndroidContentHints(wantVideo = fresh.hasVideo)
+                            },
                             recoveryPlaybackInstanceId = failedPlaybackInstanceId,
                             seekSource =
                                 PlaybackSeekSource(
