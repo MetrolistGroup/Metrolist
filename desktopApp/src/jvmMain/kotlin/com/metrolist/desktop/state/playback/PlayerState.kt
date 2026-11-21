@@ -515,7 +515,14 @@ object PlayerState {
     private val playbackStatePersistence = PlaybackStatePersistence()
     private val playbackStateWrites =
         PlaybackStateWriteQueue(scope, persist = { write ->
-            playbackStatePersistence.persist(write.snapshot, write.positionMs, write.repeatMode, write.force)
+            playbackStatePersistence.persist(
+                snapshot = write.snapshot,
+                positionMs = write.positionMs,
+                repeatMode = write.repeatMode,
+                finite = syncSession.finite,
+                recommendationsLocked = syncSession.recommendationsLocked,
+                force = write.force,
+            )
         })
     private val podcastProgress =
         PodcastPlaybackProgress(
@@ -2222,6 +2229,8 @@ object PlayerState {
                 queue.snapshots.value,
                 persistedPlaybackPositionMs(),
                 repeatMode,
+                finite = syncSession.finite,
+                recommendationsLocked = syncSession.recommendationsLocked,
             ),
         )
     }
@@ -2259,6 +2268,7 @@ object PlayerState {
         queue.restore(restoreQueue)
         shuffleEnabled = restoreQueue.isShuffled
         localRepeatMode = state.repeatMode
+        syncSession.setPersistedQueueFlags(state.finite, state.recommendationsLocked)
         radio.syncQueue()
         updateCurrentTrack(queue.currentItem(), startArtworkFetch = true)
 

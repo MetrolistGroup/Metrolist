@@ -252,6 +252,7 @@ internal class AndroidDeviceConnectPlayback(
                         syncTargetLoaded = false
                     }
                     if (playback != null) queue.setExplicitRadioQueue(playback.explicitRadioQueue)
+                    queue.applyRemoteRecommendationLock(playback?.recommendationsLocked == true)
                     controllerPlayback = playback
                     player.setControllerPlayback(playback)
                     if (playback !=

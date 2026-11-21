@@ -12,4 +12,6 @@ data class PersistedPlaybackState(
     val positionMs: Long = 0L,
     val repeatMode: RepeatMode = RepeatMode.OFF,
     val revision: String? = null,
+    val finite: Boolean = false,
+    val recommendationsLocked: Boolean = false,
 )

@@ -53,6 +53,8 @@ internal data class PlaybackStateWrite(
     val snapshot: MusicQueueSnapshot,
     val positionMs: Long,
     val repeatMode: RepeatMode,
+    val finite: Boolean = false,
+    val recommendationsLocked: Boolean = false,
     val force: Boolean = false,
 )
 
@@ -152,6 +154,8 @@ internal class PlaybackStatePersistence(
         snapshot: MusicQueueSnapshot,
         positionMs: Long,
         repeatMode: RepeatMode,
+        finite: Boolean = false,
+        recommendationsLocked: Boolean = false,
         force: Boolean = false,
     ) {
         if (!store.persistentQueue) {
@@ -164,7 +168,15 @@ internal class PlaybackStatePersistence(
         }
         var state = lastState
         if (state == null || !state.queue.hasSameStructure(snapshot)) {
-            state = PersistedPlaybackState(snapshot, positionMs, repeatMode, UUID.randomUUID().toString())
+            state =
+                PersistedPlaybackState(
+                    snapshot,
+                    positionMs,
+                    repeatMode,
+                    UUID.randomUUID().toString(),
+                    finite,
+                    recommendationsLocked,
+                )
             store.persistentPlaybackState = json.encodeToString(PersistedPlaybackState.serializer(), state)
             lastState = state
         }

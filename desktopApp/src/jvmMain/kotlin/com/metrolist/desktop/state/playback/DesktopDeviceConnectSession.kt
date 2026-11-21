@@ -134,6 +134,14 @@ internal class DesktopDeviceConnectSession(
         audioOutputEnabled = value
     }
 
+    fun setPersistedQueueFlags(
+        finite: Boolean,
+        recommendationsLocked: Boolean,
+    ) {
+        this.finite = finite
+        this.recommendationsLocked = recommendationsLocked
+    }
+
     fun remove(
         indices: Set<Int>,
         expectedQueue: MusicQueueSnapshot,

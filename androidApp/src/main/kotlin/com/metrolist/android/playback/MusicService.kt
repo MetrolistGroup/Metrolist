@@ -319,6 +319,7 @@ class MusicService :
                         preserveHistory = shuffleModeEnabled != true,
                         recommendationsLocked = intent.selectedSongOnly,
                         repeatMode = intent.remoteRepeatMode,
+                        explicitRadioQueue = radioSeed != null,
                     ),
                 )
             ) {
@@ -348,7 +349,10 @@ class MusicService :
                                         transitionPending = player.playbackTransitionPending,
                                         latestRequestId = { player.latestQueuePlaybackRequestId },
                                         isCurrentSession = { queueCoordinator.queueSessionId == sessionId },
-                                        playMix = { playMix(it, true) },
+                                        playMix = {
+                                            _repeatMode.value = Player.REPEAT_MODE_OFF
+                                            playMix(it, true)
+                                        },
                                     )
                                 }
                         }
