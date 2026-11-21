@@ -77,6 +77,8 @@ import com.metrolist.shared.generated.resources.lyrics_share_color
 import com.metrolist.shared.generated.resources.lyrics_share_content_scale
 import com.metrolist.shared.generated.resources.lyrics_share_failed
 import com.metrolist.shared.generated.resources.lyrics_share_scroll_options
+import com.metrolist.shared.generated.resources.lyrics_share_square_image
+import com.metrolist.shared.generated.resources.lyrics_share_story_image
 import com.metrolist.shared.generated.resources.lyrics_share_story_style
 import com.metrolist.shared.generated.resources.lyrics_share_text
 import com.metrolist.shared.generated.resources.lyrics_share_text_size
@@ -84,6 +86,7 @@ import com.metrolist.shared.generated.resources.player_background_style
 import com.metrolist.shared.generated.resources.preview
 import com.metrolist.shared.generated.resources.secondary_text_color
 import com.metrolist.shared.generated.resources.settings_solid
+import com.metrolist.shared.generated.resources.share
 import com.metrolist.shared.generated.resources.share_as_text
 import com.metrolist.shared.generated.resources.text_color
 import com.metrolist.shared.settings.Settings
@@ -121,6 +124,7 @@ fun LyricsShareDialog(
     onShareText: (String) -> Unit,
     onDismiss: () -> Unit,
 ) {
+    var useStoryLayout by remember(songId) { mutableStateOf(storyMode) }
     var busy by remember { mutableStateOf(false) }
     var failed by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
@@ -137,7 +141,7 @@ fun LyricsShareDialog(
                         else -> TextAlign.Center
                     },
             ).let { style ->
-                if (storyMode && Settings.shared.lyricsShareImageStyle.isBlank()) {
+                if (useStoryLayout && Settings.shared.lyricsShareImageStyle.isBlank()) {
                     style.copy(background = if (artworkUrl == null) LyricsImageBackground.SOLID else LyricsImageBackground.BLUR)
                 } else {
                     style
@@ -191,7 +195,14 @@ fun LyricsShareDialog(
     val storyCardColor = MaterialTheme.colorScheme.surfaceContainerHigh
     val storyTextColor = MaterialTheme.colorScheme.onSurface
     val storySecondaryColor = MaterialTheme.colorScheme.onSurfaceVariant
-    var bitmap by remember(text, style, artwork, storyMode, storyBackgroundColor, storyCardColor) { mutableStateOf<ImageBitmap?>(null) }
+    var bitmap by remember(
+        text,
+        style,
+        artwork,
+        useStoryLayout,
+        storyBackgroundColor,
+        storyCardColor,
+    ) { mutableStateOf<ImageBitmap?>(null) }
     LaunchedEffect(
         text,
         title,
@@ -203,7 +214,7 @@ fun LyricsShareDialog(
         palette,
         loadingArtwork,
         direction,
-        storyMode,
+        useStoryLayout,
         storyBackgroundColor,
         storyCardColor,
         storyTextColor,
@@ -230,7 +241,7 @@ fun LyricsShareDialog(
                                 logo,
                                 direction,
                                 sizePx = 540,
-                                story = storyMode,
+                                story = useStoryLayout,
                                 storyBackgroundColor = storyBackgroundColor,
                                 storyCardColor = storyCardColor,
                                 storyTextColor = storyTextColor,
@@ -260,11 +271,11 @@ fun LyricsShareDialog(
                     .heightIn(max = 880.dp)
                     .fillMaxHeight(0.9f),
             shape = RoundedCornerShape(24.dp),
-            color = if (storyMode) MaterialTheme.colorScheme.surfaceContainerHigh else MaterialTheme.colorScheme.surface,
+            color = if (useStoryLayout) MaterialTheme.colorScheme.surfaceContainerHigh else MaterialTheme.colorScheme.surface,
         ) {
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(
-                    stringResource(if (storyMode) Res.string.lyrics_share_story_style else Res.string.customize_colors),
+                    stringResource(if (useStoryLayout) Res.string.lyrics_share_story_style else Res.string.customize_colors),
                     style = MaterialTheme.typography.headlineSmall,
                 )
                 Text(stringResource(Res.string.lyrics_share_scroll_options), style = MaterialTheme.typography.bodySmall)
@@ -274,10 +285,28 @@ fun LyricsShareDialog(
                         verticalArrangement = Arrangement.spacedBy(12.dp),
                         modifier = Modifier.fillMaxSize().padding(end = 16.dp),
                     ) {
+                        if (storyMode) {
+                            item {
+                                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    ExpressiveFilterChip(
+                                        selected = !useStoryLayout,
+                                        enabled = !busy,
+                                        onClick = { useStoryLayout = false },
+                                        label = { Text(stringResource(Res.string.lyrics_share_square_image)) },
+                                    )
+                                    ExpressiveFilterChip(
+                                        selected = useStoryLayout,
+                                        enabled = !busy,
+                                        onClick = { useStoryLayout = true },
+                                        label = { Text(stringResource(Res.string.lyrics_share_story_image)) },
+                                    )
+                                }
+                            }
+                        }
                         item {
                             Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
                                 Box(
-                                    Modifier.widthIn(max = 420.dp).fillMaxWidth().aspectRatio(if (storyMode) 9f / 16f else 1f),
+                                    Modifier.widthIn(max = 420.dp).fillMaxWidth().aspectRatio(if (useStoryLayout) 9f / 16f else 1f),
                                     contentAlignment = Alignment.Center,
                                 ) {
                                     bitmap?.let { Image(it, stringResource(Res.string.preview), Modifier.fillMaxWidth()) }
@@ -313,7 +342,7 @@ fun LyricsShareDialog(
                                 Text(stringResource(Res.string.lyrics_share_auto_fit))
                             }
                         }
-                        if (!storyMode) {
+                        if (!useStoryLayout) {
                             item {
                                 Text(stringResource(Res.string.player_background_style))
                                 val scrollState = rememberScrollState()
@@ -343,7 +372,7 @@ fun LyricsShareDialog(
                                 }
                             }
                         }
-                        if (!storyMode) {
+                        if (!useStoryLayout) {
                             item {
                                 LyricsColorSwatches(
                                     stringResource(Res.string.background_color),
@@ -362,7 +391,7 @@ fun LyricsShareDialog(
                                 ) { style = style.copy(backgroundColor = it) }
                             }
                         }
-                        if (!storyMode) {
+                        if (!useStoryLayout) {
                             item {
                                 LyricsColorSwatches(
                                     stringResource(Res.string.text_color),
@@ -372,7 +401,7 @@ fun LyricsShareDialog(
                                 ) { style = style.copy(textColor = it) }
                             }
                         }
-                        if (!storyMode) {
+                        if (!useStoryLayout) {
                             item {
                                 LyricsColorSwatches(
                                     stringResource(Res.string.secondary_text_color),
@@ -430,7 +459,7 @@ fun LyricsShareDialog(
                                                     measurer,
                                                     logo,
                                                     direction,
-                                                    story = storyMode,
+                                                    story = useStoryLayout,
                                                     storyBackgroundColor = storyBackgroundColor,
                                                     storyCardColor = storyCardColor,
                                                     storyTextColor = storyTextColor,
@@ -450,7 +479,7 @@ fun LyricsShareDialog(
                             }
                         },
                         shapes = ButtonDefaults.shapes(),
-                    ) { Text(exportLabel) }
+                    ) { Text(if (storyMode && !useStoryLayout) stringResource(Res.string.share) else exportLabel) }
                 }
             }
         }

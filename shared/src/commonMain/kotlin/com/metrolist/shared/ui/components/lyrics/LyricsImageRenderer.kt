@@ -255,7 +255,9 @@ internal fun renderLyricsImage(
                     )
                 var resolvedFontSize = fontSize
                 var textLayout = measure(resolvedFontSize)
-                while (shrinkToFit && textLayout.didOverflowWidth && resolvedFontSize > 4f) {
+                while (shrinkToFit && (textLayout.didOverflowWidth || (textLayout.lineCount > 0 && textLayout.isLineEllipsized(0))) &&
+                    resolvedFontSize > 4f
+                ) {
                     resolvedFontSize = (resolvedFontSize - 0.25f).coerceAtLeast(4f)
                     textLayout = measure(resolvedFontSize)
                 }

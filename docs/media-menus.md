@@ -85,3 +85,5 @@ For desktop placement, check right-click and button menus after scrolling, with 
 For collection headers and selection, check Liked Music, an empty playlist, a remote playlist, an editable playlist, an album, Downloads, Cache, History and Queue at phone, medium and two-pane widths, with long translations, large fonts, RTL and animations disabled.
 
 Android and iOS share selected lyrics as a 9:16 PNG story card with artwork and track metadata. The image footer includes a YouTube Music link only for remote tracks. Local tracks omit the link. Desktop keeps its square exporter. Verify both mobile share sheets, local songs and five selected lines.
+
+Mobile lyric sharing offers both a story image and the square exporter. The square format retains its background and color controls.
