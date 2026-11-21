@@ -358,8 +358,12 @@ private fun WindowsAccountContent(
         if (accounts.isNotEmpty()) Text(stringResource(Res.string.account_picker_subtitle))
         if (busy) ContainedLoadingIndicator()
         if (failed) {
-            Text(stringResource(Res.string.channel_switch_unavailable), color = MaterialTheme.colorScheme.error)
-            Text(stringResource(Res.string.channel_switch_recovery_hint))
+            if (isSwitchingChannel) {
+                Text(stringResource(Res.string.channel_switch_unavailable), color = MaterialTheme.colorScheme.error)
+                Text(stringResource(Res.string.channel_switch_recovery_hint))
+            } else {
+                Text(stringResource(Res.string.authentication_data_extraction_failed), color = MaterialTheme.colorScheme.error)
+            }
         }
         Column(Modifier.fillMaxWidth().weight(1f).verticalScrollWithDrag(rememberScrollState())) {
             AccountPickerList(
@@ -369,7 +373,8 @@ private fun WindowsAccountContent(
             )
         }
         val canCompleteWithExistingCredentials =
-            accounts.isEmpty() && authData.cookie.isNotBlank() && authData.dataSyncId.isNotBlank() &&
+            accounts.none { it.isSelectableForLogin(authData.dataSyncId) } &&
+                authData.cookie.isNotBlank() && authData.dataSyncId.isNotBlank() &&
                 (!isSwitchingChannel || helperCompletedFromPicker)
         FlowRow(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
