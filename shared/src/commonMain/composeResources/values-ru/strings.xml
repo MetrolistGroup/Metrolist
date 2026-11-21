@@ -168,7 +168,7 @@
     <string name="action_login">Войти</string>
     <string name="action_not_now">Не сейчас</string>
     <string name="youtube_session_expired_title">Возможно, вы вышли из системы</string>
-    <string name="youtube_session_expired_message">Войдите снова, чтобы восстановить функции аккаунта YouTube. Вы можете продолжать использовать скачанный и кэшированный контент офлайн.</string>
+    <string name="youtube_session_expired_message">Войдите снова, чтобы восстановить функции аккаунта YouTube. Вы по-прежнему можете использовать скачанный и кэшированный контент офлайн.</string>
     <string name="audio_quality">Качество аудио</string>
     <string name="audio_quality_auto">Авто</string>
     <string name="audio_quality_high">Высокое</string>
@@ -225,8 +225,8 @@
     <string name="enable_animated_covers">Анимированные обложки</string>
     <string name="enable_animated_covers_desc">Показывать анимированные обложки из Spotify и Apple Music, если они доступны. Использует больше памяти устройства и мобильного трафика.</string>
     <string name="pause_listen_history">Приостановить историю прослушивания</string>
-    <string name="queue_youtube_history_when_offline">Добавлять историю YouTube в очередь в офлайн-режиме</string>
-    <string name="queue_youtube_history_when_offline_desc">Сохраняет отчеты о прослушивании на этом устройстве. Пробует снова при переподключении, пока приложение работает. Не записывает приостановленную историю.</string>
+    <string name="queue_youtube_history_when_offline">Ставить историю YouTube в очередь на отправку в офлайн-режиме</string>
+    <string name="queue_youtube_history_when_offline_desc">Сохраняет отчёты о прослушивании на этом устройстве и повторяет попытку отправки после восстановления подключения, пока приложение запущено. Не записывает прослушивания, пока запись истории приостановлена.</string>
     <string name="search_history">История поиска</string>
     <string name="pause_search_history">Приостановить историю поиска</string>
     <string name="clear_search_history">Очистить историю поиска</string>
@@ -548,7 +548,7 @@
     <string name="minimum_song_duration">Мин. длительность песни</string>
     <string name="minimum_song_duration_desc">Скрывает песни короче %1$d секунд</string>
     <string name="block_ai_slop_artists">Заблокировать известных AI-сгенерированных исполнителей</string>
-    <string name="block_ai_slop_artists_desc">Скрывает каналы, указанные в списке Override92/AiSList. Список распространяется под лицензией CC BY-NC 4.0, обновляется ежедневно и остаётся доступен офлайн.</string>
+    <string name="block_ai_slop_artists_desc">Скрывает каналы из списка Override92/AiSList. Он распространяется под лицензией CC BY-NC 4.0, обновляется ежедневно и остаётся доступен офлайн.</string>
     <string name="listen_together_entry_subtitle">Слушайте музыку с друзьями в реальном времени.</string>
     <string name="listen_together_create_room_title">Создать комнату</string>
     <string name="listen_together_username_required">Имя пользователя обязательно</string>
@@ -1110,7 +1110,7 @@
     <string name="remember_shuffle_and_repeat_desc">Запоминать режим перемешивания и повтора при перезапуске приложения</string>
     <string name="export_playlist">Экспортировать плейлист</string>
     <string name="export_failed">Не удалось экспортировать плейлист</string>
-    <string name="auto_download_on_like">Автоскачивание при лайке</string>
+    <string name="auto_download_on_like">Автоскачивание при отметке "Нравится"</string>
     <string name="clear_song_cache_dialog">Очистить все кэшированные песни?</string>
     <string name="clear_image_cache_dialog">Очистить все кэшированные фото?</string>
     <string name="clear_music_video_cache_dialog" tools:ignore="MissingTranslation">Очистить все кэшированные разрешения музыкальных видео?</string>
@@ -2128,7 +2128,7 @@
     </plurals>
     <string name="download_paused">Остановлено</string>
     <string name="downloads_empty">В процессе загрузок нет</string>
-    <string name="downloads_empty_hint">Песни, которые вы сохраняете для офлайн-прослушивания, будут появляться здесь во время скачивания.</string>
+    <string name="downloads_empty_hint">Треки, которые вы сохраняете для офлайн-прослушивания, будут появляться здесь во время скачивания.</string>
     <string name="remove_all_downloads">Удалить все скачивания</string>
     <string name="lyrics_song_artist">Исполнитель песни</string>
     <string name="lyrics_capability_line_syllable">Построчно и по слогам</string>
@@ -2264,7 +2264,7 @@
     <string name="skip_silence_instant_desc">После 2 секунд тишины перейти вперёд на срок до 15 секунд. Может пропустить участки с тихим звуком.</string>
     <string name="token_login_sensitive_warning_generic">НИКОМУ не передавайте этот токен.</string>
     <string name="legacy_shuffle">Классический режим перемешивания треков</string>
-    <string name="legacy_shuffle_desc">Перемешивает все треки, включая уже прослушанные, начиная с текущего. Отключите эту опцию, чтобы использовать перемешивание KMP. KMP оставляет уже прослушанные треки на своих местах, перемешивая только следующие.</string>
+    <string name="legacy_shuffle_desc">Устаревшее перемешивание ставит текущий трек первым, а также перемешивает уже прослушанные. Отключите эту опцию, чтобы перемешивать только следующие треки. Элементы с пометкой "Автомикс" или "Рекомендации" сохраняют свой порядок в обоих режимах.</string>
     <string name="artist_subscriber_count">%1$s подписчиков</string>
     <string name="pause_music_when_media_is_muted">Приостанавливать воспроизведение, если звук отключен</string>
     <string name="pause_music_when_media_is_muted_desc">Приостанавливает воспроизведение при выключении звука мультимедиа. Воспроизведение возобновится автоматически, когда громкость будет восстановлена.</string>
@@ -2719,5 +2719,7 @@
     <string name="application_failure_log_raw_empty">Событий пока не записано.</string>
     <string name="lyrics_share_square_image">Квадратное изображение</string>
     <string name="lyrics_share_story_image">Изображение для истории</string>
-    <string name="auto_download_saved_collections">Автоматически скачивать сохраненные альбомы и плейлисты</string>
+    <string name="auto_download_saved_collections">Автоскачивание сохранённых альбомов и плейлистов</string>
+    <string name="classic_recommendations_desc">Формировать "Быстрый выбор" на основе собственной истории прослушивания и воспроизводить персональную очередь "Далее" от YouTube по порядку, как в Metrolist 13</string>
+    <string name="classic_recommendations_desc_desktop">Воспроизводить персональную очередь "Далее" от YouTube по порядку, как в Metrolist 13</string>
 </resources>
