@@ -1248,7 +1248,7 @@
     <string name="onboarding_migrate_library">Přenést mou knihovnu</string>
     <string name="onboarding_sentry_opt_in">Hlášení Sentry je dobrovolné a zapne se pouze, když zvolíte „Ano“.</string>
     <string name="onboarding_sentry_diagnostics">Hlášení pomáhají zjišťovat selhání, chyby v aplikaci a problémy s přehráváním.</string>
-    <string name="onboarding_sentry_private">Údaje, tokeny, cookies a podepsané adresy URL jsou z hlášení vynechané.</string>
+    <string name="onboarding_sentry_private">Přihlašovací údaje, tokeny, cookies a podepsané adresy URL jsou z hlášení vynechané.</string>
     <string name="onboarding_privacy_policy">Přečtěte si naše zásady ochrany osobních údajů</string>
     <string name="onboarding_notification_downloads">Průběh stahování</string>
     <string name="onboarding_notification_playback">Spolehlivé přehrávání na pozadí</string>
@@ -2421,8 +2421,8 @@
     <plurals name="import_review_playlists">
         <item quantity="one">Zkontrolovat %1$s playlist</item>
         <item quantity="few">Zkontrolovat %1$s playlisty</item>
-        <item quantity="many">Zkontrolovat %1$s playlisty</item>
-        <item quantity="other">Zkontrolovat %1$s playlisty</item>
+        <item quantity="many">Zkontrolovat %1$s playlistu</item>
+        <item quantity="other">Zkontrolovat %1$s playlistů</item>
     </plurals>
     <plurals name="import_playlists_notice">
         <item quantity="one">Importuji %1$s z jednoho playlistu. Import poběží na pozadí a po dokončení vás upozorní.</item>

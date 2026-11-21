@@ -620,7 +620,7 @@
     <string name="updates_installer_failed">Установщик пакетов Android недоступен или установка приложений ограничена на этом устройстве.</string>
     <string name="updates_release_unavailable">В этом релизе нет совместимого APK.</string>
     <string name="updates_release_notes_title">Что нового в Metrolist %1$s</string>
-    <string name="device_connect_title">Device Connect</string>
+    <string name="device_connect_title">Подключение устройств</string>
     <string name="device_connect_summary">Подключите доверенные устройства в локальной сети. Соединения защищены шифрованием.</string>
     <string name="device_connect_beta">Бета</string>
     <string name="device_connect_enable">Включить</string>
@@ -1840,7 +1840,7 @@
     <string name="settings_disable_wayland_fix_description">Выключает автоматическое определение масштабирования для сессий Wayland. Требуется перезапуск.</string>
     <string name="device_connect_signed_out_pairing">Вы вышли из аккаунта. Сравните код сопряжения на обоих устройствах перед подтверждением.</string>
     <string name="device_connect_paired">Сопряжено</string>
-    <string name="shortcut_toggle_device_connect">Переключить панель Device Connect</string>
+    <string name="shortcut_toggle_device_connect">Переключить панель подключения устройств</string>
     <string name="device_connect_unshareable_queue">Эта очередь содержит локальные файлы и недоступна для обмена.</string>
     <string name="device_connect_this_device_label">Это устройство</string>
     <string name="device_connect_pair">Сопрячь</string>
@@ -1950,7 +1950,7 @@
     <string name="amazon_music_marketplace">Выберите региональный рынок Amazon Music</string>
     <string name="import_cancelled_partial">Импорт отменён. Место назначения: %2$s. Сохранено треков: не менее %1$d. Чтобы продолжить, начните импорт заново и выберите это место назначения.</string>
     <string name="recognition_history_save_failed">Не удалось сохранить эту песню в истории распознавания.</string>
-    <string name="device_connect_server_failed">Не удалось запустить Device Connect. Проверьте сеть и повторите попытку.</string>
+    <string name="device_connect_server_failed">Не удалось запустить подключение устройств. Проверьте сеть и повторите попытку.</string>
     <string name="device_connect_discovery_failed">Не удалось обнаружить устройства. Проверьте доступ к локальной сети и повторите поиск.</string>
     <string name="home_offline_empty">Вы не в сети, и содержимое главной страницы не сохранено. Подключитесь к интернету и обновите страницу, чтобы загрузить рекомендации.</string>
     <string name="home_load_failed">Не удалось загрузить главную страницу. Проверьте соединение и повторите попытку.</string>

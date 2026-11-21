@@ -83,7 +83,7 @@
     <string name="codecs">Codec</string>
     <string name="bitrate">Bitrate</string>
     <string name="sample_rate">Frequenza di campionamento</string>
-    <string name="loudness">Loudness</string>
+    <string name="loudness">Livello sonoro</string>
     <string name="loudness_value">%1$s dB</string>
     <string name="volume">Volume</string>
     <string name="file_size">Dimensioni file</string>
