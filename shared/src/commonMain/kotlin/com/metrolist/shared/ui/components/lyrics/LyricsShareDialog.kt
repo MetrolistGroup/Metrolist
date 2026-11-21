@@ -140,13 +140,7 @@ fun LyricsShareDialog(
                         "RIGHT" -> TextAlign.Right
                         else -> TextAlign.Center
                     },
-            ).let { style ->
-                if (useStoryLayout && Settings.shared.lyricsShareImageStyle.isBlank()) {
-                    style.copy(background = if (artworkUrl == null) LyricsImageBackground.SOLID else LyricsImageBackground.BLUR)
-                } else {
-                    style
-                }
-            },
+            ),
         )
     }
     val latestStyle by rememberUpdatedState(style)
