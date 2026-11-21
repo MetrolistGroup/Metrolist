@@ -222,6 +222,8 @@ class ListenTogetherManager(
     val isInRoom: StateFlow<Boolean> = _isInRoom.asStateFlow()
     private val _roomRequestPending = MutableStateFlow(false)
     val roomRequestPending: StateFlow<Boolean> = _roomRequestPending.asStateFlow()
+    private val _persistedRoomSession = MutableStateFlow(false)
+    val persistedRoomSession: StateFlow<Boolean> = _persistedRoomSession.asStateFlow()
     private val _joinRequestPending = MutableStateFlow(false)
     val joinRequestPending: StateFlow<Boolean> = _joinRequestPending.asStateFlow()
     private val _joinRequestSubmitted = MutableStateFlow(false)
@@ -871,7 +873,10 @@ class ListenTogetherManager(
     }
 
     val hasActiveOrPendingRoom: Boolean
-        get() = _isInRoom.value || hasPendingRoomRequest || hasPersistedSession || reconnectJob?.isActive == true
+        get() =
+            _isInRoom.value || hasPendingRoomRequest ||
+                (hasPersistedSession && _connectionState.value != ListenTogetherConnectionState.ERROR) ||
+                reconnectJob?.isActive == true
 
     val hasPendingRoomRequest: Boolean
         get() = pendingAction != null || awaitingRoomResponse
@@ -1467,6 +1472,7 @@ class ListenTogetherManager(
     private fun handleRoomCreated(payload: RoomCreatedPayload) {
         if (!claimRoomRequest()) return
         sessionToken = payload.sessionToken
+        _persistedRoomSession.value = !sessionToken.isNullOrBlank()
         restoredRoomCode = payload.roomCode
         sessionStartedAt = wallClockMs()
         _userId.value = payload.userId
@@ -1509,6 +1515,7 @@ class ListenTogetherManager(
         if (!claimRoomRequest()) return
         cancelRemotePlayback()
         sessionToken = payload.sessionToken
+        _persistedRoomSession.value = !sessionToken.isNullOrBlank()
         restoredRoomCode = payload.roomCode
         sessionStartedAt = wallClockMs()
         _userId.value = payload.userId
@@ -2252,6 +2259,12 @@ class ListenTogetherManager(
     }
 
     private fun cleanupRoom(clearSession: Boolean) {
+        if (clearSession) {
+            sessionToken = null
+            restoredRoomCode = null
+            sessionStartedAt = 0L
+            _persistedRoomSession.value = false
+        }
         val wasInRoom = _isInRoom.value
         clearRoomRequest()
         reconnectJob?.cancel()
@@ -2284,17 +2297,12 @@ class ListenTogetherManager(
         resetHostObservation()
         revisionFilter.reset()
         serverClock.reset()
-        if (clearSession) {
-            sessionToken = null
-            restoredRoomCode = null
-            sessionStartedAt = 0L
-            if (sessionPersistenceEnabled) Settings.shared.listenTogetherDesktopSession = ""
-        }
         if (wasInRoom) {
             scope.launch {
                 playback.setPlaybackSpeedFromRemote(Settings.shared.playbackSpeed.coerceIn(0.5f, 2f))
             }
         }
+        if (clearSession && sessionPersistenceEnabled) Settings.shared.listenTogetherDesktopSession = ""
     }
 
     private fun clearRoomRequest() {
@@ -2491,9 +2499,11 @@ class ListenTogetherManager(
         val restoredUrl = fields[5].takeIf(::isAllowedListenTogetherServerUrl) ?: return
         sessionToken = fields[0].takeIf { it.isNotBlank() }
         restoredRoomCode = fields[1].takeIf { it.isNotBlank() }
+        _persistedRoomSession.value = !sessionToken.isNullOrBlank() && !restoredRoomCode.isNullOrBlank()
         if (sessionToken == null || restoredRoomCode == null) {
             sessionToken = null
             restoredRoomCode = null
+            _persistedRoomSession.value = false
             return
         }
         if (_username.value.isBlank()) _username.value = fields[2]

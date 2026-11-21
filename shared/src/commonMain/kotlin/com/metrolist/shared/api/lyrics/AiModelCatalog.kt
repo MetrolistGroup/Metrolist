@@ -42,8 +42,9 @@ data class AiModelInfo(
     val outputUsdPerMTok: Double? = null,
     val contextLength: Int? = null,
     val tokensPerSecond: Double? = null,
+    val isFree: Boolean? = null,
 ) {
-    val free: Boolean get() = inputUsdPerMTok == 0.0 && outputUsdPerMTok == 0.0
+    val free: Boolean get() = (isFree != false) && inputUsdPerMTok == 0.0 && outputUsdPerMTok == 0.0
 }
 
 class AiModelCatalog(
@@ -102,6 +103,7 @@ class AiModelCatalog(
         apiKey: String,
         baseUrl: String,
         savedModel: String,
+        freeOnly: Boolean = false,
     ): String {
         val effectiveBaseUrl =
             if (preset.id == "Gemini" && baseUrl == AiProviderPresets.LEGACY_GEMINI_ENDPOINT) {
@@ -113,9 +115,12 @@ class AiModelCatalog(
         val models = models(preset, apiKey, effectiveBaseUrl).getOrNull() ?: return savedModel
         // Only a successful provider response can prove a saved model has disappeared.
         val ids = lock.withLock { availableIds[cacheKey(preset, apiKey, effectiveBaseUrl)] } ?: return savedModel
-        if (ids.isEmpty() || savedModel in ids) return savedModel
+        if (ids.isEmpty()) return savedModel
         val candidates = models.filter { it.id in ids }
-        return defaultModel(preset, candidates, freeOnly = savedModel.endsWith(":free")) ?: savedModel
+        val savedAllowedForFreeOnly =
+            candidates.firstOrNull { it.id == savedModel }?.let { preset.allowsFreeModel(it) } == true
+        if (savedModel in ids && (!freeOnly || savedAllowedForFreeOnly)) return savedModel
+        return defaultModel(preset, candidates, freeOnly = freeOnly || savedModel.endsWith(":free")) ?: savedModel
     }
 
     /** Median output speed over the last 30 minutes for the fastest OpenRouter endpoint; null when unknown. */
@@ -295,6 +300,7 @@ class AiModelCatalog(
                         inputUsdPerMTok = pricing?.number("prompt")?.times(1_000_000),
                         outputUsdPerMTok = pricing?.number("completion")?.times(1_000_000),
                         contextLength = entry["context_length"]?.jsonPrimitive?.intOrNull,
+                        isFree = entry["isFree"]?.jsonPrimitive?.booleanOrNull,
                     )
                 }
 
@@ -371,8 +377,16 @@ class AiModelCatalog(
             models: List<AiModelInfo>,
             freeOnly: Boolean = false,
         ): String? {
-            val candidates = filterAndSort(models).filter { !freeOnly || (it.free && it.id.endsWith(":free")) }
-            val preferred = if (freeOnly) AiProviderPresets.FREE_LYRICS_AI_MODEL else preset.defaultModel
+            val candidates =
+                filterAndSort(models).filter { model ->
+                    !freeOnly || preset.allowsFreeModel(model)
+                }
+            val preferred =
+                if (freeOnly && preset.id == "OpenRouter") {
+                    AiProviderPresets.FREE_LYRICS_AI_MODEL
+                } else {
+                    preset.defaultModel
+                }
             return candidates.firstOrNull { it.id == preferred }?.id ?: candidates.firstOrNull()?.id
         }
 

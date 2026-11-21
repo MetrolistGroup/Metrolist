@@ -8,6 +8,7 @@ package com.metrolist.shared.db.entities
 import androidx.room3.Embedded
 import androidx.room3.Junction
 import androidx.room3.Relation
+import kotlinx.datetime.LocalDateTime
 
 data class Album(
     @Embedded
@@ -24,9 +25,13 @@ data class Album(
             ),
     )
     val artists: List<ArtistEntity> = emptyList(),
+    val firstSongAddedAt: LocalDateTime? = null,
     val songCountListened: Int? = 0,
     val timeListened: Long? = 0,
 ) : LocalItem() {
+    val libraryAddedAt: LocalDateTime?
+        get() = album.bookmarkedAt ?: album.inLibrary ?: firstSongAddedAt
+
     override val id: String
         get() = album.id
     override val title: String

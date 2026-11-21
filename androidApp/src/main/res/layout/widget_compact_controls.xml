@@ -22,7 +22,7 @@
         android:layout_height="match_parent"
         android:gravity="center"
         android:orientation="horizontal"
-        android:padding="6dp">
+        android:padding="4dp">
 
         <include
             layout="@layout/widget_music_controls"
