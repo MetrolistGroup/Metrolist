@@ -345,6 +345,10 @@ internal fun computeWipe(
     val effectiveLineIdx = if (isPartOfActiveSyl) clusterLineIdx else activeLineIdx
 
     val rawLocalX = curGX - lineStart
+    if (syllableIndex != -1 && activeSylIdx >= 0 && lastSylIdx < activeSylIdx && rawLocalX < localStart) {
+        out.mode = WIPE_PAST
+        return
+    }
     val brushShift =
         if (clusterLineIdx == effectiveLineIdx && isActiveSylLastOfLine) {
             activeSylProgress * halfGradientWidth
