@@ -155,6 +155,11 @@ internal fun mergeBackgroundLyricsEntries(lyrics: List<LyricsEntry>): List<Lyric
             return@forEachIndexed
         }
         val main = displayLines[mainIndex]
+        val mainEndTime =
+            main.endTime
+                ?: main.words?.filterNot(WordTimestamp::isLineTimed)?.maxOfOrNull { (it.endTime * 1000.0).toLong() }
+                ?: main.time + 4000L
+        if (background.time - mainEndTime >= LYRICS_GAP_MIN_MS) return@forEachIndexed
         val mainBackgroundWords = main.words.orEmpty().filter(WordTimestamp::isBackground)
         val mainWordBackgroundText = mainBackgroundWords.backgroundText()
         val mainTextBackgroundWord =
@@ -165,6 +170,15 @@ internal fun mergeBackgroundLyricsEntries(lyrics: List<LyricsEntry>): List<Lyric
                 }?.let { textBackgroundWord(it, main) }
         val backgroundWords = background.words.orEmpty().map(WordTimestamp::asBackground)
         val wordBackgroundText = backgroundWords.backgroundText()
+        val representedWordTexts =
+            listOfNotNull(
+                wordBackgroundText,
+                background.words
+                    ?.filterNot(
+                        WordTimestamp::isBackground,
+                    )?.joinToString("") { it.text + if (it.hasTrailingSpace) " " else "" },
+                background.words?.backgroundText(),
+            ).map(::normalizeBackgroundText)
         val sourceBackgroundTexts =
             listOfNotNull(
                 background.text
@@ -183,8 +197,7 @@ internal fun mergeBackgroundLyricsEntries(lyrics: List<LyricsEntry>): List<Lyric
         val incomingTextBackgroundWords =
             sourceBackgroundTexts
                 .filterNot { source ->
-                    allSourceTextsRepresented ||
-                        wordBackgroundText?.let { normalizeBackgroundText(source) == normalizeBackgroundText(it) } == true
+                    allSourceTextsRepresented || normalizeBackgroundText(source) in representedWordTexts
                 }.mapNotNull { textBackgroundWord(it, background) }
         val incomingBackgroundWords =
             when {
@@ -216,6 +229,30 @@ internal fun mergeBackgroundLyricsEntries(lyrics: List<LyricsEntry>): List<Lyric
             } else {
                 incomingBackgroundWords
             }
+        val unromanizedIncomingWords =
+            if (incomingRomanizedWords != null || incomingRomanizedTextWord != null) {
+                incomingBackgroundWords.filterNot { raw ->
+                    val original =
+                        background.words?.firstOrNull {
+                            it.startTime == raw.startTime && it.endTime == raw.endTime && it.text == raw.text
+                        }
+                    val representedByWords =
+                        original != null &&
+                            background.romanizedWords.orEmpty().any { roman ->
+                                roman.isBackground == original.isBackground &&
+                                    roman.startTime < raw.endTime && roman.endTime > raw.startTime
+                            }
+                    val representedByText =
+                        incomingRomanizedTextWord != null &&
+                            (
+                                normalizeBackgroundText(raw.text) == normalizeBackgroundText(background.text) ||
+                                    original?.isBackground == false
+                            )
+                    representedByWords || representedByText
+                }
+            } else {
+                emptyList()
+            }
         val existingRomanizedWords = main.romanizedWords.orEmpty()
         val existingRawBackgroundWords = mainBackgroundWords + listOfNotNull(mainTextBackgroundWord)
         val mainWordsWithBoundary =
@@ -243,7 +280,8 @@ internal fun mergeBackgroundLyricsEntries(lyrics: List<LyricsEntry>): List<Lyric
                                     }
                             }
                         }
-                ).withBackgroundPhraseBoundary() + romanizedIncomingWords.withBackgroundPhraseBoundary()
+                ).withBackgroundPhraseBoundary() + romanizedIncomingWords.withBackgroundPhraseBoundary() +
+                    unromanizedIncomingWords.withBackgroundPhraseBoundary()
             } else {
                 null
             }
@@ -310,8 +348,9 @@ internal fun buildLyricsListItems(
     val timeline = buildLyricsTimelineItems(lines, lyrics)
     return buildList {
         var lastEndTime: Long? = null
-        if ((lyrics.firstOrNull()?.time ?: 0L) >= LYRICS_GAP_MIN_MS) {
-            add(LyricsListItem.Indicator(0L, lyrics.first().time - LYRICS_GAP_END_LEAD_MS, -1))
+        val firstVisibleTime = lines.firstOrNull()?.entry?.time ?: 0L
+        if (firstVisibleTime >= LYRICS_GAP_MIN_MS) {
+            add(LyricsListItem.Indicator(0L, firstVisibleTime - LYRICS_GAP_END_LEAD_MS, -1))
         }
         for ((linePosition, line) in lines.withIndex()) {
             val previousEnd = lastEndTime
