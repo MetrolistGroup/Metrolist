@@ -7,10 +7,20 @@ import com.sun.jna.Native
 import com.sun.jna.NativeLong
 import com.sun.jna.Pointer
 import com.sun.jna.Structure
+import com.sun.jna.platform.linux.ErrNo
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.withLock
+
+private object X11ThreadingState {
+    @Volatile var ready = false
+}
+
+internal fun initializeLinuxX11Threading() {
+    // XRecord runs on its own thread, so libX11 must enter thread-safe mode before AWT initializes it.
+    X11ThreadingState.ready = runCatching { X11.INSTANCE.XInitThreads() != 0 }.getOrDefault(false)
+}
 
 internal class LinuxPhysicalKeyCapture : PlatformPhysicalKeyCapture {
     private val lifecycleLock = ReentrantLock()
@@ -118,6 +128,7 @@ internal class LinuxPhysicalKeyCapture : PlatformPhysicalKeyCapture {
         var context: NativeLong? = null
         var range: Pointer? = null
         try {
+            if (!X11ThreadingState.ready) return
             val x11 = X11.INSTANCE
             val xtst = Native.load("Xtst", XTestRecord::class.java)
             recordApi = xtst
@@ -159,10 +170,7 @@ internal class LinuxPhysicalKeyCapture : PlatformPhysicalKeyCapture {
             pollFds[1].fd = wakeupPipe[0]
             pollFds[1].events = POLLIN.toShort()
             while (requested) {
-                pollFds[0].revents = 0
-                pollFds[1].revents = 0
-                pollFds.forEach { it.write() }
-                if (Posix.INSTANCE.poll(pollFds, NativeLong(pollFds.size.toLong()), -1) < 0) break
+                if (!pollWithRetry(pollFds)) break
                 pollFds.forEach { it.read() }
                 if (pollFds[1].revents.toInt() != 0) {
                     drainWakeup()
@@ -195,6 +203,19 @@ internal class LinuxPhysicalKeyCapture : PlatformPhysicalKeyCapture {
         if (wakeupFd < 0) return
         val buffer = ByteArray(1)
         Posix.INSTANCE.read(wakeupFd, buffer, NativeLong(buffer.size.toLong()))
+    }
+
+    private fun pollWithRetry(fds: Array<PollFd>): Boolean {
+        while (true) {
+            fds.forEach { fd ->
+                fd.revents = 0
+                fd.write()
+            }
+            val result = Posix.INSTANCE.poll(fds, NativeLong(fds.size.toLong()), -1)
+            fds.forEach { it.read() }
+            if (result >= 0) return true
+            if (!requested || Native.getLastError() != ErrNo.EINTR) return false
+        }
     }
 
     private val callback =
@@ -278,6 +299,8 @@ private class XRecordInterceptData(
 
 @Suppress("FunctionName")
 private interface X11 : Library {
+    fun XInitThreads(): Int
+
     fun XOpenDisplay(displayName: String?): Pointer?
 
     fun XConnectionNumber(display: Pointer): Int

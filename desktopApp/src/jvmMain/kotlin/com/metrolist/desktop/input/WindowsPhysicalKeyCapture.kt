@@ -173,4 +173,3 @@ internal interface WindowsPhysicalKeyHookProcedureContract : WinUser.HOOKPROC {
         data: LPARAM,
     ): LRESULT
 }
-
