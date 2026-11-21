@@ -6,6 +6,7 @@ import androidx.media3.common.Player
 import androidx.media3.session.SessionError
 import androidx.media3.session.SessionResult
 import com.metrolist.innertubex.extraction.StreamResolveException
+import com.metrolist.shared.deviceconnect.DcRepeatMode
 import com.metrolist.shared.model.SongItem
 import com.metrolist.shared.playback.MusicQueueEntry
 import com.metrolist.shared.playback.PlaybackFailureCategory
@@ -143,6 +144,26 @@ internal suspend fun resolveAutomotiveSearchSongQueue(
     return library.resolveSongQueue(item)
 }
 
+internal data class AutomotivePlaybackIntent(
+    val selectedSongOnly: Boolean,
+    val radioSeed: Boolean,
+    val remoteRepeatMode: DcRepeatMode?,
+)
+
+internal fun automotivePlaybackIntent(mode: AutomotiveSongPlaybackMode?): AutomotivePlaybackIntent =
+    AutomotivePlaybackIntent(
+        selectedSongOnly = mode == AutomotiveSongPlaybackMode.SINGLE_SONG,
+        radioSeed = mode == AutomotiveSongPlaybackMode.RADIO,
+        remoteRepeatMode = DcRepeatMode.OFF.takeIf { mode == AutomotiveSongPlaybackMode.RADIO },
+    )
+
+private data class AutomotiveRadioSeedState(
+    val request: QueuePlaybackRequest,
+    val currentSongId: String?,
+    val playing: Boolean,
+    val transitionPending: Boolean,
+)
+
 internal suspend fun awaitAutomotiveRadioSeed(
     song: SongItem,
     initialRequestId: Long,
@@ -154,13 +175,28 @@ internal suspend fun awaitAutomotiveRadioSeed(
     isCurrentSession: () -> Boolean,
     playMix: (SongItem) -> Unit,
 ) {
-    val request = requests.first { it.requestId > initialRequestId }
-    if (request.song.id != song.id) return
+    var unrelatedSelection = false
+    combine(requests, currentSong, isPlaying, transitionPending) { request, current, playing, pending ->
+        AutomotiveRadioSeedState(request, current?.id, playing, pending)
+    }.first { state ->
+        when {
+            state.request.requestId <= initialRequestId -> {
+                false
+            }
 
-    combine(currentSong, isPlaying, transitionPending) { current, playing, pending ->
-        current?.id != null && playing && !pending
-    }.first { it }
-    if (latestRequestId() == request.requestId && isCurrentSession()) {
-        currentSong.value?.let(playMix)
+            state.request.song.id != song.id -> {
+                unrelatedSelection = true
+                true
+            }
+
+            else -> {
+                state.currentSongId == song.id && state.playing && !state.transitionPending
+            }
+        }
     }
+    // A seek or resume can supersede the seed request while it is still resolving;
+    // follow the newest request instead of the one that started the wait.
+    val newest = requests.replayCache.lastOrNull()?.takeIf { it.requestId > initialRequestId } ?: return
+    if (unrelatedSelection || newest.song.id != song.id || newest.requestId != latestRequestId() || !isCurrentSession()) return
+    currentSong.value?.let(playMix)
 }

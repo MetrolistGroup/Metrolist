@@ -566,6 +566,7 @@ object PlayerState {
                                 (!deviceConnect.isActive || syncSession.ready),
                         finite = syncSession.finite,
                         explicitRadioQueue = syncSession.explicitRadioQueue,
+                        recommendationsLocked = syncSession.recommendationsLocked,
                         scrobbleSession = scrobbleManager.session(),
                     )
                 }
@@ -2286,7 +2287,7 @@ object PlayerState {
 
     private fun canLoadRecommendations(song: SongItem): Boolean =
         Settings.shared.autoLoadMore && repeatMode == RepeatMode.OFF && !isListenTogetherGuest() && !deviceConnect.isFollowing &&
-            !syncSession.finite && queue.currentItem()?.id == song.id
+            !syncSession.finite && !syncSession.recommendationsLocked && queue.currentItem()?.id == song.id
 
     private fun maybePrefetchRecommendationsForCurrentQueue(song: SongItem) {
         if (repeatMode != RepeatMode.OFF || !canLoadRecommendations(song) ||

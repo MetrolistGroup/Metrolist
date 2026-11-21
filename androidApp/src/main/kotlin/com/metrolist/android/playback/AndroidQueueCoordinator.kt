@@ -117,6 +117,26 @@ internal class AndroidQueueCoordinator(
     private val pendingRestorePosition = PendingQueueRestorePosition()
     private var remoteLoadGeneration = 0L
     var recommendationLockedSessionId: Long? = null
+    private var radioSeedLockedSessionId: Long? = null
+    val recommendationsLocked: Boolean get() = recommendationLockedSessionId == queueSessionId
+
+    fun lockRecommendationsForSelectedSong() {
+        synchronized(queueSessionLock) {
+            recommendationLockedSessionId = queueSessionId
+        }
+    }
+
+    fun lockRecommendationsForRadioSeed() {
+        synchronized(queueSessionLock) {
+            radioSeedLockedSessionId = queueSessionId
+        }
+    }
+
+    fun applyRemoteRecommendationLock(locked: Boolean) {
+        synchronized(queueSessionLock) {
+            recommendationLockedSessionId = queueSessionId.takeIf { locked }
+        }
+    }
 
     fun saveShuffleMode() {
         val queue = player.queueSnapshots.value
@@ -164,7 +184,7 @@ internal class AndroidQueueCoordinator(
             radioQueuePlaylistId = radioQueuePlaylistId,
             radioQueueParams = radioQueueParams,
             radioQueueExplicitFeed = radioQueueExplicitFeed,
-            recommendationLocked = recommendationLockedSessionId == queueSessionId,
+            recommendationLocked = recommendationsLocked,
         )
     }
 
@@ -632,6 +652,7 @@ internal class AndroidQueueCoordinator(
 
     private fun canBootstrapRecommendations(): Boolean =
         recommendationLockedSessionId != queueSessionId &&
+            radioSeedLockedSessionId != queueSessionId &&
             shouldBootstrapQueueRecommendations(isFiniteQueue, Settings.shared.autoLoadMore, playlistPage?.hasMore == true)
 
     fun selectQueueChip(chipId: String) {
@@ -839,7 +860,7 @@ internal class AndroidQueueCoordinator(
         recommendationBootstrapJob?.join()
         if (!PlaybackNetworkStateStore.current.connected || sessionId != queueSessionId) return false
         if (!Settings.shared.autoLoadMore || repeatMode.value != Player.REPEAT_MODE_OFF) return false
-        if (recommendationLockedSessionId == sessionId) return false
+        if (recommendationLockedSessionId == sessionId || radioSeedLockedSessionId == sessionId) return false
 
         val currentQueue = player.songQueue.value
         val currentIndex = player.currentMediaItemIndex.value

@@ -88,6 +88,7 @@ internal class AndroidDeviceConnectPlayback(
                                     ?.id,
                         finite = queue.isFiniteQueue,
                         explicitRadioQueue = queue.explicitRadioQueue,
+                        recommendationsLocked = queue.recommendationsLocked,
                         scrobbleSession = scrobbleManager.session(),
                     )
                 }
@@ -135,6 +136,7 @@ internal class AndroidDeviceConnectPlayback(
                 }
                 queue.setExplicitRadioQueue(desired.explicitRadioQueue)
                 queue.setTitle(desired.title)
+                queue.applyRemoteRecommendationLock(desired.recommendationsLocked)
                 repeatMode.value = desired.repeatMode.toPlayerRepeatMode()
                 if (trackChanged || previousQueue != desiredQueue) player.restoreQueue(desiredQueue, currentTrackChanged = trackChanged)
                 shuffleModeEnabled.value = player.isShuffleEnabled

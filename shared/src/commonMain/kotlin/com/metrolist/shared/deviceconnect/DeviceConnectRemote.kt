@@ -721,7 +721,8 @@ class DeviceConnectRemote(
         val playback = if (change.playback.queue === current.playback.queue) change.playback else wireQueueCache.sanitize(change.playback)
         val queueChanged =
             !sameDcQueue(current.playback.queue, playback.queue) ||
-                current.playback.explicitRadioQueue != playback.explicitRadioQueue
+                current.playback.explicitRadioQueue != playback.explicitRadioQueue ||
+                current.playback.recommendationsLocked != playback.recommendationsLocked
         if (!(if (queueChanged) validDcPlayback(playback) else validDcPlaybackScalars(playback))) {
             commandError(sender, DcSyncError.INVALID_MESSAGE)
             return
@@ -783,6 +784,7 @@ class DeviceConnectRemote(
         val playingChanged = applyJob?.isActive != true && local.ready && local.playing != current.playback.playing
         val changed =
             queueChanged || trackChanged || local.repeatMode != current.playback.repeatMode ||
+                local.recommendationsLocked != current.playback.recommendationsLocked ||
                 local.title != current.playback.title || local.ready != current.playback.ready || local.volume != current.playback.volume ||
                 local.pitch != current.playback.pitch || playingChanged ||
                 (local.durationMs > 0L && local.durationMs != current.playback.durationMs)
@@ -837,7 +839,9 @@ class DeviceConnectRemote(
         canonical = updated
         publishState()
         port?.acknowledge(updated)
-        if (queueChanged || local.title != current.playback.title) {
+        if (queueChanged || local.title != current.playback.title ||
+            local.recommendationsLocked != current.playback.recommendationsLocked
+        ) {
             broadcastSnapshot()
         } else {
             broadcastUpdate(trackChanged = trackChanged)

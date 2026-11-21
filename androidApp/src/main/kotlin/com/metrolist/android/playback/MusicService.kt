@@ -80,6 +80,7 @@ import com.metrolist.shared.cast.shouldHandleCastPlaybackEnd
 import com.metrolist.shared.db.MusicDatabase
 import com.metrolist.shared.deviceconnect.DcPlaybackAction
 import com.metrolist.shared.deviceconnect.DcPlaybackCommand
+import com.metrolist.shared.deviceconnect.DcRepeatMode
 import com.metrolist.shared.deviceconnect.DcSyncError
 import com.metrolist.shared.deviceconnect.DeviceConnectManager
 import com.metrolist.shared.discord.DiscordActivityBuilder
@@ -299,7 +300,8 @@ class MusicService :
     private val automotiveRootBrowsableOnly = ConcurrentHashMap<MediaSession.ControllerInfo, Boolean>()
     private val automotivePlaybackRequestGate =
         AutomotivePlaybackRequestGate { songs, startIndex, queueTitle, shuffleModeEnabled, playlistPage, songPlaybackMode, replacement ->
-            val radioSeed = songs.getOrNull(startIndex)?.takeIf { songPlaybackMode == AutomotiveSongPlaybackMode.RADIO }
+            val intent = automotivePlaybackIntent(songPlaybackMode)
+            val radioSeed = songs.getOrNull(startIndex)?.takeIf { intent.radioSeed }
             val shuffleEnabled =
                 newQueueShuffleEnabled(
                     requestedShuffle = shuffleModeEnabled,
@@ -315,12 +317,15 @@ class MusicService :
                         finite = radioSeed == null,
                         enabled = shuffleEnabled,
                         preserveHistory = shuffleModeEnabled != true,
+                        recommendationsLocked = intent.selectedSongOnly,
+                        repeatMode = intent.remoteRepeatMode,
                     ),
                 )
             ) {
                 queueCoordinator.replaceQueueSession(songs, startIndex, queueTitle, finite = true, playlistPage = playlistPage) {
-                    if (songPlaybackMode != null) {
-                        queueCoordinator.recommendationLockedSessionId = queueCoordinator.queueSessionId
+                    when {
+                        intent.selectedSongOnly -> queueCoordinator.lockRecommendationsForSelectedSong()
+                        intent.radioSeed -> queueCoordinator.lockRecommendationsForRadioSeed()
                     }
                     val initialRequestId = player.latestQueuePlaybackRequestId
                     replacement()
