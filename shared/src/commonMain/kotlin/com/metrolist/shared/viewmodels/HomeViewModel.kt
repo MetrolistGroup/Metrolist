@@ -534,6 +534,10 @@ class HomeViewModel(
                                 currentState = currentState,
                                 cachedAllContent = cachedAllContent,
                                 cachedSelectedChipContent = cachedSelectedChipContent,
+                                pendingChipContent =
+                                    publishedPrimaryChipContent.value
+                                        ?.takeIf { it.first == contentLoadGeneration && loadJob?.isActive == true }
+                                        ?.second,
                                 pendingAllContent =
                                     publishedPrimaryAllContent.value
                                         ?.takeIf { it.first == contentLoadGeneration }
@@ -2117,9 +2121,14 @@ internal fun homeContentAfterBlockedContentChange(
     cachedAllContent: HomeViewModel.HomeUiState?,
     cachedSelectedChipContent: HomeViewModel.HomeUiState?,
     pendingAllContent: HomeViewModel.HomeUiState? = null,
+    pendingChipContent: HomeViewModel.HomeUiState? = null,
 ): HomeViewModel.HomeUiState =
     (
         when {
+            currentState.selectedChip != null && pendingChipContent?.selectedChip == currentState.selectedChip -> {
+                pendingChipContent.withCurrentHomeLoadState(currentState).copy(continuation = null)
+            }
+
             currentState.selectedChip == null && pendingAllContent != null -> {
                 pendingAllContent.withCurrentHomeLoadState(currentState)
             }
@@ -2145,7 +2154,7 @@ internal fun HomeViewModel.HomeUiState.withCurrentHomeLoadState(currentState: Ho
         isLoading = currentState.isLoading,
         isRefreshing = currentState.isRefreshing,
         isRevalidating = currentState.isRevalidating,
-        isContentLoading = currentState.isContentLoading || isContentLoading,
+        isContentLoading = currentState.isContentLoading,
         isLoadingMore = currentState.isLoadingMore,
         isAllContentPending = currentState.isAllContentPending,
     )
