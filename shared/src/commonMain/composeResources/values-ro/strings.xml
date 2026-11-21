@@ -2659,4 +2659,15 @@
     <string name="legacy_recovery_export_failed">Nu s-a putut exporta biblioteca veche</string>
     <string name="appearance_swipe_song_gesture_queue">Gest de glisare pentru melodii în coadă</string>
     <string name="appearance_swipe_song_gesture_queue_description">Glisează o melodie spre marginea de început pentru a o elimina din coadă chiar și când este blocată</string>
+    <string name="automatic_backup">Copie de rezervă automată</string>
+    <string name="automatic_backup_description">Salvează automat o copie de rezervă locală și păstrează cele mai recente 10 copii.</string>
+    <string name="automatic_backup_frequency">Frecvență de creare a copiilor de rezervă</string>
+    <string name="automatic_backup_daily">Zilnic</string>
+    <string name="automatic_backup_weekly">Săptămânal</string>
+    <string name="automatic_backup_monthly">Lunar</string>
+    <string name="automatic_backup_location">Copiile de rezervă rămân pe acest dispozitiv. Sistemele de operare mobile le pot amâna. Copiile de rezervă pentru desktop rulează cât timp Metrolist este deschis.</string>
+    <string name="automatic_backup_restore">Restaurează o copie de rezervă automată</string>
+    <string name="automatic_backup_restore_empty">Nu sunt disponibile copii de rezervă automate.</string>
+    <string name="automatic_backup_restore_desc">Alegeți o copie de rezervă automată salvată pentru restaurare.</string>
+    <string name="foreign_import_error_generic">Copia de rezervă nu a putut fi importată</string>
 </resources>
