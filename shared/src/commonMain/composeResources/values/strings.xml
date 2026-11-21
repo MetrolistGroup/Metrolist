@@ -2929,7 +2929,7 @@
     <!-- Translators: Player setting for the original Metrolist shuffle behavior. -->
     <string name="legacy_shuffle">Legacy shuffle</string>
     <!-- Translators: Turning this setting off selects the KMP shuffle behavior. -->
-    <string name="legacy_shuffle_desc">Shuffle all songs, including played songs, with the current song first. Turn off for KMP shuffle. KMP keeps played songs in place and shuffles upcoming songs.</string>
+    <string name="legacy_shuffle_desc">Legacy shuffle puts the current song first and also shuffles played songs. Turn it off to shuffle only upcoming songs. Entries marked as auto-mix or recommendations keep their order in both modes.</string>
     <!-- Translators: Heading for persistent shuffle in the settings. -->
     <string name="persistent_shuffle_title">Persistent shuffle</string>
     <!-- Translators: Supporting text beneath the persistent shuffle option in the settings. -->
