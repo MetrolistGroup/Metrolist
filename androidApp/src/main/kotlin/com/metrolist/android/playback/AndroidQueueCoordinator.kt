@@ -187,9 +187,8 @@ internal class AndroidQueueCoordinator(
             )
             val restoredPosition = state.currentPosition
             isRadioQueue = state.radioQueue || restoredMix
-            radioQueueContinuation = null
-            radioQueueExplicitFeed = state.radioQueueSelectedChipId != null || state.radioQueueParams != null ||
-                (state.radioQueuePlaylistId != null && state.radioQueuePlaylistId != "RDAMVM$recommendationSeedSongId")
+            // A persisted continuation's recommendations mode is not stored, so after a
+            // restart its mode is unknown: discard it and let autoplay fetch a fresh page.
             radioQueuePlaylistId = state.radioQueuePlaylistId
             radioQueueParams = state.radioQueueParams
             queueChipsState.value =
@@ -252,8 +251,8 @@ internal class AndroidQueueCoordinator(
         queueChipsState.value = emptyList()
         isFiniteQueue = finite
         isRadioQueue = false
-        radioQueueExplicitFeed = false
         radioQueueContinuation = null
+        radioQueueExplicitFeed = false
         radioQueuePlaylistId = null
         radioQueueParams = null
         queuedSongIds.clear()
@@ -494,6 +493,7 @@ internal class AndroidQueueCoordinator(
         if (AndroidDeviceConnect.manager.remote.isFollowing || AndroidListenTogetherManager.isGuestPlaybackLocked) return
         val sessionId = queueSessionId
         val requestGeneration = ++recommendationRequestGeneration
+        val requestClassic = Settings.shared.classicRecommendations
         recommendationBootstrapJob?.cancel()
         recommendationBootstrapJob =
             scope.launch {
@@ -521,12 +521,13 @@ internal class AndroidQueueCoordinator(
                                 !AndroidDeviceConnect.manager.remote.isFollowing &&
                                 !AndroidListenTogetherManager.isGuestPlaybackLocked
                         },
-                        nextContinuation = { radioQueueContinuation },
+                        nextContinuation = { currentModeContinuation() },
                         applyPage = { page, initial ->
                             applyMixPage(
                                 firstPage = page,
                                 expectedSessionId = sessionId,
                                 expectedRequestGeneration = requestGeneration,
+                                requestClassic = requestClassic,
                                 replaceGeneratedSongs = false,
                                 generatedQueueSourceTitle = if (initial) QUEUE_SOURCE_AUTO_MIX else QUEUE_SOURCE_RECOMMENDED,
                                 playlistId = "RDAMVM$seedSongId",
@@ -557,9 +558,9 @@ internal class AndroidQueueCoordinator(
 
     private suspend fun freshRadioPage(
         page: RadioQueuePage,
-        requestClassic: Boolean,
         replaceGeneratedSongs: Boolean = false,
         isCurrent: () -> Boolean,
+        requestClassic: Boolean = Settings.shared.classicRecommendations,
     ): RadioQueuePage? =
         recommendationHistory.select(
             firstPage = page,
@@ -594,6 +595,7 @@ internal class AndroidQueueCoordinator(
         val currentSong = player.currentSong.value ?: return
         val sessionId = queueSessionId
         val requestGeneration = ++recommendationRequestGeneration
+        val requestClassic = Settings.shared.classicRecommendations
         recommendationBootstrapJob?.cancel()
         recommendationBootstrapJob =
             scope.launch {
@@ -612,6 +614,7 @@ internal class AndroidQueueCoordinator(
                         firstPage = page,
                         expectedSessionId = sessionId,
                         expectedRequestGeneration = requestGeneration,
+                        requestClassic = requestClassic,
                         replaceGeneratedSongs = true,
                         generatedQueueSourceTitle = QUEUE_SOURCE_AUTO_MIX,
                         selectedChipId = chip.id,
@@ -630,6 +633,7 @@ internal class AndroidQueueCoordinator(
         firstPage: RadioQueuePage,
         expectedSessionId: Long,
         expectedRequestGeneration: Long,
+        requestClassic: Boolean,
         replaceGeneratedSongs: Boolean,
         generatedQueueSourceTitle: String = QUEUE_SOURCE_RECOMMENDED,
         selectedChipId: String? = null,
@@ -650,7 +654,7 @@ internal class AndroidQueueCoordinator(
                     recommendationRequestGeneration,
                 ) && canBootstrapRecommendations()
 
-        val page = freshRadioPage(firstPage, requestClassic, replaceGeneratedSongs, ::isCurrent) ?: return false
+        val page = freshRadioPage(firstPage, replaceGeneratedSongs, ::isCurrent, requestClassic) ?: return false
 
         val currentIndex = player.currentMediaItemIndex.value
         val currentQueue = player.songQueue.value
@@ -819,7 +823,8 @@ internal class AndroidQueueCoordinator(
         seedSongId: String?,
     ) {
         if (!PlaybackNetworkStateStore.current.connected) return
-        val continuation = radioQueueContinuation
+        val continuation = currentModeContinuation()
+        val requestClassic = Settings.shared.classicRecommendations
         val seedId = seedSongId ?: recommendationSeedSongId ?: return
         scope.launch {
             try {
@@ -830,7 +835,7 @@ internal class AndroidQueueCoordinator(
                             if (continuation != null) {
                                 GlobalYouTubeRepository.instance.continueRadioQueue(continuation)
                             } else {
-                                startCurrentRadioPage(seedId)
+                                GlobalYouTubeRepository.instance.startRadioQueue(seedId)
                             }
                         }
                     }
@@ -838,6 +843,7 @@ internal class AndroidQueueCoordinator(
                     firstPage = page,
                     expectedSessionId = sessionId,
                     expectedRequestGeneration = requestGeneration,
+                    requestClassic = requestClassic,
                     replaceGeneratedSongs = false,
                     playlistId = radioQueuePlaylistId ?: "RDAMVM$seedId",
                     params = radioQueueParams,
@@ -855,7 +861,8 @@ internal class AndroidQueueCoordinator(
         seedSongId: String,
         promoteFirst: Boolean,
     ): Boolean {
-        val continuation = radioQueueContinuation
+        val continuation = currentModeContinuation()
+        val requestClassic = Settings.shared.classicRecommendations
 
         var page: RadioQueuePage? = null
         if (continuation != null) {
@@ -908,12 +915,12 @@ internal class AndroidQueueCoordinator(
             return false
         }
 
-        page = freshRadioPage(page, requestClassic) {
+        page = freshRadioPage(page, isCurrent = {
             (radioQueueExplicitFeed || requestClassic == Settings.shared.classicRecommendations) &&
                 PlaybackNetworkStateStore.current.connected && sessionId == queueSessionId &&
                 repeatMode.value == Player.REPEAT_MODE_OFF && canBootstrapRecommendations() &&
                 !AndroidDeviceConnect.manager.remote.isFollowing && !AndroidListenTogetherManager.isGuestPlaybackLocked
-        } ?: return false
+        }, requestClassic = requestClassic) ?: return false
 
         val currentQueue = player.songQueue.value
         val retainedIds = currentQueue.mapTo(linkedSetOf(), SongItem::id)
@@ -929,6 +936,7 @@ internal class AndroidQueueCoordinator(
         if (rawAdditions.isEmpty()) return false
 
         radioQueueContinuation = page.continuation
+        radioQueueContinuationClassic = requestClassic
         radioQueuePlaylistId = radioQueuePlaylistId ?: "RDAMVM$seedSongId"
 
         val (toQueue, toSuggest) =
@@ -1056,8 +1064,9 @@ internal class AndroidQueueCoordinator(
         if (player.currentMediaItemIndex.value < player.songQueue.value.lastIndex) return true
         if (!Settings.shared.autoLoadMore || repeatMode.value != Player.REPEAT_MODE_OFF) return false
         val requestGeneration = ++recommendationRequestGeneration
+        val requestClassic = Settings.shared.classicRecommendations
         val seenContinuations = mutableSetOf<String>()
-        var continuation = radioQueueContinuation
+        var continuation = currentModeContinuation()
         while (isCurrent() && seenContinuations.size < MAX_RADIO_CONTINUATION_PAGES) {
             val nextContinuation = continuation
             if (nextContinuation != null && !seenContinuations.add(nextContinuation)) break
@@ -1066,7 +1075,7 @@ internal class AndroidQueueCoordinator(
                 withQueueLoading {
                     withContext(Dispatchers.IO) {
                         if (nextContinuation == null) {
-                            startCurrentRadioPage(seedId)
+                            GlobalYouTubeRepository.instance.startRadioQueue(seedId)
                         } else {
                             GlobalYouTubeRepository.instance.continueRadioQueue(nextContinuation)
                         }
@@ -1078,12 +1087,13 @@ internal class AndroidQueueCoordinator(
                     firstPage = page,
                     expectedSessionId = sessionId,
                     expectedRequestGeneration = requestGeneration,
+                    requestClassic = requestClassic,
                     replaceGeneratedSongs = false,
                     playlistId = radioQueuePlaylistId ?: "RDAMVM$seedId",
                     params = radioQueueParams,
                 )
             if (appended) return player.currentMediaItemIndex.value < player.songQueue.value.lastIndex
-            continuation = radioQueueContinuation ?: break
+            continuation = currentModeContinuation() ?: break
         }
         return false
     }
