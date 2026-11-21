@@ -229,6 +229,12 @@ internal fun mergeBackgroundLyricsEntries(lyrics: List<LyricsEntry>): List<Lyric
             } else {
                 incomingBackgroundWords
             }
+        val backgroundOnlyWordGroup =
+            background.words.orEmpty().all(WordTimestamp::isBackground) &&
+                (
+                    background.text.isBlank() ||
+                        normalizeBackgroundText(background.text) == normalizeBackgroundText(wordBackgroundText.orEmpty())
+                )
         val unromanizedIncomingWords =
             if (incomingRomanizedWords != null || incomingRomanizedTextWord != null) {
                 incomingBackgroundWords.filterNot { raw ->
@@ -241,9 +247,7 @@ internal fun mergeBackgroundLyricsEntries(lyrics: List<LyricsEntry>): List<Lyric
                             background.romanizedWords.orEmpty().any { roman ->
                                 (
                                     roman.isBackground == original.isBackground ||
-                                        (
-                                            background.words.orEmpty().all(WordTimestamp::isBackground)
-                                        )
+                                        backgroundOnlyWordGroup
                                 ) &&
                                     roman.startTime < raw.endTime && roman.endTime > raw.startTime
                             }
