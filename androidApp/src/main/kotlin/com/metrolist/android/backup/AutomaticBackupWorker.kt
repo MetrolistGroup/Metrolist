@@ -12,10 +12,14 @@ import androidx.work.workDataOf
 import com.metrolist.android.BuildConfig
 import com.metrolist.shared.backup.AutoBackupDestination
 import com.metrolist.shared.backup.AutoBackupFrequency
+import com.metrolist.shared.backup.DriveAccountConnectionState
+import com.metrolist.shared.backup.DriveCleanupException
+import com.metrolist.shared.backup.DriveReauthorizationRequiredException
 import com.metrolist.shared.backup.GoogleDriveBackupClient
 import com.metrolist.shared.backup.defaultBackupFilename
 import com.metrolist.shared.db.MusicDatabase
 import com.metrolist.shared.settings.Settings
+import com.metrolist.shared.utils.Logger
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -40,39 +44,33 @@ class AutomaticBackupWorker(
         if (!settings.autoBackupEnabled) return Result.success()
 
         val backupDestination = AutoBackupDestination.fromSetting(settings.autoBackupDestination)
+        val brokerUrl = BuildConfig.DRIVE_BROKER_URL.takeIf(String::isNotBlank)
+        val session = settings.driveBrokerSession
+        if (backupDestination == AutoBackupDestination.GOOGLE_DRIVE) {
+            check(brokerUrl != null) { "Google Drive broker is not configured" }
+            check(session.isNotBlank()) { "Google Drive account is not connected" }
+        }
         val directory =
             when (backupDestination) {
                 AutoBackupDestination.LOCAL -> File(applicationContext.filesDir, BACKUP_DIRECTORY)
                 AutoBackupDestination.GOOGLE_DRIVE -> File(applicationContext.cacheDir, BACKUP_DIRECTORY)
             }
         val destination = File(directory, "${defaultBackupFilename(BACKUP_FILENAME_PREFIX)}.zip")
+        var archiveCreated = false
         return try {
             check(directory.isDirectory || directory.mkdirs()) { "Could not create automatic backup directory" }
+            archiveCreated = true
             BackupRestoreManager(applicationContext, GlobalContext.get().get<MusicDatabase>())
                 .backup(destination)
                 .getOrThrow()
-            when (backupDestination) {
-                AutoBackupDestination.LOCAL -> {
-                    // Prune handled after recording success
+            if (backupDestination == AutoBackupDestination.GOOGLE_DRIVE) {
+                if (AutoBackupDestination.fromSetting(settings.autoBackupDestination) != AutoBackupDestination.GOOGLE_DRIVE) {
+                    return Result.success()
                 }
-
-                AutoBackupDestination.GOOGLE_DRIVE -> {
-                    check(BuildConfig.DRIVE_BROKER_URL.isNotBlank()) { "Google Drive broker is not configured" }
-                    check(settings.driveBrokerSession.isNotBlank()) { "Google Drive account is not connected" }
-                    try {
-                        val driveClient = GoogleDriveBackupClient(BuildConfig.DRIVE_BROKER_URL)
-                        try {
-                            driveClient.uploadBackup(
-                                settings.driveBrokerSession,
-                                destination.name,
-                                destination.length(),
-                            ) { SystemFileSystem.source(Path(destination.absolutePath)) }
-                        } finally {
-                            driveClient.close()
-                        }
-                    } finally {
-                        check(!destination.exists() || destination.delete()) { "Could not remove temporary backup archive" }
-                    }
+                try {
+                    uploadAndDelete(destination, checkNotNull(brokerUrl), session)
+                } catch (cleanup: DriveCleanupException) {
+                    DriveAccountConnectionState.recordCleanupFailure()
                 }
             }
             settings.autoBackupLastSuccessEpochMillis = System.currentTimeMillis()
@@ -98,9 +96,52 @@ class AutomaticBackupWorker(
             Result.success()
         } catch (cancellation: CancellationException) {
             throw cancellation
+        } catch (reauthorization: DriveReauthorizationRequiredException) {
+            DriveAccountConnectionState.requireReauthorization()
+            Result.failure()
         } catch (_: Exception) {
             Result.retry()
+        } finally {
+            if (archiveCreated && backupDestination == AutoBackupDestination.GOOGLE_DRIVE) {
+                deleteStagedArchive(destination)
+            }
         }
+    }
+
+    private fun uploadAndDelete(
+        destination: File,
+        brokerUrl: String,
+        session: String,
+    ) {
+        val driveClient = GoogleDriveBackupClient(brokerUrl)
+        try {
+            if (Settings.shared.driveCleanupPending) {
+                try {
+                    driveClient.cleanupBackups(session)
+                    DriveAccountConnectionState.clearCleanupFailure()
+                } catch (cancelled: CancellationException) {
+                    throw cancelled
+                } catch (error: Exception) {
+                    Logger.w("AutomaticBackup", "Could not retry Drive cleanup", error)
+                    DriveAccountConnectionState.recordCleanupFailure()
+                }
+            }
+            driveClient.uploadBackup(
+                session,
+                destination.name,
+                destination.length(),
+            ) { SystemFileSystem.source(Path(destination.absolutePath)) }
+        } finally {
+            driveClient.close()
+            deleteStagedArchive(destination)
+        }
+    }
+
+    private fun deleteStagedArchive(destination: File) {
+        check(!destination.exists() || destination.delete()) { "Could not remove temporary backup archive" }
+        destination.parentFile
+            ?.listFiles { file -> file.isFile && file.name.endsWith(".tmp") }
+            ?.forEach { file -> check(file.delete()) { "Could not remove temporary backup archive" } }
     }
 
     private fun pruneBackups(directory: File) {

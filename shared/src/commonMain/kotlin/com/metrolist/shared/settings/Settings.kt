@@ -79,6 +79,7 @@ import com.metrolist.shared.constants.DownloadQueueJsonKey
 import com.metrolist.shared.constants.DownloadedCollectionSortDirectionKey
 import com.metrolist.shared.constants.DownloadedCollectionSortKey
 import com.metrolist.shared.constants.DriveBrokerSessionKey
+import com.metrolist.shared.constants.DriveCleanupPendingKey
 import com.metrolist.shared.constants.DriveOAuthStateKey
 import com.metrolist.shared.constants.DriveOAuthVerifierKey
 import com.metrolist.shared.constants.EnableHapticFeedbackKey
@@ -306,6 +307,7 @@ class Settings(
     var driveBrokerSession by preference(DriveBrokerSessionKey, "")
     var driveOAuthState by preference(DriveOAuthStateKey, "")
     var driveOAuthVerifier by preference(DriveOAuthVerifierKey, "")
+    var driveCleanupPending by preference(DriveCleanupPendingKey, false)
 
     var artistNameAliasesJson by preference(ArtistNameAliasesJsonKey, "{}")
     var playbackClientStatsJson by preference(PlaybackClientStatsJsonKey, "{}")

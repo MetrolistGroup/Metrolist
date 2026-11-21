@@ -167,8 +167,35 @@ fun Application.driveBrokerModule(
                     call.respond(HttpStatusCode.Unauthorized, ErrorResponse("unauthorized"))
                     return@delete
                 }
-                val deletedAccount = safeOperation { repository.revokeSessionAndDeleteOrphanAccount(token) }
-                if (deletedAccount != null) safeOperation { googleOAuth.revoke(deletedAccount.refreshToken) }
+                val revocation =
+                    try {
+                        repository.prepareSessionRevocation(token)
+                    } catch (cancelled: CancellationException) {
+                        throw cancelled
+                    } catch (_: Exception) {
+                        call.respond(HttpStatusCode.InternalServerError, ErrorResponse("revocation_failed"))
+                        return@delete
+                    }
+                if (revocation != null && revocation.accountToRevoke != null) {
+                    try {
+                        googleOAuth.revoke(revocation.accountToRevoke.refreshToken)
+                    } catch (cancelled: CancellationException) {
+                        throw cancelled
+                    } catch (_: Exception) {
+                        call.respond(HttpStatusCode.InternalServerError, ErrorResponse("revocation_failed"))
+                        return@delete
+                    }
+                }
+                if (revocation != null) {
+                    try {
+                        repository.completeSessionRevocation(token)
+                    } catch (cancelled: CancellationException) {
+                        throw cancelled
+                    } catch (_: Exception) {
+                        call.respond(HttpStatusCode.InternalServerError, ErrorResponse("revocation_failed"))
+                        return@delete
+                    }
+                }
                 call.respond(HttpStatusCode.NoContent)
             }
         }

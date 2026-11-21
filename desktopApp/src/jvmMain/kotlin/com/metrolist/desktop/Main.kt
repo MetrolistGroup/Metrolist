@@ -173,6 +173,7 @@ import com.metrolist.desktop.youtube.DesktopPageBoundTokenRuntime
 import com.metrolist.shared.BuildConfig
 import com.metrolist.shared.api.lastfm.LastFM
 import com.metrolist.shared.auth.YouTubeSessionState
+import com.metrolist.shared.backup.DriveAccountConnectionState
 import com.metrolist.shared.db.DatabaseDowngradeException
 import com.metrolist.shared.db.MusicDatabase
 import com.metrolist.shared.discord.DiscordRpcManager
@@ -1126,6 +1127,7 @@ private fun runDesktopApp(args: Array<String>) {
                         true -> {
                             withContext(Dispatchers.Main) {
                                 refreshRecoveredDesktopCredentials()
+                                DriveAccountConnectionState.refresh()
                                 ScrobbleSessions.restorePersistedAccounts()
                                 if (settings.enableDiscordIntegration) {
                                     DiscordRpcManager.init(GlobalYouTube.client)

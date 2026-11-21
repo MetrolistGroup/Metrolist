@@ -49,6 +49,7 @@ import com.metrolist.shared.generated.resources.automatic_backup_google_drive
 import com.metrolist.shared.generated.resources.automatic_backup_local
 import com.metrolist.shared.generated.resources.automatic_backup_location
 import com.metrolist.shared.generated.resources.automatic_backup_monthly
+import com.metrolist.shared.generated.resources.automatic_backup_use_google_drive
 import com.metrolist.shared.generated.resources.automatic_backup_weekly
 import com.metrolist.shared.generated.resources.backup_create_failed
 import com.metrolist.shared.generated.resources.backup_create_success
@@ -67,7 +68,9 @@ import com.metrolist.shared.generated.resources.create_backup_countdown
 import com.metrolist.shared.generated.resources.drive_account_connected
 import com.metrolist.shared.generated.resources.drive_account_disconnected
 import com.metrolist.shared.generated.resources.drive_connect
+import com.metrolist.shared.generated.resources.drive_connect_failed
 import com.metrolist.shared.generated.resources.drive_disconnect
+import com.metrolist.shared.generated.resources.drive_reauthorization_required
 import com.metrolist.shared.generated.resources.foreign_import_desc
 import com.metrolist.shared.generated.resources.foreign_import_title
 import com.metrolist.shared.generated.resources.restore_backup
@@ -104,9 +107,13 @@ fun BackupRestorePage(
     val settings = Settings.shared
     val autoBackupFrequency = AutoBackupFrequency.fromSetting(settings.autoBackupFrequency)
     val driveConnected by DriveAccountConnectionState.connected.collectAsState()
+    val driveReauthorizationRequired by DriveAccountConnectionState.reauthorizationRequired.collectAsState()
+    val driveSignInFailed by DriveAccountConnectionState.signInFailed.collectAsState()
+    var pendingDriveDestination by remember { mutableStateOf<AutoBackupDestination?>(null) }
     var showBackupWarning by remember { mutableStateOf(false) }
     var showRestoreWarning by remember { mutableStateOf(false) }
     var warningSeconds by remember { mutableIntStateOf(5) }
+    val driveDestinationAvailable = driveAvailable && driveConnected
 
     LaunchedEffect(showBackupWarning) {
         if (showBackupWarning) {
@@ -179,12 +186,22 @@ fun BackupRestorePage(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     RadioButton(
-                        selected = AutoBackupDestination.fromSetting(settings.autoBackupDestination) == destination,
+                        selected =
+                            if (!driveDestinationAvailable) {
+                                destination == AutoBackupDestination.LOCAL
+                            } else {
+                                AutoBackupDestination.fromSetting(settings.autoBackupDestination) == destination
+                            },
                         onClick = {
-                            settings.autoBackupDestination = destination.name
-                            onAutoBackupSettingsChanged()
+                            if (destination == AutoBackupDestination.GOOGLE_DRIVE) {
+                                pendingDriveDestination = destination
+                                showBackupWarning = true
+                            } else {
+                                settings.autoBackupDestination = destination.name
+                                onAutoBackupSettingsChanged()
+                            }
                         },
-                        enabled = settings.autoBackupEnabled && (destination == AutoBackupDestination.LOCAL || driveConnected),
+                        enabled = settings.autoBackupEnabled && (destination == AutoBackupDestination.LOCAL || driveDestinationAvailable),
                     )
                     Spacer(Modifier.width(8.dp))
                     Text(
@@ -200,6 +217,7 @@ fun BackupRestorePage(
             }
             Button(
                 onClick = {
+                    DriveAccountConnectionState.clearSignInFailure()
                     if (driveConnected) {
                         onDisconnectDrive()
                     } else {
@@ -217,9 +235,29 @@ fun BackupRestorePage(
                 ),
                 style = MaterialTheme.typography.bodySmall,
             )
+            when {
+                driveReauthorizationRequired -> {
+                    Text(
+                        stringResource(Res.string.drive_reauthorization_required),
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
+
+                driveSignInFailed -> {
+                    Text(
+                        stringResource(Res.string.drive_connect_failed),
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
+            }
         }
         Button(
-            onClick = { showBackupWarning = true },
+            onClick = {
+                pendingDriveDestination = null
+                showBackupWarning = true
+            },
             modifier = Modifier.fillMaxWidth(),
             enabled = status != BackupRestoreStatus.BUSY,
             shapes = ButtonDefaults.shapes(),
@@ -314,7 +352,10 @@ fun BackupRestorePage(
 
     PopupVisibility(visible = showBackupWarning) {
         AlertDialog(
-            onDismissRequest = { showBackupWarning = false },
+            onDismissRequest = {
+                showBackupWarning = false
+                pendingDriveDestination = null
+            },
             title = { Text(stringResource(Res.string.backup_sensitive_title)) },
             text = {
                 Text(
@@ -326,13 +367,22 @@ fun BackupRestorePage(
                 Button(
                     enabled = warningSeconds == 0,
                     onClick = {
+                        val destination = pendingDriveDestination
                         showBackupWarning = false
-                        onExport()
+                        pendingDriveDestination = null
+                        if (destination != null) {
+                            settings.autoBackupDestination = destination.name
+                            onAutoBackupSettingsChanged()
+                        } else {
+                            onExport()
+                        }
                     },
                     shapes = ButtonDefaults.shapes(),
                 ) {
                     Text(
-                        if (warningSeconds == 0) {
+                        if (pendingDriveDestination != null) {
+                            stringResource(Res.string.automatic_backup_use_google_drive)
+                        } else if (warningSeconds == 0) {
                             stringResource(Res.string.create_backup)
                         } else {
                             stringResource(Res.string.create_backup_countdown, warningSeconds)
@@ -341,7 +391,13 @@ fun BackupRestorePage(
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showBackupWarning = false }, shapes = ButtonDefaults.shapes()) {
+                TextButton(
+                    onClick = {
+                        showBackupWarning = false
+                        pendingDriveDestination = null
+                    },
+                    shapes = ButtonDefaults.shapes(),
+                ) {
                     Text(stringResource(Res.string.cancel))
                 }
             },

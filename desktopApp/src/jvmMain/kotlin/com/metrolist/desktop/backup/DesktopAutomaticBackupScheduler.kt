@@ -3,6 +3,9 @@ package com.metrolist.desktop.backup
 import com.metrolist.desktop.utils.AppLogger
 import com.metrolist.shared.backup.AutoBackupDestination
 import com.metrolist.shared.backup.AutoBackupFrequency
+import com.metrolist.shared.backup.DriveAccountConnectionState
+import com.metrolist.shared.backup.DriveCleanupException
+import com.metrolist.shared.backup.DriveReauthorizationRequiredException
 import com.metrolist.shared.backup.GoogleDriveBackupClient
 import com.metrolist.shared.backup.defaultBackupFilename
 import com.metrolist.shared.backup.isAutoBackupDue
@@ -49,6 +52,8 @@ object DesktopAutomaticBackupScheduler {
                         delay(CREDENTIAL_RECOVERY_POLL_MILLIS)
                         continue
                     }
+                    if (AutoBackupDestination.fromSetting(settings.autoBackupDestination) != destination) return@launch
+                    if (destination == AutoBackupDestination.GOOGLE_DRIVE && !DriveAccountConnectionState.connected.value) return@launch
                     if (pruningPending && destination == AutoBackupDestination.LOCAL) {
                         val directory = File(XdgUtils.getXdgDataHome(), "metrolist/automatic-backups")
                         val pruneResult = withContext(Dispatchers.IO) { runCatching { pruneBackups(directory) } }
@@ -68,24 +73,48 @@ object DesktopAutomaticBackupScheduler {
                                 AutoBackupDestination.GOOGLE_DRIVE -> File(XdgUtils.getXdgCacheHome(), "metrolist/automatic-backups")
                             }
                         val backupFile = File(directory, "${defaultBackupFilename(BACKUP_FILENAME_PREFIX)}.zip")
-                        val result =
-                            withContext(Dispatchers.IO + NonCancellable) {
-                                runCatching {
+                        val result: Result<Boolean> =
+                            runCatching {
+                                if (destination == AutoBackupDestination.GOOGLE_DRIVE) {
+                                    check(DesktopDriveSignIn.isConfigured()) { "Google Drive broker is not configured" }
+                                    check(settings.driveBrokerSession.isNotBlank()) { "Google Drive account is not connected" }
+                                }
+                                withContext(Dispatchers.IO + NonCancellable) {
                                     DesktopBackupRestoreManager.backup(backupFile).getOrThrow()
-                                    if (destination == AutoBackupDestination.GOOGLE_DRIVE) {
-                                        uploadAndDelete(backupFile, settings.driveBrokerSession)
-                                    }
-                                    settings.autoBackupLastSuccessEpochMillis = System.currentTimeMillis()
-                                    if (destination == AutoBackupDestination.LOCAL) {
+                                }
+                                if (destination == AutoBackupDestination.LOCAL) {
+                                    withContext(Dispatchers.IO + NonCancellable) {
+                                        settings.autoBackupLastSuccessEpochMillis = System.currentTimeMillis()
                                         pruningPending = true
+                                        runCatching { settings.flush() }
+                                            .onFailure { error ->
+                                                AppLogger.warning("AutomaticBackup", "Could not persist automatic backup time", error)
+                                            }
                                     }
-                                    runCatching { settings.flush() }
-                                        .onFailure { error ->
-                                            AppLogger.warning("AutomaticBackup", "Could not persist automatic backup time", error)
-                                        }
+                                    true
+                                } else {
+                                    if (AutoBackupDestination.fromSetting(settings.autoBackupDestination) != destination) {
+                                        check(!backupFile.exists() || backupFile.delete()) { "Could not remove temporary backup archive" }
+                                        return@runCatching false
+                                    }
+                                    try {
+                                        uploadAndDelete(backupFile, settings.driveBrokerSession)
+                                    } catch (cleanup: DriveCleanupException) {
+                                        DriveAccountConnectionState.recordCleanupFailure()
+                                    }
+                                    withContext(Dispatchers.IO + NonCancellable) {
+                                        settings.autoBackupLastSuccessEpochMillis = System.currentTimeMillis()
+                                        runCatching { settings.flush() }
+                                            .onFailure { error ->
+                                                AppLogger.warning("AutomaticBackup", "Could not persist automatic backup time", error)
+                                            }
+                                    }
+                                    true
                                 }
                             }
-                        if (result.isSuccess) {
+                        val error = result.exceptionOrNull()
+                        if (error is DriveReauthorizationRequiredException) DriveAccountConnectionState.requireReauthorization()
+                        if (result.getOrNull() == true) {
                             if (destination == AutoBackupDestination.LOCAL) {
                                 val pruneResult = withContext(Dispatchers.IO) { runCatching { pruneBackups(directory) } }
                                 pruningPending = pruneResult.isFailure
@@ -98,10 +127,10 @@ object DesktopAutomaticBackupScheduler {
                             } else {
                                 directory.listFiles { file -> file.isFile }?.forEach { it.delete() }
                             }
-                        } else {
+                        } else if (error != null) {
                             AppLogger.warning(
                                 "AutomaticBackup",
-                                "Automatic backup failed: ${result.exceptionOrNull()?.message ?: "Unknown error"}",
+                                "Automatic backup failed: ${error.message ?: "Unknown error"}",
                             )
                         }
                         delay(FAILURE_RETRY_MILLIS)
@@ -145,6 +174,17 @@ object DesktopAutomaticBackupScheduler {
         try {
             val driveClient = GoogleDriveBackupClient(brokerUrl)
             try {
+                if (Settings.shared.driveCleanupPending) {
+                    try {
+                        driveClient.cleanupBackups(sessionToken)
+                        DriveAccountConnectionState.clearCleanupFailure()
+                    } catch (cancelled: CancellationException) {
+                        throw cancelled
+                    } catch (error: Exception) {
+                        AppLogger.warning("AutomaticBackup", "Could not retry Drive cleanup", error)
+                        DriveAccountConnectionState.recordCleanupFailure()
+                    }
+                }
                 driveClient.uploadBackup(
                     sessionToken,
                     backupFile.name,

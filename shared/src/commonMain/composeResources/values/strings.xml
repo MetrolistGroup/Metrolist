@@ -1413,6 +1413,7 @@
     <string name="automatic_backup_destination">Backup destination</string>
     <string name="automatic_backup_local">On this device</string>
     <string name="automatic_backup_google_drive">Google Drive</string>
+    <string name="automatic_backup_use_google_drive">Use Google Drive</string>
     <string name="automatic_backup_daily">Daily</string>
     <string name="automatic_backup_weekly">Weekly</string>
     <string name="automatic_backup_monthly">Monthly</string>
@@ -1425,6 +1426,7 @@
     <string name="drive_account_connected">Google Drive account connected</string>
     <string name="drive_account_disconnected">Connect an account to upload automatic backups</string>
     <string name="drive_connect_failed">Could not connect to Google Drive</string>
+    <string name="drive_reauthorization_required">Google Drive needs to be connected again</string>
     <!-- Translators: Title of the Backup & Restore option that imports a backup made by a different YouTube Music app. -->
     <string name="foreign_import_title">Import from another app</string>
     <!-- Translators: Supporting text beneath the import-from-another-app option in the Backup & Restore. App names are product names. -->

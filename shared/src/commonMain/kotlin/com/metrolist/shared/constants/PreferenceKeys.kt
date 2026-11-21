@@ -191,6 +191,7 @@ val AutoBackupLastSuccessEpochKey = "autoBackupLastSuccessEpoch"
 val DriveBrokerSessionKey = "driveBrokerSession"
 val DriveOAuthStateKey = "driveOAuthState"
 val DriveOAuthVerifierKey = "driveOAuthVerifier"
+val DriveCleanupPendingKey = "driveCleanupPending"
 
 enum class SongSortType {
     CREATE_DATE,

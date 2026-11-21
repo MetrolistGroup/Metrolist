@@ -14,6 +14,7 @@ import io.ktor.http.formUrlEncode
 import io.ktor.http.isSuccess
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import java.net.URI
 
 @Serializable
 data class GoogleTokenResponse(
@@ -128,7 +129,7 @@ class GoogleOAuth(
             }
 
     private fun isLoopbackRedirect(value: String?): Boolean {
-        val uri = runCatching { java.net.URI(value) }.getOrNull() ?: return false
+        val uri = runCatching { URI(value) }.getOrNull() ?: return false
         return uri.scheme == "http" && uri.host in setOf("127.0.0.1", "[::1]", "::1") &&
             uri.port in 1024..65535 && uri.rawUserInfo == null && uri.rawFragment == null
     }

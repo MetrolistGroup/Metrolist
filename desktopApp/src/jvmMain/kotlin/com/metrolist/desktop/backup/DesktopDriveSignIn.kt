@@ -11,8 +11,10 @@ import java.io.BufferedReader
 import java.io.InputStreamReader
 import java.net.InetAddress
 import java.net.ServerSocket
+import java.net.Socket
 import java.net.SocketException
 import java.net.SocketTimeoutException
+import java.net.URI
 import java.net.URLDecoder
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
@@ -20,6 +22,7 @@ import java.security.MessageDigest
 import java.security.SecureRandom
 import java.util.Base64
 import java.util.concurrent.CompletableFuture
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
 import kotlin.concurrent.thread
 
@@ -28,6 +31,7 @@ object DesktopDriveSignIn {
 
     suspend fun connect() =
         withContext(Dispatchers.IO) {
+            DriveAccountConnectionState.clearSignInFailure()
             val brokerUrl = requireBrokerUrl()
             val broker = DriveTokenBrokerClient(brokerUrl)
             val configuration =
@@ -47,39 +51,46 @@ object DesktopDriveSignIn {
             val port = server.localPort
             val redirectUri = "http://127.0.0.1:$port/oauth2callback"
             val authorizationCode = CompletableFuture<String>()
+            val activeSockets = ConcurrentHashMap.newKeySet<Socket>()
             val listener =
                 thread(isDaemon = true) {
                     while (!authorizationCode.isDone) {
                         try {
                             server.accept().use { socket ->
-                                val reader = BufferedReader(InputStreamReader(socket.getInputStream(), StandardCharsets.UTF_8))
-                                val requestLine = reader.readLine().orEmpty()
-                                while (true) {
-                                    if (reader.readLine().isNullOrEmpty()) break
+                                if (!activeSockets.add(socket)) return@use
+                                try {
+                                    socket.soTimeout = SOCKET_READ_TIMEOUT_MILLIS
+                                    val reader = BufferedReader(InputStreamReader(socket.getInputStream(), StandardCharsets.UTF_8))
+                                    val requestLine = reader.readLine().orEmpty()
+                                    while (true) {
+                                        if (reader.readLine().isNullOrEmpty()) break
+                                    }
+                                    val rawQuery = requestLine.substringAfter(' ', "").substringBefore(' ').substringAfter('?', "")
+                                    val parameters =
+                                        rawQuery
+                                            .split('&')
+                                            .mapNotNull { item ->
+                                                val pair = item.split('=', limit = 2)
+                                                pair.firstOrNull()?.let { key ->
+                                                    URLDecoder.decode(key, StandardCharsets.UTF_8) to
+                                                        URLDecoder.decode(pair.getOrElse(1) { "" }, StandardCharsets.UTF_8)
+                                                }
+                                            }.toMap()
+                                    if (requestLine.substringAfter(' ', "").startsWith("/oauth2callback?") &&
+                                        parameters["state"] == state
+                                    ) {
+                                        parameters["code"]?.takeIf(String::isNotBlank)?.let(authorizationCode::complete)
+                                            ?: authorizationCode.completeExceptionally(
+                                                IllegalStateException("Google authorization was denied"),
+                                            )
+                                    }
+                                    val status = if (authorizationCode.isDone) "204 No Content" else "400 Bad Request"
+                                    socket.getOutputStream().write(
+                                        "HTTP/1.1 $status\r\nConnection: close\r\nContent-Length: 0\r\n\r\n".toByteArray(),
+                                    )
+                                } finally {
+                                    activeSockets.remove(socket)
                                 }
-                                val rawQuery = requestLine.substringAfter(' ', "").substringBefore(' ').substringAfter('?', "")
-                                val parameters =
-                                    rawQuery
-                                        .split('&')
-                                        .mapNotNull { item ->
-                                            val pair = item.split('=', limit = 2)
-                                            pair.firstOrNull()?.let { key ->
-                                                URLDecoder.decode(key, StandardCharsets.UTF_8) to
-                                                    URLDecoder.decode(pair.getOrElse(1) { "" }, StandardCharsets.UTF_8)
-                                            }
-                                        }.toMap()
-                                if (requestLine.substringAfter(' ', "").startsWith("/oauth2callback?") &&
-                                    parameters["state"] == state
-                                ) {
-                                    parameters["code"]?.takeIf(String::isNotBlank)?.let(authorizationCode::complete)
-                                        ?: authorizationCode.completeExceptionally(
-                                            IllegalStateException("Google authorization was denied"),
-                                        )
-                                }
-                                val status = if (authorizationCode.isDone) "204 No Content" else "400 Bad Request"
-                                socket.getOutputStream().write(
-                                    "HTTP/1.1 $status\r\nConnection: close\r\nContent-Length: 0\r\n\r\n".toByteArray(),
-                                )
                             }
                         } catch (_: SocketTimeoutException) {
                             continue
@@ -105,7 +116,7 @@ object DesktopDriveSignIn {
                 check(Desktop.isDesktopSupported() && Desktop.getDesktop().isSupported(Desktop.Action.BROWSE)) {
                     "A system browser is required to connect Google Drive"
                 }
-                Desktop.getDesktop().browse(java.net.URI("https://accounts.google.com/o/oauth2/v2/auth?$query"))
+                Desktop.getDesktop().browse(URI("https://accounts.google.com/o/oauth2/v2/auth?$query"))
                 val code = authorizationCode.get(3, TimeUnit.MINUTES)
                 val exchangeBroker = DriveTokenBrokerClient(brokerUrl)
                 val session =
@@ -118,6 +129,8 @@ object DesktopDriveSignIn {
                 DriveAccountConnectionState.update(session.sessionToken)
                 Settings.shared.flush()
             } finally {
+                authorizationCode.completeExceptionally(IllegalStateException("Google sign-in ended before a callback arrived"))
+                activeSockets.forEach { socket -> runCatching { socket.close() } }
                 server.close()
                 listener.join(CALLBACK_SHUTDOWN_TIMEOUT_MILLIS)
             }
@@ -129,9 +142,7 @@ object DesktopDriveSignIn {
             val broker = DriveTokenBrokerClient(requireBrokerUrl())
             try {
                 if (session.isNotBlank()) broker.revoke(session)
-                Settings.shared.driveBrokerSession = ""
-                DriveAccountConnectionState.update("")
-                Settings.shared.flush()
+                DriveAccountConnectionState.clearIfCurrent(session)
             } finally {
                 broker.close()
             }
@@ -150,5 +161,6 @@ object DesktopDriveSignIn {
 
     private const val DRIVE_BROKER_URL_ENV = "METROLIST_DRIVE_BROKER_URL"
     private const val CALLBACK_POLL_INTERVAL_MILLIS = 1_000
+    private const val SOCKET_READ_TIMEOUT_MILLIS = 2_000
     private const val CALLBACK_SHUTDOWN_TIMEOUT_MILLIS = 1_000L
 }

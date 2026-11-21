@@ -1,6 +1,7 @@
 package com.metrolist.shared.backup
 
 import com.metrolist.shared.network.createHttpClient
+import com.metrolist.shared.utils.Logger
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.plugins.timeout
@@ -15,6 +16,7 @@ import io.ktor.client.statement.HttpResponse
 import io.ktor.http.ContentType
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
+import io.ktor.http.Url
 import io.ktor.http.content.OutgoingContent
 import io.ktor.http.contentType
 import io.ktor.utils.io.ByteWriteChannel
@@ -66,8 +68,19 @@ class GoogleDriveBackupClient(
                 ?.also(::requireSafeUploadUrl)
                 ?: error("Drive did not provide a resumable upload URL")
         val uploaded = uploadArchive(accessToken, uploadUrl, archiveSize, archiveSource)
-        runCatching { pruneOldBackups(accessToken, folderId) }
+        val cleanupError = runCatching { pruneOldBackups(accessToken, folderId) }.exceptionOrNull()
+        if (cleanupError != null) {
+            if (cleanupError is CancellationException) throw cleanupError
+            Logger.w("GoogleDriveBackup", "Could not prune expired Drive backups", cleanupError)
+            throw DriveCleanupException(listOf(cleanupError))
+        }
         return uploaded
+    }
+
+    suspend fun cleanupBackups(sessionToken: String) {
+        val accessToken = broker.accessToken(sessionToken).accessToken
+        val folderId = findBackupFolder(accessToken) ?: return
+        pruneOldBackups(accessToken, folderId)
     }
 
     private suspend fun uploadArchive(
@@ -94,6 +107,7 @@ class GoogleDriveBackupClient(
                     if (retries++ >= MAX_UPLOAD_RETRIES) throw error
                     val progress = queryUploadOffset(accessToken, uploadUrl, archiveSize)
                     progress.completed?.let { return it }
+                    if (progress.offset > offset) retries = 0
                     offset = progress.offset
                     continue
                 }
@@ -133,22 +147,24 @@ class GoogleDriveBackupClient(
         return (lastByte + 1).coerceAtMost(archiveSize)
     }
 
+    private suspend fun findBackupFolder(accessToken: String): String? =
+        httpClient
+            .get("https://www.googleapis.com/drive/v3/files") {
+                header(HttpHeaders.Authorization, "Bearer $accessToken")
+                parameter(
+                    "q",
+                    "name = '$BACKUP_FOLDER_NAME' and mimeType = '$FOLDER_MIME_TYPE' and trashed = false",
+                )
+                parameter("fields", "files(id)")
+                parameter("pageSize", "10")
+            }.requireDriveApiSuccess()
+            .body<DriveFileList>()
+            .files
+            .firstOrNull()
+            ?.id
+
     private suspend fun getOrCreateBackupFolder(accessToken: String): String {
-        val existing =
-            httpClient
-                .get("https://www.googleapis.com/drive/v3/files") {
-                    header(HttpHeaders.Authorization, "Bearer $accessToken")
-                    parameter(
-                        "q",
-                        "name = '$BACKUP_FOLDER_NAME' and mimeType = '$FOLDER_MIME_TYPE' and trashed = false",
-                    )
-                    parameter("fields", "files(id)")
-                    parameter("pageSize", "10")
-                }.requireDriveApiSuccess()
-                .body<DriveFileList>()
-                .files
-                .firstOrNull()
-                ?.id
+        val existing = findBackupFolder(accessToken)
         if (existing != null) return existing
         return httpClient
             .post("https://www.googleapis.com/drive/v3/files") {
@@ -185,14 +201,21 @@ class GoogleDriveBackupClient(
             files += page.files
             pageToken = page.nextPageToken
         } while (pageToken != null)
+        val failures = mutableListOf<Throwable>()
         files.drop(MAX_RETAINED_BACKUPS).forEach { file ->
-            runCatching {
+            try {
                 httpClient
                     .delete("https://www.googleapis.com/drive/v3/files/${file.id}") {
                         header(HttpHeaders.Authorization, "Bearer $accessToken")
                     }.requireDriveApiSuccess()
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (error: Exception) {
+                Logger.w("GoogleDriveBackup", "Could not delete expired backup ${file.id}", error)
+                failures += error
             }
         }
+        if (failures.isNotEmpty()) throw DriveCleanupException(failures)
     }
 
     private companion object {
@@ -208,8 +231,12 @@ class GoogleDriveBackupClient(
     }
 }
 
+class DriveCleanupException(
+    val failures: List<Throwable>,
+) : Exception("Could not remove expired Drive backups")
+
 private fun requireSafeUploadUrl(value: String) {
-    val parsed = runCatching { io.ktor.http.Url(value) }.getOrNull()
+    val parsed = runCatching { Url(value) }.getOrNull()
     val uploadId = parsed?.parameters?.get("upload_id")
     require(
         parsed != null &&

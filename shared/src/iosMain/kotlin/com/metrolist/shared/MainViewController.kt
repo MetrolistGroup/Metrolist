@@ -137,7 +137,6 @@ import okio.Path.Companion.toPath
 import org.jetbrains.compose.resources.getString
 import org.jetbrains.compose.resources.stringResource
 import org.koin.mp.KoinPlatform
-import platform.Foundation.NSBundle
 import platform.Foundation.NSCachesDirectory
 import platform.Foundation.NSDate
 import platform.Foundation.NSDateFormatter
@@ -179,24 +178,24 @@ fun handleOpenUrl(url: String) {
 fun disconnectIosDriveAccount() {
     CoroutineScope(SupervisorJob() + Dispatchers.Main).launch {
         val settings = Settings.shared
-        val brokerUrl = NSBundle.mainBundle.infoDictionary?.get("DriveBrokerUrl") as? String
-        if (settings.driveBrokerSession.isNotBlank() && brokerUrl?.startsWith("https://") == true) {
+        val session = settings.driveBrokerSession
+        val brokerUrl = iosDriveBrokerUrl()
+        if (session.isNotBlank() && brokerUrl != null) {
             val broker = DriveTokenBrokerClient(brokerUrl)
             val revoked =
                 try {
-                    runCatching { broker.revoke(settings.driveBrokerSession) }.isSuccess
+                    runCatching { broker.revoke(session) }.isSuccess
                 } finally {
                     broker.close()
                 }
-            if (!revoked) return@launch
+            if (!revoked) {
+                DriveAccountConnectionState.reportSignInFailure()
+                return@launch
+            }
         }
-        settings.driveBrokerSession = ""
-        DriveAccountConnectionState.update("")
-        if (AutoBackupDestination.fromSetting(settings.autoBackupDestination) == AutoBackupDestination.GOOGLE_DRIVE) {
-            settings.autoBackupDestination = AutoBackupDestination.LOCAL.name
+        if (DriveAccountConnectionState.clearIfCurrent(session)) {
+            notifyIosAutomaticBackupSettingsChanged()
         }
-        settings.flush()
-        notifyIosAutomaticBackupSettingsChanged()
     }
 }
 

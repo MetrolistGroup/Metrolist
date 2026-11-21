@@ -11,6 +11,7 @@ import io.ktor.client.request.setBody
 import io.ktor.client.statement.HttpResponse
 import io.ktor.http.ContentType
 import io.ktor.http.HttpHeaders
+import io.ktor.http.HttpStatusCode
 import io.ktor.http.contentType
 import kotlinx.serialization.Serializable
 
@@ -56,10 +57,18 @@ class DriveBrokerException(
     val statusCode: Int,
 ) : Exception("Drive broker request failed with HTTP $statusCode")
 
+class DriveReauthorizationRequiredException : DriveBrokerException(HttpStatusCode.Unauthorized.value)
+
 private suspend fun HttpResponse.requireSuccess(): HttpResponse =
     also {
+        if (status == HttpStatusCode.Unauthorized) {
+            val error = runCatching { body<DriveBrokerError>().error }.getOrNull()
+            if (error == REAUTHORIZATION_REQUIRED) throw DriveReauthorizationRequiredException()
+        }
         if (status.value !in 200..299) throw DriveBrokerException(status.value)
     }
+
+private const val REAUTHORIZATION_REQUIRED = "reauthorization_required"
 
 @Serializable
 data class DriveBrokerConfiguration(
@@ -79,6 +88,11 @@ data class DriveBrokerSession(
 data class DriveAccessToken(
     val accessToken: String,
     val expiresIn: Long,
+)
+
+@Serializable
+private data class DriveBrokerError(
+    val error: String? = null,
 )
 
 @Serializable

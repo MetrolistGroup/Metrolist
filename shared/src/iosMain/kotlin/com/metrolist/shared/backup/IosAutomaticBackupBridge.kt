@@ -3,7 +3,9 @@
 package com.metrolist.shared.backup
 
 import com.metrolist.shared.settings.Settings
+import com.metrolist.shared.utils.Logger
 import kotlinx.cinterop.ExperimentalForeignApi
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
@@ -12,8 +14,9 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.withLock
-import kotlinx.io.files.FileSystem
 import kotlinx.io.files.Path
+import kotlinx.io.files.SystemFileSystem
+import platform.Foundation.NSBundle
 import platform.Foundation.NSCachesDirectory
 import platform.Foundation.NSDate
 import platform.Foundation.NSDocumentDirectory
@@ -68,7 +71,18 @@ fun createIosAutomaticBackup(completion: (Boolean) -> Unit) {
                     return@launch
                 }
                 val fileManager = NSFileManager.defaultManager
-                val destinationType = AutoBackupDestination.fromSetting(Settings.shared.autoBackupDestination)
+                val settings = Settings.shared
+                val destinationType = AutoBackupDestination.fromSetting(settings.autoBackupDestination)
+                val brokerUrl = if (destinationType == AutoBackupDestination.GOOGLE_DRIVE) iosDriveBrokerUrl() else null
+                val session =
+                    if (destinationType == AutoBackupDestination.GOOGLE_DRIVE) {
+                        settings.driveBrokerSession.takeIf(String::isNotBlank)
+                    } else {
+                        null
+                    }
+                if (destinationType == AutoBackupDestination.GOOGLE_DRIVE) {
+                    check(brokerUrl != null && session != null)
+                }
                 val backupBasePath =
                     when (destinationType) {
                         AutoBackupDestination.LOCAL -> {
@@ -88,7 +102,7 @@ fun createIosAutomaticBackup(completion: (Boolean) -> Unit) {
                         },
                     )
                 val destination = backupDirectory?.plus("/${defaultBackupFilename(BACKUP_FILENAME_PREFIX)}.zip")
-                val succeeded =
+                val result =
                     runCatching {
                         check(
                             backupDirectory != null &&
@@ -103,11 +117,14 @@ fun createIosAutomaticBackup(completion: (Boolean) -> Unit) {
                             check(NSURL.fileURLWithPath(backupDirectory).setResourceValue(true, NSURLIsExcludedFromBackupKey, error = null))
                         }
                         check(destination != null)
+                        if (destinationType == AutoBackupDestination.GOOGLE_DRIVE) {
+                            retryDriveCleanup(checkNotNull(brokerUrl), checkNotNull(session))
+                        }
                         val isDue =
                             isAutoBackupDue(
-                                Settings.shared.autoBackupLastSuccessEpochMillis,
+                                settings.autoBackupLastSuccessEpochMillis,
                                 (NSDate().timeIntervalSince1970 * 1000).toLong(),
-                                AutoBackupFrequency.fromSetting(Settings.shared.autoBackupFrequency),
+                                AutoBackupFrequency.fromSetting(settings.autoBackupFrequency),
                             )
                         if (isDue) {
                             when (destinationType) {
@@ -116,20 +133,31 @@ fun createIosAutomaticBackup(completion: (Boolean) -> Unit) {
                                 }
 
                                 AutoBackupDestination.GOOGLE_DRIVE -> {
+                                    val activeSession = settings.driveBrokerSession
+                                    check(activeSession == session && activeSession.isNotBlank())
                                     try {
                                         IosBackupRestoreManager().backup(destination).getOrThrow()
-                                        val brokerUrl = iosDriveBrokerUrl()
-                                        val session = Settings.shared.driveBrokerSession
-                                        check(brokerUrl.startsWith("https://") && session.isNotBlank())
+                                        if (AutoBackupDestination.fromSetting(settings.autoBackupDestination) != destinationType) {
+                                            return@runCatching false
+                                        }
                                         val archivePath = Path(destination)
-                                        val archiveSize = checkNotNull(FileSystem.SYSTEM.metadataOrNull(archivePath)).size
-                                        val driveClient = GoogleDriveBackupClient(brokerUrl)
+                                        val archiveSize = checkNotNull(SystemFileSystem.metadataOrNull(archivePath)).size
+                                        val driveClient = GoogleDriveBackupClient(checkNotNull(brokerUrl))
                                         try {
-                                            driveClient.uploadBackup(
-                                                session,
-                                                destination.substringAfterLast('/'),
-                                                archiveSize,
-                                            ) { FileSystem.SYSTEM.source(archivePath) }
+                                            val uploadError =
+                                                runCatching {
+                                                    driveClient.uploadBackup(
+                                                        activeSession,
+                                                        destination.substringAfterLast('/'),
+                                                        archiveSize,
+                                                    ) { SystemFileSystem.source(archivePath) }
+                                                }.exceptionOrNull()
+                                            if (uploadError is CancellationException) throw uploadError
+                                            if (uploadError is DriveCleanupException) {
+                                                DriveAccountConnectionState.recordCleanupFailure()
+                                            } else if (uploadError != null) {
+                                                throw uploadError
+                                            }
                                         } finally {
                                             driveClient.close()
                                         }
@@ -140,34 +168,11 @@ fun createIosAutomaticBackup(completion: (Boolean) -> Unit) {
                                     }
                                 }
                             }
-                            Settings.shared.autoBackupLastSuccessEpochMillis = (NSDate().timeIntervalSince1970 * 1000).toLong()
-                            Settings.shared.flush()
+                            settings.autoBackupLastSuccessEpochMillis = (NSDate().timeIntervalSince1970 * 1000).toLong()
+                            settings.flush()
                         }
-                        if (destinationType == AutoBackupDestination.LOCAL) {
-                            iosBackupOperationMutex.withLock {
-                                val entries =
-                                    fileManager
-                                        .contentsOfDirectoryAtPath(backupDirectory, error = null)
-                                        .orEmpty()
-                                        .filterIsInstance<String>()
-                                entries
-                                    .filter { it.endsWith(".tmp") }
-                                    .forEach { filename -> check(fileManager.removeItemAtPath("$backupDirectory/$filename", error = null)) }
-                                val files = entries.filter { it.endsWith(".zip") }
-                                files
-                                    .map { filename ->
-                                        val path = "$backupDirectory/$filename"
-                                        val modifiedAt =
-                                            (fileManager.attributesOfItemAtPath(path, error = null)?.get(NSFileModificationDate) as? NSDate)
-                                                ?.timeIntervalSince1970 ?: 0.0
-                                        filename to modifiedAt
-                                    }.sortedByDescending { it.second }
-                                    .drop(MAX_RETAINED_BACKUPS)
-                                    .forEach { (filename, _) ->
-                                        check(fileManager.removeItemAtPath("$backupDirectory/$filename", error = null))
-                                    }
-                            }
-                        } else {
+                        cleanupLocalBackups(fileManager)
+                        if (destinationType == AutoBackupDestination.GOOGLE_DRIVE) {
                             val entries =
                                 fileManager
                                     .contentsOfDirectoryAtPath(backupDirectory, error = null)
@@ -178,8 +183,11 @@ fun createIosAutomaticBackup(completion: (Boolean) -> Unit) {
                             }
                         }
                         true
-                    }.getOrDefault(false)
-                completion(succeeded)
+                    }
+                if (result.exceptionOrNull() is DriveReauthorizationRequiredException) {
+                    DriveAccountConnectionState.requireReauthorization()
+                }
+                completion(result.getOrDefault(false))
             } finally {
                 if (activeAutomaticBackup === currentCoroutineContext()[Job]) activeAutomaticBackup = null
             }
@@ -188,12 +196,55 @@ fun createIosAutomaticBackup(completion: (Boolean) -> Unit) {
     backupJob.start()
 }
 
-private fun iosDriveBrokerUrl(): String =
-    (
-        platform.Foundation.NSBundle.mainBundle.infoDictionary
-            ?.get("DriveBrokerUrl") as? String
-    )?.takeIf(String::isNotBlank)
-        ?: error("Google Drive broker is not configured")
+private fun cleanupLocalBackups(fileManager: NSFileManager) {
+    val directory = automaticBackupDirectory() ?: return
+    iosBackupOperationMutex.withLock {
+        val entries =
+            fileManager
+                .contentsOfDirectoryAtPath(directory, error = null)
+                .orEmpty()
+                .filterIsInstance<String>()
+        entries
+            .filter { it.endsWith(".tmp") }
+            .forEach { filename -> check(fileManager.removeItemAtPath("$directory/$filename", error = null)) }
+        entries
+            .map { filename ->
+                val path = "$directory/$filename"
+                val modifiedAt =
+                    (fileManager.attributesOfItemAtPath(path, error = null)?.get(NSFileModificationDate) as? NSDate)
+                        ?.timeIntervalSince1970 ?: 0.0
+                filename to modifiedAt
+            }.filter { it.first.endsWith(".zip") }
+            .sortedByDescending { it.second }
+            .drop(MAX_RETAINED_BACKUPS)
+            .forEach { (filename, _) ->
+                check(fileManager.removeItemAtPath("$directory/$filename", error = null))
+            }
+    }
+}
+
+private suspend fun retryDriveCleanup(
+    brokerUrl: String,
+    session: String,
+) {
+    if (!Settings.shared.driveCleanupPending) return
+    val client = GoogleDriveBackupClient(brokerUrl)
+    try {
+        client.cleanupBackups(session)
+        DriveAccountConnectionState.clearCleanupFailure()
+    } catch (cancelled: CancellationException) {
+        throw cancelled
+    } catch (error: Exception) {
+        Logger.w("AutomaticBackup", "Could not retry Drive cleanup", error)
+        DriveAccountConnectionState.recordCleanupFailure()
+    } finally {
+        client.close()
+    }
+}
+
+internal fun iosDriveBrokerUrl(): String? =
+    (NSBundle.mainBundle.infoDictionary?.get("DriveBrokerUrl") as? String)
+        ?.takeIf { it.startsWith("https://") }
 
 fun cancelIosAutomaticBackup() {
     activeAutomaticBackup?.cancel()

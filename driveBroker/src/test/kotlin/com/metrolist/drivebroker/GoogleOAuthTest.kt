@@ -41,7 +41,7 @@ class GoogleOAuthTest {
                     """{"sub":"google-subject","aud":"other-client-id","iss":"accounts.google.com","exp":${System.currentTimeMillis() / 1000 + 3600}}""",
                 )
 
-            assertNull(GoogleOAuth(client, configuration).exchange(ClientPlatform.IOS, "one-time-code", null, null))
+            assertNull(GoogleOAuth(client, configuration).exchange(ClientPlatform.ANDROID, "one-time-code", null, null))
             client.close()
         }
 

@@ -2,6 +2,7 @@ package com.metrolist.drivebroker
 
 import java.security.MessageDigest
 import java.security.SecureRandom
+import java.sql.Connection
 import java.util.Base64
 import javax.crypto.Cipher
 import javax.crypto.spec.GCMParameterSpec
@@ -28,6 +29,12 @@ data class DriveAccount(
     val refreshToken: String,
 )
 
+data class SessionRevocation(
+    val subject: String,
+    val clientId: String,
+    val accountToRevoke: DriveAccount?,
+)
+
 class TokenRepository(
     private val dataSource: DataSource,
     private val encryptionKey: ByteArray,
@@ -43,6 +50,8 @@ class TokenRepository(
         dataSource.connection.use { connection ->
             connection.autoCommit = false
             try {
+                lockSubject(connection, account.subject)
+                lockAccount(connection, account.subject, account.clientId)
                 connection
                     .prepareStatement(
                         """INSERT INTO google_drive_accounts (google_subject, oauth_client_id, refresh_token_iv, refresh_token_ciphertext)
@@ -87,15 +96,17 @@ class TokenRepository(
                     statement.setBytes(1, hash(tokenBytes))
                     statement.executeQuery().use { result ->
                         if (!result.next()) return null
+                        val subject = result.getString("google_subject")
+                        val clientId = result.getString("oauth_client_id")
                         return DriveAccount(
-                            result.getString("google_subject"),
-                            result.getString("oauth_client_id"),
+                            subject,
+                            clientId,
                             null,
                             decrypt(
                                 result.getBytes("refresh_token_ciphertext"),
                                 result.getBytes("refresh_token_iv"),
-                                result.getString("google_subject"),
-                                result.getString("oauth_client_id"),
+                                subject,
+                                clientId,
                             ),
                         )
                     }
@@ -103,17 +114,16 @@ class TokenRepository(
         }
     }
 
-    fun revokeSessionAndDeleteOrphanAccount(sessionToken: String): DriveAccount? {
-        val tokenBytes = decodeToken(sessionToken) ?: return null
+    fun prepareSessionRevocation(sessionToken: String): SessionRevocation? {
+        val tokenHash = decodeToken(sessionToken)?.let(::hash) ?: return null
         dataSource.connection.use { connection ->
             connection.autoCommit = false
             try {
-                val account =
+                val session =
                     connection
-                        .prepareStatement(
-                            """DELETE FROM google_drive_sessions WHERE token_hash = ? RETURNING google_subject, oauth_client_id""",
-                        ).use { statement ->
-                            statement.setBytes(1, hash(tokenBytes))
+                        .prepareStatement("SELECT google_subject, oauth_client_id FROM google_drive_sessions WHERE token_hash = ?")
+                        .use { statement ->
+                            statement.setBytes(1, tokenHash)
                             statement.executeQuery().use { result ->
                                 if (!result.next()) {
                                     connection.rollback()
@@ -122,62 +132,149 @@ class TokenRepository(
                                 result.getString("google_subject") to result.getString("oauth_client_id")
                             }
                         }
-                val remaining =
+                lockSubject(connection, session.first)
+                lockAccount(connection, session.first, session.second)
+                val refreshToken =
                     connection
                         .prepareStatement(
-                            "SELECT 1 FROM google_drive_sessions WHERE google_subject = ? AND oauth_client_id = ? LIMIT 1",
+                            "SELECT refresh_token_iv, refresh_token_ciphertext FROM google_drive_accounts WHERE google_subject = ? AND oauth_client_id = ?",
                         ).use { statement ->
-                            statement.setString(1, account.first)
-                            statement.setString(2, account.second)
-                            statement.executeQuery().use { it.next() }
-                        }
-                val revoked =
-                    if (remaining) {
-                        null
-                    } else {
-                        connection
-                            .prepareStatement(
-                                """SELECT refresh_token_iv, refresh_token_ciphertext FROM google_drive_accounts
-                       WHERE google_subject = ? AND oauth_client_id = ? FOR UPDATE""",
-                            ).use { statement ->
-                                statement.setString(1, account.first)
-                                statement.setString(2, account.second)
-                                statement.executeQuery().use { result ->
-                                    if (!result.next()) {
-                                        null
-                                    } else {
-                                        DriveAccount(
-                                            account.first,
-                                            account.second,
-                                            null,
-                                            decrypt(
-                                                result.getBytes("refresh_token_ciphertext"),
-                                                result.getBytes("refresh_token_iv"),
-                                                account.first,
-                                                account.second,
-                                            ),
-                                        )
-                                    }
+                            statement.setString(1, session.first)
+                            statement.setString(2, session.second)
+                            statement.executeQuery().use { result ->
+                                if (!result.next()) {
+                                    null
+                                } else {
+                                    decrypt(
+                                        result.getBytes("refresh_token_ciphertext"),
+                                        result.getBytes("refresh_token_iv"),
+                                        session.first,
+                                        session.second,
+                                    )
                                 }
                             }
-                    }
-                if (!remaining) {
-                    connection
-                        .prepareStatement(
-                            "DELETE FROM google_drive_accounts WHERE google_subject = ? AND oauth_client_id = ?",
-                        ).use { statement ->
-                            statement.setString(1, account.first)
-                            statement.setString(2, account.second)
-                            statement.executeUpdate()
                         }
-                }
+                // Google revocation invalidates every client in the project, not just this account's OAuth client.
+                val remainingForSubject = hasSession(connection, session.first, excludedTokenHash = tokenHash)
                 connection.commit()
-                return revoked
+                return SessionRevocation(
+                    session.first,
+                    session.second,
+                    if (remainingForSubject || refreshToken == null) {
+                        null
+                    } else {
+                        DriveAccount(session.first, session.second, null, refreshToken)
+                    },
+                )
             } catch (error: Exception) {
                 connection.rollback()
                 throw error
             }
         }
+    }
+
+    fun completeSessionRevocation(sessionToken: String): Boolean {
+        val tokenHash = decodeToken(sessionToken)?.let(::hash) ?: return false
+        dataSource.connection.use { connection ->
+            connection.autoCommit = false
+            try {
+                val session =
+                    connection
+                        .prepareStatement("SELECT google_subject, oauth_client_id FROM google_drive_sessions WHERE token_hash = ?")
+                        .use { statement ->
+                            statement.setBytes(1, tokenHash)
+                            statement.executeQuery().use { result ->
+                                if (!result.next()) {
+                                    connection.rollback()
+                                    return false
+                                }
+                                result.getString("google_subject") to result.getString("oauth_client_id")
+                            }
+                        }
+                lockSubject(connection, session.first)
+                lockAccount(connection, session.first, session.second)
+                val deleted =
+                    connection
+                        .prepareStatement("DELETE FROM google_drive_sessions WHERE token_hash = ?")
+                        .use { statement ->
+                            statement.setBytes(1, tokenHash)
+                            statement.executeUpdate() > 0
+                        }
+                if (!deleted) {
+                    connection.rollback()
+                    return false
+                }
+                if (!hasSession(connection, session.first, session.second)) deleteAccount(connection, session.first, session.second)
+                connection.commit()
+                return true
+            } catch (error: Exception) {
+                connection.rollback()
+                throw error
+            }
+        }
+    }
+
+    private fun hasSession(
+        connection: Connection,
+        subject: String,
+        clientId: String? = null,
+        excludedTokenHash: ByteArray? = null,
+    ): Boolean =
+        connection
+            .prepareStatement(
+                buildString {
+                    append("SELECT 1 FROM google_drive_sessions WHERE google_subject = ?")
+                    if (clientId != null) append(" AND oauth_client_id = ?")
+                    if (excludedTokenHash != null) append(" AND token_hash <> ?")
+                    append(" LIMIT 1")
+                },
+            ).use { statement ->
+                var index = 1
+                statement.setString(index++, subject)
+                clientId?.let { statement.setString(index++, it) }
+                excludedTokenHash?.let { statement.setBytes(index++, it) }
+                statement.executeQuery().use { it.next() }
+            }
+
+    private fun deleteAccount(
+        connection: Connection,
+        subject: String,
+        clientId: String,
+    ) {
+        connection
+            .prepareStatement("DELETE FROM google_drive_accounts WHERE google_subject = ? AND oauth_client_id = ?")
+            .use { statement ->
+                statement.setString(1, subject)
+                statement.setString(2, clientId)
+                statement.executeUpdate()
+            }
+    }
+
+    private fun lockSubject(
+        connection: Connection,
+        subject: String,
+    ) {
+        connection
+            .prepareStatement("SELECT pg_advisory_xact_lock(hashtext(?)::bigint)")
+            .use { statement ->
+                statement.setString(1, subject)
+                statement.executeQuery().use { it.next() }
+            }
+    }
+
+    private fun lockAccount(
+        connection: Connection,
+        subject: String,
+        clientId: String,
+    ) {
+        connection
+            .prepareStatement(
+                "SELECT 1 FROM google_drive_accounts WHERE google_subject = ? AND oauth_client_id = ? FOR UPDATE",
+            ).use { statement ->
+                statement.setString(1, subject)
+                statement.setString(2, clientId)
+                statement.executeQuery().use { it.next() }
+            }
     }
 
     private fun encrypt(
