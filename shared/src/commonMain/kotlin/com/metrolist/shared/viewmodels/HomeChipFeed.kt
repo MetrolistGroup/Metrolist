@@ -34,7 +34,7 @@ class HomePaginationTrigger {
     ): Boolean {
         val ready =
             nearEnd && !state.isLoading && !state.isRefreshing && !state.isRestoringCache && !state.isRevalidating &&
-                !state.isContentLoading && !state.isLoadingMore && !state.loadMoreError
+                !state.isContentLoading && !state.isAllContentPending && !state.isLoadingMore && !state.loadMoreError
         return shouldLoad(state.homePaginationKey.takeIf { ready }, scrollRevision, state.isLoadingMore)
     }
 
