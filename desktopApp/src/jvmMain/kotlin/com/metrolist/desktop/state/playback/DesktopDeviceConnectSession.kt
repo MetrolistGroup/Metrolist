@@ -48,6 +48,8 @@ internal class DesktopDeviceConnectSession(
         private set
     var finite = false
         private set
+    var explicitRadioQueue = false
+        private set
 
     private data class QueueUndo(
         val removal: QueueRemoval,
@@ -86,12 +88,14 @@ internal class DesktopDeviceConnectSession(
         }
         title = playback.title
         finite = playback.finite
+        explicitRadioQueue = playback.explicitRadioQueue
         baseSpeed = playback.speed
     }
 
     fun resetQueueMetadata() {
         title = null
         finite = false
+        explicitRadioQueue = false
         targetCurrentIndex = -1
         undo = null
     }

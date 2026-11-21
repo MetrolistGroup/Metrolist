@@ -57,6 +57,13 @@ internal class AndroidDeviceConnectPlayback(
     private var appliedSyncTrackRevision: Long? = null
     val port: DeviceConnectPlaybackPort =
         object : DeviceConnectPlaybackPort {
+            @Volatile private var pendingExplicitRadioRequest = false
+            private var explicitRadioBootstrapPending = false
+
+            override fun onExplicitRadioRequest() {
+                pendingExplicitRadioRequest = true
+            }
+
             override val canStartDefaultPlayback: Boolean get() = !isCasting()
 
             override suspend fun snapshot(): DcLocalPlaybackState =
@@ -80,6 +87,7 @@ internal class AndroidDeviceConnectPlayback(
                                     .getOrNull(player.currentMediaItemIndex.value)
                                     ?.id,
                         finite = queue.isFiniteQueue,
+                        explicitRadioQueue = queue.explicitRadioQueue,
                         scrobbleSession = scrobbleManager.session(),
                     )
                 }
@@ -114,11 +122,18 @@ internal class AndroidDeviceConnectPlayback(
                 }
                 transitions.cancelNextTrackPreload()
                 val seedId = desiredQueue.originalItems.firstOrNull()?.id
+                val startsExplicitRadio =
+                    desired.explicitRadioQueue && desiredQueue.displayedItems.size == 1 &&
+                        (pendingExplicitRadioRequest || !queue.explicitRadioQueue || appliedSyncSessionId != snapshot.sessionId)
+                pendingExplicitRadioRequest = false
                 if (AndroidDeviceConnect.manager.remote.isFollowing || desired.finite != queue.isFiniteQueue ||
-                    seedId != queue.recommendationSeedSongId
+                    seedId != queue.recommendationSeedSongId || desired.explicitRadioQueue != queue.explicitRadioQueue ||
+                    startsExplicitRadio
                 ) {
                     queue.resetQueueSession(seedId, desired.title, desired.finite)
+                    explicitRadioBootstrapPending = startsExplicitRadio
                 }
+                queue.setExplicitRadioQueue(desired.explicitRadioQueue)
                 queue.setTitle(desired.title)
                 repeatMode.value = desired.repeatMode.toPlayerRepeatMode()
                 if (trackChanged || previousQueue != desiredQueue) player.restoreQueue(desiredQueue, currentTrackChanged = trackChanged)
@@ -183,8 +198,14 @@ internal class AndroidDeviceConnectPlayback(
                     player.isPlaying.value,
                     desired.scrobbleSession,
                 )
-                if (!queue.isFiniteQueue && queue.recommendationBootstrapJob == null && song != null) {
-                    queue.bootstrapRecommendations(queue.recommendationSeedSongId ?: song.id)
+                if (!queue.isFiniteQueue && queue.recommendationBootstrapJob == null && song != null &&
+                    (!desired.explicitRadioQueue || explicitRadioBootstrapPending)
+                ) {
+                    queue.bootstrapRecommendations(
+                        queue.recommendationSeedSongId ?: song.id,
+                        allowRepeatMode = desired.explicitRadioQueue,
+                    )
+                    explicitRadioBootstrapPending = queue.recommendationBootstrapJob == null
                 }
                 onSave()
             }
@@ -221,12 +242,14 @@ internal class AndroidDeviceConnectPlayback(
                             playback.title,
                             playback.finite,
                         )
+                        queue.setExplicitRadioQueue(playback.explicitRadioQueue)
                         queue.setTitle(playback.title)
                         repeatMode.value = playback.repeatMode.toPlayerRepeatMode()
                         if (player.queueSnapshots.value != playback.queue) player.restoreQueue(playback.queue)
                         shuffleModeEnabled.value = playback.queue.isShuffled
                         syncTargetLoaded = false
                     }
+                    if (playback != null) queue.setExplicitRadioQueue(playback.explicitRadioQueue)
                     controllerPlayback = playback
                     player.setControllerPlayback(playback)
                     if (playback !=

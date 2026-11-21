@@ -531,9 +531,21 @@ object PlayerState {
     internal var externalReportingEnabled = true
     private val syncSession by lazy { DesktopDeviceConnectSession(queue) { deviceConnect } }
 
+    @Volatile private var pendingExplicitRadioRequest = false
+
+    @Volatile private var explicitRadioRequestGeneration = 0L
+
+    @Volatile private var deviceRadioBootstrapJob: Job? = null
+    private var deviceRadioBootstrapPending = false
     private var controllerPlayback: DcLocalPlaybackState? = null
     private val deviceConnectPlayback =
         object : DeviceConnectPlaybackPort {
+            override fun onExplicitRadioRequest() {
+                explicitRadioRequestGeneration++
+                pendingExplicitRadioRequest = true
+                deviceRadioBootstrapJob?.cancel()
+            }
+
             override val canStartDefaultPlayback: Boolean get() = castManager.state.value.status == CastConnectionStatus.DISCONNECTED
 
             override suspend fun snapshot(): DcLocalPlaybackState =
@@ -553,6 +565,7 @@ object PlayerState {
                             player.playbackReady && player.loadFailure.value == null &&
                                 (!deviceConnect.isActive || syncSession.ready),
                         finite = syncSession.finite,
+                        explicitRadioQueue = syncSession.explicitRadioQueue,
                         scrobbleSession = scrobbleManager.session(),
                     )
                 }
@@ -2328,6 +2341,17 @@ object PlayerState {
     ) = withContext(Dispatchers.Main) {
         if (!shouldCommit()) return@withContext
         val state = snapshot.playback
+        val queueIdentity = Triple(snapshot.sessionId, snapshot.queueRevision, snapshot.queueStateId)
+        val startsExplicitRadio =
+            state.explicitRadioQueue && state.queue.displayedItems.size == 1 &&
+                (pendingExplicitRadioRequest || !syncSession.explicitRadioQueue || syncSession.sessionId != snapshot.sessionId)
+        pendingExplicitRadioRequest = false
+        if (startsExplicitRadio) {
+            deviceRadioBootstrapPending = true
+        } else if (appliedDeviceQueue != queueIdentity) {
+            deviceRadioBootstrapPending = false
+            deviceRadioBootstrapJob?.cancel()
+        }
         val reuseInitialTrack =
             syncSession.sessionId == null && !deviceConnect.isFollowing &&
                 deviceConnectCanReusePlayback(
@@ -2343,7 +2367,6 @@ object PlayerState {
         if (reuseInitialTrack) syncSession.setReady(true)
         syncSession.apply(snapshot)
         localRepeatMode = RepeatMode.valueOf(state.repeatMode.name)
-        val queueIdentity = Triple(snapshot.sessionId, snapshot.queueRevision, snapshot.queueStateId)
         if (appliedDeviceQueue != queueIdentity) {
             if (!queue.snapshots.value.hasSameStructure(state.queue)) queue.restore(state.queue)
             appliedDeviceQueue = queueIdentity
@@ -2394,7 +2417,31 @@ object PlayerState {
             player.isPlaying.value,
             state.scrobbleSession,
         )
-        if (!deviceConnect.isFollowing) maybePrefetchRecommendationsForCurrentQueue(track)
+        if (!deviceConnect.isFollowing) {
+            if (deviceRadioBootstrapPending) {
+                if (deviceRadioBootstrapJob?.isActive == true) return@withContext
+                val generation = playbackTransitionGeneration
+                val requestGeneration = explicitRadioRequestGeneration
+                deviceRadioBootstrapJob =
+                    scope.launch {
+                        try {
+                            val songs = freshRadioRecommendations(track.id, generation)
+                            if (requestGeneration == explicitRadioRequestGeneration && appliedDeviceQueue == queueIdentity &&
+                                syncSession.explicitRadioQueue && !deviceConnect.isFollowing
+                            ) {
+                                deviceRadioBootstrapPending = false
+                                appendRadioRecommendations(songs, generation)
+                            }
+                        } catch (error: CancellationException) {
+                            throw error
+                        } catch (error: Exception) {
+                            Logger.w("PlayerState", "Failed to start remote radio (${error::class.simpleName})")
+                        }
+                    }
+            } else {
+                maybePrefetchRecommendationsForCurrentQueue(track)
+            }
+        }
     }
 
     internal fun setPlayingFromSync(playing: Boolean) {
@@ -3987,6 +4034,7 @@ object PlayerState {
                     songs = listOf(song),
                     index = 0,
                     finite = false,
+                    explicitRadioQueue = true,
                     positionMs = if (currentTrack?.id == song.id) player.currentPlaybackPositionMs() else 0L,
                     preserveCurrentTrack = true,
                 ),

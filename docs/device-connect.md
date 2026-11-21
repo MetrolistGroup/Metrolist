@@ -32,7 +32,7 @@ Unconfirmed transfer failure restores the saved position without counting waitin
 
 ## Compatibility and queues
 
-Peers need playback version 5. Version 4 and earlier cannot join playback sessions. Version 5 adds REMOVE successor selection and RESTORE_QUEUE playback intent. Authenticated optional capabilities `supportsPlaybackClock` and `supportsPlaybackPitch` default false. Never infer them from unauthenticated state.
+Peers need playback version 5. Version 4 and earlier cannot join playback sessions. Version 5 adds REMOVE successor selection and RESTORE_QUEUE playback intent. Authenticated optional capabilities `supportsPlaybackClock` and `supportsPlaybackPitch` default false. Never infer them from unauthenticated state. Queue snapshots also preserve explicit Radio intent, so ordinary queues expanded by Auto Load More retain their repeat behavior.
 
 Send `PITCH` only to a capable target. Snapshots and scalar updates may carry pitch from 0.5 to 2; absence preserves the receiver's pitch. Speed changes preserve pitch, and pitch does not affect the clock. Older peers ignore optional JSON fields without a version bump.
 
@@ -78,3 +78,5 @@ Linux measurements on one Ethernet interface with IPv4, ULA and link-local IPv6,
 Fallback TXT lookups during startup and measurement fell from 127,294 to 2, one per address family. Before the fix, most CPU time came from JmDNS callbacks and the TXT-fetch worker. A fallback lookup starts another resolver even when data is cached, as shown in [JmDNS's lookup path](https://github.com/jmdns/jmdns/blob/v3.6.5/src/main/java/javax/jmdns/impl/JmDNSImpl.java#L761-L776). Limiting concurrent requests alone did not stop callbacks from starting another lookup after the previous one finished.
 
 Windows and macOS idle CPU measurements remain unverified. The reporter will check the nightly Windows build.
+
+Explicit Radio requests start a fresh seed batch even when the seed is unchanged. Transferring an already populated Radio queue preserves its songs. Queue edits do not restart Radio.

@@ -198,7 +198,7 @@ internal fun reduceDcPlayback(
             if (!preserveCurrent) {
                 select(queue.currentIndex.value, if (command.preserveCurrentTrack) 0L else command.positionMs)
             }
-            next = next.copy(title = command.title, finite = command.finite)
+            next = next.copy(title = command.title, finite = command.finite, explicitRadioQueue = command.explicitRadioQueue)
         }
 
         DcPlaybackAction.REPLACE_CURRENT -> {

@@ -45,6 +45,7 @@ data class PersistPlayerState(
     val radioQueueSeedSongId: String? = null,
     val radioQueueFinite: Boolean? = null,
     val radioQueue: Boolean = false,
+    val explicitRadioQueue: Boolean? = null,
     val queueSessionId: Long? = null,
     val radioQueueChips: List<PersistRadioQueueChip> = emptyList(),
     val radioQueueSelectedChipId: String? = null,
