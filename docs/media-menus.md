@@ -84,4 +84,4 @@ For desktop placement, check right-click and button menus after scrolling, with 
 
 For collection headers and selection, check Liked Music, an empty playlist, a remote playlist, an editable playlist, an album, Downloads, Cache, History and Queue at phone, medium and two-pane widths, with long translations, large fonts, RTL and animations disabled.
 
-Lyric sharing offers both a 9:16 story image and a 1:1 square card exporter styled with the active theme colors, artwork and track metadata. Verify both formats, mobile share sheets, local songs and five selected lines.
+Lyric sharing offers a 9:16 story image styled with the active theme colors and a 1:1 square image that keeps its saved background mode and colors. Both include artwork and track metadata; the story footer adds a YouTube Music link only for remote tracks. The dialog also offers plain-text sharing. Verify both formats, mobile share sheets, local songs and five selected lines.

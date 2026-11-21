@@ -8,6 +8,9 @@
 package com.metrolist.shared.ui.components.lyrics
 
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -22,6 +25,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -44,8 +49,13 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -55,19 +65,30 @@ import coil3.compose.LocalPlatformContext
 import coil3.request.ImageRequest
 import com.metrolist.shared.generated.resources.Res
 import com.metrolist.shared.generated.resources.app_name
+import com.metrolist.shared.generated.resources.background_color
+import com.metrolist.shared.generated.resources.blurred_artwork
 import com.metrolist.shared.generated.resources.cancel
+import com.metrolist.shared.generated.resources.customize_colors
+import com.metrolist.shared.generated.resources.gradient
 import com.metrolist.shared.generated.resources.logo
 import com.metrolist.shared.generated.resources.lyrics_share_artwork_failed
 import com.metrolist.shared.generated.resources.lyrics_share_auto_fit
+import com.metrolist.shared.generated.resources.lyrics_share_color
 import com.metrolist.shared.generated.resources.lyrics_share_content_scale
 import com.metrolist.shared.generated.resources.lyrics_share_failed
 import com.metrolist.shared.generated.resources.lyrics_share_scroll_options
 import com.metrolist.shared.generated.resources.lyrics_share_square_image
 import com.metrolist.shared.generated.resources.lyrics_share_story_image
 import com.metrolist.shared.generated.resources.lyrics_share_story_style
+import com.metrolist.shared.generated.resources.lyrics_share_text
 import com.metrolist.shared.generated.resources.lyrics_share_text_size
+import com.metrolist.shared.generated.resources.player_background_style
 import com.metrolist.shared.generated.resources.preview
+import com.metrolist.shared.generated.resources.secondary_text_color
+import com.metrolist.shared.generated.resources.settings_solid
 import com.metrolist.shared.generated.resources.share
+import com.metrolist.shared.generated.resources.share_as_text
+import com.metrolist.shared.generated.resources.text_color
 import com.metrolist.shared.settings.Settings
 import com.metrolist.shared.ui.components.ContainedLoadingIndicator
 import com.metrolist.shared.ui.components.Dialog
@@ -75,7 +96,9 @@ import com.metrolist.shared.ui.components.ExpressiveFilterChip
 import com.metrolist.shared.ui.components.LazyListScrollbar
 import com.metrolist.shared.ui.playback.retainPlaybackKeyFocus
 import com.metrolist.shared.ui.utils.DragScrollableColumn
+import com.metrolist.shared.ui.utils.carouselScroll
 import com.metrolist.shared.ui.utils.toImageBitmap
+import com.metrolist.shared.utils.ShareUrls
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -98,13 +121,15 @@ fun LyricsShareDialog(
     storyMode: Boolean = false,
     isLocal: Boolean = false,
     onExport: suspend (ImageBitmap) -> Boolean,
-    onShareText: (String) -> Unit = {},
+    onShareText: (String) -> Unit,
     onDismiss: () -> Unit,
 ) {
     var useStoryLayout by remember(songId) { mutableStateOf(storyMode) }
     var busy by remember { mutableStateOf(false) }
     var failed by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
+    val shareUrl = ShareUrls.song(songId).takeUnless { isLocal }
+    val shareText = stringResource(Res.string.lyrics_share_text, text, title, artist, shareUrl.orEmpty())
     var style by remember {
         mutableStateOf(
             decodeLyricsImageStyle(
@@ -122,6 +147,8 @@ fun LyricsShareDialog(
     DisposableEffect(Unit) { onDispose { Settings.shared.lyricsShareImageStyle = latestStyle.encodeForStorage() } }
     val context = LocalPlatformContext.current
     var artwork by remember { mutableStateOf<ImageBitmap?>(null) }
+    var blurredArtwork by remember { mutableStateOf<ImageBitmap?>(null) }
+    var palette by remember { mutableStateOf(emptyList<Color>()) }
     var loadingArtwork by remember { mutableStateOf(artworkUrl != null) }
     var artworkFailed by remember { mutableStateOf(false) }
     LaunchedEffect(artworkUrl) {
@@ -137,7 +164,10 @@ fun LyricsShareDialog(
                     )
                 val image = result.image?.toImageBitmap()
                 if (image != null) {
+                    val prepared = withContext(Dispatchers.Default) { prepareLyricsArtwork(image) }
                     artwork = image
+                    palette = prepared.first
+                    blurredArtwork = prepared.second
                 } else {
                     artworkFailed = true
                 }
@@ -174,6 +204,8 @@ fun LyricsShareDialog(
         appName,
         style,
         artwork,
+        blurredArtwork,
+        palette,
         loadingArtwork,
         direction,
         useStoryLayout,
@@ -181,6 +213,7 @@ fun LyricsShareDialog(
         storyCardColor,
         storyTextColor,
         storySecondaryColor,
+        shareUrl,
     ) {
         if (!loadingArtwork) {
             delay(80)
@@ -195,6 +228,8 @@ fun LyricsShareDialog(
                                 artist,
                                 appName,
                                 artwork,
+                                blurredArtwork,
+                                palette,
                                 style,
                                 measurer,
                                 logo,
@@ -205,6 +240,7 @@ fun LyricsShareDialog(
                                 storyCardColor = storyCardColor,
                                 storyTextColor = storyTextColor,
                                 storySecondaryColor = storySecondaryColor,
+                                shareUrl = shareUrl,
                             )
                         }
                     }
@@ -229,11 +265,11 @@ fun LyricsShareDialog(
                     .heightIn(max = 880.dp)
                     .fillMaxHeight(0.9f),
             shape = RoundedCornerShape(24.dp),
-            color = MaterialTheme.colorScheme.surfaceContainerHigh,
+            color = if (useStoryLayout) MaterialTheme.colorScheme.surfaceContainerHigh else MaterialTheme.colorScheme.surface,
         ) {
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(
-                    stringResource(Res.string.lyrics_share_story_style),
+                    stringResource(if (useStoryLayout) Res.string.lyrics_share_story_style else Res.string.customize_colors),
                     style = MaterialTheme.typography.headlineSmall,
                 )
                 Text(stringResource(Res.string.lyrics_share_scroll_options), style = MaterialTheme.typography.bodySmall)
@@ -298,6 +334,78 @@ fun LyricsShareDialog(
                                 Text(stringResource(Res.string.lyrics_share_auto_fit))
                             }
                         }
+                        if (!useStoryLayout) {
+                            item {
+                                Text(stringResource(Res.string.player_background_style))
+                                val backgroundScrollState = rememberScrollState()
+                                Row(
+                                    Modifier.fillMaxWidth().carouselScroll(backgroundScrollState).horizontalScroll(backgroundScrollState),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                ) {
+                                    LyricsImageBackground.entries.forEach { background ->
+                                        ExpressiveFilterChip(
+                                            selected = style.background == background,
+                                            enabled = !busy && (background == LyricsImageBackground.SOLID || artwork != null),
+                                            onClick = { style = style.copy(background = background) },
+                                            label = {
+                                                Text(
+                                                    stringResource(
+                                                        when (background) {
+                                                            LyricsImageBackground.SOLID -> Res.string.settings_solid
+                                                            LyricsImageBackground.BLUR -> Res.string.blurred_artwork
+                                                            LyricsImageBackground.GRADIENT -> Res.string.gradient
+                                                        },
+                                                    ),
+                                                    maxLines = 1,
+                                                )
+                                            },
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                        if (!useStoryLayout) {
+                            item {
+                                LyricsColorSwatches(
+                                    stringResource(Res.string.background_color),
+                                    (
+                                        palette +
+                                            listOf(
+                                                Color(0xFF242424),
+                                                Color(0xFF121212),
+                                                Color.White,
+                                                Color.Black,
+                                                Color(0xFFF5F5F5),
+                                            )
+                                    ).distinct(),
+                                    style.backgroundColor,
+                                    !busy,
+                                ) { style = style.copy(backgroundColor = it) }
+                            }
+                        }
+                        if (!useStoryLayout) {
+                            item {
+                                LyricsColorSwatches(
+                                    stringResource(Res.string.text_color),
+                                    (palette + listOf(Color.White, Color.Black, Color(0xFF1DB954))).distinct(),
+                                    style.textColor,
+                                    !busy,
+                                ) { style = style.copy(textColor = it) }
+                            }
+                        }
+                        if (!useStoryLayout) {
+                            item {
+                                LyricsColorSwatches(
+                                    stringResource(Res.string.secondary_text_color),
+                                    (
+                                        palette.map { it.copy(alpha = 0.7f) } +
+                                            listOf(Color.White.copy(alpha = 0.7f), Color.Black.copy(alpha = 0.7f), Color(0xFF1DB954))
+                                    ).distinct(),
+                                    style.secondaryColor,
+                                    !busy,
+                                ) { style = style.copy(secondaryColor = it) }
+                            }
+                        }
                     }
                     LazyListScrollbar(scrollState, Modifier.align(Alignment.CenterEnd))
                 }
@@ -314,6 +422,14 @@ fun LyricsShareDialog(
                         shapes = ButtonDefaults.shapes(),
                     ) { Text(stringResource(Res.string.cancel)) }
                     Button(
+                        enabled = !busy,
+                        onClick = {
+                            onShareText(shareText)
+                            onDismiss()
+                        },
+                        shapes = ButtonDefaults.shapes(),
+                    ) { Text(stringResource(Res.string.share_as_text)) }
+                    Button(
                         enabled = bitmap != null && !busy,
                         onClick = {
                             busy = true
@@ -329,6 +445,8 @@ fun LyricsShareDialog(
                                                     artist,
                                                     appName,
                                                     artwork,
+                                                    blurredArtwork,
+                                                    palette,
                                                     style,
                                                     measurer,
                                                     logo,
@@ -338,6 +456,7 @@ fun LyricsShareDialog(
                                                     storyCardColor = storyCardColor,
                                                     storyTextColor = storyTextColor,
                                                     storySecondaryColor = storySecondaryColor,
+                                                    shareUrl = shareUrl,
                                                 )
                                             }
                                         }
@@ -355,6 +474,42 @@ fun LyricsShareDialog(
                     ) { Text(if (storyMode && !useStoryLayout) stringResource(Res.string.share) else exportLabel) }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun LyricsColorSwatches(
+    label: String,
+    colors: List<Color>,
+    selected: Color,
+    enabled: Boolean,
+    onSelect: (Color) -> Unit,
+) {
+    Text(label, style = MaterialTheme.typography.titleSmall)
+    val scrollState = rememberScrollState()
+    Row(Modifier.fillMaxWidth().carouselScroll(scrollState).horizontalScroll(scrollState)) {
+        colors.forEach { color ->
+            val description = stringResource(Res.string.lyrics_share_color, label, color.toArgb().toUInt().toString(16))
+            Box(
+                Modifier
+                    .size(56.dp)
+                    .semantics { contentDescription = description }
+                    .selectable(selected = color == selected, enabled = enabled, role = Role.RadioButton, onClick = { onSelect(color) })
+                    .padding(3.dp)
+                    .background(color, RoundedCornerShape(8.dp))
+                    .border(
+                        2.dp,
+                        if (color ==
+                            selected
+                        ) {
+                            MaterialTheme.colorScheme.primary
+                        } else {
+                            MaterialTheme.colorScheme.outline
+                        },
+                        RoundedCornerShape(8.dp),
+                    ),
+            )
         }
     }
 }

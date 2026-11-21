@@ -9,6 +9,7 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.RoundRect
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Canvas
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
@@ -38,6 +39,7 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.sp
+import com.metrolist.shared.ui.theme.getGradientColors
 
 internal enum class LyricsImageBackground { SOLID, BLUR, GRADIENT }
 
@@ -67,12 +69,32 @@ private fun DrawScope.drawCover(
     )
 }
 
+internal fun prepareLyricsArtwork(image: ImageBitmap): Pair<List<Color>, ImageBitmap> {
+    val sample = ImageBitmap(64, 64)
+    CanvasDrawScope().draw(Density(1f), LayoutDirection.Ltr, Canvas(sample), Size(64f, 64f)) {
+        drawRect(Color.Black)
+        drawCover(image, Offset.Zero, 64f)
+    }
+    val pixels = IntArray(64 * 64)
+    sample.readPixels(pixels)
+    val palette = lyricsArtworkPalette(pixels)
+    val blurred = blurLyricsArtwork(pixels, 64, 64, 6)
+    CanvasDrawScope().draw(Density(1f), LayoutDirection.Ltr, Canvas(sample), Size(64f, 64f)) {
+        blurred.forEachIndexed { index, pixel ->
+            drawRect(Color(pixel), Offset((index % 64).toFloat(), (index / 64).toFloat()), Size(1f, 1f))
+        }
+    }
+    return palette to sample
+}
+
 internal fun renderLyricsImage(
     lyrics: String,
     title: String,
     artist: String,
     appName: String,
     artwork: ImageBitmap?,
+    blurredArtwork: ImageBitmap?,
+    palette: List<Color>,
     style: LyricsImageStyle,
     textMeasurer: TextMeasurer,
     logo: Painter,
@@ -94,14 +116,18 @@ internal fun renderLyricsImage(
     val width = layout.lyricsWidth * scale
     val lyricsTop = layout.lyricsTop * scale
     val lyricsHeight = layout.lyricsHeight * scale
-    val lyricsInsetX = (if (story) 18f else 16f) * contentScale * scale
-    val lyricsInsetY = 12f * contentScale * scale
+    val backgroundColor = if (story) storyBackgroundColor else style.backgroundColor
+    val cardColor = if (story) storyCardColor else style.backgroundColor
+    val textColor = if (story) storyTextColor else style.textColor
+    val secondaryColor = if (story) storySecondaryColor else style.secondaryColor
+    val lyricsInsetX = if (story) 18f * contentScale * scale else 0f
+    val lyricsInsetY = if (story) 12f * contentScale * scale else 0f
     val textWidth = width - 2 * lyricsInsetX
     val textHeight = lyricsHeight - 2 * lyricsInsetY
     val textLeft = padding + lyricsInsetX
     val textStyle =
         TextStyle(
-            color = storyTextColor,
+            color = textColor,
             fontWeight = FontWeight.Bold,
             textAlign = style.alignment,
         )
@@ -127,51 +153,84 @@ internal fun renderLyricsImage(
             layoutDirection = layoutDirection,
         )
     val fit =
-        fitLyricsImageText(textHeight, style.textScale, maxFontSize = if (story) 34f else 30f) {
+        fitLyricsImageText(textHeight, style.textScale, maxFontSize = if (story) 34f else 50f) {
             measureLyrics(it).size.height.toFloat()
         }
     val lyricsLayout = measureLyrics(fit.fontSize)
     val renderedLyricsHeight = lyricsLayout.size.height * fit.drawScale
     val footerTop =
-        minOf(layout.footerTop, layout.lyricsTop + 12f * contentScale + renderedLyricsHeight / scale + 18f * contentScale)
-    val cardBottom = footerTop + layout.footerHeight
-    val cardHeight = cardBottom - layout.cardTop
-    val canvasHeight = layout.canvasHeight
-    val verticalOffset = maxOf(0f, ((canvasHeight - cardHeight) / 2f) - layout.cardTop)
+        if (story) {
+            minOf(layout.footerTop, layout.lyricsTop + 12f * contentScale + renderedLyricsHeight / scale + 18f * contentScale)
+        } else {
+            layout.footerTop
+        }
+    val cardBottom = if (story) footerTop + layout.footerHeight else 0f
+    val cardHeight = if (story) cardBottom - layout.cardTop else 0f
+    val verticalOffset =
+        if (story) {
+            maxOf(0f, ((layout.canvasHeight - cardHeight) / 2f) - layout.cardTop)
+        } else {
+            0f
+        }
     val verticalOffsetPx = verticalOffset * scale
-    val textTop = lyricsTop + lyricsInsetY + verticalOffsetPx
-    val textClipHeight = renderedLyricsHeight
+    val textTop =
+        lyricsTop + lyricsInsetY + verticalOffsetPx +
+            if (story) 0f else (textHeight - renderedLyricsHeight) / 2f
+    val textClipHeight = if (story) renderedLyricsHeight else textHeight
     CanvasDrawScope().draw(density, layoutDirection, Canvas(bitmap), Size(bitmap.width.toFloat(), bitmap.height.toFloat())) {
         val path =
             Path().apply {
-                addRoundRect(RoundRect(0f, 0f, size.width, size.height, CornerRadius(0f)))
+                addRoundRect(RoundRect(0f, 0f, size.width, size.height, CornerRadius(if (story) 0f else 20 * scale)))
             }
         clipPath(path) {
-            drawRect(storyBackgroundColor)
-            val cardTop = (layout.cardTop + verticalOffset) * scale
-            val cardHeightPx = cardHeight * scale
-            drawRoundRect(
-                storyCardColor,
-                topLeft = Offset(padding, cardTop),
-                size = Size(width, cardHeightPx),
-                cornerRadius = CornerRadius(28f * scale),
-            )
+            drawRect(backgroundColor)
+            if (!story) {
+                when (style.background) {
+                    LyricsImageBackground.SOLID -> {}
+
+                    LyricsImageBackground.BLUR -> {
+                        blurredArtwork?.let {
+                            drawCover(it, Offset.Zero, size.width)
+                            drawRect(Color.Black.copy(alpha = 0.3f))
+                        }
+                    }
+
+                    LyricsImageBackground.GRADIENT -> {
+                        val colors = palette.firstOrNull()?.let(::getGradientColors) ?: listOf(style.backgroundColor, style.backgroundColor)
+                        drawRect(Brush.linearGradient(colors))
+                    }
+                }
+            }
+            if (story) {
+                val cardTop = (layout.cardTop + verticalOffset) * scale
+                val cardHeightPx = cardHeight * scale
+                drawRoundRect(
+                    cardColor,
+                    topLeft = Offset(padding, cardTop),
+                    size = Size(width, cardHeightPx),
+                    cornerRadius = CornerRadius(28f * scale),
+                )
+            }
             artwork?.let {
                 val topLeft = Offset(layout.artworkX * scale, (layout.artworkTop + verticalOffset) * scale)
                 val artworkSide = layout.artworkSize * scale
-                val artworkClip =
-                    Path().apply {
-                        addRoundRect(
-                            RoundRect(
-                                topLeft.x,
-                                topLeft.y,
-                                topLeft.x + artworkSide,
-                                topLeft.y + artworkSide,
-                                CornerRadius(18 * scale),
-                            ),
-                        )
-                    }
-                clipPath(artworkClip) { drawCover(it, topLeft, artworkSide) }
+                if (story) {
+                    val artworkClip =
+                        Path().apply {
+                            addRoundRect(
+                                RoundRect(
+                                    topLeft.x,
+                                    topLeft.y,
+                                    topLeft.x + artworkSide,
+                                    topLeft.y + artworkSide,
+                                    CornerRadius(18 * scale),
+                                ),
+                            )
+                        }
+                    clipPath(artworkClip) { drawCover(it, topLeft, artworkSide) }
+                } else {
+                    drawCover(it, topLeft, artworkSide)
+                }
             }
 
             fun label(
@@ -214,23 +273,29 @@ internal fun renderLyricsImage(
                 drawText(textLayout, topLeft = Offset(x * scale, y * scale))
             }
             val headerX =
-                if (artwork != null) {
+                if (story && artwork != null) {
                     layout.artworkX + layout.artworkSize + 14f * contentScale
-                } else {
+                } else if (story) {
                     layout.padding + 18f * contentScale
+                } else if (artwork == null) {
+                    layout.padding
+                } else {
+                    layout.padding + 80f * contentScale
                 }
             val headerWidth =
-                if (artwork != null) {
+                if (story && artwork != null) {
                     layout.lyricsWidth - (headerX - layout.padding) - 18f * contentScale
-                } else {
+                } else if (story) {
                     layout.lyricsWidth - 36f * contentScale
+                } else {
+                    340f - layout.padding - headerX
                 }
             label(
                 title,
                 headerX,
                 layout.titleTop + verticalOffset,
                 (if (story) 20f else 18f) * contentScale,
-                storyTextColor,
+                textColor,
                 headerWidth,
             )
             label(
@@ -238,7 +303,7 @@ internal fun renderLyricsImage(
                 headerX,
                 layout.artistTop + verticalOffset,
                 (if (story) 16f else 14f) * contentScale,
-                storySecondaryColor,
+                secondaryColor,
                 headerWidth,
             )
             val textX =
@@ -255,33 +320,44 @@ internal fun renderLyricsImage(
             }
             val footerScale = scale * contentScale
             drawCircle(
-                storySecondaryColor,
-                radius = 10 * footerScale,
+                secondaryColor,
+                radius = (if (story) 10 else 22) * footerScale,
                 center =
                     Offset(
-                        padding + 28f * footerScale,
-                        (footerTop + verticalOffset) * scale + 14 * footerScale,
+                        padding + (if (story) 28f else 22f) * footerScale,
+                        (footerTop + verticalOffset) * scale + (if (story) 14 else 22) * footerScale,
                     ),
             )
             translate(
-                padding + 18f * footerScale,
-                (footerTop + verticalOffset) * scale + 4 * footerScale,
+                padding + (if (story) 18f else 3f) * footerScale,
+                (footerTop + verticalOffset) * scale + (if (story) 4 else 3) * footerScale,
             ) {
                 with(logo) {
                     draw(
-                        Size(20 * footerScale, 20 * footerScale),
-                        colorFilter = ColorFilter.tint(storyCardColor),
+                        Size((if (story) 20 else 38) * footerScale, (if (story) 20 else 38) * footerScale),
+                        colorFilter = ColorFilter.tint(if (story) cardColor else style.backgroundColor),
                     )
                 }
             }
             label(
                 appName,
-                layout.padding + 44f * contentScale,
-                footerTop + verticalOffset + 13f * contentScale,
-                12f * contentScale,
-                storySecondaryColor,
-                layout.lyricsWidth - 62f * contentScale,
+                layout.padding + (if (story) 44f else 52f) * contentScale,
+                footerTop + verticalOffset + (if (story) 8f else 13f) * contentScale,
+                (if (story) 12f else 14f) * contentScale,
+                secondaryColor,
+                layout.lyricsWidth - (if (story) 62f else 52f) * contentScale,
             )
+            if (story && shareUrl != null) {
+                label(
+                    shareUrl,
+                    layout.padding + 44f * contentScale,
+                    footerTop + verticalOffset + 20f * contentScale,
+                    7f * contentScale,
+                    secondaryColor,
+                    layout.lyricsWidth - 62f * contentScale,
+                    shrinkToFit = true,
+                )
+            }
         }
     }
     return bitmap
