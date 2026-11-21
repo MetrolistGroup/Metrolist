@@ -152,6 +152,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.jetbrains.compose.resources.getString
 import org.koin.core.context.GlobalContext
+import java.lang.ref.WeakReference
 import java.net.URI
 import java.nio.file.Files
 import java.nio.file.Path
@@ -717,6 +718,7 @@ object PlayerState {
     val queue = MusicQueue()
     internal val playbackConnected = MutableStateFlow(true)
     internal val desiredPlayback = MutableStateFlow(false)
+    private val localQueueRemovalPlaybackIntents = mutableListOf<Pair<WeakReference<QueueRemoval>, Boolean>>()
     var currentTrack: SongItem? by mutableStateOf(null)
         private set
     private val artwork = DesktopAnimatedArtwork(scope)
@@ -1438,7 +1440,7 @@ object PlayerState {
             player.streamFailure.collect { failure ->
                 val failedVideoId = failure.videoId
                 val failedPlaybackInstanceId = failure.playbackInstanceId ?: return@collect
-                if (failedPlaybackInstanceId != player.currentPlaybackInstanceId ||
+                if (!transitions.acceptsPlaybackEvent(failedPlaybackInstanceId) ||
                     interruptedNetworkPlaybackInstanceId == failedPlaybackInstanceId
                 ) {
                     return@collect
@@ -2047,7 +2049,7 @@ object PlayerState {
 
         scope.launch {
             player.onEOFPlaybackInstance.collect { completedPlaybackInstanceId ->
-                if (!transitions.acceptsEof(completedPlaybackInstanceId)) return@collect
+                if (!transitions.acceptsPlaybackEvent(completedPlaybackInstanceId)) return@collect
                 flushPodcastProgress()
                 completedCachePlaybackInstanceId.value = completedPlaybackInstanceId
                 if (deviceConnect.isActive) {
@@ -2633,11 +2635,14 @@ object PlayerState {
 
     fun isListenTogetherGuest(): Boolean = ListenTogetherState.listenTogetherManager.isGuestPlaybackLocked
 
-    fun playQueueOccurrence(key: Long) {
-        val entry =
-            queue.state.value.entries
-                .firstOrNull { it.key == key } ?: return
-        playTrack(entry.song, queue.items.value)
+    fun playQueueOccurrence(
+        key: Long,
+        startPlayingOverride: Boolean? = null,
+    ) {
+        val state = queue.state.value
+        val index = state.entries.indexOfFirst { it.key == key }
+        val entry = state.entries.getOrNull(index) ?: return
+        playTrack(entry.song, queue.items.value, startIndex = index, queueEntryKey = key, startPlayingOverride = startPlayingOverride)
     }
 
     private fun localSongChangeStartsPlayback(): Boolean =
@@ -2661,10 +2666,15 @@ object PlayerState {
         list: List<SongItem>? = null,
         songsOnly: Boolean = false,
         shuffleModeEnabled: Boolean? = null,
+        startIndex: Int? = null,
+        queueEntryKey: Long? = null,
+        startPlayingOverride: Boolean? = null,
     ) {
         if (track.isUnavailable) return
         if (list?.any { it.isUnavailable } == true) {
-            playTrack(track, list.filterNot { it.isUnavailable }, songsOnly, shuffleModeEnabled)
+            val playableList = list.filterNot { it.isUnavailable }
+            val playableStartIndex = startIndex?.let { list.take(it).count { song -> !song.isUnavailable } }
+            playTrack(track, playableList, songsOnly, shuffleModeEnabled, playableStartIndex, queueEntryKey, startPlayingOverride)
             return
         }
         val songs = list?.takeIf { it.isNotEmpty() } ?: listOf(track)
@@ -2674,7 +2684,7 @@ object PlayerState {
                 DcPlaybackCommand(
                     action,
                     songs = songs,
-                    index = index,
+                    index = startIndex ?: index,
                     finite = list != null,
                     enabled = shuffleModeEnabled,
                     preserveHistory =
@@ -2686,7 +2696,7 @@ object PlayerState {
             return
         }
         if (isListenTogetherGuest()) {
-            val startIndex = list?.indexOfFirst { it.id == track.id }?.coerceAtLeast(0) ?: 0
+            val startIndex = startIndex ?: list?.indexOfFirst { it.id == track.id }?.coerceAtLeast(0) ?: 0
             _listenTogetherPlaybackRequests.tryEmit(
                 ListenTogetherPlaybackRequest(
                     song = track,
@@ -2700,9 +2710,11 @@ object PlayerState {
         playTrackInternal(
             track,
             list,
-            startPaused = !localSongChangeStartsPlayback(),
+            startPaused = !(startPlayingOverride ?: localSongChangeStartsPlayback()),
             songsOnly = songsOnly || (list === queue.items.value && queue.recommendationsSongsOnly),
             shuffleModeEnabled = shuffleModeEnabled,
+            startIndex = startIndex,
+            queueEntryKey = queueEntryKey,
         )
     }
 
@@ -2841,6 +2853,8 @@ object PlayerState {
         startPaused: Boolean = false,
         songsOnly: Boolean = false,
         shuffleModeEnabled: Boolean? = null,
+        startIndex: Int? = null,
+        queueEntryKey: Long? = null,
     ) {
         cancelCrossfadeForManualAction()
         val restorePosition = pendingResumePosition?.takeIf { list?.isEmpty() == true && it.first == track.id }
@@ -2850,15 +2864,26 @@ object PlayerState {
             scope.launch {
                 val playableTrack: SongItem
                 if (!list.isNullOrEmpty()) {
-                    val startIndex = list.indexOfPlaylistOccurrence(track).takeIf { it >= 0 } ?: 0
-                    if (list === queue.items.value) {
+                    val startIndex = startIndex ?: list.indexOfPlaylistOccurrence(track).takeIf { it >= 0 } ?: 0
+                    if (queueEntryKey != null) {
+                        val currentEntries = queue.state.value.entries
+                        val currentIndex = currentEntries.indexOfFirst { it.key == queueEntryKey }
+                        if (currentIndex < 0) {
+                            if (isCurrentPlaybackTransition(generation)) {
+                                isPlaybackResolving = false
+                                desiredPlayback.value = player.wantsPlayback
+                            }
+                            return@launch
+                        }
+                        queue.skipTo(currentIndex)
+                    } else if (list === queue.items.value) {
                         queue.skipTo(startIndex)
                     } else {
                         replaceQueue(list, startIndex, songsOnly = songsOnly, shuffleModeEnabled = shuffleModeEnabled)
                     }
                     playableTrack = queue
                         .currentItem()
-                        ?.takeIf { current -> !isSongBlocked(current) && list.any { it.id == current.id } }
+                        ?.takeIf { current -> !isSongBlocked(current) && (queueEntryKey != null || list.any { it.id == current.id }) }
                         ?: return@launch
                     Logger.i("PlayerState", "Set up queue with ${list.size} songs, starting at index $startIndex")
                 } else if (list == null) {
@@ -3592,17 +3617,78 @@ object PlayerState {
         expectedQueue: MusicQueueSnapshot = queue.snapshots.value,
     ): QueueRemoval? {
         if (isListenTogetherGuest()) return null
-        if (deviceConnect.isActive) {
-            return syncSession.remove(indices, expectedQueue)
+        val state = queue.state.value
+        val targetCurrentIndex =
+            if (deviceConnect.isActive) {
+                syncSession.targetCurrentIndex.takeIf { it in state.entries.indices } ?: state.currentIndex
+            } else {
+                state.currentIndex
+            }
+        val currentRemoved = targetCurrentIndex in indices
+        val nextEntry =
+            if (currentRemoved) {
+                state.entries
+                    .withIndex()
+                    .firstOrNull { (index, entry) ->
+                        index > targetCurrentIndex && index !in indices && !isSongBlocked(entry.song)
+                    }
+            } else {
+                null
+            }
+        val nextEntryKey = nextEntry?.value?.key
+        val nextEntryIndex = nextEntry?.index
+        val connectedSession = deviceConnect.isActive
+        val wasPlaying =
+            when {
+                castManager.state.value.isConnected -> castPlayback.playbackIntent(castManager.state.value.isPlaying)
+                isPlaybackResolving -> desiredPlayback.value
+                else -> player.wantsPlayback
+            }
+        val removal =
+            if (connectedSession) {
+                syncSession.remove(indices, expectedQueue, nextEntryIndex)
+            } else {
+                queue
+                    .removeAt(
+                        indices,
+                        advanceCurrentToSuccessor = currentRemoved,
+                        successorIndex = nextEntryIndex,
+                    ).also { removal ->
+                        if (removal != null) {
+                            if (currentRemoved) {
+                                playbackPosition.value = 0L
+                                playbackDuration.value =
+                                    nextEntryKey
+                                        ?.let { key ->
+                                            queue.state.value.entries
+                                                .firstOrNull { it.key == key }
+                                                ?.song
+                                                ?.duration
+                                        }?.times(1_000L) ?: 0L
+                                progress = 0f
+                                transitions.retireCurrentPlayback()
+                            }
+                            queueChanged()
+                        }
+                    }
+            } ?: return null
+        if (currentRemoved && !connectedSession) {
+            localQueueRemovalPlaybackIntents.removeAll { it.first.get() == null }
+            if (nextEntryKey == null) {
+                localQueueRemovalPlaybackIntents += WeakReference(removal) to wasPlaying
+                stop()
+            } else {
+                playQueueOccurrence(nextEntryKey)
+            }
         }
-        return queue.removeAt(indices).also { if (it != null) queueChanged() }
+        return removal
     }
 
     fun removeQueueOccurrence(key: Long): QueueRemoval? {
         if (isListenTogetherGuest() || Settings.shared.isQueueLocked) return null
         val state = queue.state.value
         val index = state.entries.indexOfFirst { it.key == key }
-        if (index <= state.currentIndex) return null
+        if (index < 0) return null
         return removeQueueItems(setOf(index), queue.snapshots.value)
     }
 
@@ -3615,11 +3701,10 @@ object PlayerState {
         val state = queue.state.value
         val from = state.entries.indexOfFirst { it.key == fromKey }
         val to = state.entries.indexOfFirst { it.key == toKey }
-        if (from <= state.currentIndex || to <= state.currentIndex || from == to) return
+        if (from < 0 || to < 0 || from == to) return
         val selected =
             state.entries.indices.filterTo(mutableSetOf()) {
-                it > state.currentIndex &&
-                    state.entries[it].key in selectedEntryKeys
+                state.entries[it].key in selectedEntryKeys
             }
         reorderQueue(
             state.entries.indices
@@ -3647,8 +3732,38 @@ object PlayerState {
     fun restoreQueueItems(removal: QueueRemoval) {
         if (isListenTogetherGuest()) return
         if (syncSession.restore(removal)) return
+        val previousSize = queue.state.value.entries.size
         queue.restore(removal)
+        val restored = queue.state.value.entries.size == previousSize + removal.items.size
         queueChanged()
+        if (restored && removal.items.any { it.index == removal.previousCurrentIndex } &&
+            queue.currentIndex.value == removal.previousCurrentIndex
+        ) {
+            val startPlayingOverride =
+                consumeLocalQueueRemovalPlaybackIntent(removal) ?: when {
+                    castManager.state.value.isConnected -> castPlayback.playbackIntent(castManager.state.value.isPlaying)
+                    isPlaybackResolving -> desiredPlayback.value
+                    else -> player.wantsPlayback
+                }
+            queue.state.value.entries
+                .getOrNull(queue.currentIndex.value)
+                ?.key
+                ?.let { playQueueOccurrence(it, startPlayingOverride) }
+        }
+    }
+
+    private fun consumeLocalQueueRemovalPlaybackIntent(removal: QueueRemoval): Boolean? {
+        val iterator = localQueueRemovalPlaybackIntents.iterator()
+        var intent: Boolean? = null
+        while (iterator.hasNext()) {
+            val (reference, wasPlaying) = iterator.next()
+            val candidate = reference.get()
+            if (candidate == null || candidate === removal) {
+                if (candidate === removal) intent = wasPlaying
+                iterator.remove()
+            }
+        }
+        return intent
     }
 
     fun moveQueueItem(
@@ -3911,6 +4026,7 @@ object PlayerState {
                 expectedQueue = queue.snapshots.value,
             )
         ) {
+            syncSession.requestPlaying(playing)
             return
         }
         if (isListenTogetherGuest()) return
