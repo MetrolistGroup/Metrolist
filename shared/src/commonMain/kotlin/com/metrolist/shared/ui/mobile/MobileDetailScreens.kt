@@ -47,6 +47,7 @@ import com.metrolist.shared.generated.resources.more_options
 import com.metrolist.shared.generated.resources.playlist_removed_from_youtube
 import com.metrolist.shared.generated.resources.retry
 import com.metrolist.shared.generated.resources.unable_to_load_podcast
+import com.metrolist.shared.generated.resources.unable_to_update_podcast
 import com.metrolist.shared.model.AlbumItem
 import com.metrolist.shared.model.AlbumPage
 import com.metrolist.shared.model.ArtistItem
@@ -922,12 +923,15 @@ internal fun MobilePodcastScreen(
     onBack: () -> Unit,
     onShare: (String) -> Unit = {},
     onSongMenu: (YTItem) -> Unit,
+    onSaveError: (String) -> Unit,
     modifier: Modifier = Modifier,
     onChannelClick: (String) -> Unit = {},
     bottomContentPadding: Dp = 0.dp,
 ) {
     val scope = rememberCoroutineScope()
     val errorText = stringResource(Res.string.unable_to_load_podcast)
+    val podcastSaveError = stringResource(Res.string.unable_to_update_podcast)
+    val episodeSaveError = stringResource(Res.string.error_occurred)
     val playbackState by remember(playbackController) {
         playbackController.listState
     }.collectAsState(playbackController.state.value.listState())
@@ -984,12 +988,16 @@ internal fun MobilePodcastScreen(
                 scope.launch {
                     val saved = !loaded.saved
                     isSaving = true
-                    PodcastLibrary
-                        .setPodcastSaved(database, loaded.podcast, saved)
-                        .onSuccess {
-                            page = page?.copy(saved = saved)
-                        }
-                    isSaving = false
+                    try {
+                        PodcastLibrary.setPodcastSaved(database, loaded.podcast, saved).getOrThrow()
+                        page = page?.copy(saved = saved)
+                    } catch (error: CancellationException) {
+                        throw error
+                    } catch (_: Exception) {
+                        onSaveError(podcastSaveError)
+                    } finally {
+                        isSaving = false
+                    }
                 }
             }
         },
@@ -1005,11 +1013,16 @@ internal fun MobilePodcastScreen(
         },
         onToggleEpisodeSaved = { episode ->
             scope.launch {
-                PodcastLibrary.setEpisodeSaved(database, episode, !episode.saved).onSuccess { updated ->
+                try {
+                    val updated = PodcastLibrary.setEpisodeSaved(database, episode, !episode.saved).getOrThrow()
                     page =
                         page?.let { latest ->
                             latest.copy(episodes = latest.episodes.map { if (it.id == updated.id) updated else it })
                         }
+                } catch (error: CancellationException) {
+                    throw error
+                } catch (_: Exception) {
+                    onSaveError(episodeSaveError)
                 }
             }
         },
