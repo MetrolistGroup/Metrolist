@@ -31,12 +31,21 @@ object HomeShelfBuilder {
 
         fun sourceFor(shelf: HomeShelf): HomeSection? {
             if (shelf.style == HomeShelfStyle.SPEED_DIAL) return null
+            val itemIds = shelf.items.mapTo(mutableSetOf(), ::canonicalHomeItemId)
+            if (shelf.key == "quick_picks") {
+                val candidates =
+                    sourceSections.filter { section ->
+                        section.hasTitle &&
+                            (section.browseId?.startsWith("FEmusic_quickpicks") == true || section.title == shelf.title) &&
+                            section.items.mapTo(mutableSetOf(), ::canonicalHomeItemId).containsAll(itemIds)
+                    }
+                return candidates.firstOrNull { it.title == shelf.title } ?: candidates.firstOrNull()
+            }
             state.sections
                 .singleOrNull { section ->
                     section.hasTitle && section.title == shelf.title && section.browseId == shelf.browseId &&
                         section.params == shelf.params && section.subtitle == shelf.label && section.items.containsAll(shelf.items)
                 }?.let { return it }
-            val itemIds = shelf.items.mapTo(mutableSetOf(), ::canonicalHomeItemId)
             val candidates =
                 sourceSections.filter { section ->
                     section.hasTitle && section.items.any { canonicalHomeItemId(it) in itemIds }
@@ -136,9 +145,6 @@ object HomeShelfBuilder {
             }
 
             if (isVisible("quick_picks", text.quickPicks)) {
-                val quickPicksSections = sourceSections.filter { it.browseId?.startsWith("FEmusic_quickpicks") == true }
-                val quickPicksSection =
-                    quickPicksSections.firstOrNull { it.title == text.quickPicks } ?: quickPicksSections.firstOrNull()
                 val uniqueQuickPicks =
                     state.quickPicks
                         .distinctBy(::canonicalHomeItemId)
@@ -152,8 +158,6 @@ object HomeShelfBuilder {
                             style = HomeShelfStyle.SONG_GRID,
                             headerAction = HomeShelfHeaderAction.PLAY_ALL,
                             rows = 4,
-                            browseId = quickPicksSection?.browseId,
-                            params = quickPicksSection?.params,
                         ),
                     )
                 }
