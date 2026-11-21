@@ -21,8 +21,11 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -34,6 +37,8 @@ import kotlin.time.Clock
 
 object AlbumLikeState {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+    private val _inFlightAlbumIds = MutableStateFlow<Set<String>>(emptySet())
+    val inFlightAlbumIds = _inFlightAlbumIds.asStateFlow()
 
     fun albumLiked(albumId: String): Flow<Boolean> =
         KoinPlatform
@@ -48,22 +53,36 @@ object AlbumLikeState {
         songs: List<SongItem>,
         onResult: (Result<Boolean>) -> Unit,
     ) {
+        while (true) {
+            val current = _inFlightAlbumIds.value
+            if (album.id in current) {
+                scope.launch { onResult(Result.failure(AlbumLikeToggleAlreadyInProgressException())) }
+                return
+            }
+            if (_inFlightAlbumIds.compareAndSet(current, current + album.id)) break
+        }
         scope.launch {
-            val result =
-                withContext(Dispatchers.Default) {
-                    try {
-                        val db = KoinPlatform.getKoin().get<MusicDatabase>()
-                        Result.success(db.toggleAlbumLiked(album, songs, GlobalYouTubeRepository.instance))
-                    } catch (e: CancellationException) {
-                        throw e
-                    } catch (e: Exception) {
-                        Result.failure(e)
+            try {
+                val result =
+                    withContext(Dispatchers.Default) {
+                        try {
+                            val db = KoinPlatform.getKoin().get<MusicDatabase>()
+                            Result.success(db.toggleAlbumLiked(album, songs, GlobalYouTubeRepository.instance))
+                        } catch (e: CancellationException) {
+                            throw e
+                        } catch (e: Exception) {
+                            Result.failure(e)
+                        }
                     }
-                }
-            onResult(result)
+                onResult(result)
+            } finally {
+                _inFlightAlbumIds.update { it - album.id }
+            }
         }
     }
 }
+
+class AlbumLikeToggleAlreadyInProgressException : IllegalStateException()
 
 private val albumBookmarkGuard = Mutex()
 private val albumBookmarkLocks = mutableMapOf<String, AlbumBookmarkLock>()
