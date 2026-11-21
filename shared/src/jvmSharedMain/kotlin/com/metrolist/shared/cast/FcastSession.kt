@@ -338,6 +338,7 @@ internal class FcastSession(
                                 positionMs,
                                 durationMs,
                             )
+                    if (hasEnded) replayPositionMs = 0L
                     // shortcut: FCast sends no media ID; replace this heuristic if the protocol adds one.
                     if (
                         !isCurrentFcastPlaybackUpdate(
