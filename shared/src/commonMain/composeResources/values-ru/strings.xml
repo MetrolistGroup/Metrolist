@@ -539,7 +539,7 @@
     <string name="content_filters_filtering">Фильтрация</string>
     <string name="hide_video_songs">Скрыть клипы</string>
     <string name="hide_video_songs_desc">Скрыть видеоверсии песен в поиске и плейлистах</string>
-    <string name="hide_non_musical_videos">Скрыть видео не музыкального характера</string>
+    <string name="hide_non_musical_videos">Скрыть видео немузыкального характера</string>
     <string name="hide_non_musical_videos_desc">Оставляет официальные клипы и скрывает другие видео, например, влоги и трейлеры</string>
     <string name="hide_podcasts">Скрыть подкасты</string>
     <string name="hide_podcasts_desc">Скрывает подкасты и выпуски из обзора, поиска и воспроизведения</string>
@@ -1591,7 +1591,7 @@
     <string name="backup_failed">Ошибка резервного копирования: %1$s</string>
     <string name="could_not_open_file_picker">Не удалось открыть выбор файла: %1$s</string>
     <string name="restore_replaces_data">Это заменяет ваши данные настройки, учетные данные, аккаунты и данные библиотеки. Metrolist перезапустится автоматически.</string>
-    <string name="create_backup_countdown">Создание бэкапа (%1$d)</string>
+    <string name="create_backup_countdown">Создание резервной копии (%1$d)</string>
     <string name="listen_together_how_it_works">Как это работает</string>
     <string name="listen_together_how_it_works_body">Слушать Вместе синхронизирует воспроизведение музыки с друзьями. Хост управляет воспроизведением, а у гостей оно синхронизируется автоматически.</string>
     <string name="listen_together_how_it_works_bullets">• Создайте комнату чтобы стать хостом\n• Поделитесь вашим кодом комнаты с друзьями\n• Гости могут присоединиться, используя код комнаты\n• Только хост может управлять воспроизведением</string>
@@ -2029,8 +2029,8 @@
     <string name="theme_color_rose">Розовый</string>
     <string name="theme_color_red">Красный</string>
     <string name="theme_color_gold">Золотой</string>
-    <string name="backup_unsupported_format">Эта версия Metrolist не поддерживает формат этой резервной копии.</string>
-    <string name="backup_unsupported_database">Эта версия Metrolist не поддерживает версию базы данных в этой резервной копии.</string>
+    <string name="backup_unsupported_format">Текущая версия Metrolist не поддерживает формат из этой резервной копии.</string>
+    <string name="backup_unsupported_database">Текущая версия Metrolist не поддерживает версию базы данных из этой резервной копии.</string>
     <string name="backup_too_large">Резервная копия превышает допустимый размер или количество записей.</string>
     <string name="backup_invalid_data">Не удалось прочитать или проверить резервную копию. Возможно, она повреждена или содержит неподдерживаемые данные.</string>
     <string name="search_history_removal_failed">Не удалось очистить историю поиска в аккаунте. Повторите попытку после подключения к сети.</string>
