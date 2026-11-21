@@ -16,11 +16,14 @@ internal class MacOsPhysicalKeyCapture : PlatformPhysicalKeyCapture {
 
     @Volatile private var requested = false
 
+    // A disable invalidates the current worker even if focus returns before its bounded run exits.
+    @Volatile private var workerGeneration = 0L
+
+    @Volatile private var activeGeneration = 0L
+
     @Volatile private var available = false
 
     @Volatile private var worker: Thread? = null
-
-    @Volatile private var runLoop: Pointer? = null
 
     @Volatile private var tap: Pointer? = null
 
@@ -44,7 +47,11 @@ internal class MacOsPhysicalKeyCapture : PlatformPhysicalKeyCapture {
         val currentWorker =
             lifecycleLock.withLock {
                 requested = false
-                runLoop?.let(MacCoreFoundation.INSTANCE::CFRunLoopStop)
+                restartOnExit = false
+                workerGeneration++
+                activeGeneration = 0L
+                available = false
+                tap = null
                 pending.clear()
                 worker
             }
@@ -55,20 +62,19 @@ internal class MacOsPhysicalKeyCapture : PlatformPhysicalKeyCapture {
     }
 
     private fun startWorker(): CountDownLatch {
+        val generation = ++workerGeneration
         val ready = CountDownLatch(1)
         worker =
             Thread(
                 {
                     try {
-                        runEventTap(ready)
+                        runEventTap(generation, ready)
                     } finally {
                         lifecycleLock.withLock {
                             val shouldRestart = restartOnExit && requested
                             restartOnExit = false
                             if (worker === Thread.currentThread()) worker = null
                             available = false
-                            runLoop = null
-                            tap = null
                             pending.clear()
                             if (shouldRestart && worker == null) startWorker()
                         }
@@ -82,15 +88,18 @@ internal class MacOsPhysicalKeyCapture : PlatformPhysicalKeyCapture {
         return ready
     }
 
-    private fun runEventTap(ready: CountDownLatch) {
+    private fun runEventTap(
+        generation: Long,
+        ready: CountDownLatch,
+    ) {
         var eventTap: Pointer? = null
         var source: Pointer? = null
         try {
             val coreGraphics = MacCoreGraphics.INSTANCE
             val coreFoundation = MacCoreFoundation.INSTANCE
             coreGraphics.CGRequestListenEventAccess()
-            if (!requested) return
-            eventTap =
+            if (!requested || workerGeneration != generation) return
+            val activeTap =
                 coreGraphics.CGEventTapCreate(
                     SESSION_EVENT_TAP,
                     HEAD_INSERT_EVENT_TAP,
@@ -99,22 +108,40 @@ internal class MacOsPhysicalKeyCapture : PlatformPhysicalKeyCapture {
                     callback,
                     null,
                 ) ?: return
-            tap = eventTap
+            eventTap = activeTap
             val currentRunLoop = coreFoundation.CFRunLoopGetCurrent()
-            source = coreFoundation.CFMachPortCreateRunLoopSource(null, eventTap, 0L) ?: return
-            runLoop = currentRunLoop
-            coreFoundation.CFRunLoopAddSource(currentRunLoop, source, COMMON_RUN_LOOP_MODES)
-            coreGraphics.CGEventTapEnable(eventTap, true)
-            available = true
+            val activeSource = coreFoundation.CFMachPortCreateRunLoopSource(null, activeTap, 0L) ?: return
+            source = activeSource
+            val activated =
+                lifecycleLock.withLock {
+                    if (!requested || workerGeneration != generation) {
+                        false
+                    } else {
+                        coreFoundation.CFRunLoopAddSource(currentRunLoop, activeSource, COMMON_RUN_LOOP_MODES)
+                        coreGraphics.CGEventTapEnable(activeTap, true)
+                        tap = activeTap
+                        activeGeneration = generation
+                        available = true
+                        true
+                    }
+                }
             ready.countDown()
-            coreFoundation.CFRunLoopRun()
+            if (!activated) return
+            // A bounded run keeps a deactivation that races loop startup from parking the worker forever.
+            while (requested && workerGeneration == generation) {
+                coreFoundation.CFRunLoopRunInMode(DEFAULT_RUN_LOOP_MODE, RUN_LOOP_POLL_SECONDS, false)
+            }
         } catch (_: UnsatisfiedLinkError) {
             available = false
         } finally {
             ready.countDown()
-            available = false
-            runLoop = null
-            tap = null
+            lifecycleLock.withLock {
+                available = false
+                if (tap === eventTap) {
+                    tap = null
+                    activeGeneration = 0L
+                }
+            }
             source?.let(MacCoreFoundation.INSTANCE::CFRelease)
             eventTap?.let(MacCoreFoundation.INSTANCE::CFRelease)
         }
@@ -129,9 +156,10 @@ internal class MacOsPhysicalKeyCapture : PlatformPhysicalKeyCapture {
                 userInfo: Pointer?,
             ): Pointer? {
                 val activeTap = tap
+                if (activeTap == null || activeGeneration != workerGeneration) return event
                 if (type == EVENT_TAP_DISABLED_BY_TIMEOUT || type == EVENT_TAP_DISABLED_BY_USER_INPUT) {
-                    if (activeTap != null && requested) MacCoreGraphics.INSTANCE.CGEventTapEnable(activeTap, true)
-                } else if (type == KEY_DOWN_EVENT_TYPE && requested && event != null) {
+                    MacCoreGraphics.INSTANCE.CGEventTapEnable(activeTap, true)
+                } else if (type == KEY_DOWN_EVENT_TYPE && event != null) {
                     val keyCode =
                         MacCoreGraphics.INSTANCE
                             .CGEventGetIntegerValueField(event, KEYBOARD_EVENT_KEYCODE_FIELD)
@@ -155,10 +183,16 @@ internal class MacOsPhysicalKeyCapture : PlatformPhysicalKeyCapture {
         const val EVENT_TAP_DISABLED_BY_TIMEOUT = -2
         const val EVENT_TAP_DISABLED_BY_USER_INPUT = -1
         const val KEY_DOWN_EVENT_MASK = 1L shl KEY_DOWN_EVENT_TYPE
+        const val RUN_LOOP_POLL_SECONDS = 0.1
         val COMMON_RUN_LOOP_MODES: Pointer =
             NativeLibrary
                 .getInstance("CoreFoundation")
                 .getGlobalVariableAddress("kCFRunLoopCommonModes")
+                .getPointer(0)
+        val DEFAULT_RUN_LOOP_MODE: Pointer =
+            NativeLibrary
+                .getInstance("CoreFoundation")
+                .getGlobalVariableAddress("kCFRunLoopDefaultMode")
                 .getPointer(0)
     }
 }
@@ -216,9 +250,11 @@ private interface MacCoreFoundation : Library {
         mode: Pointer,
     )
 
-    fun CFRunLoopRun()
-
-    fun CFRunLoopStop(runLoop: Pointer)
+    fun CFRunLoopRunInMode(
+        mode: Pointer,
+        seconds: Double,
+        returnAfterSourceHandled: Boolean,
+    ): Int
 
     fun CFRelease(value: Pointer)
 
