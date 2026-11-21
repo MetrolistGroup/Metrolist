@@ -464,6 +464,13 @@ interface SongDao {
     @Query(
         """
         SELECT album.*,
+               (SELECT MIN(song.inLibrary)
+                FROM song
+                WHERE song.id IN (
+                    SELECT direct.id FROM song AS direct WHERE direct.albumId = album.id
+                    UNION
+                    SELECT songId FROM song_album_map WHERE albumId = album.id
+                )) AS firstSongAddedAt,
                (SELECT SUM(song.totalPlayTime)
                 FROM song
                 WHERE song.albumId = album.id) AS timeListened

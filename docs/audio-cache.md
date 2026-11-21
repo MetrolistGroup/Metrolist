@@ -59,3 +59,5 @@ Finite MP4/WebM files and supported finite HLS playlists have a 32 MiB per-file 
 ## Verification
 
 Run affected [platform checks](checks.md#platform-checks). Use disposable storage to check cold-cache completion, seeks, crossfades, cache clear during capture, low disk space, failed migration and each download destination. On iOS, check that throttled capture does not block unrelated playback or republish after clear.
+
+On desktop, Auto download saved albums and playlists starts downloads only after saving succeeds. Albums finish loading their remaining tracks first. Playlists use complete stored membership or load all pages, and downloads continue after leaving the collection page. Unavailable and blocked songs are filtered through the normal download path.

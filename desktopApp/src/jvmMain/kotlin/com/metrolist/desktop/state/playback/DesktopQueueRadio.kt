@@ -32,15 +32,9 @@ internal class DesktopQueueRadio(
     private val queuedIds = linkedSetOf<String>()
     private var continuation: String? = null
 
-    // Classic mode keeps YouTube's order: songs not yet enqueued from the last
-    // fetched page are served before fetching the next one.
-    private var pendingClassicSongs: List<SongItem> = emptyList()
-    private var radioClassicMode: Boolean = Settings.shared.classicRecommendations
-
     fun reset() {
         cancelPrefetch()
         continuation = null
-        pendingClassicSongs = emptyList()
     }
 
     fun cancelPrefetch() {

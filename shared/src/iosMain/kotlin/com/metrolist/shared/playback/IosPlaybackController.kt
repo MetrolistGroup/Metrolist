@@ -3,20 +3,25 @@ package com.metrolist.shared.playback
 import androidx.compose.runtime.snapshotFlow
 import com.metrolist.innertubex.extraction.ContentHints
 import com.metrolist.shared.api.YouTubeRepository
+import com.metrolist.shared.api.musicvideo.CounterpartPositionMap
+import com.metrolist.shared.api.musicvideo.MusicVideoResolver
+import com.metrolist.shared.api.musicvideo.MusicVideoResult
 import com.metrolist.shared.db.MusicDatabase
 import com.metrolist.shared.db.entities.Event
-import com.metrolist.shared.db.entities.RelatedSongMap
 import com.metrolist.shared.db.upsertHistorySong
 import com.metrolist.shared.db.withDatabaseTransaction
 import com.metrolist.shared.deviceconnect.DcScrobbleSession
 import com.metrolist.shared.listentogether.ListenTogetherManager
+import com.metrolist.shared.listentogether.listenTogetherControls
 import com.metrolist.shared.model.RadioQueueChip
 import com.metrolist.shared.model.RadioQueuePage
 import com.metrolist.shared.model.RadioRecommendationHistory
 import com.metrolist.shared.model.RepeatMode
 import com.metrolist.shared.model.SongItem
 import com.metrolist.shared.model.buildRadioQueueRecommendations
+import com.metrolist.shared.model.canSwitchToMusicVideo
 import com.metrolist.shared.model.isPodcast
+import com.metrolist.shared.model.isVideoSong
 import com.metrolist.shared.model.selectRadioQueueChip
 import com.metrolist.shared.playback.QUEUE_SOURCE_AUTO_MIX
 import com.metrolist.shared.scrobble.ScrobbleManager
@@ -89,8 +94,6 @@ import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.TimeMark
 import kotlin.time.TimeSource
 
-private const val RELATED_SONGS_LIMIT = 20
-
 internal class IosPlaybackController(
     private val player: MusicPlayer,
     private val resolver: StreamResolver,
@@ -99,9 +102,12 @@ internal class IosPlaybackController(
     private val timeSource: TimeSource = TimeSource.Monotonic,
     private val audioStorage: IosAudioDownloadManager? = null,
     private val persistenceDispatcher: CoroutineDispatcher = Dispatchers.Default,
+    private val musicVideoResolver: MusicVideoResolver = MusicVideoResolver(),
+    private val videoSongLookup: (suspend (String) -> SongItem?)? = null,
+    private val videoPlaybackDispatcher: CoroutineDispatcher = Dispatchers.Default,
     private val repository: () -> YouTubeRepository = { GlobalYouTubeRepository.instance },
 ) : PlaybackController {
-    override val supportsVideoPlayback = false
+    override val supportsVideoPlayback = true
     override val supportsCasting = false
     override val canSkipNext: Boolean
         get() = !guestLocked && state.value.canSkipNext(allowSuggestions = !isFiniteQueue || canAutoLoadMore)
@@ -128,6 +134,17 @@ internal class IosPlaybackController(
                 }
                 player.updateRemotePlaybackLock()
                 player.updateRemoteSkipAvailability(!guestLocked && canSkipNext, !guestLocked && canSkipPrevious)
+            }
+        }
+        scope.launch {
+            combine(manager.role, manager.isInRoom, snapshotFlow { Settings.shared.listenTogetherEnabled }) { role, active, enabled ->
+                listenTogetherControls(enabled, role, active).playbackLocked
+            }.distinctUntilChanged().collect { locked ->
+                if (locked && (isVideoModeActive.value || isVideoResolving.value || videoModeJob?.isActive == true)) {
+                    videoModeRequestId++
+                    videoModeJob?.cancel()
+                    clearVideoMode()
+                }
             }
         }
     }
@@ -263,6 +280,18 @@ internal class IosPlaybackController(
     private val queueChips = MutableStateFlow<List<RadioQueueChip>>(emptyList())
     private val isQueueLoading = MutableStateFlow(false)
     private val suggestedTracks = MutableStateFlow<List<SongItem>>(emptyList())
+    private val videoPlaybackResource = MutableStateFlow<PlaybackResource?>(null)
+    private val videoPositionMap = MutableStateFlow<CounterpartPositionMap?>(null)
+    private val isVideoModeActive = MutableStateFlow(false)
+    private val isVideoResolving = MutableStateFlow(false)
+    private var videoModeJob: Job? = null
+    private var videoModeRequestId = 0L
+    private var videoModeSongId: String? = null
+    private val failedVideoResourceIds = mutableSetOf<String>()
+    private var deferredVideoModeSongId: String? = null
+    private var videoSurfacePlayer: IosMusicVideoSurfacePlayer? = null
+    private var videoSurfaceUrl: String? = null
+    private var videoSurfaceHeaders: Map<String, String>? = null
 
     private val coreState =
         combine(baseState, player.currentMediaItemIndex, pendingPlayback, playbackError) { base, index, pending, error ->
@@ -281,13 +310,12 @@ internal class IosPlaybackController(
 
     private val extendedState =
         combine(coreState, queueTitle, queueChips, isQueueLoading, suggestedTracks) { base, title, chips, loading, suggested ->
-            base.copy(
-                queueTitle = title,
-                queueChips = chips,
-                isQueueLoading = loading,
-                suggestedTracks = suggested,
-            )
-        }
+            base.copy(queueTitle = title, queueChips = chips, isQueueLoading = loading, suggestedTracks = suggested)
+        }.combine(videoPlaybackResource) { state, resource -> state.copy(videoPlaybackResource = resource) }
+            .combine(videoPositionMap) { state, positionMap -> state.copy(videoPositionMap = positionMap) }
+            .combine(isVideoModeActive) { state, active ->
+                state.copy(isVideoModeActive = active, retimeLyricsOnVideoMode = false)
+            }.combine(isVideoResolving) { state, resolving -> state.copy(isVideoResolving = resolving) }
 
     private val sleepTimerPlayer =
         object : SleepTimerPlayer {
@@ -374,6 +402,29 @@ internal class IosPlaybackController(
     init {
         player.playbackCache = audioStorage?.playbackCache
         restorePersistedPlayback()
+        scope.launch {
+            snapshotFlow { Settings.shared.musicVideoPlaybackEnabled }.distinctUntilChanged().collect { enabled ->
+                if (!enabled) {
+                    videoModeRequestId++
+                    videoModeJob?.cancel()
+                    clearVideoMode()
+                }
+            }
+        }
+        scope.launch {
+            var observedSongId = player.currentSong.value?.id
+            player.currentSong.collect { song ->
+                val songId = song?.id
+                if (songId != observedSongId) {
+                    observedSongId = songId
+                    if (songId == deferredVideoModeSongId || songId == videoModeSongId) return@collect
+                    deferredVideoModeSongId = null
+                    videoModeRequestId++
+                    videoModeJob?.cancel()
+                    clearVideoMode()
+                }
+            }
+        }
         scope.launch {
             sleepTimerController.state.collect { timer ->
                 player.setStopAfterSongFade(timer.stopAfterCurrentSong && timer.fadeOut)
@@ -778,7 +829,7 @@ internal class IosPlaybackController(
                                 if (radioContinuation != null) {
                                     continueRadioIfNeeded(seedId)
                                 } else {
-                                    bootstrapRecommendations(seedId, currentRadioPlaylistId, currentRadioParams)
+                                    bootstrapRecommendations(seedId, currentRadioPlaylistId ?: "RDAMVM$seedId", currentRadioParams)
                                 }
                                 radioJob?.join()
                             }
@@ -798,7 +849,7 @@ internal class IosPlaybackController(
             ) { idx, q, _, _ -> idx to q }.collect { (idx, q) ->
                 if (deferredRadioBootstrap && canAutoLoadMore && radioJob?.isActive != true) {
                     currentRadioSeedId?.let { seedId ->
-                        bootstrapRecommendations(seedId, currentRadioPlaylistId, currentRadioParams)
+                        bootstrapRecommendations(seedId, currentRadioPlaylistId ?: "RDAMVM$seedId", currentRadioParams)
                     }
                 }
                 if (q.isNotEmpty() && idx >= q.size - 3) {
@@ -987,6 +1038,124 @@ internal class IosPlaybackController(
                 )
             }
         }
+    }
+
+    override fun toggleVideoMode() = setVideoMode(!isVideoModeActive.value)
+
+    internal fun musicVideoSurfacePlayer(
+        url: String,
+        headers: Map<String, String>,
+    ): IosMusicVideoSurfacePlayer {
+        if (videoSurfaceUrl != url || videoSurfaceHeaders != headers) {
+            releaseMusicVideoSurfacePlayer()
+            videoSurfaceUrl = url
+            videoSurfaceHeaders = headers.toMap()
+            videoSurfacePlayer = IosMusicVideoSurfacePlayer(url, headers)
+        }
+        return checkNotNull(videoSurfacePlayer)
+    }
+
+    override fun setVideoMode(wantVideo: Boolean) {
+        videoModeRequestId++
+        val requestId = videoModeRequestId
+        videoModeJob?.cancel()
+        val pendingSong = pendingPlayback.value?.song
+        if (pendingSong != null) {
+            deferredVideoModeSongId =
+                pendingSong.id.takeIf { wantVideo && Settings.shared.musicVideoPlaybackEnabled && !guestLocked }
+            clearVideoMode()
+            return
+        }
+        if (!wantVideo || !Settings.shared.musicVideoPlaybackEnabled || guestLocked) {
+            deferredVideoModeSongId = null
+            clearVideoMode()
+            return
+        }
+        val song = player.currentSong.value
+        if (song == null || song.isLocal || song.isUploaded || song.id.startsWith("local_") ||
+            (!song.isVideoSong && !song.isPodcast && !song.canSwitchToMusicVideo)
+        ) {
+            deferredVideoModeSongId = null
+            clearVideoMode()
+            return
+        }
+        deferredVideoModeSongId = null
+        videoModeSongId = song.id
+        isVideoResolving.value = true
+        videoModeJob =
+            scope.launch {
+                try {
+                    val resolvedVideo =
+                        if (song.isVideoSong || song.isPodcast) {
+                            MusicVideoResult.Found(song.id)
+                        } else {
+                            withContext(videoPlaybackDispatcher) { musicVideoResolver.resolveMusicVideo(song) }
+                        } as? MusicVideoResult.Found ?: return@launch
+                    if (resolvedVideo.videoId != song.id && resolvedVideo.positionMap == null) return@launch
+                    val videoSong =
+                        if (resolvedVideo.videoId == song.id) {
+                            song
+                        } else {
+                            withContext(videoPlaybackDispatcher) {
+                                videoSongLookup?.invoke(resolvedVideo.videoId)
+                                    ?: repository().getSongMetadata(resolvedVideo.videoId)
+                            }
+                        } ?: return@launch
+                    val hints =
+                        videoSong.toContentHints(wantVideo = true).withIosAudioCapabilities(
+                            allowHls = true,
+                            allowSabr = false,
+                            allowBoundedRange = false,
+                        )
+                    val refreshFailedResource = videoSong.id in failedVideoResourceIds
+                    val resource =
+                        withContext(videoPlaybackDispatcher) {
+                            if (refreshFailedResource) {
+                                resolver.refresh(videoSong.id, hints, iosPlaybackAudioQuality(Settings.shared.audioQuality), videoSong)
+                            } else {
+                                resolver.resolve(videoSong.id, hints, iosPlaybackAudioQuality(Settings.shared.audioQuality), videoSong)
+                            }
+                        }
+                    if (requestId != videoModeRequestId || player.currentSong.value?.id != song.id) return@launch
+                    if (!resource.hasDirectVideo || resource.musicVideoId != null) {
+                        failedVideoResourceIds += videoSong.id
+                        return@launch
+                    }
+                    videoPositionMap.value = resolvedVideo.positionMap
+                    videoPlaybackResource.value = resource
+                    failedVideoResourceIds -= videoSong.id
+                    isVideoModeActive.value = true
+                } catch (error: CancellationException) {
+                    throw error
+                } catch (error: Exception) {
+                    Logger.w("IosPlaybackController", "Video resolution failed id=${song.id} type=${error::class.simpleName}")
+                } finally {
+                    if (requestId == videoModeRequestId) isVideoResolving.value = false
+                }
+            }
+    }
+
+    private fun clearVideoMode() {
+        isVideoResolving.value = false
+        isVideoModeActive.value = false
+        videoPlaybackResource.value = null
+        videoPositionMap.value = null
+        videoModeSongId = null
+        releaseMusicVideoSurfacePlayer()
+    }
+
+    internal fun releaseMusicVideoSurfacePlayer() {
+        videoSurfacePlayer?.close()
+        videoSurfacePlayer = null
+        videoSurfaceUrl = null
+        videoSurfaceHeaders = null
+    }
+
+    override fun reportVideoPlaybackFailure() {
+        videoPlaybackResource.value?.videoId?.let(failedVideoResourceIds::add)
+        videoModeRequestId++
+        videoModeJob?.cancel()
+        clearVideoMode()
     }
 
     override fun seekTo(positionMs: Long) {
@@ -1193,6 +1362,7 @@ internal class IosPlaybackController(
     }
 
     private fun discardPendingPlayback() {
+        deferredVideoModeSongId = null
         pendingPlayback.value = null
         isShuffled.value = player.isShuffleEnabled
         player.cancelQueueTransition()
@@ -1296,7 +1466,7 @@ internal class IosPlaybackController(
 
     private fun bootstrapRecommendations(
         seedSongId: String,
-        playlistId: String? = null,
+        playlistId: String = "RDAMVM$seedSongId",
         params: String? = null,
         selectedChipId: String? = null,
     ) {
@@ -1310,7 +1480,7 @@ internal class IosPlaybackController(
         radioExplicitFeed = explicitFeed
         if (selectedChipId == null) {
             currentRadioSeedId = seedSongId
-            currentRadioPlaylistId = requestPlaylistId
+            currentRadioPlaylistId = playlistId
             currentRadioParams = params
             radioContinuation = null
             suggestedTracks.value = emptyList()
@@ -1328,7 +1498,7 @@ internal class IosPlaybackController(
                         loadRadioRecommendations(
                             repository().startRadioQueue(
                                 videoId = seedSongId,
-                                playlistId = requestPlaylistId,
+                                playlistId = playlistId,
                                 params = params,
                             ),
                             seedSongId,
@@ -1337,7 +1507,7 @@ internal class IosPlaybackController(
                             requestClassic = requestClassic,
                         ) ?: return@launch
                     currentRadioSeedId = seedSongId
-                    currentRadioPlaylistId = requestPlaylistId
+                    currentRadioPlaylistId = playlistId
                     currentRadioParams = params
                     if (selectedChipId != null) isFiniteQueue = false
                     deferredRadioBootstrap = false
@@ -1570,39 +1740,6 @@ internal class IosPlaybackController(
             logIosPlaybackError("Failed to record local play for ${song.id}", error)
             Logger.w("IosPlaybackController", "Failed to record local play id=${song.id}")
         }
-        if (Settings.shared.classicRecommendations) recordRelatedSongs(song.id)
-    }
-
-    /** Stores the songs YouTube relates to [songId], feeding the classic local Quick picks. */
-    private suspend fun recordRelatedSongs(songId: String) {
-        // Local files have no YouTube watch id, so their relations cannot be fetched.
-        if (songId.startsWith("local_")) return
-        try {
-            val dao = database.dao()
-            if (dao.hasRelatedSongs(songId)) return
-            val related =
-                repository()
-                    .startRadioQueue(songId)
-                    .songs
-                    .filter { it.id.isNotBlank() && it.id != songId }
-                    .distinctBy { it.id }
-                    .take(RELATED_SONGS_LIMIT)
-            if (related.isEmpty()) return
-            database.withDatabaseTransaction {
-                // Recheck inside the transaction: overlapping qualified plays of the
-                // same seed could both pass the check above before either write.
-                if (dao.hasRelatedSongs(songId)) return@withDatabaseTransaction
-                related.forEach { relatedSong ->
-                    dao.upsertHistorySong(relatedSong)
-                    dao.insert(RelatedSongMap(songId = songId, relatedSongId = relatedSong.id))
-                }
-            }
-        } catch (error: CancellationException) {
-            throw error
-        } catch (error: Exception) {
-            logIosPlaybackError("Failed to record related songs for $songId", error)
-            Logger.w("IosPlaybackController", "Failed to record related songs id=$songId")
-        }
     }
 
     private fun requestPlayback(
@@ -1629,6 +1766,12 @@ internal class IosPlaybackController(
             }
         val song = pendingQueue.currentItem() ?: return null
         audioRecovery.select(song.id)
+        if (song.id != player.currentSong.value?.id && deferredVideoModeSongId != song.id) {
+            deferredVideoModeSongId = null
+            videoModeRequestId++
+            videoModeJob?.cancel()
+            clearVideoMode()
+        }
         resolveJob?.cancel()
         audioQualityReloadJob?.cancel()
         preResolveJob?.cancel()
@@ -1742,11 +1885,16 @@ internal class IosPlaybackController(
                     check(player.loadError.value == null) { "iOS player rejected playback resource" }
                     player.editQueue { restore(pending.queueSnapshot) }
                     pendingPlayback.value = null
+                    if (deferredVideoModeSongId == song.id) {
+                        deferredVideoModeSongId = null
+                        setVideoMode(true)
+                    }
                     if (previousSong?.id == song.id) scrobbleManager.onPlaybackInstanceStart(song)
                 } catch (error: CancellationException) {
                     throw error
                 } catch (error: Exception) {
                     if (generation != requestGeneration) return@launch
+                    if (deferredVideoModeSongId == song.id) deferredVideoModeSongId = null
                     logIosPlaybackError("Playback resolution failed for ${song.id}", error)
                     handleTerminalPlaybackFailure(
                         pendingPlayback.value?.startPlaying == true,
