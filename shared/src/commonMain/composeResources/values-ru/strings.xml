@@ -1472,11 +1472,11 @@
     <string name="no_logs_available">Нет доступных логов</string>
     <string name="export_logs">Экспорт логов</string>
     <string name="create_backup">Создать бэкап</string>
-    <string name="create_backup_desc">Экспортирует все настройки, аккаунты, учетные данные и данные библиотеки</string>
+    <string name="create_backup_desc">Экспортировать все настройки, аккаунты, учётные данные и данные библиотеки</string>
     <string name="restore_backup">Восстановить резервную копию</string>
-    <string name="restore_backup_desc">Восстанавливает бэкап Metrolist с Android или компьютера и перезапускается</string>
-    <string name="sensitive_backup">Конфиденциальный бэкап</string>
-    <string name="restore_backup_confirm">Восстановить бэкап?</string>
+    <string name="restore_backup_desc">Импортировать резервную копию Metrolist с Android или компьютера и перезапустить приложение</string>
+    <string name="sensitive_backup">Конфиденциальная резервная копия</string>
+    <string name="restore_backup_confirm">Восстановить резервную копию?</string>
     <string name="restore">Восстановить</string>
     <string name="restoring_backup">Восстановление резервной копии…\nMetrolist перезапустится автоматически.</string>
     <string name="hidden_items_count">Спрятанные элементы (%1$d)</string>
@@ -1586,9 +1586,9 @@
     </plurals>
     <string name="app_data">Данные приложения</string>
     <string name="backup_picker_title">Восстановить резервную копию Metrolist</string>
-    <string name="create_backup_dialog_title">Создать бэкап Metrolist</string>
+    <string name="create_backup_dialog_title">Создать резервную копию Metrolist</string>
     <string name="backup_created">Резервная копия создана</string>
-    <string name="backup_failed">Ошибка бэкапа: %1$s</string>
+    <string name="backup_failed">Ошибка резервного копирования: %1$s</string>
     <string name="could_not_open_file_picker">Не удалось открыть выбор файла: %1$s</string>
     <string name="restore_replaces_data">Это заменяет ваши данные настройки, учетные данные, аккаунты и данные библиотеки. Metrolist перезапустится автоматически.</string>
     <string name="create_backup_countdown">Создание бэкапа (%1$d)</string>
