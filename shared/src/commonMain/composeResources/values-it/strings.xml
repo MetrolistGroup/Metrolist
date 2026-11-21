@@ -579,13 +579,13 @@
     <string name="updates_status_current">Aggiornato a Metrolist %1$s</string>
     <string name="updates_auto_check">Controlla in automatico gli aggiornamenti</string>
     <string name="updates_notifications">Notifiche d'aggiornamento</string>
-    <string name="updates_changelogs">Changelog</string>
+    <string name="updates_changelogs">Registri delle modifiche</string>
     <string name="updates_last_check">Ultimo controllo</string>
     <string name="updates_pending_title">Aggiornamento in attesa</string>
     <string name="updates_version">Versione Metrolist</string>
     <string name="updates_size">Dimensione aggiornamento</string>
     <string name="updates_date">Data</string>
-    <string name="updates_changelog">Changelog</string>
+    <string name="updates_changelog">Registro delle modifiche</string>
     <string name="updates_install">Installa</string>
     <string name="updates_retry">Riprova</string>
     <string name="updates_available_title">Metrolist %1$s è disponibile</string>
@@ -606,7 +606,7 @@
     <string name="device_connect_title">Device Connect</string>
     <string name="device_connect_beta">Beta</string>
     <string name="device_connect_enable">Attiva</string>
-    <string name="copy_logs">Copia log</string>
+    <string name="copy_logs">Copia i log</string>
     <string name="device_connect_name_label">Nome dispositivo</string>
     <string name="device_connect_name_hint">Come questo dispositivo appare agli altri nella rete</string>
     <string name="device_connect_no_devices">Nessun dispositivo ancora trovato nella rete.</string>
@@ -1944,7 +1944,7 @@
     <string name="ai_model_load_failed">Impossibile caricare i modelli</string>
     <string name="ai_model_api_key_needed">Aggiungi una chiave API per caricare la lista dei modelli</string>
     <string name="ai_model_none_found">Nessun modello corrispondente alla ricerca</string>
-    <string name="openrouter_sign_in_title">Login via browser</string>
+    <string name="openrouter_sign_in_title">Accesso tramite browser</string>
     <string name="openrouter_sign_in_description">Accedi dal tuo browser, o inserisci una chiave API qui sotto</string>
     <string name="ai_test_connection">Test di connessione</string>
     <string name="ai_test_connection_running">Test di connessione…</string>
@@ -2014,7 +2014,7 @@
     <string name="bottom_sheet_pane_title">Riquadro inferiore</string>
     <string name="lyrics_provider_lrcred_description">Database di testi con sincronizzazione riga per riga e parola per parola con indicatori temporali o sincronizzazione automatica</string>
     <string name="foreign_import_title">Importa da un'altra app</string>
-    <string name="foreign_import_desc">Importa i Mi piace, le playlist e la cronologia d'ascolto da un backup di InnerTune, OuterTune, ViMusic, RiMusic, Kreate, SimpMusic o Prism. La libreria attuale viene mantenuta.</string>
+    <string name="foreign_import_desc">Importa i brani piaciuti, le playlist e la cronologia d'ascolto da un backup di InnerTune, OuterTune, ViMusic, RiMusic, Kreate, SimpMusic o Prism. La libreria attuale viene mantenuta.</string>
     <string name="foreign_import_success">Importati %1$d brani, %2$d Mi piace, %3$d playlist e %4$d riproduzioni</string>
     <string name="foreign_import_unsupported">Il file non è un backup di un'app musicale supportata</string>
     <string name="foreign_import_failed">Importazione non riuscita: %1$s</string>
