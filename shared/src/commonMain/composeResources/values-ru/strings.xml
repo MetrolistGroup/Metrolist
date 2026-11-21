@@ -1092,7 +1092,7 @@
     <string name="seek_duration_description">Секунды для пропуска при помощи стрелок</string>
     <string name="gradient">Градиент</string>
     <string name="prevent_duplicate_tracks_in_queue">Предотвращать дубликаты треков в очереди</string>
-    <string name="prevent_duplicate_tracks_in_queue_desc">Если добавить трек, который уже есть в очереди, его предыдущая запись будет удалена</string>
+    <string name="prevent_duplicate_tracks_in_queue_desc">Удалять старую запись, если добавляемый трек уже есть в очереди</string>
     <string name="skip_silence_desc">Перемотка сквозь тихие части песен</string>
     <string name="token_login_title">Токен входа</string>
     <string name="token_login_show_token">Показать токен</string>
