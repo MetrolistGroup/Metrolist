@@ -118,7 +118,7 @@ internal data class LyricsImageLayout(
         if (story) {
             544f
         } else {
-            minOf(264f * contentScale, canvasHeight - cardTop - footerHeight)
+            minOf(canvasHeight - 72f * contentScale, canvasHeight - cardTop - footerHeight)
         }
     val lyricsWidth = 340f - 2f * padding
     val lyricsHeight = footerTop - 10f * contentScale - lyricsTop
