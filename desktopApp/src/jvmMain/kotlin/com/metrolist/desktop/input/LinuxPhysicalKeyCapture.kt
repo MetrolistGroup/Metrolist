@@ -44,7 +44,7 @@ internal class LinuxPhysicalKeyCapture : PlatformPhysicalKeyCapture {
 
     @Volatile private var clockProbe: ClockProbe? = null
 
-    @Volatile private var modifierKeycodes: Set<Int> = emptySet()
+    @Volatile private var suppressedModifierKeycodes: Set<Int> = emptySet()
 
     @Volatile private var modifierMappingReady = false
 
@@ -101,7 +101,7 @@ internal class LinuxPhysicalKeyCapture : PlatformPhysicalKeyCapture {
                 pending.clear()
                 clockAnchor = null
                 clockProbe = null
-                modifierKeycodes = emptySet()
+                suppressedModifierKeycodes = emptySet()
                 modifierMappingReady = false
                 worker
             }
@@ -145,7 +145,7 @@ internal class LinuxPhysicalKeyCapture : PlatformPhysicalKeyCapture {
                             pending.clear()
                             clockAnchor = null
                             clockProbe = null
-                            modifierKeycodes = emptySet()
+                            suppressedModifierKeycodes = emptySet()
                             modifierMappingReady = false
                             if (shouldRestart && worker == null) startWorker()
                         }
@@ -164,7 +164,7 @@ internal class LinuxPhysicalKeyCapture : PlatformPhysicalKeyCapture {
         ready: CountDownLatch,
     ) {
         var eventDisplay: Pointer? = null
-        var controlDisplay: Pointer? = null
+        var controlDisplayForCleanup: Pointer? = null
         var context: NativeLong? = null
         var range: Pointer? = null
         try {
@@ -174,8 +174,8 @@ internal class LinuxPhysicalKeyCapture : PlatformPhysicalKeyCapture {
             recordApi = xtst
             val activeEventDisplay = x11.XOpenDisplay(null) ?: return
             eventDisplay = activeEventDisplay
-            val activeControlDisplay = x11.XOpenDisplay(null) ?: return
-            controlDisplay = activeControlDisplay
+            val openedControlDisplay = x11.XOpenDisplay(null) ?: return
+            controlDisplayForCleanup = openedControlDisplay
             range = xtst.XRecordAllocRange() ?: return
             range.clear(X_RECORD_RANGE_SIZE)
             // Range members are byte ranges in Xlib's 32-byte XRecordRange structure.
@@ -192,7 +192,7 @@ internal class LinuxPhysicalKeyCapture : PlatformPhysicalKeyCapture {
             ranges.setPointer(0, range)
             val activeContext =
                 xtst.XRecordCreateContext(
-                    activeControlDisplay,
+                    openedControlDisplay,
                     X_RECORD_FROM_SERVER_TIME,
                     clients,
                     1,
@@ -201,30 +201,29 @@ internal class LinuxPhysicalKeyCapture : PlatformPhysicalKeyCapture {
                 )
             if (activeContext.toLong() == 0L) return
             context = activeContext
-            x11.XSync(activeControlDisplay, false)
+            x11.XSync(openedControlDisplay, false)
             val enabled =
                 lifecycleLock.withLock {
                     if (!requested || workerGeneration != generation) return@withLock false
-                    controlDisplay = activeControlDisplay
+                    this.controlDisplay = openedControlDisplay
                     recordContext = activeContext
                     xtst.XRecordEnableContextAsync(activeEventDisplay, activeContext, callback, null) != 0
                 }
             if (!enabled) return
 
-            // XRecord reports the control connection's resource ID base. Derive it from the context
-            // XID by clearing the variable bits described by the server's resource ID mask.
-            val resourceIdMask = xtst.XRecordIdBaseMask(activeControlDisplay).toLong() and X_TIME_MASK
-            val controlIdBase = activeContext.toLong() and X_TIME_MASK and (resourceIdMask.inv() and X_TIME_MASK)
+            // XRecordIdBaseMask returns the fixed client-ID bits from connection setup, which are
+            // the id_base reported for replies recorded from this control connection.
+            val controlIdBase = xtst.XRecordIdBaseMask(openedControlDisplay).toLong() and X_TIME_MASK
             ready.countDown()
             x11.XFlush(activeEventDisplay)
             var nextClockProbeAt = 0L
             var nextModifierRefreshAt = 0L
-            if (refreshModifierKeycodes(activeControlDisplay)) {
+            if (refreshModifierKeycodes(openedControlDisplay)) {
                 nextModifierRefreshAt = System.currentTimeMillis() + MODIFIER_REFRESH_INTERVAL_MILLIS
             } else {
                 nextModifierRefreshAt = System.currentTimeMillis() + REFRESH_RETRY_MILLIS
             }
-            if (requestClockProbe(activeControlDisplay, controlIdBase)) {
+            if (requestClockProbe(openedControlDisplay, controlIdBase)) {
                 nextClockProbeAt = System.currentTimeMillis() + CLOCK_REFRESH_INTERVAL_MILLIS
             } else {
                 nextClockProbeAt = System.currentTimeMillis() + REFRESH_RETRY_MILLIS
@@ -253,7 +252,7 @@ internal class LinuxPhysicalKeyCapture : PlatformPhysicalKeyCapture {
                 if (loopNow >= nextModifierRefreshAt) {
                     nextModifierRefreshAt =
                         loopNow +
-                        if (refreshModifierKeycodes(activeControlDisplay)) {
+                        if (refreshModifierKeycodes(openedControlDisplay)) {
                             MODIFIER_REFRESH_INTERVAL_MILLIS
                         } else {
                             REFRESH_RETRY_MILLIS
@@ -267,7 +266,7 @@ internal class LinuxPhysicalKeyCapture : PlatformPhysicalKeyCapture {
                 if (clockProbe == null && loopNow >= nextClockProbeAt) {
                     nextClockProbeAt =
                         loopNow +
-                        if (requestClockProbe(activeControlDisplay, controlIdBase)) {
+                        if (requestClockProbe(openedControlDisplay, controlIdBase)) {
                             CLOCK_REFRESH_INTERVAL_MILLIS
                         } else {
                             REFRESH_RETRY_MILLIS
@@ -284,15 +283,16 @@ internal class LinuxPhysicalKeyCapture : PlatformPhysicalKeyCapture {
         } finally {
             ready.countDown()
             val activeContext = context
-            val activeControlDisplay = controlDisplay
-            controlDisplay = null
-            recordContext = null
-            if (activeContext != null && activeControlDisplay != null) {
-                runCatching { recordApi?.XRecordFreeContext(activeControlDisplay, activeContext) }
+            lifecycleLock.withLock {
+                if (this.controlDisplay === controlDisplayForCleanup) this.controlDisplay = null
+                if (recordContext === activeContext) recordContext = null
+            }
+            if (activeContext != null && controlDisplayForCleanup != null) {
+                runCatching { recordApi?.XRecordFreeContext(controlDisplayForCleanup, activeContext) }
             }
             range?.let { runCatching { X11.INSTANCE.XFree(it) } }
             eventDisplay?.let { runCatching { X11.INSTANCE.XCloseDisplay(it) } }
-            activeControlDisplay?.let { runCatching { X11.INSTANCE.XCloseDisplay(it) } }
+            controlDisplayForCleanup?.let { runCatching { X11.INSTANCE.XCloseDisplay(it) } }
             recordApi = null
         }
     }
@@ -341,15 +341,24 @@ internal class LinuxPhysicalKeyCapture : PlatformPhysicalKeyCapture {
             val keycodes = HashSet<Int>()
             repeat(MODIFIER_COUNT * maxKeysPerModifier) { index ->
                 val keycode = map.getByte(index.toLong()).toInt() and 0xFF
-                if (keycode != 0) keycodes.add(keycode)
+                if (keycode != 0 && isAwtModifierKeycode(display, keycode)) keycodes.add(keycode)
             }
-            modifierKeycodes = keycodes
+            suppressedModifierKeycodes = keycodes
             modifierMappingReady = true
             return true
         } finally {
             X11.INSTANCE.XFreeModifiermap(mapping)
         }
     }
+
+    private fun isAwtModifierKeycode(
+        display: Pointer,
+        keycode: Int,
+    ): Boolean =
+        (0 until KEYSYMS_PER_KEYCODE).any { index ->
+            val keysym = X11.INSTANCE.XKeycodeToKeysym(display, keycode, index).toLong() and X_TIME_MASK
+            keysym in AWT_MODIFIER_KEYSYMS
+        }
 
     private fun requestClockProbe(
         display: Pointer,
@@ -402,8 +411,10 @@ internal class LinuxPhysicalKeyCapture : PlatformPhysicalKeyCapture {
                 closure: Pointer?,
                 dataPointer: Pointer?,
             ) {
-                if (dataPointer == null || !requested) return
+                if (dataPointer == null) return
+                val recorder = recordApi ?: return
                 try {
+                    if (!requested) return
                     val data = XRecordInterceptData(dataPointer)
                     data.read()
                     if (data.category != RECORD_FROM_SERVER || data.dataLength.toLong() < MIN_DATUM_LENGTH) return
@@ -423,14 +434,15 @@ internal class LinuxPhysicalKeyCapture : PlatformPhysicalKeyCapture {
                         X_KEY_PRESS -> {
                             if (clockAnchor == null || !modifierMappingReady) return
                             val xKeyCode = eventData.getByte(1).toInt() and 0xFF
-                            if (xKeyCode in modifierKeycodes) return
-                            // AWT consumes one capture per non-modifier press; keep unmapped presses as null markers.
+                            if (xKeyCode in suppressedModifierKeycodes) return
+                            // AWT consumes one capture per press it reports; unmapped and non-AWT
+                            // modifier presses stay in the FIFO as null markers.
                             val position = linuxPhysicalPositionForX11KeyCode(xKeyCode)
                             pending.record(position, wallTimeForServerTime(serverTime))
                         }
                     }
                 } finally {
-                    recordApi?.XRecordFreeData(dataPointer)
+                    recorder.XRecordFreeData(dataPointer)
                 }
             }
         }
@@ -478,6 +490,7 @@ internal class LinuxPhysicalKeyCapture : PlatformPhysicalKeyCapture {
         const val REPLY_SEQUENCE_OFFSET = 2L
         const val MODIFIER_COUNT = 8
         const val MAX_KEYS_PER_MODIFIER = 255
+        const val KEYSYMS_PER_KEYCODE = 4
         const val CLOCK_REFRESH_INTERVAL_MILLIS = 5_000L
         const val CLOCK_PROBE_TIMEOUT_MILLIS = 2_000L
         const val MODIFIER_REFRESH_INTERVAL_MILLIS = 5_000L
@@ -487,6 +500,26 @@ internal class LinuxPhysicalKeyCapture : PlatformPhysicalKeyCapture {
         const val POLLERR = 0x8
         const val POLLHUP = 0x10
         const val POLLNVAL = 0x20
+
+        val AWT_MODIFIER_KEYSYMS =
+            setOf(
+                0xffe1L, // Shift_L
+                0xffe2L, // Shift_R
+                0xffe3L, // Control_L
+                0xffe4L, // Control_R
+                0xffe5L, // Caps_Lock
+                0xffe6L, // Shift_Lock
+                0xffe7L, // Meta_L
+                0xffe8L, // Meta_R
+                0xffe9L, // Alt_L
+                0xffeaL, // Alt_R
+                0xffebL, // Super_L
+                0xffecL, // Super_R
+                0xffedL, // Hyper_L
+                0xffeeL, // Hyper_R
+                0xfe03L, // ISO_Level3_Shift / AltGraph
+                0xff7eL, // Mode_switch / AltGraph
+            )
     }
 }
 
@@ -542,6 +575,12 @@ private interface X11 : Library {
     ): Int
 
     fun XGetModifierMapping(display: Pointer): Pointer?
+
+    fun XKeycodeToKeysym(
+        display: Pointer,
+        keyCode: Int,
+        index: Int,
+    ): NativeLong
 
     fun XFreeModifiermap(modifiermap: Pointer): Int
 
