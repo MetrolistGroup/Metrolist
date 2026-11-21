@@ -2376,7 +2376,7 @@
     </plurals>
     <string name="token_login_sensitive_warning_generic">NESDÍLEJTE tento token.</string>
     <string name="legacy_shuffle">Klasické náhodné přehrávání</string>
-    <string name="legacy_shuffle_desc">Zamíchá všechny skladby, včetně již přehraných, s aktuální skladbou na prvním místě. Vypnutím aktivujete KMP míchání. KMP ponechá již přehrané skladby na místě a zamíchá pouze ty nadcházející.</string>
+    <string name="legacy_shuffle_desc">Klasické náhodné přehrávání zařadí aktuální skladbu na začátek a zamíchá i již přehrané skladby. Vypnutím se budou míchat pouze nadcházející skladby. Položky označené jako automatický mix nebo doporučení si v obou režimech zachovají své pořadí.</string>
     <string name="sync_playlist">Synchronizovat playlist</string>
     <string name="auto_download_saved_collections">Automaticky stahovat uložená alba a playlisty</string>
     <string name="artist_subscriber_count">%1$s odběratelů</string>
@@ -2625,4 +2625,20 @@
     <string name="listen_together_server_maintainer">Správce</string>
     <string name="account_downloading_nightly_update">Stahování aktualizace vývojové verze</string>
     <string name="account_nightly_update_available">Je k dispozici nová vývojová verze</string>
+    <string name="clearing_search_history">Vymazávání historie vyhledávání…</string>
+    <string name="devtools_playback_log_title">Protokol událostí aplikace</string>
+    <string name="devtools_playback_log_count">Zaznamenáno %1$d událostí</string>
+    <string name="automatic_backup">Automatická záloha</string>
+    <string name="automatic_backup_daily">Denně</string>
+    <string name="automatic_backup_weekly">Každý týden</string>
+    <string name="automatic_backup_restore">Obnovit z automatické zálohy</string>
+    <string name="automatic_backup_restore_empty">Nejsou k dispozici žádné automatické zálohy.</string>
+    <string name="automatic_backup_restore_desc">Vyberte automatickou zálohu pro obnovení.</string>
+    <string name="foreign_import_error_generic">Zálohu se nepodařilo importovat</string>
+    <string name="ai_api_key_optional">Volitelné, bezplatné modely fungují bez klíče</string>
+    <string name="lyrics_share_story_style">Přizpůsobit obrázek</string>
+    <string name="application_failure_log_raw_description">Zde se zaznamenávají události přehrávání a selhání aplikace. Události uživatelského rozhraní se nezaznamenávají.</string>
+    <string name="application_failure_log_raw_empty">Zatím nebyly zaznamenány žádné události.</string>
+    <string name="lyrics_share_square_image">Čtvercový obrázek</string>
+    <string name="lyrics_share_story_image">Obrázek příběhu</string>
 </resources>
