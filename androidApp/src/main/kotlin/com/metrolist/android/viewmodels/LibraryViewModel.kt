@@ -44,7 +44,12 @@ class LibraryViewModel(
                 if (local) {
                     createStoredLocalPlaylist(database, name).map { it.id }
                 } else {
-                    createStoredPlaylist(database, GlobalYouTubeRepository.instance, name)
+                    val repository = GlobalYouTubeRepository.instance
+                    if (repository.canManagePlaylists()) {
+                        createStoredPlaylist(database, repository, name)
+                    } else {
+                        Result.failure(IllegalStateException())
+                    }
                 }
             if (result.isSuccess) refresh()
             onResult(result)
