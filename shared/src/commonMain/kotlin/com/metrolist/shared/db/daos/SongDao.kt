@@ -171,7 +171,20 @@ interface SongDao {
 
     @Transaction
     @Query(
-        "SELECT song.* FROM song WHERE title LIKE '%' || :query || '%' OR customTitle LIKE '%' || :query || '%' OR albumName LIKE '%' || :query || '%' OR customArtist LIKE '%' || :query || '%' OR EXISTS (SELECT 1 FROM song_artist_map JOIN artist ON artist.id = song_artist_map.artistId WHERE song_artist_map.songId = song.id AND artist.name LIKE '%' || :query || '%') ORDER BY song.rowid",
+        """
+        SELECT song.* FROM song
+        WHERE instr(lower(song.title), lower(:query)) > 0
+           OR instr(lower(song.customTitle), lower(:query)) > 0
+           OR instr(lower(song.albumName), lower(:query)) > 0
+           OR instr(lower(song.customArtist), lower(:query)) > 0
+           OR EXISTS (
+               SELECT 1 FROM song_artist_map
+               JOIN artist ON artist.id = song_artist_map.artistId
+               WHERE song_artist_map.songId = song.id
+                 AND instr(lower(artist.name), lower(:query)) > 0
+           )
+        ORDER BY song.rowid
+        """,
     )
     fun storedSearchSongs(query: String): Flow<List<Song>>
 
@@ -450,6 +463,13 @@ interface SongDao {
     @Query(
         """
         SELECT album.*,
+               (SELECT MIN(song.inLibrary)
+                FROM song
+                WHERE song.id IN (
+                    SELECT direct.id FROM song AS direct WHERE direct.albumId = album.id
+                    UNION
+                    SELECT songId FROM song_album_map WHERE albumId = album.id
+                )) AS firstSongAddedAt,
                (SELECT SUM(song.totalPlayTime)
                 FROM song
                 WHERE song.albumId = album.id) AS timeListened

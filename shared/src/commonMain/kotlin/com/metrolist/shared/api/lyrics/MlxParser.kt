@@ -460,11 +460,12 @@ object MlxParser {
             val bgContent = bgMatch?.groupValues?.get(1)
             val nextStart = lineStarts.getOrNull(lineStarts.binarySearch(startMs).let { if (it >= 0) it + 1 else -it - 1 })
             val wordEnd = endMs ?: nextStart
-            val (mainText, mainWords) = parseContent(mainContent, startMs, wordEnd)
+            val explicitStart = startMs.takeIf { headerMatch != null }
+            val (mainText, mainWords) = parseContent(mainContent, explicitStart, wordEnd)
 
             val bgWords: List<WordTimestamp>? =
                 if (!bgContent.isNullOrBlank()) {
-                    val (_, parsed) = parseContent(bgContent, startMs, wordEnd)
+                    val (_, parsed) = parseContent(bgContent, explicitStart, wordEnd)
                     parsed?.map { it.copy(isBackground = true) }
                 } else {
                     null
@@ -490,7 +491,7 @@ object MlxParser {
                         agent = agentId,
                         endTime = endMs,
                         isBackground = isBackground,
-                        backgroundText = bgContent?.let { parseContent(it, startMs, endMs).first },
+                        backgroundText = bgContent?.let { parseContent(it, explicitStart, endMs).first },
                         songPart = currentSongPart,
                     ),
                 )
@@ -539,7 +540,7 @@ object MlxParser {
     /** Preserves syllable spacing; only trailing spaces move into WordTimestamp.hasTrailingSpace. */
     private fun parseContent(
         content: String,
-        lineStartMs: Long,
+        lineStartMs: Long?,
         lineEndMs: Long?,
     ): Pair<String, List<WordTimestamp>?> {
         val markers = WORD_TS.findAll(content).toList()
@@ -551,8 +552,9 @@ object MlxParser {
         val words = mutableListOf<WordTimestamp>()
         val textBuf = StringBuilder()
 
-        var pendingText: String? = null
+        var pendingText: String? = content.substring(0, markers.first().range.first).takeIf(String::isNotBlank)
         var pendingStartMs = 0L
+        pendingText?.let(textBuf::append)
 
         fun flushPending(endMs: Long) {
             val raw = pendingText ?: return
@@ -573,6 +575,10 @@ object MlxParser {
         for (i in markers.indices) {
             val marker = markers[i]
             val markerMs = groupsToMs(marker.groupValues[1], marker.groupValues[2], marker.groupValues[3])
+            if (i == 0) {
+                // The line tag can also start the first word in enhanced LRC.
+                pendingStartMs = lineStartMs?.coerceAtMost(markerMs) ?: markerMs
+            }
 
             val segStart = marker.range.last + 1
             val segEnd = if (i + 1 < markers.size) markers[i + 1].range.first else content.length

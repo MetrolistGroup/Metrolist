@@ -121,6 +121,7 @@ import com.metrolist.shared.ui.menu.contextMenuAnchor
 import com.metrolist.shared.ui.menu.cursorContextMenu
 import com.metrolist.shared.ui.menu.rememberCursorContextMenuState
 import com.metrolist.shared.ui.navigation.LocalNavigator
+import com.metrolist.shared.ui.navigation.Screen
 import com.metrolist.shared.ui.navigation.navigationPopupSource
 import com.metrolist.shared.ui.screens.PlaylistContent
 import com.metrolist.shared.ui.screens.playlistContentText
@@ -140,7 +141,10 @@ import java.io.File
 import java.util.IdentityHashMap
 
 @Composable
-fun PlaylistScreen(colorScheme: ColorScheme) {
+fun PlaylistScreen(
+    colorScheme: ColorScheme,
+    route: Screen.Playlist,
+) {
     if (PlaylistAlbumState.isPlaylistLoading && PlaylistAlbumState.playlistData.isEmpty()) {
         val loadingNavigator = LocalNavigator.current
         CollectionHeaderNavigation({ loadingNavigator.goBack() }) { LoadingScreen() }
@@ -510,6 +514,7 @@ fun PlaylistScreen(colorScheme: ColorScheme) {
             listState = listState,
             contentPadding = PaddingValues(top = 16.dp, bottom = 16.dp),
             currentSongId = PlayerState.currentTrack?.id,
+            currentQueueItemId = PlayerState.currentTrack?.originalQueueItemId,
             isPlaying = PlayerState.isPlaying,
             suggestions = suggestions.takeIf { searchQuery.isBlank() && !(songs.isEmpty() && isEditable) }.orEmpty(),
             onArtistClick = ArtistState::fetchArtistData,
@@ -769,7 +774,9 @@ fun PlaylistScreen(colorScheme: ColorScheme) {
             confirmButton = {
                 Button(
                     onClick = {
-                        PlaylistAlbumState.deleteSelectedPlaylist { result ->
+                        if (navigator.state.currentRoute != route) return@Button
+                        PlaylistAlbumState.deleteSelectedPlaylist(route.id) { result ->
+                            if (navigator.state.currentRoute != route) return@deleteSelectedPlaylist
                             result.onSuccess {
                                 showDeleteDialog = false
                                 deleteFailed = false

@@ -75,6 +75,7 @@ import com.metrolist.shared.settings.BlockedContent
 import com.metrolist.shared.settings.SavedPlaylistSongSorting
 import com.metrolist.shared.settings.Settings
 import com.metrolist.shared.state.AlbumLikeState
+import com.metrolist.shared.state.AlbumLikeToggleAlreadyInProgressException
 import com.metrolist.shared.state.GlobalYouTubeRepository
 import com.metrolist.shared.state.PodcastLibrary
 import com.metrolist.shared.state.SongLikeState
@@ -191,7 +192,9 @@ internal fun MobileAlbumScreen(
                 isFavorite = isFavorite,
                 onFavorite = {
                     AlbumLikeState.toggleAlbumLike(page.album, page.songs) { result ->
-                        if (result.isFailure) onSwipeFeedback(favoriteErrorText)
+                        if (result.exceptionOrNull() !is AlbumLikeToggleAlreadyInProgressException && result.isFailure) {
+                            onSwipeFeedback(favoriteErrorText)
+                        }
                     }
                 },
                 onArtistClick = onArtistClick,
@@ -344,10 +347,10 @@ internal fun MobileArtistScreen(
             operationError = null
             loader.load()
         },
-        onItemClick = { item ->
+        onItemClick = { sectionTitle, item ->
             if (item is SongItem) {
                 scope.launch {
-                    val songs = fullArtistShelfQueue(item, sections, page?.sectionBrowseIds.orEmpty())
+                    val songs = fullArtistShelfQueue(item, sectionTitle, sections, page?.sectionBrowseIds.orEmpty())
                     playbackController.play(songs.first { it.id == item.id }, songs)
                 }
             } else {
@@ -739,6 +742,8 @@ internal fun MobilePlaylistScreen(
                 durationSongs = page?.takeUnless { it.isOffline }?.songs ?: cachedSections?.playlistSongs().orEmpty(),
                 hasMoreSongs = page?.hasMore == true,
                 hiddenSongCount = loadedSongs.size - songs.size,
+                // Unlike the visible rows, the artwork list already includes hidden tracks.
+                loadedSongCount = loadedSongs.size,
                 paginationContent = {
                     if (page?.hasMore == true) {
                         if (pageFailed) {
@@ -898,6 +903,7 @@ internal fun MobilePlaylistScreen(
                 onBackClick = onBack,
                 onArtistClick = onArtistClick,
                 currentSongId = playbackState.currentSongId,
+                currentQueueItemId = playbackState.originalQueueItemId,
                 isPlaying = playbackState.isPlaying,
                 contentPadding = PaddingValues(bottom = 88.dp + bottomContentPadding),
                 modifier = modifier.fillMaxSize(),

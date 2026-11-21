@@ -71,11 +71,16 @@ class CsvPlaylist(
     companion object {
         private val separatorDirective = Regex("""^sep=([,;\t])(?:\r\n|\r|\n)""", RegexOption.IGNORE_CASE)
 
-        fun parse(text: String): CsvPlaylist {
+        fun parse(text: String): CsvPlaylist = parse(text, preferTabs = false)
+
+        internal fun parse(
+            text: String,
+            preferTabs: Boolean,
+        ): CsvPlaylist {
             if (text.length > PlaylistImportManager.MAX_CSV_CHARACTERS) throw ImportException(ImportErrorKey.FileReadFailed)
             val input = text.removePrefix("\uFEFF")
             val directive = separatorDirective.find(input)
-            val delimiter = directive?.groupValues?.get(1)?.single() ?: detectDelimiter(input)
+            val delimiter = directive?.groupValues?.get(1)?.single() ?: detectDelimiter(input, preferTabs)
             val rows = mutableListOf<List<String>>()
             var row = mutableListOf<String>()
             val cell = StringBuilder()
@@ -136,7 +141,10 @@ class CsvPlaylist(
             return CsvPlaylist(rows)
         }
 
-        private fun detectDelimiter(text: String): Char {
+        private fun detectDelimiter(
+            text: String,
+            preferTabs: Boolean,
+        ): Char {
             val delimiters = listOf(',', ';', '\t')
             val counts = mutableListOf<IntArray>()
             var row = IntArray(delimiters.size)
@@ -159,6 +167,7 @@ class CsvPlaylist(
                 index++
             }
             if (row.any { it > 0 }) counts += row
+            val tabIndex = delimiters.indexOf('\t')
             val best =
                 delimiters.indices.maxWithOrNull(
                     compareBy<Int> { candidate ->
@@ -169,6 +178,9 @@ class CsvPlaylist(
                             .eachCount()
                             .values
                             .maxOrNull() ?: 0
+                    }.thenBy { candidate ->
+                        // When both delimiters look equally consistent, prefer the declared TSV format.
+                        preferTabs && candidate == tabIndex && counts.any { it[tabIndex] > 0 }
                     }.thenBy { candidate -> counts.firstOrNull()?.get(candidate) ?: 0 },
                 ) ?: 0
             return delimiters[best]

@@ -195,20 +195,18 @@ object LibraryContentState {
     fun deletePlaylist(
         playlist: PlaylistItem,
         onResult: (Result<Unit>) -> Unit,
-    ) {
-        AppState.scope.launch {
-            val result =
-                withContext(Dispatchers.IO) {
-                    deleteStoredPlaylist(database, GlobalYouTubeRepository.instance, playlist.id)
-                }
-            if (result.isSuccess) {
-                libraryViewModel.onPlaylistDeleted(playlist.id)
-                val normalizedId = playlist.id.removePrefix("VL")
-                userPlaylists = userPlaylists.filterNot { it.id.removePrefix("VL") == normalizedId }
-                fetchLibraryData(force = true)
+    ) = AppState.scope.launch {
+        val result =
+            withContext(Dispatchers.IO) {
+                deleteStoredPlaylist(database, GlobalYouTubeRepository.instance, playlist.id)
             }
-            onResult(result)
+        if (result.isSuccess) {
+            libraryViewModel.onPlaylistDeleted(playlist.id)
+            val normalizedId = playlist.id.removePrefix("VL")
+            userPlaylists = userPlaylists.filterNot { it.id.removePrefix("VL") == normalizedId }
+            fetchLibraryData(force = true)
         }
+        onResult(result)
     }
 
     private fun applyBlockedContentFilter() {

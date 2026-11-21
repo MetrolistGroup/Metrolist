@@ -4,6 +4,7 @@ import com.metrolist.shared.network.PublicArtworkDns
 import com.metrolist.shared.network.hasHttpTransportFailureInCauseChain
 import com.metrolist.shared.network.sharedHttpTransportHandlesFailures
 import com.metrolist.shared.network.sharedOkHttpClient
+import com.metrolist.shared.playback.ffmpeg.DirectMediaRedirectInterceptor
 import com.metrolist.shared.utils.Logger
 import com.metrolist.shared.youtube.playback.PlaybackEventKind
 import com.metrolist.shared.youtube.playback.PlaybackEventLog
@@ -136,6 +137,8 @@ internal class CastProxyServer(
             .newBuilder()
             .followRedirects(false)
             .followSslRedirects(false)
+            // Uncached tracks redirect to another googlevideo edge; follow only trusted media endpoints.
+            .addInterceptor(DirectMediaRedirectInterceptor)
             .dns(PublicArtworkDns)
             .connectTimeout(15, TimeUnit.SECONDS)
             .readTimeout(30, TimeUnit.SECONDS)
@@ -287,10 +290,15 @@ internal class CastProxyServer(
                 val body = response.body
                 if (response.code != 206 && !(response.code == 200 && range.start == 0L)) {
                     PlaybackEventLog.error(
-                        PlaybackEventKind.NETWORK,
-                        "CastProxy",
-                        "Upstream rejected range request",
-                        IllegalStateException("HTTP ${response.code}"),
+                        kind = PlaybackEventKind.NETWORK,
+                        message = "[CastProxy] Upstream rejected range request",
+                        details =
+                            buildMap {
+                                put("upstreamHttpStatus", response.code.toString())
+                                put("requestedRange", "bytes=${range.start}-${range.endInclusive}")
+                                response.header("Content-Range")?.let { put("upstreamContentRange", it) }
+                            },
+                        error = IllegalStateException("HTTP ${response.code}"),
                     )
                     Logger.w("CastProxy", "Upstream rejected range request (HTTP ${response.code})")
                     writeError(socket, 502, "Bad Gateway")

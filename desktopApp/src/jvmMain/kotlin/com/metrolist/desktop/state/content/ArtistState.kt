@@ -40,6 +40,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
@@ -72,6 +73,7 @@ object ArtistState {
     private var artistArtworkLoadJob: Job? = null
     private var artistArtworkRequestKey: String? = null
     private var artistSubscriptionJob: Job? = null
+    private var artistSongsPlaybackJob: Job? = null
 
     private val customBanners: MutableMap<String, String> =
         run {
@@ -421,20 +423,24 @@ object ArtistState {
         if (PlayerState.isListenTogetherGuest()) return
         val artist = artistData["header"]?.firstOrNull() as? ArtistItem ?: return
         val page = ArtistPageResult(artistData.toMap(), artistSectionBrowseIds.toMap())
-        AppState.scope.launch {
-            val songs =
-                GlobalYouTubeRepository.instance.getArtistSongs(artist.id, page) {
-                    AppState.snackbarHostState.showSnackbar(getString(Res.string.error_occurred))
-                }
-            if (shuffle) {
-                PlayerState.shuffleQueue(songs, songsOnly = true)
-            } else {
-                songs.firstOrNull()?.let {
-                    if (PlayerState.shuffleEnabled) PlayerState.toggleShuffle()
-                    PlayerState.playTrack(it, songs, songsOnly = true)
+        artistSongsPlaybackJob?.cancel()
+        artistSongsPlaybackJob =
+            AppState.scope.launch {
+                val songs =
+                    GlobalYouTubeRepository.instance.getArtistSongs(artist.id, page) {
+                        ensureActive()
+                        AppState.snackbarHostState.showSnackbar(getString(Res.string.error_occurred))
+                    }
+                ensureActive()
+                if (shuffle) {
+                    PlayerState.shuffleQueue(songs, songsOnly = true)
+                } else {
+                    songs.firstOrNull()?.let {
+                        if (PlayerState.shuffleEnabled) PlayerState.toggleShuffle()
+                        PlayerState.playTrack(it, songs, songsOnly = true)
+                    }
                 }
             }
-        }
     }
 
     fun fetchArtistIconOnDemand(
