@@ -2312,7 +2312,7 @@ object PlayerState {
         val queueIdentity = Triple(snapshot.sessionId, snapshot.queueRevision, snapshot.queueStateId)
         val startsExplicitRadio =
             state.explicitRadioQueue && state.queue.displayedItems.size == 1 &&
-                (pendingExplicitRadioRequest || !syncSession.explicitRadioQueue)
+                (pendingExplicitRadioRequest || !syncSession.explicitRadioQueue || syncSession.sessionId != snapshot.sessionId)
         pendingExplicitRadioRequest = false
         val reuseInitialTrack =
             syncSession.sessionId == null && !deviceConnect.isFollowing &&

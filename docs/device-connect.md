@@ -76,3 +76,5 @@ Linux measurements on one Ethernet interface with IPv4, ULA and link-local IPv6,
 Fallback TXT lookups during startup and measurement fell from 127,294 to 2, one per address family. Before the fix, most CPU time came from JmDNS callbacks and the TXT-fetch worker. A fallback lookup starts another resolver even when data is cached, as shown in [JmDNS's lookup path](https://github.com/jmdns/jmdns/blob/v3.6.5/src/main/java/javax/jmdns/impl/JmDNSImpl.java#L761-L776). Limiting concurrent requests alone did not stop callbacks from starting another lookup after the previous one finished.
 
 Windows and macOS idle CPU measurements remain unverified. The reporter will check the nightly Windows build.
+
+Explicit Radio requests start a fresh seed batch even when the seed is unchanged. Transferring an already populated Radio queue preserves its songs. Queue edits do not restart Radio.
