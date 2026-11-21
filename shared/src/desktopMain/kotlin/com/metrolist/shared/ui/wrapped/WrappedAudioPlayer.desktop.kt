@@ -31,12 +31,14 @@ internal actual fun createWrappedAudioPlayer(
     onEnded: () -> Unit,
     onFailure: () -> Unit,
     onInterrupted: () -> Unit,
-): WrappedAudioPlayer = DesktopWrappedAudioPlayer(onEnded, onFailure, onInterrupted)
+    volume: Float,
+): WrappedAudioPlayer = DesktopWrappedAudioPlayer(onEnded, onFailure, onInterrupted, volume)
 
 private class DesktopWrappedAudioPlayer(
     private val onEnded: () -> Unit,
     private val onFailure: () -> Unit,
     private val onInterrupted: () -> Unit,
+    initialVolume: Float,
 ) : WrappedAudioPlayer {
     private val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
     private var clockJob: Job? = null
@@ -45,6 +47,12 @@ private class DesktopWrappedAudioPlayer(
     private var player: AudioPlayer? = null
     private var input: InputStream? = null
     private var closed = false
+    private var currentVolume = initialVolume
+
+    override fun setVolume(volume: Float) {
+        currentVolume = volume
+        player?.setVolume(volume)
+    }
 
     override suspend fun play(song: SongItem) {
         check(!closed)
@@ -64,6 +72,7 @@ private class DesktopWrappedAudioPlayer(
                 },
             )
         player = current
+        current.setVolume(currentVolume)
         val source =
             resource.sabrBootstrap?.let { bootstrap ->
                 SabrInputStream(

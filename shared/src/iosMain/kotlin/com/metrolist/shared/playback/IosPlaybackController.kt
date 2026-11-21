@@ -113,6 +113,7 @@ internal class IosPlaybackController(
 ) : PlaybackController {
     override val supportsVideoPlayback = true
     override val supportsCasting = false
+    override val playbackVolume = player.volume
     override val canSkipNext: Boolean
         get() = !guestLocked && state.value.canSkipNext(allowSuggestions = !isFiniteQueue || canAutoLoadMore)
     override val canSkipPrevious: Boolean

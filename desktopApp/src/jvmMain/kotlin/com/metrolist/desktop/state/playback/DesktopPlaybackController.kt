@@ -20,6 +20,7 @@ import kotlinx.coroutines.flow.stateIn
 class DesktopPlaybackController(
     scope: CoroutineScope,
 ) : PlaybackController {
+    override val playbackVolume = PlayerState.volumeState
     override val playbackCommandGeneration: Long get() = PlayerState.explicitPlaybackGeneration
     override val playbackCommands = PlayerState.playbackCommands
     private val wrappedSharedPlayback =

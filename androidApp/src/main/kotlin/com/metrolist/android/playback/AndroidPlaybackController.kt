@@ -20,6 +20,7 @@ class AndroidPlaybackController(
     private val connection: PlayerConnection,
     scope: CoroutineScope,
 ) : PlaybackController {
+    override val playbackVolume = connection.volume
     override val playbackCommandGeneration: Long get() = connection.playbackCommandGeneration
     override val playbackCommands = connection.playbackCommands
     override val wrappedSoundtrackAllowed =

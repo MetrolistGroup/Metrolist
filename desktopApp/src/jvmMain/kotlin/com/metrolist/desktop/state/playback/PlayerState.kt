@@ -4368,6 +4368,7 @@ object PlayerState {
         if (isLiveStream) return
         if (deviceConnect.intercept(DcPlaybackCommand(DcPlaybackAction.SEEK, positionMs = positionMs))) return
         if (isListenTogetherGuest()) return
+        _explicitPlaybackGeneration.updateAndGet { it + 1 }
         val dur = playbackDuration.value
         val targetMs = if (dur > 0) positionMs.coerceIn(0, dur) else positionMs.coerceAtLeast(0)
         ListenTogetherState.listenTogetherManager.sendSeek(targetMs)
@@ -4415,6 +4416,7 @@ object PlayerState {
             return
         }
         if (isListenTogetherGuest()) return
+        _explicitPlaybackGeneration.updateAndGet { it + 1 }
 
         if (castManager.state.value.isConnected) {
             val targetMs = (fraction.coerceIn(0f, 1f) * playbackDuration.value).toLong()

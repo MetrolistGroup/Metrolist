@@ -38,6 +38,9 @@ fun rememberWrappedSoundtrack(
     LaunchedEffect(soundtrack, controller) {
         controller.playbackCommands.collect { soundtrack.onPlaybackCommand() }
     }
+    LaunchedEffect(soundtrack, controller) {
+        controller.playbackVolume?.collect { soundtrack.updateVolume() }
+    }
     LifecycleEventEffect(Lifecycle.Event.ON_STOP) { soundtrack.stop() }
     DisposableEffect(soundtrack) { onDispose { soundtrack.stop() } }
     return soundtrack
@@ -58,7 +61,7 @@ class WrappedSoundtrack internal constructor(
     private var playback by mutableStateOf(controller.state.value)
     val available: Boolean
         get() =
-            allowed && songs.isNotEmpty() && !playback.isLoading && !playback.isReconnecting &&
+            allowed && controller.playbackVolume != null && songs.isNotEmpty() && !playback.isLoading && !playback.isReconnecting &&
                 !playback.isVideoResolving && !playback.sleepTimerState.isActive && !playback.sleepTimerState.stopAfterCurrentSong
 
     private var normalPlayback: PlaybackUiState? = null
@@ -68,6 +71,7 @@ class WrappedSoundtrack internal constructor(
     private var job: Job? = null
     private var player: WrappedAudioPlayer? = null
     private var songIndex = 0
+    private var sessionId = 0L
 
     internal fun setAllowed(value: Boolean) {
         allowed = value
@@ -83,6 +87,10 @@ class WrappedSoundtrack internal constructor(
         if (enabled && normalCommandGeneration?.let { it != controller.playbackCommandGeneration } == true) stop(resume = false)
     }
 
+    internal fun updateVolume() {
+        controller.playbackVolume?.value?.let { player?.setVolume(it) }
+    }
+
     fun toggle() {
         if (enabled) {
             stop()
@@ -90,6 +98,7 @@ class WrappedSoundtrack internal constructor(
         }
         if (!available) return
         failed = false
+        val session = ++sessionId
         enabled = true
         loading = true
         normalPlayback = controller.state.value
@@ -105,6 +114,7 @@ class WrappedSoundtrack internal constructor(
                     if (normalPlayback?.isPlaying == true) {
                         check(withTimeoutOrNull(3_000) { controller.state.first { !it.isPlaying } } != null)
                     }
+                    if (!enabled || session != sessionId) return@launch
                     pausedPositionMs = controller.currentPositionMs()
                     if (!ownsPausedPlayback()) {
                         stop(resume = false)
@@ -112,36 +122,40 @@ class WrappedSoundtrack internal constructor(
                     }
                     player =
                         createWrappedAudioPlayer(
-                            onEnded = { scope.launch { if (enabled) playNext() } },
-                            onFailure = { scope.launch { fail() } },
-                            onInterrupted = { scope.launch { stop(resume = false) } },
+                            onEnded = { scope.launch { if (enabled && session == sessionId) playNext() } },
+                            onFailure = { scope.launch { if (session == sessionId) fail() } },
+                            onInterrupted = { scope.launch { if (session == sessionId) stop(resume = false) } },
+                            volume = checkNotNull(controller.playbackVolume).value,
                         )
-                    playCurrent()
+                    playCurrent(session)
                 } catch (error: CancellationException) {
                     throw error
                 } catch (_: Exception) {
-                    fail()
+                    if (session == sessionId) fail()
                 }
             }
     }
 
-    private suspend fun playCurrent() {
+    private suspend fun playCurrent(session: Long) {
+        if (!enabled || session != sessionId) return
         loading = true
-        checkNotNull(player).play(songs[songIndex])
-        if (enabled) loading = false
+        val current = checkNotNull(player)
+        current.play(songs[songIndex])
+        if (enabled && session == sessionId && player === current) loading = false
     }
 
     private fun playNext() {
+        val session = sessionId
         job?.cancel()
         songIndex = (songIndex + 1) % songs.size
         job =
             scope.launch {
                 try {
-                    playCurrent()
+                    playCurrent(session)
                 } catch (error: CancellationException) {
                     throw error
                 } catch (_: Exception) {
-                    fail()
+                    if (session == sessionId) fail()
                 }
             }
     }
@@ -165,6 +179,7 @@ class WrappedSoundtrack internal constructor(
     internal fun stop(resume: Boolean = true) {
         if (!enabled) return
         val resumeNormalPlayback = resume && normalPlayback?.isPlaying == true && ownsPausedPlayback()
+        sessionId++
         enabled = false
         loading = false
         job?.cancel()
@@ -182,6 +197,8 @@ class WrappedSoundtrack internal constructor(
 internal interface WrappedAudioPlayer {
     suspend fun play(song: SongItem)
 
+    fun setVolume(volume: Float)
+
     fun close()
 }
 
@@ -189,4 +206,5 @@ internal expect fun createWrappedAudioPlayer(
     onEnded: () -> Unit,
     onFailure: () -> Unit,
     onInterrupted: () -> Unit,
+    volume: Float,
 ): WrappedAudioPlayer

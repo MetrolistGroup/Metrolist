@@ -77,6 +77,6 @@ The smaller option is a dedicated recap summary and poster inside Statistics. St
 
 New history providers, a mobile Home shortcut, streaks, video export, playlist creation and comparisons are outside the selected first scope.
 
-The user authorized full-send through an unmerged PR and a release build installed on the connected OnePlus CPH2747 over Wi-Fi. The PR must remain unmerged until the user gives a separate signal. The existing manual Android build workflow accepts a release variant and requires release signing. Installation should update the existing app without deleting its data.
+The manual Android build workflow accepts a release variant and requires release signing. Build the APK from the reviewed PR revision and install it as an update to preserve existing app data.
 
 External API contracts were read from documentation. The research did not exercise new provider APIs. iOS runtime verification needs an Apple environment; Linux compilation and Android device checks cannot establish iOS behavior.

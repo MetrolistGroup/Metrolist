@@ -44,19 +44,27 @@ internal actual fun createWrappedAudioPlayer(
     onEnded: () -> Unit,
     onFailure: () -> Unit,
     onInterrupted: () -> Unit,
-): WrappedAudioPlayer = AndroidWrappedAudioPlayer(onEnded, onFailure, onInterrupted)
+    volume: Float,
+): WrappedAudioPlayer = AndroidWrappedAudioPlayer(onEnded, onFailure, onInterrupted, volume)
 
 @UnstableApi
 private class AndroidWrappedAudioPlayer(
     private val onEnded: () -> Unit,
     private val onFailure: () -> Unit,
     private val onInterrupted: () -> Unit,
+    initialVolume: Float,
 ) : WrappedAudioPlayer {
     private val scope = CoroutineScope(Dispatchers.Main.immediate + SupervisorJob())
     private var player: ExoPlayer? = null
     private var source: SeekableMediaSource? = null
     private var clockJob: Job? = null
     private var closed = false
+    private var currentVolume = initialVolume
+
+    override fun setVolume(volume: Float) {
+        currentVolume = volume
+        player?.volume = volume
+    }
 
     override suspend fun play(song: SongItem) {
         check(!closed)
@@ -115,6 +123,7 @@ private class AndroidWrappedAudioPlayer(
                     true,
                 )
                 setHandleAudioBecomingNoisy(true)
+                volume = currentVolume
                 addListener(
                     object : Player.Listener {
                         override fun onPlaybackStateChanged(playbackState: Int) {

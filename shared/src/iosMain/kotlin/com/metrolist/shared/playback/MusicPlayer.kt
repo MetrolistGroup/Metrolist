@@ -1190,6 +1190,7 @@ class MusicPlayer internal constructor(
     }
 
     fun seekTo(position: Long) {
+        playbackCommandEvents.update { it + 1 }
         _currentPosition.value = currentPositionMs()
         sampleChanges.trySend(Unit)
         cancelActiveCrossfade()

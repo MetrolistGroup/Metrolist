@@ -297,7 +297,7 @@ Metrolist Wrapped opens from Statistics throughout the year and covers the curre
 
 Wrapped uses history saved on the device, including retained imports. Historic local plays do not reliably identify an account, so the recap is not account-specific. Date groups can represent a day or a broader imported period. Wrapped makes no streak or exact-hour claims from them. Time includes recorded durations only; older imports can have incomplete duration metadata. Refresh respects YouTube history sync and privacy settings, and the recap remains usable from saved history when a refresh fails. Its summary PNG carries the same period, totals and source explanation.
 
-The soundtrack is opt-in. It uses a temporary player while the regular queue remains loaded and paused, and it does not submit history or scrobbles. Disabling it or leaving Wrapped resumes the original playback only while the session still owns that paused state. Changes to normal playback, remote playback and interruptions take precedence. See [Wrapped research](wrapped-research.md) for the source research and design decisions.
+The soundtrack is opt-in. It follows the regular player's volume and uses a temporary player while the regular queue remains loaded and paused, without submitting history or scrobbles. Disabling it or leaving Wrapped resumes the original playback only while the session still owns that paused state. Changes to normal playback, remote playback and interruptions take precedence. See [Wrapped research](wrapped-research.md) for the source research and design decisions.
 
 ## Settings
 

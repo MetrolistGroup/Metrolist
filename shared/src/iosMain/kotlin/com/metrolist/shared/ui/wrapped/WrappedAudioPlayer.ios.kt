@@ -44,6 +44,7 @@ import platform.AVFoundation.pause
 import platform.AVFoundation.play
 import platform.AVFoundation.replaceCurrentItemWithPlayerItem
 import platform.AVFoundation.status
+import platform.AVFoundation.volume
 import platform.Foundation.NSNotificationCenter
 import platform.Foundation.NSNumber
 import platform.Foundation.NSOperationQueue
@@ -54,21 +55,27 @@ internal actual fun createWrappedAudioPlayer(
     onEnded: () -> Unit,
     onFailure: () -> Unit,
     onInterrupted: () -> Unit,
-): WrappedAudioPlayer = IosWrappedAudioPlayer(onEnded, onFailure, onInterrupted)
+    volume: Float,
+): WrappedAudioPlayer = IosWrappedAudioPlayer(onEnded, onFailure, onInterrupted, volume)
 
 private class IosWrappedAudioPlayer(
     private val onEnded: () -> Unit,
     private val onFailure: () -> Unit,
     onInterrupted: () -> Unit,
+    initialVolume: Float,
 ) : WrappedAudioPlayer {
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
-    private val player = AVPlayer()
+    private val player = AVPlayer().apply { volume = initialVolume }
     private val cache = IosPlaybackCache(GlobalYouTube.client, scope, directoryName = "wrapped-soundtrack")
     private var capture: IosPlaybackCapture? = null
     private var observation: IosKeyValueObservation? = null
     private val itemObservers = mutableListOf<NSObjectProtocol>()
     private val sessionObservers = mutableListOf<NSObjectProtocol>()
     private var closed = false
+
+    override fun setVolume(volume: Float) {
+        player.volume = volume
+    }
 
     init {
         val center = NSNotificationCenter.defaultCenter

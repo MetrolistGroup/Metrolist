@@ -60,9 +60,10 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.metrolist.shared.db.HistoryStatisticsSnapshot
+import com.metrolist.shared.db.HistorySyncOutcome
 import com.metrolist.shared.db.MusicDatabase
 import com.metrolist.shared.db.historyChanges
-import com.metrolist.shared.db.syncYouTubeHistory
+import com.metrolist.shared.db.refreshYouTubeHistory
 import com.metrolist.shared.db.wrappedStatisticsSnapshot
 import com.metrolist.shared.generated.resources.Res
 import com.metrolist.shared.generated.resources.back
@@ -162,7 +163,7 @@ fun WrappedScreen(
     LaunchedEffect(database, range, refreshKey) {
         syncFailed = false
         try {
-            withTimeout(30_000) { database.syncYouTubeHistory() }
+            syncFailed = withTimeout(30_000) { database.refreshYouTubeHistory() } == HistorySyncOutcome.FAILED
         } catch (_: TimeoutCancellationException) {
             syncFailed = true
         } catch (error: CancellationException) {
@@ -304,7 +305,7 @@ private fun WrappedReport(
             ToggleButton(
                 checked = soundtrack.enabled,
                 onCheckedChange = { soundtrack.toggle() },
-                enabled = soundtrack.available && !soundtrack.loading,
+                enabled = soundtrack.enabled || (soundtrack.available && !soundtrack.loading),
             ) {
                 Text(stringResource(if (soundtrack.loading) Res.string.wrapped_soundtrack_loading else Res.string.wrapped_soundtrack))
             }

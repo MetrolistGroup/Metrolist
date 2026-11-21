@@ -67,6 +67,7 @@ data class PlaybackUiState(
 interface PlaybackController {
     val state: StateFlow<PlaybackUiState>
     val wrappedSoundtrackAllowed: Flow<Boolean> get() = flowOf(false)
+    val playbackVolume: StateFlow<Float>? get() = null
     val playbackCommandGeneration: Long get() = 0L
     val playbackCommands: Flow<Long> get() = flowOf(0L)
     val listState: Flow<PlaybackListState> get() = state.listStates()
