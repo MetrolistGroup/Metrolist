@@ -31,6 +31,7 @@ internal fun desktopRestartCommand(
     classPath: String,
     mainClass: String,
     jpackagePath: String? = null,
+    osName: String = System.getProperty("os.name"),
 ): List<String> {
     val launcher = appImage?.takeIf(String::isNotBlank) ?: jpackagePath?.takeIf(String::isNotBlank)
     val executable = requireNotNull(launcher ?: command) { "Current application command is unavailable" }
@@ -48,7 +49,25 @@ internal fun desktopRestartCommand(
     val recoveryIndex = launchArguments.indexOf(DesktopCrashRecovery.ARGUMENT)
     val restartArguments =
         if (recoveryIndex < 0) launchArguments else launchArguments.take(recoveryIndex) + launchArguments.drop(recoveryIndex + 2)
-    return listOf(executable) + restartArguments
+    val appCommand = listOf(executable) + restartArguments
+    return if (osName.startsWith("Mac", ignoreCase = true)) {
+        macOSAppRelaunchCommand(appCommand)
+    } else {
+        appCommand
+    }
+}
+
+internal fun macOSAppRelaunchCommand(appCommand: List<String>): List<String> {
+    val executable = appCommand.firstOrNull() ?: return appCommand
+    val contentsPath = "/Contents/MacOS/"
+    val contentsIndex = executable.indexOf(contentsPath)
+    val appBundle =
+        executable
+            .takeIf { contentsIndex > 0 }
+            ?.substring(0, contentsIndex)
+            ?.takeIf { it.endsWith(".app") }
+            ?: return appCommand
+    return listOf("/usr/bin/open", "-n", "-a", appBundle, "--args") + appCommand.drop(1)
 }
 
 // Java passes an argument that is already wrapped in quotes through unchanged, and cmd /c strips only that
@@ -59,4 +78,13 @@ internal fun windowsDelayedRestartCommand(appCommand: List<String>): List<String
 internal fun ProcessBuilder.prepareDesktopRelaunch(): ProcessBuilder =
     apply {
         environment().remove("_JPACKAGE_LAUNCHER")
+        if (System.getProperty("os.name").startsWith("Mac", ignoreCase = true)) {
+            val command = command()
+            val launcherIndex = command.indexOf("/usr/bin/open")
+            val argsIndex = command.indexOf("--args")
+            if (launcherIndex >= 0 && argsIndex > launcherIndex) {
+                val environmentOptions = environment().toSortedMap().flatMap { (name, value) -> listOf("--env", "$name=$value") }
+                command(command.take(argsIndex) + environmentOptions + command.drop(argsIndex))
+            }
+        }
     }
