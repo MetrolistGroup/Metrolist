@@ -592,7 +592,7 @@ suspend fun MusicDatabase.importForeignLibrary(
                 if (source.browseId != null) {
                     dao.findPlaylistEntity(source.browseId)
                 } else {
-                    dao.findPlaylistByName(name)?.takeIf { it.browseId == null && it.isEditable }
+                    dao.findEditableLocalPlaylistByName(name)
                 }
             if (existing != null && existing.browseId != null) return@forEach
             val target =

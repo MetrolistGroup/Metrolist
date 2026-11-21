@@ -341,6 +341,9 @@ interface PlaylistDao {
     @Query("SELECT * FROM playlist WHERE name = :name COLLATE NOCASE LIMIT 1")
     suspend fun findPlaylistByName(name: String): PlaylistEntity?
 
+    @Query("SELECT * FROM playlist WHERE name = :name COLLATE NOCASE AND browseId IS NULL AND isEditable ORDER BY rowId LIMIT 1")
+    suspend fun findEditableLocalPlaylistByName(name: String): PlaylistEntity?
+
     @Query("SELECT * FROM playlist ORDER BY name")
     fun allPlaylists(): Flow<List<PlaylistEntity>>
 
