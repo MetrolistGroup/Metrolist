@@ -94,13 +94,7 @@ fun HistoryScreen() {
             menuSong = it.toSongItem()
             songMenu.open()
         },
-        onToggleSelection = { id ->
-            state.selectedIds =
-                state.selectedIds.toMutableSet().apply {
-                    val longId = id.toLong()
-                    if (!add(longId)) remove(longId)
-                }
-        },
+        onToggleSelection = { state.toggleSelection(it.toLong()) },
         onSelectAll = { state.selectAll(it.mapTo(mutableSetOf(), String::toLong), scope) },
         onUpdate = { entry, title, artists, album ->
             state.entries.firstOrNull { it.id.toString() == entry.id }?.let {
