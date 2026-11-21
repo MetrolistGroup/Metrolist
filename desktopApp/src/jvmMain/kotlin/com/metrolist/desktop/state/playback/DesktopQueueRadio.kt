@@ -32,9 +32,22 @@ internal class DesktopQueueRadio(
     private val queuedIds = linkedSetOf<String>()
     private var continuation: String? = null
 
+    // Classic mode keeps YouTube's order: songs not yet enqueued from the last
+    // fetched page are served before fetching the next one.
+    private var pendingClassicSongs: List<SongItem> = emptyList()
+    private var radioClassicMode: Boolean = Settings.shared.classicRecommendations
+
     fun reset() {
         cancelPrefetch()
         continuation = null
+        pendingClassicSongs = emptyList()
+    }
+
+    fun acceptBootstrap(bootstrap: DesktopRadioBootstrap) {
+        cancelPrefetch()
+        continuation = bootstrap.page.continuation
+        radioClassicMode = bootstrap.classic
+        pendingClassicSongs = emptyList()
     }
 
     fun cancelPrefetch() {
@@ -74,7 +87,9 @@ internal class DesktopQueueRadio(
         playImmediately: Boolean,
         shouldCommit: () -> Boolean,
     ): SongItem? {
-        fun canLoad() = autoLoadMore() && shouldCommit()
+        val classic = Settings.shared.classicRecommendations
+
+        fun canLoad() = autoLoadMore() && shouldCommit() && Settings.shared.classicRecommendations == classic
         if (!canLoad()) return null
         return mutex.withLock {
             if (!canLoad()) return@withLock null
@@ -83,25 +98,57 @@ internal class DesktopQueueRadio(
             }
             if (seed.id.isBlank()) return@withLock null
             try {
-                val token = continuation
-                val firstPage = if (token == null) radio(seed.id) else continueRadio(token)
-                val page =
-                    recommendationHistory.select(
-                        firstPage = firstPage,
-                        filter = { songs ->
-                            buildRadioQueueRecommendations(
-                                songs,
-                                queue.items.value.mapTo(mutableSetOf(), SongItem::id) + queuedIds + seed.id,
-                                QUEUE_SOURCE_AUTO_MIX,
-                                isBlocked,
-                                songsOnly = queue.recommendationsSongsOnly,
-                            )
-                        },
-                        isCurrent = ::canLoad,
-                        loadMore = continueRadio,
-                    ) ?: return@withLock null
-                continuation = page.continuation
-                val candidates = page.songs.take(limit)
+                // Continuations and the buffer belong to the mode that fetched them.
+                if (radioClassicMode != classic) {
+                    radioClassicMode = classic
+                    continuation = null
+                    pendingClassicSongs = emptyList()
+                }
+
+                fun currentFilter(songs: List<SongItem>): List<SongItem> =
+                    buildRadioQueueRecommendations(
+                        songs,
+                        queue.items.value.mapTo(mutableSetOf(), SongItem::id) + queuedIds + seed.id,
+                        QUEUE_SOURCE_AUTO_MIX,
+                        isBlocked,
+                        songsOnly = queue.recommendationsSongsOnly,
+                    )
+                // Re-filter the buffer: the blocked/hidden policy may have changed
+                // since those songs were fetched.
+                val buffered = if (classic) currentFilter(pendingClassicSongs) else emptyList()
+                var page: RadioQueuePage? = null
+                if (buffered.size < limit) {
+                    // The top-up fetch is best-effort while saved songs remain:
+                    // a failed request must not stop autoplay.
+                    val token = continuation
+                    val firstPage =
+                        try {
+                            if (token == null) radio(seed.id) else continueRadio(token)
+                        } catch (cancelled: CancellationException) {
+                            throw cancelled
+                        } catch (error: Exception) {
+                            if (buffered.isEmpty()) throw error
+                            null
+                        }
+                    page =
+                        firstPage?.let {
+                            recommendationHistory.select(
+                                firstPage = it,
+                                classic = classic,
+                                filter = ::currentFilter,
+                                isCurrent = ::canLoad,
+                                loadMore = continueRadio,
+                            ) ?: return@withLock null
+                        }
+                }
+                if (page != null) continuation = page.continuation
+                // The buffered path skips select()'s freshness check; recheck here.
+                if (!canLoad()) return@withLock null
+                val fetched = page?.songs.orEmpty()
+                // Blocking can change while the top-up request is suspended.
+                val available = if (classic) currentFilter(buffered + fetched) else fetched
+                val candidates = available.take(limit)
+                pendingClassicSongs = if (classic) available.drop(limit) else emptyList()
                 var changed = false
                 for (song in candidates) {
                     if (song.id in queuedIds || queue.items.value.any { it.id == song.id }) continue

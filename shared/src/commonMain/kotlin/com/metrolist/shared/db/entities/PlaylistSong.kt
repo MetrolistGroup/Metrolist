@@ -23,5 +23,6 @@ fun PlaylistSong.toSongItem(): SongItem =
     song.toSongItem().copy(
         playlistSetVideoId = map.setVideoId,
         playlistLocalMappingId = map.id,
+        playlistOccurrenceId = map.setVideoId?.let { "remote:$it" } ?: "local:${map.id}",
         playlistAddedOrder = map.id,
     )

@@ -20,6 +20,7 @@ import com.metrolist.shared.generated.resources.music_video_unavailable
 import com.metrolist.shared.model.SongItem
 import com.metrolist.shared.model.isPodcast
 import com.metrolist.shared.model.isVideoSong
+import com.metrolist.shared.model.playlistOccurrenceIdentity
 import com.metrolist.shared.playback.PlaybackSeekSource
 import com.metrolist.shared.settings.MusicVideoQuality
 import com.metrolist.shared.settings.Settings
@@ -395,6 +396,13 @@ internal class AndroidVideoModeController(
                     }
 
                     if (!isCurrentVideoModeTarget(target, generation)) return@launch
+                    if (playbackSong.id != sourceSong.id) {
+                        playbackSong =
+                            playbackSong.copy(
+                                originalQueueItemId = sourceSong.originalQueueItemId ?: sourceSong.id,
+                                playlistOccurrenceId = sourceSong.playlistOccurrenceIdentity(),
+                            )
+                    }
                     if (playbackSong.id != sourceSong.id &&
                         sync.intercept(
                             DcPlaybackCommand(

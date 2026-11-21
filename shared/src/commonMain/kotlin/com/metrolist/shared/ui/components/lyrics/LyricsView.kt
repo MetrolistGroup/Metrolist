@@ -163,6 +163,14 @@ private val LYRICS_FADE_BOTTOM_DP = 160.dp
 private val LYRICS_KEEP_ALIVE_ZONE_BASE_DP = 350.dp
 private const val LYRICS_PROGRESSIVE_BLUR_MAX_DP = 8f
 
+private fun visibleLyricsLinePosition(
+    sourceIndex: Int,
+    visiblePositions: Map<Int, Int>,
+): Int =
+    visiblePositions[sourceIndex]
+        ?: visiblePositions.entries.minByOrNull { (index, _) -> abs(index - sourceIndex) }?.value
+        ?: sourceIndex
+
 private fun LyricsListItem.listKey(): String =
     when (this) {
         is LyricsListItem.Line -> "line_$index"
@@ -261,7 +269,7 @@ fun LyricsView(
     val shimmerColor = MaterialTheme.colorScheme.primary
     val globalOffsetMs = Settings.shared.globalLyricsOffsetMs
     val effectiveOffsetMs = LyricsUtils.combinedLyricsOffsetMs(timingOffsetMs, globalOffsetMs)
-    val isPlusLighter = isLiquidBackground && Settings.shared.lyricsPlusLighter
+    val isPlusLighter = isLiquidBackground && Settings.shared.lyricsPlusLighter && textColor.luminance() > 0.5f
     val lyricsActiveByRealTiming = Settings.shared.lyricsActiveByRealTiming
     val selection = selectionState ?: remember(songId, lyrics) { LyricsSelectionState() }
     val selectedIndices = selection.selectedIndices
@@ -330,9 +338,16 @@ fun LyricsView(
                 }
             }
 
+    val displayLyrics = remember(lyrics) { mergeBackgroundLyricsEntries(lyrics) }
+    val unsyncedDisplayLyrics =
+        remember(displayLyrics) {
+            displayLyrics.mapIndexedNotNull { index, entry ->
+                if (entry.isBackground && entry.text.isBlank() && entry.words.isNullOrEmpty()) null else index to entry
+            }
+        }
     val processedItems =
-        remember(lyrics, provider, validSongwriters, lyricsActiveByRealTiming) {
-            buildLyricsListItems(lyrics, provider, validSongwriters, activeByRealTiming = lyricsActiveByRealTiming)
+        remember(displayLyrics, provider, validSongwriters, lyricsActiveByRealTiming) {
+            buildLyricsListItems(displayLyrics, provider, validSongwriters, activeByRealTiming = lyricsActiveByRealTiming)
         }
 
     val lyricsItemIndex =
@@ -341,8 +356,8 @@ fun LyricsView(
         }
 
     val timelineItems =
-        remember(processedItems, lyrics) {
-            buildLyricsTimelineItems(processedItems, lyrics)
+        remember(processedItems, displayLyrics) {
+            buildLyricsTimelineItems(processedItems, displayLyrics)
         }
 
     val lineEndTimesByIndex =
@@ -501,6 +516,19 @@ fun LyricsView(
             if (pending != null && !lyricsActiveByRealTiming) listOf(pending) else syncSnapshot.activeLineIndices
         }
     val highlightedLineIndices = remember(highlightedIndicesList) { highlightedIndicesList.toSet() }
+    val visibleLinePositions =
+        remember(processedItems) {
+            buildMap {
+                var position = 0
+                processedItems.forEach { item ->
+                    if (item is LyricsListItem.Line) put(item.index, position++)
+                }
+            }
+        }
+    val visibleHighlightedIndices =
+        remember(highlightedIndicesList, visibleLinePositions) {
+            highlightedIndicesList.map { visibleLyricsLinePosition(it, visibleLinePositions) }
+        }
 
     var lastActiveLineIndex by remember(songId, lyrics, effectiveOffsetMs) {
         val currentLyricsPos =
@@ -1197,15 +1225,23 @@ fun LyricsView(
                                 modifier = Modifier.fillMaxSize(),
                                 contentPadding = PaddingValues(top = fadeTop, bottom = fadeBottom),
                             ) {
-                                itemsIndexed(lyrics, key = { index, _ -> index }) { index, entry ->
+                                itemsIndexed(unsyncedDisplayLyrics, key = { _, indexedEntry -> indexedEntry.first }) { _, indexedEntry ->
+                                    val (index, entry) = indexedEntry
+                                    val displayText =
+                                        combineBackgroundText(
+                                            listOf(
+                                                entry.text.takeIf(String::isNotBlank),
+                                                entry.backgroundText?.takeIf(String::isNotBlank)?.let { "($it)" },
+                                            ),
+                                        )
                                     Text(
-                                        text = entry.text,
+                                        text = displayText,
                                         color = textColor,
                                         modifier =
                                             Modifier
                                                 .fillMaxWidth()
                                                 .then(
-                                                    if (onShareSelection != null && entry.text.isNotBlank()) {
+                                                    if (onShareSelection != null && displayText.isNotBlank()) {
                                                         Modifier
                                                             .combinedClickable(
                                                                 onClick = { if (isSelectionMode) selection.toggle(index) },
@@ -1416,18 +1452,29 @@ fun LyricsView(
                                             is LyricsListItem.Line -> {
                                                 val entry = listItem.entry
                                                 val idx = listItem.index
+                                                val visibleIndex = visibleLinePositions[idx] ?: idx
                                                 val isActive = highlightedLineIndices.contains(idx)
                                                 val signedDistance =
-                                                    if (highlightedIndicesList.isNotEmpty()) {
+                                                    if (visibleHighlightedIndices.isNotEmpty()) {
                                                         when {
-                                                            idx < highlightedIndicesList.first() -> idx - highlightedIndicesList.first()
-                                                            idx > highlightedIndicesList.last() -> idx - highlightedIndicesList.last()
-                                                            else -> 0
+                                                            visibleIndex < visibleHighlightedIndices.first() -> {
+                                                                visibleIndex -
+                                                                    visibleHighlightedIndices.first()
+                                                            }
+
+                                                            visibleIndex > visibleHighlightedIndices.last() -> {
+                                                                visibleIndex -
+                                                                    visibleHighlightedIndices.last()
+                                                            }
+
+                                                            else -> {
+                                                                0
+                                                            }
                                                         }
                                                     } else if (predictiveLineIndex >= 0) {
-                                                        idx - predictiveLineIndex
+                                                        visibleIndex - visibleLyricsLinePosition(predictiveLineIndex, visibleLinePositions)
                                                     } else {
-                                                        idx - lastActiveLineIndex
+                                                        visibleIndex - visibleLyricsLinePosition(lastActiveLineIndex, visibleLinePositions)
                                                     }
                                                 val lineDistance = abs(signedDistance)
                                                 val staggerDelayMs =
@@ -1640,7 +1687,7 @@ fun LyricsView(
                             onClick = {
                                 onShareSelection?.invoke(
                                     selectedLyricsText(
-                                        lyrics,
+                                        displayLyrics,
                                         selectedIndices,
                                     ),
                                 )

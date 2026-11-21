@@ -193,6 +193,11 @@ java {
 
 val sentryAuthToken = providers.environmentVariable("SENTRY_AUTH_TOKEN").filter(String::isNotBlank)
 val appVersion = providers.gradleProperty("appVersion").get()
+val bundledLanguageParser =
+    DocumentBuilderFactory
+        .newInstance()
+        .apply { setFeature("http://apache.org/xml/features/disallow-doctype-decl", true) }
+        .newDocumentBuilder()
 val bundledLanguageTags =
     rootProject
         .file("shared/src/commonMain/composeResources")
@@ -200,7 +205,11 @@ val bundledLanguageTags =
         .orEmpty()
         .asSequence()
         .filter { it.isDirectory && it.name.startsWith("values-") && it.name != "values-xml" }
-        .map { directory ->
+        .filter { directory ->
+            val catalog = File(directory, "strings.xml").takeIf(File::isFile) ?: return@filter false
+            val root = bundledLanguageParser.parse(catalog).documentElement
+            root.getElementsByTagName("string").length > 0 || root.getElementsByTagName("plurals").length > 0
+        }.map { directory ->
             val qualifier = directory.name.removePrefix("values-")
             val languageTag =
                 if (qualifier.startsWith("b+")) {
@@ -439,6 +448,7 @@ dependencies {
 
     implementation(libs.activity)
     implementation(libs.lifecycle.process)
+    implementation(libs.androidx.work.runtime)
     implementation(libs.material3)
     implementation(libs.androidx.navigation3.ui)
     implementation(libs.androidx.navigation3.runtime)

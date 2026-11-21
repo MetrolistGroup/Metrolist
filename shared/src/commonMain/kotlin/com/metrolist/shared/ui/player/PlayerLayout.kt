@@ -84,6 +84,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
@@ -887,7 +888,11 @@ internal fun LandscapePlayerContent(
             textBackgroundColor
         }
     val controlsSurface by animateColorAsState(
-        if (artworkBehindControls) Color.Black.copy(alpha = 0.6f) else MaterialTheme.colorScheme.surfaceContainer,
+        if (artworkBehindControls) {
+            (if (controlsColor.luminance() < 0.5f) Color.White else Color.Black).copy(alpha = 0.6f)
+        } else {
+            MaterialTheme.colorScheme.surfaceContainer
+        },
         MaterialTheme.motionScheme.defaultEffectsSpec(),
     )
     val hapticManager = rememberMetrolistHaptics()
@@ -1060,13 +1065,14 @@ internal fun LandscapePlayerContent(
                 Modifier.fillMaxSize().drawBehind {
                     val start = if (layoutDirection == LayoutDirection.Ltr) 0f else size.width
                     val controlsStart = (size.width / 2 + LandscapeRightPaneStartGap.toPx()) / size.width
+                    val fadeStart = 0.25f
+                    val fadeLength = controlsStart - fadeStart
                     drawRect(
-                        // A wide eased ramp blends the artwork into the controls instead of a hard edge.
                         Brush.horizontalGradient(
                             0f to Color.Transparent,
-                            0.25f to Color.Transparent,
-                            0.36f to controlsSurface.copy(alpha = 0.3f),
-                            0.46f to controlsSurface.copy(alpha = 0.72f),
+                            fadeStart to Color.Transparent,
+                            (fadeStart + fadeLength * 0.45f) to controlsSurface.copy(alpha = 0.18f),
+                            (fadeStart + fadeLength * 0.8f) to controlsSurface.copy(alpha = 0.55f),
                             controlsStart to controlsSurface,
                             1f to controlsSurface,
                             startX = start,

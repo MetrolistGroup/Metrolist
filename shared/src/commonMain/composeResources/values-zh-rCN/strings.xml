@@ -65,7 +65,7 @@
     <string name="add_to_playlist">添加到播放列表</string>
     <string name="view_artist">查看艺人</string>
     <string name="view_song_info">查看歌曲信息</string>
-    <string name="view_album">浏览专辑</string>
+    <string name="view_album">查看专辑</string>
     <string name="refetch">刷新</string>
     <string name="share">分享</string>
     <string name="delete">删除</string>
@@ -93,7 +93,7 @@
     <string name="song_artists">歌曲艺人</string>
     <string name="save">保存</string>
     <string name="edit_playlist">编辑播放列表</string>
-    <string name="create_playlist">新建播放列表</string>
+    <string name="create_playlist">创建播放列表</string>
     <string name="error_playlist_name_empty">播放列表名称不能为空。</string>
     <string name="duplicates">重复项</string>
     <string name="add_anyway">仍要添加</string>
@@ -107,7 +107,7 @@
         <item quantity="other">%1$d 周</item>
     </plurals>
     <plurals name="n_month">
-        <item quantity="other">%1$d 月</item>
+        <item quantity="other">%1$d 个月</item>
     </plurals>
     <plurals name="n_year">
         <item quantity="other">%1$d 年</item>
@@ -145,7 +145,7 @@
     <string name="action_not_now">暂时跳过</string>
     <string name="youtube_session_expired_title">您可能已退出登录</string>
     <string name="youtube_session_expired_message">重新登录以恢复 YouTube 账号功能。您可以继续使用已下载和缓存的内容。</string>
-    <string name="audio_quality">音质</string>
+    <string name="audio_quality">音频质量</string>
     <string name="audio_quality_auto">自动</string>
     <string name="audio_quality_high">高</string>
     <string name="audio_quality_low">低</string>
@@ -159,8 +159,8 @@
     <string name="auto_skip_next_on_error_desc">发生错误后继续播放</string>
     <string name="stop_music_on_task_clear">从最近任务中移除应用时停止播放</string>
     <string name="storage">储存</string>
-    <string name="music_video_quality_desc" tools:ignore="MissingTranslation">音乐视频默认分辨率</string>
-    <string name="music_video_quality_auto" tools:ignore="MissingTranslation">自动（推荐）</string>
+    <string name="music_video_quality_desc" tools:ignore="MissingTranslation">音乐视频的默认分辨率</string>
+    <string name="music_video_quality_auto" tools:ignore="MissingTranslation">自动</string>
     <string name="music_video_resolution" tools:ignore="MissingTranslation">视频分辨率</string>
     <string name="music_video_resolution_desc" tools:ignore="MissingTranslation">更改此音乐视频的分辨率</string>
     <string name="music_video_resolution_current" tools:ignore="MissingTranslation">正在播放</string>
@@ -209,9 +209,9 @@
     <string name="explicit_only_desc">隐藏未标记为露骨的歌曲</string>
     <string name="action_backup">备份</string>
     <string name="action_restore">还原</string>
-    <string name="backup_create_success">成功新建备份</string>
-    <string name="backup_create_failed">无法新建备份</string>
-    <string name="restore_failed">无法还原备份</string>
+    <string name="backup_create_success">备份已创建</string>
+    <string name="backup_create_failed">无法创建备份</string>
+    <string name="restore_failed">无法恢复备份</string>
     <string name="dismiss">关闭</string>
     <string name="preview">预览</string>
     <string name="about">关于</string>
@@ -219,14 +219,14 @@
     <string name="credits_creator">Metrolist 创建者</string>
     <string name="credits_desktop_developer">桌面开发者</string>
     <string name="credits_macos_developer">macOS 开发者</string>
-    <string name="credits_lyrics_ui_services">歌词界面及服务</string>
-    <string name="credits_android_designer">Android 设计师</string>
+    <string name="credits_lyrics_ui_services">歌词界面和服务</string>
+    <string name="credits_android_designer">界面设计师</string>
     <string name="open_website">打开网站</string>
     <string name="open_github_profile">打开 GitHub 个人资料</string>
     <string name="sponsor_developer">赞助开发者</string>
     <string name="credits_license_name">许可</string>
-    <string name="credits_license_desc">Metrolist 采用 GPL-3.0 许可证授权。</string>
-    <string name="devmode_already_active" translatable="true">开发模式已激活</string>
+    <string name="credits_license_desc">Metrolist 采用 GPL-3.0 许可</string>
+    <string name="devmode_already_active" translatable="true">开发者模式已经激活</string>
     <string name="discord_listen_to_metrolist">收听 Metrolist</string>
     <string name="discord_login_description">连接您的 Discord 账号</string>
     <string name="discord_button1_text_default">在 YouTube Music 上收听</string>
@@ -236,25 +236,25 @@
     <string name="discord_status_authorized">已授权</string>
     <string name="discord_error_denied">Discord 拒绝了授权。</string>
     <string name="discord_error_connection_failed">无法连接到 Discord。Metrolist 将自动重试。</string>
-    <string name="discord_error_no_browser">没有可用的应用来打开 Discord 授权。</string>
+    <string name="discord_error_no_browser">没有可用于打开 Discord 授权的应用。</string>
     <string name="discord_error_token_exchange_failed">令牌交换失败。请重试。</string>
     <string name="discord_error_token_refresh_failed">令牌刷新失败。请重新登录。</string>
     <string name="discord_error_invalid_scope">无效范围。请重新登录。</string>
     <string name="discord_error_timeout">授权超时。请重试。</string>
     <string name="discord_error_missing_code">Discord 响应中缺少授权码。</string>
-    <string name="discord_button1_label">按钮 1 的文字</string>
+    <string name="discord_button1_label">按钮 1 的标签</string>
     <string name="discord_button1_url">按钮 1 的 URL</string>
-    <string name="discord_button2_label">按钮 2 的文字</string>
+    <string name="discord_button2_label">按钮 2 的标签</string>
     <string name="discord_button2_url">按钮 2 的 URL</string>
     <string name="discord_refresh_rpc">刷新 RPC</string>
-    <string name="discord_refresh_rpc_description">重新发送当前状态至 Discord</string>
+    <string name="discord_refresh_rpc_description">再次将您的当前在线状态发送到 Discord</string>
     <string name="discord_refresh_rate_limited">再次刷新前请稍等片刻</string>
-    <string name="discord_refresh_error">刷新状态失败</string>
+    <string name="discord_refresh_error">无法刷新状态</string>
     <string name="integrations">集成</string>
     <string name="settings_interface">界面</string>
     <string name="settings_playback">播放</string>
     <string name="settings_player_audio_description">音频、过渡、队列</string>
-    <string name="track_transition_fade_desc">平滑过渡当前曲目与下一曲目</string>
+    <string name="track_transition_fade_desc">在当前歌曲和下一首歌曲之间平滑过渡</string>
     <string name="settings_content_title">内容</string>
     <string name="settings_content_description">语言、动态、发现</string>
     <string name="settings_lyrics_description">歌词获取与翻译</string>
@@ -269,13 +269,13 @@
     <string name="settings_about_title">关于 Metrolist</string>
     <string name="settings_search_placeholder">搜索设置</string>
     <string name="settings_search_no_results">未找到设置</string>
-    <string name="settings_search_no_results_desc">未找到 %1$s 的匹配项</string>
+    <string name="settings_search_no_results_desc">%1$s 没有匹配项</string>
     <string name="search_no_results">未找到结果</string>
     <string name="appearance_title">外观</string>
     <string name="appearance_theme">主题</string>
     <string name="appearance_style">样式</string>
     <string name="appearance_app_icon">应用图标</string>
-    <string name="appearance_app_icon_credit">备用图标由 Kayé 制作 (@thy_k on Discord)</string>
+    <string name="appearance_app_icon_credit">备选图标由 Kayé（Discord 用户名：@thy_k）设计</string>
     <string name="song_artwork_colors">歌曲封面颜色</string>
     <string name="song_artwork_colors_description">如有当前歌曲封面，则将其覆盖应用颜色</string>
     <string name="theme_palette_style">调色板样式</string>
@@ -289,7 +289,7 @@
     <string name="app_icon_arctic_haze">北极迷雾</string>
     <string name="app_icon_static">静态</string>
     <string name="app_font_choose">选择字体文件</string>
-    <string name="app_font_picker_desc">选择 TTF 或 OTF 文件。Metrolist 将其复制到应用私有存储。</string>
+    <string name="app_font_picker_desc">选择 TTF 或 OTF 文件。Metrolist 会将其复制到应用专属存储空间。</string>
     <string name="app_font_system">系统默认</string>
     <string name="app_font_applied">使用 %1$s</string>
     <string name="app_font_invalid">无法使用该字体。请选择有效的 TTF 或 OTF 文件，大小小于 20 MB。</string>
@@ -319,8 +319,8 @@
     <string name="appearance_play_videos_in_mini_player" tools:ignore="MissingTranslation">在迷你播放器中播放视频</string>
     <string name="appearance_play_videos_in_mini_player_desc" tools:ignore="MissingTranslation">迷你播放器收起时显示音乐视频</string>
     <string name="appearance_mini_player_swipe_sensitivity">滑动灵敏度</string>
-    <string name="appearance_misc">杂项</string>
-    <string name="appearance_default_open_tab">默认启动标签页</string>
+    <string name="appearance_misc">其他</string>
+    <string name="appearance_default_open_tab">默认打开的标签页</string>
     <string name="appearance_navigation_tabs">导航标签</string>
     <string name="appearance_show_home_tab">显示主页标签</string>
     <string name="appearance_show_search_tab">显示搜索标签页</string>
@@ -390,7 +390,7 @@
     <string name="android_auto_local_playlist">已保存的播放列表</string>
     <string name="backup_restore_title">备份与还原</string>
     <string name="import_playlist">导入播放列表</string>
-    <string name="playlist_name">名称</string>
+    <string name="playlist_name">播放列表名称</string>
     <string name="equalizer">均衡器</string>
     <string name="lyrics_timing_unsynced">未同步歌词</string>
     <string name="lyrics_timing_line_synced">逐行同步歌词</string>
@@ -413,7 +413,7 @@
     <string name="import_error_file_read_failed">无法读取播放列表文件。请重新选择并授予文件访问权限。</string>
     <string name="lyrics_source_preference">歌词来源偏好</string>
     <string name="auto_load_more_desc">电台和混合待播列表接近末尾时，自动添加相似歌曲</string>
-    <string name="music_video_quality" tools:ignore="MissingTranslation">音乐视频质量</string>
+    <string name="music_video_quality" tools:ignore="MissingTranslation">音乐视频画质</string>
     <string name="animated_cover_resolution">动态封面质量</string>
     <string name="animated_cover_resolution_low">低 (360p)</string>
     <string name="animated_cover_resolution_medium">中等 (720p)</string>
@@ -795,4 +795,46 @@
     <string name="edit_playlist_cover">编辑播放列表封面</string>
     <string name="edit_playlist_cover_note">您的账号必须绑定电话号码并在 YouTube Music 上完成验证才能更改播放列表封面</string>
     <string name="discord_state">状态</string>
+    <string name="settings_reset_to_default">重置为默认设置</string>
+    <string name="backup_created">备份已创建</string>
+    <string name="search_songs_artists_podcasts">搜索歌曲、艺人、播客</string>
+    <string name="connect">连接</string>
+    <string name="listen_together_logs">连接日志</string>
+    <string name="listen_together_error">连接错误</string>
+    <string name="clear">清除</string>
+    <string name="copy">复制</string>
+    <string name="discord_advanced_mode">高级模式</string>
+    <string name="none">无</string>
+    <string name="hide_video_songs">隐藏视频歌曲</string>
+    <string name="kick_user">踢出</string>
+    <string name="discord_activity_name">活动名称</string>
+    <string name="listen_together_connected">已连接</string>
+    <string name="discord_activity_type">活动类型</string>
+    <string name="reject">拒绝</string>
+    <string name="approve">批准</string>
+    <string name="password">密码</string>
+    <string name="listen_together">一起听</string>
+    <string name="username">用户名</string>
+    <string name="disable">禁用</string>
+    <string name="enable_song_cache">歌曲缓存</string>
+    <string name="lyrics">歌词</string>
+    <string name="information">信息</string>
+    <string name="description">描述</string>
+    <string name="play_pause">播放/暂停</string>
+    <string name="album_art">专辑封面</string>
+    <string name="subscribed">已订阅</string>
+    <string name="discord_button_2">按钮 2</string>
+    <string name="uploading">正在上传…</string>
+    <string name="upload_failed">上传失败</string>
+    <string name="listen_together_reconnecting">正在重新连接…</string>
+    <string name="filter_channels">频道</string>
+    <string name="listen_together_server_url">服务器网址</string>
+    <string name="error_title">错误</string>
+    <string name="discord_button_1">按钮 1</string>
+    <string name="listen_together_auto_approval_joins">自动批准加入请求</string>
+    <string name="details_desc">查看歌曲信息</string>
+    <string name="not_set">未设置</string>
+    <string name="listen_together_auto_approval_suggestions">自动批准歌曲推荐</string>
+    <string name="continue_action">继续</string>
+    <string name="listen_together_disconnected">已断开连接</string>
 </resources>

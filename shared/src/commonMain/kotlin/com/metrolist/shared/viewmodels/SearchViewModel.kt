@@ -21,6 +21,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -63,15 +64,13 @@ class SearchViewModel(
             BlockedContent.version.drop(1).collect {
                 _uiState.update { it.copy(recentSearchItems = BlockedContent.filterItems(unfilteredRecentSearchItems)) }
                 val state = _uiState.value
-                val updatedState =
-                    state.clearUnavailableSearchFilter(
-                        hideVideoSongs = Settings.shared.hideVideoSongs,
-                        hidePodcasts = Settings.shared.hidePodcasts,
-                    )
+                val hideVideoSongs = Settings.shared.hideVideoSongs
+                val hidePodcasts = Settings.shared.hidePodcasts
+                val updatedState = state.clearUnavailableSearchFilter(hideVideoSongs, hidePodcasts)
                 if (updatedState.selectedFilter != state.selectedFilter) {
                     filterJob?.cancel()
                     cancelLoadMore()
-                    _uiState.value = updatedState
+                    _uiState.update { it.clearUnavailableSearchFilter(hideVideoSongs, hidePodcasts) }
                     search(recordSearchHistory = false)
                 } else {
                     _uiState.update {
@@ -401,7 +400,12 @@ class SearchViewModel(
         historyMutationJob?.cancel()
         removedRemoteSearchQueries.clear()
         _uiState.update {
-            it.copy(searchHistory = localSearchHistory, remoteSearchHistoryFeedbackTokens = emptyMap())
+            it.copy(
+                searchHistory = localSearchHistory,
+                remoteSearchHistoryFeedbackTokens = emptyMap(),
+                searchHistoryClearGeneration = it.searchHistoryClearGeneration + 1,
+                pendingSearchHistoryClears = 0,
+            )
         }
     }
 
@@ -417,32 +421,46 @@ class SearchViewModel(
     }
 
     fun clearSearchHistory() {
+        if (!scope.isActive) return
         resetRemoteHistoryIfSessionChanged()
         historySyncJob?.cancel()
         val session = repository.sessionSnapshot()
         val state = _uiState.value
+        val clearGeneration = state.searchHistoryClearGeneration
         val remoteTokens = state.remoteSearchHistoryFeedbackTokens.values.toList()
         val revisions =
             (state.searchHistory + localSearchHistory).distinct().associateWith { query ->
                 searchHistoryRevisions.getOrPut(query) { ++nextSearchHistoryRevision }
             }
+        _uiState.update { it.copy(pendingSearchHistoryClears = it.pendingSearchHistoryClears + 1) }
         historyMutationJob =
-            scope.launch {
-                historyMutationMutex.withLock {
-                    try {
-                        if (repository.sessionSnapshot() != session) return@withLock
-                        repository.clearSearchHistory(remoteTokens)
-                        if (repository.sessionSnapshot() != session) return@withLock
-                        val unchangedQueries = revisions.filter { (query, revision) -> searchHistoryRevisions[query] == revision }.keys
-                        removeLocalSearchHistory(unchangedQueries)
-                        removedRemoteSearchQueries.addAll(unchangedQueries.map(String::lowercase))
-                    } catch (e: CancellationException) {
-                        throw e
-                    } catch (_: Exception) {
-                        _uiState.update { it.copy(historyMutationFailures = it.historyMutationFailures + 1) }
+            scope
+                .launch {
+                    historyMutationMutex.withLock {
+                        try {
+                            if (repository.sessionSnapshot() != session) return@withLock
+                            repository.clearSearchHistory(remoteTokens)
+                            if (repository.sessionSnapshot() != session) return@withLock
+                            val unchangedQueries = revisions.filter { (query, revision) -> searchHistoryRevisions[query] == revision }.keys
+                            removeLocalSearchHistory(unchangedQueries)
+                            removedRemoteSearchQueries.addAll(unchangedQueries.map(String::lowercase))
+                        } catch (e: CancellationException) {
+                            throw e
+                        } catch (_: Exception) {
+                            _uiState.update { it.copy(historyMutationFailures = it.historyMutationFailures + 1) }
+                        }
+                    }
+                }.also { job ->
+                    job.invokeOnCompletion {
+                        _uiState.update { current ->
+                            if (current.searchHistoryClearGeneration == clearGeneration) {
+                                current.copy(pendingSearchHistoryClears = current.pendingSearchHistoryClears - 1)
+                            } else {
+                                current
+                            }
+                        }
                     }
                 }
-            }
     }
 
     private fun removeLocalSearchHistory(queries: Set<String>) {
@@ -617,6 +635,8 @@ class SearchViewModel(
         val filteredResults: SearchResultPage? = null,
         val selectedFilter: SearchFilter? = null,
         val searchHistory: List<String> = emptyList(),
+        internal val searchHistoryClearGeneration: Long = 0L,
+        internal val pendingSearchHistoryClears: Int = 0,
         val historyMutationFailures: Int = 0,
         val remoteSearchHistoryFeedbackTokens: Map<String, String> = emptyMap(),
         val recentSearchItems: List<YTItem> = emptyList(),
@@ -625,7 +645,9 @@ class SearchViewModel(
         val isLoadingMore: Boolean = false,
         val searchFailed: Boolean = false,
         val loadMoreFailed: Boolean = false,
-    )
+    ) {
+        val isClearingSearchHistory: Boolean get() = pendingSearchHistoryClears > 0
+    }
 }
 
 object SearchHistoryCodec {

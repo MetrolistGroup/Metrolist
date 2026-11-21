@@ -10,11 +10,14 @@ import com.metrolist.shared.youtube.playback.PlaybackEventLog
 import com.metrolist.shared.youtube.playback.PlaybackResource
 import com.sun.net.httpserver.HttpServer
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.yield
+import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -27,6 +30,8 @@ import okhttp3.ResponseBody.Companion.toResponseBody
 import java.io.ByteArrayInputStream
 import java.io.EOFException
 import java.io.IOException
+import java.io.InputStream
+import java.io.OutputStream
 import java.net.InetAddress
 import java.net.InetSocketAddress
 import java.net.ServerSocket
@@ -34,6 +39,8 @@ import java.net.Socket
 import java.net.SocketException
 import java.net.URI
 import java.net.UnknownHostException
+import java.nio.ByteBuffer
+import java.nio.ByteOrder
 import java.util.Collections
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.ThreadPoolExecutor
@@ -118,6 +125,74 @@ class CastProtocolTest {
             assertTrue(logs.none { "secret" in it.second })
         } finally {
             LogBridge.sink = previous
+        }
+    }
+
+    @Test
+    fun rejectedUpstreamRangeLogsStatusAndRangesWithoutTheMediaUrl() {
+        PlaybackEventLog.clear()
+        val address = InetAddress.getLoopbackAddress()
+        val upstreamRequests = mutableListOf<Request>()
+        val upstream =
+            OkHttpClient
+                .Builder()
+                .addInterceptor { chain ->
+                    upstreamRequests += chain.request()
+                    Response
+                        .Builder()
+                        .request(chain.request())
+                        .protocol(Protocol.HTTP_1_1)
+                        .code(416)
+                        .message("Range Not Satisfiable")
+                        .header("Content-Range", "bytes */10")
+                        .body("".toResponseBody())
+                        .build()
+                }.build()
+        val media =
+            CastMedia(
+                SongItem("id", "Title", null, emptyList(), null),
+                null,
+                PlaybackResource(
+                    "id",
+                    "https://r1.googlevideo.com/videoplayback?sig=secret",
+                    emptyMap(),
+                    null,
+                    null,
+                    contentLengthBytes = 10L,
+                    mimeType = "audio/mp4",
+                ),
+                0L,
+            )
+        val proxy = CastProxyServer(address, address, media)
+        CastProxyServer::class.java
+            .getDeclaredField("client")
+            .apply { isAccessible = true }
+            .set(proxy, upstream)
+
+        try {
+            val path = URI(proxy.mediaUrl()).rawPath
+            Socket(address, proxy.port).use { receiver ->
+                receiver.soTimeout = 5_000
+                receiver.getOutputStream().write(
+                    "GET $path HTTP/1.1\r\nHost: localhost\r\nRange: bytes=3-7\r\n\r\n".toByteArray(),
+                )
+                assertTrue(
+                    receiver
+                        .getInputStream()
+                        .bufferedReader()
+                        .readText()
+                        .startsWith("HTTP/1.1 502"),
+                )
+            }
+
+            val event = PlaybackEventLog.events.value.last()
+            assertEquals("416", event.details["upstreamHttpStatus"])
+            assertEquals("bytes=3-7", event.details["requestedRange"])
+            assertEquals("bytes */10", event.details["upstreamContentRange"])
+            assertEquals("bytes=3-7", upstreamRequests.single().header("Range"))
+            assertFalse(PlaybackEventLog.exportText().contains("sig=secret"))
+        } finally {
+            proxy.close()
         }
     }
 
@@ -393,6 +468,143 @@ class CastProtocolTest {
         assertEquals(4L, loaded.mediaGeneration)
         assertTrue(loaded.isPlaying)
     }
+
+    @Test
+    fun fcastV3EndEventsRespectReplacementStopAndReplaySeek() =
+        runBlocking {
+            fun readPacket(input: InputStream): Pair<Int, String> {
+                val header = input.readNBytes(4)
+                assertEquals(4, header.size)
+                val size = ByteBuffer.wrap(header).order(ByteOrder.LITTLE_ENDIAN).int
+                val frame = input.readNBytes(size)
+                assertEquals(size, frame.size)
+                return (frame[0].toInt() and 255) to frame.copyOfRange(1, frame.size).decodeToString()
+            }
+
+            fun sendPacket(
+                output: OutputStream,
+                opcode: Int,
+                body: String,
+            ) {
+                val bytes = body.encodeToByteArray()
+                output.write(
+                    ByteBuffer
+                        .allocate(4)
+                        .order(ByteOrder.LITTLE_ENDIAN)
+                        .putInt(bytes.size + 1)
+                        .array(),
+                )
+                output.write(opcode)
+                output.write(bytes)
+                output.flush()
+            }
+            val address = InetAddress.getLoopbackAddress()
+            val server = ServerSocket(0, 1, address).apply { soTimeout = 5_000 }
+            val finishReplay = CompletableDeferred<Unit>()
+            val replaySeek = CompletableDeferred<Unit>()
+            val replayAsserted = CompletableDeferred<Unit>()
+            val receiver =
+                async(Dispatchers.IO) {
+                    server.accept().use { socket ->
+                        socket.soTimeout = 5_000
+                        val input = socket.getInputStream()
+                        val output = socket.getOutputStream()
+                        assertEquals(11, readPacket(input).first)
+                        sendPacket(output, 11, """{"version":3}""")
+                        var subscribed = false
+                        while (true) {
+                            val (opcode, body) = readPacket(input)
+                            if (opcode == 17) subscribed = body.contains("\"type\":1")
+                            if (opcode == 1) break
+                        }
+                        assertTrue(subscribed)
+                        sendPacket(output, 19, """{"event":{"type":1,"item":{"url":"http://localhost/first"}}}""")
+                        assertEquals(1, readPacket(input).first)
+                        sendPacket(output, 19, """{"event":{"type":1,"item":{"url":"http://localhost/first"}}}""")
+                        sendPacket(output, 7, """{"volume":0.25}""")
+                        finishReplay.await()
+                        sendPacket(output, 19, """{"event":{"type":1,"item":{"url":"http://localhost/second"}}}""")
+                        replaySeek.await()
+                        sendPacket(output, 19, """{"event":{"type":1,"item":{"url":"http://localhost/second"}}}""")
+                        sendPacket(output, 7, """{"volume":0.4}""")
+                        val (replayOpcode, replayBody) = readPacket(input)
+                        assertEquals(1, replayOpcode)
+                        assertEquals(
+                            "12.0",
+                            Json
+                                .parseToJsonElement(replayBody)
+                                .jsonObject["time"]
+                                ?.jsonPrimitive
+                                ?.content,
+                        )
+                        sendPacket(output, 7, """{"volume":0.45}""")
+                        assertEquals(4, readPacket(input).first)
+                        sendPacket(output, 6, """{"state":1,"time":0,"duration":60}""")
+                        sendPacket(output, 7, """{"volume":0.5}""")
+                        val (opcode, replay) = readPacket(input)
+                        assertEquals(1, opcode)
+                        assertEquals(
+                            "25.0",
+                            Json
+                                .parseToJsonElement(replay)
+                                .jsonObject["time"]
+                                ?.jsonPrimitive
+                                ?.content,
+                        )
+                        val (seekOpcode, seekBody) = readPacket(input)
+                        assertEquals(5, seekOpcode)
+                        assertEquals(
+                            "35.0",
+                            Json
+                                .parseToJsonElement(seekBody)
+                                .jsonObject["time"]
+                                ?.jsonPrimitive
+                                ?.content,
+                        )
+                        sendPacket(output, 6, """{"state":1,"time":35,"duration":60}""")
+                        sendPacket(output, 7, """{"volume":0.75}""")
+                        replayAsserted.await()
+                    }
+                }
+            val session = FcastSession(this, address, server.localPort, "test")
+            val media =
+                CastMedia(
+                    SongItem("id", "Title", null, emptyList(), null),
+                    null,
+                    PlaybackResource("id", "https://media.example.test/audio", emptyMap(), null, null, mimeType = "audio/mp4"),
+                    60_000,
+                )
+            try {
+                withTimeout(5_000) {
+                    session.load("http://localhost/first", media, 0, true, 1f, 1)
+                    session.state.first { it.hasEnded }
+                    session.load("http://localhost/second", media, 0, true, 1f, 2)
+                    session.state.first { it.volume == 0.25f }
+                    assertFalse(session.state.value.hasEnded)
+                    finishReplay.complete(Unit)
+                    session.state.first { it.hasEnded }
+                    session.seekTo(12_000)
+                    replaySeek.complete(Unit)
+                    session.state.first { it.volume == 0.4f }
+                    session.play()
+                    session.state.first { it.volume == 0.45f }
+                    session.stop()
+                    session.state.first { it.volume == 0.5f }
+                    assertFalse(session.state.value.isPlaying)
+                    session.seekTo(25_000)
+                    session.play()
+                    session.seekTo(35_000)
+                    session.state.first { it.volume == 0.75f }
+                    assertEquals(35_000L, session.state.value.positionMs)
+                    replayAsserted.complete(Unit)
+                    receiver.await()
+                }
+            } finally {
+                session.close()
+                server.close()
+                receiver.cancel()
+            }
+        }
 
     @Test
     fun fcastRejectsOldPlaybackUpdatesWhileAReplacementLoads() {

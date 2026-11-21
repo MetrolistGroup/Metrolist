@@ -14,7 +14,13 @@ fun readPlaylistText(
     val bounded = BoundedInputStream(input, maxCharacters * 4L + 4L)
     val stream = PushbackInputStream(bounded, 3)
     val prefix = ByteArray(3)
-    val prefixSize = stream.read(prefix)
+    var prefixSize = 0
+    while (prefixSize < prefix.size) {
+        val nextByte = stream.read()
+        if (nextByte < 0) break
+        prefix[prefixSize] = nextByte.toByte()
+        prefixSize++
+    }
     val charset =
         when {
             prefixSize >= 3 && prefix[0] == 0xEF.toByte() && prefix[1] == 0xBB.toByte() && prefix[2] == 0xBF.toByte() -> {

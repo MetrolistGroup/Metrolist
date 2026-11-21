@@ -100,17 +100,33 @@ internal fun renderLyricsImage(
     logo: Painter,
     layoutDirection: LayoutDirection,
     sizePx: Int = 2160,
+    story: Boolean = false,
+    storyBackgroundColor: Color = style.backgroundColor,
+    storyCardColor: Color = style.backgroundColor,
+    storyTextColor: Color = style.textColor,
+    storySecondaryColor: Color = style.secondaryColor,
+    shareUrl: String? = null,
 ): ImageBitmap {
-    val bitmap = ImageBitmap(sizePx, sizePx)
+    val bitmap = ImageBitmap(sizePx, if (story) sizePx * 16 / 9 else sizePx)
     val scale = sizePx / 340f
     val density = Density(scale, fontScale = 1f)
-    val layout = lyricsImageLayout(style.contentScale)
+    val layout = lyricsImageLayout(style.contentScale, story)
     val contentScale = layout.contentScale
     val padding = layout.padding * scale
     val width = layout.lyricsWidth * scale
     val lyricsTop = layout.lyricsTop * scale
     val lyricsHeight = layout.lyricsHeight * scale
-    val textStyle = TextStyle(color = style.textColor, fontWeight = FontWeight.Bold, textAlign = style.alignment)
+    val lyricsInsetX = if (story) 18f * contentScale * scale else 0f
+    val lyricsInsetY = if (story) 12f * contentScale * scale else 0f
+    val textWidth = width - 2 * lyricsInsetX
+    val textHeight = lyricsHeight - 2 * lyricsInsetY
+    val textLeft = padding + lyricsInsetX
+    val textStyle =
+        TextStyle(
+            color = if (story) storyTextColor else style.textColor,
+            fontWeight = FontWeight.Bold,
+            textAlign = style.alignment,
+        )
 
     fun lyricsText(size: Float) =
         buildAnnotatedString {
@@ -128,32 +144,85 @@ internal fun renderLyricsImage(
         textMeasurer.measure(
             lyricsText(size),
             style = textStyle.copy(fontSize = size.sp, lineHeight = (size * 1.2f).sp),
-            constraints = Constraints(minWidth = width.toInt(), maxWidth = width.toInt()),
+            constraints = Constraints(minWidth = textWidth.toInt(), maxWidth = textWidth.toInt()),
             density = density,
             layoutDirection = layoutDirection,
         )
-    val fit = fitLyricsImageText(lyricsHeight, style.textScale) { measureLyrics(it).size.height.toFloat() }
+    val fit =
+        fitLyricsImageText(textHeight, style.textScale, maxFontSize = if (story) 34f else 50f) {
+            measureLyrics(it).size.height.toFloat()
+        }
     val lyricsLayout = measureLyrics(fit.fontSize)
-    CanvasDrawScope().draw(density, layoutDirection, Canvas(bitmap), Size(sizePx.toFloat(), sizePx.toFloat())) {
-        val path = Path().apply { addRoundRect(RoundRect(0f, 0f, size.width, size.height, CornerRadius(20 * scale))) }
+    val renderedLyricsHeight = lyricsLayout.size.height * fit.drawScale
+    val footerTop =
+        if (story) {
+            minOf(layout.footerTop, layout.lyricsTop + 12f * contentScale + renderedLyricsHeight / scale + 18f * contentScale)
+        } else {
+            layout.footerTop
+        }
+    val cardBottom = if (story) footerTop + 34f * contentScale else 0f
+    val cardHeight = if (story) cardBottom - layout.cardTop else 0f
+    val verticalOffset = if (story) ((340f * 16f / 9f - cardHeight) / 2f) - layout.cardTop else 0f
+    val verticalOffsetPx = verticalOffset * scale
+    val textTop =
+        lyricsTop + lyricsInsetY + verticalOffsetPx +
+            if (story) 0f else (textHeight - renderedLyricsHeight) / 2f
+    val textClipHeight = if (story) renderedLyricsHeight else textHeight
+    CanvasDrawScope().draw(density, layoutDirection, Canvas(bitmap), Size(bitmap.width.toFloat(), bitmap.height.toFloat())) {
+        val path =
+            Path().apply {
+                addRoundRect(RoundRect(0f, 0f, size.width, size.height, CornerRadius(if (story) 0f else 20 * scale)))
+            }
         clipPath(path) {
-            drawRect(style.backgroundColor)
-            when (style.background) {
-                LyricsImageBackground.SOLID -> {}
+            drawRect(if (story) storyBackgroundColor else style.backgroundColor)
+            if (!story) {
+                when (style.background) {
+                    LyricsImageBackground.SOLID -> {}
 
-                LyricsImageBackground.BLUR -> {
-                    if (blurredArtwork != null) {
-                        drawCover(blurredArtwork, Offset.Zero, size.width)
-                        drawRect(Color.Black.copy(alpha = 0.3f))
+                    LyricsImageBackground.BLUR -> {
+                        blurredArtwork?.let {
+                            drawCover(it, Offset.Zero, size.width)
+                            drawRect(Color.Black.copy(alpha = 0.3f))
+                        }
+                    }
+
+                    LyricsImageBackground.GRADIENT -> {
+                        val colors = palette.firstOrNull()?.let(::getGradientColors) ?: listOf(style.backgroundColor, style.backgroundColor)
+                        drawRect(Brush.linearGradient(colors))
                     }
                 }
-
-                LyricsImageBackground.GRADIENT -> {
-                    val colors = palette.firstOrNull()?.let(::getGradientColors) ?: listOf(style.backgroundColor, style.backgroundColor)
-                    drawRect(Brush.linearGradient(colors))
+            }
+            if (story) {
+                val cardTop = (layout.cardTop + verticalOffset) * scale
+                val cardHeightPx = cardHeight * scale
+                drawRoundRect(
+                    storyCardColor,
+                    topLeft = Offset(padding, cardTop),
+                    size = Size(width, cardHeightPx),
+                    cornerRadius = CornerRadius(28f * scale),
+                )
+            }
+            artwork?.let {
+                val topLeft = Offset(layout.artworkX * scale, (layout.artworkTop + verticalOffset) * scale)
+                val artworkSide = layout.artworkSize * scale
+                if (story) {
+                    val artworkClip =
+                        Path().apply {
+                            addRoundRect(
+                                RoundRect(
+                                    topLeft.x,
+                                    topLeft.y,
+                                    topLeft.x + artworkSide,
+                                    topLeft.y + artworkSide,
+                                    CornerRadius(18 * scale),
+                                ),
+                            )
+                        }
+                    clipPath(artworkClip) { drawCover(it, topLeft, artworkSide) }
+                } else {
+                    drawCover(it, topLeft, artworkSide)
                 }
             }
-            artwork?.let { drawCover(it, Offset(padding, padding), layout.artworkSize * scale) }
 
             fun label(
                 text: String,
@@ -162,52 +231,124 @@ internal fun renderLyricsImage(
                 fontSize: Float,
                 color: Color,
                 maxWidth: Float,
+                shrinkToFit: Boolean = false,
             ) {
-                val layout =
+                fun measure(fontSize: Float) =
                     textMeasurer.measure(
                         text,
-                        style = TextStyle(color = color, fontSize = fontSize.sp, fontWeight = FontWeight.Bold),
+                        style =
+                            TextStyle(
+                                color = color,
+                                fontSize = fontSize.sp,
+                                fontWeight = FontWeight.Bold,
+                                textAlign = TextAlign.Start,
+                            ),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
-                        constraints = Constraints(maxWidth = (maxWidth * scale).toInt()),
+                        constraints =
+                            Constraints(
+                                minWidth = 0,
+                                maxWidth = (maxWidth * scale).toInt(),
+                            ),
                         density = density,
                         layoutDirection = layoutDirection,
                     )
-                drawText(layout, topLeft = Offset(x * scale, y * scale))
+                var resolvedFontSize = fontSize
+                var textLayout = measure(resolvedFontSize)
+                while (shrinkToFit && (textLayout.didOverflowWidth || (textLayout.lineCount > 0 && textLayout.isLineEllipsized(0))) &&
+                    resolvedFontSize > 4f
+                ) {
+                    resolvedFontSize = (resolvedFontSize - 0.25f).coerceAtLeast(4f)
+                    textLayout = measure(resolvedFontSize)
+                }
+                drawText(textLayout, topLeft = Offset(x * scale, y * scale))
             }
-            val headerX = layout.padding + if (artwork == null) 0f else 80f * contentScale
-            val headerWidth = 340f - layout.padding - headerX
-            label(title, headerX, 34f * contentScale, 20f * contentScale, style.textColor, headerWidth)
-            label(artist, headerX, 63f * contentScale, 16f * contentScale, style.secondaryColor, headerWidth)
+            val headerX =
+                if (story && artwork != null) {
+                    layout.artworkX + layout.artworkSize + 14f * contentScale
+                } else if (story) {
+                    layout.padding + 18f * contentScale
+                } else if (artwork == null) {
+                    layout.padding
+                } else {
+                    layout.padding + 80f * contentScale
+                }
+            val headerWidth =
+                if (story && artwork != null) {
+                    layout.lyricsWidth - (headerX - layout.padding) - 18f * contentScale
+                } else if (story) {
+                    layout.lyricsWidth - 36f * contentScale
+                } else {
+                    340f - layout.padding - headerX
+                }
+            label(
+                title,
+                headerX,
+                layout.titleTop + verticalOffset,
+                20f * contentScale,
+                if (story) storyTextColor else style.textColor,
+                headerWidth,
+            )
+            label(
+                artist,
+                headerX,
+                layout.artistTop + verticalOffset,
+                16f * contentScale,
+                if (story) storySecondaryColor else style.secondaryColor,
+                headerWidth,
+            )
             val textX =
-                padding +
+                textLeft +
                     when (style.alignment) {
                         TextAlign.Left -> 0f
-                        TextAlign.Right -> width * (1f - fit.drawScale)
-                        else -> width * (1f - fit.drawScale) / 2f
+                        TextAlign.Right -> textWidth * (1f - fit.drawScale)
+                        else -> textWidth * (1f - fit.drawScale) / 2f
                     }
-            clipRect(padding, lyricsTop, padding + width, lyricsTop + lyricsHeight) {
-                translate(textX, lyricsTop + (lyricsHeight - lyricsLayout.size.height * fit.drawScale) / 2f) {
+            clipRect(textLeft, textTop, textLeft + textWidth, textTop + textClipHeight) {
+                translate(textX, textTop) {
                     scale(fit.drawScale, pivot = Offset.Zero) { drawText(lyricsLayout) }
                 }
             }
             val footerScale = scale * contentScale
             drawCircle(
-                style.secondaryColor,
-                radius = 22 * footerScale,
-                center = Offset(padding + 22 * footerScale, layout.footerTop * scale + 22 * footerScale),
+                if (story) storySecondaryColor else style.secondaryColor,
+                radius = (if (story) 10 else 22) * footerScale,
+                center =
+                    Offset(
+                        padding + (if (story) 28f else 22f) * footerScale,
+                        (footerTop + verticalOffset) * scale + (if (story) 14 else 22) * footerScale,
+                    ),
             )
-            translate(padding + 3 * footerScale, layout.footerTop * scale + 3 * footerScale) {
-                with(logo) { draw(Size(38 * footerScale, 38 * footerScale), colorFilter = ColorFilter.tint(style.backgroundColor)) }
+            translate(
+                padding + (if (story) 18f else 3f) * footerScale,
+                (footerTop + verticalOffset) * scale + (if (story) 4 else 3) * footerScale,
+            ) {
+                with(logo) {
+                    draw(
+                        Size((if (story) 20 else 38) * footerScale, (if (story) 20 else 38) * footerScale),
+                        colorFilter = ColorFilter.tint(if (story) storyCardColor else style.backgroundColor),
+                    )
+                }
             }
             label(
                 appName,
-                layout.padding + 52f * contentScale,
-                layout.footerTop + 13f * contentScale,
-                14f * contentScale,
-                style.secondaryColor,
-                layout.lyricsWidth - 52f * contentScale,
+                layout.padding + (if (story) 44f else 52f) * contentScale,
+                footerTop + verticalOffset + (if (story) 8f else 13f) * contentScale,
+                (if (story) 12f else 14f) * contentScale,
+                if (story) storySecondaryColor else style.secondaryColor,
+                layout.lyricsWidth - (if (story) 62f else 52f) * contentScale,
             )
+            if (story && shareUrl != null) {
+                label(
+                    shareUrl,
+                    layout.padding + 44f * contentScale,
+                    footerTop + verticalOffset + 20f * contentScale,
+                    7f * contentScale,
+                    storySecondaryColor,
+                    layout.lyricsWidth - 62f * contentScale,
+                    shrinkToFit = true,
+                )
+            }
         }
     }
     return bitmap

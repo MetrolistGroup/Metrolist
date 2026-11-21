@@ -319,6 +319,19 @@ internal fun SettingsUiRegistryBuilder.registerPlaybackSettings(host: SharedSett
                 checked = settings.autoLoadMore,
             ) { settings.autoLoadMore = it }
             switch(
+                id = "classicRecommendations",
+                title = stringResource(Res.string.classic_recommendations),
+                description =
+                    stringResource(
+                        if (host.platform == SettingsPlatform.DESKTOP) {
+                            Res.string.classic_recommendations_desc_desktop
+                        } else {
+                            Res.string.classic_recommendations_desc
+                        },
+                    ),
+                checked = settings.classicRecommendations,
+            ) { settings.classicRecommendations = it }
+            switch(
                 id = "rememberShuffleRepeat",
                 title = stringResource(Res.string.remember_shuffle_and_repeat),
                 description = stringResource(Res.string.remember_shuffle_and_repeat_desc),
@@ -335,13 +348,18 @@ internal fun SettingsUiRegistryBuilder.registerPlaybackSettings(host: SharedSett
                     settings.autoDownloadOnLike = enabled
                 }
             }
-            // Only Android downloads a whole album or playlist when it is saved.
-            if (host.platform == SettingsPlatform.ANDROID) {
+            if (host.platform != SettingsPlatform.IOS) {
                 switch(
                     id = "autoDownloadSavedCollections",
                     title = stringResource(Res.string.auto_download_saved_collections),
                     checked = settings.autoDownloadSavedCollections,
-                ) { enabled -> host.onSettingChanged(SettingsChangeEffect.AUTO_DOWNLOAD_SAVED_COLLECTIONS, enabled) }
+                ) { enabled ->
+                    if (host.platform == SettingsPlatform.ANDROID) {
+                        host.onSettingChanged(SettingsChangeEffect.AUTO_DOWNLOAD_SAVED_COLLECTIONS, enabled)
+                    } else {
+                        settings.autoDownloadSavedCollections = enabled
+                    }
+                }
             }
         }
         if (host.platform != SettingsPlatform.DESKTOP) {

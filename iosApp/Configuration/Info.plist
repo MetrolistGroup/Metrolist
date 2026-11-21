@@ -36,7 +36,11 @@
     <true/>
     <key>LSRequiresIPhoneOS</key>
     <true/>
-    <key>UIApplicationSceneManifest</key>
+	<key>UIFileSharingEnabled</key>
+	<true/>
+	<key>LSSupportsOpeningDocumentsInPlace</key>
+	<true/>
+	<key>UIApplicationSceneManifest</key>
     <dict>
         <key>UIApplicationSupportsMultipleScenes</key>
         <false/>
@@ -44,6 +48,11 @@
     <key>UIBackgroundModes</key>
     <array>
         <string>audio</string>
+        <string>processing</string>
+    </array>
+    <key>BGTaskSchedulerPermittedIdentifiers</key>
+    <array>
+        <string>com.metrolist.automatic-backup</string>
     </array>
     <key>UILaunchScreen</key>
     <dict/>

@@ -185,6 +185,8 @@ Tapping a search result inside a playlist, album or stored collection queues the
 
 Start radio for the current song keeps its audio and position while replacing the queue. It resumes a paused song unless **Keep paused when changing songs** is on; the system media Start radio action always resumes it. While casting, the receiver keeps its playback state. A different seed starts from the beginning. On Android, Start radio turns repeat off so recommendations can populate the queue.
 
+With **Classic recommendations** enabled, radio asks `/next` with the video id alone instead of a generated playlist, keeps YouTube's recommendation order without skipping previously recommended songs, and serves the rest of a fetched page before requesting the next one. Continuations belong to the mode that fetched them; changing the setting mid-queue restarts the feed in the selected mode. Songs related to qualified plays are stored locally to feed Home Quick picks; seeds without a YouTube id, such as local files, skip that fetch.
+
 Desktop manual Next can promote an already prepared successor with the chosen play/pause intent. Active crossfades and podcasts use ordinary advancement so cancellation and resume positions apply.
 
 Android and desktop **Add to queue** and **Play next** respect **Prevent duplicate tracks in queue** when starting an empty or dismissed queue: the first occurrence of each track is kept in batch order. The first track is prepared paused.
@@ -327,7 +329,7 @@ LyricsPlus and Zemer are not lookup providers. Stored provider settings drop the
 
 Each candidate includes cached translations and dictionary-free romanization before display. When romanization dictionary preparation is needed and nothing is displayed, plain lyrics publish first. Enrichment replaces only the displayed entries and keeps source timestamps. Cancelled requests and late enrichment cannot overwrite newer results. Songwriter lookups run independently.
 
-The shared player keeps empty results loading until the request releases its deduplication key. Refetch bypasses the saved result; empty or failed refreshes keep the displayed lyrics. Player captions request lyrics when enabled, but hidden mobile players do not. Next-song prefetch requires full lyrics or subtitles.
+The shared player keeps empty results loading until the request releases its deduplication key. In the **Refetch** menu, **Automatic** bypasses the saved provider result and uses the configured lookup. Picking a provider searches only that provider and shows its candidates in the existing source picker. Empty or failed refreshes keep the displayed lyrics. Player captions request lyrics when enabled, but hidden mobile players do not. Next-song prefetch requires full lyrics or subtitles.
 
 ### Timing
 
@@ -376,6 +378,8 @@ OpenRouter free translations combine detection and translation in one batch. Pre
 A 429 never retries. Explicit upstream throttling moves to the next free model and remembers busy models per account for the server's retry interval, or one minute. Account daily limits stop automatic inference until the reset header or the next UTC day; a setup retry first checks `GET /api/v1/key` and resumes only if quota remains. Minute limits and ambiguous 429s stop the current operation. No fallback uses a paid model.
 
 See OpenRouter's [model catalog](https://openrouter.ai/api/v1/models), [limits](https://openrouter.ai/docs/api_reference/limits), [reasoning tokens](https://openrouter.ai/docs/guides/best-practices/reasoning-tokens), [structured outputs](https://openrouter.ai/docs/guides/features/structured-outputs), [provider selection](https://openrouter.ai/docs/guides/routing/provider-selection) and [errors](https://openrouter.ai/docs/api_reference/errors-and-debugging). Account privacy policies can filter out every provider and cause a 404; setup links to the privacy settings for that case.
+
+Kilo (`https://ai-gateway.kilo.ai/api/v1/chat/completions`) is a keyless OpenAI-compatible gateway preset whose `Authorization` header is omitted when the API key is left blank. Its default model `kilo-auto/free` is rotated server-side across active free models (anonymous limit: 200 requests/hour/IP), while free models from its public `/models` catalog remain selectable and an optional key unlocks paid models.
 
 iOS lyrics support long-press selection and the shared image editor. Images are shared as temporary PNG files that are removed when sharing finishes.
 
@@ -445,7 +449,7 @@ Queue transitions and preloading prefer downloaded or cached audio, matching man
 
 ## Android music widgets
 
-The music player defaults to 4x2 cells with a 250x110 dp fallback and a 2:1 preview. Shorter placements keep metadata beside the four controls when possible and drop the cover first; smaller ones use the controls-only and square variants. A three-column placement can shrink to 180 dp and uses artwork, metadata, Like and Play/Pause with 48 dp touch targets. Wider short placements retain the four controls and the action label. Short rows use icon controls when scaled metadata does not fit their height. Layout selection uses available dp and font scale, with size-specific RemoteViews on Android 12+ and portrait/landscape layouts before that. Keep existing widget IDs and actions valid.
+The music player defaults to 4x2 cells with a 250x110 dp fallback and a 2:1 preview. Shorter placements keep metadata beside the four controls when possible and drop the cover first; smaller ones use the controls-only and square variants. A three-column placement can shrink to 180 dp and uses artwork, metadata, Like and Play/Pause with 48 dp touch targets. Wider short placements retain the four controls and the action label. Short rows use icon controls when scaled metadata does not fit; at the default font scale, compact and wide rows switch to controls-only below 56 dp. The compact row layouts use 4 dp top and bottom padding to fit that cutoff. Layout selection uses available dp and font scale, with size-specific RemoteViews on Android 12+ and portrait/landscape layouts before that. Keep existing widget IDs and actions valid.
 
 Turntable requests a fixed 2x2 placement with 110 dp minimums and draws artwork and controls in a centered square. Recognizer requests 4x1 cells with a 250x40 dp fallback; its card wraps its content so taller hosts do not stretch it, and narrow hosts get the mic-only variant.
 
@@ -459,3 +463,9 @@ Music layouts order Previous, Play/Pause, Next and Like. Play/Pause shows a loca
 - For protobuf errors, initialize `metroproto` and run `./gradlew :shared:desktopTest` to regenerate and test the codecs.
 - If the configuration cache is stale, rerun the failing command with `--no-configuration-cache`.
 - Never commit heap dumps, traces, account tokens or local configuration. They can contain private data.
+
+Automatic backups are opt-in and keep the ten newest local archives. Android uses WorkManager, desktop runs while the app is open, and iOS requests background processing that the system may defer. Backup creation and retention cleanup are serialized. Failed retention cleanup retries without creating another archive.
+
+MLX preserves primary and inline background word groups inside background-marked rows. Sharing retains distinct foreground and background vocals even when they sing the same phrase.
+
+Desktop automatic backups recheck wall-clock deadlines at most five minutes after resume, rather than waiting for a full interval of awake time.

@@ -5,6 +5,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -18,6 +19,7 @@ import androidx.compose.runtime.withFrameMillis
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.graphics.painter.Painter
 import coil3.BitmapImage
@@ -45,6 +47,7 @@ internal expect fun PlatformLiquidBackgroundCanvas(
     previousArt: LayerArt?,
     crossfadeAlpha: () -> Float,
     rotationTimeMs: () -> Long,
+    isLightTheme: Boolean,
 )
 
 private val liquidArtCache = mutableMapOf<String, LayerArt>()
@@ -71,6 +74,7 @@ fun LiquidBackground(
     isPlaying: Boolean = true,
     visible: Boolean = true,
 ) {
+    val isLightTheme = MaterialTheme.colorScheme.surface.luminance() >= 0.5f
     val prepared = LocalPlayerTrackArtwork.current?.takeIf { it.url == artworkUrl }
     val context = LocalPlatformContext.current
     val request =
@@ -184,13 +188,14 @@ fun LiquidBackground(
                 previousArt = currentPrev,
                 crossfadeAlpha = { if (hasActive) crossfadeAlpha.value else 1f },
                 rotationTimeMs = readRotation,
+                isLightTheme = isLightTheme,
             )
         } else {
             Box(
                 modifier =
                     Modifier
                         .fillMaxSize()
-                        .background(Color.Black),
+                        .background(if (isLightTheme) Color.White else Color.Black),
             )
         }
     }

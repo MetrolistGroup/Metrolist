@@ -16,6 +16,53 @@ internal const val MAX_ARTWORK_SIZE_PX = 2400
 private val GoogleArtworkSizeSuffix = Regex("=(?:s(\\d+)|w(\\d+)(?:-[^-?#=]+)*-h\\d+)([^?#]*)")
 private val YouTubeVideoArtworkPath =
     Regex("(/vi(?:_webp)?/[^/?#]+/)(mqdefault|hqdefault|sddefault|hq720|maxresdefault)(\\.(?:jpg|webp))(?=[?#]|$)")
+private val ArtworkRefreshFragment = Regex("#metrolist-refresh=\\d+")
+
+/**
+ * Normalizes a song artwork URL to the identity used for bytes retained on the device.
+ * Cache revisions, query strings, display sizes and YouTube renditions are ignored so the
+ * same cover stays reachable when metadata is refetched with a different URL variant.
+ * Display and Coil cache keys are deliberately left unchanged.
+ */
+fun retainedArtworkUrl(url: String): String {
+    val host =
+        url
+            .substringAfter("://", missingDelimiterValue = "")
+            .substringBefore('/')
+            .substringBefore(':')
+            .lowercase()
+    if (host == "i.ytimg.com" || host.endsWith(".ytimg.com")) {
+        val source = url.substringBefore('#').substringBefore('?')
+        val path = YouTubeVideoArtworkPath.find(source) ?: return ArtworkRefreshFragment.replace(url, "")
+        val videoId = path.groupValues[1].trim('/').substringAfter('/')
+        return "https://i.ytimg.com/vi/$videoId/mqdefault.jpg"
+    }
+    if (host.endsWith(".googleusercontent.com") || host.endsWith(".ggpht.com")) {
+        return url.substringBefore('#').substringBefore('?').replace(GoogleArtworkSizeSuffix, "")
+    }
+    return ArtworkRefreshFragment.replace(url, "")
+}
+
+/** Legacy keys are kept so covers retained before the stable identity shipped remain readable. */
+fun retainedArtworkUrlCandidates(url: String): List<String> {
+    // Revision fragments are volatile: derive the old canonical/persistent keys from the URL
+    // before its fragment so a cover saved under a pre-stability key stays reachable.
+    val revisionFree = url.substringBefore('#')
+    // Pre-stability covers were keyed by canonicalArtworkUrl, whose bucket depends on the size
+    // requested at save time. Include both historical buckets so a cover saved from a large
+    // variant stays reachable when the current metadata requests a smaller one, and vice versa.
+    val historicalBuckets =
+        listOf(CANONICAL_ARTWORK_SIZE_PX, MAX_ARTWORK_SIZE_PX).flatMap { size ->
+            listOf(sizedArtworkUrl(url, size), sizedArtworkUrl(revisionFree, size))
+        }
+    return listOf(
+        retainedArtworkUrl(url),
+        canonicalArtworkUrl(url),
+        persistentArtworkUrl(url),
+        canonicalArtworkUrl(revisionFree),
+        persistentArtworkUrl(revisionFree),
+    ).plus(historicalBuckets).distinct()
+}
 
 internal class ArtworkUrlCache(
     private val capacity: Int = 512,

@@ -114,10 +114,45 @@ suspend fun MusicDatabase.cacheRemotePlaylist(
             isAutoSync = true,
         )
     dao.upsert(entity)
+    val existingMappings =
+        dao
+            .playlistSongs(entity.id)
+            .first()
+            .map { it.map }
+            .toMutableList()
     dao.clearPlaylist(entity.id)
+    val existingById = existingMappings.associateBy { it.id }
+    val existingBySetVideoId = existingMappings.mapNotNull { m -> m.setVideoId?.let { it to m } }.toMap()
+    val matches = mutableMapOf<Int, PlaylistSongMap>()
+    val claimed = mutableSetOf<Int>()
+    songs.forEachIndexed { index, song ->
+        val mapping =
+            song.playlistLocalMappingId?.let { id -> existingById[id] }
+                ?: song.playlistSetVideoId?.let { token -> existingBySetVideoId[token] }
+        if (mapping != null && claimed.add(mapping.id)) matches[index] = mapping
+    }
+    val unmatchedBySongId = existingMappings.filterNot { it.id in claimed }.groupBy { it.songId }
+    songs.indices.filterNot(matches::containsKey).groupBy { songs[it].id }.forEach { (songId, indices) ->
+        val old = unmatchedBySongId[songId].orEmpty()
+        if (indices.size == old.size) {
+            indices.zip(old).forEach { (index, mapping) ->
+                val token = songs[index].playlistSetVideoId
+                if (token == null || mapping.setVideoId == null || token == mapping.setVideoId) matches[index] = mapping
+            }
+        }
+    }
     songs.forEachIndexed { index, song ->
         dao.upsertHistorySong(song)
-        dao.insert(PlaylistSongMap(playlistId = entity.id, songId = song.id, position = index, setVideoId = song.playlistSetVideoId))
+        val existingMapping = matches[index]
+        dao.insert(
+            PlaylistSongMap(
+                id = existingMapping?.id ?: 0,
+                playlistId = entity.id,
+                songId = song.id,
+                position = index,
+                setVideoId = song.playlistSetVideoId,
+            ),
+        )
     }
 }
 

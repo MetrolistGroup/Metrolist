@@ -39,7 +39,14 @@ object LyricsUtils {
         entries: List<LyricsEntry>,
     ): String {
         val raw = rawLyrics.orEmpty()
-        val original = parseLyrics(raw)
+        if (raw.isBlank()) return raw
+        // Translation tags are matched to the source timestamps before the file offset is applied.
+        val original =
+            try {
+                MlxParser.parseWithoutLrcOffset(raw).lines
+            } catch (_: Exception) {
+                return raw
+            }
         if (original.size != entries.size || original.indices.any { original[it].text != entries[it].text }) return raw
         val translations =
             original.mapIndexed { index, line ->

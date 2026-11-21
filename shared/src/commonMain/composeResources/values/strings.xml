@@ -496,6 +496,9 @@
     <string name="auto_load_more">Add similar songs automatically</string>
     <!-- Translators: Supporting text beneath the auto load more option in the settings. -->
     <string name="auto_load_more_desc">Automatically add similar songs to radio and mix queues when they near the end</string>
+    <string name="classic_recommendations">Classic recommendations</string>
+    <string name="classic_recommendations_desc">Build Quick picks from your own listening history and play your personal YouTube up next in order, like Metrolist 13</string>
+    <string name="classic_recommendations_desc_desktop">Play your personal YouTube up next in order, like Metrolist 13</string>
     <!-- Translators: Imperative action label for skip silence in the settings. -->
     <string name="skip_silence">Skip silence</string>
     <!-- Translators: Option or section label for audio normalization in the settings. -->
@@ -651,6 +654,8 @@
     <string name="pause_search_history">Pause search history</string>
     <!-- Translators: Imperative action label for clear search history in the Home and browse screens and settings. -->
     <string name="clear_search_history">Clear search history</string>
+    <!-- Translators: Progress label shown while saved search queries are being cleared. -->
+    <string name="clearing_search_history">Clearing search history…</string>
     <!-- Translators: Supporting text beneath the clear search history option in the settings. -->
     <string name="settings_clear_search_history_description">Remove saved searches from this device and YouTube</string>
     <!-- Translators: Dialog or notice body text for clear search history confirm in the settings. -->
@@ -937,21 +942,21 @@
     <string name="devtools_access_logged_in" translatable="false">Logged in</string>
     <!-- Translators: Label for client legend access in the playback developer tools. -->
     <string name="devtools_playback_client_legend_access" translatable="false">Account access</string>
-    <!-- Translators: Heading for log in the playback developer tools. -->
-    <string name="devtools_playback_log_title" translatable="false">Playback event log</string>
-    <!-- Translators: Supporting text beneath the log option in the playback developer tools. -->
-    <!-- Translators: Empty-state message for log empty in the playback developer tools. -->
-    <!-- Translators: Label for log count in the playback developer tools. %1$d is the captured event count. -->
-    <string name="devtools_playback_log_count" translatable="false">%1$d events captured</string>
+    <!-- Translators: Heading for the application failure log in the developer tools. -->
+    <string name="devtools_playback_log_title">Application event log</string>
+    <!-- Translators: Supporting text beneath the application failure log. -->
+    <!-- Translators: Empty-state message for the application failure log. -->
+    <!-- Translators: Label for the application failure log count. %1$d is the captured event count. -->
+    <string name="devtools_playback_log_count">%1$d events captured</string>
     <!-- Translators: Label for log filter all in the playback developer tools. -->
     <!-- Translators: Label for log filter warnings in the playback developer tools. -->
     <!-- Translators: Error message about log filter errors in the playback developer tools. -->
     <!-- Translators: Label for log cleared in the playback developer tools. -->
-    <string name="devtools_playback_log_cleared" translatable="false">Playback log cleared</string>
+    <string name="devtools_playback_log_cleared">Application log cleared</string>
     <!-- Translators: Error message about log export in the playback developer tools. -->
-    <string name="devtools_playback_log_export_failed" translatable="false">Could not export the playback log</string>
-    <!-- Translators: Heading for log share in the playback developer tools. -->
-    <string name="devtools_playback_log_share_title" translatable="false">Export playback log</string>
+    <string name="devtools_playback_log_export_failed">Could not export the application log</string>
+    <!-- Translators: Share-sheet title for the application failure log. -->
+    <string name="devtools_playback_log_share_title">Export application log</string>
     <!-- Translators: Input hint for search in the settings. -->
     <string name="settings_search_placeholder">Search settings</string>
     <!-- Translators: Imperative action label for results; retained for translation compatibility but not currently referenced by app code. -->
@@ -1402,6 +1407,16 @@
     <string name="backup_restore_import_desc">Restore a Metrolist backup. The app will restart after a successful restore.</string>
     <!-- Translators: Progress or status message for restore busy in the Backup & Restore. -->
     <string name="backup_restore_busy">Working…</string>
+    <string name="automatic_backup">Automatic backup</string>
+    <string name="automatic_backup_description">Save a local backup automatically and keep the 10 most recent copies.</string>
+    <string name="automatic_backup_frequency">Backup frequency</string>
+    <string name="automatic_backup_daily">Daily</string>
+    <string name="automatic_backup_weekly">Weekly</string>
+    <string name="automatic_backup_monthly">Monthly</string>
+    <string name="automatic_backup_location">Backups stay on this device. Mobile operating systems may defer them. Desktop backups run while Metrolist is open.</string>
+    <string name="automatic_backup_restore">Restore an automatic backup</string>
+    <string name="automatic_backup_restore_empty">No automatic backups are available.</string>
+    <string name="automatic_backup_restore_desc">Choose a saved automatic backup to restore.</string>
     <!-- Translators: Title of the Backup & Restore option that imports a backup made by a different YouTube Music app. -->
     <string name="foreign_import_title">Import from another app</string>
     <!-- Translators: Supporting text beneath the import-from-another-app option in the Backup & Restore. App names are product names. -->
@@ -1412,6 +1427,8 @@
     <string name="foreign_import_unsupported">This file is not a backup from a supported music app</string>
     <!-- Translators: Error shown when importing another app's backup fails. %1$s is the technical error message. -->
     <string name="foreign_import_failed">Import failed: %1$s</string>
+    <!-- Translators: Generic error shown when importing another app's backup fails. -->
+    <string name="foreign_import_error_generic">The backup could not be imported</string>
     <!-- Translators: Heading for sensitive in the Backup & Restore. -->
     <string name="backup_sensitive_title">Sensitive backup</string>
     <!-- Translators: Dialog or notice body text for sensitive in the Backup & Restore. -->
@@ -1866,6 +1883,7 @@
     <string name="ai_prompt_line_count_description">Optional. Use {lineCount} to include the exact input line count in your prompt.</string>
     <!-- Translators: Option or section label for provider default in the AI lyrics translation settings. -->
     <string name="brand_opencode_zen" translatable="false">OpenCode Zen</string>
+    <string name="brand_kilo" translatable="false">Kilo</string>
     <string name="brand_opencode_go" translatable="false">OpenCode Go</string>
     <string name="brand_groq" translatable="false">Groq</string>
     <string name="brand_deepseek" translatable="false">DeepSeek</string>
@@ -1942,6 +1960,8 @@
     <!-- Translators: Option or section label for same provider default in the AI lyrics translation settings. -->
     <!-- Translators: Field or option label for API key in the AI lyrics translation settings. -->
     <string name="ai_api_key_label">API key</string>
+    <!-- Translators: Field description for an optional API key when free models work without one. -->
+    <string name="ai_api_key_optional">Optional, free models work without a key</string>
     <!-- Translators: Field or option label for system prompt in the AI lyrics translation settings. -->
     <string name="ai_system_prompt_label">System prompt</string>
     <!-- Translators: Imperative action label for translation enable in the AI lyrics translation settings. -->
@@ -2518,6 +2538,8 @@
     <string name="share_podcast">Share podcast</string>
     <!-- Translators: Imperative action label for share song in the multiple app screens. -->
     <string name="share_song">Share song</string>
+    <!-- Translators: Button label for sharing selected lyrics as a vertical story card. -->
+    <string name="share_song_to_story">Share to story</string>
     <!-- Translators: Imperative action label for shuffle artist in the search. -->
     <!-- Translators: Imperative action label for shuffle playlist in the search. -->
     <string name="shuffle_playlist">Shuffle playlist</string>
@@ -4673,6 +4695,8 @@
     <string name="import_provider_file">File or text</string>
     <!-- Translators: Supporting text beneath the provider file option in the playlist import. -->
     <string name="import_provider_file_desc">Import playlist files (CSV, TSV, M3U, M3U8, JSON)</string>
+    <!-- Translators: Supporting text beneath a streaming provider option in the iOS playlist import. -->
+    <!-- Translators: Label for free text input in the playlist import page. -->
     <!-- Translators: Imperative action label for connect spotify account in the playlist import. -->
     <string name="import_connect_spotify_account">Sign in with Spotify account</string>
     <!-- Translators: Imperative action label for spotify account playlists in the playlist import. -->
@@ -4937,6 +4961,7 @@
     <string name="secondary_text_color">Secondary text color</string>
     <string name="lyrics_share_artwork_failed">Artwork could not be loaded. You can still share with a solid background.</string>
     <string name="lyrics_share_failed">Could not create or export the image. Try again.</string>
+    <string name="lyrics_share_story_style">Customize image</string>
     <string name="lyrics_share_color">%1$s: #%2$s</string>
     <string name="lyrics_share_save_image">Save PNG</string>
     <string name="lyrics_share_text">"%1$s"\n\n%2$s - %3$s\n%4$s</string>
@@ -5094,6 +5119,8 @@
     <string name="live">LIVE</string>
     <string name="playback_event_log_raw_description">Always-on playback diagnostics. Copy or export this raw log when playback breaks.</string>
     <string name="playback_event_log_raw_empty">No playback events recorded yet. Play a track to capture diagnostics.</string>
+    <string name="application_failure_log_raw_description">Playback events and application failures are recorded here. UI events are excluded.</string>
+    <string name="application_failure_log_raw_empty">No events recorded yet.</string>
     <string name="import_error_playlist_tracks_unavailable">Could not load the playlist's tracks from %1$s. Export the playlist and paste the track list.</string>
     <string name="import_error_album_tracks_unavailable">Could not load the album's tracks from %1$s. Export the album and paste the track list.</string>
 <string name="audio_boost">Preamp</string>
@@ -5542,4 +5569,6 @@
     <string name="ai_setup_privacy_settings">Open privacy settings</string>
     <string name="ai_setup_sign_in_again">Sign in again</string>
     <string name="ai_setup_key_limits">Review key limits</string>
+    <string name="lyrics_share_square_image">Square image</string>
+    <string name="lyrics_share_story_image">Story image</string>
 </resources>

@@ -11,9 +11,10 @@ import com.metrolist.shared.auth.YouTubeSyncState
 import com.metrolist.shared.generated.resources.Res
 import com.metrolist.shared.generated.resources.try_again
 import com.metrolist.shared.generated.resources.youtube_sync_failed
+import com.metrolist.shared.youtube.playback.PlaybackNetworkStateStore
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.getString
 
@@ -21,22 +22,33 @@ import org.jetbrains.compose.resources.getString
 fun YouTubeSyncSnackbar(snackbarHostState: SnackbarHostState) {
     val scope = rememberCoroutineScope()
     LaunchedEffect(snackbarHostState) {
-        YouTubeSyncState.failures.map { it.values.firstOrNull() }.distinctUntilChanged().collectLatest { current ->
-            val failure = current ?: return@collectLatest
-            if (YouTubeSessionState.showExpiredSessionNotice) return@collectLatest
-            val result =
-                snackbarHostState.showSnackbar(
-                    message = getString(Res.string.youtube_sync_failed),
-                    actionLabel = getString(Res.string.try_again),
-                    withDismissAction = true,
-                    duration = SnackbarDuration.Long,
-                )
-            if (result == SnackbarResult.ActionPerformed) {
-                scope.launch {
-                    YouTubeSyncState.succeeded(failure.operation)
-                    failure.retry()
+        var dismissedFailure: YouTubeSyncState.Failure? = null
+        YouTubeSyncState.failures
+            .combine(PlaybackNetworkStateStore.state) { failures, network ->
+                if (network.connected) failures.values.firstOrNull() else null
+            }.distinctUntilChanged()
+            .collectLatest { current ->
+                val failure = current ?: return@collectLatest
+                if (failure === dismissedFailure || YouTubeSessionState.showExpiredSessionNotice) return@collectLatest
+                val result =
+                    snackbarHostState.showSnackbar(
+                        message = getString(Res.string.youtube_sync_failed),
+                        actionLabel = getString(Res.string.try_again),
+                        withDismissAction = true,
+                        duration = SnackbarDuration.Long,
+                    )
+                when (result) {
+                    SnackbarResult.Dismissed -> {
+                        dismissedFailure = failure
+                    }
+
+                    SnackbarResult.ActionPerformed -> {
+                        scope.launch {
+                            YouTubeSyncState.succeeded(failure.operation)
+                            failure.retry()
+                        }
+                    }
                 }
             }
-        }
     }
 }

@@ -32,7 +32,7 @@ Unconfirmed transfer failure restores the saved position without counting waitin
 
 ## Compatibility and queues
 
-Peers need playback version 4. Version 3 cannot join playback sessions. Authenticated optional capabilities `supportsPlaybackClock` and `supportsPlaybackPitch` default false. Never infer them from unauthenticated state.
+Peers need playback version 5. Version 4 and earlier cannot join playback sessions. Version 5 adds REMOVE successor selection and RESTORE_QUEUE playback intent. Authenticated optional capabilities `supportsPlaybackClock` and `supportsPlaybackPitch` default false. Never infer them from unauthenticated state. Queue snapshots also preserve explicit Radio intent, so ordinary queues expanded by Auto Load More retain their repeat behavior.
 
 Send `PITCH` only to a capable target. Snapshots and scalar updates may carry pitch from 0.5 to 2; absence preserves the receiver's pitch. Speed changes preserve pitch, and pitch does not affect the clock. Older peers ignore optional JSON fields without a version bump.
 
@@ -41,6 +41,8 @@ Capable peers can send scalar `UPDATE` against an accepted `queueRevision` and n
 Legacy peers receive full state on track/scrobble-session changes and one-second progress. Clock-capable peers use immediate changes and less frequent corrections. Clocks honor speed, pause, buffering and duration. Retain scrobble sessions for transfer.
 
 `REORDER` sends a revision-checked permutation containing every queue index once. The target preserves the current occurrence, position and shuffle identity even if playback advances in transit. Android media-session bulk edits are rejected while following another device.
+
+REMOVE may carry `advanceCurrentToSuccessor`, `successorIndex` and `expectedTrackRevision`. A removal with a stale expected track revision is rejected so an intervening track change cannot apply an obsolete successor. RESTORE_QUEUE accepts `startPlaying` to restore the playback intent captured when removing entries.
 
 Radio replacement can set `preserveCurrentTrack`. A matching ready seed retains its instance and position; otherwise it starts at zero. Older targets ignore the flag and may reload using the supplied position. Queue replacement requires complete snapshots. Partial queues need negotiated continuation ownership, cancellation and acknowledgement before use.
 
@@ -51,6 +53,8 @@ Admission allows two unauthenticated incoming connections per source and four to
 Outgoing queues are bounded. Coalesce only adjacent redundant clock samples; preserve state, seek and command order. Assign encrypted sequence numbers and chunk under the send mutex. Disconnect stalled or overloaded peers. Local queue acceptance is not proof of remote delivery.
 
 Normalize personal sync IDs `||account-id` to `account-id` and channel IDs `channel-id||account-id` to `channel-id`. Use one helper for login and pairing. Cache identity by exact cookie and data-sync ID; invalidate on logout or credential changes.
+
+Login retains a valid identity extracted from the WebView. If it is missing, account discovery may recover the identity from exactly one account; multiple accounts require selection. Windows uses the helper credentials for discovery before validating and saving the selected account. An empty selectable list after helper login may reuse its validated identity.
 
 Unresolved account IDs cannot pair. Exchange the `resolved` flag without an account proof so peers can show identity recovery instead of a false account mismatch. Obtain fresh account identity by signing in and selecting the same channel. Never guess a channel or allow unresolved identities. Genuine mismatches stay blocked.
 
@@ -74,3 +78,7 @@ Linux measurements on one Ethernet interface with IPv4, ULA and link-local IPv6,
 Fallback TXT lookups during startup and measurement fell from 127,294 to 2, one per address family. Before the fix, most CPU time came from JmDNS callbacks and the TXT-fetch worker. A fallback lookup starts another resolver even when data is cached, as shown in [JmDNS's lookup path](https://github.com/jmdns/jmdns/blob/v3.6.5/src/main/java/javax/jmdns/impl/JmDNSImpl.java#L761-L776). Limiting concurrent requests alone did not stop callbacks from starting another lookup after the previous one finished.
 
 Windows and macOS idle CPU measurements remain unverified. The reporter will check the nightly Windows build.
+
+Explicit Radio requests start a fresh seed batch even when the seed is unchanged. Transferring an already populated Radio queue preserves its songs. Queue edits do not restart Radio.
+
+A seed-only explicit Radio transfer requests recommendations even when it replaces an existing Radio session. Desktop shuffle changes preserve an in-flight bootstrap while its session and seed remain the same.

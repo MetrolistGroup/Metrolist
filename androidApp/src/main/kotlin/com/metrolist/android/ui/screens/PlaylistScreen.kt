@@ -125,6 +125,7 @@ import com.metrolist.shared.model.canEdit
 import com.metrolist.shared.model.filterForPlaylistSearch
 import com.metrolist.shared.model.indexOfPlaylistOccurrence
 import com.metrolist.shared.model.isReordering
+import com.metrolist.shared.model.playlistOccurrenceIdentity
 import com.metrolist.shared.model.playlistOccurrenceKey
 import com.metrolist.shared.model.preparePlaylistPresentation
 import com.metrolist.shared.model.previewThumbnailUrl
@@ -740,6 +741,8 @@ fun PlaylistScreen(
                                     miniPlayerInset,
                         ),
                     currentSongId = currentSong?.id,
+                    currentQueueItemId = currentSong?.originalQueueItemId,
+                    currentSongOccurrenceKey = currentSong?.playlistOccurrenceIdentity(),
                     isPlaying = isPlaying,
                     suggestions = suggestions.takeIf { searchQuery.isBlank() }.orEmpty(),
                     downloadedSongIds = downloadedSongIds,

@@ -1,6 +1,5 @@
 package com.metrolist.shared.ui.mobile
 
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -26,7 +25,6 @@ import com.metrolist.shared.api.lyrics.LyricsUtils
 import com.metrolist.shared.db.MusicDatabase
 import com.metrolist.shared.db.entities.KIND_DOWNLOAD
 import com.metrolist.shared.generated.resources.Res
-import com.metrolist.shared.generated.resources.equalizer
 import com.metrolist.shared.generated.resources.listen_together
 import com.metrolist.shared.generated.resources.playback_pitch
 import com.metrolist.shared.generated.resources.playback_speed
@@ -82,7 +80,7 @@ internal class MobilePlayerPlatform(
     override fun lyricsShareAction(viewModel: PlayerViewModel): ((String) -> Unit)? = shareLyrics(viewModel)
 
     override val supportsPictureInPicture = false
-    override val supportsVideoPlayback = false
+    override val supportsVideoPlayback = true
     override val supportsCasting = false
 
     @Composable
@@ -125,7 +123,7 @@ internal class MobilePlayerPlatform(
         useSurfaceView: Boolean,
         onFullscreenClick: (() -> Unit)?,
         onPiPClick: (() -> Unit)?,
-    ) = Box(modifier)
+    ) = MobileMusicVideoSurface(modifier, cornerRadius, fillContainer, showControls, onFullscreenClick)
 
     @Composable
     override fun AnimatedCoverVideo(
@@ -369,7 +367,7 @@ internal class MobilePlayerPlatform(
                     isCustomQuery = isCustomQuery,
                 )
             },
-            onLoadProviders = { customTitle, customArtist ->
+            onLoadProviders = { customTitle, customArtist, provider ->
                 val resolvedTitle = customTitle?.takeIf { it.isNotBlank() } ?: current.title
                 val resolvedArtist = customArtist?.trim() ?: artist
                 val isCustomQuery =
@@ -382,6 +380,7 @@ internal class MobilePlayerPlatform(
                     duration = current.duration,
                     album = current.album,
                     isCustomQuery = isCustomQuery,
+                    selectedProvider = provider,
                 )
             },
             onSelectProvider = { result -> viewModel.selectLyricsProviderResult(current.id, result) },

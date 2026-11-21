@@ -9,11 +9,16 @@ internal class CacheAccessTimes {
         songId: String,
         timestamp: Long,
     ) {
-        pending[songId] = timestamp
+        pending[songId] = pending[songId]?.let { maxOf(it, timestamp) } ?: timestamp
     }
 
+    fun effective(entry: CachedSongEntry): Long = maxOf(entry.lastAccessedAt, pending[entry.songId] ?: Long.MIN_VALUE)
+
     fun applyTo(entries: List<CachedSongEntry>): List<CachedSongEntry> =
-        entries.map { entry -> pending[entry.songId]?.let { entry.copy(lastAccessedAt = it) } ?: entry }
+        entries.map { entry ->
+            val latest = effective(entry)
+            if (latest != entry.lastAccessedAt) entry.copy(lastAccessedAt = latest) else entry
+        }
 
     fun clear() = pending.clear()
 }

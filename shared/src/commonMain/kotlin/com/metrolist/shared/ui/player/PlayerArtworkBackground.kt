@@ -33,6 +33,7 @@ import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.ButtonGroupDefaults
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ToggleButtonShapes
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -61,6 +62,7 @@ import androidx.compose.ui.graphics.Outline
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
@@ -567,6 +569,8 @@ private fun LandscapeFullscreenThumbnailBackground(
             )
         }
 
+        val foregroundIsDark = playerBackground == PlayerBackgroundStyle.LIQUID && MaterialTheme.colorScheme.surface.luminance() >= 0.5f
+        val backdropScrim = if (foregroundIsDark) Color.White else Color.Black
         val layoutDirection = LocalLayoutDirection.current
         val cutoutStart = WindowInsets.displayCutout.asPaddingValues().calculateStartPadding(layoutDirection)
 
@@ -612,8 +616,8 @@ private fun LandscapeFullscreenThumbnailBackground(
                                 arrayOf(
                                     0.0f to Color.Transparent,
                                     0.50f to Color.Transparent,
-                                    0.78f to Color.Black.copy(alpha = 0.12f),
-                                    1.0f to Color.Black.copy(alpha = 0.22f),
+                                    0.78f to backdropScrim.copy(alpha = 0.12f),
+                                    1.0f to backdropScrim.copy(alpha = 0.22f),
                                 ),
                         ),
                     ),
@@ -762,6 +766,7 @@ private fun LandscapeFullscreenThumbnailBackground(
                 }
             }
         }
+        Box(Modifier.fillMaxSize().background(backdropScrim.copy(alpha = 0.6f)))
     }
 }
 

@@ -30,6 +30,7 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.LayoutDirection
 import com.metrolist.shared.ui.utils.markPixelsImmutable
+import com.metrolist.shared.utils.isDesktop
 import kotlin.math.ceil
 import kotlin.math.max
 import kotlin.math.min
@@ -109,6 +110,7 @@ internal class ClusterMaskCache(
     private val scales = FloatArray(count)
     private val rasterScope = CanvasDrawScope()
     private val white = SolidColor(Color.White)
+    private val maskConfig = if (isDesktop) ImageBitmapConfig.Argb8888 else ImageBitmapConfig.Alpha8
 
     val layerPaint = Paint()
 
@@ -140,12 +142,13 @@ internal class ClusterMaskCache(
         val w = ceil(lw * s).toInt().coerceIn(1, MAX_MASK_SIDE.toInt())
         val h = ceil(lh * s).toInt().coerceIn(1, MAX_MASK_SIDE.toInt())
 
-        val bmp = ImageBitmap(w, h, ImageBitmapConfig.Alpha8)
+        val bmp = ImageBitmap(w, h, maskConfig)
 
         val fullW = ceil(lw).toInt().coerceIn(1, MAX_GLOW_FULL_SIDE)
         val fullH = ceil(lh).toInt().coerceIn(1, MAX_GLOW_FULL_SIDE)
-        val full = ImageBitmap(fullW, fullH, ImageBitmapConfig.Alpha8)
+        val full = ImageBitmap(fullW, fullH, maskConfig)
         rasterScope.draw(density, LayoutDirection.Ltr, Canvas(full), Size(fullW.toFloat(), fullH.toFloat())) {
+            drawRect(color = Color.Transparent, blendMode = BlendMode.Clear)
             drawText(
                 textLayoutResult = layout,
                 topLeft = Offset(padPx, padPx),
@@ -154,6 +157,7 @@ internal class ClusterMaskCache(
             )
         }
         rasterScope.draw(density, LayoutDirection.Ltr, Canvas(bmp), Size(w.toFloat(), h.toFloat())) {
+            drawRect(color = Color.Transparent, blendMode = BlendMode.Clear)
             withTransform({ scale(s, s, Offset.Zero) }) {
                 drawImage(
                     image = full,
@@ -245,8 +249,9 @@ internal class ClusterMaskCache(
         val w = ceil(lw * s).toInt().coerceIn(1, MAX_MASK_SIDE.toInt())
         val h = ceil(lh * s).toInt().coerceIn(1, MAX_MASK_SIDE.toInt())
 
-        val bmp = ImageBitmap(w, h, ImageBitmapConfig.Alpha8)
+        val bmp = ImageBitmap(w, h, maskConfig)
         rasterScope.draw(density, LayoutDirection.Ltr, Canvas(bmp), Size(w.toFloat(), h.toFloat())) {
+            drawRect(color = Color.Transparent, blendMode = BlendMode.Clear)
             withTransform({ scale(s, s, Offset.Zero) }) {
                 drawText(
                     textLayoutResult = layout,
@@ -337,14 +342,13 @@ internal fun computeWipe(
 
     val lastSylIdx = if (lastSyllableIndex != -1) lastSyllableIndex else syllableIndex
     val isPartOfActiveSyl = syllableIndex != -1 && activeSylIdx in syllableIndex..lastSylIdx
-    // A sung syllable stays fully lit; otherwise the next word's band would dim its tail again.
+    val effectiveLineIdx = if (isPartOfActiveSyl) clusterLineIdx else activeLineIdx
+
+    val rawLocalX = curGX - lineStart
     if (syllableIndex != -1 && activeSylIdx >= 0 && lastSylIdx < activeSylIdx) {
         out.mode = WIPE_PAST
         return
     }
-    val effectiveLineIdx = if (isPartOfActiveSyl) clusterLineIdx else activeLineIdx
-
-    val rawLocalX = curGX - lineStart
     val brushShift =
         if (clusterLineIdx == effectiveLineIdx && isActiveSylLastOfLine) {
             activeSylProgress * halfGradientWidth
@@ -355,14 +359,9 @@ internal fun computeWipe(
     val localX =
         when {
             activeSylIdx == -1 -> -gradientWidth * 2f
-
-            // The band leaves the syllable's own glyphs as it ends, so a pause before the next word shows no dim tail.
-            isPartOfActiveSyl -> rawLocalX + activeSylProgress * halfGradientWidth
-
+            isPartOfActiveSyl -> rawLocalX + brushShift
             clusterLineIdx < activeLineIdx -> lineWidth + gradientWidth * 2f
-
             clusterLineIdx > activeLineIdx -> -gradientWidth * 2f
-
             else -> rawLocalX + brushShift
         }
 

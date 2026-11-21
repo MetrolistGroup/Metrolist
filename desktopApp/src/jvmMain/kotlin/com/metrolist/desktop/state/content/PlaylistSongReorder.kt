@@ -40,13 +40,16 @@ internal fun Map<String, List<YTItem>>.reorderPlaylistSong(
     val targetIndex = songs.indexOfFirst { it.matches(target) }
     val insertionIndex = targetIndex + if (afterTarget) 1 else 0
     songs.add(insertionIndex, moving)
+    val successor = songs.getOrNull(insertionIndex + 1)
+    // A null remote successor means the end, not an existing occurrence without a server ID.
+    if (!local && successor != null && successor.playlistSetVideoId.isNullOrBlank()) return null
     val sections = filterKeys { it.equals("header", ignoreCase = true) || it.contains("suggest", ignoreCase = true) }
     return PlaylistSongReorder(
         sections = sections + ("songs" to songs),
         setVideoId = song.playlistSetVideoId,
         localMappingId = song.playlistLocalMappingId,
-        successorLocalMappingId = songs.getOrNull(insertionIndex + 1)?.playlistLocalMappingId,
-        successorSetVideoId = songs.getOrNull(insertionIndex + 1)?.playlistSetVideoId,
+        successorLocalMappingId = successor?.playlistLocalMappingId,
+        successorSetVideoId = successor?.playlistSetVideoId,
     )
 }
 

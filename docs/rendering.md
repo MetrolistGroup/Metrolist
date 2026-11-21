@@ -2,7 +2,7 @@
 
 ## Artwork
 
-Shared collection covers resolve through `LibraryCovers.kt`. Keep user-selected covers ahead of built-in resources. Android widgets and Android Auto use the same artwork provider for offline covers.
+Shared collection covers resolve through `LibraryCovers.kt`. Keep user-selected covers ahead of built-in resources. Android widgets and Android Auto use the same artwork provider for offline covers. Retained download covers use a stable identity that ignores cache-busting revisions, query strings, display sizes and video renditions, so a refetched URL keeps resolving to the PNG already on disk. Legacy keys remain readable and are included when pruning.
 
 Player and collection artwork use square, centered crops. Full-player video thumbnails use the same preview source as song rows, including the thumbnail without encoded letterboxing. Dedicated video shelves, episode previews and video playback keep their wide layouts. On iOS, managed playlist-cover identifiers resolve against the current Application Support directory so container relocation does not break covers. Delete only managed files after the database change succeeds.
 
@@ -126,3 +126,7 @@ Current-song rows use a pill container, scalloped artwork and matching content c
 Run affected [platform checks](checks.md#platform-checks). Native checks must verify taps, keyboard actions, dismissal and rendering.
 
 Native checks must cover interrupted motion, missing and portrait artwork, theme changes, reduced motion, large fonts and accessibility. Compare CPU/GPU use when changing shaders, blur or visibility work. Backend tests do not establish rendering or power behavior.
+
+Light-theme Liquid backgrounds use a white wash with dark controls. Fullscreen video backdrops retain light controls. Lyrics use the same foreground polarity for blending and contrast scrims; additive blending applies only to light text.
+
+The landscape fullscreen contrast wash covers the sharp artwork as well as its backdrop, so tablet controls remain legible when opening the queue narrows the player pane.

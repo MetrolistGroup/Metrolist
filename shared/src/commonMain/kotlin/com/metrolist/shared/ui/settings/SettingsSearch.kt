@@ -318,12 +318,15 @@ private fun highlightSearchMatches(
     }
 }
 
+// Lowercasing Turkish capital İ introduces a combining dot; keep ordinary dotted i searchable.
+private fun String.settingsSearchFold(): String = lowercase().replace("i\u0307", "i")
+
 @Composable
 internal fun rememberSettingsSearchResults(
     registry: SettingsUiRegistry,
     query: String,
 ): List<SettingsSearchResult> {
-    val normalized = query.trim().lowercase()
+    val normalized = query.trim().settingsSearchFold()
     val listenTogetherEnabled = Settings.shared.listenTogetherEnabled
     return remember(registry, normalized, listenTogetherEnabled) {
         settingsSearchResults(registry, normalized, listenTogetherEnabled)
@@ -343,10 +346,10 @@ internal fun settingsSearchResults(
             .flatMap { page ->
                 buildList {
                     val matchingTerm = page.searchTerms.firstOrNull { it.contains(normalized, ignoreCase = true) }
-                    if (page.title.lowercase().contains(normalized) ||
+                    if (page.title.settingsSearchFold().contains(normalized) ||
                         page.subtitle
                             .orEmpty()
-                            .lowercase()
+                            .settingsSearchFold()
                             .contains(normalized) ||
                         matchingTerm != null
                     ) {
@@ -363,13 +366,13 @@ internal fun settingsSearchResults(
                                 ) {
                                     return@forEach
                                 }
-                                val titleMatches = item.title.lowercase().contains(normalized)
+                                val titleMatches = item.title.settingsSearchFold().contains(normalized)
                                 val descriptionMatches =
                                     item.description
                                         .orEmpty()
-                                        .lowercase()
+                                        .settingsSearchFold()
                                         .contains(normalized)
-                                val groupMatches = group.title.lowercase().contains(normalized)
+                                val groupMatches = group.title.settingsSearchFold().contains(normalized)
                                 val matchingValue =
                                     (item.choices.map { it.label } + listOfNotNull(item.valueLabel))
                                         .firstOrNull { it.contains(normalized, ignoreCase = true) }

@@ -1,6 +1,7 @@
 package com.metrolist.shared.ui.playback
 
 import androidx.compose.runtime.staticCompositionLocalOf
+import com.metrolist.shared.api.musicvideo.CounterpartPositionMap
 import com.metrolist.shared.cast.CastDevice
 import com.metrolist.shared.cast.CastState
 import com.metrolist.shared.model.RadioQueueChip
@@ -35,8 +36,11 @@ data class PlaybackUiState(
     val suggestedTracks: List<SongItem> = emptyList(),
     val sleepTimerState: SleepTimerState = SleepTimerState(),
     val isVideoModeActive: Boolean = false,
+    val retimeLyricsOnVideoMode: Boolean = true,
     val isVideoAvailable: Boolean = false,
     val isVideoResolving: Boolean = false,
+    val videoPlaybackResource: PlaybackResource? = null,
+    val videoPositionMap: CounterpartPositionMap? = null,
     val castState: CastState = CastState(),
     val castDevices: List<CastDevice> = emptyList(),
     val bufferedPositionMs: Long = 0L,
@@ -66,6 +70,12 @@ interface PlaybackController {
     val canSkipPrevious: Boolean get() = state.value.canSkipPrevious
     val supportsVideoPlayback: Boolean get() = true
     val supportsCasting: Boolean get() = true
+    val explicitPlaybackGeneration: Long get() = 0L
+    val playbackReplacementGeneration: Long get() = explicitPlaybackGeneration
+
+    fun reserveExplicitPlaybackGeneration(): Long = 0L
+
+    fun reserveQueueAdditionGeneration(): Long = explicitPlaybackGeneration
 
     fun currentPositionMs(): Long = state.value.positionMs
 
@@ -74,6 +84,15 @@ interface PlaybackController {
         queue: List<SongItem> = listOf(song),
         songsOnly: Boolean = false,
     )
+
+    fun playAtGeneration(
+        expectedGeneration: Long,
+        song: SongItem,
+        queue: List<SongItem> = listOf(song),
+        songsOnly: Boolean = false,
+    ) {
+        if (explicitPlaybackGeneration == expectedGeneration) play(song, queue, songsOnly)
+    }
 
     fun playQueue(
         songs: List<SongItem>,
@@ -84,11 +103,29 @@ interface PlaybackController {
         play(song, songs)
     }
 
+    fun playQueueAtGeneration(
+        expectedGeneration: Long,
+        songs: List<SongItem>,
+        startIndex: Int = 0,
+        queueTitle: String? = null,
+    ) {
+        if (explicitPlaybackGeneration == expectedGeneration) playQueue(songs, startIndex, queueTitle)
+    }
+
     fun shuffleQueue(
         songs: List<SongItem>,
         queueTitle: String? = null,
         songsOnly: Boolean = false,
     )
+
+    fun shuffleQueueAtGeneration(
+        expectedGeneration: Long,
+        songs: List<SongItem>,
+        queueTitle: String? = null,
+        songsOnly: Boolean = false,
+    ) {
+        if (explicitPlaybackGeneration == expectedGeneration) shuffleQueue(songs, queueTitle, songsOnly)
+    }
 
     fun togglePlayPause()
 
@@ -114,7 +151,21 @@ interface PlaybackController {
 
     fun playNext(songs: List<SongItem>)
 
+    fun playNextAtGeneration(
+        expectedGeneration: Long,
+        songs: List<SongItem>,
+    ) {
+        if (playbackReplacementGeneration == expectedGeneration) playNext(songs)
+    }
+
     fun addToQueue(songs: List<SongItem>)
+
+    fun addToQueueAtGeneration(
+        expectedGeneration: Long,
+        songs: List<SongItem>,
+    ) {
+        if (playbackReplacementGeneration == expectedGeneration) addToQueue(songs)
+    }
 
     fun playQueueIndex(index: Int) {
         val snapshot = state.value
@@ -157,6 +208,8 @@ interface PlaybackController {
     fun toggleVideoMode() = Unit
 
     fun setVideoMode(wantVideo: Boolean) = Unit
+
+    fun reportVideoPlaybackFailure() = setVideoMode(false)
 
     fun startCastDiscovery() = Unit
 

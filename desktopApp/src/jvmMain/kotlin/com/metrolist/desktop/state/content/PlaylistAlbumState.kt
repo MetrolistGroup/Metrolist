@@ -11,6 +11,7 @@ import androidx.compose.runtime.setValue
 import com.metrolist.desktop.state.app.AppState
 import com.metrolist.desktop.state.app.DesktopNavigation
 import com.metrolist.desktop.state.playback.PlayerState
+import com.metrolist.desktop.storage.DownloadManager
 import com.metrolist.innertubex.InnerTube
 import com.metrolist.innertubex.InnerTubeHttpException
 import com.metrolist.shared.api.PlaylistNotFoundException
@@ -26,10 +27,12 @@ import com.metrolist.shared.generated.resources.Res
 import com.metrolist.shared.generated.resources.error_occurred
 import com.metrolist.shared.generated.resources.playlist_removed_from_youtube
 import com.metrolist.shared.model.AlbumPage
+import com.metrolist.shared.model.EpisodeItem
 import com.metrolist.shared.model.PlaylistItem
 import com.metrolist.shared.model.SongItem
 import com.metrolist.shared.model.YTItem
 import com.metrolist.shared.model.moveSelection
+import com.metrolist.shared.model.preservePlaylistOccurrenceMappings
 import com.metrolist.shared.playlist.PlaylistChanges
 import com.metrolist.shared.playlist.PlaylistPartiallyUpdatedException
 import com.metrolist.shared.playlist.addSongToStoredPlaylist
@@ -42,6 +45,7 @@ import com.metrolist.shared.playlist.setStoredPlaylistCover
 import com.metrolist.shared.playlist.updateStoredPlaylist
 import com.metrolist.shared.playlist.uploadStoredPlaylistCover
 import com.metrolist.shared.settings.BlockedContent
+import com.metrolist.shared.settings.Settings
 import com.metrolist.shared.state.GlobalYouTube
 import com.metrolist.shared.state.GlobalYouTubeRepository
 import com.metrolist.shared.ui.navigation.Screen
@@ -157,6 +161,8 @@ object PlaylistAlbumState {
         database: MusicDatabase,
         repository: () -> YouTubeRepository,
     ) {
+        val previousPlaylistSongs = unfilteredPlaylistData.playlistSongs().takeIf { selectedPlaylistId == id }.orEmpty()
+        var invocationPlaylistSongs = previousPlaylistSongs
         try {
             val localPlaylist =
                 withContext(Dispatchers.IO) {
@@ -178,8 +184,10 @@ object PlaylistAlbumState {
                     localSongs.map {
                         it.toSongItem().copy(
                             playlistLocalMappingId = if (headerItem.isLocal) it.map.id else null,
+                            playlistOccurrenceId = "local:${it.map.id}",
                         )
                     }
+                invocationPlaylistSongs = songItems
                 if (selectedPlaylistId == id) {
                     playlistHasMore = !hasCompleteStoredPlaylist(localPlaylist.playlist, songItems)
                     playlistDurationComplete = !playlistHasMore
@@ -230,14 +238,22 @@ object PlaylistAlbumState {
                                     playlistHasMore = firstPage.hasMore
                                     playlistDurationComplete = !firstPage.hasMore && !firstPage.isOffline
                                     playlistTrackCount = firstPage.songs.size
-                                    unfilteredPlaylistData = sections
+                                    unfilteredPlaylistData =
+                                        sections.withPlaylistSongs(
+                                            sections.playlistSongs().preservePlaylistOccurrenceMappings(invocationPlaylistSongs),
+                                        )
                                     playlistData = unfilteredPlaylistData.withoutBlockedContent()
                                 }
                             }
                         }
                     }
                 }
-            val unfilteredResult = loadedPage.sections
+            val unfilteredResult =
+                loadedPage.sections.let { sections ->
+                    sections.withPlaylistSongs(
+                        sections.playlistSongs().preservePlaylistOccurrenceMappings(invocationPlaylistSongs),
+                    )
+                }
             val playlist = unfilteredResult["header"]?.firstOrNull() as? PlaylistItem
             val storedCustom =
                 withContext(Dispatchers.IO) {
@@ -328,14 +344,65 @@ object PlaylistAlbumState {
                     withContext(Dispatchers.IO) {
                         setStoredPlaylistBookmarked(database, GlobalYouTubeRepository.instance, id, playlist, bookmarked, songCount)
                     }
-                if (selectedPlaylistId != id) return@launch
                 if (result.isSuccess) {
-                    isPlaylistBookmarked = bookmarked
-                    LibraryContentState.fetchLibraryData()
-                } else {
+                    if (selectedPlaylistId == id) {
+                        isPlaylistBookmarked = bookmarked
+                        LibraryContentState.fetchLibraryData()
+                    }
+                    if (bookmarked && Settings.shared.autoDownloadSavedCollections) {
+                        downloadBookmarkedPlaylist(id)
+                    }
+                } else if (selectedPlaylistId == id) {
                     AppState.snackbarHostState.showSnackbar(getString(Res.string.error_occurred))
                 }
             }
+    }
+
+    private fun downloadBookmarkedPlaylist(id: String) {
+        val activeLoad = playlistLoadJob.takeIf { selectedPlaylistId == id }
+        AppState.scope.launch {
+            try {
+                activeLoad?.join()
+                val playlist =
+                    withContext(Dispatchers.IO) {
+                        database.dao().playlist(id).first()
+                            ?: database.dao().playlistByBrowseId(id.removePrefix("VL")).first()
+                            ?: database.dao().playlistByBrowseId(id).first()
+                    }
+                val storedSongs =
+                    playlist
+                        ?.let {
+                            withContext(Dispatchers.IO) {
+                                database
+                                    .dao()
+                                    .playlistSongs(it.id)
+                                    .first()
+                                    .map { song -> song.toSongItem() }
+                            }
+                        }.orEmpty()
+                val songs =
+                    if (playlist?.playlist?.isLocal == true) {
+                        storedSongs
+                    } else if (playlist != null && hasCompleteStoredPlaylist(playlist.playlist, storedSongs)) {
+                        storedSongs
+                    } else {
+                        withContext(Dispatchers.IO) {
+                            val repository = GlobalYouTubeRepository.instance
+                            val firstPage = database.loadAndCachePlaylistPage(repository, id)
+                            if (firstPage.hasMore) {
+                                repository.completePlaylistPage(firstPage, applyContentFilters = false).songs
+                            } else {
+                                firstPage.songs
+                            }
+                        }
+                    }
+                DownloadManager.downloadAll(BlockedContent.filterSongs(songs))
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                AppState.snackbarHostState.showSnackbar(getString(Res.string.error_occurred))
+            }
+        }
     }
 
     fun restoreAlbum(id: String): Boolean {
@@ -751,6 +818,18 @@ object PlaylistAlbumState {
 
     private fun Map<String, List<YTItem>>.withoutBlockedContent(): Map<String, List<YTItem>> =
         mapValues { (title, items) -> if (title == "header") items else BlockedContent.filterItems(items) }
+
+    private fun Map<String, List<YTItem>>.withPlaylistSongs(songs: List<SongItem>): Map<String, List<YTItem>> {
+        if (containsKey("Tracks")) return this + ("Tracks" to songs) + ("Continuation" to emptyList())
+        if (containsKey("Continuation")) return this + ("Continuation" to songs)
+        return mapValues { (title, items) ->
+            if (title.equals("header", ignoreCase = true) || title.contains("suggest", ignoreCase = true)) {
+                items
+            } else {
+                items.filterNot { it is SongItem || it is EpisodeItem }
+            }
+        }.filterValues { it.isNotEmpty() } + ("songs" to songs)
+    }
 }
 
 internal fun canRestoreAlbum(

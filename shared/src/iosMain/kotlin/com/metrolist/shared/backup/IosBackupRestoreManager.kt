@@ -3,6 +3,7 @@ package com.metrolist.shared.backup
 import androidx.sqlite.SQLiteConnection
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
 import com.metrolist.shared.db.DATABASE_VERSION
+import com.metrolist.shared.db.MusicDatabase
 import com.metrolist.shared.db.entities.toSongItem
 import com.metrolist.shared.db.getIosDatabaseBuilder
 import com.metrolist.shared.db.iosDatabaseFilePath
@@ -20,6 +21,8 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.withContext
@@ -52,6 +55,15 @@ import platform.posix.link
 import platform.posix.realpath
 import platform.posix.rename
 
+private val SQLITE_HEADER = "SQLite format 3\u0000".encodeToByteArray()
+private const val MAX_FOREIGN_ARCHIVE_ENTRIES = 4096
+private const val MAX_ZIP_CENTRAL_DIRECTORY_BYTES = 16L * 1024 * 1024
+private const val PRISM_ARCHIVE_DIRECTORY = ".prism/"
+private const val PRISM_ARTIST_PREFERENCES = "shared_prefs/artist_prefs.xml"
+
+internal val iosBackupOperationMutex = Mutex()
+
+/** File-based backup API; copy document-provider URLs into the app container before calling. */
 @OptIn(ExperimentalForeignApi::class, BetaInteropApi::class)
 class IosBackupRestoreManager(
     private val databasePath: String = iosDatabaseFilePath(),
@@ -121,33 +133,196 @@ class IosBackupRestoreManager(
 
     suspend fun backup(destinationPath: String): Result<Unit> =
         withContext(Dispatchers.IO) {
-            operationMutex.lock()
+            iosBackupOperationMutex.lock()
             try {
                 backupLocked(destinationPath)
             } finally {
-                operationMutex.unlock()
+                iosBackupOperationMutex.unlock()
             }
         }
 
-    private fun backupLocked(destinationPath: String): Result<Unit> {
+    suspend fun importForeignBackup(
+        sourcePath: String,
+        database: MusicDatabase,
+    ): Result<ForeignImportSummary> =
+        withContext(Dispatchers.IO) {
+            val stagingPath = temporaryPath("foreign-import")
+            val staging = stagingPath.toPath()
+            val fs = FileSystem.SYSTEM
+            try {
+                fs.createDirectories(staging)
+                val (sourceSize, header) =
+                    fileSeekableSource(sourcePath).use { source ->
+                        source.size to if (source.size >= SQLITE_HEADER.size) source.readFully(0, SQLITE_HEADER.size) else ByteArray(0)
+                    }
+                if (header.contentEquals(SQLITE_HEADER)) {
+                    requireBackupSize(sourceSize, BackupArchiveLimits.DATABASE_BYTES)
+                    val candidate = "$stagingPath/source.db"
+                    copyFile(sourcePath, candidate, BackupArchiveLimits.DATABASE_BYTES)
+                    return@withContext readAndImportForeignDatabase(candidate, database)
+                }
+                val databases = mutableListOf<String>()
+                val prismDataFiles = mutableMapOf<String, String>()
+                validateZipEntryCount(
+                    sourcePath,
+                    MAX_FOREIGN_ARCHIVE_ENTRIES,
+                    allowNestedPaths = true,
+                    maximumUncompressedBytes = BackupArchiveLimits.TOTAL_UNCOMPRESSED_BYTES,
+                )
+                ZipFile(fileSeekableSource(sourcePath)).use { archive ->
+                    requireBackupSize(archive.entries.size.toLong(), MAX_FOREIGN_ARCHIVE_ENTRIES.toLong())
+                    var total = 0L
+                    archive.entries.forEach { entry ->
+                        val prismEntry = entry.name.removePrefix(PRISM_ARCHIVE_DIRECTORY)
+                        if (isPrismBackupDataEntry(prismEntry) || prismEntry == PRISM_ARTIST_PREFERENCES) {
+                            check(prismEntry !in prismDataFiles) { "Backup contains duplicate Prism library files" }
+                            check(entry.size >= 0) { "Backup entry size is invalid" }
+                            val limit =
+                                minOf(
+                                    BackupArchiveLimits.SETTINGS_BYTES,
+                                    BackupArchiveLimits.TOTAL_UNCOMPRESSED_BYTES - total,
+                                )
+                            requireBackupSize(entry.size, limit)
+                            val target = "$stagingPath/prism/$prismEntry"
+                            fs.createDirectories(target.toPath().parent!!)
+                            val copied =
+                                archive.getInputStream(entry).use { input ->
+                                    IosFileOutputStream(target).use { output ->
+                                        input.copyTo(output, limit)
+                                    }
+                                }
+                            total += copied
+                            requireBackupSize(total, BackupArchiveLimits.TOTAL_UNCOMPRESSED_BYTES)
+                            prismDataFiles[prismEntry] = target
+                            return@forEach
+                        }
+                        val name = entry.name.substringAfterLast('/').substringAfterLast('\\')
+                        check(entry.size >= 0) { "Backup entry size is invalid" }
+                        val isSidecar = name.endsWith("-wal") || name.endsWith("-shm")
+                        val shouldStage = name.isNotBlank() && !name.startsWith('.') && "exoplayer" !in name.lowercase()
+                        val entryLimit = if (shouldStage) BackupArchiveLimits.DATABASE_BYTES else BackupArchiveLimits.UNKNOWN_ENTRY_BYTES
+                        val limit = minOf(entryLimit, BackupArchiveLimits.TOTAL_UNCOMPRESSED_BYTES - total)
+                        requireBackupSize(entry.size, limit)
+                        val target = if (shouldStage) "$stagingPath/$name" else null
+                        val copied =
+                            archive.getInputStream(entry).use { input ->
+                                if (target ==
+                                    null
+                                ) {
+                                    input.copyTo(DiscardOutputStream, limit)
+                                } else {
+                                    val prefix = ByteArray(SQLITE_HEADER.size)
+                                    var prefixSize = 0
+                                    while (prefixSize < prefix.size) {
+                                        val count = input.read(prefix, prefixSize, prefix.size - prefixSize)
+                                        if (count <= 0) break
+                                        prefixSize += count
+                                    }
+                                    if (isSidecar || (prefixSize == prefix.size && prefix.contentEquals(SQLITE_HEADER))) {
+                                        check(!fs.exists(target.toPath())) { "Backup contains duplicate file names" }
+                                        IosFileOutputStream(target).use { output ->
+                                            output.write(prefix, 0, prefixSize)
+                                            prefixSize + input.copyTo(output, limit - prefixSize)
+                                        }
+                                    } else {
+                                        prefixSize + input.copyTo(DiscardOutputStream, limit - prefixSize)
+                                    }
+                                }
+                            }
+                        total += copied
+                        requireBackupSize(total, BackupArchiveLimits.TOTAL_UNCOMPRESSED_BYTES)
+                        if (target != null && fs.exists(target.toPath()) && !isSidecar && hasSqliteHeader(target)) {
+                            databases += target
+                        } else if (target != null && !isSidecar) {
+                            fs.delete(target.toPath(), mustExist = false)
+                        }
+                    }
+                }
+                val library =
+                    databases.firstNotNullOfOrNull { candidate ->
+                        runCatching {
+                            BundledSQLiteDriver().open(candidate).use { connection ->
+                                connection.takeIf { it.detectForeignLibraryFamily() != null }?.readForeignLibrary()
+                            }
+                        }.getOrNull()
+                    } ?: throw UnsupportedForeignLibraryException()
+                val enhanced =
+                    library.withPrismBackupData { entry ->
+                        prismDataFiles[entry]?.let { path -> fs.read(path.toPath()) { readUtf8() } }
+                    }
+                val favorites =
+                    prismDataFiles[PRISM_ARTIST_PREFERENCES]?.let { path ->
+                        fs.read(path.toPath()) { readUtf8() }
+                    }
+                Result.success(database.importForeignLibrary(enhanced.withPrismArtistPreferences(favorites)))
+            } catch (error: CancellationException) {
+                throw error
+            } catch (error: Exception) {
+                Result.failure(error)
+            } finally {
+                runCatching { fs.deleteRecursively(staging, mustExist = false) }
+            }
+        }
+
+    private suspend fun readAndImportForeignDatabase(
+        path: String,
+        database: MusicDatabase,
+    ): Result<ForeignImportSummary> =
+        try {
+            val library =
+                BundledSQLiteDriver().open(path).use { connection ->
+                    if (connection.detectForeignLibraryFamily() == null) throw UnsupportedForeignLibraryException()
+                    connection.readForeignLibrary()
+                }
+            Result.success(database.importForeignLibrary(library))
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: Exception) {
+            Result.failure(error)
+        }
+
+    private fun copyFile(
+        source: String,
+        destination: String,
+        limit: Long,
+    ) {
+        IosFileInputStream(source).use { input ->
+            IosFileOutputStream(destination).use { output -> input.copyTo(output, limit) }
+        }
+    }
+
+    private fun hasSqliteHeader(path: String): Boolean {
+        val file = path.toPath()
+        if ((FileSystem.SYSTEM.metadata(file).size ?: 0L) < SQLITE_HEADER.size) return false
+        return FileSystem.SYSTEM.read(file) { readByteArray(SQLITE_HEADER.size.toLong()).contentEquals(SQLITE_HEADER) }
+    }
+
+    private suspend fun backupLocked(destinationPath: String): Result<Unit> {
+        val coroutineContext = currentCoroutineContext()
+        val checkActive = { coroutineContext.ensureActive() }
         val fileManager = NSFileManager.defaultManager
         val snapshotPath = temporaryPath("backup-snapshot")
         val archivePath = "$destinationPath.${NSUUID().UUIDString}.tmp"
         val previousPath = "$destinationPath.${NSUUID().UUIDString}.previous"
         return try {
+            check(!FileSystem.SYSTEM.exists(recoveryPath)) { "An interrupted restore still needs recovery" }
             val destination = resolveFilePath(destinationPath)
             val protectedPaths =
                 listOf(databasePath, "$databasePath-wal", "$databasePath-shm", "$databasePath-journal")
                     .map(::resolveFilePath)
                     .toSet()
             check(destination !in protectedPaths) { "Backup destination cannot replace the live database or its sidecars" }
+            checkActive()
             snapshotDatabase(databasePath, snapshotPath)
+            checkActive()
             val version = databaseVersion(snapshotPath)
+            checkActive()
             val settingsBytes = json.encodeToString(PortableSettings.serializer(), settings.exportBackupSettings()).encodeToByteArray()
             check(settingsBytes.size <= BackupArchiveLimits.SETTINGS_BYTES) { "Backup settings are too large" }
             check(fileManager.createFileAtPath(archivePath, contents = null, attributes = null)) { "Could not create backup archive" }
             IosFileOutputStream(archivePath).use { output ->
                 ZipOutputStream(output).use { zip ->
+                    checkActive()
                     zip.writeEntry(
                         BACKUP_MANIFEST_ENTRY,
                         json
@@ -157,8 +332,11 @@ class IosBackupRestoreManager(
                             ).encodeToByteArray(),
                     )
                     zip.writeEntry(BACKUP_SETTINGS_ENTRY, settingsBytes)
+                    checkActive()
                     zip.putNextEntry(ZipEntry(BACKUP_DATABASE_ENTRY))
-                    IosFileInputStream(snapshotPath).use { input -> input.copyTo(zip, BackupArchiveLimits.DATABASE_BYTES) }
+                    IosFileInputStream(snapshotPath).use { input ->
+                        input.copyTo(zip, BackupArchiveLimits.DATABASE_BYTES, checkActive)
+                    }
                     zip.closeEntry()
                 }
             }
@@ -186,11 +364,11 @@ class IosBackupRestoreManager(
         reopenDatabase: suspend () -> Unit,
     ): Result<Unit> =
         withContext(Dispatchers.IO) {
-            operationMutex.lock()
+            iosBackupOperationMutex.lock()
             try {
                 restoreLocked(sourcePath, closeDatabase, reopenDatabase)
             } finally {
-                operationMutex.unlock()
+                iosBackupOperationMutex.unlock()
             }
         }
 
@@ -646,9 +824,17 @@ class IosBackupRestoreManager(
             name.length <= 255 &&
             !name.startsWith('/') &&
             '\\' !in name &&
+            '\u0000' !in name &&
             '/' !in name &&
             name != "." &&
             name != ".."
+
+    private fun isSafeForeignEntryName(name: String): Boolean {
+        if (name.isBlank() || name.length > 255 || name.startsWith('/') || '\\' in name || '\u0000' in name) return false
+        val path = name.removeSuffix("/")
+        val segments = path.split('/')
+        return path.isNotEmpty() && ':' !in segments.first() && segments.all { it.isNotEmpty() && it != "." && it != ".." }
+    }
 
     private fun entryLimit(name: String): Long =
         when (name) {
@@ -658,7 +844,12 @@ class IosBackupRestoreManager(
             else -> BackupArchiveLimits.UNKNOWN_ENTRY_BYTES
         }
 
-    private fun validateZipEntryCount(path: String) {
+    private fun validateZipEntryCount(
+        path: String,
+        maximumEntries: Int = BackupArchiveLimits.ENTRY_COUNT,
+        allowNestedPaths: Boolean = false,
+        maximumUncompressedBytes: Long = BackupArchiveLimits.TOTAL_UNCOMPRESSED_BYTES,
+    ) {
         fileSeekableSource(path).use { source ->
             requireBackupSize(source.size, MAX_ARCHIVE_BYTES)
             check(source.size >= 22) { "Backup archive is truncated" }
@@ -675,16 +866,22 @@ class IosBackupRestoreManager(
                     tail.readLeInt(offset) == 0x06054b50L &&
                         offset + 22 + tail.readLeShort(offset + 20) == tail.size
                 } ?: error("Backup archive is corrupt")
+            val eocdAbsoluteOffset = source.size - tail.size + eocd
+            check(
+                eocdAbsoluteOffset < 20 || source.readFully(eocdAbsoluteOffset - 20, 4).readLeInt(0) != 0x07064b50L,
+            ) { "ZIP64 backup archives are not supported" }
             check(tail.readLeShort(eocd + 4) == 0 && tail.readLeShort(eocd + 6) == 0) { "Split archives are not supported" }
             val count = tail.readLeShort(eocd + 10)
-            requireBackupSize(count.toLong(), BackupArchiveLimits.ENTRY_COUNT.toLong())
+            requireBackupSize(count.toLong(), maximumEntries.toLong())
             check(tail.readLeShort(eocd + 8) == count) { "Backup archive is corrupt" }
             val centralSize = tail.readLeInt(eocd + 12)
             val centralOffset = tail.readLeInt(eocd + 16)
             check(centralSize != 0xffffffffL && centralOffset != 0xffffffffL && centralOffset + centralSize <= source.size) {
                 "Backup archive is corrupt or uses unsupported ZIP64 features"
             }
+            requireBackupSize(centralSize, MAX_ZIP_CENTRAL_DIRECTORY_BYTES)
             var position = centralOffset
+            var totalUncompressedBytes = 0L
             repeat(count) {
                 val header = source.readFully(position, 46)
                 check(header.readLeInt(0) == 0x02014b50L) { "Backup archive central directory is corrupt" }
@@ -695,7 +892,13 @@ class IosBackupRestoreManager(
                 check(position + recordLength <= centralOffset + centralSize) { "Backup archive central directory is truncated" }
                 val nameBytes = source.readFully(position + 46, nameLength)
                 val name = nameBytes.decodeToString(throwOnInvalidSequence = true)
-                check(isSafeEntryName(name)) { "Backup contains an unsafe entry name" }
+                check(if (allowNestedPaths) isSafeForeignEntryName(name) else isSafeEntryName(name)) {
+                    "Backup contains an unsafe entry name"
+                }
+                val entryUncompressedBytes = header.readLeInt(24)
+                check(entryUncompressedBytes != 0xffffffffL) { "ZIP64 backup entries are not supported" }
+                requireBackupSize(entryUncompressedBytes, maximumUncompressedBytes - totalUncompressedBytes)
+                totalUncompressedBytes += entryUncompressedBytes
                 position += recordLength
             }
             check(position == centralOffset + centralSize) { "Backup archive central directory is corrupt" }
@@ -832,7 +1035,6 @@ class IosBackupRestoreManager(
         const val MAX_ARCHIVE_BYTES = BackupArchiveLimits.TOTAL_UNCOMPRESSED_BYTES + 2L * 1024 * 1024
 
         // shortcut: One lock serializes all databases; use per-database locks if multiple profiles are supported.
-        val operationMutex = Mutex()
     }
 }
 
@@ -848,10 +1050,12 @@ private fun ZipOutputStream.writeEntry(
 private fun InputStream.copyTo(
     output: OutputStream,
     limit: Long,
+    checkActive: () -> Unit = {},
 ): Long {
     val buffer = ByteArray(64 * 1024)
     var total = 0L
     while (true) {
+        checkActive()
         val count = read(buffer)
         if (count < 0) return total
         check(count > 0) { "Backup entry read made no progress" }

@@ -155,12 +155,13 @@ fun SongDetailsContent(
         }
         val storedSong = localSong?.song
         val storedFormat = localSong?.format
-        val title = storedSong?.title ?: song.title
+        val title = storedSong?.customTitle ?: storedSong?.title ?: song.title
         val artistText =
-            localSong
-                ?.orderedArtists
-                ?.joinToString(", ") { it.name }
-                ?.takeIf { it.isNotBlank() }
+            storedSong?.customArtist?.takeIf(String::isNotBlank)
+                ?: localSong
+                    ?.orderedArtists
+                    ?.joinToString(", ") { it.name }
+                    ?.takeIf { it.isNotBlank() }
                 ?: song.artists.joinToString(", ") { it.displayName }
         val albumText = storedSong?.albumName ?: localSong?.album?.title ?: song.album?.name
         val duration = storedSong?.duration?.takeIf { it >= 0 }?.toLong() ?: song.duration

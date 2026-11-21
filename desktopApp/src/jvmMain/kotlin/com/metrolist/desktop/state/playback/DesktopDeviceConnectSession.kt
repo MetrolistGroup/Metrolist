@@ -34,6 +34,8 @@ internal class DesktopDeviceConnectSession(
         private set
     var trackRevision = -1L
         private set
+    var targetCurrentIndex = -1
+        private set
     var desiredPlaying = false
         private set
     var baseSpeed = Settings.shared.playbackSpeed
@@ -46,6 +48,8 @@ internal class DesktopDeviceConnectSession(
         private set
     var finite = false
         private set
+    var explicitRadioQueue = false
+        private set
 
     private data class QueueUndo(
         val removal: QueueRemoval,
@@ -53,9 +57,11 @@ internal class DesktopDeviceConnectSession(
         val removed: MusicQueueSnapshot,
         val sessionId: String,
         val revision: Long,
+        val wasPlaying: Boolean,
     )
 
     private var undo: QueueUndo? = null
+    private var requestedPlaying: Boolean? = null
 
     // UI undo can outlive the session; weak identity keeps old remote removals from becoming local undos.
     private val connectedRemovals = mutableListOf<WeakReference<QueueRemoval>>()
@@ -63,6 +69,7 @@ internal class DesktopDeviceConnectSession(
     fun acknowledge(snapshot: DcPlaybackSnapshot) {
         sessionId = snapshot.sessionId
         trackRevision = snapshot.trackRevision
+        targetCurrentIndex = snapshot.playback.queue.currentIndex
         baseSpeed = snapshot.playback.speed
     }
 
@@ -72,26 +79,43 @@ internal class DesktopDeviceConnectSession(
     }
 
     fun applyPlayback(playback: DcLocalPlaybackState) {
-        desiredPlaying = playback.playing
+        targetCurrentIndex = playback.queue.currentIndex
+        val requested = requestedPlaying
+        if (requested == null) {
+            desiredPlaying = playback.playing
+        } else if (playback.playing == requested) {
+            desiredPlaying = playback.playing
+            requestedPlaying = null
+        }
         title = playback.title
         finite = playback.finite
+        explicitRadioQueue = playback.explicitRadioQueue
         baseSpeed = playback.speed
     }
 
     fun resetQueueMetadata() {
         title = null
         finite = false
+        explicitRadioQueue = false
+        targetCurrentIndex = -1
         undo = null
     }
 
     fun disconnected() {
         sessionId = null
         trackRevision = -1L
+        targetCurrentIndex = -1
         undo = null
+        requestedPlaying = null
     }
 
     fun setPlaying(playing: Boolean) {
         desiredPlaying = playing
+    }
+
+    fun requestPlaying(playing: Boolean) {
+        setPlaying(playing)
+        requestedPlaying = playing
     }
 
     fun setReady(value: Boolean) {
@@ -109,17 +133,29 @@ internal class DesktopDeviceConnectSession(
     fun remove(
         indices: Set<Int>,
         expectedQueue: MusicQueueSnapshot,
+        successorIndex: Int?,
     ): QueueRemoval? {
         val sync = coordinator()
         val activeSession = sync.state.value.sessionId ?: return null
         val revision = sync.queueRevision ?: return null
-        val local = MusicQueue().apply { restore(expectedQueue) }
-        val removal = local.removeAt(indices) ?: return null
-        undo = QueueUndo(removal, expectedQueue, local.snapshot(), activeSession, revision + 1L)
+        val local =
+            MusicQueue().apply {
+                restore(expectedQueue)
+                targetCurrentIndex.takeIf { it in expectedQueue.displayedItems.indices }?.let(::skipTo)
+            }
+        val original = local.snapshot()
+        val removal = local.removeAt(indices, advanceCurrentToSuccessor = true, successorIndex = successorIndex) ?: return null
+        undo = QueueUndo(removal, original, local.snapshot(), activeSession, revision + 1L, desiredPlaying)
         connectedRemovals.removeAll { it.get() == null }
         connectedRemovals += WeakReference(removal)
         sync.intercept(
-            DcPlaybackCommand(DcPlaybackAction.REMOVE, indices = indices),
+            DcPlaybackCommand(
+                DcPlaybackAction.REMOVE,
+                indices = indices,
+                advanceCurrentToSuccessor = true,
+                successorIndex = successorIndex,
+                expectedTrackRevision = sync.trackRevision,
+            ),
             expectedQueueRevision = revision,
             expectedQueue = expectedQueue,
         )
@@ -142,6 +178,7 @@ internal class DesktopDeviceConnectSession(
                 DcPlaybackAction.RESTORE_QUEUE,
                 queue = pending.original,
                 indices = removal.items.mapTo(mutableSetOf()) { it.index },
+                startPlaying = pending.wasPlaying,
             ),
             expectedQueueRevision = pending.revision,
             expectedQueue = pending.removed,

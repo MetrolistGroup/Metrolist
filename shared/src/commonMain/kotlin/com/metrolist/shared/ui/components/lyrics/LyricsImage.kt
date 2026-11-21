@@ -30,7 +30,29 @@ internal fun toggleLyricsShareLine(
 internal fun selectedLyricsText(
     lyrics: List<LyricsEntry>,
     selected: Set<Int>,
-): String = selected.sorted().mapNotNull { lyrics.getOrNull(it)?.text?.takeIf(String::isNotBlank) }.joinToString("\n")
+): String =
+    selected
+        .sorted()
+        .mapNotNull { index ->
+            lyrics.getOrNull(index)?.let { entry ->
+                val mainText = entry.text.takeIf { !entry.isBackground && it.isNotBlank() }
+                val backgroundText =
+                    listOfNotNull(
+                        entry.text
+                            .takeIf { entry.isBackground && it.isNotBlank() }
+                            ?.trim()
+                            ?.removeSurrounding("(", ")"),
+                        entry.backgroundText
+                            ?.takeIf(String::isNotBlank)
+                            ?.trim()
+                            ?.removeSurrounding("(", ")"),
+                        entry.words?.backgroundText(),
+                    ).distinctBy(::normalizeBackgroundText)
+                        .joinToString(" ")
+                        .takeIf(String::isNotBlank)
+                listOfNotNull(mainText, backgroundText?.let { "($it)" }).joinToString(" ").takeIf(String::isNotBlank)
+            }
+        }.joinToString("\n")
 
 internal fun lyricsArtworkPalette(pixels: IntArray): List<Color> =
     QuantizerCelebi
@@ -75,16 +97,25 @@ internal fun blurLyricsArtwork(
 
 internal data class LyricsImageLayout(
     val contentScale: Float,
+    val story: Boolean = false,
 ) {
     val padding = 28f * contentScale
     val artworkSize = 64f * contentScale
-    val lyricsTop = 110f * contentScale
-    val footerTop = 340f - 72f * contentScale
+    val artworkX = if (story) padding + 18f * contentScale else padding
+    val cardTop = if (story) 30f else 0f
+    val artworkTop = if (story) maxOf(48f * contentScale, cardTop + 8f * contentScale) else padding
+    val titleTop = if (story) 58f * contentScale else 34f * contentScale
+    val artistTop = if (story) 84f * contentScale else 63f * contentScale
+    val lyricsTop = if (story) 138f * contentScale else 110f * contentScale
+    val footerTop = if (story) 544f else 340f - 72f * contentScale
     val lyricsWidth = 340f - 2f * padding
-    val lyricsHeight = footerTop - 12f * contentScale - lyricsTop
+    val lyricsHeight = footerTop - (if (story) 10f else 12f * contentScale) - lyricsTop
 }
 
-internal fun lyricsImageLayout(contentScale: Float): LyricsImageLayout = LyricsImageLayout(contentScale.coerceIn(0.6f, 1.35f))
+internal fun lyricsImageLayout(
+    contentScale: Float,
+    story: Boolean = false,
+): LyricsImageLayout = LyricsImageLayout(contentScale.coerceIn(0.6f, 1.35f), story)
 
 internal data class LyricsTextFit(
     val fontSize: Float,
@@ -94,6 +125,7 @@ internal data class LyricsTextFit(
 internal fun fitLyricsImageText(
     height: Float,
     textScale: Float,
+    maxFontSize: Float = 50f,
     measureHeight: (Float) -> Float,
 ): LyricsTextFit {
     fun fit(maximum: Float): Float {
@@ -105,7 +137,7 @@ internal fun fitLyricsImageText(
         }
         return low
     }
-    val automatic = fit(50f)
+    val automatic = fit(maxFontSize)
     val requested = automatic * textScale.coerceIn(0.5f, 2f)
     val fontSize = if (requested <= automatic) requested else fit(requested)
     return LyricsTextFit(fontSize, (height / measureHeight(fontSize).coerceAtLeast(1f)).coerceAtMost(1f))

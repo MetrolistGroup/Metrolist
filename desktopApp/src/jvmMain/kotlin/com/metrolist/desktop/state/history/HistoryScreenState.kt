@@ -42,6 +42,8 @@ class HistoryScreenState(
     var hasMore by mutableStateOf(false)
     private var loadJob: Job? = null
     private var pageJob: Job? = null
+    private var selectionJob: Job? = null
+    private var selectionRevision = 0L
     private val pageSize = 100
     private var loadedFilter: Triple<String, HistorySortMode, SortDirection>? = null
     private var uiSource: List<HistoryEntry>? = null
@@ -57,6 +59,7 @@ class HistoryScreenState(
     var sortDirection by mutableStateOf(SortDirection.DESCENDING)
     var sortMode by mutableStateOf(HistorySortMode.NEWEST)
     var selectedIds by mutableStateOf(emptySet<Long>())
+        private set
     var selectedHasRemoteEntries by mutableStateOf(false)
         private set
 
@@ -67,6 +70,7 @@ class HistoryScreenState(
         if (Triple(query, mode, direction) != loadedFilter) hasMore = false
         loadJob?.cancel()
         pageJob?.cancel()
+        selectionJob?.cancel()
         loadJob =
             scope.launch {
                 isLoading = true
@@ -77,7 +81,7 @@ class HistoryScreenState(
                     loadedFilter = Triple(query, mode, direction)
                     entries = local
                     hasMore = local.size == pageSize
-                    if (selectedIds.isNotEmpty()) selectedIds = selectedIds.intersect(readIds(query))
+                    reconcileSelection(query)
                 } catch (e: CancellationException) {
                     throw e
                 } catch (_: Exception) {
@@ -98,7 +102,7 @@ class HistoryScreenState(
                 pageJob?.cancel()
                 entries = synced
                 hasMore = !loadFailed && synced.size == pageSize
-                if (selectedIds.isNotEmpty()) selectedIds = selectedIds.intersect(readIds(query))
+                reconcileSelection(query)
             }
         return requireNotNull(loadJob)
     }
@@ -113,7 +117,9 @@ class HistoryScreenState(
         ids: Set<Long>,
         alsoRemote: Boolean,
         scope: CoroutineScope,
-    ): Job {
+    ): Job? {
+        if (ids.isEmpty()) return null
+        selectionJob?.cancel()
         isDeleting = true
         deletionFailed = false
         return scope.launch {
@@ -188,18 +194,44 @@ class HistoryScreenState(
             }
     }
 
+    private suspend fun reconcileSelection(query: String) {
+        while (query == debouncedQuery && selectedIds.isNotEmpty()) {
+            val revision = selectionRevision
+            val ids = readIds(query)
+            currentCoroutineContext().ensureActive()
+            if (query != debouncedQuery) return
+            if (revision == selectionRevision) {
+                selectedIds = selectedIds.intersect(ids)
+                return
+            }
+        }
+    }
+
+    fun toggleSelection(id: Long) {
+        selectionJob?.cancel()
+        selectionRevision++
+        selectedIds = if (id in selectedIds) selectedIds - id else selectedIds + id
+    }
+
     fun selectAll(
         ids: Set<Long>,
         scope: CoroutineScope,
     ) {
+        selectionJob?.cancel()
+        selectionRevision++
         if (ids.isEmpty() || ids.size < selectedIds.size) {
             selectedIds = emptySet()
         } else {
             val query = debouncedQuery
-            scope.launch {
-                val allIds = withContext(Dispatchers.IO) { readIds(query) }
-                if (query == debouncedQuery) selectedIds = allIds
-            }
+            selectionJob =
+                scope.launch {
+                    val allIds = withContext(Dispatchers.IO) { readIds(query) }
+                    currentCoroutineContext().ensureActive()
+                    if (query == debouncedQuery) {
+                        selectionRevision++
+                        selectedIds = allIds
+                    }
+                }
         }
     }
 

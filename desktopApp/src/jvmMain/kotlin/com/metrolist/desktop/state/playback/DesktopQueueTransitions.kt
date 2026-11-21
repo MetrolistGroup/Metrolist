@@ -49,6 +49,12 @@ internal class DesktopQueueTransitions(
     private var preloadSong: SongItem? = null
     private var preloadResource: PlaybackResource? = null
     private var preloadInstanceId = 0L
+    private var retiredPlaybackInstanceId: Long? = null
+
+    fun retireCurrentPlayback() {
+        retiredPlaybackInstanceId = player.currentPlaybackInstanceId
+        pendingEof = false
+    }
 
     fun cancel() {
         crossfadeJob?.cancel()
@@ -76,11 +82,16 @@ internal class DesktopQueueTransitions(
         return outgoing
     }
 
-    fun acceptsEof(instanceId: Long): Boolean =
-        (isCrossfading && instanceId == originalInstanceId) || instanceId == player.currentPlaybackInstanceId
+    fun acceptsPlaybackEvent(instanceId: Long): Boolean {
+        if (retiredPlaybackInstanceId != null && player.currentPlaybackInstanceId != retiredPlaybackInstanceId) {
+            retiredPlaybackInstanceId = null
+        }
+        if (instanceId == retiredPlaybackInstanceId) return false
+        return (isCrossfading && instanceId == originalInstanceId) || instanceId == player.currentPlaybackInstanceId
+    }
 
     fun onEof(instanceId: Long): Boolean {
-        if (!acceptsEof(instanceId)) return true
+        if (!acceptsPlaybackEvent(instanceId)) return true
         if (!allowed() || !hasCurrentTarget()) {
             cancel()
             return false

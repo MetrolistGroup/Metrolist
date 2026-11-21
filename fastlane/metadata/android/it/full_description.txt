@@ -3,19 +3,19 @@ Client YouTube Music per Android in stile Material 3
 Funzionalità:
 
 - Riproduzione di YouTube Music ultra rapida e senza interruzioni
-- Supporto per l'accesso a YouTube Music (utilizzabile appieno anche senza effettuare il login)
+- Supporto per l'accesso a YouTube Music (utilizzabile appieno anche senza login)
 - Design **Material 3 Expressive**
 - **Discord Rich Presence**, scrobbling tramite **Last.fm e ListenBrainz**
-- **Nessuna pubblicità**, mai
+- **Nessuna pubblicità**, per sempre
 - Ascolta insieme ad altre persone online in tempo reale
 - Trasmissione su **Google Cast**, F-Cast, dispositivi SONOS e tramite DLNA
 - Importazione di backup e playlist da oltre 29 altri client e 6 diversi servizi
 - Riconoscimento musicale tramite **Shazam**
-- Provider personalizzato ad alta velocità per i testi, con supporto per traduzione e traslitterazione
+- Provider per i testi personalizzato ad alta velocità, con supporto per traduzione e romanizzazione
 - Tradotta in oltre 15 lingue
 - Supporto per la **riproduzione video**
 - Filtri avanzati per i contenuti
 - **Canvas da Apple Music**, Spotify e YouTube Music
-- Diversi stili di lettore, copertina, miniplayer e sfondo tra cui scegliere
+- Diversi stili di lettore, copertina, minilettore e sfondo tra cui scegliere
 - Supporto per font e icone dell'app personalizzati
-- ... e molto altro ancora!
+- …e molto altro ancora!

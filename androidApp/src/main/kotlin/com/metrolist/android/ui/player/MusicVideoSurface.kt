@@ -68,6 +68,7 @@ fun MusicVideoSurface(
     modifier: Modifier = Modifier,
     cornerRadius: Dp = 12.dp,
     fillContainer: Boolean = false,
+    cropVideoToFill: Boolean = fillContainer,
     useSurfaceView: Boolean = false,
     showControls: Boolean = true,
     isPip: Boolean = false,
@@ -92,7 +93,7 @@ fun MusicVideoSurface(
             if (useSurfaceView) null else RoundedCornerOutlineProvider(with(density) { cornerRadius.toPx() })
         }
     val targetResizeMode =
-        if (fillContainer) {
+        if (cropVideoToFill) {
             AspectRatioFrameLayout.RESIZE_MODE_ZOOM
         } else {
             AspectRatioFrameLayout.RESIZE_MODE_FIT

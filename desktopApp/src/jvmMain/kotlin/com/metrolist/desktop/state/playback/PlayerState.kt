@@ -152,9 +152,11 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.jetbrains.compose.resources.getString
 import org.koin.core.context.GlobalContext
+import java.lang.ref.WeakReference
 import java.net.URI
 import java.nio.file.Files
 import java.nio.file.Path
+import java.util.concurrent.atomic.AtomicLong
 import kotlin.time.Clock
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
@@ -369,6 +371,7 @@ internal fun directPlaybackQueue(
             radioSongs
                 .filterNot { it.id == target.id || isBlocked(it) }
                 .distinctBy(SongItem::id),
+            classic = Settings.shared.classicRecommendations,
         )
 
 internal fun retainedAnimatedCoverUrl(
@@ -426,6 +429,23 @@ internal fun MusicPlayer.setPlaying(playing: Boolean) {
 }
 
 object PlayerState {
+    private val _explicitPlaybackGeneration = AtomicLong(0L)
+    val explicitPlaybackGeneration: Long
+        get() = _explicitPlaybackGeneration.get()
+    private val _playbackReplacementGeneration = AtomicLong(0L)
+    val playbackReplacementGeneration: Long
+        get() = _playbackReplacementGeneration.get()
+
+    fun reserveExplicitPlaybackGeneration(): Long {
+        _playbackReplacementGeneration.incrementAndGet()
+        return _explicitPlaybackGeneration.incrementAndGet()
+    }
+
+    fun reserveQueueAdditionGeneration(): Long {
+        _explicitPlaybackGeneration.incrementAndGet()
+        return _playbackReplacementGeneration.get()
+    }
+
     private val _listenTogetherPlaybackRequests = MutableSharedFlow<ListenTogetherPlaybackRequest>(extraBufferCapacity = 1)
     val listenTogetherPlaybackRequests: SharedFlow<ListenTogetherPlaybackRequest> = _listenTogetherPlaybackRequests.asSharedFlow()
     private val database by lazy { GlobalContext.get().get<MusicDatabase>() }
@@ -511,9 +531,21 @@ object PlayerState {
     internal var externalReportingEnabled = true
     private val syncSession by lazy { DesktopDeviceConnectSession(queue) { deviceConnect } }
 
+    @Volatile private var pendingExplicitRadioRequest = false
+
+    @Volatile private var explicitRadioRequestGeneration = 0L
+
+    @Volatile private var deviceRadioBootstrapJob: Job? = null
+    private var deviceRadioBootstrapPending = false
     private var controllerPlayback: DcLocalPlaybackState? = null
     private val deviceConnectPlayback =
         object : DeviceConnectPlaybackPort {
+            override fun onExplicitRadioRequest() {
+                explicitRadioRequestGeneration++
+                pendingExplicitRadioRequest = true
+                deviceRadioBootstrapJob?.cancel()
+            }
+
             override val canStartDefaultPlayback: Boolean get() = castManager.state.value.status == CastConnectionStatus.DISCONNECTED
 
             override suspend fun snapshot(): DcLocalPlaybackState =
@@ -533,6 +565,7 @@ object PlayerState {
                             player.playbackReady && player.loadFailure.value == null &&
                                 (!deviceConnect.isActive || syncSession.ready),
                         finite = syncSession.finite,
+                        explicitRadioQueue = syncSession.explicitRadioQueue,
                         scrobbleSession = scrobbleManager.session(),
                     )
                 }
@@ -717,6 +750,7 @@ object PlayerState {
     val queue = MusicQueue()
     internal val playbackConnected = MutableStateFlow(true)
     internal val desiredPlayback = MutableStateFlow(false)
+    private val localQueueRemovalPlaybackIntents = mutableListOf<Pair<WeakReference<QueueRemoval>, Boolean>>()
     var currentTrack: SongItem? by mutableStateOf(null)
         private set
     private val artwork = DesktopAnimatedArtwork(scope)
@@ -1065,11 +1099,12 @@ object PlayerState {
         song: SongItem,
         resource: PlaybackResource,
         generation: Long,
+        startedPlaying: Boolean = true,
     ) {
         if (deviceConnect.isActive && !deviceConnect.isFollowing) {
-            syncSession.setPlaying(true)
+            syncSession.setPlaying(startedPlaying)
             syncSession.setReady(true)
-            desiredPlayback.value = true
+            desiredPlayback.value = startedPlaying
             deviceConnect.localStateChanged(trackChanged = true)
         }
         if (resource.hasVideo) {
@@ -1079,7 +1114,7 @@ object PlayerState {
                 if (song.isVideoSong || UiState.showVideoViewer || UiState.showVideoFullscreen || isVideoActive) {
                     LyricsState.retimeCurrentLyricsIfPossible()
                 }
-                if (UiState.showVideoViewer || UiState.showVideoFullscreen || isVideoActive) {
+                if (startedPlaying && (UiState.showVideoViewer || UiState.showVideoFullscreen || isVideoActive)) {
                     startVideo()
                 }
             }
@@ -1177,19 +1212,22 @@ object PlayerState {
     private suspend fun fetchSelectedPlaybackResource(
         song: SongItem,
         generation: Long,
+        canCommit: () -> Boolean = { true },
     ): PlaybackResource? {
         var failure: Throwable? = null
         val resource =
             if (castManager.state.value.isConnected) {
                 withContext(Dispatchers.Main) {
-                    castPlayback.resolveTrack(song, onFailure = { failure = it }) { isCurrentPlaybackTransition(generation) }
+                    castPlayback.resolveTrack(song, onFailure = { failure = it }) {
+                        isCurrentPlaybackTransition(generation) && canCommit()
+                    }
                 }
             } else {
                 fetchPlaybackResource(song, showError = true, onFailure = { failure = it })
             }
         if (resource == null) {
             withContext(Dispatchers.Main) {
-                if (isCurrentPlaybackTransition(generation)) {
+                if (isCurrentPlaybackTransition(generation) && canCommit()) {
                     player.beginPendingPlayback(song)
                     updateCurrentTrack(song, startArtworkFetch = true)
                     reportPlayerError(
@@ -1438,7 +1476,7 @@ object PlayerState {
             player.streamFailure.collect { failure ->
                 val failedVideoId = failure.videoId
                 val failedPlaybackInstanceId = failure.playbackInstanceId ?: return@collect
-                if (failedPlaybackInstanceId != player.currentPlaybackInstanceId ||
+                if (!transitions.acceptsPlaybackEvent(failedPlaybackInstanceId) ||
                     interruptedNetworkPlaybackInstanceId == failedPlaybackInstanceId
                 ) {
                     return@collect
@@ -2047,7 +2085,7 @@ object PlayerState {
 
         scope.launch {
             player.onEOFPlaybackInstance.collect { completedPlaybackInstanceId ->
-                if (!transitions.acceptsEof(completedPlaybackInstanceId)) return@collect
+                if (!transitions.acceptsPlaybackEvent(completedPlaybackInstanceId)) return@collect
                 flushPodcastProgress()
                 completedCachePlaybackInstanceId.value = completedPlaybackInstanceId
                 if (deviceConnect.isActive) {
@@ -2303,6 +2341,26 @@ object PlayerState {
     ) = withContext(Dispatchers.Main) {
         if (!shouldCommit()) return@withContext
         val state = snapshot.playback
+        val queueIdentity = Triple(snapshot.sessionId, snapshot.queueRevision, snapshot.queueStateId)
+        val samePendingRadioSeed =
+            deviceRadioBootstrapPending && state.explicitRadioQueue && state.queue.displayedItems.size == 1 &&
+                syncSession.sessionId == snapshot.sessionId &&
+                queue.items.value
+                    .singleOrNull()
+                    ?.id ==
+                state.queue.displayedItems
+                    .single()
+                    .id
+        val startsExplicitRadio =
+            state.explicitRadioQueue && state.queue.displayedItems.size == 1 &&
+                (pendingExplicitRadioRequest || !syncSession.explicitRadioQueue || syncSession.sessionId != snapshot.sessionId)
+        pendingExplicitRadioRequest = false
+        if (startsExplicitRadio) {
+            deviceRadioBootstrapPending = true
+        } else if (appliedDeviceQueue != queueIdentity && !samePendingRadioSeed) {
+            deviceRadioBootstrapPending = false
+            deviceRadioBootstrapJob?.cancel()
+        }
         val reuseInitialTrack =
             syncSession.sessionId == null && !deviceConnect.isFollowing &&
                 deviceConnectCanReusePlayback(
@@ -2318,7 +2376,6 @@ object PlayerState {
         if (reuseInitialTrack) syncSession.setReady(true)
         syncSession.apply(snapshot)
         localRepeatMode = RepeatMode.valueOf(state.repeatMode.name)
-        val queueIdentity = Triple(snapshot.sessionId, snapshot.queueRevision, snapshot.queueStateId)
         if (appliedDeviceQueue != queueIdentity) {
             if (!queue.snapshots.value.hasSameStructure(state.queue)) queue.restore(state.queue)
             appliedDeviceQueue = queueIdentity
@@ -2369,7 +2426,34 @@ object PlayerState {
             player.isPlaying.value,
             state.scrobbleSession,
         )
-        if (!deviceConnect.isFollowing) maybePrefetchRecommendationsForCurrentQueue(track)
+        if (!deviceConnect.isFollowing) {
+            if (deviceRadioBootstrapPending) {
+                if (deviceRadioBootstrapJob?.isActive == true) return@withContext
+                val generation = playbackTransitionGeneration
+                val requestGeneration = explicitRadioRequestGeneration
+                deviceRadioBootstrapJob =
+                    scope.launch {
+                        try {
+                            val songs = freshRadioRecommendations(track.id, generation)
+                            if (requestGeneration == explicitRadioRequestGeneration && deviceRadioBootstrapPending &&
+                                syncSession.sessionId == snapshot.sessionId && queue.items.value
+                                    .singleOrNull()
+                                    ?.id == track.id &&
+                                syncSession.explicitRadioQueue && !deviceConnect.isFollowing
+                            ) {
+                                deviceRadioBootstrapPending = false
+                                appendRadioRecommendations(songs, generation)
+                            }
+                        } catch (error: CancellationException) {
+                            throw error
+                        } catch (error: Exception) {
+                            Logger.w("PlayerState", "Failed to start remote radio (${error::class.simpleName})")
+                        }
+                    }
+            } else {
+                maybePrefetchRecommendationsForCurrentQueue(track)
+            }
+        }
     }
 
     internal fun setPlayingFromSync(playing: Boolean) {
@@ -2428,8 +2512,11 @@ object PlayerState {
     private val castTimerVolume = DesktopSleepTimerCastVolume()
 
     private val related =
-        DesktopRelatedSongs(scope, { currentTrack?.id }) {
-            BlockedContent.filterPlayableSongs(GlobalYouTubeRepository.instance.startRadio(it)).drop(1).take(25)
+        DesktopRelatedSongs(scope, { currentTrack?.id }) { videoId ->
+            BlockedContent
+                .filterPlayableSongs(GlobalYouTubeRepository.instance.startRadio(videoId))
+                .filterNot { it.id == videoId }
+                .take(25)
         }
     var relatedSongs: List<SongItem>
         get() = related.songs
@@ -2470,6 +2557,7 @@ object PlayerState {
     var miniplayerFocusMode by Settings.shared::miniplayerFocusMode
 
     fun toggleShuffle() {
+        if (!isListenTogetherGuest()) _explicitPlaybackGeneration.incrementAndGet()
         if (deviceConnect.intercept(DcPlaybackCommand(DcPlaybackAction.SHUFFLE, enabled = !shuffleEnabled))) return
         if (isListenTogetherGuest()) return
         invalidatePersistedRestore()
@@ -2633,11 +2721,14 @@ object PlayerState {
 
     fun isListenTogetherGuest(): Boolean = ListenTogetherState.listenTogetherManager.isGuestPlaybackLocked
 
-    fun playQueueOccurrence(key: Long) {
-        val entry =
-            queue.state.value.entries
-                .firstOrNull { it.key == key } ?: return
-        playTrack(entry.song, queue.items.value)
+    fun playQueueOccurrence(
+        key: Long,
+        startPlayingOverride: Boolean? = null,
+    ) {
+        val state = queue.state.value
+        val index = state.entries.indexOfFirst { it.key == key }
+        val entry = state.entries.getOrNull(index) ?: return
+        playTrack(entry.song, queue.items.value, startIndex = index, queueEntryKey = key, startPlayingOverride = startPlayingOverride)
     }
 
     private fun localSongChangeStartsPlayback(): Boolean =
@@ -2651,9 +2742,20 @@ object PlayerState {
     fun shuffleQueue(
         songs: List<SongItem>,
         songsOnly: Boolean = false,
+        advanceGeneration: Boolean = true,
+        expectedReplacementGeneration: Long? = null,
     ) {
         val playable = BlockedContent.filterPlayableSongs(songs)
-        playable.randomOrNull()?.let { playTrack(it, playable, songsOnly, shuffleModeEnabled = true) }
+        playable.randomOrNull()?.let {
+            playTrack(
+                it,
+                playable,
+                songsOnly,
+                shuffleModeEnabled = true,
+                advanceGeneration = advanceGeneration,
+                expectedReplacementGeneration = expectedReplacementGeneration,
+            )
+        }
     }
 
     fun playTrack(
@@ -2661,11 +2763,37 @@ object PlayerState {
         list: List<SongItem>? = null,
         songsOnly: Boolean = false,
         shuffleModeEnabled: Boolean? = null,
+        startIndex: Int? = null,
+        queueEntryKey: Long? = null,
+        startPlayingOverride: Boolean? = null,
+        advanceGeneration: Boolean = true,
+        expectedReplacementGeneration: Long? = null,
     ) {
+        if (expectedReplacementGeneration != null &&
+            playbackReplacementGeneration != expectedReplacementGeneration
+        ) {
+            return
+        }
         if (track.isUnavailable) return
         if (list?.any { it.isUnavailable } == true) {
-            playTrack(track, list.filterNot { it.isUnavailable }, songsOnly, shuffleModeEnabled)
+            val playableList = list.filterNot { it.isUnavailable }
+            val playableStartIndex = startIndex?.let { list.take(it).count { song -> !song.isUnavailable } }
+            playTrack(
+                track,
+                playableList,
+                songsOnly,
+                shuffleModeEnabled,
+                startIndex = playableStartIndex,
+                queueEntryKey = queueEntryKey,
+                startPlayingOverride = startPlayingOverride,
+                advanceGeneration = advanceGeneration,
+                expectedReplacementGeneration = expectedReplacementGeneration,
+            )
             return
+        }
+        if (advanceGeneration) {
+            _playbackReplacementGeneration.incrementAndGet()
+            _explicitPlaybackGeneration.incrementAndGet()
         }
         val songs = list?.takeIf { it.isNotEmpty() } ?: listOf(track)
         val index = songs.indexOfPlaylistOccurrence(track).coerceAtLeast(0)
@@ -2674,7 +2802,7 @@ object PlayerState {
                 DcPlaybackCommand(
                     action,
                     songs = songs,
-                    index = index,
+                    index = startIndex ?: index,
                     finite = list != null,
                     enabled = shuffleModeEnabled,
                     preserveHistory =
@@ -2686,7 +2814,7 @@ object PlayerState {
             return
         }
         if (isListenTogetherGuest()) {
-            val startIndex = list?.indexOfFirst { it.id == track.id }?.coerceAtLeast(0) ?: 0
+            val startIndex = startIndex ?: list?.indexOfFirst { it.id == track.id }?.coerceAtLeast(0) ?: 0
             _listenTogetherPlaybackRequests.tryEmit(
                 ListenTogetherPlaybackRequest(
                     song = track,
@@ -2700,9 +2828,12 @@ object PlayerState {
         playTrackInternal(
             track,
             list,
-            startPaused = !localSongChangeStartsPlayback(),
+            startPaused = !(startPlayingOverride ?: localSongChangeStartsPlayback()),
             songsOnly = songsOnly || (list === queue.items.value && queue.recommendationsSongsOnly),
             shuffleModeEnabled = shuffleModeEnabled,
+            startIndex = startIndex,
+            queueEntryKey = queueEntryKey,
+            expectedReplacementGeneration = expectedReplacementGeneration,
         )
     }
 
@@ -2841,24 +2972,43 @@ object PlayerState {
         startPaused: Boolean = false,
         songsOnly: Boolean = false,
         shuffleModeEnabled: Boolean? = null,
+        startIndex: Int? = null,
+        queueEntryKey: Long? = null,
+        expectedReplacementGeneration: Long? = null,
     ) {
         cancelCrossfadeForManualAction()
         val restorePosition = pendingResumePosition?.takeIf { list?.isEmpty() == true && it.first == track.id }
         val generation = beginPlaybackTransition(resumePosition = restorePosition, preserveCast = true)
+
+        fun isAllowedByReplacement(): Boolean =
+            expectedReplacementGeneration == null || playbackReplacementGeneration == expectedReplacementGeneration
+
         desiredPlayback.value = !startPaused
         playbackTransitionJob =
             scope.launch {
+                if (!isCurrentPlaybackTransition(generation) || !isAllowedByReplacement()) return@launch
                 val playableTrack: SongItem
                 if (!list.isNullOrEmpty()) {
-                    val startIndex = list.indexOfPlaylistOccurrence(track).takeIf { it >= 0 } ?: 0
-                    if (list === queue.items.value) {
+                    val startIndex = startIndex ?: list.indexOfPlaylistOccurrence(track).takeIf { it >= 0 } ?: 0
+                    if (queueEntryKey != null) {
+                        val currentEntries = queue.state.value.entries
+                        val currentIndex = currentEntries.indexOfFirst { it.key == queueEntryKey }
+                        if (currentIndex < 0) {
+                            if (isCurrentPlaybackTransition(generation)) {
+                                isPlaybackResolving = false
+                                desiredPlayback.value = player.wantsPlayback
+                            }
+                            return@launch
+                        }
+                        queue.skipTo(currentIndex)
+                    } else if (list === queue.items.value) {
                         queue.skipTo(startIndex)
                     } else {
                         replaceQueue(list, startIndex, songsOnly = songsOnly, shuffleModeEnabled = shuffleModeEnabled)
                     }
                     playableTrack = queue
                         .currentItem()
-                        ?.takeIf { current -> !isSongBlocked(current) && list.any { it.id == current.id } }
+                        ?.takeIf { current -> !isSongBlocked(current) && (queueEntryKey != null || list.any { it.id == current.id }) }
                         ?: return@launch
                     Logger.i("PlayerState", "Set up queue with ${list.size} songs, starting at index $startIndex")
                 } else if (list == null) {
@@ -2874,9 +3024,18 @@ object PlayerState {
                 val resumePosition =
                     pendingResumePosition?.takeIf { it.first == playableTrack.id }?.second
                         ?: podcastResumePosition(playableTrack)
-                if (!isCurrentPlaybackTransition(generation)) return@launch
+                if (!isCurrentPlaybackTransition(generation) || !isAllowedByReplacement()) return@launch
                 pendingResumePosition = resumePosition?.let { playableTrack.id to it }
-                if (playCastTrack(playableTrack, generation, !startPaused, resumePosition ?: 0L)) return@launch
+                if (playCastTrack(
+                        playableTrack,
+                        generation,
+                        !startPaused,
+                        resumePosition ?: 0L,
+                        canCommit = ::isAllowedByReplacement,
+                    )
+                ) {
+                    return@launch
+                }
                 val preparePaused = startPaused || resumePosition != null
                 val forcedClientId = forcedPlaybackClientId()
                 val localResource =
@@ -2891,7 +3050,7 @@ object PlayerState {
                     } else {
                         null
                     }
-                if (!isCurrentPlaybackTransition(generation)) return@launch
+                if (!isCurrentPlaybackTransition(generation) || !isAllowedByReplacement()) return@launch
                 val pendingTransitionId = player.beginPendingPlayback(playableTrack)
                 if (currentTrack?.id != playableTrack.id || history.currentSongId != playableTrack.id) {
                     LyricsState.clearLyrics()
@@ -2907,28 +3066,43 @@ object PlayerState {
                 markVideoUnavailable()
                 video.setResolving(true)
                 if (localResource != null) {
+                    if (!isCurrentPlaybackTransition(generation) || !isAllowedByReplacement()) return@launch
                     val played =
-                        withContext(Dispatchers.IO) { player.playPending(playableTrack, localResource, pendingTransitionId, preparePaused) }
-                    if (played) {
+                        withContext(Dispatchers.IO) {
+                            player.playPending(playableTrack, localResource, pendingTransitionId, preparePaused) {
+                                isCurrentPlaybackTransition(generation) && isAllowedByReplacement()
+                            }
+                        }
+                    if (played && isCurrentPlaybackTransition(generation) && isAllowedByReplacement()) {
                         attachBackgroundVideoResource(playableTrack, generation)
                         Logger.i("PlayerState", "Started local playback")
-                    } else if (isCurrentPlaybackTransition(generation)) {
+                    } else if (!played && isCurrentPlaybackTransition(generation)) {
                         video.setResolving(false)
                     }
                 } else if (cachedResource != null) {
+                    if (!isCurrentPlaybackTransition(generation) || !isAllowedByReplacement()) return@launch
                     val played =
-                        withContext(
-                            Dispatchers.IO,
-                        ) { player.playPending(playableTrack, cachedResource, pendingTransitionId, preparePaused) }
-                    if (played) {
+                        withContext(Dispatchers.IO) {
+                            player.playPending(playableTrack, cachedResource, pendingTransitionId, preparePaused) {
+                                isCurrentPlaybackTransition(generation) && isAllowedByReplacement()
+                            }
+                        }
+                    if (played && isCurrentPlaybackTransition(generation) && isAllowedByReplacement()) {
                         attachBackgroundVideoResource(playableTrack, generation)
                         Logger.i("PlayerState", "Started cached playback")
-                    } else if (isCurrentPlaybackTransition(generation)) {
+                    } else if (!played && isCurrentPlaybackTransition(generation)) {
                         video.setResolving(false)
                     }
                 } else {
-                    val resource = withContext(Dispatchers.IO) { fetchSelectedPlaybackResource(playableTrack, generation) }
-                    if (resource != null && isCurrentPlaybackTransition(generation)) {
+                    val resource =
+                        withContext(Dispatchers.IO) {
+                            fetchSelectedPlaybackResource(
+                                playableTrack,
+                                generation,
+                                canCommit = ::isAllowedByReplacement,
+                            )
+                        }
+                    if (resource != null && isCurrentPlaybackTransition(generation) && isAllowedByReplacement()) {
                         val liveTrack = playableTrack.matchingLiveState(resource)
                         if (liveTrack !== playableTrack) {
                             queue.replaceCurrent(liveTrack)
@@ -2936,11 +3110,14 @@ object PlayerState {
                                 updateCurrentTrack(liveTrack, startArtworkFetch = false)
                             }
                         }
+                        if (!isCurrentPlaybackTransition(generation) || !isAllowedByReplacement()) return@launch
                         val played =
                             withContext(Dispatchers.IO) {
-                                player.playPending(liveTrack, resource, pendingTransitionId, preparePaused)
+                                player.playPending(liveTrack, resource, pendingTransitionId, preparePaused) {
+                                    isCurrentPlaybackTransition(generation) && isAllowedByReplacement()
+                                }
                             }
-                        if (played) {
+                        if (played && isCurrentPlaybackTransition(generation) && isAllowedByReplacement()) {
                             onTrackPlaybackStarted(liveTrack, resource, generation)
                             Logger.i("PlayerState", "Started playback")
                         }
@@ -2953,13 +3130,13 @@ object PlayerState {
                     pendingResumePosition?.second == resumePosition
                 ) {
                     val position = podcastResumePosition(playableTrack, player.duration.value)
-                    if (!isCurrentPlaybackTransition(generation)) return@launch
+                    if (!isCurrentPlaybackTransition(generation) || !isAllowedByReplacement()) return@launch
                     pendingResumePosition = position?.let { playableTrack.id to it }
                 }
                 if (completeDesktopPlaybackResume(
                         positionMs = pendingResumePosition?.second ?: resumePosition,
                         prepared = player.playbackReady,
-                        currentTransition = isCurrentPlaybackTransition(generation),
+                        currentTransition = isCurrentPlaybackTransition(generation) && isAllowedByReplacement(),
                         desiredPlaying = { desiredPlayback.value },
                         seek = player::seekTo,
                         setPlaying = player::setPlaying,
@@ -3138,8 +3315,13 @@ object PlayerState {
         startPlaying: Boolean,
         positionMs: Long = 0L,
         resource: PlaybackResource? = null,
-    ): Boolean =
-        when (castPlayback.replaceTrack(song, positionMs, startPlaying, resource) { isCurrentPlaybackTransition(generation) }) {
+        canCommit: () -> Boolean = { true },
+    ): Boolean {
+        return when (
+            castPlayback.replaceTrack(song, positionMs, startPlaying, resource) {
+                isCurrentPlaybackTransition(generation) && canCommit()
+            }
+        ) {
             DesktopCastTrackResult.LOCAL -> {
                 false
             }
@@ -3149,6 +3331,7 @@ object PlayerState {
             }
 
             DesktopCastTrackResult.LOADED -> {
+                if (!isCurrentPlaybackTransition(generation) || !canCommit()) return true
                 player.beginPendingPlayback(song)
                 updateCurrentTrack(song, startArtworkFetch = true)
                 markVideoUnavailable()
@@ -3158,6 +3341,7 @@ object PlayerState {
                 true
             }
         }
+    }
 
     private suspend fun playQueueTrack(
         song: SongItem,
@@ -3206,6 +3390,10 @@ object PlayerState {
         fromRemoteControl: Boolean = false,
         fromFailure: Boolean = false,
     ) {
+        if (!fromEOF && !fromFailure && !fromListenTogether) {
+            _playbackReplacementGeneration.incrementAndGet()
+            _explicitPlaybackGeneration.incrementAndGet()
+        }
         if ((fromEOF || fromFailure) && deviceConnect.isActive) {
             deviceConnect.playbackEnded()
             return
@@ -3384,6 +3572,15 @@ object PlayerState {
         fromListenTogether: Boolean = false,
         fromRemoteControl: Boolean = false,
     ) {
+        val currentPos = currentMediaPositionMs()
+        val isLive = isLiveStream
+
+        val previousIndex =
+            queue.state.value.let { desktopPreviousQueueIndex(it.currentIndex, it.entries.lastIndex, repeatMode, isLive) }
+        if (!fromListenTogether) {
+            if ((isLive || currentPos <= 3_000L) && previousIndex != null) _playbackReplacementGeneration.incrementAndGet()
+            _explicitPlaybackGeneration.incrementAndGet()
+        }
         if (!fromListenTogether && deviceConnect.intercept(DcPlaybackCommand(DcPlaybackAction.PREVIOUS))) return
         if (!fromListenTogether && isListenTogetherGuest()) return
 
@@ -3398,25 +3595,18 @@ object PlayerState {
                 localSongChangeStartsPlayback()
             }
         cancelCrossfadeForManualAction()
-        val currentPos = currentMediaPositionMs()
-
-        fun previousIndex(isLive: Boolean): Int? =
-            queue.state.value.let { desktopPreviousQueueIndex(it.currentIndex, it.entries.lastIndex, repeatMode, isLive) }
-
-        val isLive = isLiveStream
-        val restartPosition = desktopPreviousRestartPosition(pendingResumePosition, currentPos, isLive, previousIndex(isLive) != null)
+        val restartPosition = desktopPreviousRestartPosition(pendingResumePosition, currentPos, isLive, previousIndex != null)
         val generation = beginPlaybackTransition(resumePosition = restartPosition, preserveCast = true)
         desiredPlayback.value = startPlaying
         playbackTransitionJob =
             scope.launch {
-                val live = isLiveStream
-                val previous = if (live || currentPos <= 3_000L) previousIndex(live)?.let(queue::skipTo) else null
+                val previous = if (isLive || currentPos <= 3_000L) previousIndex?.let(queue::skipTo) else null
                 if (previous != null) {
                     val resource = withContext(Dispatchers.IO) { fetchSelectedPlaybackResource(previous, generation) }
                     if (resource != null && isCurrentPlaybackTransition(generation)) {
                         playQueueTrack(previous, resource, generation, startPlaying)
                     }
-                } else if (!live) {
+                } else if (!isLive) {
                     seekToPositionInternal(0)
                 }
             }
@@ -3438,14 +3628,24 @@ object PlayerState {
         skipPrevious(fromListenTogether = true)
     }
 
-    fun addToQueue(songs: List<SongItem>) {
-        if (deviceConnect.intercept(DcPlaybackCommand(DcPlaybackAction.ADD, songs = BlockedContent.filterPlayableSongs(songs)))) return
-        if (isListenTogetherGuest()) return
-
+    fun addToQueue(
+        songs: List<SongItem>,
+        advanceGeneration: Boolean = true,
+        expectedReplacementGeneration: Long? = null,
+    ) {
+        if (expectedReplacementGeneration != null &&
+            playbackReplacementGeneration != expectedReplacementGeneration
+        ) {
+            return
+        }
         val filteredSongs = BlockedContent.filterPlayableSongs(songs)
-        if (filteredSongs.isEmpty()) return
+        if (advanceGeneration && !isListenTogetherGuest() && filteredSongs.isNotEmpty()) {
+            _explicitPlaybackGeneration.incrementAndGet()
+        }
+        if (deviceConnect.intercept(DcPlaybackCommand(DcPlaybackAction.ADD, songs = filteredSongs))) return
+        if (isListenTogetherGuest() || filteredSongs.isEmpty()) return
 
-        enqueueSongs(filteredSongs, playNext = false)
+        enqueueSongs(filteredSongs, playNext = false, expectedReplacementGeneration = expectedReplacementGeneration)
     }
 
     fun addToQueue(song: SongItem) = addToQueue(listOf(song))
@@ -3508,7 +3708,13 @@ object PlayerState {
                 if (finishCurrentSong) {
                     startSleepTimer(0L, stopAfterCurrentSong = true, fadeOut = fadeOut)
                 } else {
-                    if (castManager.state.value.isConnected) castManager.pause() else setPlaybackPlaying(false)
+                    if (castManager.state.value.isConnected) {
+                        _explicitPlaybackGeneration.incrementAndGet()
+                        playbackTransitions.setPlaying(false)
+                        castManager.pause()
+                    } else {
+                        setPlaybackPlaying(false)
+                    }
                     clearSleepTimer()
                 }
             }
@@ -3544,37 +3750,58 @@ object PlayerState {
 
     fun fetchRelated(videoId: String) = related.fetch(videoId)
 
-    fun playNext(songs: List<SongItem>) {
-        if (deviceConnect.intercept(
-                DcPlaybackCommand(DcPlaybackAction.PLAY_NEXT, songs = BlockedContent.filterPlayableSongs(songs)),
-            )
+    fun playNext(
+        songs: List<SongItem>,
+        advanceGeneration: Boolean = true,
+        expectedReplacementGeneration: Long? = null,
+    ) {
+        if (expectedReplacementGeneration != null &&
+            playbackReplacementGeneration != expectedReplacementGeneration
         ) {
             return
         }
-        if (isListenTogetherGuest()) return
-
         val filteredSongs = BlockedContent.filterPlayableSongs(songs)
-        if (filteredSongs.isEmpty()) return
+        if (advanceGeneration && !isListenTogetherGuest() && filteredSongs.isNotEmpty()) {
+            _explicitPlaybackGeneration.incrementAndGet()
+        }
+        if (deviceConnect.intercept(DcPlaybackCommand(DcPlaybackAction.PLAY_NEXT, songs = filteredSongs))) return
+        if (isListenTogetherGuest() || filteredSongs.isEmpty()) return
 
-        enqueueSongs(filteredSongs, playNext = true)
+        enqueueSongs(filteredSongs, playNext = true, expectedReplacementGeneration = expectedReplacementGeneration)
     }
 
     private fun enqueueSongs(
         songs: List<SongItem>,
         playNext: Boolean,
+        expectedReplacementGeneration: Long? = null,
     ) {
         enqueueOrStartQueue(
             songs = songs,
             currentSong = currentTrack,
             preventDuplicates = Settings.shared.preventDuplicateTracksInQueue,
             startQueue = { additions, startPlaying ->
+                if (expectedReplacementGeneration != null &&
+                    playbackReplacementGeneration != expectedReplacementGeneration
+                ) {
+                    return@enqueueOrStartQueue
+                }
                 replaceQueue(additions)
                 val track = queue.currentItem() ?: return@enqueueOrStartQueue
                 updateCurrentTrack(track, startArtworkFetch = true)
                 desiredPlayback.value = startPlaying
-                playTrackInternal(track, emptyList(), startPaused = !startPlaying)
+                playTrackInternal(
+                    track,
+                    emptyList(),
+                    startPaused = !startPlaying,
+                    expectedReplacementGeneration = expectedReplacementGeneration,
+                )
             },
             enqueue = { additions ->
+                if (expectedReplacementGeneration != null &&
+                    playbackReplacementGeneration != expectedReplacementGeneration
+                ) {
+                    return@enqueueOrStartQueue
+                }
                 if (playNext) {
                     queue.playNext(additions, Settings.shared.preventDuplicateTracksInQueue)
                 } else {
@@ -3590,19 +3817,82 @@ object PlayerState {
     fun removeQueueItems(
         indices: Set<Int>,
         expectedQueue: MusicQueueSnapshot = queue.snapshots.value,
+        isUserAction: Boolean = true,
     ): QueueRemoval? {
         if (isListenTogetherGuest()) return null
-        if (deviceConnect.isActive) {
-            return syncSession.remove(indices, expectedQueue)
+        if (isUserAction) _explicitPlaybackGeneration.incrementAndGet()
+        val state = queue.state.value
+        val targetCurrentIndex =
+            if (deviceConnect.isActive) {
+                syncSession.targetCurrentIndex.takeIf { it in state.entries.indices } ?: state.currentIndex
+            } else {
+                state.currentIndex
+            }
+        val currentRemoved = targetCurrentIndex in indices
+        val nextEntry =
+            if (currentRemoved) {
+                state.entries
+                    .withIndex()
+                    .firstOrNull { (index, entry) ->
+                        index > targetCurrentIndex && index !in indices && !isSongBlocked(entry.song)
+                    }
+            } else {
+                null
+            }
+        val nextEntryKey = nextEntry?.value?.key
+        val nextEntryIndex = nextEntry?.index
+        val connectedSession = deviceConnect.isActive
+        val wasPlaying =
+            when {
+                castManager.state.value.isConnected -> castPlayback.playbackIntent(castManager.state.value.isPlaying)
+                isPlaybackResolving -> desiredPlayback.value
+                else -> player.wantsPlayback
+            }
+        val removal =
+            if (connectedSession) {
+                syncSession.remove(indices, expectedQueue, nextEntryIndex)
+            } else {
+                queue
+                    .removeAt(
+                        indices,
+                        advanceCurrentToSuccessor = currentRemoved,
+                        successorIndex = nextEntryIndex,
+                    ).also { removal ->
+                        if (removal != null) {
+                            if (currentRemoved) {
+                                playbackPosition.value = 0L
+                                playbackDuration.value =
+                                    nextEntryKey
+                                        ?.let { key ->
+                                            queue.state.value.entries
+                                                .firstOrNull { it.key == key }
+                                                ?.song
+                                                ?.duration
+                                        }?.times(1_000L) ?: 0L
+                                progress = 0f
+                                transitions.retireCurrentPlayback()
+                            }
+                            queueChanged()
+                        }
+                    }
+            } ?: return null
+        if (currentRemoved && !connectedSession) {
+            localQueueRemovalPlaybackIntents.removeAll { it.first.get() == null }
+            if (nextEntryKey == null) {
+                localQueueRemovalPlaybackIntents += WeakReference(removal) to wasPlaying
+                stop()
+            } else {
+                playQueueOccurrence(nextEntryKey)
+            }
         }
-        return queue.removeAt(indices).also { if (it != null) queueChanged() }
+        return removal
     }
 
     fun removeQueueOccurrence(key: Long): QueueRemoval? {
         if (isListenTogetherGuest() || Settings.shared.isQueueLocked) return null
         val state = queue.state.value
         val index = state.entries.indexOfFirst { it.key == key }
-        if (index <= state.currentIndex) return null
+        if (index < 0) return null
         return removeQueueItems(setOf(index), queue.snapshots.value)
     }
 
@@ -3615,11 +3905,10 @@ object PlayerState {
         val state = queue.state.value
         val from = state.entries.indexOfFirst { it.key == fromKey }
         val to = state.entries.indexOfFirst { it.key == toKey }
-        if (from <= state.currentIndex || to <= state.currentIndex || from == to) return
+        if (from < 0 || to < 0 || from == to) return
         val selected =
             state.entries.indices.filterTo(mutableSetOf()) {
-                it > state.currentIndex &&
-                    state.entries[it].key in selectedEntryKeys
+                state.entries[it].key in selectedEntryKeys
             }
         reorderQueue(
             state.entries.indices
@@ -3632,6 +3921,7 @@ object PlayerState {
         if (isListenTogetherGuest() || Settings.shared.isQueueLocked) return false
         val expectedQueue = queue.snapshots.value
         if (order.size != expectedQueue.displayedItems.size || order.toSet() != expectedQueue.displayedItems.indices.toSet()) return false
+        _explicitPlaybackGeneration.incrementAndGet()
         if (deviceConnect.intercept(
                 DcPlaybackCommand(DcPlaybackAction.REORDER, order = order),
                 expectedQueue = expectedQueue,
@@ -3646,9 +3936,40 @@ object PlayerState {
 
     fun restoreQueueItems(removal: QueueRemoval) {
         if (isListenTogetherGuest()) return
+        _explicitPlaybackGeneration.incrementAndGet()
         if (syncSession.restore(removal)) return
+        val previousSize = queue.state.value.entries.size
         queue.restore(removal)
+        val restored = queue.state.value.entries.size == previousSize + removal.items.size
         queueChanged()
+        if (restored && removal.items.any { it.index == removal.previousCurrentIndex } &&
+            queue.currentIndex.value == removal.previousCurrentIndex
+        ) {
+            val startPlayingOverride =
+                consumeLocalQueueRemovalPlaybackIntent(removal) ?: when {
+                    castManager.state.value.isConnected -> castPlayback.playbackIntent(castManager.state.value.isPlaying)
+                    isPlaybackResolving -> desiredPlayback.value
+                    else -> player.wantsPlayback
+                }
+            queue.state.value.entries
+                .getOrNull(queue.currentIndex.value)
+                ?.key
+                ?.let { playQueueOccurrence(it, startPlayingOverride) }
+        }
+    }
+
+    private fun consumeLocalQueueRemovalPlaybackIntent(removal: QueueRemoval): Boolean? {
+        val iterator = localQueueRemovalPlaybackIntents.iterator()
+        var intent: Boolean? = null
+        while (iterator.hasNext()) {
+            val (reference, wasPlaying) = iterator.next()
+            val candidate = reference.get()
+            if (candidate == null || candidate === removal) {
+                if (candidate === removal) intent = wasPlaying
+                iterator.remove()
+            }
+        }
+        return intent
     }
 
     fun moveQueueItem(
@@ -3656,6 +3977,7 @@ object PlayerState {
         to: Int,
         expectedQueue: MusicQueueSnapshot = queue.snapshots.value,
     ) {
+        if (!isListenTogetherGuest()) _explicitPlaybackGeneration.incrementAndGet()
         if (deviceConnect.intercept(
                 DcPlaybackCommand(DcPlaybackAction.MOVE, index = from, toIndex = to),
                 expectedQueue = expectedQueue,
@@ -3715,12 +4037,17 @@ object PlayerState {
     }
 
     fun startRadio(song: SongItem) {
+        if (!isListenTogetherGuest() && !isSongBlocked(song)) {
+            _playbackReplacementGeneration.incrementAndGet()
+            _explicitPlaybackGeneration.incrementAndGet()
+        }
         if (deviceConnect.intercept(
                 DcPlaybackCommand(
                     DcPlaybackAction.REPLACE_QUEUE,
                     songs = listOf(song),
                     index = 0,
                     finite = false,
+                    explicitRadioQueue = true,
                     positionMs = if (currentTrack?.id == song.id) player.currentPlaybackPositionMs() else 0L,
                     preserveCurrentTrack = true,
                 ),
@@ -3742,28 +4069,32 @@ object PlayerState {
     private suspend fun freshRadioRecommendations(
         seedId: String,
         generation: Long,
-    ): List<SongItem> {
+    ): DesktopRadioBootstrap? {
+        val classic = Settings.shared.classicRecommendations
         val repository = GlobalYouTubeRepository.instance
         val firstPage = repository.startRadioQueue(seedId)
         val page =
             recommendationHistory.select(
                 firstPage = firstPage,
+                classic = classic,
                 filter = { songs -> songs.filter { it.id != seedId && !isSongBlocked(it) } },
                 isCurrent = { isCurrentPlaybackTransition(generation) },
                 loadMore = { repository.continueRadioQueue(it) },
-            ) ?: return emptyList()
-        return firstPage.songs.filter { it.id == seedId } + page.songs
+            ) ?: return null
+        return DesktopRadioBootstrap(page.copy(songs = firstPage.songs.filter { it.id == seedId } + page.songs), classic)
     }
 
     private fun appendRadioRecommendations(
-        songs: List<SongItem>,
+        bootstrap: DesktopRadioBootstrap?,
         generation: Long,
     ) {
         if (!isCurrentPlaybackTransition(generation)) return
         initialRecommendationsGeneration = null
+        if (bootstrap == null) return
+        radio.acceptBootstrap(bootstrap)
         val blocked = BlockedContent.snapshot()
         val existing = queue.items.value.mapTo(mutableSetOf()) { it.id }
-        val additions = songs.filter { !it.isUnavailable && !blocked.isBlocked(it) && existing.add(it.id) }
+        val additions = bootstrap.page.songs.filter { !it.isUnavailable && !blocked.isBlocked(it) && existing.add(it.id) }
         if (additions.isNotEmpty()) {
             queue.addToQueue(additions)
             recommendationHistory.remember(additions)
@@ -3789,13 +4120,13 @@ object PlayerState {
                 try {
                     val recommendations =
                         async(Dispatchers.IO) {
-                            if (!Settings.shared.autoLoadMore) return@async emptyList()
+                            if (!Settings.shared.autoLoadMore) return@async null
                             try {
                                 freshRadioRecommendations(videoId, generation)
                             } catch (error: CancellationException) {
                                 throw error
                             } catch (_: Exception) {
-                                emptyList()
+                                null
                             }
                         }
                     val playerInfo =
@@ -3821,7 +4152,11 @@ object PlayerState {
                             )
                         }
                             ?: withContext(Dispatchers.IO) { GlobalYouTubeRepository.instance.getSongMetadata(videoId) }
-                            ?: recommendations.await().firstOrNull { it.id == videoId }
+                            ?: recommendations
+                                .await()
+                                ?.page
+                                ?.songs
+                                ?.firstOrNull { it.id == videoId }
                             ?: run {
                                 if (isCurrentPlaybackTransition(generation)) {
                                     reportPlayerError(getString(Res.string.playback_error_track_not_found))
@@ -3906,11 +4241,13 @@ object PlayerState {
     fun pause() = setPlaybackPlaying(false)
 
     fun setPlaybackPlaying(playing: Boolean) {
+        if (!isListenTogetherGuest()) _explicitPlaybackGeneration.incrementAndGet()
         if (deviceConnect.intercept(
                 DcPlaybackCommand(if (playing) DcPlaybackAction.PLAY else DcPlaybackAction.PAUSE),
                 expectedQueue = queue.snapshots.value,
             )
         ) {
+            syncSession.requestPlaying(playing)
             return
         }
         if (isListenTogetherGuest()) return
@@ -3919,6 +4256,10 @@ object PlayerState {
     }
 
     fun stop() {
+        if (!isListenTogetherGuest()) {
+            _playbackReplacementGeneration.incrementAndGet()
+            _explicitPlaybackGeneration.incrementAndGet()
+        }
         if (deviceConnect.intercept(DcPlaybackCommand(DcPlaybackAction.PAUSE))) return
         if (isListenTogetherGuest()) return
         playbackTransitions.begin()
@@ -4187,6 +4528,7 @@ object PlayerState {
                 queue.items.value.indices
                     .filter { queue.items.value[it].id == songId }
                     .toSet(),
+                isUserAction = false,
             )
             return
         }

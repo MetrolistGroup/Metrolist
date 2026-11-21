@@ -218,6 +218,7 @@ private fun buildBraccatoStatics(
             val timeWhereStart = { v: Float -> sd * (v - SWIPE_START_FROM) / (SWIPE_START_TO - SWIPE_START_FROM) }
             out.begin[i] = timeWhereEnd(index.toFloat() / letters).coerceIn(0f, sd)
             out.finish[i] = timeWhereStart((index + 1f) / letters).coerceIn(0f, sd)
+            out.lineEndMs = max(out.lineEndMs, (startMs + braccatoSwipeCompletionElapsedMs(animationDur)).toLong())
         }
 
         if (kind == KIND_LETTER) {
@@ -275,6 +276,14 @@ private fun buildBraccatoStatics(
         out.groupCx[i] = if (e != null) (e[0] + e[1]) / 2f else statics.baseX[i] + clusters[i].width / 2f
     }
     return out
+}
+
+internal fun braccatoSwipeCompletionElapsedMs(animationDurMs: Float): Float {
+    val swipeDur = animationDurMs * SWIPE_DURATION_RATIO
+    if (swipeDur <= 0f) return 0f
+    val lead = animationDurMs * SWIPE_LEAD_RATIO
+    val finish = (swipeDur * (1f - SWIPE_START_FROM) / (SWIPE_START_TO - SWIPE_START_FROM)).coerceIn(0f, swipeDur)
+    return max(0f, finish - lead)
 }
 
 private fun braccatoEdge(
