@@ -117,7 +117,7 @@ internal actual fun MobileMusicVideoSurface(
             surfaceVisible,
         )
     }
-    LaunchedEffect(video) {
+    LaunchedEffect(video, foreground, surfaceVisible) {
         while (isActive) {
             if (video.hasFailed()) {
                 controller.reportVideoPlaybackFailure()
@@ -127,10 +127,10 @@ internal actual fun MobileMusicVideoSurface(
                 controller.reportVideoPlaybackFailure()
                 break
             }
-            if (foreground) video.applyPendingSeek()
-            if (video.ready && video.positionSynchronized) {
+            if (foreground && surfaceVisible) video.applyPendingSeek()
+            if (foreground && surfaceVisible && video.ready && video.positionSynchronized) {
                 firstFrameRendered = true
-            } else if (!video.positionSynchronized) {
+            } else {
                 firstFrameRendered = false
             }
             delay(250)
