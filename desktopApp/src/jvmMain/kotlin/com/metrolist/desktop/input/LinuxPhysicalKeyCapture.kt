@@ -251,7 +251,6 @@ internal class LinuxPhysicalKeyCapture : PlatformPhysicalKeyCapture {
                 }
             if (!enabled) return
 
-            ready.countDown()
             x11.XFlush(activeEventDisplay)
             var nextModifierRefreshAt = monotonicMillis()
             if (refreshModifierKeycodes(openedControlDisplay)) {
@@ -259,6 +258,10 @@ internal class LinuxPhysicalKeyCapture : PlatformPhysicalKeyCapture {
             } else {
                 nextModifierRefreshAt = monotonicMillis() + REFRESH_RETRY_MILLIS
             }
+            // Enable is on the wire and the modifier map is known, so the dispatcher can rely on
+            // captured positions instead of falling back for the first symbol shortcut.
+            if (modifierMappingReady) available = true
+            ready.countDown()
             val eventFd = x11.XConnectionNumber(activeEventDisplay)
 
             @Suppress("UNCHECKED_CAST")
