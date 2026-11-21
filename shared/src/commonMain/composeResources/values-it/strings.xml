@@ -2050,8 +2050,8 @@
     <string name="recognition_match_found">Corrispondenza trovata</string>
     <string name="recognition_listening_hint">Avvicina il telefono alla musica</string>
     <string name="no_recognized_songs_hint">I brani che identifichi verranno mostrati qui.</string>
-    <string name="recognition_history_earlier">Meno recenti</string>
-    <string name="recognition_no_match_message">Non abbiamo potuto riconoscere questo brano.</string>
+    <string name="recognition_history_earlier">Precedenti</string>
+    <string name="recognition_no_match_message">Impossibile identificare questo brano.</string>
     <string name="import_error_playlist_tracks_unavailable">Impossibile caricare i brani della playlist da %1$s. Esporta la playlist e incolla l'elenco dei brani.</string>
     <string name="import_error_album_tracks_unavailable">Impossibile caricare i brani dell'album da %1$s. Esporta l'album e incolla l'elenco dei brani.</string>
     <string name="login">Accedi</string>
@@ -2152,7 +2152,7 @@
     <string name="home_offline_empty">Sei offline e non ci sono contenuti salvati per la schermata Home. Connettiti a Internet e aggiorna per caricare i consigli.</string>
     <string name="home_load_failed">Impossibile caricare la Home. Controlla la connessione e riprova.</string>
     <string name="library_load_failed">Impossibile caricare la libreria. Controlla la connessione e riprova.</string>
-    <string name="recognition_microphone_permission_description">Consenti l'accesso al microfono per riconoscere la musica. Se la richiesta di autorizzazione non compare più, abilitalo nelle impostazioni dell'app.</string>
+    <string name="recognition_microphone_permission_description">Consenti l'accesso al microfono per riconoscere la musica. Se la richiesta di autorizzazione non viene più visualizzata, abilitala nelle impostazioni dell'app.</string>
     <string name="app_font_reset_confirm">Rimuovere il carattere importato e usare quello di sistema?</string>
     <string name="android_auto_playlists_load_failed">Impossibile caricare tutte le playlist di YouTube.</string>
     <string name="import_choose_single_playlist">Scegli una playlist o i brani piaciuti da importare in una destinazione dedicata.</string>
