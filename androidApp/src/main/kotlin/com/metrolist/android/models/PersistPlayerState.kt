@@ -52,6 +52,7 @@ data class PersistPlayerState(
     val radioQueueContinuation: String? = null,
     val radioQueuePlaylistId: String? = null,
     val radioQueueParams: String? = null,
+    val radioQueueExplicitFeed: Boolean? = null,
     val revision: String? = null,
 ) : java.io.Serializable
 

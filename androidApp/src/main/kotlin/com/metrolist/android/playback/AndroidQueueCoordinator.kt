@@ -164,6 +164,7 @@ internal class AndroidQueueCoordinator(
             radioQueueContinuation = radioQueueContinuation,
             radioQueuePlaylistId = radioQueuePlaylistId,
             radioQueueParams = radioQueueParams,
+            radioQueueExplicitFeed = radioQueueExplicitFeed,
         )
     }
 
@@ -196,6 +197,10 @@ internal class AndroidQueueCoordinator(
             // restart its mode is unknown: discard it and let autoplay fetch a fresh page.
             radioQueuePlaylistId = state.radioQueuePlaylistId
             radioQueueParams = state.radioQueueParams
+            radioQueueExplicitFeed = state.radioQueueExplicitFeed ?: (
+                radioQueueParams != null ||
+                    radioQueuePlaylistId?.let { it != "RDAMVM$recommendationSeedSongId" } == true
+            )
             queueChipsState.value =
                 state.radioQueueChips.map { chip ->
                     RadioQueueChip(
@@ -557,8 +562,8 @@ internal class AndroidQueueCoordinator(
                                 requestClassic = requestClassic,
                                 replaceGeneratedSongs = false,
                                 generatedQueueSourceTitle = if (initial) QUEUE_SOURCE_AUTO_MIX else QUEUE_SOURCE_RECOMMENDED,
-                                playlistId = "RDAMVM$seedSongId",
-                                params = null,
+                                playlistId = radioQueuePlaylistId ?: "RDAMVM$seedSongId",
+                                params = radioQueueParams,
                                 allowRepeatMode = allowRepeatMode,
                             )
                         },

@@ -4066,29 +4066,32 @@ object PlayerState {
     private suspend fun freshRadioRecommendations(
         seedId: String,
         generation: Long,
-    ): List<SongItem> {
+    ): DesktopRadioBootstrap? {
+        val classic = Settings.shared.classicRecommendations
         val repository = GlobalYouTubeRepository.instance
         val firstPage = repository.startRadioQueue(seedId)
         val page =
             recommendationHistory.select(
                 firstPage = firstPage,
-                classic = Settings.shared.classicRecommendations,
+                classic = classic,
                 filter = { songs -> songs.filter { it.id != seedId && !isSongBlocked(it) } },
                 isCurrent = { isCurrentPlaybackTransition(generation) },
                 loadMore = { repository.continueRadioQueue(it) },
-            ) ?: return emptyList()
-        return firstPage.songs.filter { it.id == seedId } + page.songs
+            ) ?: return null
+        return DesktopRadioBootstrap(page.copy(songs = firstPage.songs.filter { it.id == seedId } + page.songs), classic)
     }
 
     private fun appendRadioRecommendations(
-        songs: List<SongItem>,
+        bootstrap: DesktopRadioBootstrap?,
         generation: Long,
     ) {
         if (!isCurrentPlaybackTransition(generation)) return
         initialRecommendationsGeneration = null
+        if (bootstrap == null) return
+        radio.acceptBootstrap(bootstrap)
         val blocked = BlockedContent.snapshot()
         val existing = queue.items.value.mapTo(mutableSetOf()) { it.id }
-        val additions = songs.filter { !it.isUnavailable && !blocked.isBlocked(it) && existing.add(it.id) }
+        val additions = bootstrap.page.songs.filter { !it.isUnavailable && !blocked.isBlocked(it) && existing.add(it.id) }
         if (additions.isNotEmpty()) {
             queue.addToQueue(additions)
             recommendationHistory.remember(additions)
@@ -4114,13 +4117,13 @@ object PlayerState {
                 try {
                     val recommendations =
                         async(Dispatchers.IO) {
-                            if (!Settings.shared.autoLoadMore) return@async emptyList()
+                            if (!Settings.shared.autoLoadMore) return@async null
                             try {
                                 freshRadioRecommendations(videoId, generation)
                             } catch (error: CancellationException) {
                                 throw error
                             } catch (_: Exception) {
-                                emptyList()
+                                null
                             }
                         }
                     val playerInfo =
@@ -4146,7 +4149,11 @@ object PlayerState {
                             )
                         }
                             ?: withContext(Dispatchers.IO) { GlobalYouTubeRepository.instance.getSongMetadata(videoId) }
-                            ?: recommendations.await().firstOrNull { it.id == videoId }
+                            ?: recommendations
+                                .await()
+                                ?.page
+                                ?.songs
+                                ?.firstOrNull { it.id == videoId }
                             ?: run {
                                 if (isCurrentPlaybackTransition(generation)) {
                                     reportPlayerError(getString(Res.string.playback_error_track_not_found))
