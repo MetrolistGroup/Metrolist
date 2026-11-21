@@ -1108,6 +1108,14 @@ class HomeViewModel(
                             cachedSelectedChipContent = failedChipSnapshot
                             failedChipSnapshot?.selectedChip?.let { chip -> cacheChipContent(chip, failedChipSnapshot) }
                             publishedPrimaryChipContent.update { it?.takeUnless { primary -> primary.first == generation } }
+                        } else {
+                            cachedSelectedChipContent =
+                                cachedSelectedChipContent
+                                    ?.takeIf { it.selectedChip == currentState.selectedChip }
+                                    ?.asOfflineSnapshot()
+                            cachedSelectedChipContent?.let { cached ->
+                                cached.selectedChip?.let { chip -> cacheChipContent(chip, cached, markFresh = false) }
+                            }
                         }
                     } finally {
                         if (generation == contentLoadGeneration) {
