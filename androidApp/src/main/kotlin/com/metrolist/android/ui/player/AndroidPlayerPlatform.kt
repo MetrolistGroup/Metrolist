@@ -417,7 +417,7 @@ class AndroidPlayerPlatform(
                     )
                 }
             },
-            onLoadProviderResults = { customTitle, customArtist ->
+            onLoadProviderResults = { customTitle, customArtist, provider ->
                 currentSong?.let { song ->
                     val defaultArtist = song.artists.joinToString { it.name }
                     val resolvedTitle = customTitle?.takeIf { it.isNotBlank() } ?: song.title
@@ -432,6 +432,7 @@ class AndroidPlayerPlatform(
                         duration = song.duration,
                         album = song.album,
                         isCustomQuery = isCustomQuery,
+                        selectedProvider = provider,
                     )
                 }
             },
