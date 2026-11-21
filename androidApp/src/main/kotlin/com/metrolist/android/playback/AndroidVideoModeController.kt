@@ -396,7 +396,11 @@ internal class AndroidVideoModeController(
 
                     if (!isCurrentVideoModeTarget(target, generation)) return@launch
                     if (playbackSong.id != sourceSong.id) {
-                        playbackSong = playbackSong.copy(originalQueueItemId = sourceSong.originalQueueItemId ?: sourceSong.id)
+                        playbackSong =
+                            playbackSong.copy(
+                                originalQueueItemId = sourceSong.originalQueueItemId ?: sourceSong.id,
+                                playlistOccurrenceId = sourceSong.playlistOccurrenceId,
+                            )
                     }
                     if (playbackSong.id != sourceSong.id &&
                         sync.intercept(

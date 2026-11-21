@@ -1747,7 +1747,10 @@ class MusicService :
                     if (selection.song.id == sourceSong.id) {
                         selection.song
                     } else {
-                        selection.song.copy(originalQueueItemId = sourceSong.originalQueueItemId ?: sourceSong.id)
+                        selection.song.copy(
+                            originalQueueItemId = sourceSong.originalQueueItemId ?: sourceSong.id,
+                            playlistOccurrenceId = sourceSong.playlistOccurrenceId,
+                        )
                     }
                 playbackPosition = selection.positionMs
                 if (!isCurrentRequest(expectedWantVideo = wantVideo)) return@withQueueLoading false
