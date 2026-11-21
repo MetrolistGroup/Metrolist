@@ -20,7 +20,7 @@ class DesktopPlaybackController(
 ) : PlaybackController {
     override val listState =
         combine(PlayerState.player.currentSong, PlayerState.player.isPlaying) { song, playing ->
-            PlaybackListState(song?.id, playing, song?.originalQueueItemId)
+            PlaybackListState(song?.id, playing)
         }.distinctUntilChanged()
 
     private val baseState =
@@ -73,11 +73,54 @@ class DesktopPlaybackController(
         songsOnly: Boolean,
     ) = PlayerState.playTrack(song, queue.ifEmpty { listOf(song) }, songsOnly = songsOnly)
 
+    override fun playAtGeneration(
+        expectedGeneration: Long,
+        song: SongItem,
+        queue: List<SongItem>,
+        songsOnly: Boolean,
+    ) {
+        if (explicitPlaybackGeneration != expectedGeneration) return
+        val replacementGeneration = playbackReplacementGeneration
+        PlayerState.playTrack(
+            song,
+            queue.ifEmpty { listOf(song) },
+            songsOnly = songsOnly,
+            advanceGeneration = false,
+            expectedReplacementGeneration = replacementGeneration,
+        )
+    }
+
+    override fun playQueueAtGeneration(
+        expectedGeneration: Long,
+        songs: List<SongItem>,
+        startIndex: Int,
+        queueTitle: String?,
+    ) {
+        val song = songs.getOrNull(startIndex) ?: return
+        playAtGeneration(expectedGeneration, song, songs)
+    }
+
     override fun shuffleQueue(
         songs: List<SongItem>,
         queueTitle: String?,
         songsOnly: Boolean,
     ) = PlayerState.shuffleQueue(songs, songsOnly)
+
+    override fun shuffleQueueAtGeneration(
+        expectedGeneration: Long,
+        songs: List<SongItem>,
+        queueTitle: String?,
+        songsOnly: Boolean,
+    ) {
+        if (explicitPlaybackGeneration != expectedGeneration) return
+        val replacementGeneration = playbackReplacementGeneration
+        PlayerState.shuffleQueue(
+            songs,
+            songsOnly,
+            advanceGeneration = false,
+            expectedReplacementGeneration = replacementGeneration,
+        )
+    }
 
     override fun currentPositionMs(): Long = PlayerState.currentMediaPositionMs()
 
@@ -99,7 +142,23 @@ class DesktopPlaybackController(
 
     override fun playNext(songs: List<SongItem>) = PlayerState.playNext(songs)
 
+    override fun playNextAtGeneration(
+        expectedGeneration: Long,
+        songs: List<SongItem>,
+    ) {
+        if (playbackReplacementGeneration != expectedGeneration) return
+        PlayerState.playNext(songs, advanceGeneration = false, expectedReplacementGeneration = expectedGeneration)
+    }
+
     override fun addToQueue(songs: List<SongItem>) = PlayerState.addToQueue(songs)
+
+    override fun addToQueueAtGeneration(
+        expectedGeneration: Long,
+        songs: List<SongItem>,
+    ) {
+        if (playbackReplacementGeneration != expectedGeneration) return
+        PlayerState.addToQueue(songs, advanceGeneration = false, expectedReplacementGeneration = expectedGeneration)
+    }
 
     override fun reorderQueue(order: List<Int>) = PlayerState.reorderQueue(order)
 
