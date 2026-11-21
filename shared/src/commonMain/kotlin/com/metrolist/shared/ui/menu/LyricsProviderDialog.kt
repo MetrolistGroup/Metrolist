@@ -46,7 +46,6 @@ import androidx.compose.ui.window.DialogProperties
 import com.metrolist.shared.generated.resources.Res
 import com.metrolist.shared.generated.resources.apply
 import com.metrolist.shared.generated.resources.automatic
-import com.metrolist.shared.generated.resources.cancel
 import com.metrolist.shared.generated.resources.brand_better_lyrics
 import com.metrolist.shared.generated.resources.brand_kugou
 import com.metrolist.shared.generated.resources.brand_lrclib
@@ -54,9 +53,9 @@ import com.metrolist.shared.generated.resources.brand_lrcred
 import com.metrolist.shared.generated.resources.brand_lyprio
 import com.metrolist.shared.generated.resources.brand_paxsenix
 import com.metrolist.shared.generated.resources.brand_unison
+import com.metrolist.shared.generated.resources.cancel
 import com.metrolist.shared.generated.resources.choose_lyrics
 import com.metrolist.shared.generated.resources.close
-import com.metrolist.shared.generated.resources.refetch
 import com.metrolist.shared.generated.resources.collapse
 import com.metrolist.shared.generated.resources.collapsed
 import com.metrolist.shared.generated.resources.expand
@@ -73,6 +72,7 @@ import com.metrolist.shared.generated.resources.lyrics_timing_unsynced
 import com.metrolist.shared.generated.resources.lyrics_timing_word_synced
 import com.metrolist.shared.generated.resources.lyrics_youtube_captions
 import com.metrolist.shared.generated.resources.next
+import com.metrolist.shared.generated.resources.refetch
 import com.metrolist.shared.generated.resources.youtube_music
 import com.metrolist.shared.model.LyricsProvider
 import com.metrolist.shared.model.LyricsProviderResult
@@ -234,45 +234,45 @@ private fun LyricsResultCard(
                     .clickable(onClick = onSelect)
                     .padding(12.dp),
             ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Column(Modifier.weight(1f)) {
-                    Text(
-                        listOfNotNull(result.song.title, result.song.album, result.song.artist)
-                            .filter(String::isNotBlank)
-                            .joinToString(" - "),
-                        style = MaterialTheme.typography.titleSmall,
-                    )
-                    val timing = timingLabel(result.timingKind)
-                    Text(
-                        listOfNotNull(
-                            result.song.durationMs
-                                ?.takeIf { it > 0 }
-                                ?.let(::formatDuration),
-                            timing,
-                        ).joinToString(" · "),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    if (result.providerName.contains('/')) {
-                        Text(result.providerName, style = MaterialTheme.typography.bodySmall)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text(
+                            listOfNotNull(result.song.title, result.song.album, result.song.artist)
+                                .filter(String::isNotBlank)
+                                .joinToString(" - "),
+                            style = MaterialTheme.typography.titleSmall,
+                        )
+                        val timing = timingLabel(result.timingKind)
+                        Text(
+                            listOfNotNull(
+                                result.song.durationMs
+                                    ?.takeIf { it > 0 }
+                                    ?.let(::formatDuration),
+                                timing,
+                            ).joinToString(" · "),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        if (result.providerName.contains('/')) {
+                            Text(result.providerName, style = MaterialTheme.typography.bodySmall)
+                        }
                     }
+                    ExpandButton(expanded) { expanded = !expanded }
                 }
-                ExpandButton(expanded) { expanded = !expanded }
+                Surface(
+                    color = MaterialTheme.colorScheme.surfaceContainerLowest,
+                    shape = MaterialTheme.shapes.small,
+                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                ) {
+                    Text(
+                        result.preview,
+                        style = MaterialTheme.typography.bodySmall,
+                        maxLines = if (expanded) Int.MAX_VALUE else 5,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.padding(12.dp),
+                    )
+                }
             }
-            Surface(
-                color = MaterialTheme.colorScheme.surfaceContainerLowest,
-                shape = MaterialTheme.shapes.small,
-                modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
-            ) {
-                Text(
-                    result.preview,
-                    style = MaterialTheme.typography.bodySmall,
-                    maxLines = if (expanded) Int.MAX_VALUE else 5,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.padding(12.dp),
-                )
-            }
-        }
         }
     }
 }
