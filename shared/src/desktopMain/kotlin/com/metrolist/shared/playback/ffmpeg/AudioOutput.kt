@@ -36,9 +36,10 @@ internal fun openAudioLine(
     for (outputFormat in audioOutputFormats(format, osName)) {
         val unsupportedMixers = mutableSetOf<Mixer.Info?>()
         for (attempt in 0..3) {
+            val candidateMixers = audioOutputMixers(osName, configuredLine, mixers()).filterNot { it in unsupportedMixers }
+            if (candidateMixers.isEmpty()) break
             if (attempt > 0) sleep(100L shl (attempt - 1))
-            for (mixer in audioOutputMixers(osName, configuredLine, mixers())) {
-                if (mixer in unsupportedMixers) continue
+            for (mixer in candidateMixers) {
                 val outputBufferSize = bufferSize * outputFormat.frameSize / format.frameSize
                 var line: SourceDataLine? = null
                 var opened = false
