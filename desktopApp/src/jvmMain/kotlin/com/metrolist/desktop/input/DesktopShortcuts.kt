@@ -979,11 +979,10 @@ internal class ShortcutPressTracker {
         if (event.id != AwtKeyEvent.KEY_PRESSED) return false
         if (event.keyCode in handled) return true
         val consumed = action()
-        // Match captured symbols by position, but keep AWT repeat behavior for arrows and numpad keys.
-        val repeatableSymbol = physicalPosition == PhysicalKeyPosition.MINUS || physicalPosition == PhysicalKeyPosition.EQUALS
+        // Layouts can report a physical slash as VK_MINUS, so repeat follows the captured position when known.
         val repeatable =
-            if (repeatableSymbol) {
-                physicalPositionsAvailable
+            if (physicalPositionsAvailable && physicalPosition != null) {
+                physicalPosition in REPEATABLE_PHYSICAL_POSITIONS
             } else {
                 event.keyCode in REPEATABLE_AWT_KEY_CODES
             }
@@ -992,6 +991,12 @@ internal class ShortcutPressTracker {
     }
 
     private companion object {
+        val REPEATABLE_PHYSICAL_POSITIONS =
+            setOf(
+                PhysicalKeyPosition.MINUS,
+                PhysicalKeyPosition.EQUALS,
+                PhysicalKeyPosition.NUMPAD_PLUS,
+            )
         val REPEATABLE_AWT_KEY_CODES =
             setOf(
                 AwtKeyEvent.VK_LEFT,
