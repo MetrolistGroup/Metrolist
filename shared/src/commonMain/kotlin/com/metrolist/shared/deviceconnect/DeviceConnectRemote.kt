@@ -629,6 +629,7 @@ class DeviceConnectRemote(
         canonical = adopted
         controllers += peerId
         publishState()
+        if (adopted.playback.explicitRadioQueue && adopted.playback.queue.displayedItems.size == 1) port?.onExplicitRadioRequest()
         applyCanonical(adopted, seek = true)
         broadcastSnapshot()
     }
@@ -646,7 +647,10 @@ class DeviceConnectRemote(
         playback?.setControllerPlayback(null)
         playback?.setExternalReportingEnabled(enabled = true, session = snapshot.playback.scrobbleSession)
         playback?.setAudioOutputEnabled(true)
-        if (playback != null) playback.apply(snapshot, snapshot.playback.positionMs) { port === playback && !isActive }
+        if (playback != null) {
+            if (snapshot.playback.explicitRadioQueue && snapshot.playback.queue.displayedItems.size == 1) playback.onExplicitRadioRequest()
+            playback.apply(snapshot, snapshot.playback.positionMs) { port === playback && !isActive }
+        }
     }
 
     private suspend fun handlePull(
