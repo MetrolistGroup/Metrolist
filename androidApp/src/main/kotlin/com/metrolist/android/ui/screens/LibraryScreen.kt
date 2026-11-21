@@ -18,16 +18,20 @@ import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DropdownMenuGroup
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -68,6 +72,7 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -96,6 +101,7 @@ import com.metrolist.shared.db.isHistoryPlaylistId
 import com.metrolist.shared.db.refreshUploadedSongs
 import com.metrolist.shared.generated.resources.Res
 import com.metrolist.shared.generated.resources.action_cannot_be_undone
+import com.metrolist.shared.generated.resources.android_auto_youtube_playlist
 import com.metrolist.shared.generated.resources.cancel
 import com.metrolist.shared.generated.resources.create_playlist
 import com.metrolist.shared.generated.resources.delete
@@ -103,6 +109,7 @@ import com.metrolist.shared.generated.resources.delete_playlist_question
 import com.metrolist.shared.generated.resources.error_occurred
 import com.metrolist.shared.generated.resources.hide_from_library
 import com.metrolist.shared.generated.resources.import_playlist
+import com.metrolist.shared.generated.resources.local_playlist
 import com.metrolist.shared.generated.resources.more_options
 import com.metrolist.shared.generated.resources.new_playlist
 import com.metrolist.shared.generated.resources.playlist_name
@@ -257,6 +264,8 @@ fun LibraryScreen(
     var menuItem by remember { mutableStateOf<Pair<HiddenLibraryItem, YTItem?>?>(null) }
     var showCreateDialog by remember { mutableStateOf(false) }
     var createName by remember { mutableStateOf("") }
+    var remoteCreationAvailable by remember { mutableStateOf(false) }
+    var createLocally by remember { mutableStateOf(true) }
     var playlistToRename by remember { mutableStateOf<PlaylistItem?>(null) }
     var renameName by remember { mutableStateOf("") }
     val deleteConfirmation = remember { PlaylistDeleteConfirmation(scope) }
@@ -789,6 +798,8 @@ fun LibraryScreen(
                         shape = groupedMenuItemShapes(0, 2).shape,
                         onClick = {
                             showNewPlaylistMenu = false
+                            remoteCreationAvailable = GlobalYouTubeRepository.instance.canManagePlaylists()
+                            createLocally = !remoteCreationAvailable
                             showCreateDialog = true
                         },
                     )
@@ -813,16 +824,43 @@ fun LibraryScreen(
             value = createName,
             onValueChange = { createName = it },
             onDismiss = { showCreateDialog = false },
-        ) {
-            val name = createName
-            showCreateDialog = false
-            createName = ""
-            viewModel.createPlaylist(name) { result ->
-                result.onSuccess { id ->
-                    navigationScope.launch {
-                        if (currentRootActive) onNavigateToPlaylist(id, null)
+            destination = {
+                if (remoteCreationAvailable) {
+                    Row(
+                        modifier =
+                            Modifier.fillMaxWidth().toggleable(
+                                value = createLocally,
+                                role = Role.Checkbox,
+                                onValueChange = { createLocally = it },
+                            ),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Checkbox(checked = createLocally, onCheckedChange = null)
+                        Text(stringResource(Res.string.local_playlist))
                     }
                 }
+                if (!remoteCreationAvailable || !createLocally) {
+                    Text(
+                        stringResource(
+                            if (createLocally) Res.string.local_playlist else Res.string.android_auto_youtube_playlist,
+                        ),
+                    )
+                }
+            },
+        ) {
+            val name = createName
+            val local = createLocally
+            showCreateDialog = false
+            createName = ""
+            viewModel.createPlaylist(name, local) { result ->
+                result
+                    .onSuccess { id ->
+                        navigationScope.launch {
+                            if (currentRootActive) onNavigateToPlaylist(id, null)
+                        }
+                    }.onFailure {
+                        if (currentRootActive) Toast.makeText(context, errorOccurredText, Toast.LENGTH_SHORT).show()
+                    }
             }
         }
     }
@@ -885,6 +923,7 @@ private fun PlaylistNameDialog(
     value: String,
     onValueChange: (String) -> Unit,
     onDismiss: () -> Unit,
+    destination: @Composable () -> Unit = {},
     onConfirm: () -> Unit,
 ) {
     val isTv = LocalIsTv.current
@@ -895,46 +934,49 @@ private fun PlaylistNameDialog(
             val focusManager = LocalFocusManager.current
             val keyboardController = LocalSoftwareKeyboardController.current
             var tvKeyboardRequested by remember { mutableStateOf(false) }
-            OutlinedTextField(
-                value,
-                onValueChange,
-                label = { Text(stringResource(Res.string.playlist_name)) },
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(showKeyboardOnFocus = !isTv || tvKeyboardRequested),
-                modifier =
-                    Modifier.onFocusChanged { if (!it.isFocused) tvKeyboardRequested = false }.onPreviewKeyEvent { event ->
-                        if (!isTv) return@onPreviewKeyEvent false
-                        when (event.key) {
-                            Key.DirectionCenter, Key.Enter -> {
-                                if (event.type == KeyEventType.KeyUp) {
-                                    tvKeyboardRequested = true
-                                    keyboardController?.show()
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(
+                    value,
+                    onValueChange,
+                    label = { Text(stringResource(Res.string.playlist_name)) },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(showKeyboardOnFocus = !isTv || tvKeyboardRequested),
+                    modifier =
+                        Modifier.onFocusChanged { if (!it.isFocused) tvKeyboardRequested = false }.onPreviewKeyEvent { event ->
+                            if (!isTv) return@onPreviewKeyEvent false
+                            when (event.key) {
+                                Key.DirectionCenter, Key.Enter -> {
+                                    if (event.type == KeyEventType.KeyUp) {
+                                        tvKeyboardRequested = true
+                                        keyboardController?.show()
+                                    }
+                                    true
                                 }
-                                true
-                            }
 
-                            Key.DirectionDown, Key.DirectionRight, Key.DirectionUp, Key.DirectionLeft -> {
-                                if (event.type == KeyEventType.KeyDown) {
-                                    keyboardController?.hide()
-                                    focusManager.moveFocus(
-                                        if (event.key == Key.DirectionDown ||
-                                            event.key == Key.DirectionRight
-                                        ) {
-                                            FocusDirection.Next
-                                        } else {
-                                            FocusDirection.Previous
-                                        },
-                                    )
+                                Key.DirectionDown, Key.DirectionRight, Key.DirectionUp, Key.DirectionLeft -> {
+                                    if (event.type == KeyEventType.KeyDown) {
+                                        keyboardController?.hide()
+                                        focusManager.moveFocus(
+                                            if (event.key == Key.DirectionDown ||
+                                                event.key == Key.DirectionRight
+                                            ) {
+                                                FocusDirection.Next
+                                            } else {
+                                                FocusDirection.Previous
+                                            },
+                                        )
+                                    }
+                                    true
                                 }
-                                true
-                            }
 
-                            else -> {
-                                false
+                                else -> {
+                                    false
+                                }
                             }
-                        }
-                    },
-            )
+                        },
+                )
+                destination()
+            }
         },
         confirmButton = {
             TextButton(
