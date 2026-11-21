@@ -281,7 +281,7 @@ fun StoredPlaylistContent(
             onRetryPlayCounts?.invoke()
         }
         val expectedGeneration = playback.reserveExplicitPlaybackGeneration()
-        val expectedSleepTimerGeneration = playback.sleepTimerExpiryGeneration
+
         pendingPlayState.track(
             scope.launch {
                 val complete =
@@ -298,9 +298,7 @@ fun StoredPlaylistContent(
                             .first { (ready, _) -> ready }
                             .second
                     }
-                if (playback.explicitPlaybackGeneration != expectedGeneration ||
-                    playback.sleepTimerExpiryGeneration != expectedSleepTimerGeneration
-                ) {
+                if (playback.explicitPlaybackGeneration != expectedGeneration) {
                     return@launch
                 }
                 val playable =

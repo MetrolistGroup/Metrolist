@@ -14,6 +14,7 @@ import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
+import com.metrolist.shared.ui.utils.settled
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.min
@@ -60,7 +61,7 @@ class ExpressiveMiniPlayerShape(
         path.lineTo(0f, tlP.p)
         tlP.append(path, 0f, tlP.p, 3)
         path.close()
-        return Outline.Generic(path)
+        return Outline.Generic(path.settled())
     }
 
     private class CornerParams(

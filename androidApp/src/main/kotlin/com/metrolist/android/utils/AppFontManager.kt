@@ -10,6 +10,8 @@ import android.graphics.Typeface
 import android.net.Uri
 import android.provider.OpenableColumns
 import androidx.compose.ui.text.font.FontFamily
+import com.metrolist.shared.settings.Settings
+import timber.log.Timber
 import java.io.File
 import java.util.UUID
 
@@ -23,7 +25,20 @@ object AppFontManager {
         val displayName: String,
     )
 
-    fun importFont(
+    suspend fun importFont(
+        context: Context,
+        uri: Uri,
+        select: (ImportedFont) -> String,
+    ): Result<ImportedFont> =
+        selectCustomFont(
+            prepare = { prepareFont(context, uri) },
+            select = select,
+            flushSelection = Settings.shared::flush,
+            remove = { removeImportedFile(context, it) },
+            onCleanupFailure = ::logCleanupFailure,
+        )
+
+    private fun prepareFont(
         context: Context,
         uri: Uri,
     ): Result<ImportedFont> =
@@ -56,12 +71,6 @@ object AppFontManager {
                 // A new path invalidates both Compose's state and Android's path-based typeface cache.
                 val target = File(directory, "app_font_${UUID.randomUUID()}.$extension")
                 check(temporaryFile.renameTo(target)) { "Font could not be saved" }
-                directory
-                    .listFiles()
-                    .orEmpty()
-                    .filter { storedFileName.matches(it.name) }
-                    .filterNot { it == target }
-                    .forEach(File::delete)
                 ImportedFont(target.name, displayName)
             } finally {
                 temporaryFile.delete()
@@ -77,12 +86,25 @@ object AppFontManager {
         return runCatching { FontFamily(Typeface.createFromFile(file)) }.getOrDefault(FontFamily.Default)
     }
 
-    fun removeImportedFont(context: Context) {
-        fontDirectory(context)
-            .listFiles()
-            .orEmpty()
-            .filter { storedFileName.matches(it.name) }
-            .forEach(File::delete)
+    suspend fun retireImportedFont(
+        context: Context,
+        fileName: String,
+    ) = retireCustomFont(
+        fileName = fileName,
+        flushSelection = Settings.shared::flush,
+        remove = { removeImportedFile(context, it) },
+        onCleanupFailure = ::logCleanupFailure,
+    )
+
+    private fun removeImportedFile(
+        context: Context,
+        fileName: String,
+    ) {
+        if (storedFileName.matches(fileName)) File(fontDirectory(context), fileName).delete()
+    }
+
+    private fun logCleanupFailure(error: Exception) {
+        Timber.w(error, "Keeping the previous custom font because cleanup could not finish")
     }
 
     fun hasImportedFont(

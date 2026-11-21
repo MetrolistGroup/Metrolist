@@ -44,9 +44,11 @@ On Linux and Windows, Metrolist uses `ComposeNativeTray` to integrate with nativ
 
 On macOS, Metrolist uses Compose Multiplatform's stock `Tray` backed by OpenJDK's `java.awt.SystemTray` (`CTrayIcon`) to avoid AWT/AppKit event loop deadlocks. On macOS, left-clicking opens the native status bar menu, and right-clicking triggers the window toggle action when `desktopTrayToggleOnClick` is enabled. Template rendering is explicitly enabled via the `apple.awt.enableTemplateImages` system property so macOS automatically adapts icon contrast to the menu bar appearance. Native macOS images register `CTrayIcon` and `CMenuItem` callbacks for JNI accessibility.
 
+The tray menu toggles miniplayer visibility independently of the main window. Closing the main window to the tray does not stop miniplayer controls.
+
 ## Linux audio setup
 
-Desktop uses bundled FFmpeg to decode audio and Java Sound to send PCM through ALSA. Automatic output selection tries named `default`, `pipewire` and `pulse` mixers before asking Java Sound for its default line. This also supports ALSA devices whose mixer names differ. Preferred mixers keep priority so Java Sound does not select a hardware or loopback output when a system route works.
+Desktop uses bundled FFmpeg to decode audio and Java Sound to send PCM through ALSA. Automatic output selection tries named `default`, `pipewire` and `pulse` mixers when the host exposes them. Java Sound's default line is used only when none of those system routes is listed, which supports ALSA devices with other mixer names without bypassing an available system route through a hardware or loopback output.
 
 Linux FFmpeg JARs exclude ALSA, PulseAudio, JACK and PipeWire libraries. JVM distributions, AppImages and native-image builds use the host's audio libraries, configuration and plugins. No Linux target keeps a bundled ALSA fallback. `verifyLinuxAudioLibraries` checks JVM package directories and JARs after packaging, including when other packaging checks are disabled. Native builds check their input classpath before compilation and their output directory before packaging. To check a directory, JAR or tarball directly, run `python3 scripts/desktop-native-image/verify_linux_audio.py <path>`.
 
@@ -80,6 +82,20 @@ Windows registers `metrolist-auth` under `HKCU\Software\Classes` for the running
 
 The embedded login is used when registration fails, when a macOS launch lacks a bundle or open-URI support, or when an unpackaged JVM launch has no native launcher. Linux registration requires working `xdg-mime` and writable user application data. Browser launch failure keeps the waiting dialog available for retry.
 
+## Matugen colors
+
+Appearance's Matugen colors switch replaces the app's color scheme with the one [Matugen](https://github.com/InioX/matugen) generates from the wallpaper. It is off by default, and nothing reads or watches the palette file while it is off. While it is on, Material You, the theme color, song artwork colors and palette style are disabled. Light, dark and pure black still follow the theme setting.
+
+Copy [`matugen-template.properties`](matugen-template.properties) into Matugen's templates directory and add it to Matugen's `config.toml`:
+
+```toml
+[templates.metrolist]
+input_path = "~/.config/matugen/templates/metrolist.properties"
+output_path = "~/.config/metrolist/matugen.properties"
+```
+
+The output path follows `XDG_CONFIG_HOME` on every platform, like `settings.properties`. Flatpak reads `~/.var/app/com.metrolist.desktop/config/metrolist/matugen.properties`. Run `matugen image /path/to/wallpaper`; the app reloads the file when Matugen rewrites it. A file with a missing or malformed color is logged and ignored, keeping the last valid palette. Deleting the file restores the normal theme.
+
 ## Display density
 
 Linux JVM and native launchers preserve `XCURSOR_THEME` and `XCURSOR_SIZE`. In KDE sessions they read Plasma's `kcminputrc` through `kreadconfig6` or `kreadconfig5`, without applying GNOME cursor defaults. Missing or automatic cursor sizes stay unset for the toolkit to resolve.
@@ -98,7 +114,7 @@ X11 detection leaves automatic AWT scaling intact so saved window sizes, minimum
 
 Desktop scroll containers use Compose Foundation's built-in wheel animation. Startup leaves `compose.scrolling.smooth.enabled` at its enabled default, including on Windows. The shared carousel modifier lets the container handle wheel input, so lists, rows, grids and scroll pages share Foundation's tick accumulation and precise-input handling. Foundation also settles carousel and pager snapping after wheel input. Android uses its own wheel handler and settling delay.
 
-In Compose 1.13.0-beta02, Foundation recognizes fractional wheel rotation as precise input on Linux and macOS, but its Windows config classifies all AWT wheel events as non-precise. `DesktopScrollConfig.kt` applies the same fractional-rotation check on Windows and delegates all other behavior to Foundation. The config API is internal in this pinned version; check it when upgrading Compose. See the pinned [Foundation sources](https://repo.maven.apache.org/maven2/org/jetbrains/compose/foundation/foundation-desktop/1.13.0-beta02/foundation-desktop-1.13.0-beta02-sources.jar), `DesktopScrollable.desktop.kt`.
+In Compose 1.13.0-rc01, Foundation recognizes fractional wheel rotation as precise input on Linux and macOS, but its Windows config classifies all AWT wheel events as non-precise. `DesktopScrollConfig.kt` applies the same fractional-rotation check on Windows and delegates all other behavior to Foundation. The config API is internal in this pinned version; check it when upgrading Compose. See the pinned [Foundation sources](https://repo.maven.apache.org/maven2/org/jetbrains/compose/foundation/foundation-desktop/1.13.0-rc01/foundation-desktop-1.13.0-rc01-sources.jar), `DesktopScrollable.desktop.kt`.
 
 Mouse drags continue scrolling at the release velocity with the container's fling behavior. This also applies to Linux touchscreens that report touches as mouse input. Lists, grids and scroll columns use Compose's default deceleration; carousels and pagers keep their snap behavior. Movement thresholds and direction locking preserve taps and gestures handled by child controls. Precise touchpad input must track the gesture directly.
 
@@ -106,7 +122,7 @@ Mouse drags continue scrolling at the release velocity with the container's flin
 
 Horizontal Home rows show arrow buttons at each edge that has more content. The buttons fade at the scroll limits and animate scrolling. Artwork and video shelves use Material carousel snapping; Speed Dial and song grids scroll freely. Home chips and moods use the same controls. Android and iOS do not show these buttons.
 
-Compose 1.13.0-beta02's `CarouselState` inherits scroll flags that always return true. The controls read its internal pager's measured limits so arrows follow scrolling, window resizing and content changes. Check this accessor when upgrading Compose.
+Compose 1.13.0-rc01's `CarouselState` inherits scroll flags that always return true. The controls read its internal pager's measured limits so arrows follow scrolling, window resizing and content changes. Check this accessor when upgrading Compose.
 
 Desktop category pages such as Moods & genres fit as many columns as the available width allows, with a minimum chip width of 240 dp. Chips in the final row share its full width. Category-only pages use 6 dp gaps in both directions.
 
@@ -116,7 +132,7 @@ Scrolling changes need checks with physical wheel, touchpad and touchscreen inpu
 
 `desktopApp/src/jvmMain/kotlin/com/metrolist/desktop/window/HyprlandRenderVisibility.kt` tracks each window's workspace visibility. Before hiding a GL layer, it copies the retained frame to Java-owned pixels for compositor transitions. Live rendering resumes when visible or when compositor state is unknown. Pinned windows and windows visible on another monitor keep rendering.
 
-Run `HyprlandRetainedFrameTest` for retained-image changes. Native compositor and driver behavior need a Hyprland session.
+Retained-image changes need a Hyprland session to check native compositor and driver behavior.
 
 ## Linux ARM64
 
@@ -139,7 +155,7 @@ Bytedeco publishes no `windows-arm64` FFmpeg natives. `scripts/build_windows_arm
 ./gradlew :desktopApp:packageReleaseDmg
 ```
 
-The AppImage script writes `dist/Metrolist.AppImage` and accepts `GRADLE` to select the Gradle command. The DMG task requires macOS and writes under `desktopApp/build/compose/binaries/main-release/dmg/`. Packages include their own runtime.
+The AppImage script writes `dist/Metrolist.AppImage` and accepts `GRADLE` to select the Gradle command. The DMG task requires macOS and writes under `desktopApp/build/compose/binaries/main-release/dmg/`. The bundle declares macOS 15.0 as its minimum because Bytedeco's FFmpeg dylibs target macOS 15; older systems could open the app but failed to load FFmpeg at playback. Packages include their own runtime.
 
 The AppImage script and Windows and macOS release workflows pass `-Pmetrolist.debug=false` so release packages use the release title and settings.
 

@@ -56,8 +56,8 @@ internal fun mapIosDeviceSettings(
     IosDeviceSettings(
         keepScreenAwake = expandedPlayerVisible && keepScreenOnMode.keepsAwake(isPlaying, lyricsVisible),
         hideStatusBar =
-            (immersivePlayer && expandedPlayerVisible) ||
-                (hideStatusBarInLyricsFullscreen && lyricsFullscreenVisible),
+            expandedPlayerVisible &&
+                (immersivePlayer || (hideStatusBarInLyricsFullscreen && lyricsFullscreenVisible)),
     )
 
 internal fun isValidFontImport(

@@ -888,47 +888,43 @@ class LyricsTranslationClient(
                 val batchEnd = (i + batchSize).coerceAtMost(textsToFetch.size)
                 val batch = textsToFetch.subList(i, batchEnd)
                 val batchText = batch.joinToString("|")
-                try {
-                    val response =
-                        httpClient.post("https://translate.googleapis.com/translate_a/single") {
-                            setBody(
-                                FormDataContent(
-                                    Parameters.build {
-                                        append("client", "gtx")
-                                        append("sl", "auto")
-                                        append("tl", "la")
-                                        append("dt", "rm")
-                                        append("q", batchText)
-                                    },
-                                ),
-                            )
-                        }
-                    if (response.status.isSuccess()) {
-                        val root = Json.parseToJsonElement(response.bodyAsText()).jsonArray
-                        val firstArr = root.firstOrNull()?.jsonArray
-                        val fullRomanizedString =
-                            firstArr
-                                ?.mapNotNull { segment ->
-                                    runCatching {
-                                        val arr = segment.jsonArray
-                                        arr.getOrNull(3)?.jsonPrimitive?.contentOrNull
-                                            ?: arr.getOrNull(2)?.jsonPrimitive?.contentOrNull
-                                            ?: arr.getOrNull(0)?.jsonPrimitive?.contentOrNull
-                                    }.getOrNull()
-                                }?.joinToString("")
-                                .orEmpty()
-
-                        if (fullRomanizedString.isNotBlank()) {
-                            val split = fullRomanizedString.replace(Regex("\\s*\\|\\s*"), "|").split("|")
-                            batch.forEachIndexed { batchIndex, originalText ->
-                                val rom = split.getOrNull(batchIndex)?.trim()?.ifBlank { originalText } ?: originalText
-                                resultsMap[validIndices[i + batchIndex]] = rom
-                            }
-                        }
+                val response =
+                    httpClient.post("https://translate.googleapis.com/translate_a/single") {
+                        setBody(
+                            FormDataContent(
+                                Parameters.build {
+                                    append("client", "gtx")
+                                    append("sl", "auto")
+                                    append("tl", "la")
+                                    append("dt", "rm")
+                                    append("q", batchText)
+                                },
+                            ),
+                        )
                     }
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (_: Exception) {
+                if (!response.status.isSuccess()) {
+                    throw LyricsTranslationHttpException(
+                        response.status.value,
+                        "Google romanization request failed (${response.status.value})",
+                    )
+                }
+                val root = Json.parseToJsonElement(response.bodyAsText()).jsonArray
+                val firstArr = root.firstOrNull()?.jsonArray
+                val fullRomanizedString =
+                    firstArr
+                        ?.mapNotNull { segment ->
+                            val arr = segment.jsonArray
+                            arr.getOrNull(3)?.jsonPrimitive?.contentOrNull
+                                ?: arr.getOrNull(2)?.jsonPrimitive?.contentOrNull
+                                ?: arr.getOrNull(0)?.jsonPrimitive?.contentOrNull
+                        }?.joinToString("")
+                        .orEmpty()
+                val split = fullRomanizedString.replace(Regex("\\s*\\|\\s*"), "|").split("|").map(String::trim)
+                if (split.size != batch.size || split.any(String::isBlank)) {
+                    throw LyricsTranslationException(LyricsTranslationFailure.INVALID_RESPONSE, "Google returned incomplete romanization")
+                }
+                batch.forEachIndexed { batchIndex, _ ->
+                    resultsMap[validIndices[i + batchIndex]] = split[batchIndex]
                 }
             }
 

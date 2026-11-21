@@ -804,9 +804,6 @@
     <plurals name="minutes">
         <item quantity="other">%1$d menit</item>
     </plurals>
-    <plurals name="minutes_short">
-        <item quantity="other">%1$d mnt</item>
-    </plurals>
     <plurals name="n_track">
         <item quantity="other">%1$d lagu</item>
     </plurals>
@@ -818,9 +815,6 @@
     </plurals>
     <plurals name="removed_songs_from_playlist">
         <item quantity="other">%1$d lagu dihapus dari playlist</item>
-    </plurals>
-    <plurals name="seconds_short">
-        <item quantity="other">%1$d dtk</item>
     </plurals>
     <plurals name="song_count">
         <item quantity="other">%1$d lagu</item>

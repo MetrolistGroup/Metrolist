@@ -34,3 +34,9 @@ internal fun needsTopWidgetSong(
     precedingPicks: Int,
     capacity: Int,
 ): Boolean = precedingPicks < playlistWidgetDisplayCount(precedingPicks + 1, capacity)
+
+// A Speed Dial pin may use YouTube's VL browse wrapper while a saved playlist uses its unwrapped ID.
+internal fun playlistWidgetPickKey(
+    key: String,
+    remoteId: String?,
+): String = remoteId?.let { "online:${it.removePrefix("VL")}" } ?: key

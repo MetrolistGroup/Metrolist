@@ -112,8 +112,7 @@ internal class AndroidQueueCoordinator(
     @Volatile
     var queueSessionId = 0L
         private set
-    private var pendingRestorePositionMs: Long? = null
-    private var restoredSongId: String? = null
+    private val pendingRestorePosition = PendingQueueRestorePosition()
     private var remoteLoadGeneration = 0L
 
     fun saveShuffleMode() {
@@ -185,8 +184,6 @@ internal class AndroidQueueCoordinator(
                 sessionId = state.queueSessionId,
             )
             val restoredPosition = state.currentPosition
-            pendingRestorePositionMs = restoredPosition.takeIf { it > 0L }
-            restoredSongId = restoredSongs.getOrNull(restoredQueue.currentIndex)?.id
             isRadioQueue = state.radioQueue || restoredMix
             radioQueueContinuation = state.radioQueueContinuation
             radioQueuePlaylistId = state.radioQueuePlaylistId
@@ -208,21 +205,16 @@ internal class AndroidQueueCoordinator(
                 startPlaying = false,
             )
             player.restoreQueue(restoredQueue)
+            pendingRestorePosition.restore(currentQueueEntryKey(), restoredPosition)
             _shuffleModeEnabled.value = player.isShuffleEnabled
             _repeatMode.value = if (restoreModes) state.repeatMode else Player.REPEAT_MODE_OFF
             player.seekTo(restoredPosition, PlaybackSeekSource("queue_restore", mapOf("reason" to "saved_queue")))
             true
         }
 
-    fun takeRestorePosition(
-        song: SongItem,
-        requestedPositionMs: Long,
-    ): Long {
-        val position = (pendingRestorePositionMs?.takeIf { song.id == restoredSongId } ?: requestedPositionMs).coerceAtLeast(0L)
-        pendingRestorePositionMs = null
-        restoredSongId = null
-        return position
-    }
+    fun takeRestorePosition(requestedPositionMs: Long): Long = pendingRestorePosition.take(currentQueueEntryKey(), requestedPositionMs)
+
+    private fun currentQueueEntryKey(): Long? = player.queueState.value.let { it.entries.getOrNull(it.currentIndex)?.key }
 
     fun setTitle(title: String?) {
         queueTitleState.value = title
@@ -235,8 +227,7 @@ internal class AndroidQueueCoordinator(
         sessionId: Long? = null,
     ) {
         if (sessionId == null) {
-            pendingRestorePositionMs = null
-            restoredSongId = null
+            pendingRestorePosition.clear()
             Settings.shared.pendingContinuePlayback = false
         }
         recommendationBootstrapJob?.cancel()
@@ -388,6 +379,7 @@ internal class AndroidQueueCoordinator(
     }
 
     fun extendPlaylistBeforeSkip(resumePlayback: Boolean? = null): Boolean {
+        if (!PlaybackNetworkStateStore.current.connected) return false
         if (playlistPage?.hasMore != true || player.currentMediaItemIndex.value < player.songQueue.value.lastIndex) return false
         val sessionId = queueSessionId
         schedulePlaylistPage()
@@ -440,7 +432,10 @@ internal class AndroidQueueCoordinator(
             }
     }
 
-    fun playMix(seed: SongItem) {
+    fun playMix(
+        seed: SongItem,
+        startPlaying: Boolean,
+    ) {
         if (seed.isUnavailable || BlockedContent.isBlocked(seed)) return
         val title = context.getString(R.string.song_mix_title, seed.title)
         val current = player.currentSong.value?.takeIf { it.id == seed.id }
@@ -456,6 +451,8 @@ internal class AndroidQueueCoordinator(
                 ),
             )
         ) {
+            // The target keeps a retained seed's play state, so send the play intent separately.
+            if (startPlaying) AndroidDeviceConnect.intercept(DcPlaybackCommand(DcPlaybackAction.PLAY))
             return
         }
         _repeatMode.value = Player.REPEAT_MODE_OFF
@@ -469,10 +466,11 @@ internal class AndroidQueueCoordinator(
                     queue.toggleShuffle(legacyShuffle = Settings.shared.useLegacyShuffle)
                 }
                 player.restoreQueue(queue.snapshot())
+                if (startPlaying && !castState().isConnected && !player.wantsPlayback) player.resume()
                 _shuffleModeEnabled.value = player.isShuffleEnabled
             }
         } else {
-            playQueue(songs = listOf(seed), queueTitle = title, finite = false, fromRemote = true)
+            playQueue(songs = listOf(seed), queueTitle = title, finite = false, fromRemote = true, startPlaying = startPlaying)
         }
         isRadioQueue = true
         radioQueuePlaylistId = "RDAMVM${seed.id}"
@@ -482,9 +480,7 @@ internal class AndroidQueueCoordinator(
     }
 
     fun updatePendingRestorePosition(position: Long) {
-        if (restoredSongId != null) {
-            pendingRestorePositionMs = position.coerceAtLeast(0L)
-        }
+        pendingRestorePosition.update(currentQueueEntryKey(), position)
     }
 
     fun bootstrapRecommendations(seedSongId: String) {
@@ -687,6 +683,8 @@ internal class AndroidQueueCoordinator(
             combine(repeatMode, player.songQueue) { mode, _ -> mode }.collect { mode ->
                 if (mode == Player.REPEAT_MODE_ALL) {
                     autoLoadMoreJob?.cancel()
+                    // Repeat All removes generated tracks; allow the same song to refill once repeat is off.
+                    lastAutoLoadedSongId = null
                     recommendationBootstrapJob?.cancel()
                     transitions.cancelNextTrackPreload()
                     generatedQueueIndicesToRemoveForRepeat(player.songQueue.value, player.currentMediaItemIndex.value)

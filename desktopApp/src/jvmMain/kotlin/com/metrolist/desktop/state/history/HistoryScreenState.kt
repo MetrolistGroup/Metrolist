@@ -97,7 +97,7 @@ class HistoryScreenState(
                     }
                 pageJob?.cancel()
                 entries = synced
-                hasMore = synced.size == pageSize
+                hasMore = !loadFailed && synced.size == pageSize
                 if (selectedIds.isNotEmpty()) selectedIds = selectedIds.intersect(readIds(query))
             }
         return requireNotNull(loadJob)
@@ -119,7 +119,7 @@ class HistoryScreenState(
         return scope.launch {
             try {
                 withContext(Dispatchers.IO) { deleteHistory(ids, alsoRemote) }
-                refreshAfterDeletion()
+                refreshAfterDeletion(scope)
                 selectedIds = selectedIds - ids
                 historyChanged()
             } catch (cancelled: CancellationException) {
@@ -142,16 +142,25 @@ class HistoryScreenState(
         scope.launch(Dispatchers.IO) {
             HistoryRepository.updateHistoryEntry(entry.id, title, artists, album)
             withContext(Dispatchers.Main) {
-                refreshAfterDeletion()
+                refreshAfterDeletion(scope)
                 PlayerState.refreshHistory()
             }
         }
     }
 
-    private suspend fun refreshAfterDeletion() {
+    private suspend fun refreshAfterDeletion(scope: CoroutineScope) {
+        val filter = Triple(debouncedQuery, sortMode, sortDirection)
+        val (query, mode, direction) = filter
+        val initialLoad = loadJob
         val limit = maxOf(pageSize, entries.size)
-        entries = withContext(Dispatchers.IO) { readPage(limit, 0, debouncedQuery, sortMode, sortDirection) }
-        hasMore = entries.size == limit
+        val refreshed = withContext(Dispatchers.IO) { readPage(limit, 0, query, mode, direction) }
+        if (initialLoad !== loadJob || filter != Triple(debouncedQuery, sortMode, sortDirection)) return
+        val pagePending = pageJob?.isActive == true
+        pageJob?.cancel()
+        pageJob = null
+        entries = refreshed
+        hasMore = refreshed.size == limit
+        if (pagePending) loadMore(scope)
     }
 
     fun loadMore(scope: CoroutineScope) {
@@ -164,8 +173,15 @@ class HistoryScreenState(
         pageJob =
             scope.launch {
                 val next =
-                    withContext(Dispatchers.IO) {
-                        readPage(pageSize, offset, query, mode, direction)
+                    try {
+                        withContext(Dispatchers.IO) { readPage(pageSize, offset, query, mode, direction) }
+                    } catch (error: CancellationException) {
+                        throw error
+                    } catch (_: Exception) {
+                        currentCoroutineContext().ensureActive()
+                        loadFailed = true
+                        hasMore = false
+                        return@launch
                     }
                 entries = entries + next
                 hasMore = next.size == pageSize

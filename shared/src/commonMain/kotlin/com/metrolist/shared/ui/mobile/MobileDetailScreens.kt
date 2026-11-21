@@ -65,6 +65,7 @@ import com.metrolist.shared.model.playlistOccurrenceKey
 import com.metrolist.shared.model.playlistSearchIndices
 import com.metrolist.shared.model.sortedForPlaylist
 import com.metrolist.shared.model.toSongItem
+import com.metrolist.shared.model.withDownloadsPlayable
 import com.metrolist.shared.playback.fullArtistShelfQueue
 import com.metrolist.shared.playlist.PlaylistChanges
 import com.metrolist.shared.playlist.addSongToStoredPlaylist
@@ -134,6 +135,7 @@ internal fun MobileAlbumScreen(
     onAddToPlaylist: (List<SongItem>) -> Unit,
     modifier: Modifier = Modifier,
     bottomContentPadding: Dp = 0.dp,
+    downloadedSongIds: Set<String> = emptySet(),
 ) {
     val isFavorite by remember(albumId) { AlbumLikeState.albumLiked(albumId) }.collectAsState(false)
     val favoriteErrorText = stringResource(Res.string.error_occurred)
@@ -169,7 +171,10 @@ internal fun MobileAlbumScreen(
 
         else -> {
             val loaded = albumPage
-            val page = remember(loaded, blockedVersion) { BlockedContent.filterAlbumPage(loaded) }
+            val page =
+                remember(loaded, blockedVersion, downloadedSongIds) {
+                    BlockedContent.filterAlbumPage(loaded).let { it.copy(songs = it.songs.withDownloadsPlayable(downloadedSongIds)) }
+                }
             AlbumContent(
                 isTrackSelected = { selection.isSelected(it.id) },
                 trackContainer = { song, content -> SongSwipeActions(song, onSwipeFeedback, content = content) },
@@ -339,10 +344,10 @@ internal fun MobileArtistScreen(
             operationError = null
             loader.load()
         },
-        onItemClick = { item ->
+        onItemClick = { sectionTitle, item ->
             if (item is SongItem) {
                 scope.launch {
-                    val songs = fullArtistShelfQueue(item, sections, page?.sectionBrowseIds.orEmpty())
+                    val songs = fullArtistShelfQueue(item, sectionTitle, sections, page?.sectionBrowseIds.orEmpty())
                     playbackController.play(songs.first { it.id == item.id }, songs)
                 }
             } else {
@@ -734,6 +739,8 @@ internal fun MobilePlaylistScreen(
                 durationSongs = page?.takeUnless { it.isOffline }?.songs ?: cachedSections?.playlistSongs().orEmpty(),
                 hasMoreSongs = page?.hasMore == true,
                 hiddenSongCount = loadedSongs.size - songs.size,
+                // Unlike the visible rows, the artwork list already includes hidden tracks.
+                loadedSongCount = loadedSongs.size,
                 paginationContent = {
                     if (page?.hasMore == true) {
                         if (pageFailed) {

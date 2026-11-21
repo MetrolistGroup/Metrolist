@@ -1,5 +1,8 @@
 package com.metrolist.shared.discord
 
+import com.metrolist.shared.api.isAlbumBrowseId
+import com.metrolist.shared.utils.ShareUrls
+
 object DiscordTemplateRenderer {
     fun render(
         template: String,
@@ -13,7 +16,12 @@ object DiscordTemplateRenderer {
     ): String {
         val artistUrl = if (artistId.isNotEmpty()) "https://music.youtube.com/channel/$artistId" else ""
         val songUrl = if (songId.isNotEmpty()) "${DiscordDefaults.YOUTUBE_WATCH_URL}$songId" else ""
-        val albumUrl = if (albumId.isNotEmpty()) "https://music.youtube.com/playlist?list=$albumId" else songUrl
+        val albumUrl =
+            when {
+                albumId.isAlbumBrowseId() -> ShareUrls.album(albumId)
+                albumId.isNotEmpty() -> "https://music.youtube.com/playlist?list=$albumId"
+                else -> songUrl
+            }
         return template
             .replace("{song.name}", title)
             .replace("{song_name}", title)

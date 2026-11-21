@@ -33,6 +33,11 @@ on:
         required: false
         default: false
         type: boolean
+      architectures:
+        description: JSON list of architectures to package, from x64 and arm64
+        required: false
+        default: '["x64", "arm64"]'
+        type: string
     secrets:
       GRADLE_ENCRYPTION_KEY:
         required: false
@@ -50,16 +55,13 @@ on:
 jobs:
   package:
     name: ${{ matrix.arch }} AppImage
-    runs-on: ${{ matrix.runner }}
+    runs-on: ${{ matrix.arch == 'arm64' && 'blacksmith-8vcpu-ubuntu-2404-arm' || 'blacksmith-4vcpu-ubuntu-2404' }}
     timeout-minutes: 45
     strategy:
       fail-fast: false
+      # Per-architecture values are expressions: include entries would add jobs for architectures left out.
       matrix:
-        include:
-          - arch: x64
-            runner: blacksmith-4vcpu-ubuntu-2404
-          - arch: arm64
-            runner: blacksmith-8vcpu-ubuntu-2404-arm
+        arch: ${{ fromJSON(inputs.architectures) }}
     steps:
       - name: Check out repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7

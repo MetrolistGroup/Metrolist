@@ -2,7 +2,7 @@
 
 ## Requirements and download
 
-Use Windows 10 or later on x64. Choose the stable installer when available, or the portable ZIP, through [the download channels](README.md#get-the-package). The package includes Java. Login requires Microsoft Edge WebView2 Runtime.
+Use Windows 10 or later on x64. Choose the stable installer when available, or the portable ZIP, through [the download channels](README.md#get-the-package). The x64 package is a native executable that needs no Java; the ARM64 package includes Java. Login requires Microsoft Edge WebView2 Runtime.
 
 ## Install and verify
 

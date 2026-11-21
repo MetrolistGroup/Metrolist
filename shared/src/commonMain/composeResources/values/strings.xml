@@ -746,6 +746,9 @@
     <string name="open_github_profile">Open GitHub profile</string>
     <!-- Translators: Label for sponsor developer in the About screen. -->
     <string name="sponsor_developer">Sponsor developer</string>
+    <string name="support_prompt_title">Enjoying the app?</string>
+    <string name="support_prompt_message">Support Metrolist's development by supporting the developers behind it. Tap someone to open their support page.</string>
+    <string name="support_prompt_never_show">Never show this again</string>
     <!-- Translators: Label for credits collaborator; retained for translation compatibility but not currently referenced by app code. -->
     <!-- Translators: Label for discord in the multiple app screens. -->
     <string name="brand_discord" translatable="false">Discord</string>
@@ -984,6 +987,10 @@
     <string name="song_artwork_colors">Colors from song artwork</string>
     <!-- Translators: Supporting text beneath the song artwork colors option in the settings. -->
     <string name="song_artwork_colors_description">Override app colors with the current song artwork when available</string>
+    <!-- Translators: Switch label in the desktop Appearance settings. Matugen is the name of a program and should not be translated. -->
+    <string name="matugen_colors">Matugen colors</string>
+    <!-- Translators: Supporting text beneath the Matugen colors switch. Keep the file path unchanged. -->
+    <string name="matugen_colors_description">Use the wallpaper palette Matugen writes to ~/.config/metrolist/matugen.properties</string>
     <!-- Translators: Option or section label for palette style in the Appearance settings. -->
     <string name="theme_palette_content">Content</string>
     <string name="theme_palette_style">Palette style</string>
@@ -1708,6 +1715,8 @@
     <string name="updates_install">Install</string>
     <!-- Translators: Imperative action label for retry in the update settings. -->
     <string name="updates_retry">Try again</string>
+    <!-- Translators: Button that installs a downloaded update without checking its checksum or signature first. -->
+    <string name="updates_force_install">Install anyway</string>
     <!-- Translators: Heading for available in the update settings. %1$s is the available app version. -->
     <string name="updates_available_title">Metrolist %1$s is available</string>
     <!-- Translators: Dialog or notice body text for available in the update settings. -->
@@ -2476,6 +2485,7 @@
     <string name="search_recognized_songs">Search songs</string>
     <!-- Translators: Imperative action label for songs in the search. -->
     <string name="search_songs">Search songs</string>
+    <string name="search_episodes">Search episodes</string>
     <!-- Translators: Imperative action label for songs artists podcasts in the search. -->
     <string name="search_songs_artists_podcasts">Search songs, artists, podcasts</string>
     <!-- Translators: Label for see all in the artist screen and Home screen. -->
@@ -2726,6 +2736,15 @@
         <item quantity="one">%1$dm ago</item>
         <item quantity="other">%1$dm ago</item>
     </plurals>
+    <!-- Translators: Day count in the total duration of a playlist or album. %1$d is the day count. -->
+    <plurals name="days">
+        <item quantity="one">%1$d day</item>
+        <item quantity="other">%1$d days</item>
+    </plurals>
+    <!-- Translators: Total duration of a playlist or album made of two units, e.g. "10 hours, 36 minutes". %1$s and %2$s are the localized units, largest first. -->
+    <string name="duration_two_units">%1$s, %2$s</string>
+    <!-- Translators: Total duration of a playlist or album made of three units, e.g. "1 day, 2 hours, 45 minutes". %1$s, %2$s and %3$s are the localized units, largest first. -->
+    <string name="duration_three_units">%1$s, %2$s, %3$s</string>
     <!-- Translators: Pluralized count or status for hours in the song details. %1$d is the hour count. -->
     <plurals name="hours">
         <item quantity="one">%1$d hour</item>
@@ -2750,11 +2769,6 @@
     <plurals name="minutes">
         <item quantity="one">%1$d minute</item>
         <item quantity="other">%1$d minutes</item>
-    </plurals>
-    <!-- Translators: Pluralized count or status for minutes short in the song details. %1$d is the minute count. -->
-    <plurals name="minutes_short">
-        <item quantity="one">%1$d min</item>
-        <item quantity="other">%1$d min</item>
     </plurals>
     <!-- Translators: Pluralized count or status for track in the Home screen. %1$d is the track count. -->
     <plurals name="n_track">
@@ -2785,11 +2799,6 @@
     <plurals name="removed_songs_from_playlist">
         <item quantity="one">Removed %1$d song from playlist</item>
         <item quantity="other">Removed %1$d songs from playlist</item>
-    </plurals>
-    <!-- Translators: Pluralized count or status for seconds short in the song details. %1$d is the second count. -->
-    <plurals name="seconds_short">
-        <item quantity="one">%1$d s</item>
-        <item quantity="other">%1$d s</item>
     </plurals>
     <!-- Translators: Pluralized count or status for song count in the Home and browse screens and player menu. %1$d is the song count. -->
     <plurals name="song_count">
@@ -3440,8 +3449,12 @@
     <string name="account_login_with_token_hint">Tap to view or edit tokens</string>
     <!-- Translators: Progress or status message for downloading update in the account menu. %1$s is the app version. -->
     <string name="account_downloading_update">Downloading v%1$s</string>
+    <!-- Translators: Progress message shown while downloading a nightly app update in the account menu. -->
+    <string name="account_downloading_nightly_update">Downloading nightly update</string>
     <!-- Translators: Label for update available in the account menu. %1$s is the available app version. -->
     <string name="account_update_available">v%1$s available</string>
+    <!-- Translators: Label shown when a nightly app update is available in the account menu. -->
+    <string name="account_nightly_update_available">New nightly available</string>
     <!-- Translators: Label for control playback position in the mini player and desktop player. -->
     <string name="cd_playback_position">Playback position</string>
     <!-- Translators: Label for control account menu in the desktop app. -->
@@ -4274,6 +4287,12 @@
     <!-- Translators: Option or section label for changes save automatically; retained for translation compatibility but not currently referenced by app code. -->
     <!-- Translators: Option or section label for invalid credentials in the Last.fm settings. -->
     <string name="lastfm_invalid_credentials">Invalid username or password. Check your Last.fm credentials.</string>
+    <!-- Translators: Title of the dialog and notification shown when the saved Last.fm sign-in stopped working. -->
+    <string name="lastfm_session_expired_title">Last.fm sign-in expired</string>
+    <!-- Translators: Settings action shown when the saved Last.fm sign-in stopped working and the user must sign in again. -->
+    <string name="lastfm_session_expired">Sign in to Last.fm again</string>
+    <!-- Translators: Description beneath the Last.fm sign-in-again action. Plays are listens waiting to be scrobbled. -->
+    <string name="lastfm_session_expired_description">Your Last.fm sign-in is no longer valid. Plays are saved and sent after you sign in.</string>
     <!-- Translators: Option or section label for login session invalid in the Last.fm settings. -->
     <string name="lastfm_login_session_invalid">Invalid session response</string>
     <!-- Translators: Error message about login; retained for translation compatibility but not currently referenced by app code. -->
@@ -4470,6 +4489,8 @@
     <string name="desktop_tray_toggle_on_click_desc_mac">Right-clicking the tray icon will open or close the Metrolist window</string>
     <!-- Translators: Imperative action label for show miniplayer in the desktop system tray. -->
     <string name="tray_show_miniplayer">Show miniplayer</string>
+    <!-- Translators: Imperative action label for hide miniplayer in the desktop system tray. -->
+    <string name="tray_hide_miniplayer">Hide miniplayer</string>
     <!-- Translators: Label for tray settings in the desktop system tray. -->
     <string name="tray_settings">Settings</string>
     <!-- Translators: Label for quit metrolist in the desktop system tray. -->
@@ -5365,6 +5386,7 @@
     <string name="crash_updates_pending_title" translatable="false">Pending update</string>
     <string name="crash_updates_release_unavailable" translatable="false">This release does not include a compatible APK.</string>
     <string name="crash_updates_retry" translatable="false">Try again</string>
+    <string name="crash_updates_force_install" translatable="false">Install anyway</string>
     <string name="crash_updates_size" translatable="false">Update size</string>
     <string name="crash_updates_version" translatable="false">Metrolist version</string>
     <string name="crash_upload" translatable="false">Upload</string>

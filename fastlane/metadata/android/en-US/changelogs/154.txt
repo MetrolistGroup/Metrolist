@@ -1,3 +1,4 @@
+v14.0.0
 First public Metrolist-KMP release, replacing standalone Android 13.x.
 Material 3 Expressive design and new player layouts.
 Music videos, ListenBrainz scrobbling and podcast SponsorBlock.

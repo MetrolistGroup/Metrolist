@@ -42,9 +42,13 @@ fun IntegrationsOverlay(colorScheme: ColorScheme) {
     val discordLogin = DesktopDiscordLogin.flow
     val playbackSpeed by PlayerState.player.playbackSpeed.collectAsState()
     val playbackDuration by PlayerState.playbackDuration.collectAsState()
+    val close = {
+        UiState.showIntegrationsSettings = false
+        UiState.integrationsInitialPage = null
+    }
 
     Dialog(
-        onDismissRequest = { UiState.showIntegrationsSettings = false },
+        onDismissRequest = close,
         properties = DialogProperties(usePlatformDefaultWidth = false),
     ) {
         Card(
@@ -63,7 +67,8 @@ fun IntegrationsOverlay(colorScheme: ColorScheme) {
                 host =
                     SharedIntegrationsHost(
                         platform = SettingsPlatform.DESKTOP,
-                        onClose = { UiState.showIntegrationsSettings = false },
+                        onClose = close,
+                        initialPage = UiState.integrationsInitialPage,
                         playbackPosition = PlayerState.playbackPosition,
                         currentPositionMs = PlayerState::currentMediaPositionMs,
                         playback =

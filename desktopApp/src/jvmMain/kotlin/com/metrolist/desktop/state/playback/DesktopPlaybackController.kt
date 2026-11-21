@@ -63,9 +63,6 @@ class DesktopPlaybackController(
     override val playbackReplacementGeneration: Long
         get() = PlayerState.playbackReplacementGeneration
 
-    override val sleepTimerExpiryGeneration: Long
-        get() = PlayerState.sleepTimerExpiryGeneration
-
     override fun reserveExplicitPlaybackGeneration(): Long = PlayerState.reserveExplicitPlaybackGeneration()
 
     override fun reserveQueueAdditionGeneration(): Long = PlayerState.reserveQueueAdditionGeneration()

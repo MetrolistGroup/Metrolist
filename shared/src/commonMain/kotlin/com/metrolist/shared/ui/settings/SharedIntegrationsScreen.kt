@@ -543,6 +543,13 @@ private fun buildIntegrationsRegistry(
                     description = stringResource(Res.string.lastfm_connect_description),
                 ) { onOpenLogin(ScrobbleLoginProvider.LAST_FM) }
             } else {
+                if (settings.lastFmSessionExpired) {
+                    action(
+                        id = "lastFmReauth",
+                        title = stringResource(Res.string.lastfm_session_expired),
+                        description = stringResource(Res.string.lastfm_session_expired_description),
+                    ) { onOpenLogin(ScrobbleLoginProvider.LAST_FM) }
+                }
                 action(
                     id = "lastFmLogout",
                     title = stringResource(Res.string.lastfm_logged_in_as, lastFmAccount.account),

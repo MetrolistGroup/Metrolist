@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.Button
@@ -667,6 +666,7 @@ private fun WebViewContent(
         WebViewPromptWindow(
             onCloseRequest = { validationFailed = false },
             title = stringResource(Res.string.error),
+            height = 240.dp,
             text = { Text(stringResource(Res.string.login_failed_with_error, stringResource(Res.string.error))) },
             confirmButton = {
                 Button(onClick = { validationFailed = false }, shapes = ButtonDefaults.shapes()) {
@@ -716,6 +716,7 @@ private fun WebViewContent(
             WebViewPromptWindow(
                 onCloseRequest = onDismissRequest,
                 title = stringResource(Res.string.account_picker_title),
+                height = 560.dp,
                 text = {
                     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                         Text(stringResource(Res.string.account_picker_subtitle))
@@ -757,10 +758,12 @@ private fun WebViewContent(
 }
 
 // Compose dialogs share the parent canvas and can be covered by the native WebView.
+// A fixed, resizable window keeps the buttons visible: content-sized windows are measured before the Wayland scale applies.
 @Composable
 private fun WebViewPromptWindow(
     onCloseRequest: () -> Unit,
     title: String,
+    height: Dp,
     text: @Composable () -> Unit,
     confirmButton: @Composable () -> Unit,
     dismissButton: @Composable () -> Unit = {},
@@ -771,8 +774,7 @@ private fun WebViewPromptWindow(
     DialogWindow(
         onCloseRequest = onCloseRequest,
         title = title,
-        state = rememberDialogState(width = 480.dp, height = Dp.Unspecified),
-        resizable = false,
+        state = rememberDialogState(width = 480.dp, height = height),
         onPreviewKeyEvent = { event ->
             if (event.key == Key.Escape && event.type == KeyEventType.KeyDown) {
                 onCloseRequest()
@@ -785,10 +787,10 @@ private fun WebViewPromptWindow(
         ClearWindowContentOnDispose(window)
         MaterialTheme(colorScheme = colorScheme, typography = typography, shapes = shapes) {
             DesktopDensityProvider {
-                Surface(Modifier.fillMaxWidth()) {
-                    Column(Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                Surface(Modifier.fillMaxSize()) {
+                    Column(Modifier.fillMaxSize().padding(24.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
                         Text(title, style = MaterialTheme.typography.headlineSmall)
-                        Column(Modifier.fillMaxWidth().heightIn(max = 420.dp).verticalScrollWithDrag(rememberScrollState())) {
+                        Column(Modifier.fillMaxWidth().weight(1f).verticalScrollWithDrag(rememberScrollState())) {
                             text()
                         }
                         FlowRow(

@@ -1016,12 +1016,6 @@
         <item quantity="many">%1$d minut</item>
         <item quantity="other">%1$d minut</item>
     </plurals>
-    <plurals name="minutes_short">
-        <item quantity="one">%1$d min</item>
-        <item quantity="few">%1$d min</item>
-        <item quantity="many">%1$d min</item>
-        <item quantity="other">%1$d min</item>
-    </plurals>
     <plurals name="n_track">
         <item quantity="one">%1$d skladba</item>
         <item quantity="few">%1$d skladby</item>
@@ -1057,12 +1051,6 @@
         <item quantity="few">Odstraněny %1$d skladby z playlistu</item>
         <item quantity="many">Odstraněno %1$d skladeb z playlistu</item>
         <item quantity="other">Odstraněno %1$d skladeb z playlistu</item>
-    </plurals>
-    <plurals name="seconds_short">
-        <item quantity="one">%1$d s</item>
-        <item quantity="few">%1$d s</item>
-        <item quantity="many">%1$d s</item>
-        <item quantity="other">%1$d s</item>
     </plurals>
     <plurals name="song_count">
         <item quantity="one">%1$d skladba</item>
@@ -2326,4 +2314,7 @@
     <string name="listen_together_server_label">%1$s · %2$s</string>
     <string name="settings_sound">Zvuk</string>
     <string name="song_count_with_hidden">%1$s, %2$s</string>
+    <string name="charts">Žebříčky</string>
+    <string name="leave_room">Opustit místnost</string>
+    <string name="room_code">Kód místnosti</string>
 </resources>

@@ -1,17 +1,28 @@
 package com.metrolist.desktop.nativeimage
 
+import com.metrolist.desktop.utils.configureDesktopSentry
 import com.metrolist.desktop.utils.isDesktopPlatformSupported
 import com.metrolist.desktop.window.jna.User32Extend
 import com.metrolist.desktop.window.jna.structure.MENUITEMINFO
 import com.metrolist.desktop.window.jna.structure.windowsBuildNumber
 import com.sun.jna.Pointer
+import com.sun.jna.platform.win32.Advapi32Util
 import com.sun.jna.platform.win32.COM.COMUtils
 import com.sun.jna.platform.win32.Ole32
+import com.sun.jna.platform.win32.WinReg
+import io.sentry.Attachment
+import io.sentry.Hint
+import io.sentry.Sentry
+import io.sentry.SentryEnvelope
+import io.sentry.SentryOptions
+import io.sentry.transport.ITransport
+import io.sentry.transport.RateLimiter
 import kotlinx.serialization.serializer
 import kotlinx.serialization.serializerOrNull
 import org.bytedeco.ffmpeg.global.avutil
 import org.jetbrains.skia.FontMgr
 import java.awt.GraphicsEnvironment
+import java.io.ByteArrayOutputStream
 import javax.sound.sampled.AudioSystem
 import kotlin.reflect.KClass
 import kotlin.reflect.KType
@@ -48,6 +59,52 @@ private fun serializationSmoke() {
     println("[NativeBackendSmoke] serializers passed: ${types.size} types")
 }
 
+// Release crash reports must initialize, find the uploaded source bundle and serialize events inside the image.
+private fun sentrySmoke() {
+    var configured: SentryOptions? = null
+    val envelopes = mutableListOf<ByteArray>()
+    Sentry.init { options ->
+        configureDesktopSentry(options, release = "native-smoke", environment = "native-smoke")
+        options.setTransportFactory { transportOptions, _ ->
+            val rateLimiter = RateLimiter(transportOptions)
+            object : ITransport {
+                override fun send(
+                    envelope: SentryEnvelope,
+                    hint: Hint,
+                ) {
+                    envelopes += ByteArrayOutputStream().also { transportOptions.serializer.serialize(envelope, it) }.toByteArray()
+                }
+
+                override fun flush(timeoutMillis: Long) = Unit
+
+                override fun getRateLimiter() = rateLimiter
+
+                override fun close(isRestarting: Boolean) = Unit
+
+                override fun close() = Unit
+            }
+        }
+        configured = options
+    }
+    try {
+        check(Sentry.isEnabled()) { "Sentry did not initialize" }
+        check(checkNotNull(configured).bundleIds.isNotEmpty()) { "Sentry found no sentry-debug-meta.properties bundle ID" }
+        // Mirrors SentryManager: a session and an event with an attachment, as previous-exit reports send.
+        Sentry.startSession()
+        Sentry.captureException(IllegalStateException("native smoke event")) { scope ->
+            scope.addAttachment(Attachment("previous exit summary".encodeToByteArray(), "native-smoke.txt", "text/plain"))
+        }
+        Sentry.endSession()
+        Sentry.flush(5_000)
+        val serialized = envelopes.joinToString("\n") { it.decodeToString() }
+        check("\"type\":\"event\"" in serialized && "native smoke event" in serialized) { "Sentry serialized no event" }
+        check("previous exit summary" in serialized) { "Sentry serialized no attachment" }
+    } finally {
+        Sentry.close()
+    }
+    println("[NativeBackendSmoke] Sentry passed")
+}
+
 internal fun nativeBackendSmoke() {
     // The packaged executable must pass the same platform gate as the app, including the Windows build check.
     check(isDesktopPlatformSupported()) { "Desktop platform check rejected this system, Windows build $windowsBuildNumber" }
@@ -62,6 +119,11 @@ internal fun nativeBackendSmoke() {
         val result = Ole32.INSTANCE.CoInitializeEx(Pointer.NULL, Ole32.COINIT_MULTITHREADED)
         COMUtils.checkRC(result)
         Ole32.INSTANCE.CoUninitialize()
+        // The update manager handoff reads its installation through these registry calls.
+        val international = "Control Panel\\International"
+        check(Advapi32Util.registryKeyExists(WinReg.HKEY_CURRENT_USER, international))
+        check(Advapi32Util.registryGetStringValue(WinReg.HKEY_CURRENT_USER, international, "LocaleName").isNotBlank())
     }
+    sentrySmoke()
     println("[NativeBackendSmoke] passed")
 }

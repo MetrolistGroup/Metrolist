@@ -42,7 +42,7 @@ The source recipe and verification live in `aur/`. The generator writes `aur/rel
 
 ## Nix
 
-`flake.nix` uses `appimageTools` for Linux x86_64/aarch64 and pins nixpkgs. Generated output includes `nix/packaging/release.json` with fixed-output hashes. The FHS sandbox uses the host's ALSA configuration. Do not add `alsa-plugins` to `extraPkgs`, because its `/etc/alsa` hides the host's PipeWire configuration.
+`flake.nix` uses `appimageTools` for Linux x86_64/aarch64 and pins nixpkgs. On aarch64 and x86_64 macOS, `packaging/nix/darwin.nix` unpacks the release DMG into `Applications/Metrolist.app` and adds a `bin/metrolist` launcher. It copies the bundle unchanged, so its ad-hoc signature stays valid. Generated output includes `nix/packaging/release.json` with fixed-output hashes for the AppImages and DMGs. The FHS sandbox uses the host's ALSA configuration. Do not add `alsa-plugins` to `extraPkgs`, because its `/etc/alsa` hides the host's PipeWire configuration.
 
 The sandbox includes `glib-networking` and adds its GIO modules to `GIO_EXTRA_MODULES` for WebKitGTK TLS. It preserves any existing module paths.
 
@@ -53,7 +53,7 @@ nix build path:./build/distribution/nix
 nix run path:./build/distribution/nix
 ```
 
-The root flake reads the committed `packaging/release.json`, so `nix run github:MetrolistGroup/Metrolist` installs the latest stable release. After each stable release, copy the generated `release.json` to `packaging/release.json` and commit it. Missing metadata fails with generation instructions rather than a fake hash. Verify login, Secret Service, audio and desktop integration on both architectures.
+The root flake reads the committed `packaging/release.json`, so `nix run github:MetrolistGroup/Metrolist` installs the latest stable release. After each stable release, copy the generated `release.json` to `packaging/release.json` and commit it. Missing metadata fails with generation instructions rather than a fake hash. Verify login, Secret Service, audio and desktop integration on both Linux architectures, and launch, login and Keychain restoration on both macOS architectures.
 
 ## Flatpak
 
@@ -63,7 +63,7 @@ The `flatpark` job in `release.yml` runs [flatpark/publish-action](https://githu
 
 The source manifest builds the committed `main` branch of the local checkout with Gradle and network access (`make flatpak-bundle`). Its JDK module stays unstripped because jlink rejects modified JDK libraries. It uses GNOME 51, matching flatpark.
 
-Permissions cover X11, IPC, DRI, PulseAudio, network, Secret Service, the app's MPRIS name, the tray watcher and tray item name (`org.kde.StatusNotifierItem-2-1`, the app runs as PID 2 in the sandbox), Downloads and Music. The manifest grants neither the whole home directory nor the session bus. Inside the sandbox the Wayland scale probes cannot reach the compositor and fall back to environment variables, the download folder chooser sees only Downloads and Music, and Omarchy detection relies on `OMARCHY_PATH`. Check login, credentials, local files, downloads, audio, tray, MPRIS and GPU rendering in the sandbox.
+Permissions cover X11, IPC, DRI, PulseAudio, network, Secret Service, the app's MPRIS name, the tray watcher and tray item name (`org.kde.StatusNotifierItem-2-1`, the app runs as PID 2 in the sandbox), Downloads and Music. The manifest grants neither the whole home directory nor the session bus. Inside the sandbox the Wayland scale probes cannot reach the compositor and fall back to environment variables, and the download folder chooser sees only Downloads and Music. Omarchy detection requires its OS identity or version tool to be visible inside the sandbox; `OMARCHY_PATH` alone does not trigger rejection. Check login, credentials, local files, downloads, audio, tray, MPRIS and GPU rendering in the sandbox.
 
 ## Optional external proposals
 

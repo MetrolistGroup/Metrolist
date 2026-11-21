@@ -16,10 +16,10 @@
     <string name="mood_and_genres">Настроения и жанры</string>
     <string name="account">Аккаунт</string>
     <string name="quick_picks">Рекомендуем</string>
-    <string name="forgotten_favorites">Забытые избранные</string>
-    <string name="keep_listening">Продолжайте слушать</string>
+    <string name="forgotten_favorites">Вы давно не слушали</string>
+    <string name="keep_listening">Слушать дальше</string>
     <string name="similar_to">Похоже на</string>
-    <string name="new_releases">Новые релизы</string>
+    <string name="new_releases">Новинки</string>
     <string name="podcasts_for_you">Подкасты для вас</string>
     <string name="recap">Итоги</string>
     <string name="home_unavailable">Главная страница недоступна</string>
@@ -1020,12 +1020,6 @@
         <item quantity="many">%1$d минут</item>
         <item quantity="other">%1$d минут</item>
     </plurals>
-    <plurals name="minutes_short">
-        <item quantity="one">%1$d мин</item>
-        <item quantity="few">%1$d мин</item>
-        <item quantity="many">%1$d мин</item>
-        <item quantity="other">%1$d мин</item>
-    </plurals>
     <plurals name="n_track">
         <item quantity="one">%1$d трек</item>
         <item quantity="few">%1$d трека</item>
@@ -1061,12 +1055,6 @@
         <item quantity="few">Удалены %1$d песни из плейлиста</item>
         <item quantity="many">Удалено %1$d песен из плейлиста</item>
         <item quantity="other">Удалено %1$d песен из плейлиста</item>
-    </plurals>
-    <plurals name="seconds_short">
-        <item quantity="one">%1$d с</item>
-        <item quantity="few">%1$d с</item>
-        <item quantity="many">%1$d с</item>
-        <item quantity="other">%1$d с</item>
     </plurals>
     <plurals name="song_count">
         <item quantity="one">%1$d песня</item>
@@ -2500,7 +2488,7 @@
     <string name="current_version">Текущая версия</string>
     <string name="guest">Гость</string>
     <string name="leave_room">Выйти из комнаты</string>
-    <string name="charts">Графики</string>
+    <string name="charts">Хит-парады</string>
     <string name="album_charts">Лучшие альбомы</string>
     <string name="recap_playlists">Итоговые плейлисты</string>
     <string name="settings_default">По умолчанию</string>

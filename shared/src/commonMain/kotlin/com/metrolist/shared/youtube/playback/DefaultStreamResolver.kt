@@ -31,6 +31,7 @@ import com.metrolist.shared.model.isUploadedType
 import com.metrolist.shared.model.isVideoSong
 import com.metrolist.shared.network.bodyAsTextLimited
 import com.metrolist.shared.network.createHttpClient
+import com.metrolist.shared.playback.PlaybackClientStats
 import com.metrolist.shared.playback.PlaybackFailureCategory
 import com.metrolist.shared.playback.PlaybackFailureClassifier
 import com.metrolist.shared.settings.Settings
@@ -325,6 +326,7 @@ class DefaultStreamResolver(
             )
         }
         if (effectiveCategory == PlaybackFailureCategory.URL_EXPIRED) return
+        PlaybackClientStats.recordPlayback(profileId, effectiveCategory)
         PlaybackClientCatalog.manifestIdFromProfileId(profileId)?.let { manifestId ->
             clientHealthTracker.recordFailure(
                 manifestId,
@@ -343,6 +345,7 @@ class DefaultStreamResolver(
         profileId: String?,
         hints: ContentHints,
     ) {
+        PlaybackClientStats.recordPlayback(profileId)
         PlaybackClientCatalog.manifestIdFromProfileId(profileId)?.let { manifestId ->
             clientHealthTracker.recordSuccess(
                 manifestId,
@@ -785,8 +788,11 @@ class DefaultStreamResolver(
             retryHints: ContentHints = extractHints,
         ): ExtractedStream? =
             try {
-                extractor.extract(extractVideoId, retryHints, exclusions, audioQuality)
+                extractor
+                    .extract(extractVideoId, retryHints, exclusions, audioQuality)
+                    .also { PlaybackClientStats.recordAttempts(it?.streamDiagnostics) }
             } catch (error: StreamResolveException) {
+                PlaybackClientStats.recordAttempts(error.diagnostics)
                 if (error.reason == StreamResolveException.Reason.NETWORK) throw error
                 lastSelectionFailure = error
                 null
@@ -1176,7 +1182,7 @@ class DefaultStreamResolver(
                     durationSeconds = durationSeconds.takeUnless { isLive },
                     isLive = isLive,
                     requireBoundedRange = false,
-                    videoUrl = if (extractWantVideo || resolvedVideoUrl != null) resolvedVideoUrl else null,
+                    videoUrl = resolvedVideoUrl.takeIf { extractWantVideo },
                     videoWidth = resolvedWidth,
                     videoHeight = resolvedHeight,
                     videoBitrate = resolvedBitrate?.toInt(),

@@ -267,6 +267,8 @@ import com.metrolist.shared.generated.resources.downloads
 import com.metrolist.shared.generated.resources.error
 import com.metrolist.shared.generated.resources.filter_library
 import com.metrolist.shared.generated.resources.home
+import com.metrolist.shared.generated.resources.lastfm_session_expired_description
+import com.metrolist.shared.generated.resources.lastfm_session_expired_title
 import com.metrolist.shared.generated.resources.listen_together
 import com.metrolist.shared.generated.resources.listen_together_guest_choice_message
 import com.metrolist.shared.generated.resources.listen_together_guest_choice_title
@@ -297,6 +299,7 @@ import com.metrolist.shared.model.SongItem
 import com.metrolist.shared.playback.LocalPlayerSession
 import com.metrolist.shared.playlistimport.PlaylistImportProgressCard
 import com.metrolist.shared.playlistimport.PlaylistImportStatusManager
+import com.metrolist.shared.scrobble.ScrobbleSessions
 import com.metrolist.shared.settings.MiniPlayerType
 import com.metrolist.shared.settings.Settings
 import com.metrolist.shared.settings.defaultOpenTabRoot
@@ -359,6 +362,7 @@ import com.metrolist.shared.ui.playback.LocalPlaybackController
 import com.metrolist.shared.ui.player.LocalPlayerPlatform
 import com.metrolist.shared.ui.player.PlayerScreen
 import com.metrolist.shared.ui.player.shouldShowMusicVideoSurface
+import com.metrolist.shared.ui.screens.SupportPrompt
 import com.metrolist.shared.ui.screens.pageKey
 import com.metrolist.shared.ui.screens.toHomeSection
 import com.metrolist.shared.ui.settings.SettingsPageId
@@ -544,6 +548,29 @@ fun MetrolistApp(
                 },
             )
         }
+        PopupVisibility(visible = ScrobbleSessions.showLastFmExpiredNotice && !YouTubeSessionState.showExpiredSessionNotice) {
+            AlertDialog(
+                onDismissRequest = ScrobbleSessions::dismissLastFmExpiredNotice,
+                title = { Text(stringResource(Res.string.lastfm_session_expired_title)) },
+                text = { Text(stringResource(Res.string.lastfm_session_expired_description)) },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            ScrobbleSessions.dismissLastFmExpiredNotice()
+                            navigator.navigate(Screen.LastFm)
+                        },
+                        shapes = ButtonDefaults.shapes(),
+                    ) {
+                        Text(stringResource(Res.string.action_login))
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = ScrobbleSessions::dismissLastFmExpiredNotice, shapes = ButtonDefaults.shapes()) {
+                        Text(stringResource(Res.string.action_not_now))
+                    }
+                },
+            )
+        }
         var pendingSearchQuery by remember { mutableStateOf<String?>(null) }
         var pendingRoomCode by rememberSaveable { mutableStateOf<String?>(null) }
         var continuePlaybackPromptHandled by rememberSaveable { mutableStateOf(false) }
@@ -595,7 +622,9 @@ fun MetrolistApp(
                     AppUpdateManager.pendingReleaseForInstalledVersion()
                         ?: AppUpdateManager.releaseForInstalledVersion()
             }
-            if (!wasUpdated || installedReleaseNotes != null || AppUpdateManager.releases.value.isNotEmpty()) {
+            if (!BuildConfig.UPDATER_ENABLED || !wasUpdated || installedReleaseNotes != null ||
+                AppUpdateManager.releases.value.isNotEmpty()
+            ) {
                 Settings.shared.lastRunAppVersion = BuildConfig.VERSION_NAME
             }
         }
@@ -607,6 +636,8 @@ fun MetrolistApp(
                 if (Settings.shared.checkForUpdates) AppUpdateManager.checkAtStartup(context, networkEnabled = true)
             }
         }
+
+        SupportPrompt()
 
         PopupContent(updatePrompt) { release ->
             AlertDialog(
@@ -1207,6 +1238,10 @@ fun MetrolistApp(
 
                             IncomingDestination.Recognition -> {
                                 navigator.navigate(Screen.Recognition)
+                            }
+
+                            IncomingDestination.LastFm -> {
+                                navigator.navigate(Screen.LastFm)
                             }
 
                             IncomingDestination.Player -> {
@@ -2232,6 +2267,8 @@ sealed class IncomingDestination {
 
     object Recognition : IncomingDestination()
 
+    object LastFm : IncomingDestination()
+
     object Player : IncomingDestination()
 
     data class Search(
@@ -2315,6 +2352,7 @@ fun Intent.toIncomingDestination(): IncomingDestination? {
         Intent.ACTION_APPLICATION_PREFERENCES -> IncomingDestination.Settings
         MainActivity.ACTION_BACKUP_RESTORE -> IncomingDestination.BackupRestore
         MainActivity.ACTION_RECOGNITION -> IncomingDestination.Recognition
+        MainActivity.ACTION_LASTFM -> IncomingDestination.LastFm
         else -> null
     }
 }

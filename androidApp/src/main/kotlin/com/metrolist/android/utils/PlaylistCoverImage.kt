@@ -3,9 +3,12 @@ package com.metrolist.android.utils
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.ImageDecoder
+import android.graphics.Matrix
+import android.media.ExifInterface
 import android.os.Build
 import androidx.annotation.RequiresApi
 import java.io.ByteArrayOutputStream
+import java.io.IOException
 import java.io.InputStream
 import java.nio.ByteBuffer
 import kotlin.math.roundToInt
@@ -16,7 +19,14 @@ private const val PLAYLIST_COVER_SIZE = 1024
 
 internal fun readPlaylistCover(input: InputStream): ByteArray {
     val bytes = requireNotNull(input.readBoundedBytes(MAX_PLAYLIST_COVER_BYTES))
-    val bitmap = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) decodeScaled(bytes) else decodeScaledLegacy(bytes)
+    val bitmap =
+        if (Build.VERSION.SDK_INT >=
+            Build.VERSION_CODES.P
+        ) {
+            decodeScaled(bytes)
+        } else {
+            orientLegacyCover(decodeScaledLegacy(bytes), bytes)
+        }
     return try {
         ByteArrayOutputStream().use { output ->
             check(bitmap.compress(Bitmap.CompressFormat.JPEG, 90, output))
@@ -69,4 +79,57 @@ private fun decodeScaledLegacy(bytes: ByteArray): Bitmap {
         )
     if (scaled !== sampled) sampled.recycle()
     return scaled
+}
+
+private fun orientLegacyCover(
+    bitmap: Bitmap,
+    bytes: ByteArray,
+): Bitmap {
+    val orientation =
+        try {
+            bytes.inputStream().use { ExifInterface(it).getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL) }
+        } catch (_: IOException) {
+            ExifInterface.ORIENTATION_NORMAL
+        }
+    val matrix = Matrix()
+    when (orientation) {
+        ExifInterface.ORIENTATION_FLIP_HORIZONTAL -> {
+            matrix.setScale(-1f, 1f)
+        }
+
+        ExifInterface.ORIENTATION_ROTATE_180 -> {
+            matrix.setRotate(180f)
+        }
+
+        ExifInterface.ORIENTATION_FLIP_VERTICAL -> {
+            matrix.setScale(1f, -1f)
+        }
+
+        ExifInterface.ORIENTATION_TRANSPOSE -> {
+            matrix.setRotate(90f)
+            matrix.postScale(-1f, 1f)
+        }
+
+        ExifInterface.ORIENTATION_ROTATE_90 -> {
+            matrix.setRotate(90f)
+        }
+
+        ExifInterface.ORIENTATION_TRANSVERSE -> {
+            matrix.setRotate(270f)
+            matrix.postScale(-1f, 1f)
+        }
+
+        ExifInterface.ORIENTATION_ROTATE_270 -> {
+            matrix.setRotate(270f)
+        }
+
+        else -> {
+            return bitmap
+        }
+    }
+    return try {
+        Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
+    } finally {
+        bitmap.recycle()
+    }
 }

@@ -7,6 +7,7 @@ import com.metrolist.shared.db.StoredHistoryRow
 import com.metrolist.shared.model.HistorySortMode
 import com.metrolist.shared.model.SortDirection
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.yield
 
 internal class MobileHistoryLoader(
     private val read: suspend (Int, Int, String, HistorySortMode, SortDirection) -> List<StoredHistoryRow>,
@@ -23,6 +24,7 @@ internal class MobileHistoryLoader(
         private set
 
     private var generation = 0L
+    private var nextOffset = 0L
     private var filter = Triple("", HistorySortMode.NEWEST, SortDirection.DESCENDING)
     private var loadedFilter: Triple<String, HistorySortMode, SortDirection>? = null
 
@@ -43,8 +45,9 @@ internal class MobileHistoryLoader(
             val refreshed = read(limit, 0, query, sortMode, direction)
             if (requestGeneration != generation) return false
             loadedFilter = requestedFilter
-            rows = refreshed
-            hasMore = rows.size == limit
+            nextOffset = refreshed.size.toLong()
+            rows = refreshed.distinctBy(StoredHistoryRow::id)
+            hasMore = refreshed.size == limit
             return true
         } catch (error: CancellationException) {
             throw error
@@ -62,11 +65,22 @@ internal class MobileHistoryLoader(
         val requestGeneration = generation
         loadingPage = true
         try {
-            val page = read(100, rows.size, query, sortMode, direction)
-            if (requestGeneration != generation) return
-            rows = rows + page
-            hasMore = page.size == 100
-            failed = false
+            val seenIds = rows.mapTo(mutableSetOf(), StoredHistoryRow::id)
+            while (requestGeneration == generation) {
+                val page = read(100, nextOffset.toInt(), query, sortMode, direction)
+                if (requestGeneration != generation) return
+                // The database offset counts raw rows even when concurrent inserts make pages overlap.
+                nextOffset += page.size
+                hasMore = page.size == 100 && nextOffset <= Int.MAX_VALUE
+                val newRows = page.filter { seenIds.add(it.id) }
+                if (newRows.isNotEmpty() || !hasMore) {
+                    rows = rows + newRows
+                    failed = false
+                    break
+                }
+                // The list cannot request another page until its displayed row count changes.
+                yield()
+            }
         } catch (error: CancellationException) {
             throw error
         } catch (_: Exception) {

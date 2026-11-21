@@ -1085,11 +1085,6 @@
         <item quantity="many">%1$d minuti</item>
         <item quantity="other">%1$d minuti</item>
     </plurals>
-    <plurals name="minutes_short">
-        <item quantity="one">%1$d min</item>
-        <item quantity="many">%1$d min</item>
-        <item quantity="other">%1$d min</item>
-    </plurals>
     <plurals name="n_track">
         <item quantity="one">%1$d traccia</item>
         <item quantity="many">%1$d tracce</item>
@@ -1119,11 +1114,6 @@
         <item quantity="one">Rimosso %1$d brano dalla playlist</item>
         <item quantity="many">Rimossi %1$d brani dalla playlist</item>
         <item quantity="other">Rimossi %1$d brani dalla playlist</item>
-    </plurals>
-    <plurals name="seconds_short">
-        <item quantity="one">%1$d s</item>
-        <item quantity="many">%1$d s</item>
-        <item quantity="other">%1$d s</item>
     </plurals>
     <plurals name="statistics_tracks">
         <item quantity="one">%1$d traccia</item>

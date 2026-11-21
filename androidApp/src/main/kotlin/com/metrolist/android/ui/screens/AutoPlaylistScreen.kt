@@ -197,6 +197,8 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import org.jetbrains.compose.resources.getString
 import org.jetbrains.compose.resources.pluralStringResource
@@ -247,7 +249,9 @@ fun AutoPlaylistScreen(
 
     var songs by remember { mutableStateOf<List<SongItem>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
-    var isUploading by remember { mutableStateOf(false) }
+    var pendingUploads by remember { mutableIntStateOf(0) }
+    val isUploading = pendingUploads > 0
+    val uploadQueue = remember { Mutex() }
     var showClearConfirmation by remember { mutableStateOf(false) }
     var showCollectionMenu by remember { mutableStateOf(false) }
     var showExportDialog by remember { mutableStateOf(false) }
@@ -498,45 +502,49 @@ fun AutoPlaylistScreen(
     }
 
     val uploadLauncher =
-        rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
-            if (uri == null || isUploading) return@rememberLauncherForActivityResult
-            scope.launch {
-                isUploading = true
-                try {
-                    val result =
-                        withContext(Dispatchers.IO) {
-                            val fileName = context.displayName(uri) ?: uri.lastPathSegment?.substringAfterLast('/') ?: "upload"
-                            val contentLength = context.contentLength(uri) ?: 0L
-                            GlobalYouTubeRepository.instance.uploadSong(fileName, contentLength) {
-                                requireNotNull(context.contentResolver.openInputStream(uri)).toByteReadChannel(Dispatchers.IO)
-                            }
-                        }
-                    if (result.success) {
-                        Toast.makeText(context, getString(Res.string.uploaded_song_to_youtube_music), Toast.LENGTH_SHORT).show()
-                        if (currentType == "uploaded") {
-                            val knownIds = songs.mapTo(mutableSetOf()) { it.id }
-                            scope.launch {
-                                GlobalYouTubeRepository.instance.awaitProcessedUpload(knownIds) { processed ->
-                                    if (currentType == "uploaded") {
-                                        scope.launch { database.synchronizeUploadedSongs(processed) }
+        rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris: List<Uri> ->
+            pendingUploads += uris.size
+            // Picked files upload one at a time; picking again while uploading adds to the queue.
+            uris.forEach { uri ->
+                scope.launch {
+                    try {
+                        val result =
+                            uploadQueue.withLock {
+                                withContext(Dispatchers.IO) {
+                                    val fileName = context.displayName(uri) ?: uri.lastPathSegment?.substringAfterLast('/') ?: "upload"
+                                    val contentLength = context.contentLength(uri) ?: 0L
+                                    GlobalYouTubeRepository.instance.uploadSong(fileName, contentLength) {
+                                        requireNotNull(context.contentResolver.openInputStream(uri)).toByteReadChannel(Dispatchers.IO)
                                     }
                                 }
                             }
+                        if (result.success) {
+                            Toast.makeText(context, getString(Res.string.uploaded_song_to_youtube_music), Toast.LENGTH_SHORT).show()
+                            if (currentType == "uploaded") {
+                                val knownIds = songs.mapTo(mutableSetOf()) { it.id }
+                                scope.launch {
+                                    GlobalYouTubeRepository.instance.awaitProcessedUpload(knownIds) { processed ->
+                                        if (currentType == "uploaded") {
+                                            scope.launch { database.synchronizeUploadedSongs(processed) }
+                                        }
+                                    }
+                                }
+                            }
+                        } else {
+                            Toast
+                                .makeText(
+                                    context,
+                                    result.localizedErrorMessage(),
+                                    Toast.LENGTH_LONG,
+                                ).show()
                         }
-                    } else {
-                        Toast
-                            .makeText(
-                                context,
-                                result.localizedErrorMessage(),
-                                Toast.LENGTH_LONG,
-                            ).show()
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        Toast.makeText(context, getString(Res.string.upload_failed), Toast.LENGTH_LONG).show()
+                    } finally {
+                        pendingUploads--
                     }
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (e: Exception) {
-                    Toast.makeText(context, getString(Res.string.upload_failed), Toast.LENGTH_LONG).show()
-                } finally {
-                    isUploading = false
                 }
             }
         }
@@ -769,7 +777,6 @@ fun AutoPlaylistScreen(
                             IconButton(
                                 modifier = Modifier.tvFocusHighlight(CircleShape).navigationPopupSource(),
                                 onClick = action,
-                                enabled = currentType != "uploaded" || !isUploading,
                                 shapes = IconButtonDefaults.shapes(),
                             ) {
                                 if (currentType == "uploaded" && isUploading) {

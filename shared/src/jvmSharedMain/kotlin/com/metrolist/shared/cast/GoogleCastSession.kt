@@ -218,6 +218,9 @@ internal class GoogleCastSession(
     private var mediaGeneration = 0L
 
     @Volatile
+    private var currentLoadRequestId: Int? = null
+
+    @Volatile
     private var closed = false
 
     override suspend fun load(
@@ -270,7 +273,7 @@ internal class GoogleCastSession(
                 put("autoplay", autoplay)
                 put("currentTime", positionMs / 1000.0)
             }
-        check(response.type() != "LOAD_FAILED")
+        check(response.type() == "MEDIA_STATUS") { "Cast load rejected: ${response.type()}" }
         updateMediaStatus(response, loadedMediaGeneration = mediaGeneration)
         if (pollingJob == null) {
             pollingJob =
@@ -353,6 +356,7 @@ internal class GoogleCastSession(
         content: kotlinx.serialization.json.JsonObjectBuilder.() -> Unit = {},
     ): JsonObject {
         val requestId = requestIds.incrementAndGet()
+        if (type == "LOAD") currentLoadRequestId = requestId
         val payload =
             buildJsonObject {
                 put("type", type)
@@ -423,9 +427,19 @@ internal class GoogleCastSession(
                 }
                 val payload = message.payloadObject()
                 when (payload?.type()) {
-                    "MEDIA_STATUS" -> updateMediaStatus(payload)
-                    "RECEIVER_STATUS" -> updateReceiverStatus(payload)
-                    "LOAD_FAILED", "LOAD_CANCELLED" -> close()
+                    "MEDIA_STATUS" -> {
+                        updateMediaStatus(payload)
+                    }
+
+                    "RECEIVER_STATUS" -> {
+                        updateReceiverStatus(payload)
+                    }
+
+                    "LOAD_FAILED", "LOAD_CANCELLED" -> {
+                        // A superseded load can report failure after replacement playback has started.
+                        val requestId = payload["requestId"]?.jsonPrimitive?.intOrNull
+                        if (requestId != null && requestId == currentLoadRequestId) close()
+                    }
                 }
                 messages.tryEmit(message)
             }

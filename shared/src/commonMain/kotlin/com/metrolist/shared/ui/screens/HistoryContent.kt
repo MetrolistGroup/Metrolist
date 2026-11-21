@@ -214,7 +214,8 @@ fun HistoryContent(
 
     NavigationBackHandler(enabled = isSelectMode) {
         isSelectMode = false
-        if (selectedIds.isNotEmpty()) onSelectAll(emptySet())
+        // A Select All request can still be pending while the displayed count is zero.
+        onSelectAll(emptySet())
     }
 
     Column(modifier.fillMaxSize().windowInsetsPadding(WindowInsets.statusBars)) {
@@ -225,7 +226,7 @@ fun HistoryContent(
                 onClose = {
                     isSelectMode = false
                     showSelectionMenu = false
-                    if (selectedIds.isNotEmpty()) onSelectAll(emptySet())
+                    onSelectAll(emptySet())
                 },
                 onSelectAll = { onSelectAll(toggleDisplayedHistorySelection(selectedIds, displayedIds)) },
                 onMore = { showSelectionMenu = true },

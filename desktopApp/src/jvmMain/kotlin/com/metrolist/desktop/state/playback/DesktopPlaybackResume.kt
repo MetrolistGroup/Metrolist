@@ -1,5 +1,7 @@
 package com.metrolist.desktop.state.playback
 
+import com.metrolist.shared.model.RepeatMode
+
 internal fun completeDesktopPlaybackResume(
     positionMs: Long?,
     prepared: Boolean,
@@ -20,3 +22,15 @@ internal fun desktopPreviousRestartPosition(
     isLive: Boolean,
     hasPrevious: Boolean,
 ): Pair<String, Long>? = pendingResumePosition?.takeIf { !isLive && (positionMs > 3_000L || !hasPrevious) }?.let { it.first to 0L }
+
+internal fun desktopPreviousQueueIndex(
+    currentIndex: Int,
+    lastIndex: Int,
+    repeatMode: RepeatMode,
+    isLive: Boolean,
+): Int? =
+    when {
+        currentIndex > 0 -> currentIndex - 1
+        currentIndex == 0 && lastIndex > 0 && repeatMode == RepeatMode.ALL && !isLive -> lastIndex
+        else -> null
+    }

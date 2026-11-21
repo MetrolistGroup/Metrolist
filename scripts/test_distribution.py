@@ -53,13 +53,22 @@ class DistributionTest(unittest.TestCase):
         self.assertEqual(set(data['linux']), {'x86_64-linux', 'aarch64-linux'})
         nix_recipe = (self.output / 'nix/packaging/nix/package.nix').read_text()
         self.assertNotIn('alsa-plugins', nix_recipe.split('extraPkgs =', 1)[1].split('];', 1)[0])
-        for asset in data['linux'].values():
+        self.assertEqual(set(data['darwin']), {'aarch64-darwin', 'x86_64-darwin'})
+        self.assertTrue((self.output / 'nix/packaging/nix/darwin.nix').is_file())
+        for asset in [*data['linux'].values(), *data['darwin'].values()]:
             self.assertEqual(asset['sha256'], hashlib.sha256((self.assets / asset['name']).read_bytes()).hexdigest())
             self.assertTrue(asset['hash'].startswith('sha256-'))
         self.assertFalse((self.output / 'flatpak').exists())
         self.assertFalse((self.output / 'aur/PKGBUILD').exists())
         if shutil.which('ruby'):
             subprocess.run(['ruby', '-c', str(self.output / 'homebrew/Casks/metrolist.rb')], check=True, capture_output=True)
+
+    def test_generated_nix_flake_keeps_the_matching_input_lock(self):
+        self.generate()
+        source = Path(__file__).resolve().parents[1]
+        generated = self.output / 'nix'
+        for name in ('flake.nix', 'flake.lock'):
+            self.assertEqual((source / name).read_bytes(), (generated / name).read_bytes())
 
     def test_rejects_unpublished_wrong_repository_and_nonstable_releases(self):
         for key, value in [('tagName', 'v14.0.0-rc7'), ('tagName', '../14.0.0'),

@@ -114,7 +114,11 @@ interface HistoryDao {
 
     @Transaction
     @Query(
-        "SELECT * FROM recognition_history WHERE title LIKE '%' || :query || '%' OR artist LIKE '%' || :query || '%' ORDER BY recognizedAt DESC",
+        """
+        SELECT * FROM recognition_history
+        WHERE instr(lower(title), lower(:query)) > 0 OR instr(lower(artist), lower(:query)) > 0
+        ORDER BY recognizedAt DESC
+        """,
     )
     fun searchRecognitionHistory(query: String): Flow<List<RecognitionHistory>>
 

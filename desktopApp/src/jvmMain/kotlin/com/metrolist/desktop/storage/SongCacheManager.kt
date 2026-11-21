@@ -534,7 +534,7 @@ object SongCacheManager {
         awaitReady: suspend () -> Unit = {},
     ) {
         if (resource != null && !resource.isDirectFile && !resource.isSabr) return
-        if (resource?.clientName == "local") return
+        if (resource?.isMuxedProgressive == true || resource?.clientName == "local") return
         val mvId = resource?.musicVideoId
         val targetSong =
             if (mvId != null && mvId != song.id) {
@@ -658,7 +658,7 @@ object SongCacheManager {
         if (songIds.isEmpty()) return
         synchronized(indexLock) {
             songIds.forEach { jobs.remove(it)?.cancel() }
-            removeCachedSongs(_cachedSongs.value, songIds, ::safeFile, ::saveAndPublish)
+            removeCachedSongs(_cachedSongs.value, songIds, ::safeFile, save = ::saveAndPublish)
         }
     }
 
@@ -710,11 +710,14 @@ object SongCacheManager {
                     requestedBytes,
                 )
             if (evictionCount > 0) {
-                entries.take(evictionCount).forEach { entry ->
-                    safeFile(entry.filePath)?.delete()
-                    entry.thumbnailPath?.let(::safeFile)?.delete()
-                }
-                saveAndPublish(entries.drop(evictionCount))
+                val candidates = entries.take(evictionCount)
+                removeCachedSongs(
+                    candidates,
+                    candidates.mapTo(mutableSetOf()) { it.songId },
+                    ::safeFile,
+                    onDeleteFailure = { AppLogger.warning("SongCacheManager", "Could not evict a cache entry", it) },
+                    save = { retained -> saveAndPublish(retained + entries.drop(evictionCount)) },
+                )
             }
             (maximum - _cacheSizeBytes.value).coerceAtLeast(0L)
         }
@@ -739,6 +742,7 @@ internal fun removeCachedSongs(
     entries: List<CachedSongEntry>,
     songIds: Set<String>,
     safeFile: (String) -> File?,
+    onDeleteFailure: (Exception) -> Unit = { throw it },
     save: (List<CachedSongEntry>) -> Unit,
 ) {
     var failure: Exception? = null
@@ -757,5 +761,5 @@ internal fun removeCachedSongs(
             }
         }
     save(remaining)
-    failure?.let { throw it }
+    failure?.let(onDeleteFailure)
 }

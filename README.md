@@ -52,7 +52,7 @@ DO NOT REMOVE THIS SECTION, I WANT TO ADD IT LATER!!!
 </div>
 
 - YouTube Music playback with or without signing in
-- Android 7+, iOS 17+, Windows 10+, macOS 15+ and Linux support
+- Android 7+, iOS 15+, Windows 10+, macOS 15+ and Linux support
 - Material 3 Expressive design
 - Discord Rich Presence and scrobbling through Last.fm and ListenBrainz
 - No ads
@@ -92,7 +92,7 @@ DO NOT REMOVE THIS SECTION, I WANT TO ADD IT LATER!!!
 </p>
 
 <h3>iOS</h3>
-<p><sub>iPhone and iPad · iOS 17+ · sideload with AltStore, SideStore, TrollStore or Sideloadly</sub></p>
+<p><sub>iPhone and iPad · iOS 15+ · sideload with AltStore, SideStore, TrollStore or Sideloadly</sub></p>
 <p>
   <a href="https://github.com/MetrolistGroup/Metrolist/releases/latest/download/Metrolist.ipa"><img alt="Download the iOS IPA" src="assets/badges/platform/ios-ipa.svg"></a>
 </p>

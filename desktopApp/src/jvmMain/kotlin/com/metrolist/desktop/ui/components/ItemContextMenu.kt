@@ -400,17 +400,23 @@ fun AlbumContextMenu(
     MediaContextMenu(expanded = expanded, offset = offset, onDismiss = onDismiss) {
         val playback = LocalPlaybackController.current
         val isPinned = album.id in HomeState.uiState.speedDialPinnedIds
+        val playbackActions =
+            MediaMenuPlaybackActions(
+                album,
+                playback,
+                withSongs = { action -> withMediaSongs(album, songs, action) },
+            )
         albumMediaMenuModel(
             album = album,
             isFavorite = isFavorite,
             onFavorite = onFavorite,
             onDismiss = onDismiss,
             isPinned = isPinned,
-            onPlay = { launchTrackedMenuPlayback(album, songs, playback, invoke = MediaMenuPlaybackActions::play) },
-            onShuffle = { launchTrackedMenuPlayback(album, songs, playback, invoke = MediaMenuPlaybackActions::shuffle) },
+            onPlay = playbackActions::play,
+            onShuffle = playbackActions::shuffle,
             onShare = { AppState.copyToClipboard(ShareUrls.album(album.id)) },
-            onPlayNext = { launchTrackedMenuQueueAction(album, songs, playback, MediaMenuPlaybackActions::playNext) },
-            onAddToQueue = { launchTrackedMenuQueueAction(album, songs, playback, MediaMenuPlaybackActions::addToQueue) },
+            onPlayNext = playbackActions::playNext,
+            onAddToQueue = playbackActions::addToQueue,
             onAddToPlaylist = { withMediaSongs(album, songs) { PlayerState.showAddToPlaylistSongs = it } },
             onTogglePin = {
                 if (isPinned) HomeState.unpinSpeedDialItem(album.id) else HomeState.pinSpeedDialItem(album)
@@ -439,17 +445,23 @@ fun ArtistContextMenu(
         val playback = LocalPlaybackController.current
         val isPinned = artist.id in HomeState.uiState.speedDialPinnedIds
         val isBlocked = BlockedContent.isArtistBlocked(artist.id)
+        val playbackActions =
+            MediaMenuPlaybackActions(
+                artist,
+                playback,
+                withSongs = { action -> withMediaSongs(artist, emptyList(), action) },
+            )
         artistMediaMenuModel(
             artist = artist,
             onDismiss = onDismiss,
             isPinned = isPinned,
             isBlocked = isBlocked,
             isSubscribed = isSubscribed,
-            onPlay = { launchTrackedMenuPlayback(artist, emptyList(), playback, invoke = MediaMenuPlaybackActions::play) },
-            onShuffle = { launchTrackedMenuPlayback(artist, emptyList(), playback, invoke = MediaMenuPlaybackActions::shuffle) },
+            onPlay = playbackActions::play,
+            onShuffle = playbackActions::shuffle,
             onShare = { AppState.copyToClipboard(ShareUrls.artist(artist.id)) },
-            onPlayNext = { launchTrackedMenuQueueAction(artist, emptyList(), playback, MediaMenuPlaybackActions::playNext) },
-            onAddToQueue = { launchTrackedMenuQueueAction(artist, emptyList(), playback, MediaMenuPlaybackActions::addToQueue) },
+            onPlayNext = playbackActions::playNext,
+            onAddToQueue = playbackActions::addToQueue,
             onTogglePin = {
                 if (isPinned) HomeState.unpinSpeedDialItem(artist.id) else HomeState.pinSpeedDialItem(artist)
             },
@@ -706,23 +718,23 @@ fun PodcastContextMenu(
     MediaContextMenu(expanded = expanded, offset = offset, onDismiss = onDismiss) {
         val playback = LocalPlaybackController.current
         val isPinned = podcast.id in HomeState.uiState.speedDialPinnedIds
+        val playbackActions =
+            MediaMenuPlaybackActions(
+                podcast,
+                playback,
+                withSongs = { action -> withMediaSongs(podcast, songs, action) },
+            )
         podcastMediaMenuModel(
             podcast = podcast,
             onDismiss = onDismiss,
             isPinned = isPinned,
             isSaved = isSaved,
-            onPlay = { launchTrackedMenuPlayback(podcast, songs, playback, invoke = MediaMenuPlaybackActions::play) },
-            onShuffle = { launchTrackedMenuPlayback(podcast, songs, playback, invoke = MediaMenuPlaybackActions::shuffle) },
-            onPlayOldestFirst = {
-                launchTrackedMenuPlayback(podcast, songs, playback, invoke = MediaMenuPlaybackActions::playOldestFirst)
-            },
+            onPlay = playbackActions::play,
+            onShuffle = playbackActions::shuffle,
+            onPlayOldestFirst = playbackActions::playOldestFirst,
             onShare = { AppState.copyToClipboard(ShareUrls.podcast(podcast.id)) },
-            onPlayNext = {
-                launchTrackedMenuQueueAction(podcast, songs, playback, MediaMenuPlaybackActions::playNext)
-            },
-            onAddToQueue = {
-                launchTrackedMenuQueueAction(podcast, songs, playback, MediaMenuPlaybackActions::addToQueue)
-            },
+            onPlayNext = playbackActions::playNext,
+            onAddToQueue = playbackActions::addToQueue,
             onTogglePin = {
                 if (isPinned) HomeState.unpinSpeedDialItem(podcast.id) else HomeState.pinSpeedDialItem(podcast)
             },
@@ -1011,7 +1023,7 @@ private fun launchTrackedMenuPlayback(
     invoke: MediaMenuPlaybackActions.() -> Unit,
 ) {
     val expectedGeneration = playback.reserveExplicitPlaybackGeneration()
-    val expectedSleepTimerGeneration = playback.sleepTimerExpiryGeneration
+
     onPlaybackAction()
     sharedMenuPlayState.cancel()
     sharedMenuQueueAdditions.cancel()
@@ -1025,9 +1037,7 @@ private fun launchTrackedMenuPlayback(
             withSongs = { action ->
                 launched =
                     withMediaSongs(item, existingSongs) { loadedSongs ->
-                        if (playback.explicitPlaybackGeneration == expectedGeneration &&
-                            playback.sleepTimerExpiryGeneration == expectedSleepTimerGeneration
-                        ) {
+                        if (playback.explicitPlaybackGeneration == expectedGeneration) {
                             action(loadedSongs)
                         }
                     }

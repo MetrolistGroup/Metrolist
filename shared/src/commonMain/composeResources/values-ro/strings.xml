@@ -33,7 +33,7 @@
     <string name="filter_downloaded">Descărcate</string>
     <string name="filter_all">Toate</string>
     <string name="filter_videos">Videoclipuri</string>
-    <string name="filter_community_playlists">Playlisturi comunitare</string>
+    <string name="filter_community_playlists">Playlisturi ale comunității</string>
     <string name="filter_featured_playlists">Playlisturi recomandate</string>
     <string name="other_versions">Alte versiuni</string>
     <string name="liked_songs">Melodii apreciate</string>
@@ -58,7 +58,7 @@
     <string name="completed_downloads">Descărcări finalizate</string>
     <string name="download_completion_summary">%1$d descărcate, %2$d eșuate</string>
     <plurals name="download_notification_progress">
-        <item quantity="one">Descărcate %1$d din %2$d melodie, %3$d eșuată</item>
+        <item quantity="one">Descărcat %1$d din %2$d melodie, %3$d eșuată</item>
         <item quantity="few">Descărcate %1$d din %2$d melodii, %3$d eșuate</item>
         <item quantity="other">Descărcate %1$d din %2$d de melodii, %3$d eșuate</item>
     </plurals>
@@ -998,11 +998,6 @@
         <item quantity="few">%1$d minute</item>
         <item quantity="other">%1$d de minute</item>
     </plurals>
-    <plurals name="minutes_short">
-        <item quantity="one">Un min</item>
-        <item quantity="few">%1$d min</item>
-        <item quantity="other">%1$d min</item>
-    </plurals>
     <plurals name="n_track">
         <item quantity="one">O piesă</item>
         <item quantity="few">%1$d piese</item>
@@ -1032,11 +1027,6 @@
         <item quantity="one">S-a eliminat %1$d melodie din playlist</item>
         <item quantity="few">S-au eliminat %1$d melodii din playlist</item>
         <item quantity="other">S-au eliminat %1$d de melodii din playlist</item>
-    </plurals>
-    <plurals name="seconds_short">
-        <item quantity="one">%1$d s</item>
-        <item quantity="few">%1$d s</item>
-        <item quantity="other">%1$d s</item>
     </plurals>
     <plurals name="song_count">
         <item quantity="one">O melodie</item>

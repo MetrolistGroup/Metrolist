@@ -18,7 +18,7 @@ class GenerateAltStoreSourceTest(unittest.TestCase):
                     "date": "2026-11-14",
                     "downloadURL": "https://github.com/MetrolistGroup/Metrolist/releases/download/v14.0.0/Metrolist.ipa",
                     "size": 42,
-                    "minOSVersion": "17.0",
+                    "minOSVersion": "15.0",
                 },
                 app["versions"][0],
             )

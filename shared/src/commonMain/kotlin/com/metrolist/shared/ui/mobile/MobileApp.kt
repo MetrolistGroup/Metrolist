@@ -139,6 +139,8 @@ import com.metrolist.shared.generated.resources.error_unknown
 import com.metrolist.shared.generated.resources.export_logs
 import com.metrolist.shared.generated.resources.filter_library
 import com.metrolist.shared.generated.resources.home
+import com.metrolist.shared.generated.resources.lastfm_session_expired_description
+import com.metrolist.shared.generated.resources.lastfm_session_expired_title
 import com.metrolist.shared.generated.resources.library
 import com.metrolist.shared.generated.resources.liked_songs
 import com.metrolist.shared.generated.resources.listen_together
@@ -178,6 +180,7 @@ import com.metrolist.shared.playlist.renameStoredPlaylist
 import com.metrolist.shared.playlist.updateStoredPlaylist
 import com.metrolist.shared.playlistimport.PlaylistImportProgressCard
 import com.metrolist.shared.repository.LyricsRepository
+import com.metrolist.shared.scrobble.ScrobbleSessions
 import com.metrolist.shared.settings.MiniPlayerType
 import com.metrolist.shared.settings.Settings
 import com.metrolist.shared.settings.defaultOpenTabRoot
@@ -239,6 +242,7 @@ import com.metrolist.shared.ui.player.collectWhilePlayerActive
 import com.metrolist.shared.ui.screens.AboutScreen
 import com.metrolist.shared.ui.screens.HomeContent
 import com.metrolist.shared.ui.screens.SearchScreen
+import com.metrolist.shared.ui.screens.SupportPrompt
 import com.metrolist.shared.ui.screens.homeContentText
 import com.metrolist.shared.ui.screens.pageKey
 import com.metrolist.shared.ui.screens.searchScreenText
@@ -1166,6 +1170,10 @@ fun MobileApp(
                                     },
                                     onSearch = { query ->
                                         cancelVideoLookup()
+                                        resolveMobilePodcastBrowseLink(query)?.let { route ->
+                                            open(route)
+                                            return@SearchScreen
+                                        }
                                         when (val parsed = parseYouTubeUrl(query)) {
                                             is YouTubeUrlParser.ParsedUrl.Video -> {
                                                 playVideo(parsed.id)
@@ -1681,6 +1689,7 @@ fun MobileApp(
                                     onMoreOptions = { menuItem = it to null },
                                     onSongMenu = { menuItem = it to null },
                                     modifier = Modifier.fillMaxSize().padding(routePadding),
+                                    downloadedSongIds = downloadedSongIds,
                                 )
                             }
 
@@ -1893,6 +1902,31 @@ fun MobileApp(
                     },
                 )
             }
+            PopupVisibility(visible = ScrobbleSessions.showLastFmExpiredNotice && !YouTubeSessionState.showExpiredSessionNotice) {
+                AlertDialog(
+                    onDismissRequest = ScrobbleSessions::dismissLastFmExpiredNotice,
+                    title = { Text(stringResource(Res.string.lastfm_session_expired_title)) },
+                    text = { Text(stringResource(Res.string.lastfm_session_expired_description)) },
+                    confirmButton = {
+                        TextButton(
+                            onClick = {
+                                ScrobbleSessions.dismissLastFmExpiredNotice()
+                                open(MobileRoute.Settings(initialPage = SettingsPageId.LAST_FM))
+                            },
+                            shapes = ButtonDefaults.shapes(),
+                        ) {
+                            Text(stringResource(Res.string.action_login))
+                        }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = ScrobbleSessions::dismissLastFmExpiredNotice, shapes = ButtonDefaults.shapes()) {
+                            Text(stringResource(Res.string.action_not_now))
+                        }
+                    },
+                )
+            }
+
+            SupportPrompt()
 
             PopupVisibility(visible = showContinuePlaybackPrompt) {
                 AlertDialog(

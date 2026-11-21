@@ -127,6 +127,7 @@ import com.metrolist.shared.constants.LyricsPlusLighterKey
 import com.metrolist.shared.constants.LyricsProgressiveBlurKey
 import com.metrolist.shared.constants.LyricsShareImageStyleKey
 import com.metrolist.shared.constants.LyricsShowOriginalLyricsKey
+import com.metrolist.shared.constants.MatugenThemeKey
 import com.metrolist.shared.constants.MinimumSongDurationSecondsKey
 import com.metrolist.shared.constants.MusicVideoCacheJsonKey
 import com.metrolist.shared.constants.MusicVideoPlaybackEnabledKey
@@ -138,6 +139,8 @@ import com.metrolist.shared.constants.PendingSongVotesJsonKey
 import com.metrolist.shared.constants.PersistentPlaybackPositionKey
 import com.metrolist.shared.constants.PlayVideosInMiniPlayerKey
 import com.metrolist.shared.constants.PlaybackClientHealthJsonKey
+import com.metrolist.shared.constants.PlaybackClientStatsJsonKey
+import com.metrolist.shared.constants.PlaybackClientStatsLaunchesKey
 import com.metrolist.shared.constants.PlaybackPitchKey
 import com.metrolist.shared.constants.PlaybackSpeedKey
 import com.metrolist.shared.constants.PlayerConfigRemoteEtagKey
@@ -177,6 +180,9 @@ import com.metrolist.shared.constants.SlimNavBarKey
 import com.metrolist.shared.constants.SpeedDialArtworkRefreshTimesKey
 import com.metrolist.shared.constants.SpeedDialSurprisePinnedKey
 import com.metrolist.shared.constants.SponsorBlockEnabledKey
+import com.metrolist.shared.constants.SupportPromptDismissedKey
+import com.metrolist.shared.constants.SupportPromptLaunchThresholdKey
+import com.metrolist.shared.constants.SupportPromptLaunchesKey
 import com.metrolist.shared.constants.SwipeToRemoveSongKey
 import com.metrolist.shared.constants.SwipeToSongKey
 import com.metrolist.shared.constants.TempoPitchPresetsJsonKey
@@ -272,9 +278,14 @@ class Settings(
         }
 
     var artistNameAliasesJson by preference(ArtistNameAliasesJsonKey, "{}")
+    var playbackClientStatsJson by preference(PlaybackClientStatsJsonKey, "{}")
+    var playbackClientStatsLaunches by preference(PlaybackClientStatsLaunchesKey, 0)
     val artistNameAliases: Map<String, String> by derivedStateOf { ArtistNameAliases.deserialize(artistNameAliasesJson) }
 
     var tokenLoginWarningDismissed by preference(TokenLoginWarningDismissedKey, false)
+    var supportPromptDismissed by preference(SupportPromptDismissedKey, false)
+    var supportPromptLaunches by preference(SupportPromptLaunchesKey, 0)
+    var supportPromptLaunchThreshold by preference(SupportPromptLaunchThresholdKey, 0)
     var visitorData by preference("")
     var dataSyncId by preference("")
     var innerTubeAuthUser by preference("0")
@@ -314,6 +325,7 @@ class Settings(
     var autoPureBlack by preference(AutoPureBlackKey, false)
     var selectedThemeColor by preference(0L)
     var themePaletteStyle by preference(ThemePaletteStyle.TONAL_SPOT)
+    var matugenTheme by preference(MatugenThemeKey, false)
 
     var appFont by preference(FontOption.SYSTEM)
     var androidCustomFontFile by preference(AndroidCustomFontFileKey, "")
@@ -626,6 +638,7 @@ class Settings(
 
     var lastFmUsername by preference("")
     var lastFmSession by preference("")
+    var lastFmSessionExpired by preference(false)
     var lastFmEnabled by preference(true)
     var lastFmUseNowPlaying by preference(true)
     var lastFmShowFriends by preference(true)
@@ -1341,6 +1354,7 @@ class Settings(
         private val nonPortableKeys =
             secureSettingsKeys +
                 setOf(
+                    "lastFmSessionExpired",
                     "aiSlopBlocklistCache",
                     "aiSlopBlocklistUpdatedAt",
                     SpeedDialArtworkRefreshTimesKey,

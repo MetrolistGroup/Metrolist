@@ -14,7 +14,6 @@ import io.ktor.client.request.header
 import io.ktor.http.Url
 import io.ktor.http.isSuccess
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.withTimeout
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
@@ -23,7 +22,6 @@ import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import org.jetbrains.compose.resources.getString
-import kotlin.time.Duration.Companion.milliseconds
 
 object AmazonMusicPlaylistImporter {
     private const val UA = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
@@ -133,7 +131,7 @@ object AmazonMusicPlaylistImporter {
         onProgress: (loaded: Int, total: Int?) -> Unit,
     ): Result<ImportedPlaylistData> {
         val response =
-            withTimeout(15_000.milliseconds) {
+            withImportRequestTimeout {
                 httpClient.get(playlistUrl) {
                     header("User-Agent", UA)
                 }
@@ -214,7 +212,7 @@ object AmazonMusicPlaylistImporter {
         onProgress: (loaded: Int, total: Int?) -> Unit,
     ): Result<ImportedPlaylistData> {
         val response =
-            withTimeout(15_000.milliseconds) {
+            withImportRequestTimeout {
                 httpClient.get(albumUrl) {
                     header("User-Agent", UA)
                 }

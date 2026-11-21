@@ -231,7 +231,7 @@ sentry {
     autoInstallation {
         enabled.set(false)
     }
-    ignoredBuildTypes.set(setOf("debug", "benchmark"))
+    ignoredBuildTypes.set(setOf("debug", "benchmark", "izzy"))
     tracingInstrumentation.enabled.set(false)
     org.set("metrolistgroup")
     projectName.set("metrolist-kmp")
@@ -255,13 +255,14 @@ android {
         applicationId = "com.metrolist.music"
         minSdk = 24
         targetSdk = 37
-        versionCode = 154
+        versionCode = 155
         versionName = appVersion
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables.useSupportLibrary = true
 
         buildConfigField("Long", "DISCORD_APP_ID", "1447278780795064401L")
+        buildConfigField("Boolean", "UPDATER_ENABLED", "true")
         buildConfigField("String", "BUNDLED_LANGUAGE_TAGS", "\"${bundledLanguageTags.joinToString(",")}\"")
     }
 
@@ -308,6 +309,12 @@ android {
             isProfileable = true
             matchingFallbacks += "release"
         }
+        // IzzyOnDroid ships updates itself and must not carry Sentry or Lyprio credentials.
+        create("izzy") {
+            initWith(getByName("release"))
+            buildConfigField("Boolean", "UPDATER_ENABLED", "false")
+            matchingFallbacks += "release"
+        }
         debug {
             applicationIdSuffix = ".debug"
             manifestPlaceholders["appLabel"] = "Metrolist KMP Debug"
@@ -338,6 +345,8 @@ android {
             kotlin.directories += "src/release/kotlin"
             manifest.srcFile("src/benchmark/AndroidManifest.xml")
         }
+        // The debug source set holds the no-op Sentry reporters.
+        getByName("izzy").kotlin.directories += "src/debug/kotlin"
     }
 
     packaging {
@@ -404,7 +413,7 @@ androidComponents {
 val composeStringsResource =
     "assets/composeResources/com.metrolist.shared.generated.resources/values/strings.commonMain.cvr"
 
-listOf("debug", "release", "benchmark").forEach { variant ->
+listOf("debug", "release", "benchmark", "izzy").forEach { variant ->
     val verification =
         tasks.register<VerifyComposeResourcesTask>("verify${variant.replaceFirstChar(Char::uppercaseChar)}ComposeResources") {
             apkDirectory.set(layout.buildDirectory.dir("outputs/apk/$variant"))
@@ -420,7 +429,7 @@ configurations["benchmarkImplementation"].extendsFrom(configurations["releaseImp
 
 configurations
     .matching {
-        it.name in setOf("debugRuntimeClasspath", "releaseRuntimeClasspath", "benchmarkRuntimeClasspath")
+        it.name in setOf("debugRuntimeClasspath", "releaseRuntimeClasspath", "benchmarkRuntimeClasspath", "izzyRuntimeClasspath")
     }.configureEach {
         exclude(group = "org.jetbrains.kotlin", module = "kotlin-reflect")
     }

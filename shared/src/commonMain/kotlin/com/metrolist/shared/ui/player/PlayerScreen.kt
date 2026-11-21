@@ -870,6 +870,8 @@ fun PlayerScreen(
                 }
             val useTabletLayout = isTv && useLandscapeLayout && minOf(screenWidth, maxHeight) >= 600.dp
             val compactPortraitHeight = !useLandscapeLayout && maxHeight < 560.dp
+            // Short split-screen windows shrink the centred artwork to a sliver; show it beside the title as lyrics do.
+            val artworkBesideTitle = !useLandscapeLayout && !isTv && !usesFullscreenThumbnail && maxHeight < ArtworkBesideTitleMaxHeight
             val primaryControlSize = if (compactPortraitHeight) 64.dp else 72.dp
             val showFullscreenThumbnailBackground = usesFullscreenThumbnail
             val navigationBarBottomPadding = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
@@ -890,6 +892,19 @@ fun PlayerScreen(
                     initialAnchor = COLLAPSED_ANCHOR,
                     isDismissible = false,
                 )
+
+            fun openQueueSheet() {
+                if (!useLandscapeLayout && uiState.isLyricsExpanded) {
+                    viewModel.setLyricsVisible(false)
+                }
+                queueSheetState.expandSoft()
+            }
+
+            LaunchedEffect(useLandscapeLayout, queueSheetState.isSettledExpanded) {
+                if (!useLandscapeLayout && queueSheetState.isSettledExpanded && uiState.isLyricsExpanded) {
+                    viewModel.setLyricsVisible(false)
+                }
+            }
 
             LaunchedEffect(useLandscapeLayout, uiState.isLyricsExpanded) {
                 if (useLandscapeLayout && uiState.isLyricsExpanded) {
@@ -1271,7 +1286,7 @@ fun PlayerScreen(
                                     sleepTimerState = sleepTimerState,
                                     onShowSleepTimer = { showSleepTimerDialog = true },
                                     onShowLyricsMenu = { showLyricsMenu = true },
-                                    onOpenQueue = { queueSheetState.expandSoft() },
+                                    onOpenQueue = ::openQueueSheet,
                                     onShowPlayerMenu = { showPlayerMenu = true },
                                     onIsLyricsVisibleChange = { visible -> viewModel.setLyricsVisible(visible) },
                                     onShareSong = { shareDisplayedSong() },
@@ -1318,7 +1333,7 @@ fun PlayerScreen(
                                     sleepTimerState = sleepTimerState,
                                     onShowSleepTimer = { showSleepTimerDialog = true },
                                     onShowLyricsMenu = { showLyricsMenu = true },
-                                    onOpenQueue = { queueSheetState.expandSoft() },
+                                    onOpenQueue = ::openQueueSheet,
                                     onShowPlayerMenu = { showPlayerMenu = true },
                                     onIsLyricsVisibleChange = { visible -> viewModel.setLyricsVisible(visible) },
                                     onShareSong = { shareDisplayedSong() },
@@ -1777,6 +1792,7 @@ fun PlayerScreen(
                                                     } else if (
                                                         !usesFullscreenThumbnail &&
                                                         !usesCanvasThumbnail &&
+                                                        !artworkBesideTitle &&
                                                         currentSong?.displayThumbnail != null &&
                                                         !(
                                                             isVideoModeActive &&
@@ -1867,7 +1883,7 @@ fun PlayerScreen(
                                     ) {
                                         AnimatedVisibility(
                                             visible =
-                                                (usesCanvasThumbnail || uiState.isLyricsVisible) &&
+                                                (usesCanvasThumbnail || uiState.isLyricsVisible || artworkBesideTitle) &&
                                                     currentSong?.displayThumbnail != null,
                                             enter = expandHorizontally(clip = false) + fadeIn(),
                                             exit = shrinkHorizontally(clip = false) + fadeOut(),
@@ -2235,7 +2251,7 @@ fun PlayerScreen(
                                 }
 
                                 playerControlsTransition.AnimatedVisibility(
-                                    visible = { (expanded, minimalUi) -> !expanded && !minimalUi },
+                                    visible = { (_, minimalUi) -> !minimalUi },
                                     enter = canvasControlsEnter,
                                     exit = canvasControlsExit,
                                 ) {
@@ -2257,7 +2273,7 @@ fun PlayerScreen(
 
                     if (!useLandscapeLayout) {
                         playerControlsTransition.AnimatedVisibility(
-                            visible = { (expanded, minimalUi) -> !expanded && !minimalUi },
+                            visible = { (_, minimalUi) -> !minimalUi },
                             enter =
                                 fadeIn(canvasEffectsSpec) +
                                     slideInVertically(canvasSlideSpec) { it },
@@ -2316,7 +2332,7 @@ fun PlayerScreen(
                                             lyricsText = stringResource(Res.string.lyrics),
                                             onQueueClick = {
                                                 hapticManager.perform(HapticEvent.PRESS)
-                                                queueSheetState.expandSoft()
+                                                openQueueSheet()
                                             },
                                             onLyricsClick = {
                                                 hapticManager.toggle(!uiState.isLyricsVisible)
@@ -2334,7 +2350,7 @@ fun PlayerScreen(
                                             repeatMode = repeatMode,
                                             onToggleRepeat = viewModel::toggleRepeat,
                                             navigationBarBottomPadding = navigationBarBottomPadding,
-                                            onOpenQueue = { queueSheetState.expandSoft() },
+                                            onOpenQueue = ::openQueueSheet,
                                             onShowPlayerMenu = { showPlayerMenu = true },
                                             isLyricsVisible = uiState.isLyricsVisible,
                                             onIsLyricsVisibleChange = { visible -> viewModel.setLyricsVisible(visible) },
@@ -2545,3 +2561,4 @@ private fun FullscreenBackgroundBounds(
 }
 
 private val MinPortraitPlayerHeight = 420.dp
+private val ArtworkBesideTitleMaxHeight = 600.dp
