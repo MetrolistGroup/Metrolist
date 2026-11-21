@@ -5,6 +5,7 @@ import com.metrolist.shared.api.musicvideo.MusicTrackResult
 import com.metrolist.shared.model.ArtistTiny
 import com.metrolist.shared.model.SongItem
 import com.metrolist.shared.model.canSwitchToAudioTrack
+import com.metrolist.shared.model.playlistOccurrenceIdentity
 import com.metrolist.shared.youtube.playback.PlaybackResource
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.currentCoroutineContext
@@ -113,7 +114,7 @@ internal fun mergeSelectedQueueSong(
         customArtist = customArtist,
     ).copy(
         originalQueueItemId = sourceSongAtSelection.originalQueueItemId ?: sourceSongAtSelection.id,
-        playlistOccurrenceId = sourceSongAtSelection.playlistOccurrenceId,
+        playlistOccurrenceId = sourceSongAtSelection.playlistOccurrenceIdentity(),
     )
 }
 

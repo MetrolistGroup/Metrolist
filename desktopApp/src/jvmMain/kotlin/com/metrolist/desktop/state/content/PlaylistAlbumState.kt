@@ -821,7 +821,7 @@ object PlaylistAlbumState {
     private fun Map<String, List<YTItem>>.withPlaylistSongs(songs: List<SongItem>): Map<String, List<YTItem>> {
         if (containsKey("Tracks")) return this + ("Tracks" to songs) + ("Continuation" to emptyList())
         if (containsKey("Continuation")) return this + ("Continuation" to songs)
-        return this + ("songs" to songs)
+        return mapValues { (_, items) -> items.filterNot { it is SongItem } }.filterValues { it.isNotEmpty() } + ("songs" to songs)
     }
 }
 
