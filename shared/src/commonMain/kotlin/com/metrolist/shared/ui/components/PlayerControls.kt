@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -500,7 +501,10 @@ fun PlayerLikeShareButtons(
                         val shareShape = ButtonGroupDefaults.connectedLeadingButtonShape
                         HoverTooltip(
                             text = if (isCopied) linkCopiedDesc else shareDesc,
-                            modifier = Modifier.animateWidth(shareInteractionSource, 12.dp),
+                            modifier =
+                                Modifier
+                                    .animateWidth(shareInteractionSource, 12.dp)
+                                    .defaultMinSize(minWidth = buttonWidth, minHeight = groupHeight),
                         ) {
                             Surface(
                                 shape = shareShape,
@@ -508,7 +512,7 @@ fun PlayerLikeShareButtons(
                                 contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
                                 modifier =
                                     Modifier
-                                        .size(width = buttonWidth, height = groupHeight)
+                                        .fillMaxSize()
                                         .pointerInput(Unit) {
                                             awaitPointerEventScope {
                                                 while (true) {
@@ -573,7 +577,10 @@ fun PlayerLikeShareButtons(
                 buttonGroupContent = {
                     HoverTooltip(
                         text = likeDesc,
-                        modifier = Modifier.animateWidth(likeInteractionSource, 12.dp),
+                        modifier =
+                            Modifier
+                                .animateWidth(likeInteractionSource, 12.dp)
+                                .defaultMinSize(minWidth = buttonWidth, minHeight = groupHeight),
                     ) {
                         ToggleButton(
                             checked = isLiked,
