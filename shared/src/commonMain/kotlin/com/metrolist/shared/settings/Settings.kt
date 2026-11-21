@@ -11,6 +11,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import com.metrolist.shared.api.lyrics.AiProviderPresets
+import com.metrolist.shared.backup.AutoBackupFrequency
 import com.metrolist.shared.constants.ActiveLyricsTextPositionKey
 import com.metrolist.shared.constants.AiSlopBlocklistCacheKey
 import com.metrolist.shared.constants.AiSlopBlocklistUpdatedAtKey
@@ -36,6 +37,9 @@ import com.metrolist.shared.constants.AppleMusicArtistVideosKey
 import com.metrolist.shared.constants.ArtistNameAliasesJsonKey
 import com.metrolist.shared.constants.AudioBoostDbKey
 import com.metrolist.shared.constants.AudioTrackPlaybackParamsKey
+import com.metrolist.shared.constants.AutoBackupEnabledKey
+import com.metrolist.shared.constants.AutoBackupFrequencyKey
+import com.metrolist.shared.constants.AutoBackupLastSuccessEpochKey
 import com.metrolist.shared.constants.AutoPureBlackKey
 import com.metrolist.shared.constants.BlockAiSlopArtistsKey
 import com.metrolist.shared.constants.BlockedArtistsUndoHintShownKey
@@ -276,6 +280,10 @@ class Settings(
             sleepTimerDefaultFinishCurrentSong = value.finishCurrentSong
             sleepTimerDefaultFadeOut = value.fadeOut
         }
+
+    var autoBackupEnabled by preference(AutoBackupEnabledKey, false)
+    var autoBackupFrequency by preference(AutoBackupFrequencyKey, AutoBackupFrequency.WEEKLY.name)
+    var autoBackupLastSuccessEpochMillis by preference(AutoBackupLastSuccessEpochKey, 0L)
 
     var artistNameAliasesJson by preference(ArtistNameAliasesJsonKey, "{}")
     var playbackClientStatsJson by preference(PlaybackClientStatsJsonKey, "{}")
@@ -1376,6 +1384,9 @@ class Settings(
                     "appleMusicArtistCacheJson",
                     LastFmArtistCacheJsonKey,
                     LastFmPhotoCacheJsonKey,
+                    AutoBackupEnabledKey,
+                    AutoBackupFrequencyKey,
+                    AutoBackupLastSuccessEpochKey,
                 )
         private val backupExcludedKeys = nonPortableKeys - backupCredentialKeys
         private const val PORTABLE_SETTINGS_VERSION = 1

@@ -461,3 +461,5 @@ Music layouts order Previous, Play/Pause, Next and Like. Play/Pause shows a loca
 - For protobuf errors, initialize `metroproto` and run `./gradlew :shared:desktopTest` to regenerate and test the codecs.
 - If the configuration cache is stale, rerun the failing command with `--no-configuration-cache`.
 - Never commit heap dumps, traces, account tokens or local configuration. They can contain private data.
+
+Automatic backups are opt-in and keep the ten newest local archives. Android uses WorkManager, desktop runs while the app is open, and iOS requests background processing that the system may defer. Backup creation and retention cleanup are serialized. Failed retention cleanup retries without creating another archive.

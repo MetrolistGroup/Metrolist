@@ -54,67 +54,72 @@ import java.nio.file.StandardCopyOption
 import java.nio.file.attribute.PosixFilePermission
 import java.sql.Connection
 import java.sql.DriverManager
+import java.util.concurrent.locks.ReentrantLock
 import java.util.zip.ZipEntry
 import java.util.zip.ZipFile
 import java.util.zip.ZipInputStream
 import java.util.zip.ZipOutputStream
+import kotlin.concurrent.withLock
 import kotlin.system.exitProcess
 
 object DesktopBackupRestoreManager {
     private val json = Json { ignoreUnknownKeys = true }
     internal var databaseFileOverride: File? = null
     internal var restoreDirOverride: File? = null
+    internal val backupLock = ReentrantLock()
     private val databaseFile get() = databaseFileOverride ?: File(XdgUtils.getXdgDataHome(), "metrolist/metrolist.db")
     private val restoreDir get() = restoreDirOverride ?: File(XdgUtils.getXdgStateHome(), "metrolist/pending-restore")
 
     fun backup(destination: File): Result<Unit> =
-        runCatching {
-            val protectedPaths =
-                listOf(
-                    databaseFile,
-                    File(databaseFile.path + "-wal"),
-                    File(databaseFile.path + "-shm"),
-                    File(databaseFile.path + "-journal"),
-                ).map { it.canonicalFile }
-            check(destination.canonicalFile !in protectedPaths) { runBlocking { getString(Res.string.backup_create_failed) } }
-            ensureCurrentDatabaseExists()
-            if (databaseFileOverride == null) HistoryRepository.initialize()
-            check(
-                destination.absoluteFile.parentFile?.let { it.mkdirs() || it.isDirectory } != false,
-            ) { "Could not create backup directory" }
-            restoreDir.parentFile.mkdirs()
-            val snapshot = File(restoreDir.parentFile, "backup-database.tmp")
-            val archive = createPrivateBackupFile(destination.absoluteFile.parentFile.toPath(), ".${destination.name}.").toFile()
-            snapshot.delete()
-            try {
-                snapshotDatabase(databaseFile, snapshot)
-                ZipOutputStream(archive.outputStream().buffered()).use { zip ->
-                    zip.putNextEntry(ZipEntry(BACKUP_MANIFEST_ENTRY))
-                    zip.write(
-                        json
-                            .encodeToString(
-                                BackupManifest.serializer(),
-                                BackupManifest(BackupManifest.CURRENT_FORMAT_VERSION, BackupPlatform.DESKTOP, DATABASE_VERSION),
-                            ).toByteArray(),
-                    )
-                    zip.closeEntry()
-                    zip.putNextEntry(ZipEntry(BACKUP_SETTINGS_ENTRY))
-                    zip.write(
-                        json.encodeToString(PortableSettings.serializer(), Settings.shared.exportBackupSettings()).toByteArray().also {
-                            check(
-                                it.size <= BackupArchiveLimits.SETTINGS_BYTES,
-                            ) { runBlocking { getString(Res.string.backup_create_failed) } }
-                        },
-                    )
-                    zip.closeEntry()
-                    zip.putNextEntry(ZipEntry(BACKUP_DATABASE_ENTRY))
-                    snapshot.inputStream().buffered().use { it.copyTo(zip, BackupArchiveLimits.DATABASE_BYTES) }
-                    zip.closeEntry()
-                }
-                atomicMove(archive, destination)
-            } finally {
+        backupLock.withLock {
+            runCatching {
+                val protectedPaths =
+                    listOf(
+                        databaseFile,
+                        File(databaseFile.path + "-wal"),
+                        File(databaseFile.path + "-shm"),
+                        File(databaseFile.path + "-journal"),
+                    ).map { it.canonicalFile }
+                check(destination.canonicalFile !in protectedPaths) { runBlocking { getString(Res.string.backup_create_failed) } }
+                ensureCurrentDatabaseExists()
+                if (databaseFileOverride == null) HistoryRepository.initialize()
+                check(
+                    destination.absoluteFile.parentFile?.let { it.mkdirs() || it.isDirectory } != false,
+                ) { "Could not create backup directory" }
+                restoreDir.parentFile.mkdirs()
+                val snapshot = File(restoreDir.parentFile, "backup-database.tmp")
+                val archive = createPrivateBackupFile(destination.absoluteFile.parentFile.toPath(), ".${destination.name}.").toFile()
                 snapshot.delete()
-                archive.delete()
+                try {
+                    snapshotDatabase(databaseFile, snapshot)
+                    ZipOutputStream(archive.outputStream().buffered()).use { zip ->
+                        zip.putNextEntry(ZipEntry(BACKUP_MANIFEST_ENTRY))
+                        zip.write(
+                            json
+                                .encodeToString(
+                                    BackupManifest.serializer(),
+                                    BackupManifest(BackupManifest.CURRENT_FORMAT_VERSION, BackupPlatform.DESKTOP, DATABASE_VERSION),
+                                ).toByteArray(),
+                        )
+                        zip.closeEntry()
+                        zip.putNextEntry(ZipEntry(BACKUP_SETTINGS_ENTRY))
+                        zip.write(
+                            json.encodeToString(PortableSettings.serializer(), Settings.shared.exportBackupSettings()).toByteArray().also {
+                                check(
+                                    it.size <= BackupArchiveLimits.SETTINGS_BYTES,
+                                ) { runBlocking { getString(Res.string.backup_create_failed) } }
+                            },
+                        )
+                        zip.closeEntry()
+                        zip.putNextEntry(ZipEntry(BACKUP_DATABASE_ENTRY))
+                        snapshot.inputStream().buffered().use { it.copyTo(zip, BackupArchiveLimits.DATABASE_BYTES) }
+                        zip.closeEntry()
+                    }
+                    atomicMove(archive, destination)
+                } finally {
+                    snapshot.delete()
+                    archive.delete()
+                }
             }
         }
 
