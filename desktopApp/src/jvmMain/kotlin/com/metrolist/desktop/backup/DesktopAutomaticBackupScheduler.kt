@@ -84,11 +84,11 @@ object DesktopAutomaticBackupScheduler {
                                 "Automatic backup failed: ${result.exceptionOrNull()?.message ?: "Unknown error"}",
                             )
                         }
-                        delay(if (result.isSuccess && !pruningPending) frequency.intervalMillis else FAILURE_RETRY_MILLIS)
+                        delay(FAILURE_RETRY_MILLIS)
                     } else {
                         val nextDue = settings.autoBackupLastSuccessEpochMillis + frequency.intervalMillis
                         val untilNextBackup = (nextDue - now).coerceAtLeast(1L)
-                        delay(if (pruningPending) minOf(untilNextBackup, FAILURE_RETRY_MILLIS) else untilNextBackup)
+                        delay(minOf(untilNextBackup, FAILURE_RETRY_MILLIS))
                     }
                 }
             }
