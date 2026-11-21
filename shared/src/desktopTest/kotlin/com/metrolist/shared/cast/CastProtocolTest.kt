@@ -502,6 +502,7 @@ class CastProtocolTest {
             val server = ServerSocket(0, 1, address).apply { soTimeout = 5_000 }
             val finishReplay = CompletableDeferred<Unit>()
             val replaySeek = CompletableDeferred<Unit>()
+            val replayAsserted = CompletableDeferred<Unit>()
             val receiver =
                 async(Dispatchers.IO) {
                     server.accept().use { socket ->
@@ -562,6 +563,7 @@ class CastProtocolTest {
                         )
                         sendPacket(output, 6, """{"state":1,"time":35,"duration":60}""")
                         sendPacket(output, 7, """{"volume":0.75}""")
+                        replayAsserted.await()
                     }
                 }
             val session = FcastSession(this, address, server.localPort, "test")
@@ -594,6 +596,7 @@ class CastProtocolTest {
                     session.seekTo(35_000)
                     session.state.first { it.volume == 0.75f }
                     assertEquals(35_000L, session.state.value.positionMs)
+                    replayAsserted.complete(Unit)
                     receiver.await()
                 }
             } finally {
