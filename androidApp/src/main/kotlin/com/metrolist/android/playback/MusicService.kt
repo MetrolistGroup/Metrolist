@@ -497,6 +497,7 @@ class MusicService :
                 player = player,
                 scope = serviceScope,
                 musicVideoResolver = musicVideoResolver,
+                streamResolver = streamResolver,
                 withPlaybackLoading = { block -> withQueueLoading(isPlaybackLoading = true, block = block) },
                 fetchPlaybackResource = { song, wantVideo -> fetchPlaybackResource(song, wantVideo).resource },
                 onError = ::showPlaybackErrorToast,
@@ -1368,8 +1369,8 @@ class MusicService :
             streamRecoveryBudget = PlaybackRecoveryBudget.starting(SystemClock.elapsedRealtime())
         }
 
-        val hints = song.toAndroidContentHints(wantVideo = Settings.shared.videoViewerVisible)
         var failedResource = player.currentPlaybackResource.value
+        val hints = song.toAndroidContentHints(wantVideo = failedResource?.hasVideo ?: Settings.shared.videoViewerVisible)
         var lastFailure = failure.cause ?: IllegalStateException(failure.message)
         var lastHttpStatusCode = failure.httpStatusCode ?: lastFailure.findMedia3HttpStatusCode()
         var failureCategory =

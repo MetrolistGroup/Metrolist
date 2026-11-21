@@ -8,7 +8,7 @@ Player and collection artwork use square, centered crops. Full-player video thum
 
 The portrait full-screen artwork continuation starts before a wide thumbnail's bottom edge. Its preview and detailed blur keep their fades, with no uncovered band between the image and continuation.
 
-Android mini-player and expanded-player artwork slots request crop explicitly through the player platform. The loading artwork uses the same crop through the first-frame fade. Fullscreen video uses fit, including letterboxing when the screen and video have different aspect ratios. PiP has its own scaling.
+Android mini-player video crops to its artwork slot. Expanded-player video fits its aspect ratio within the available space, with the player background outside the frame and controls inside it. The loading artwork keeps its crop through the first-frame fade. Fullscreen video uses fit, including letterboxing when the screen and video have different aspect ratios. PiP has its own scaling.
 
 Android full-player artwork uses software bitmaps so Compose and image decoding can share pixels. Export code copies hardware images when a software canvas requires it.
 
