@@ -128,6 +128,7 @@ actual fun PlayerConnectedButtonGroup(
     val darkTheme = Settings.shared.getCurrentThemeIsDark()
     val height = if (compact) 36.dp else touchTarget
     val iconSize = if (compact) 20.dp else 24.dp
+    val repeatDescription = repeatContentDescription(repeatMode)
     val leftActions =
         listOfNotNull(
             PlayerControlAction(
@@ -135,6 +136,7 @@ actual fun PlayerConnectedButtonGroup(
                 stringResource(Res.string.queue),
                 onQueueClick,
                 isQueueActive,
+                tooltip = stringResource(Res.string.queue),
             ),
             onLyricsClick?.let {
                 PlayerControlAction(
@@ -142,6 +144,7 @@ actual fun PlayerConnectedButtonGroup(
                     stringResource(Res.string.lyrics),
                     it,
                     isLyricsActive,
+                    tooltip = stringResource(Res.string.lyrics),
                 )
             },
             onShuffleClick?.let {
@@ -150,6 +153,7 @@ actual fun PlayerConnectedButtonGroup(
                     stringResource(Res.string.shuffle),
                     it,
                     isShuffled,
+                    tooltip = stringResource(Res.string.shuffle),
                 )
             },
             onRepeatClick?.let {
@@ -161,9 +165,10 @@ actual fun PlayerConnectedButtonGroup(
                     } else {
                         MetrolistIcons.Rounded.Repeat
                     },
-                    repeatContentDescription(repeatMode),
+                    repeatDescription,
                     it,
                     repeatMode != RepeatMode.OFF,
+                    tooltip = repeatDescription,
                 )
             },
             onSleepTimerClick?.let {
@@ -173,6 +178,7 @@ actual fun PlayerConnectedButtonGroup(
                     it,
                     isSleepTimerActive,
                     text = sleepTimerDisplay,
+                    tooltip = sleepTimerContentDescription ?: stringResource(Res.string.sleep_timer),
                 )
             },
         )
@@ -184,22 +190,38 @@ actual fun PlayerConnectedButtonGroup(
                     stringResource(Res.string.device_connect_title),
                     it,
                     isDeviceConnectActive,
+                    tooltip = stringResource(Res.string.device_connect_title),
                 )
             },
             onCastClick
                 ?.takeIf {
                     Settings.shared.isPlayerCastButtonVisible
-                }?.let { PlayerControlAction(MetrolistIcons.Outlined.Cast, stringResource(Res.string.cast), it, isCasting) },
+                }?.let {
+                    PlayerControlAction(
+                        MetrolistIcons.Outlined.Cast,
+                        stringResource(Res.string.cast),
+                        it,
+                        isCasting,
+                        tooltip = stringResource(Res.string.cast),
+                    )
+                },
             onVideoClick?.takeIf { Settings.shared.showPlayerVideoButton }?.let {
                 PlayerControlAction(
                     MetrolistIcons.Filled.Movie,
                     stringResource(Res.string.video_viewer),
                     it,
                     isVideoActive,
+                    tooltip = stringResource(Res.string.video_viewer),
                 )
             },
             onSubtitleClick?.let {
-                PlayerControlAction(MetrolistIcons.Default.ClosedCaption, stringResource(Res.string.subtitles), it, isSubtitleActive)
+                PlayerControlAction(
+                    MetrolistIcons.Default.ClosedCaption,
+                    stringResource(Res.string.subtitles),
+                    it,
+                    isSubtitleActive,
+                    tooltip = stringResource(Res.string.subtitles),
+                )
             },
             onMiniplayerClick?.let {
                 PlayerControlAction(
@@ -207,6 +229,7 @@ actual fun PlayerConnectedButtonGroup(
                     stringResource(if (showMiniplayer) Res.string.close_miniplayer else Res.string.open_miniplayer),
                     it,
                     showMiniplayer,
+                    tooltip = stringResource(if (showMiniplayer) Res.string.close_miniplayer else Res.string.open_miniplayer),
                 )
             },
             onFullscreenClick?.let {
@@ -215,6 +238,7 @@ actual fun PlayerConnectedButtonGroup(
                     stringResource(if (isFullscreen) Res.string.exit_fullscreen else Res.string.fullscreen),
                     it,
                     isFullscreen,
+                    tooltip = stringResource(if (isFullscreen) Res.string.exit_fullscreen else Res.string.fullscreen),
                 )
             },
         )
@@ -331,89 +355,91 @@ actual fun PlayerConnectedButtonGroup(
                             val startsSegment = index == 0
                             val endsSegment = index == lastVisibleIndex
                             Box {
-                                ToggleButton(
-                                    checked = action.checked == true,
-                                    interactionSource = interactionSource,
-                                    onCheckedChange = { action.onClick() },
-                                    enabled = action.enabled,
-                                    shapes =
-                                        when {
-                                            startsSegment && endsSegment -> {
-                                                ButtonGroupDefaults.connectedLeadingButtonShapes(
-                                                    shape = CircleShape,
-                                                    pressedShape = CircleShape,
-                                                    checkedShape = CircleShape,
-                                                )
-                                            }
+                                HoverTooltip(text = action.tooltip?.takeIf { action.text == null }) {
+                                    ToggleButton(
+                                        checked = action.checked == true,
+                                        interactionSource = interactionSource,
+                                        onCheckedChange = { action.onClick() },
+                                        enabled = action.enabled,
+                                        shapes =
+                                            when {
+                                                startsSegment && endsSegment -> {
+                                                    ButtonGroupDefaults.connectedLeadingButtonShapes(
+                                                        shape = CircleShape,
+                                                        pressedShape = CircleShape,
+                                                        checkedShape = CircleShape,
+                                                    )
+                                                }
 
-                                            startsSegment -> {
-                                                ButtonGroupDefaults.connectedLeadingButtonShapes()
-                                            }
+                                                startsSegment -> {
+                                                    ButtonGroupDefaults.connectedLeadingButtonShapes()
+                                                }
 
-                                            endsSegment -> {
-                                                ButtonGroupDefaults.connectedTrailingButtonShapes()
-                                            }
+                                                endsSegment -> {
+                                                    ButtonGroupDefaults.connectedTrailingButtonShapes()
+                                                }
 
-                                            else -> {
-                                                ButtonGroupDefaults.connectedMiddleButtonShapes()
-                                            }
-                                        }.let { it.copy(pressedShape = it.shape, checkedShape = it.shape) }.withStaticCorners(),
-                                    colors =
-                                        FilledTonalToggleButtonDefaults.colors(
-                                            containerColor =
-                                                filledTonalToggleButtonDefaults.containerColor.copy(
-                                                    alpha = if (darkTheme) 0.5f else 1f,
-                                                ),
-                                        ),
-                                    contentPadding = PaddingValues(horizontal = if (action.text != null) 8.dp else 0.dp),
-                                    modifier =
-                                        Modifier
-                                            .navigationPopupSource()
-                                            .height(height)
-                                            .then(
-                                                if (action.text !=
-                                                    null
-                                                ) {
-                                                    Modifier.widthIn(min = height + 8.dp)
-                                                } else {
-                                                    Modifier.width(height + 8.dp)
-                                                },
-                                            ).then(
-                                                if (action ===
-                                                    volumeAction
-                                                ) {
-                                                    Modifier
-                                                        .onPreviewKeyEvent { event ->
-                                                            if (event.key in
-                                                                listOf(Key.DirectionUp, Key.DirectionDown, Key.Enter, Key.Spacebar)
-                                                            ) {
-                                                                if (event.type == KeyEventType.KeyDown) keyboardVolume = true
-                                                                true
-                                                            } else {
-                                                                false
-                                                            }
-                                                        }.hoverable(
-                                                            volumeHover,
-                                                        ).then(volumeScrollModifier)
-                                                } else {
-                                                    Modifier
-                                                },
+                                                else -> {
+                                                    ButtonGroupDefaults.connectedMiddleButtonShapes()
+                                                }
+                                            }.let { it.copy(pressedShape = it.shape, checkedShape = it.shape) }.withStaticCorners(),
+                                        colors =
+                                            FilledTonalToggleButtonDefaults.colors(
+                                                containerColor =
+                                                    filledTonalToggleButtonDefaults.containerColor.copy(
+                                                        alpha = if (darkTheme) 0.5f else 1f,
+                                                    ),
                                             ),
-                                ) {
-                                    if (action.text !=
-                                        null
+                                        contentPadding = PaddingValues(horizontal = if (action.text != null) 8.dp else 0.dp),
+                                        modifier =
+                                            Modifier
+                                                .navigationPopupSource()
+                                                .height(height)
+                                                .then(
+                                                    if (action.text !=
+                                                        null
+                                                    ) {
+                                                        Modifier.widthIn(min = height + 8.dp)
+                                                    } else {
+                                                        Modifier.width(height + 8.dp)
+                                                    },
+                                                ).then(
+                                                    if (action ===
+                                                        volumeAction
+                                                    ) {
+                                                        Modifier
+                                                            .onPreviewKeyEvent { event ->
+                                                                if (event.key in
+                                                                    listOf(Key.DirectionUp, Key.DirectionDown, Key.Enter, Key.Spacebar)
+                                                                ) {
+                                                                    if (event.type == KeyEventType.KeyDown) keyboardVolume = true
+                                                                    true
+                                                                } else {
+                                                                    false
+                                                                }
+                                                            }.hoverable(
+                                                                volumeHover,
+                                                            ).then(volumeScrollModifier)
+                                                    } else {
+                                                        Modifier
+                                                    },
+                                                ),
                                     ) {
-                                        Text(
-                                            action.text,
-                                            maxLines = 1,
-                                            modifier =
-                                                Modifier.semantics {
-                                                    contentDescription =
-                                                        action.contentDescription
-                                                },
-                                        )
-                                    } else {
-                                        Icon(action.icon, action.contentDescription, Modifier.size(iconSize))
+                                        if (action.text !=
+                                            null
+                                        ) {
+                                            Text(
+                                                action.text,
+                                                maxLines = 1,
+                                                modifier =
+                                                    Modifier.semantics {
+                                                        contentDescription =
+                                                            action.contentDescription
+                                                    },
+                                            )
+                                        } else {
+                                            Icon(action.icon, action.contentDescription, Modifier.size(iconSize))
+                                        }
                                     }
                                 }
                                 if (action === volumeAction) {

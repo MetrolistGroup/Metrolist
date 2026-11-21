@@ -103,6 +103,7 @@ import com.metrolist.shared.model.previewThumbnailUrl
 import com.metrolist.shared.settings.PlayerBackgroundStyle
 import com.metrolist.shared.settings.Settings
 import com.metrolist.shared.ui.components.ArtistSubtitle
+import com.metrolist.shared.ui.components.HoverTooltip
 import com.metrolist.shared.ui.components.MetadataLink
 import com.metrolist.shared.ui.components.playbackMarquee
 import com.metrolist.shared.ui.icons.MetrolistIcons
@@ -508,81 +509,96 @@ private fun FocusModeMiniplayer(
                         if (!isListenTogetherGuest) {
                             Spacer(Modifier.height(24.dp))
 
+                            val playPauseTooltip =
+                                if (PlayerState.isPlaybackLoading) {
+                                    stringResource(Res.string.loading)
+                                } else if (PlayerState.isPlaying) {
+                                    stringResource(Res.string.pause)
+                                } else {
+                                    stringResource(Res.string.play)
+                                }
+
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(20.dp),
                             ) {
-                                IconButton(
-                                    onClick = { PlayerState.skipPrevious() },
-                                    enabled = PlayerState.canSkipPrevious,
-                                    modifier = Modifier.size(40.dp),
-                                    colors =
-                                        IconButtonDefaults.iconButtonColors(
-                                            containerColor = colorScheme.secondaryContainer,
-                                            contentColor = colorScheme.onSecondaryContainer,
-                                        ),
-                                    shapes = IconButtonDefaults.shapes(),
-                                ) {
-                                    Icon(
-                                        MetrolistIcons.Rounded.SkipPrevious,
-                                        stringResource(Res.string.previous),
-                                        modifier = Modifier.size(28.dp),
-                                        tint = colorScheme.onSecondaryContainer,
-                                    )
+                                HoverTooltip(text = stringResource(Res.string.previous)) {
+                                    IconButton(
+                                        onClick = { PlayerState.skipPrevious() },
+                                        enabled = PlayerState.canSkipPrevious,
+                                        modifier = Modifier.size(40.dp),
+                                        colors =
+                                            IconButtonDefaults.iconButtonColors(
+                                                containerColor = colorScheme.secondaryContainer,
+                                                contentColor = colorScheme.onSecondaryContainer,
+                                            ),
+                                        shapes = IconButtonDefaults.shapes(),
+                                    ) {
+                                        Icon(
+                                            MetrolistIcons.Rounded.SkipPrevious,
+                                            stringResource(Res.string.previous),
+                                            modifier = Modifier.size(28.dp),
+                                            tint = colorScheme.onSecondaryContainer,
+                                        )
+                                    }
                                 }
 
-                                Surface(
-                                    onClick = { PlayerState.togglePlay() },
-                                    shape = CircleShape,
-                                    color = Color.White.copy(alpha = 0.2f),
-                                    modifier = Modifier.size(56.dp),
-                                ) {
-                                    Box(contentAlignment = Alignment.Center) {
-                                        if (PlayerState.isPlaybackLoading) {
-                                            val loadingText = stringResource(Res.string.loading)
-                                            LoadingIndicator(
-                                                modifier = Modifier.size(28.dp).semantics { contentDescription = loadingText },
-                                                color = Color.White,
-                                            )
-                                        } else {
-                                            val playPauseIcon =
-                                                if (PlayerState.isPlaying) {
-                                                    MetrolistIcons.Rounded.Pause
-                                                } else {
-                                                    MetrolistIcons.Rounded.PlayArrow
-                                                }
-                                            val playPauseDesc =
-                                                if (PlayerState.isPlaying) {
-                                                    stringResource(Res.string.pause)
-                                                } else {
-                                                    stringResource(Res.string.play)
-                                                }
-                                            Icon(
-                                                imageVector = playPauseIcon,
-                                                contentDescription = playPauseDesc,
-                                                modifier = Modifier.size(32.dp),
-                                                tint = Color.White,
-                                            )
+                                HoverTooltip(text = playPauseTooltip) {
+                                    Surface(
+                                        onClick = { PlayerState.togglePlay() },
+                                        shape = CircleShape,
+                                        color = Color.White.copy(alpha = 0.2f),
+                                        modifier = Modifier.size(56.dp),
+                                    ) {
+                                        Box(contentAlignment = Alignment.Center) {
+                                            if (PlayerState.isPlaybackLoading) {
+                                                val loadingText = stringResource(Res.string.loading)
+                                                LoadingIndicator(
+                                                    modifier = Modifier.size(28.dp).semantics { contentDescription = loadingText },
+                                                    color = Color.White,
+                                                )
+                                            } else {
+                                                val playPauseIcon =
+                                                    if (PlayerState.isPlaying) {
+                                                        MetrolistIcons.Rounded.Pause
+                                                    } else {
+                                                        MetrolistIcons.Rounded.PlayArrow
+                                                    }
+                                                val playPauseDesc =
+                                                    if (PlayerState.isPlaying) {
+                                                        stringResource(Res.string.pause)
+                                                    } else {
+                                                        stringResource(Res.string.play)
+                                                    }
+                                                Icon(
+                                                    imageVector = playPauseIcon,
+                                                    contentDescription = playPauseDesc,
+                                                    modifier = Modifier.size(32.dp),
+                                                    tint = Color.White,
+                                                )
+                                            }
                                         }
                                     }
                                 }
 
-                                IconButton(
-                                    onClick = { PlayerState.skipNext() },
-                                    modifier = Modifier.size(40.dp),
-                                    colors =
-                                        IconButtonDefaults.iconButtonColors(
-                                            containerColor = colorScheme.secondaryContainer,
-                                            contentColor = colorScheme.onSecondaryContainer,
-                                        ),
-                                    shapes = IconButtonDefaults.shapes(),
-                                ) {
-                                    Icon(
-                                        MetrolistIcons.Rounded.SkipNext,
-                                        stringResource(Res.string.next),
-                                        modifier = Modifier.size(28.dp),
-                                        tint = colorScheme.onSecondaryContainer,
-                                    )
+                                HoverTooltip(text = stringResource(Res.string.next)) {
+                                    IconButton(
+                                        onClick = { PlayerState.skipNext() },
+                                        modifier = Modifier.size(40.dp),
+                                        colors =
+                                            IconButtonDefaults.iconButtonColors(
+                                                containerColor = colorScheme.secondaryContainer,
+                                                contentColor = colorScheme.onSecondaryContainer,
+                                            ),
+                                        shapes = IconButtonDefaults.shapes(),
+                                    ) {
+                                        Icon(
+                                            MetrolistIcons.Rounded.SkipNext,
+                                            stringResource(Res.string.next),
+                                            modifier = Modifier.size(28.dp),
+                                            tint = colorScheme.onSecondaryContainer,
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -652,67 +668,80 @@ private fun PlaybackControls(colorScheme: ColorScheme) {
         modifier = Modifier.width(180.dp).height(40.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        FilledIconButton(
-            onClick = { PlayerState.skipPrevious() },
-            enabled = PlayerState.canSkipPrevious,
-            shapes = IconButtonDefaults.shapes(shape = RoundedCornerShape(50)),
-            interactionSource = backInteractionSource,
-            colors =
-                IconButtonDefaults.filledIconButtonColors(
-                    containerColor =
-                        colorScheme.surfaceContainerHighest.copy(
-                            alpha = 1.0f,
-                        ),
-                    contentColor = colorScheme.onSurface,
-                ),
-            modifier = Modifier.fillMaxHeight().weight(backButtonWeight),
-        ) { Icon(MetrolistIcons.Rounded.SkipPrevious, stringResource(Res.string.previous), modifier = Modifier.size(20.dp)) }
+        HoverTooltip(text = stringResource(Res.string.previous), modifier = Modifier.weight(backButtonWeight)) {
+            FilledIconButton(
+                onClick = { PlayerState.skipPrevious() },
+                enabled = PlayerState.canSkipPrevious,
+                shapes = IconButtonDefaults.shapes(shape = RoundedCornerShape(50)),
+                interactionSource = backInteractionSource,
+                colors =
+                    IconButtonDefaults.filledIconButtonColors(
+                        containerColor =
+                            colorScheme.surfaceContainerHighest.copy(
+                                alpha = 1.0f,
+                            ),
+                        contentColor = colorScheme.onSurface,
+                    ),
+                modifier = Modifier.fillMaxSize(),
+            ) { Icon(MetrolistIcons.Rounded.SkipPrevious, stringResource(Res.string.previous), modifier = Modifier.size(20.dp)) }
+        }
 
         Spacer(Modifier.width(8.dp))
 
         val playDesc = stringResource(Res.string.play)
         val pauseDesc = stringResource(Res.string.pause)
         val loadingDesc = stringResource(Res.string.loading)
+        val playPauseTooltip =
+            if (PlayerState.isPlaybackLoading) {
+                loadingDesc
+            } else if (PlayerState.isPlaying) {
+                pauseDesc
+            } else {
+                playDesc
+            }
 
-        MetrolistPlayPauseButton(
-            isPlaying = PlayerState.isPlaying,
-            isLoading = PlayerState.isPlaybackLoading,
-            onClick = { PlayerState.togglePlay() },
-            colorScheme = colorScheme,
-            isWide = false,
-            interactionSource = playPauseInteractionSource,
-            modifier =
-                Modifier
-                    .fillMaxHeight()
-                    .weight(playPauseWeight)
-                    .semantics {
-                        contentDescription =
-                            if (PlayerState.isPlaybackLoading) {
-                                loadingDesc
-                            } else if (PlayerState.isPlaying) {
-                                pauseDesc
-                            } else {
-                                playDesc
-                            }
-                    },
-        )
+        HoverTooltip(text = playPauseTooltip, modifier = Modifier.weight(playPauseWeight)) {
+            MetrolistPlayPauseButton(
+                isPlaying = PlayerState.isPlaying,
+                isLoading = PlayerState.isPlaybackLoading,
+                onClick = { PlayerState.togglePlay() },
+                colorScheme = colorScheme,
+                isWide = false,
+                interactionSource = playPauseInteractionSource,
+                modifier =
+                    Modifier
+                        .fillMaxSize()
+                        .semantics {
+                            contentDescription =
+                                if (PlayerState.isPlaybackLoading) {
+                                    loadingDesc
+                                } else if (PlayerState.isPlaying) {
+                                    pauseDesc
+                                } else {
+                                    playDesc
+                                }
+                        },
+            )
+        }
 
         Spacer(Modifier.width(8.dp))
 
-        FilledIconButton(
-            onClick = { PlayerState.skipNext() },
-            shapes = IconButtonDefaults.shapes(shape = RoundedCornerShape(50)),
-            interactionSource = nextInteractionSource,
-            colors =
-                IconButtonDefaults.filledIconButtonColors(
-                    containerColor =
-                        colorScheme.surfaceContainerHighest.copy(
-                            alpha = 1.0f,
-                        ),
-                    contentColor = colorScheme.onSurface,
-                ),
-            modifier = Modifier.fillMaxHeight().weight(nextButtonWeight),
-        ) { Icon(MetrolistIcons.Rounded.SkipNext, stringResource(Res.string.next), modifier = Modifier.size(20.dp)) }
+        HoverTooltip(text = stringResource(Res.string.next), modifier = Modifier.weight(nextButtonWeight)) {
+            FilledIconButton(
+                onClick = { PlayerState.skipNext() },
+                shapes = IconButtonDefaults.shapes(shape = RoundedCornerShape(50)),
+                interactionSource = nextInteractionSource,
+                colors =
+                    IconButtonDefaults.filledIconButtonColors(
+                        containerColor =
+                            colorScheme.surfaceContainerHighest.copy(
+                                alpha = 1.0f,
+                            ),
+                        contentColor = colorScheme.onSurface,
+                    ),
+                modifier = Modifier.fillMaxSize(),
+            ) { Icon(MetrolistIcons.Rounded.SkipNext, stringResource(Res.string.next), modifier = Modifier.size(20.dp)) }
+        }
     }
 }
 

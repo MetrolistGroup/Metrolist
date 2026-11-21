@@ -174,6 +174,7 @@ import com.metrolist.shared.generated.resources.queued
 import com.metrolist.shared.generated.resources.refresh
 import com.metrolist.shared.generated.resources.remove_from_search_history
 import com.metrolist.shared.generated.resources.repeat
+import com.metrolist.shared.generated.resources.repeat_mode_description
 import com.metrolist.shared.generated.resources.retry
 import com.metrolist.shared.generated.resources.search
 import com.metrolist.shared.generated.resources.search_history_keyboard_hint
@@ -186,6 +187,7 @@ import com.metrolist.shared.model.previewThumbnailUrl
 import com.metrolist.shared.playlistimport.PlaylistImportProgressIndicator
 import com.metrolist.shared.settings.Settings
 import com.metrolist.shared.settings.displayName
+import com.metrolist.shared.ui.components.HoverTooltip
 import com.metrolist.shared.ui.components.playbackMarquee
 import com.metrolist.shared.ui.icons.MetrolistIcons
 import com.metrolist.shared.ui.navigation.navigationPopupSource
@@ -349,6 +351,7 @@ fun WindowScope.TopBarWithPlayer(
                 RepeatMode.ONE -> Res.string.menu_repeat_one
             },
         )
+    val repeatTooltip = stringResource(Res.string.repeat_mode_description, repeatStateDescription)
     val titlebarContent2: @Composable () -> Unit = {
         val bgColor = colorScheme.surfaceContainer
         Row(
@@ -400,137 +403,155 @@ fun WindowScope.TopBarWithPlayer(
                             horizontalArrangement = Arrangement.Center,
                         ) {
                             if (!isWindowTight) {
-                                IconButton(
-                                    onClick = { PlayerState.toggleShuffle() },
-                                    modifier = Modifier.size(40.dp).semantics { stateDescription = shuffleStateDescription },
-                                    shapes = IconButtonDefaults.shapes(),
-                                ) {
-                                    Icon(
-                                        MetrolistIcons.Rounded.Shuffle,
-                                        contentDescription = stringResource(Res.string.shuffle),
-                                        tint = if (PlayerState.shuffleEnabled) colorScheme.primary else colorScheme.onSurfaceVariant,
-                                        modifier = Modifier.size(18.dp),
-                                    )
+                                HoverTooltip(text = stringResource(Res.string.shuffle)) {
+                                    IconButton(
+                                        onClick = { PlayerState.toggleShuffle() },
+                                        modifier = Modifier.size(40.dp).semantics { stateDescription = shuffleStateDescription },
+                                        shapes = IconButtonDefaults.shapes(),
+                                    ) {
+                                        Icon(
+                                            MetrolistIcons.Rounded.Shuffle,
+                                            contentDescription = stringResource(Res.string.shuffle),
+                                            tint = if (PlayerState.shuffleEnabled) colorScheme.primary else colorScheme.onSurfaceVariant,
+                                            modifier = Modifier.size(18.dp),
+                                        )
+                                    }
                                 }
 
                                 Spacer(Modifier.width(4.dp))
                             }
 
-                            FilledTonalButton(
-                                onClick = { PlayerState.skipPrevious() },
-                                shapes = ButtonDefaults.shapes(shape = RoundedCornerShape(18.dp)),
-                                interactionSource = backInteractionSource,
-                                colors =
-                                    ButtonDefaults.filledTonalButtonColors(
-                                        containerColor = colorScheme.surfaceContainerHighest,
-                                        contentColor = colorScheme.onSurface,
-                                    ),
-                                contentPadding = PaddingValues(horizontal = 0.dp),
-                                modifier = Modifier.height(36.dp).width(36.dp),
-                            ) {
-                                Icon(
-                                    MetrolistIcons.Rounded.SkipPrevious,
-                                    stringResource(Res.string.previous),
-                                    modifier = Modifier.size(18.dp),
-                                )
+                            HoverTooltip(text = stringResource(Res.string.previous)) {
+                                FilledTonalButton(
+                                    onClick = { PlayerState.skipPrevious() },
+                                    shapes = ButtonDefaults.shapes(shape = RoundedCornerShape(18.dp)),
+                                    interactionSource = backInteractionSource,
+                                    colors =
+                                        ButtonDefaults.filledTonalButtonColors(
+                                            containerColor = colorScheme.surfaceContainerHighest,
+                                            contentColor = colorScheme.onSurface,
+                                        ),
+                                    contentPadding = PaddingValues(horizontal = 0.dp),
+                                    modifier = Modifier.height(36.dp).width(36.dp),
+                                ) {
+                                    Icon(
+                                        MetrolistIcons.Rounded.SkipPrevious,
+                                        stringResource(Res.string.previous),
+                                        modifier = Modifier.size(18.dp),
+                                    )
+                                }
                             }
 
                             Spacer(Modifier.width(4.dp))
 
-                            FilledTonalButton(
-                                onClick = { PlayerState.togglePlay() },
-                                shapes = ButtonDefaults.shapes(shape = RoundedCornerShape(18.dp)),
-                                interactionSource = playPauseInteractionSource,
-                                colors =
-                                    ButtonDefaults.filledTonalButtonColors(
-                                        containerColor = colorScheme.primary,
-                                        contentColor = colorScheme.onPrimary,
-                                    ),
-                                contentPadding = PaddingValues(horizontal = if (isWindowTight) 8.dp else 16.dp),
-                                modifier = Modifier.height(36.dp).weight(1f),
-                            ) {
-                                Row(
-                                    horizontalArrangement = Arrangement.Center,
-                                    verticalAlignment = Alignment.CenterVertically,
-                                ) {
-                                    val loadingText = stringResource(Res.string.loading)
-                                    if (PlayerState.isPlaybackLoading) {
-                                        LoadingIndicator(
-                                            modifier =
-                                                Modifier.size(18.dp).semantics {
-                                                    contentDescription = loadingText
-                                                },
-                                            color = LocalContentColor.current,
-                                        )
+                            HoverTooltip(
+                                text =
+                                    if (isWindowTight && !PlayerState.isPlaybackLoading) {
+                                        stringResource(if (isPlaying) Res.string.pause else Res.string.play)
                                     } else {
-                                        Icon(
-                                            if (isPlaying) MetrolistIcons.Rounded.Pause else MetrolistIcons.Rounded.PlayArrow,
-                                            if (isWindowTight) {
-                                                stringResource(
-                                                    if (isPlaying) Res.string.pause else Res.string.play,
-                                                )
-                                            } else {
-                                                null
-                                            },
-                                            modifier = Modifier.size(18.dp),
-                                        )
-                                    }
-                                    if (!isWindowTight && !PlayerState.isPlaybackLoading) {
-                                        Spacer(Modifier.width(6.dp))
-                                        Text(
-                                            if (isPlaying) {
-                                                stringResource(Res.string.pause)
-                                            } else {
-                                                stringResource(Res.string.play)
-                                            },
-                                            style = MaterialTheme.typography.labelMedium,
-                                            fontWeight = FontWeight.SemiBold,
-                                            maxLines = 1,
-                                        )
+                                        null
+                                    },
+                                modifier = Modifier.weight(1f),
+                            ) {
+                                FilledTonalButton(
+                                    onClick = { PlayerState.togglePlay() },
+                                    shapes = ButtonDefaults.shapes(shape = RoundedCornerShape(18.dp)),
+                                    interactionSource = playPauseInteractionSource,
+                                    colors =
+                                        ButtonDefaults.filledTonalButtonColors(
+                                            containerColor = colorScheme.primary,
+                                            contentColor = colorScheme.onPrimary,
+                                        ),
+                                    contentPadding = PaddingValues(horizontal = if (isWindowTight) 8.dp else 16.dp),
+                                    modifier = Modifier.height(36.dp).fillMaxWidth(),
+                                ) {
+                                    Row(
+                                        horizontalArrangement = Arrangement.Center,
+                                        verticalAlignment = Alignment.CenterVertically,
+                                    ) {
+                                        val loadingText = stringResource(Res.string.loading)
+                                        if (PlayerState.isPlaybackLoading) {
+                                            LoadingIndicator(
+                                                modifier =
+                                                    Modifier.size(18.dp).semantics {
+                                                        contentDescription = loadingText
+                                                    },
+                                                color = LocalContentColor.current,
+                                            )
+                                        } else {
+                                            Icon(
+                                                if (isPlaying) MetrolistIcons.Rounded.Pause else MetrolistIcons.Rounded.PlayArrow,
+                                                if (isWindowTight) {
+                                                    stringResource(
+                                                        if (isPlaying) Res.string.pause else Res.string.play,
+                                                    )
+                                                } else {
+                                                    null
+                                                },
+                                                modifier = Modifier.size(18.dp),
+                                            )
+                                        }
+                                        if (!isWindowTight && !PlayerState.isPlaybackLoading) {
+                                            Spacer(Modifier.width(6.dp))
+                                            Text(
+                                                if (isPlaying) {
+                                                    stringResource(Res.string.pause)
+                                                } else {
+                                                    stringResource(Res.string.play)
+                                                },
+                                                style = MaterialTheme.typography.labelMedium,
+                                                fontWeight = FontWeight.SemiBold,
+                                                maxLines = 1,
+                                            )
+                                        }
                                     }
                                 }
                             }
 
                             Spacer(Modifier.width(4.dp))
 
-                            FilledTonalButton(
-                                onClick = { PlayerState.skipNext() },
-                                shapes = ButtonDefaults.shapes(shape = RoundedCornerShape(18.dp)),
-                                interactionSource = nextInteractionSource,
-                                colors =
-                                    ButtonDefaults.filledTonalButtonColors(
-                                        containerColor = colorScheme.surfaceContainerHighest,
-                                        contentColor = colorScheme.onSurface,
-                                    ),
-                                contentPadding = PaddingValues(horizontal = 0.dp),
-                                modifier = Modifier.height(36.dp).width(36.dp),
-                            ) {
-                                Icon(MetrolistIcons.Rounded.SkipNext, stringResource(Res.string.next), modifier = Modifier.size(18.dp))
+                            HoverTooltip(text = stringResource(Res.string.next)) {
+                                FilledTonalButton(
+                                    onClick = { PlayerState.skipNext() },
+                                    shapes = ButtonDefaults.shapes(shape = RoundedCornerShape(18.dp)),
+                                    interactionSource = nextInteractionSource,
+                                    colors =
+                                        ButtonDefaults.filledTonalButtonColors(
+                                            containerColor = colorScheme.surfaceContainerHighest,
+                                            contentColor = colorScheme.onSurface,
+                                        ),
+                                    contentPadding = PaddingValues(horizontal = 0.dp),
+                                    modifier = Modifier.height(36.dp).width(36.dp),
+                                ) {
+                                    Icon(MetrolistIcons.Rounded.SkipNext, stringResource(Res.string.next), modifier = Modifier.size(18.dp))
+                                }
                             }
 
                             if (!isWindowTight) {
                                 Spacer(Modifier.width(4.dp))
 
-                                IconButton(
-                                    onClick = { PlayerState.cycleRepeatMode() },
-                                    modifier = Modifier.size(40.dp).semantics { stateDescription = repeatStateDescription },
-                                    shapes = IconButtonDefaults.shapes(),
-                                ) {
-                                    Icon(
-                                        if (PlayerState.repeatMode == RepeatMode.ONE) {
-                                            MetrolistIcons.Rounded.RepeatOne
-                                        } else {
-                                            MetrolistIcons.Rounded.Repeat
-                                        },
-                                        contentDescription = stringResource(Res.string.repeat),
-                                        tint =
-                                            if (PlayerState.repeatMode != RepeatMode.OFF) {
-                                                colorScheme.primary
+                                HoverTooltip(text = repeatTooltip) {
+                                    IconButton(
+                                        onClick = { PlayerState.cycleRepeatMode() },
+                                        modifier = Modifier.size(40.dp).semantics { stateDescription = repeatStateDescription },
+                                        shapes = IconButtonDefaults.shapes(),
+                                    ) {
+                                        Icon(
+                                            if (PlayerState.repeatMode == RepeatMode.ONE) {
+                                                MetrolistIcons.Rounded.RepeatOne
                                             } else {
-                                                colorScheme.onSurfaceVariant
+                                                MetrolistIcons.Rounded.Repeat
                                             },
-                                        modifier = Modifier.size(18.dp),
-                                    )
+                                            contentDescription = stringResource(Res.string.repeat),
+                                            tint =
+                                                if (PlayerState.repeatMode != RepeatMode.OFF) {
+                                                    colorScheme.primary
+                                                } else {
+                                                    colorScheme.onSurfaceVariant
+                                                },
+                                            modifier = Modifier.size(18.dp),
+                                        )
+                                    }
                                 }
                             }
                         }
