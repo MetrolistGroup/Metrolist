@@ -2248,11 +2248,13 @@ object PlayerState {
     }
 
     private fun canLoadRecommendations(song: SongItem): Boolean =
-        Settings.shared.autoLoadMore && repeatMode == RepeatMode.OFF && !isListenTogetherGuest() && !deviceConnect.isFollowing &&
+        (Settings.shared.autoLoadMore || syncSession.explicitRadioQueue) &&
+            (repeatMode == RepeatMode.OFF || syncSession.explicitRadioQueue) &&
+            !isListenTogetherGuest() && !deviceConnect.isFollowing &&
             !syncSession.finite && queue.currentItem()?.id == song.id
 
     private fun maybePrefetchRecommendationsForCurrentQueue(song: SongItem) {
-        if (repeatMode != RepeatMode.OFF || !canLoadRecommendations(song) ||
+        if (!canLoadRecommendations(song) ||
             initialRecommendationsGeneration == playbackTransitionGeneration
         ) {
             return
@@ -3722,6 +3724,7 @@ object PlayerState {
                     songs = listOf(song),
                     index = 0,
                     finite = false,
+                    explicitRadioQueue = true,
                     positionMs = if (currentTrack?.id == song.id) player.currentPlaybackPositionMs() else 0L,
                     preserveCurrentTrack = true,
                 ),
