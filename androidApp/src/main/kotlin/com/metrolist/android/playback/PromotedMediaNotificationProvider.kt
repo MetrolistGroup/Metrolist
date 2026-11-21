@@ -24,7 +24,7 @@ import kotlin.math.abs
 @UnstableApi
 internal class PromotedMediaNotificationProvider(
     private val context: Context,
-    private val delegate: DefaultMediaNotificationProvider = DefaultMediaNotificationProvider(context),
+    private val delegate: MediaNotification.Provider = DefaultMediaNotificationProvider(context),
 ) : MediaNotification.Provider {
     // Session preferences in these slots remove the standard skip actions used by watches and lock screens.
     private fun transportButtons(): List<CommandButton> =
@@ -55,6 +55,9 @@ internal class PromotedMediaNotificationProvider(
     private var cachedStartTimeMs: Long? = null
     private var generation = 0L
     private var latestCallback: MediaNotification.Provider.Callback? = null
+
+    @Volatile
+    internal var notificationUpdatedListener: ((MediaNotification) -> Unit)? = null
 
     override fun createNotification(
         mediaSession: MediaSession,
@@ -92,7 +95,10 @@ internal class PromotedMediaNotificationProvider(
                 if (generation == requestGeneration) {
                     val promoted = updated.promoteIfPlaying(mediaSession)
                     cachedNotification = promoted
+                    // Media3 posts its callback to the main thread and may demote the service there.
+                    // Post the listener afterwards so room demand can restore foreground ownership.
                     latestCallback?.onNotificationChanged(promoted)
+                    notificationUpdatedListener?.invoke(promoted)
                 }
             }.promoteIfPlaying(mediaSession)
             .also { cachedNotification = it }
