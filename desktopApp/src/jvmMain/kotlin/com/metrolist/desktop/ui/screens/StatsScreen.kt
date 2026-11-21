@@ -331,6 +331,10 @@ fun StatsScreen() {
                             .substringBefore(':')
                             .toIntOrNull()
                     val album = index?.let(topAlbums::getOrNull) ?: return@StatisticsScreen
+                    album.id?.let {
+                        PlaylistAlbumState.fetchAlbumData(it)
+                        return@StatisticsScreen
+                    }
                     val query = "${album.name} ${album.artists}".trim()
                     AppState.scope.launch {
                         val foundId =
