@@ -261,7 +261,7 @@ fun LyricsView(
     val shimmerColor = MaterialTheme.colorScheme.primary
     val globalOffsetMs = Settings.shared.globalLyricsOffsetMs
     val effectiveOffsetMs = LyricsUtils.combinedLyricsOffsetMs(timingOffsetMs, globalOffsetMs)
-    val isPlusLighter = isLiquidBackground && Settings.shared.lyricsPlusLighter
+    val isPlusLighter = isLiquidBackground && Settings.shared.lyricsPlusLighter && textColor.luminance() > 0.5f
     val lyricsActiveByRealTiming = Settings.shared.lyricsActiveByRealTiming
     val selection = selectionState ?: remember(songId, lyrics) { LyricsSelectionState() }
     val selectedIndices = selection.selectedIndices
