@@ -84,7 +84,7 @@
     <string name="bitrate">Bitrate</string>
     <string name="sample_rate">Frequenza di campionamento</string>
     <string name="loudness">Intensità sonora</string>
-    <string name="loudness_value">%1$s dB</string>
+    <string name="loudness_value">%1$s dB</string>
     <string name="volume">Volume</string>
     <string name="file_size">Dimensioni file</string>
     <string name="unknown">Sconosciuto</string>
@@ -112,19 +112,19 @@
         <item quantity="other">%1$d album</item>
     </plurals>
     <plurals name="n_week">
-        <item quantity="one">%1$d settimana</item>
-        <item quantity="many">%1$d settimane</item>
-        <item quantity="other">%1$d settimane</item>
+        <item quantity="one">%1$d settimana</item>
+        <item quantity="many">%1$d settimane</item>
+        <item quantity="other">%1$d settimane</item>
     </plurals>
     <plurals name="n_month">
-        <item quantity="one">%1$d mese</item>
-        <item quantity="many">%1$d mesi</item>
-        <item quantity="other">%1$d mesi</item>
+        <item quantity="one">%1$d mese</item>
+        <item quantity="many">%1$d mesi</item>
+        <item quantity="other">%1$d mesi</item>
     </plurals>
     <plurals name="n_year">
-        <item quantity="one">%1$d anno</item>
-        <item quantity="many">%1$d anni</item>
-        <item quantity="other">%1$d anni</item>
+        <item quantity="one">%1$d anno</item>
+        <item quantity="many">%1$d anni</item>
+        <item quantity="other">%1$d anni</item>
     </plurals>
     <string name="undo">Annulla</string>
     <string name="lyrics_not_found">Testo non trovato</string>
@@ -143,9 +143,9 @@
     <string name="queue_loading">Caricamento della coda…</string>
     <string name="calculating">Calcolo in corso…</string>
     <plurals name="queue_track_count_duration">
-        <item quantity="one">%1$d brano · %2$s</item>
-        <item quantity="many">%1$d brani · %2$s</item>
-        <item quantity="other">%1$d brani · %2$s</item>
+        <item quantity="one">%1$d brano · %2$s</item>
+        <item quantity="many">%1$d brani · %2$s</item>
+        <item quantity="other">%1$d brani · %2$s</item>
     </plurals>
     <string name="suggested_tracks">Raccomandati</string>
     <string name="playback_notification_channel_name">Riproduzione</string>
@@ -156,7 +156,7 @@
     <string name="lyrics_written_by">Scritto da %1$s</string>
     <string name="lyrics_auto_scroll_btn">Scorrimento automatico</string>
     <string name="squiggly">Ondulata</string>
-    <string name="action_logout">Esci</string>
+    <string name="action_logout">Disconnetti</string>
     <string name="action_login">Accedi</string>
     <string name="action_not_now">Non ora</string>
     <string name="youtube_session_expired_title">Potresti essere stato disconnesso</string>
@@ -2006,7 +2006,7 @@
     <string name="downloads_empty">Nessun download in corso</string>
     <string name="downloads_empty_hint">I brani salvati per l'ascolto offline saranno mostrati qui durante il download.</string>
     <string name="edit_playlist_cover">Modifica copertina playlist</string>
-    <string name="edit_playlist_cover_note">Il tuo account dev'essere collegato ad un numero di telefono e verificato su YouTube Music per cambiare la copertina della playlist</string>
+    <string name="edit_playlist_cover_note">Il tuo account deve essere collegato a un numero di telefono e verificato su YouTube Music per cambiare la copertina della playlist</string>
     <string name="edit_playlist_cover_note_wait">Dopo aver selezionato un'immagine, attendi qualche istante affinché la nuova copertina venga visualizzata nella playlist</string>
     <string name="choose_from_library">Scegli dalla libreria</string>
     <string name="remove_custom_image">Rimuovi immagine personalizzata</string>
@@ -2381,8 +2381,8 @@
     <string name="lyrics_capability_line">Riga</string>
     <string name="lyrics_capability_unsynced">Non sincronizzato</string>
     <string name="lyrics_youtube_captions">Sottotitoli YouTube</string>
-    <string name="sleep_timer_hour">Ora</string>
-    <string name="sleep_timer_minute">Minuto</string>
+    <string name="sleep_timer_hour">Ore</string>
+    <string name="sleep_timer_minute">Minuti</string>
     <string name="sleep_timer_advanced_options">Opzioni avanzate</string>
     <string name="sleep_timer_finish_current_song">Ferma il timer alla fine del brano attuale</string>
     <string name="sleep_timer_set_default">Imposta come predefinito</string>
