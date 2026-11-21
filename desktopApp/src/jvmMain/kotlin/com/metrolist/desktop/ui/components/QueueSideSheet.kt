@@ -49,10 +49,13 @@ import com.metrolist.shared.ui.player.QueueScreen
 import com.metrolist.shared.ui.player.QueueScreenState
 import com.metrolist.shared.ui.player.QueueTrack
 import com.metrolist.shared.utils.formatQueueDuration
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.getPluralString
 import org.jetbrains.compose.resources.getString
 import org.jetbrains.compose.resources.stringResource
+
+private var queueRemovalUndoJob: Job? = null
 
 @Composable
 internal fun DesktopQueueContent(
@@ -85,16 +88,18 @@ internal fun DesktopQueueContent(
     }
 
     fun showRemovalUndo(removal: QueueRemoval) {
-        AppState.scope.launch {
-            val count = removal.items.size
-            val result =
-                AppState.snackbarHostState.showSnackbar(
-                    message = getPluralString(Res.plurals.removed_from_queue, count, count),
-                    actionLabel = getString(Res.string.undo),
-                    duration = SnackbarDuration.Short,
-                )
-            if (result == SnackbarResult.ActionPerformed) PlayerState.restoreQueueItems(removal)
-        }
+        queueRemovalUndoJob?.cancel()
+        queueRemovalUndoJob =
+            AppState.scope.launch {
+                val count = removal.items.size
+                val result =
+                    AppState.snackbarHostState.showSnackbar(
+                        message = getPluralString(Res.plurals.removed_from_queue, count, count),
+                        actionLabel = getString(Res.string.undo),
+                        duration = SnackbarDuration.Short,
+                    )
+                if (result == SnackbarResult.ActionPerformed) PlayerState.restoreQueueItems(removal)
+            }
     }
 
     fun SongItem.toQueueTrack(
