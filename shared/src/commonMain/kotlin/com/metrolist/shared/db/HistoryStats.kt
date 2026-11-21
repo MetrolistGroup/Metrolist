@@ -104,12 +104,16 @@ private fun historyStatsQuery(
     val sql =
         if (mergeSourcesByDay) {
             // YouTube's date groups cannot identify individual local plays. Keep the larger count without deleting either source.
-            val day = "strftime('%Y-%m-%d', timestamp / 1000, 'unixepoch', 'localtime')"
-            "WITH eligible AS (SELECT e.* FROM event e $tables WHERE $where), " +
-                "ranked AS (SELECT *, ROW_NUMBER() OVER (PARTITION BY songId, $day, source = 'YOUTUBE' " +
-                "ORDER BY timestamp DESC, remoteOrder DESC, id DESC) AS sourceRank, " +
-                "SUM(CASE WHEN source != 'YOUTUBE' THEN 1 ELSE 0 END) OVER (PARTITION BY songId, $day) AS localCount FROM eligible), " +
-                "merged AS (SELECT * FROM ranked WHERE source != 'YOUTUBE' OR sourceRank > localCount) " +
+            val day = "strftime('%Y-%m-%d', e.timestamp / 1000, 'unixepoch', 'localtime')"
+            // Android's system SQLite on API 24 does not support window functions.
+            "WITH eligible AS (SELECT e.*, $day AS localDay FROM event e $tables WHERE $where), " +
+                "local_counts AS (SELECT songId, localDay, COUNT(*) AS playCount FROM eligible " +
+                "WHERE source != 'YOUTUBE' GROUP BY songId, localDay), " +
+                "merged AS (SELECT e.* FROM eligible e LEFT JOIN local_counts l ON l.songId = e.songId AND l.localDay = e.localDay " +
+                "WHERE e.source != 'YOUTUBE' OR l.playCount IS NULL OR " +
+                "(SELECT COUNT(*) FROM eligible r WHERE r.songId = e.songId AND r.localDay = e.localDay AND r.source = 'YOUTUBE' AND " +
+                "(r.timestamp > e.timestamp OR (r.timestamp = e.timestamp AND " +
+                "(r.remoteOrder > e.remoteOrder OR (r.remoteOrder = e.remoteOrder AND r.id >= e.id))))) > l.playCount) " +
                 "$select FROM merged e $tables $suffix"
         } else {
             "$select FROM event e $tables WHERE $where $suffix"

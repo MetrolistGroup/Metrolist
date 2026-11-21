@@ -77,6 +77,6 @@ The smaller option is a dedicated recap summary and poster inside Statistics. St
 
 New history providers, a mobile Home shortcut, streaks, video export, playlist creation and comparisons are outside the selected first scope.
 
-The manual Android build workflow accepts a release variant and requires release signing. Build the APK from the reviewed PR revision and install it as an update to preserve existing app data.
+The manual Android build workflow accepts a release variant and requires release signing. Build the APK from the reviewed PR revision and install it as an update to preserve existing app data. An in-place update requires the same application ID, a version code at least as high as the installed app, and a matching signing certificate or valid proof of signing-key rotation. If Android rejects the update, do not uninstall the existing app to bypass the rejection.
 
 External API contracts were read from documentation. The research did not exercise new provider APIs. iOS runtime verification needs an Apple environment; Linux compilation and Android device checks cannot establish iOS behavior.

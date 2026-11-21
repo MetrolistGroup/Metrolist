@@ -189,6 +189,13 @@ fun WrappedScreen(
                         Text(stringResource(Res.string.refresh))
                     }
                 }
+                if (syncFailed) {
+                    Text(
+                        stringResource(Res.string.wrapped_sync_failed),
+                        Modifier.padding(horizontal = 24.dp),
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
                 val result = snapshot
                 when {
                     loading && result == null -> {
@@ -215,7 +222,6 @@ fun WrappedScreen(
                             exportLabel,
                             desktopLayout,
                             bottomContentPadding,
-                            syncFailed,
                         )
                     }
                 }
@@ -240,7 +246,6 @@ private fun WrappedReport(
     exportLabel: String,
     desktopLayout: Boolean,
     bottomContentPadding: Dp,
-    syncFailed: Boolean,
 ) {
     val formatter = rememberStatisticsFormatter()
     val state =
@@ -319,13 +324,6 @@ private fun WrappedReport(
         } else if (!soundtrack.available) {
             Text(
                 stringResource(Res.string.wrapped_soundtrack_unavailable),
-                Modifier.padding(horizontal = 24.dp),
-                style = MaterialTheme.typography.bodySmall,
-            )
-        }
-        if (syncFailed) {
-            Text(
-                stringResource(Res.string.wrapped_sync_failed),
                 Modifier.padding(horizontal = 24.dp),
                 style = MaterialTheme.typography.bodySmall,
             )

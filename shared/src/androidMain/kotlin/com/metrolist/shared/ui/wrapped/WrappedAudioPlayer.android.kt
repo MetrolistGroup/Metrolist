@@ -228,7 +228,7 @@ private class WrappedMediaDataSource(
         transferInitializing(dataSpec)
         opened = true
         transferStarted(dataSpec)
-        return remaining
+        return if (dataSpec.length != C.LENGTH_UNSET.toLong()) dataSpec.length else remaining
     }
 
     override fun read(

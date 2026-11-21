@@ -7,6 +7,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
@@ -28,7 +29,8 @@ fun rememberWrappedSoundtrack(
     songs: List<SongItem>,
 ): WrappedSoundtrack {
     val scope = rememberCoroutineScope()
-    val soundtrack = remember(controller, songs) { WrappedSoundtrack(controller, songs, scope) }
+    val currentSongs by rememberUpdatedState(songs)
+    val soundtrack = remember(controller) { WrappedSoundtrack(controller, { currentSongs }, scope) }
     LaunchedEffect(soundtrack, controller) {
         controller.wrappedSoundtrackAllowed.collect { soundtrack.setAllowed(it) }
     }
@@ -48,7 +50,7 @@ fun rememberWrappedSoundtrack(
 
 class WrappedSoundtrack internal constructor(
     private val controller: PlaybackController,
-    private val songs: List<SongItem>,
+    private val songs: () -> List<SongItem>,
     private val scope: CoroutineScope,
 ) {
     var enabled by mutableStateOf(false)
@@ -61,7 +63,8 @@ class WrappedSoundtrack internal constructor(
     private var playback by mutableStateOf(controller.state.value)
     val available: Boolean
         get() =
-            allowed && controller.playbackVolume != null && songs.isNotEmpty() && !playback.isLoading && !playback.isReconnecting &&
+            allowed && controller.playbackVolume != null && (if (enabled) sessionSongs else songs()).isNotEmpty() &&
+                !playback.isLoading && !playback.isReconnecting &&
                 !playback.isVideoResolving && !playback.sleepTimerState.isActive && !playback.sleepTimerState.stopAfterCurrentSong
 
     private var normalPlayback: PlaybackUiState? = null
@@ -70,6 +73,7 @@ class WrappedSoundtrack internal constructor(
     private var pausedPositionMs: Long? = null
     private var job: Job? = null
     private var player: WrappedAudioPlayer? = null
+    private var sessionSongs: List<SongItem> = emptyList()
     private var songIndex = 0
     private var sessionId = 0L
 
@@ -99,6 +103,7 @@ class WrappedSoundtrack internal constructor(
         if (!available) return
         failed = false
         val session = ++sessionId
+        sessionSongs = songs().toList()
         enabled = true
         loading = true
         normalPlayback = controller.state.value
@@ -140,14 +145,14 @@ class WrappedSoundtrack internal constructor(
         if (!enabled || session != sessionId) return
         loading = true
         val current = checkNotNull(player)
-        current.play(songs[songIndex])
+        current.play(sessionSongs[songIndex])
         if (enabled && session == sessionId && player === current) loading = false
     }
 
     private fun playNext() {
         val session = sessionId
         job?.cancel()
-        songIndex = (songIndex + 1) % songs.size
+        songIndex = (songIndex + 1) % sessionSongs.size
         job =
             scope.launch {
                 try {
@@ -186,6 +191,7 @@ class WrappedSoundtrack internal constructor(
         job = null
         runCatching { player?.close() }.onFailure { failed = true }
         player = null
+        sessionSongs = emptyList()
         normalPlayback = null
         normalCommandGeneration = null
         pausedPositionMs = null
