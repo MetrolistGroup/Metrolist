@@ -315,7 +315,7 @@ fun LyricsShareDialog(
                         }
                         if (!storyMode) {
                             item {
-                                Text(stringResource(Res.string.player_background_style), style = MaterialTheme.typography.titleSmall)
+                                Text(stringResource(Res.string.player_background_style))
                                 val scrollState = rememberScrollState()
                                 Row(
                                     Modifier.fillMaxWidth().carouselScroll(scrollState).horizontalScroll(scrollState),
