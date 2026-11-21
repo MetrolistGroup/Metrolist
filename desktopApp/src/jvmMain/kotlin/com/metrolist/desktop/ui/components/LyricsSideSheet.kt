@@ -142,7 +142,16 @@ internal fun DesktopLyricsContent(
     Surface(
         modifier = modifier.fillMaxHeight(),
         shape = RoundedCornerShape(16.dp),
-        color = if (isImmersiveBg) if (isLightLiquidBg) Color.White else Color.Black else colorScheme.surface,
+        color =
+            if (isImmersiveBg) {
+                if (isLightLiquidBg) {
+                    Color.White
+                } else {
+                    Color.Black
+                }
+            } else {
+                colorScheme.surface
+            },
         tonalElevation = 1.dp,
     ) {
         val drawerContent = @Composable {
@@ -159,6 +168,7 @@ internal fun DesktopLyricsContent(
                     artworkUrl = PlayerState.currentArtworkUrl.takeIf { hasArtwork },
                     artworkScrimAlpha = 0.45f,
                     isLiquid = style == PlayerBackgroundStyle.LIQUID,
+                    foregroundColor = textBackgroundColor,
                 )
             }
             Column(modifier = Modifier.fillMaxSize()) {

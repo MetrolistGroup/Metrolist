@@ -333,7 +333,7 @@ internal actual fun PlatformLiquidBackgroundCanvas(
         modifier =
             modifier.fillMaxSize().drawWithContent {
                 drawContent()
-                if (isLightTheme) drawRect(Color.White.copy(alpha = 0.48f))
+                if (isLightTheme) drawRect(Color.White.copy(alpha = 0.6f))
             },
     ) {
         renderer.draw(

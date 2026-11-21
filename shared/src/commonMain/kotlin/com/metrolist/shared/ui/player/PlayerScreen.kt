@@ -746,7 +746,7 @@ fun PlayerScreen(
         targetValue =
             if (
                 isCanvasBackdropVisible ||
-                    (usesFullscreenThumbnail && currentSong?.displayThumbnail != null && !showVideoSurface && !uiState.isLyricsVisible)
+                (usesFullscreenThumbnail && currentSong?.displayThumbnail != null && !uiState.isLyricsVisible)
             ) {
                 Color.White
             } else {
@@ -1101,6 +1101,7 @@ fun PlayerScreen(
                                         artworkWhiteAlpha = 0.12f,
                                         isLiquid = isLiquid,
                                         visible = uiState.isLyricsVisible,
+                                        foregroundColor = textBackgroundColor,
                                     )
                                 }
                             }
