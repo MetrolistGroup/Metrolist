@@ -23,14 +23,22 @@ class ArtistTracksLoader(
     private val repository: () -> YouTubeRepository = { GlobalYouTubeRepository.instance },
 ) {
     private var loadGeneration = 0L
-    private val requestedMetadata = mutableSetOf<String>()
+
+    private enum class MetadataRequest {
+        INITIAL,
+        RETRY_AVAILABLE,
+        RETRY,
+        FINISHED,
+    }
+
+    private val requestedMetadata = mutableMapOf<String, MetadataRequest>()
     private val metadataRequests = Semaphore(2)
     private val sectionTokens = mutableMapOf<String, MutableSet<String>>()
 
     fun reset(): Set<String> {
         loadGeneration++
         sectionTokens.clear()
-        return requestedMetadata.toSet().also { requestedMetadata.clear() }
+        return requestedMetadata.keys.toSet().also { requestedMetadata.clear() }
     }
 
     fun loadSection(title: String) {
@@ -82,11 +90,16 @@ class ArtistTracksLoader(
 
     fun loadItemMetadata(items: List<YTItem>) {
         val pending =
-            items.filter { item ->
-                when (item) {
-                    is SongItem -> item.duration == null
-                    else -> false
-                } && requestedMetadata.add(item.id)
+            items.mapNotNull { item ->
+                if (item !is SongItem || item.duration != null) return@mapNotNull null
+                val request =
+                    when (requestedMetadata[item.id]) {
+                        null -> MetadataRequest.INITIAL
+                        MetadataRequest.RETRY_AVAILABLE -> MetadataRequest.RETRY
+                        else -> return@mapNotNull null
+                    }
+                requestedMetadata[item.id] = request
+                item.id
             }
         if (pending.isEmpty()) return
         val generation = loadGeneration
@@ -96,12 +109,21 @@ class ArtistTracksLoader(
                     metadataRequests.withPermit {
                         val repository = repository()
                         repository
-                            .getSongsMetadata(pending.filterIsInstance<SongItem>().map { it.id })
+                            .getSongsMetadata(pending)
                             .mapNotNull { song -> song.duration?.let { song.id to it } }
                             .toMap()
                     }
                 }
             if (generation != loadGeneration) return@launch
+            pending.forEach { id ->
+                // Let a later visibility callback retry missing metadata once, without polling or duplicate in-flight requests.
+                requestedMetadata[id] =
+                    if (id !in updates && requestedMetadata[id] == MetadataRequest.INITIAL) {
+                        MetadataRequest.RETRY_AVAILABLE
+                    } else {
+                        MetadataRequest.FINISHED
+                    }
+            }
             uiState.update { state ->
                 val sections = updateArtistSongDurations(state.unfilteredSections, updates)
                 if (sections ===

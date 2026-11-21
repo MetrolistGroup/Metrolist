@@ -206,15 +206,23 @@ internal fun shouldWrapToLastItem(
     playbackPositionMs: Long,
     currentQueueIndex: Int,
     lastQueueIndex: Int,
-): Boolean = repeatAll && currentQueueIndex == 0 && lastQueueIndex > 0 && playbackPositionMs < RESTART_CURRENT_ITEM_THRESHOLD_MS
+    isLive: Boolean = false,
+): Boolean =
+    repeatAll && currentQueueIndex == 0 && lastQueueIndex > 0 &&
+        (isLive || playbackPositionMs < RESTART_CURRENT_ITEM_THRESHOLD_MS)
 
 internal fun AndroidPlaybackPlayer.skipToPrevious(
     repeatAll: Boolean,
     resumePlayback: Boolean,
 ) {
     val lastIndex = songQueue.value.lastIndex
-    if (currentSong.value?.isLive != true &&
-        shouldWrapToLastItem(repeatAll, currentPosition.value, currentMediaItemIndex.value, lastIndex)
+    if (shouldWrapToLastItem(
+            repeatAll,
+            currentPosition.value,
+            currentMediaItemIndex.value,
+            lastIndex,
+            isLive = currentSong.value?.isLive == true,
+        )
     ) {
         skipToQueueItem(lastIndex, resumePlayback = resumePlayback)
     } else {

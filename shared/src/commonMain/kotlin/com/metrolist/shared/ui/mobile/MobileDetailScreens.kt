@@ -344,10 +344,10 @@ internal fun MobileArtistScreen(
             operationError = null
             loader.load()
         },
-        onItemClick = { item ->
+        onItemClick = { sectionTitle, item ->
             if (item is SongItem) {
                 scope.launch {
-                    val songs = fullArtistShelfQueue(item, sections, page?.sectionBrowseIds.orEmpty())
+                    val songs = fullArtistShelfQueue(item, sectionTitle, sections, page?.sectionBrowseIds.orEmpty())
                     playbackController.play(songs.first { it.id == item.id }, songs)
                 }
             } else {
@@ -739,6 +739,8 @@ internal fun MobilePlaylistScreen(
                 durationSongs = page?.takeUnless { it.isOffline }?.songs ?: cachedSections?.playlistSongs().orEmpty(),
                 hasMoreSongs = page?.hasMore == true,
                 hiddenSongCount = loadedSongs.size - songs.size,
+                // Unlike the visible rows, the artwork list already includes hidden tracks.
+                loadedSongCount = loadedSongs.size,
                 paginationContent = {
                     if (page?.hasMore == true) {
                         if (pageFailed) {

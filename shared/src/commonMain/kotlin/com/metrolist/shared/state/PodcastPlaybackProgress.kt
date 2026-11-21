@@ -6,6 +6,7 @@ import com.metrolist.shared.playback.PLAYBACK_CHECKPOINT_INTERVAL_MS
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import kotlin.time.TimeSource
 
@@ -22,8 +23,14 @@ class PodcastPlaybackProgress(
         val duration: Long,
     )
 
+    private class WriteAttempt(
+        val checkpoint: Checkpoint,
+    ) {
+        val failed = MutableStateFlow(false)
+    }
+
     private var current: Checkpoint? = null
-    private var lastSaved: Checkpoint? = null
+    private var lastAttempt: WriteAttempt? = null
     private var lastWrite = timeSource.markNow()
     private var pendingWrite: Job? = null
     private var wasPlaying = false
@@ -38,13 +45,17 @@ class PodcastPlaybackProgress(
         if (current?.song?.id != song?.id) {
             flush()
             current = null
-            lastSaved = null
+            lastAttempt = null
         }
         val previous = current
         current = song?.takeIf { it.isPodcast }?.let { Checkpoint(it, positionMs.coerceAtLeast(0L), durationMs) }
-        if (current != null &&
-            (current!!.position > 0L || (previous?.position ?: 0L) > 0L) &&
-            (!playing || !wasPlaying || lastWrite.elapsedNow().inWholeMilliseconds >= PLAYBACK_CHECKPOINT_INTERVAL_MS)
+        val checkpoint = current
+        val intervalElapsed = lastWrite.elapsedNow().inWholeMilliseconds >= PLAYBACK_CHECKPOINT_INTERVAL_MS
+        val retryFailedCheckpoint = lastAttempt?.let { it.checkpoint == checkpoint && it.failed.value } == true
+        if (checkpoint != null &&
+            (checkpoint.position > 0L || (previous?.position ?: 0L) > 0L || retryFailedCheckpoint) &&
+            (!playing || !wasPlaying || intervalElapsed) &&
+            (checkpoint != lastAttempt?.checkpoint || intervalElapsed)
         ) {
             flush()
         }
@@ -53,8 +64,15 @@ class PodcastPlaybackProgress(
 
     fun flush(force: Boolean = false): Job? {
         val checkpoint = current ?: return pendingWrite
-        if (checkpoint == lastSaved || (!force && checkpoint.position == 0L && lastSaved == null)) return pendingWrite
-        lastSaved = checkpoint
+        val previousAttempt = lastAttempt
+        if (
+            (checkpoint == previousAttempt?.checkpoint && !previousAttempt.failed.value) ||
+            (!force && checkpoint.position == 0L && previousAttempt == null)
+        ) {
+            return pendingWrite
+        }
+        val attempt = WriteAttempt(checkpoint)
+        lastAttempt = attempt
         lastWrite = timeSource.markNow()
         val previousWrite = pendingWrite
         pendingWrite =
@@ -67,6 +85,7 @@ class PodcastPlaybackProgress(
                 } catch (error: CancellationException) {
                     throw error
                 } catch (error: Exception) {
+                    attempt.failed.value = true
                     onError(error)
                 }
             }

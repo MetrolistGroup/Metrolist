@@ -3399,34 +3399,25 @@ object PlayerState {
             }
         cancelCrossfadeForManualAction()
         val currentPos = currentMediaPositionMs()
-        val restartPosition = desktopPreviousRestartPosition(pendingResumePosition, currentPos, isLiveStream, queue.hasPrevious())
+
+        fun previousIndex(isLive: Boolean): Int? =
+            queue.state.value.let { desktopPreviousQueueIndex(it.currentIndex, it.entries.lastIndex, repeatMode, isLive) }
+
+        val isLive = isLiveStream
+        val restartPosition = desktopPreviousRestartPosition(pendingResumePosition, currentPos, isLive, previousIndex(isLive) != null)
         val generation = beginPlaybackTransition(resumePosition = restartPosition, preserveCast = true)
         desiredPlayback.value = startPlaying
         playbackTransitionJob =
             scope.launch {
-                val isLive = isLiveStream
-                if (isLive) {
-                    val prev = queue.getPrevious()
-                    if (prev != null) {
-                        val resource = withContext(Dispatchers.IO) { fetchSelectedPlaybackResource(prev, generation) }
-                        if (resource != null && isCurrentPlaybackTransition(generation)) {
-                            playQueueTrack(prev, resource, generation, startPlaying)
-                        }
+                val live = isLiveStream
+                val previous = if (live || currentPos <= 3_000L) previousIndex(live)?.let(queue::skipTo) else null
+                if (previous != null) {
+                    val resource = withContext(Dispatchers.IO) { fetchSelectedPlaybackResource(previous, generation) }
+                    if (resource != null && isCurrentPlaybackTransition(generation)) {
+                        playQueueTrack(previous, resource, generation, startPlaying)
                     }
-                    return@launch
-                }
-                if (currentPos > 3000) {
+                } else if (!live) {
                     seekToPositionInternal(0)
-                } else {
-                    val prev = queue.getPrevious()
-                    if (prev != null) {
-                        val resource = withContext(Dispatchers.IO) { fetchSelectedPlaybackResource(prev, generation) }
-                        if (resource != null && isCurrentPlaybackTransition(generation)) {
-                            playQueueTrack(prev, resource, generation, startPlaying)
-                        }
-                    } else {
-                        seekToPositionInternal(0)
-                    }
                 }
             }
     }
@@ -4126,7 +4117,7 @@ object PlayerState {
     ) {
         automaticCacheJob?.cancel()
         if (
-            (!resource.isDirectFile && !resource.isSabr) || resource.clientName == "local" ||
+            (!resource.isDirectFile && !resource.isSabr) || resource.isMuxedProgressive || resource.clientName == "local" ||
             !automaticCacheAllowedForCurrentTrack ||
             !automaticCachingEnabled()
         ) {

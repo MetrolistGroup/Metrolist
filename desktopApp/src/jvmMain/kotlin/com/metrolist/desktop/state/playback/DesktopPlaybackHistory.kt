@@ -13,7 +13,7 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 
 internal class DesktopPlaybackHistory(
-    private val nowMs: () -> Long = System::currentTimeMillis,
+    private val nowMs: () -> Long = { System.nanoTime() / 1_000_000L },
     private val record: suspend (SongItem, Long) -> Unit = { song, playTimeMs ->
         HistoryRepository.recordPlay(song, playTimeMs = playTimeMs)
     },

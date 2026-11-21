@@ -62,6 +62,10 @@ data class PlaybackResource(
                 !url.substringBefore('?').endsWith(".m3u8", ignoreCase = true) &&
                 !url.substringBefore('?').endsWith(".mpd", ignoreCase = true)
 
+    /** A muxed audio/video file played for its audio; too large and low quality to keep as cached audio. */
+    val isMuxedProgressive: Boolean
+        get() = isDirectFile && videoUrl == null && mimeType.orEmpty().startsWith("video/", ignoreCase = true)
+
     val hasDirectVideo: Boolean
         get() = !videoUrl.isNullOrBlank() && !videoUrl.startsWith("sabr-video://")
 

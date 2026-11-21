@@ -501,6 +501,7 @@ private fun MediaItem.automotivePlaybackRequestGeneration(): Long? =
 internal data class AutomotiveSongResolution(
     val songs: List<SongItem>,
     val startIndex: Int,
+    val retainsRequestedStartPosition: Boolean = true,
 )
 
 internal fun resolveAutomotiveSongRequest(

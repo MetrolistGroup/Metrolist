@@ -69,6 +69,7 @@ import com.metrolist.android.playlistimport.PlaylistImportPreparationType
 import com.metrolist.android.playlistimport.TidalLoginScreen
 import com.metrolist.android.playlistimport.containsAndroidInaccessibleReference
 import com.metrolist.android.playlistimport.preparePlaylistBatch
+import com.metrolist.android.playlistimport.preparePlaylistPreview
 import com.metrolist.android.playlistimport.readPlaylistFile
 import com.metrolist.android.spotifyimport.SpotifyLoginScreen
 import com.metrolist.android.spotifyimport.SpotifyPlaylistPickerSheet
@@ -1403,29 +1404,9 @@ fun BackupRestoreScreen(onNavigateBack: () -> Unit) {
                         startBatchImport(loaded, spotifySource, ImportSourceType.SPOTIFY)
                         return@continueImport
                     }
-                    val allTracks =
-                        loaded.flatMap { pl ->
-                            pl.tracks.map {
-                                PlaylistImportManager.CsvTrack(
-                                    it.title,
-                                    it.artist,
-                                    null,
-                                    album = it.album,
-                                    durationSeconds = it.durationSeconds,
-                                )
-                            }
-                        }
-                    val spotifyDefaultName = importProviderSpotifyText
-                    val name = if (loaded.size == 1) loaded.first().name else spotifyDefaultName
-                    customPlaylistTitle = name
                     val data =
-                        ImportedPlaylistData(
-                            title = name,
-                            tracks = allTracks,
-                            source = spotifySource,
-                            provider = ImportSourceType.SPOTIFY,
-                            sourcePlaylistCount = loaded.size,
-                        )
+                        preparePlaylistPreview(loaded.singleOrNull(), importProviderSpotifyText, spotifySource, ImportSourceType.SPOTIFY)
+                    customPlaylistTitle = data.title
                     pendingImportData = data
                     AndroidPlaylistImportTransfer.replacePreparationResult(data)
                     showDestinationPicker = true
@@ -1533,28 +1514,9 @@ fun BackupRestoreScreen(onNavigateBack: () -> Unit) {
                         startBatchImport(loaded, appleMusicSource, ImportSourceType.APPLE_MUSIC)
                         return@continueImport
                     }
-                    val allTracks =
-                        loaded.flatMap { pl ->
-                            pl.tracks.map {
-                                PlaylistImportManager.CsvTrack(
-                                    it.title,
-                                    it.artist,
-                                    null,
-                                    album = it.album,
-                                    durationSeconds = it.durationSeconds,
-                                )
-                            }
-                        }
-                    val name = if (loaded.size == 1) loaded.first().name else appleMusicDefaultName
-                    customPlaylistTitle = name
                     val data =
-                        ImportedPlaylistData(
-                            title = name,
-                            tracks = allTracks,
-                            source = appleMusicSource,
-                            provider = ImportSourceType.APPLE_MUSIC,
-                            sourcePlaylistCount = loaded.size,
-                        )
+                        preparePlaylistPreview(loaded.singleOrNull(), appleMusicDefaultName, appleMusicSource, ImportSourceType.APPLE_MUSIC)
+                    customPlaylistTitle = data.title
                     pendingImportData = data
                     AndroidPlaylistImportTransfer.replacePreparationResult(data)
                     showDestinationPicker = true
@@ -2002,10 +1964,9 @@ private suspend fun Context.displayNameOf(uri: Uri): String? =
         getDisplayName(uri) ?: uri.lastPathSegment?.substringAfterLast('/')
     }
 
-private val PLAYLIST_FILE_EXTENSIONS = setOf("csv", "tsv", "m3u", "m3u8")
+private val PLAYLIST_FILE_EXTENSIONS = setOf("csv", "tsv", "m3u", "m3u8", "json", "txt")
 
-private fun String?.isPlaylistFileName(): Boolean =
-    this?.substringAfterLast('.', "")?.lowercase() in PLAYLIST_FILE_EXTENSIONS
+private fun String?.isPlaylistFileName(): Boolean = this?.substringAfterLast('.', "")?.lowercase() in PLAYLIST_FILE_EXTENSIONS
 
 private fun Context.getDisplayName(uri: Uri): String? {
     if (uri.scheme == ContentResolver.SCHEME_CONTENT) {

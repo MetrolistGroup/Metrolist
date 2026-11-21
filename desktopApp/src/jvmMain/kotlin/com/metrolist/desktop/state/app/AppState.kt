@@ -24,6 +24,8 @@ import com.metrolist.shared.generated.resources.updates_title
 import com.metrolist.shared.settings.Settings
 import com.metrolist.shared.state.GlobalYouTube
 import com.metrolist.shared.ui.settings.SettingsPageId
+import com.metrolist.shared.update.UPDATE_CHANNEL_NIGHTLY
+import com.metrolist.shared.update.UPDATE_CHANNEL_STABLE
 import com.metrolist.shared.utils.OsUtil
 import com.metrolist.shared.utils.tryOpenUrl
 import dev.nucleusframework.share.ShareException
@@ -75,6 +77,17 @@ object AppState {
         if (UiState.availableUpdate?.updateKey != update?.updateKey) UiState.updateDownloadError = null
         UiState.availableUpdate = update
         UiState.canInstallUpdate = UiState.availableUpdate?.let { DesktopUpdateManager.canInstall(it) } == true
+    }
+
+    fun setFollowNightlyUpdates(enabled: Boolean) {
+        Settings.shared.updateChannel = if (enabled) UPDATE_CHANNEL_NIGHTLY else UPDATE_CHANNEL_STABLE
+        if (!enabled && UiState.availableUpdate?.isNightly == true) {
+            // The next check may fail or already be running; the old offer is no longer eligible.
+            UiState.availableUpdate = null
+            UiState.canInstallUpdate = false
+            UiState.updateDownloadError = null
+        }
+        checkForUpdates()
     }
 
     fun checkForUpdates(notify: Boolean = false) {

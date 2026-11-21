@@ -54,6 +54,8 @@ data class CastState(
         get() = status == CastConnectionStatus.CONNECTED && device != null
 }
 
+fun dlnaVolumePercent(volume: Float): Int = (volume.coerceIn(0f, 1f) * 100).toInt()
+
 internal fun acceptedCastPlaybackEnd(
     receiverHasEnded: Boolean,
     remoteStopRequested: Boolean,

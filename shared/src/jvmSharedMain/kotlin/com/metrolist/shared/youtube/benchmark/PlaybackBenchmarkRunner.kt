@@ -130,7 +130,7 @@ class PlaybackBenchmarkRunner(
                 isExplicit = sample.case == PlaybackBenchmarkCase.EXPLICIT,
                 isKidsContent = sample.case == PlaybackBenchmarkCase.KIDS,
                 playbackClientOverrideId = profile?.id,
-            )
+            ).withStreamCapabilities(allowProgressive = true)
         var resource: PlaybackResource? = null
         var player: PlaybackBenchmarkPlayer? = null
         var reporter: YouTubePlaybackReporter? = null

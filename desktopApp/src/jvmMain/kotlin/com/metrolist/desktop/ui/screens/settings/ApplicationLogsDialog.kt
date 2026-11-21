@@ -38,7 +38,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.metrolist.desktop.utils.AppLogger
-import com.metrolist.desktop.utils.readLogTail
+import com.metrolist.desktop.utils.readLogPreview
 import com.metrolist.shared.generated.resources.Res
 import com.metrolist.shared.generated.resources.app_logs
 import com.metrolist.shared.generated.resources.close
@@ -69,16 +69,7 @@ fun ApplicationLogsDialog(onDismiss: () -> Unit) {
         logContent =
             try {
                 withContext(Dispatchers.IO) {
-                    val logFiles = AppLogger.getLogFiles()
-                    if (logFiles.isEmpty()) {
-                        ""
-                    } else {
-                        logFiles
-                            .take(3)
-                            .joinToString("\n\n---\n\n") { file ->
-                                "--- ${file.name} ---\n${readLogTail(file)}"
-                            }
-                    }
+                    readLogPreview(AppLogger.getLogFiles())
                 }
             } catch (e: CancellationException) {
                 throw e

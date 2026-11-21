@@ -961,9 +961,12 @@ class MusicPlayer(
         }
     }
 
-    fun setVolume(level: Int) {
+    fun setVolume(level: Int) = setVolumeFraction(level / 100f)
+
+    fun setVolumeFraction(level: Float) {
+        if (!level.isFinite()) return
         synchronized(playerLock) {
-            currentVolume = (level / 100f).coerceIn(0f, 1f)
+            currentVolume = level.coerceIn(0f, 1f)
             _volume.value = currentVolume
             applyPlaybackGains()
         }

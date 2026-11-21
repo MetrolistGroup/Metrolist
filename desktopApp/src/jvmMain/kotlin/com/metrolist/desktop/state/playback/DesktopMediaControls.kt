@@ -22,7 +22,9 @@ internal fun desktopMediaControls(
     if (!hasTrack || loading || guest) return DesktopMediaControls()
     return DesktopMediaControls(
         playPause = true,
-        previous = currentIndex > 0 || (!isLiveStream && positionMs > 0L),
+        previous =
+            desktopPreviousQueueIndex(currentIndex, queueSize - 1, repeatMode, isLiveStream) != null ||
+                (!isLiveStream && positionMs > 0L),
         next = currentIndex + 1 < queueSize || repeatMode == RepeatMode.ALL || (repeatMode == RepeatMode.OFF && autoLoadMore),
     )
 }

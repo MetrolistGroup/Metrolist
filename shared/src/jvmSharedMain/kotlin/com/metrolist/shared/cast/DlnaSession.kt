@@ -210,7 +210,7 @@ internal class DlnaSession(
         withContext(Dispatchers.IO) {
             val controlUrl = descriptor.renderingControlUrl ?: return@withContext
             val controlType = descriptor.renderingControlType ?: return@withContext
-            val requestedVolume = (volume.coerceIn(0f, 1f) * 100).toInt()
+            val requestedVolume = dlnaVolumePercent(volume)
             runCatching {
                 soap(
                     controlUrl,
