@@ -160,7 +160,7 @@ def arguments(graal, work, output, target, experiment=False, agent=None, macos_v
             options += [f'-H:NativeLinkerOption={work / "windows-resources/metrolist.res"}']
         if target.startswith('linux-'):
             # Module opens are fixed at build time; the JVM's runtime flag does not reach the image.
-            options += ['--add-opens=java.desktop/sun.awt.X11=ALL-UNNAMED']
+            options += ['--add-opens=java.desktop/sun.awt=ALL-UNNAMED', '--add-opens=java.desktop/sun.awt.X11=ALL-UNNAMED']
         if target == 'macos-arm64':
             options += [f'-H:NativeLinkerOption=-mmacosx-version-min={macos_version or macos_deployment_target(graal)}',
                         f'-H:NativeLinkerOption={work / "macos-awt.o"}',
