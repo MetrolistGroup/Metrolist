@@ -263,9 +263,9 @@ class HomeViewModel(
 
     @Volatile private var cachedAllContent: HomeUiState? = null
 
-    @Volatile private var publishedPrimaryAllContent: Pair<Long, HomeUiState>? = null
+    private val publishedPrimaryAllContent = MutableStateFlow<Pair<Long, HomeUiState>?>(null)
 
-    @Volatile private var publishedPrimaryChipContent: Pair<Long, HomeUiState>? = null
+    private val publishedPrimaryChipContent = MutableStateFlow<Pair<Long, HomeUiState>?>(null)
 
     @Volatile private var cachedSelectedChipContent: HomeUiState? = null
 
@@ -420,14 +420,16 @@ class HomeViewModel(
                         cachedAllContent?.let { cached ->
                             cached.withSpeedDialPins(pinned, cached.speedDialUnpinnedItems())
                         }
-                    publishedPrimaryAllContent =
-                        publishedPrimaryAllContent?.let { (generation, state) ->
+                    publishedPrimaryAllContent.update { primary ->
+                        primary?.let { (generation, state) ->
                             generation to state.withSpeedDialPins(pinned, state.speedDialUnpinnedItems())
                         }
-                    publishedPrimaryChipContent =
-                        publishedPrimaryChipContent?.let { (generation, state) ->
+                    }
+                    publishedPrimaryChipContent.update { primary ->
+                        primary?.let { (generation, state) ->
                             generation to state.withSpeedDialPins(pinned, state.speedDialUnpinnedItems())
                         }
+                    }
                 }
             }
 
@@ -464,10 +466,12 @@ class HomeViewModel(
                     _uiState.update { it.withLibrarySnapshot() }
                     cachedAllContent = cachedAllContent?.withLibrarySnapshot()
                     cachedSelectedChipContent = cachedSelectedChipContent?.withLibrarySnapshot()
-                    publishedPrimaryAllContent =
-                        publishedPrimaryAllContent?.let { (generation, state) -> generation to state.withLibrarySnapshot() }
-                    publishedPrimaryChipContent =
-                        publishedPrimaryChipContent?.let { (generation, state) -> generation to state.withLibrarySnapshot() }
+                    publishedPrimaryAllContent.update { primary ->
+                        primary?.let { (generation, state) -> generation to state.withLibrarySnapshot() }
+                    }
+                    publishedPrimaryChipContent.update { primary ->
+                        primary?.let { (generation, state) -> generation to state.withLibrarySnapshot() }
+                    }
                     chipContentCache = chipContentCache.mapValues { it.value.withLibrarySnapshot() }
                     val known =
                         playlists
@@ -531,7 +535,7 @@ class HomeViewModel(
                                 cachedAllContent = cachedAllContent,
                                 cachedSelectedChipContent = cachedSelectedChipContent,
                                 pendingAllContent =
-                                    publishedPrimaryAllContent
+                                    publishedPrimaryAllContent.value
                                         ?.takeIf { it.first == contentLoadGeneration }
                                         ?.second
                                         ?.withLatestLibraryAndSpeedDialState(currentState)
@@ -593,7 +597,7 @@ class HomeViewModel(
                             )
                         } else {
                             val cancelledGeneration = contentLoadGeneration
-                            val interruptedPrimary = publishedPrimaryAllContent
+                            val interruptedPrimary = publishedPrimaryAllContent.value
                             val interruptedState = _uiState.value
                             if (interruptedPrimary?.first == cancelledGeneration) {
                                 val latestPrimary =
@@ -608,7 +612,7 @@ class HomeViewModel(
                                         interruptedPrimary.first,
                                         cancelledGeneration,
                                     )
-                                publishedPrimaryAllContent = null
+                                publishedPrimaryAllContent.value = null
                                 if (cachedAllContent != null) {
                                     val locale = GlobalYouTube.innerTube.locale
                                     lastKnownLocaleSignature = "${locale.hl}:${locale.gl}"
@@ -625,7 +629,7 @@ class HomeViewModel(
                                         ?.withLatestLibraryAndSpeedDialState(interruptedState)
                                         ?.withLatestSongMetadataFrom(interruptedState)
                                         ?.asOfflineSnapshot()
-                                        ?: publishedPrimaryChipContent
+                                        ?: publishedPrimaryChipContent.value
                                             ?.takeIf { it.first == cancelledGeneration }
                                             ?.second
                                             ?.withLatestLibraryAndSpeedDialState(interruptedState)
@@ -638,7 +642,7 @@ class HomeViewModel(
                                 cachedSelectedChipContent?.selectedChip?.let { chip ->
                                     cachedSelectedChipContent?.let { cacheChipContent(chip, it, markFresh = false) }
                                 }
-                                publishedPrimaryChipContent = null
+                                publishedPrimaryChipContent.value = null
                             }
                             contentLoadGeneration++
                             cancelPagination()
@@ -770,49 +774,58 @@ class HomeViewModel(
                         }
                         var userPlaylists = userPlaylistsSnapshot.playlists
                         val chartSections = findSectionsByBrowseId(hydratedPrimarySections, "FEmusic_charts")
-                        _uiState.update { state ->
-                            val primaryState =
-                                state
-                                    .primaryHomeContentLoaded(
-                                        sections = hydratedPrimarySections,
-                                        chips = homeChipsForSelection(homePageData.chips, state.selectedChip),
-                                        userPlaylists = userPlaylists,
-                                    ).copy(
-                                        trending = chartSections.flatMap { it.items.filterIsInstance<SongItem>() },
-                                        albumCharts = chartSections.flatMap { it.items.filterIsInstance<AlbumItem>() },
-                                        quickPicks = findSectionSongs(hydratedPrimarySections, "FEmusic_quickpicks"),
-                                        keepListening = findSectionSongs(hydratedPrimarySections, "FEmusic_listen_again"),
-                                        forgottenFavorites =
-                                            findSectionSongs(hydratedPrimarySections, "FEmusic_forgotten_favorites"),
-                                        newReleases = newReleasesFrom(hydratedPrimarySections),
-                                        communityPlaylist =
-                                            findSectionsByBrowseId(hydratedPrimarySections, "FEmusic_community")
-                                                .flatMap { it.items.filterIsInstance<PlaylistItem>() },
-                                        moodsAndGenres = findMoodsAndGenresByBrowseId(hydratedPrimarySections),
-                                        podcasts =
-                                            findSectionsByBrowseId(hydratedPrimarySections, "FEmusic_immersive")
-                                                .flatMap { it.items.filterIsInstance<PodcastItem>() },
-                                        similarRecommendations = findSimilarRecommendations(hydratedPrimarySections),
-                                        recapPlaylists =
-                                            findSectionsByBrowseId(hydratedPrimarySections, "FEmusic_listening_review")
-                                                .flatMap { it.items.filterIsInstance<PlaylistItem>() },
-                                        sections = uncategorizedHomeSections(hydratedPrimarySections),
-                                    )
-                            primaryContentSnapshot = primaryState
-                            if (!isFiltered) {
-                                publishedPrimaryAllContent = generation to primaryState.copy(continuation = homePageData.continuation)
+                        withContext(Dispatchers.Main.immediate) {
+                            if (generation != contentLoadGeneration ||
+                                sessionKey != GlobalYouTube.innerTube.sessionSnapshot().homeCacheSessionKey()
+                            ) {
+                                return@withContext
                             }
-                            if (isFiltered) {
-                                val chipPrimaryState =
-                                    primaryState.copy(
-                                        continuation = homePageData.continuation,
-                                        isContentLoading = true,
-                                    )
-                                cachedSelectedChipContent = chipPrimaryState
-                                publishedPrimaryChipContent = generation to chipPrimaryState
+                            _uiState.update { state ->
+                                val primaryState =
+                                    state
+                                        .primaryHomeContentLoaded(
+                                            sections = hydratedPrimarySections,
+                                            chips = homeChipsForSelection(homePageData.chips, state.selectedChip),
+                                            userPlaylists = userPlaylists,
+                                        ).copy(
+                                            trending = chartSections.flatMap { it.items.filterIsInstance<SongItem>() },
+                                            albumCharts = chartSections.flatMap { it.items.filterIsInstance<AlbumItem>() },
+                                            quickPicks = findSectionSongs(hydratedPrimarySections, "FEmusic_quickpicks"),
+                                            keepListening = findSectionSongs(hydratedPrimarySections, "FEmusic_listen_again"),
+                                            forgottenFavorites =
+                                                findSectionSongs(hydratedPrimarySections, "FEmusic_forgotten_favorites"),
+                                            newReleases = newReleasesFrom(hydratedPrimarySections),
+                                            communityPlaylist =
+                                                findSectionsByBrowseId(hydratedPrimarySections, "FEmusic_community")
+                                                    .flatMap { it.items.filterIsInstance<PlaylistItem>() },
+                                            moodsAndGenres = findMoodsAndGenresByBrowseId(hydratedPrimarySections),
+                                            podcasts =
+                                                findSectionsByBrowseId(hydratedPrimarySections, "FEmusic_immersive")
+                                                    .flatMap { it.items.filterIsInstance<PodcastItem>() },
+                                            similarRecommendations = findSimilarRecommendations(hydratedPrimarySections),
+                                            recapPlaylists =
+                                                findSectionsByBrowseId(hydratedPrimarySections, "FEmusic_listening_review")
+                                                    .flatMap { it.items.filterIsInstance<PlaylistItem>() },
+                                            sections = uncategorizedHomeSections(hydratedPrimarySections),
+                                        )
+                                primaryContentSnapshot = primaryState
+                                if (!isFiltered) {
+                                    publishedPrimaryAllContent.value =
+                                        generation to primaryState.copy(continuation = homePageData.continuation)
+                                }
+                                if (isFiltered) {
+                                    val chipPrimaryState =
+                                        primaryState.copy(
+                                            continuation = homePageData.continuation,
+                                            isContentLoading = true,
+                                        )
+                                    cachedSelectedChipContent = chipPrimaryState
+                                    publishedPrimaryChipContent.value = generation to chipPrimaryState
+                                }
+                                primaryState.withoutBlockedContent()
                             }
-                            primaryState.withoutBlockedContent()
                         }
+                        if (generation != contentLoadGeneration) return@supervisorScope
                         primaryContentPublished = true
                         Logger.d(
                             HOME_LOG_TAG,
@@ -972,12 +985,12 @@ class HomeViewModel(
                                 loadedState.selectedChip?.let { chip ->
                                     cacheChipContent(chip, loadedState)
                                 }
-                                if (publishedPrimaryChipContent?.first == generation) publishedPrimaryChipContent = null
+                                publishedPrimaryChipContent.update { it?.takeUnless { primary -> primary.first == generation } }
                             } else {
                                 allContentReloadRequired = false
                                 cacheAllContentState(loadedState)
-                                publishedPrimaryAllContent = null
-                                publishedPrimaryChipContent = null
+                                publishedPrimaryAllContent.value = null
+                                publishedPrimaryChipContent.value = null
                             }
                             saveLastHomePage(loadedState)
                             if (!isFiltered) appendMissingMainFeedMoods(generation)
@@ -1016,7 +1029,7 @@ class HomeViewModel(
                                     hadIncompleteAllContent = hadIncompleteAllContent,
                                 )
                         val retainedPrimaryContent =
-                            publishedPrimaryAllContent
+                            publishedPrimaryAllContent.value
                                 ?.takeIf { it.first == generation }
                                 ?.second
                                 ?: primaryContentSnapshot
@@ -1060,7 +1073,7 @@ class HomeViewModel(
                         _uiState.value = failedState
                         if (!isFiltered) {
                             allContentReloadRequired = failedAllPending
-                            if (publishedPrimaryAllContent?.first == generation) publishedPrimaryAllContent = null
+                            publishedPrimaryAllContent.update { it?.takeUnless { primary -> primary.first == generation } }
                             cachedAllContent =
                                 homeCacheAfterAssemblyFailure(
                                     cachedAllContent,
@@ -1090,7 +1103,7 @@ class HomeViewModel(
                                 )
                             cachedSelectedChipContent = failedChipSnapshot
                             failedChipSnapshot?.selectedChip?.let { chip -> cacheChipContent(chip, failedChipSnapshot) }
-                            if (publishedPrimaryChipContent?.first == generation) publishedPrimaryChipContent = null
+                            publishedPrimaryChipContent.update { it?.takeUnless { primary -> primary.first == generation } }
                         }
                     } finally {
                         if (generation == contentLoadGeneration) {
@@ -1516,6 +1529,14 @@ class HomeViewModel(
         if (chip?.isPodcastChip == true && Settings.shared.hidePodcasts) return
         val currentState = _uiState.value
         val currentChip = currentState.selectedChip
+        val pendingChip = publishedPrimaryChipContent.value?.takeIf { it.first == contentLoadGeneration }?.second
+        if (currentChip != null && pendingChip?.selectedChip == currentChip) {
+            cacheChipContent(
+                currentChip,
+                pendingChip.withLatestLibraryAndSpeedDialState(currentState).withLatestSongMetadataFrom(currentState),
+                markFresh = false,
+            )
+        }
         val params = chip?.params
 
         val shouldRestoreAll =
@@ -1529,7 +1550,7 @@ class HomeViewModel(
         }
 
         if (currentChip == null) {
-            val pendingPrimary = publishedPrimaryAllContent?.takeIf { it.first == contentLoadGeneration }?.second
+            val pendingPrimary = publishedPrimaryAllContent.value?.takeIf { it.first == contentLoadGeneration }?.second
             if (pendingPrimary != null) {
                 cachedAllContent =
                     cacheableAllContentSnapshot(pendingPrimary.copy(isAllContentPending = false)) ?: cachedAllContent
@@ -1617,10 +1638,12 @@ class HomeViewModel(
         Settings.shared.speedDialSurprisePinned = pinned
         _uiState.update { it.copy(speedDialSurprisePinned = pinned) }
         cachedAllContent = cachedAllContent?.copy(speedDialSurprisePinned = pinned)
-        publishedPrimaryAllContent =
-            publishedPrimaryAllContent?.let { (generation, state) -> generation to state.copy(speedDialSurprisePinned = pinned) }
-        publishedPrimaryChipContent =
-            publishedPrimaryChipContent?.let { (generation, state) -> generation to state.copy(speedDialSurprisePinned = pinned) }
+        publishedPrimaryAllContent.update { primary ->
+            primary?.let { (generation, state) -> generation to state.copy(speedDialSurprisePinned = pinned) }
+        }
+        publishedPrimaryChipContent.update { primary ->
+            primary?.let { (generation, state) -> generation to state.copy(speedDialSurprisePinned = pinned) }
+        }
     }
 
     fun updateSongMetadata(song: SongItem) {
@@ -1628,14 +1651,16 @@ class HomeViewModel(
         latestSpeedDialItemMetadata += updated.id to updated
         speedDialRecommendationItems = speedDialRecommendationItems.withUpdatedSongItems(updated)
         _uiState.update { it.withUpdatedSongMetadata(updated) }
-        publishedPrimaryAllContent =
-            publishedPrimaryAllContent?.let { (generation, snapshot) ->
+        publishedPrimaryAllContent.update { primary ->
+            primary?.let { (generation, snapshot) ->
                 generation to snapshot.withUpdatedSongMetadata(updated)
             }
-        publishedPrimaryChipContent =
-            publishedPrimaryChipContent?.let { (generation, snapshot) ->
+        }
+        publishedPrimaryChipContent.update { primary ->
+            primary?.let { (generation, snapshot) ->
                 generation to snapshot.withUpdatedSongMetadata(updated)
             }
+        }
         cachedAllContent = cachedAllContent?.withUpdatedSongMetadata(updated)
         cachedSelectedChipContent = cachedSelectedChipContent?.withUpdatedSongMetadata(updated)
         chipContentCache = chipContentCache.mapValues { it.value.withUpdatedSongMetadata(updated) }
