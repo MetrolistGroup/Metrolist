@@ -34,10 +34,14 @@ internal fun shouldClearPersistedPlaybackForAppliedQueue(queue: MusicQueueSnapsh
 internal fun shouldClearPersistedPlaybackForControllerState(
     previous: DcLocalPlaybackState?,
     next: DcLocalPlaybackState?,
-): Boolean =
-    previous != null && next != null &&
-        previous.queue.displayedItems.isNotEmpty() &&
-        next.queue.displayedItems.isEmpty()
+    provisional: Boolean,
+    provisionalClearPending: Boolean,
+): Boolean {
+    if (next == null || provisional || next.queue.displayedItems.isNotEmpty()) return false
+    // The first confirmed empty state can arrive without a provisional callback, such as when a port
+    // reattaches to an already empty canonical queue and replaces the restored local queue.
+    return provisionalClearPending || previous == null || previous.queue.displayedItems.isNotEmpty()
+}
 
 internal class AndroidDeviceConnectPlayback(
     private val context: Context,
@@ -249,10 +253,13 @@ internal class AndroidDeviceConnectPlayback(
                 provisional: Boolean,
             ) = withContext(Dispatchers.Main.immediate) {
                 if (playbackReleased) return@withContext
-                val confirmedEmpty = !provisional && playback?.queue?.displayedItems?.isEmpty() == true
                 val clearsQueue =
-                    shouldClearPersistedPlaybackForControllerState(controllerPlayback, playback) ||
-                        (provisionalControllerClearPending && confirmedEmpty)
+                    shouldClearPersistedPlaybackForControllerState(
+                        previous = controllerPlayback,
+                        next = playback,
+                        provisional = provisional,
+                        provisionalClearPending = provisionalControllerClearPending,
+                    )
                 // A provisional empty state is meaningful even when the local queue is already empty:
                 // persisted playback can still hold a queue from an earlier session.
                 provisionalControllerClearPending =

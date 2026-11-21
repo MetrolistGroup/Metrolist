@@ -1599,6 +1599,7 @@ class PlayerConnection(
         musicService?.player?.let { player ->
             if (_currentSong.value == null) {
                 player.setQueue(songs, startIndex = -1)
+                if (player.queueSnapshot().displayedItems.isEmpty()) musicService?.clearPersistedPlaybackState()
             } else {
                 player.replaceUpcomingQueue(songs)
             }
