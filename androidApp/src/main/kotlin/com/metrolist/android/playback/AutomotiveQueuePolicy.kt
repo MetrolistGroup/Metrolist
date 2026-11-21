@@ -129,8 +129,11 @@ internal suspend fun resolveAutomotiveSearchSongQueue(
     library: AutomotiveMediaLibrary,
     mode: AutomotiveSongPlaybackMode,
 ): AutomotiveSongQueue? {
-    val isSearchSong = AutomotiveMediaIds.browseSong(item.mediaId)
-        ?.parentId?.startsWith("auto:search:") == true
+    val isSearchSong =
+        AutomotiveMediaIds
+            .browseSong(item.mediaId)
+            ?.parentId
+            ?.startsWith("auto:search:") == true
 
     if (isSearchSong && mode != AutomotiveSongPlaybackMode.QUEUE) {
         return library.resolveSong(item)?.let { song ->

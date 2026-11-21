@@ -466,9 +466,10 @@ internal class AndroidQueueCoordinator(
         if (seed.isUnavailable || BlockedContent.isBlocked(seed)) return
         val title = context.getString(R.string.song_mix_title, seed.title)
         val current = player.currentSong.value?.takeIf { it.id == seed.id }
-        val remote = castState()
-            .takeIf { it.isConnected && it.queueEntry != null }
-            ?.forQueueEntry(player.queueState.value)
+        val remote =
+            castState()
+                .takeIf { it.isConnected && it.queueEntry != null }
+                ?.forQueueEntry(player.queueState.value)
         if (AndroidDeviceConnect.intercept(
                 DcPlaybackCommand(
                     DcPlaybackAction.REPLACE_QUEUE,

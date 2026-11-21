@@ -329,21 +329,23 @@ class MusicService :
                     if (songPlaybackMode == AutomotiveSongPlaybackMode.RADIO) {
                         songs.getOrNull(startIndex)?.let { song ->
                             val sessionId = queueCoordinator.queueSessionId
-                            pendingRadioJob = serviceScope.launch {
-                                awaitAutomotiveRadioSeed(
-                                    song = song,
-                                    initialRequestId = initialRequestId,
-                                    requests = player.queuePlaybackRequests,
-                                    currentSong = player.currentSong,
-                                    isPlaying = combine(player.isPlaying, castManager.state) { local, cast ->
-                                        local || (cast.isConnected && cast.isPlaying)
-                                    },
-                                    transitionPending = player.playbackTransitionPending,
-                                    latestRequestId = { player.latestQueuePlaybackRequestId },
-                                    isCurrentSession = { queueCoordinator.queueSessionId == sessionId },
-                                    playMix = { playMix(it, true) },
-                                )
-                            }
+                            pendingRadioJob =
+                                serviceScope.launch {
+                                    awaitAutomotiveRadioSeed(
+                                        song = song,
+                                        initialRequestId = initialRequestId,
+                                        requests = player.queuePlaybackRequests,
+                                        currentSong = player.currentSong,
+                                        isPlaying =
+                                            combine(player.isPlaying, castManager.state) { local, cast ->
+                                                local || (cast.isConnected && cast.isPlaying)
+                                            },
+                                        transitionPending = player.playbackTransitionPending,
+                                        latestRequestId = { player.latestQueuePlaybackRequestId },
+                                        isCurrentSession = { queueCoordinator.queueSessionId == sessionId },
+                                        playMix = { playMix(it, true) },
+                                    )
+                                }
                         }
                     }
                 }
@@ -3558,13 +3560,14 @@ class MusicService :
                 }
 
                 val pinnedQueue = requestedItem?.let { automotiveLibrary.resolvePinnedPlaylist(it) }
-                val songQueue = requestedItem?.let { item ->
-                    resolveAutomotiveSearchSongQueue(
-                        item = item,
-                        library = automotiveLibrary,
-                        mode = Settings.shared.androidAutoSongPlaybackMode,
-                    )
-                }
+                val songQueue =
+                    requestedItem?.let { item ->
+                        resolveAutomotiveSearchSongQueue(
+                            item = item,
+                            library = automotiveLibrary,
+                            mode = Settings.shared.androidAutoSongPlaybackMode,
+                        )
+                    }
                 val individuallyResolvedSongs =
                     if (mediaItems.size != 1 || (pinnedQueue == null && songQueue == null)) {
                         mediaItems.map { item ->

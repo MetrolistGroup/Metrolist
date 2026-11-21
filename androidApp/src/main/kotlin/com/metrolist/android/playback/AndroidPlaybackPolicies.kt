@@ -652,9 +652,15 @@ class AutomotivePlaybackRequestGate internal constructor(
         startIndex: Int,
         replacement: () -> Unit,
     ) {
-        queueReplacement(songs, startIndex, application.queueTitle,
-            application.shuffleModeEnabled, application.playlistPage,
-            application.songPlaybackMode, replacement)
+        queueReplacement(
+            songs,
+            startIndex,
+            application.queueTitle,
+            application.shuffleModeEnabled,
+            application.playlistPage,
+            application.songPlaybackMode,
+            replacement,
+        )
     }
 }
 
