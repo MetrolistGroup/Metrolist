@@ -394,7 +394,7 @@ fun StatisticsScreen(
                                         item {
                                             StatisticsCarousel(artistCount(state.artistCount), state.artists, artistsState, onItemClick, {
                                                 openDetail(StatisticsDetail.ARTISTS)
-                                            }, onItemMenu, onArtistVisible)
+                                            }, onItemMenu, onArtistVisible, artistLookupGeneration)
                                         }
                                         item { StatisticsCard(stringResource(Res.string.statistics_overview)) { SummaryGrid(state) } }
                                         item {
@@ -886,6 +886,7 @@ private fun StatisticsCarousel(
     onOpenDetail: () -> Unit,
     onItemMenu: ((StatisticsItem) -> Unit)? = null,
     onItemVisible: (suspend (StatisticsItem) -> Unit)? = null,
+    artistLookupGeneration: Int = 0,
 ) {
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -935,7 +936,7 @@ private fun StatisticsCarousel(
                 horizontalArrangement = Arrangement.spacedBy(GridTileSpacing),
             ) {
                 itemsIndexed(items.take(500), key = { _, item -> item.id }) { index, item ->
-                    LaunchedEffect(item.id) { onItemVisible?.invoke(item) }
+                    LaunchedEffect(item.id, artistLookupGeneration) { onItemVisible?.invoke(item) }
                     val shape = statisticsArtworkShape(item, index)
                     Column(
                         Modifier
