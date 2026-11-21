@@ -80,3 +80,5 @@ Fallback TXT lookups during startup and measurement fell from 127,294 to 2, one 
 Windows and macOS idle CPU measurements remain unverified. The reporter will check the nightly Windows build.
 
 Explicit Radio requests start a fresh seed batch even when the seed is unchanged. Transferring an already populated Radio queue preserves its songs. Queue edits do not restart Radio.
+
+A seed-only explicit Radio transfer requests recommendations even when it replaces an existing Radio session. Desktop shuffle changes preserve an in-flight bootstrap while its session and seed remain the same.

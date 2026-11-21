@@ -2342,13 +2342,22 @@ object PlayerState {
         if (!shouldCommit()) return@withContext
         val state = snapshot.playback
         val queueIdentity = Triple(snapshot.sessionId, snapshot.queueRevision, snapshot.queueStateId)
+        val samePendingRadioSeed =
+            deviceRadioBootstrapPending && state.explicitRadioQueue && state.queue.displayedItems.size == 1 &&
+                syncSession.sessionId == snapshot.sessionId &&
+                queue.items.value
+                    .singleOrNull()
+                    ?.id ==
+                state.queue.displayedItems
+                    .single()
+                    .id
         val startsExplicitRadio =
             state.explicitRadioQueue && state.queue.displayedItems.size == 1 &&
                 (pendingExplicitRadioRequest || !syncSession.explicitRadioQueue || syncSession.sessionId != snapshot.sessionId)
         pendingExplicitRadioRequest = false
         if (startsExplicitRadio) {
             deviceRadioBootstrapPending = true
-        } else if (appliedDeviceQueue != queueIdentity) {
+        } else if (appliedDeviceQueue != queueIdentity && !samePendingRadioSeed) {
             deviceRadioBootstrapPending = false
             deviceRadioBootstrapJob?.cancel()
         }
@@ -2426,7 +2435,10 @@ object PlayerState {
                     scope.launch {
                         try {
                             val songs = freshRadioRecommendations(track.id, generation)
-                            if (requestGeneration == explicitRadioRequestGeneration && appliedDeviceQueue == queueIdentity &&
+                            if (requestGeneration == explicitRadioRequestGeneration && deviceRadioBootstrapPending &&
+                                syncSession.sessionId == snapshot.sessionId && queue.items.value
+                                    .singleOrNull()
+                                    ?.id == track.id &&
                                 syncSession.explicitRadioQueue && !deviceConnect.isFollowing
                             ) {
                                 deviceRadioBootstrapPending = false
