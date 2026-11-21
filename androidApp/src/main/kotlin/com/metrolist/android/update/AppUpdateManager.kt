@@ -120,6 +120,7 @@ enum class UpdateFailure { CHECK, NO_APK, DOWNLOAD, DIGEST, INSTALL }
 object AppUpdateManager {
     const val CHANNEL_ID = "updates"
     private const val RELEASES_URL = "https://api.github.com/repos/MetrolistGroup/Metrolist/releases?per_page=50"
+    private const val NIGHTLY_RELEASE_URL = "https://api.github.com/repos/MetrolistGroup/Metrolist/releases/tags/$NIGHTLY_TAG"
     private const val NOTIFICATION_ID = 1400
     private const val MAX_APK_BYTES = 512L * 1024 * 1024
     private const val MIN_FREE_SPACE_BYTES = 16L * 1024 * 1024
@@ -243,13 +244,48 @@ object AppUpdateManager {
             }
         }
 
-    @SuppressLint("UsableSpace")
     suspend fun download(
         context: Context,
         release: GitHubRelease,
         crashRecovery: Boolean = false,
         skipVerification: Boolean = false,
+    ) {
+        if (!downloadOnce(context, release, crashRecovery, skipVerification) || !release.isNightly) return
+        // A nightly rebuilt after the check replaced its asset. The fresh digest still comes from the GitHub API,
+        // and the signing-key check still applies to the new package.
+        val fresh = withContext(Dispatchers.IO) { runCatching(::fetchNightlyRelease).getOrNull() } ?: return
+        if (fresh.apk?.digest == null || fresh.updateKey == release.updateKey) return
+        if (!crashRecovery) Settings.shared.cachedAvailableUpdateJson = json.encodeToString(fresh)
+        downloadOnce(context, fresh, crashRecovery, skipVerification)
+    }
+
+    private fun fetchNightlyRelease(): GitHubRelease? {
+        val request =
+            Request
+                .Builder()
+                .url(NIGHTLY_RELEASE_URL)
+                .header("Accept", "application/vnd.github+json")
+                .header("X-GitHub-Api-Version", "2022-11-28")
+                .header("User-Agent", "Metrolist/${BuildConfig.VERSION_NAME}")
+                .build()
+        return client
+            .newCall(request)
+            .execute()
+            .use { response ->
+                check(response.isSuccessful) { "GitHub returned ${response.code}" }
+                json.decodeFromString<GitHubRelease>(checkNotNull(response.body).string())
+            }.takeIf(GitHubRelease::isNightly)
+    }
+
+    /** Returns true when the package did not match the release's size or digest. */
+    @SuppressLint("UsableSpace")
+    private suspend fun downloadOnce(
+        context: Context,
+        release: GitHubRelease,
+        crashRecovery: Boolean,
+        skipVerification: Boolean,
     ) = withContext(Dispatchers.IO) {
+        var packageMismatch = false
         operationMutex.withLock {
             when (val active = mutableState.value) {
                 is AppUpdateState.Downloading -> if (active.release.updateKey == release.updateKey) return@withLock
@@ -279,7 +315,10 @@ object AppUpdateManager {
                     check(response.isSuccessful) { "Download returned ${response.code}" }
                     val body = checkNotNull(response.body)
                     val responseLength = body.contentLength()
-                    check(responseLength < 0 || responseLength == asset.size) { "Update response size mismatch" }
+                    if (responseLength >= 0 && responseLength != asset.size) {
+                        packageMismatch = true
+                        error("Update response size mismatch")
+                    }
                     check(updateDir.usableSpace > asset.size + MIN_FREE_SPACE_BYTES) { "Insufficient space for update" }
                     val total = asset.size.takeIf { it > 0 } ?: body.contentLength()
                     body.byteStream().use { input ->
@@ -288,6 +327,7 @@ object AppUpdateManager {
                             while (true) {
                                 val count = input.read(buffer)
                                 if (count < 0) break
+                                if (downloaded + count > asset.size) packageMismatch = true
                                 check(downloaded + count <= asset.size && downloaded + count <= MAX_APK_BYTES) {
                                     "Update exceeded the expected size"
                                 }
@@ -301,6 +341,7 @@ object AppUpdateManager {
                     }
                 }
                 if (downloaded != asset.size || (!skipVerification && !verifyDigest(partial, asset.digest))) {
+                    packageMismatch = true
                     partial.delete()
                     mutableState.value = AppUpdateState.Error(UpdateFailure.DIGEST, release)
                     return@runCatching
@@ -324,6 +365,7 @@ object AppUpdateManager {
             }
             activeDownload = null
         }
+        packageMismatch
     }
 
     fun cancelDownload() {

@@ -15,12 +15,15 @@ internal fun PlaybackResource.isWebmOpus(): Boolean =
 internal fun iosPlaybackAudioQuality(setting: String): AudioQuality =
     runCatching { AudioQuality.valueOf(setting) }.getOrDefault(AudioQuality.AUTO)
 
-internal fun ContentHints.withIosAudioCapabilities(allowHls: Boolean = false) =
-    copy(sabrFirst = false).withStreamCapabilities(
-        allowHls = allowHls,
-        allowSabr = true,
-        allowBoundedRange = true,
-    )
+internal fun ContentHints.withIosAudioCapabilities(
+    allowHls: Boolean = false,
+    allowSabr: Boolean = true,
+    allowBoundedRange: Boolean = true,
+) = copy(sabrFirst = false).withStreamCapabilities(
+    allowHls = allowHls,
+    allowSabr = allowSabr,
+    allowBoundedRange = allowBoundedRange,
+)
 
 internal suspend fun resolveIosAudioResource(
     quality: AudioQuality,

@@ -388,7 +388,8 @@ class PlaylistWidgetManager(
             val seen = mutableSetOf<String>()
 
             fun add(item: QuickPick) {
-                if (result.size < 8 && seen.add(item.key)) result += item
+                val remoteId = item.targetId.takeIf { item.targetType == PlaylistWidgetReceiver.TARGET_TYPE_ONLINE }
+                if (result.size < 8 && seen.add(playlistWidgetPickKey(item.key, remoteId))) result += item
             }
 
             snapshot.speedDial

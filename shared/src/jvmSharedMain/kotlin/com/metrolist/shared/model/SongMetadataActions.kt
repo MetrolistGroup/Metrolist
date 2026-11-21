@@ -24,16 +24,18 @@ suspend fun resetSongMetadata(
 suspend fun editSongMetadata(
     database: MusicDatabase,
     song: SongItem,
-    title: String,
-    artistName: String,
+    title: String?,
+    artistName: String?,
 ) {
+    if (title == null && artistName == null) return
     database.withDatabaseTransaction {
         val dao = database.dao()
         val existing = dao.getSongById(song.id)
+        val stored = existing?.song ?: song.toEntity()
         dao.upsert(
-            (existing?.song ?: song.toEntity()).copy(
-                customTitle = title,
-                customArtist = artistName,
+            stored.copy(
+                customTitle = title ?: stored.customTitle,
+                customArtist = artistName ?: stored.customArtist,
             ),
         )
         ensureSongArtists(database, song, existing == null)

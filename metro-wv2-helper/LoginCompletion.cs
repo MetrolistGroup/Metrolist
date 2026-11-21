@@ -41,9 +41,9 @@ namespace MetroWv2Helper
                 string? Read(string name) => root.TryGetProperty(name, out var value) && value.ValueKind == JsonValueKind.String
                     ? value.GetString() : null;
                 var visitor = Read("visitorData");
-                var dataSyncId = Read("dataSyncId")?.Split("||", StringSplitOptions.RemoveEmptyEntries).FirstOrDefault();
+                var dataSyncId = Read("dataSyncId")?.Split("||", StringSplitOptions.RemoveEmptyEntries).FirstOrDefault() ?? string.Empty;
                 var authUser = Read("authUser");
-                if (string.IsNullOrWhiteSpace(visitor) || string.IsNullOrWhiteSpace(dataSyncId) ||
+                if (string.IsNullOrWhiteSpace(visitor) ||
                     !int.TryParse(authUser, NumberStyles.None, CultureInfo.InvariantCulture, out var index) || index < 0) return null;
                 return new YouTubeCredentials(string.Join("; ", cookies.Select(kv => $"{kv.Key}={kv.Value}")), visitor, dataSyncId, authUser!);
             }

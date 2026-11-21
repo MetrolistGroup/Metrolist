@@ -73,6 +73,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.metrolist.android.LocalMiniPlayerBottomInset
 import com.metrolist.android.extensions.isInternetConnected
+import com.metrolist.android.listentogether.AndroidListenTogetherManager
 import com.metrolist.android.playback.LocalPlayerConnection
 import com.metrolist.android.ui.component.AdaptiveModalBottomSheet
 import com.metrolist.android.ui.component.SwipeGestureHandler
@@ -135,6 +136,7 @@ import com.metrolist.shared.ui.components.AlertDialog
 import com.metrolist.shared.ui.components.ChipShelf
 import com.metrolist.shared.ui.components.FabMenuPopup
 import com.metrolist.shared.ui.components.LibraryItemContainer
+import com.metrolist.shared.ui.components.PlaylistDeleteConfirmation
 import com.metrolist.shared.ui.components.PopupVisibility
 import com.metrolist.shared.ui.components.RefreshIndicator
 import com.metrolist.shared.ui.components.ScrollingAddButton
@@ -186,6 +188,7 @@ fun LibraryScreen(
     val errorOccurredText = stringResource(Res.string.error_occurred)
 
     val playerConnection = LocalPlayerConnection.current
+    val isGuestPlaybackLocked by AndroidListenTogetherManager.isGuestPlaybackLockedFlow.collectAsStateWithLifecycle()
     val currentSong by playerConnection?.currentSong?.collectAsStateWithLifecycle() ?: remember { mutableStateOf(null) }
     val isPlaying by playerConnection?.isPlaying?.collectAsStateWithLifecycle() ?: remember { mutableStateOf(false) }
     val rootActive = LocalRootContentActive.current
@@ -258,7 +261,7 @@ fun LibraryScreen(
     var createName by remember { mutableStateOf("") }
     var playlistToRename by remember { mutableStateOf<PlaylistItem?>(null) }
     var renameName by remember { mutableStateOf("") }
-    var playlistToDelete by remember { mutableStateOf<PlaylistItem?>(null) }
+    val deleteConfirmation = remember { PlaylistDeleteConfirmation(scope) }
     var exportItem by remember { mutableStateOf<YTItem?>(null) }
     var autoPlaylistToExport by remember { mutableStateOf<LibraryAutoPlaylist?>(null) }
     var networkAvailable by remember { mutableStateOf(context.isInternetConnected()) }
@@ -545,7 +548,11 @@ fun LibraryScreen(
                         SwipeGestureHandler(
                             onSwipeLeft = { queue(item, playNext = false) },
                             onSwipeRight = { queue(item, playNext = true) },
-                            enabled = playerConnection != null && Settings.shared.swipeToSong && searchQuery.isNotBlank(),
+                            enabled =
+                                playerConnection != null &&
+                                    Settings.shared.swipeToSong &&
+                                    ((item is SongItem && !item.isUnavailable && !isGridView) || searchQuery.isNotBlank()) &&
+                                    !isGuestPlaybackLocked,
                             shape = if (isGridView) gridCellShape() else RoundedCornerShape(ThumbnailCornerRadius),
                             content = content,
                         )
@@ -684,7 +691,7 @@ fun LibraryScreen(
                                 playlistToRename = playlist
                             }
                         },
-                    onDelete = { playlistToDelete = item }.takeUnless { isHistoryPlaylist },
+                    onDelete = { deleteConfirmation.open(item) }.takeUnless { isHistoryPlaylist },
                     onHideFromLibrary = hideFromLibrary.takeUnless { isHistoryPlaylist },
                     onExport = { exportItem = item },
                     loadSongs = { loadSongs(item) },
@@ -844,10 +851,11 @@ fun LibraryScreen(
             playlistToRename = null
         }
     }
-    playlistToDelete?.takeIf { rootActive }?.let { playlist ->
+    deleteConfirmation.request?.takeIf { rootActive }?.let { request ->
+        val playlist = request.playlist
         val deletesPlaylist = playlist.isLocal || playlist.isEditable
         AlertDialog(
-            onDismissRequest = { playlistToDelete = null },
+            onDismissRequest = { deleteConfirmation.dismiss(request) },
             title = {
                 Text(
                     if (deletesPlaylist) stringResource(Res.string.delete_playlist_question) else playlist.title,
@@ -860,10 +868,10 @@ fun LibraryScreen(
             },
             confirmButton = {
                 TextButton(
+                    enabled = !deleteConfirmation.isSubmitting(request),
                     onClick = {
-                        viewModel.deletePlaylist(playlist) { result ->
-                            result.onSuccess { playlistToDelete = null }
-                            result.onFailure {
+                        deleteConfirmation.confirm(request, viewModel::deletePlaylist) {
+                            if (currentRootActive) {
                                 Toast.makeText(context, errorOccurredText, Toast.LENGTH_SHORT).show()
                             }
                         }
@@ -875,7 +883,7 @@ fun LibraryScreen(
             },
             dismissButton = {
                 TextButton(
-                    onClick = { playlistToDelete = null },
+                    onClick = { deleteConfirmation.dismiss(request) },
                     shapes = ButtonDefaults.shapes(),
                 ) { Text(stringResource(Res.string.cancel)) }
             },

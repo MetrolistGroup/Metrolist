@@ -36,13 +36,11 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.currentCoroutineContext
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.koin.core.context.GlobalContext
 import kotlin.time.Clock
-import kotlin.time.Duration.Companion.milliseconds
 
 object LyricsState : DesktopLyricsState()
 
@@ -84,7 +82,10 @@ open class DesktopLyricsState internal constructor(
 
     private var lyricsFetchJob: Job? = null
     private var lyricsRetimingJob: Job? = null
-    private var lyricsOffsetSaveJob: Job? = null
+    private val lyricsOffsetWrites =
+        DesktopLyricsOffsetWrites(scope) { videoId, offset ->
+            withContext(Dispatchers.IO) { lyricsRepository.setLyricsOffset(videoId, offset) }
+        }
     private var lyricsTimingGeneration = 0L
     private var lyricsRequestId = 0L
     private var lyricsRequestKey: List<Any?>? = null
@@ -113,13 +114,18 @@ open class DesktopLyricsState internal constructor(
             song.id
         }
 
+    private fun isCurrentLyricsOffsetTarget(
+        songId: String,
+        videoId: String,
+    ): Boolean = currentTrack()?.let { it.id == songId && activeLyricsVideoId(it) == videoId } == true
+
     fun syncLyricsOffsetForVideoMode() {
         val song = currentTrack() ?: return
         val targetId = activeLyricsVideoId(song)
         val repository = GlobalContext.getOrNull()?.getOrNull<LyricsRepository>() ?: return
         scope.launch {
-            val offset = repository.getLyricsOffset(targetId)
-            if (currentTrack()?.id == song.id) {
+            val offset = lyricsOffsetWrites.resolve(targetId, repository::getLyricsOffset)
+            if (isCurrentLyricsOffsetTarget(song.id, targetId)) {
                 currentLyricsOffsetMs = offset
             }
         }
@@ -132,7 +138,6 @@ open class DesktopLyricsState internal constructor(
         lyricsFetchJob?.cancel()
         providerSearch?.cancel()
         lyricsRetimingJob?.cancel()
-        lyricsOffsetSaveJob?.cancel()
         currentLyrics = null
         currentLyricsAgents = emptyMap()
         currentLyricsSongwriters = emptyList()
@@ -211,7 +216,6 @@ open class DesktopLyricsState internal constructor(
         previousFetchJob?.cancel()
         providerSearch?.cancel()
         previousRetimeJob?.cancel()
-        lyricsOffsetSaveJob?.cancel()
         val keepCurrentLyrics = skipCache && currentLyricsSongId == song.id && currentLyricsEntries.isNotEmpty()
         if (!keepCurrentLyrics) {
             currentLyrics = null
@@ -252,10 +256,14 @@ open class DesktopLyricsState internal constructor(
                             )
                         }
                     val cachedMiss = if (skipCache) null else cachedMissExpiry()
-                    val offsetMs = withContext(Dispatchers.IO) { lyricsRepository.getLyricsOffset(activeLyricsVideoId(song)) }
+                    val offsetVideoId = activeLyricsVideoId(song)
+                    val offsetMs =
+                        lyricsOffsetWrites.resolve(offsetVideoId) { videoId ->
+                            withContext(Dispatchers.IO) { lyricsRepository.getLyricsOffset(videoId) }
+                        }
                     if (currentTrack()?.id != song.id || requestId != lyricsRequestId) return@launch
                     lyricsMissExpiresAt = cachedMiss
-                    if (!keepCurrentLyrics) currentLyricsOffsetMs = offsetMs
+                    if (!keepCurrentLyrics && isCurrentLyricsOffsetTarget(song.id, offsetVideoId)) currentLyricsOffsetMs = offsetMs
                     if (cachedMiss != null) return@launch
                     isLyricsLoading = true
                     val publicationContext = currentCoroutineContext()
@@ -282,7 +290,6 @@ open class DesktopLyricsState internal constructor(
                             publishedResult = result
                             publishedDocument = document
                             lyricsRetimingJob?.cancel()
-                            if (currentLyrics == null) currentLyricsOffsetMs = offsetMs
                             currentLyrics = result?.lyrics
                             currentLyricsAgents = document?.agents ?: emptyMap()
                             currentLyricsSongwriters = document?.song?.songwriters.orEmpty()
@@ -519,14 +526,7 @@ open class DesktopLyricsState internal constructor(
         val song = currentTrack() ?: return
         val targetId = activeLyricsVideoId(song)
         currentLyricsOffsetMs = offsetMs
-        lyricsOffsetSaveJob?.cancel()
-        lyricsOffsetSaveJob =
-            scope.launch {
-                delay(150.milliseconds)
-                withContext(Dispatchers.IO) {
-                    lyricsRepository.setLyricsOffset(targetId, offsetMs)
-                }
-            }
+        lyricsOffsetWrites.save(targetId, offsetMs)
     }
 
     fun refreshEditedLyrics(song: SongItem) {

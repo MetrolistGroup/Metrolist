@@ -164,7 +164,7 @@ fun AppContentHost(
 
                     is Screen.Playlist -> {
                         if (PlaylistAlbumState.selectedPlaylistId == destination.id) {
-                            PlaylistScreen(colorScheme)
+                            PlaylistScreen(colorScheme, destination)
                         } else {
                             CollectionHeaderNavigation({ navigator.goBack() }) { LoadingScreen() }
                         }

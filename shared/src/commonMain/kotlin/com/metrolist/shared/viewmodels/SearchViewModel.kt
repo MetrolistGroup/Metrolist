@@ -49,6 +49,7 @@ class SearchViewModel(
     private var nextSearchHistoryRevision = 0L
     private var loadingContinuation: String? = null
     private var loadMoreGeneration = 0
+    private val consumedContinuations = mutableSetOf<String>()
     private var unfilteredRecentSearchItems = emptyList<YTItem>()
     private var localSearchHistory = emptyList<String>()
     private var historySession = repository.sessionSnapshot()
@@ -279,6 +280,13 @@ class SearchViewModel(
                             continuation,
                             recordSearchHistory = recordSearchHistory,
                         )
+                    val latest = _uiState.value
+                    if (loadMoreGeneration != generation || !isCurrentSearchRequest(latest, query, filter, submitted) ||
+                        latest.filteredResults?.continuation != continuation
+                    ) {
+                        return@launch
+                    }
+                    consumedContinuations += continuation
                     _uiState.update { current ->
                         if (!isCurrentSearchRequest(current, query, filter, submitted) ||
                             current.filteredResults?.continuation != continuation
@@ -290,6 +298,7 @@ class SearchViewModel(
                                     current.unfilteredResults ?: current.filteredResults,
                                     nextPage,
                                     continuation,
+                                    consumedContinuations,
                                 )
                             current.copy(
                                 unfilteredResults = merged,
@@ -322,6 +331,7 @@ class SearchViewModel(
         loadMoreJob?.cancel()
         loadMoreJob = null
         loadMoreGeneration++
+        consumedContinuations.clear()
         loadingContinuation = null
         _uiState.update { it.copy(isLoadingMore = false, loadMoreFailed = false) }
     }
@@ -696,11 +706,12 @@ internal fun appendSearchResultPage(
     current: SearchResultPage?,
     next: SearchResultPage,
     requestedContinuation: String,
+    consumedContinuations: Set<String> = emptySet(),
 ): SearchResultPage {
     val items = (current?.items.orEmpty() + next.items).distinctBy(YTItem::id)
     return SearchResultPage(
         items = items,
-        continuation = next.continuation?.takeUnless { it == requestedContinuation },
+        continuation = next.continuation?.takeUnless { it == requestedContinuation || it in consumedContinuations },
     )
 }
 

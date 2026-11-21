@@ -35,9 +35,11 @@ interface PlayerSession {
     val queueTitle: StateFlow<String?>
     val queueChips: StateFlow<List<RadioQueueChip>>
     val isVideoModeActive: StateFlow<Boolean>
+    val retimeLyricsOnVideoMode: Boolean get() = true
     val isVideoModeResolving: StateFlow<Boolean>
     val isVideoViewerVisible: StateFlow<Boolean>
     val currentPlaybackResource: StateFlow<PlaybackResource?>
+    val videoPlaybackResource: StateFlow<PlaybackResource?>
     val sleepTimerState: StateFlow<SleepTimerState>
     val castDevices: StateFlow<List<CastDevice>>
     val castState: StateFlow<CastState>

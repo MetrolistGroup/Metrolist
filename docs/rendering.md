@@ -2,7 +2,7 @@
 
 ## Artwork
 
-Shared collection covers resolve through `LibraryCovers.kt`. Keep user-selected covers ahead of built-in resources. Android widgets and Android Auto use the same artwork provider for offline covers.
+Shared collection covers resolve through `LibraryCovers.kt`. Keep user-selected covers ahead of built-in resources. Android widgets and Android Auto use the same artwork provider for offline covers. Retained download covers use a stable identity that ignores cache-busting revisions, query strings, display sizes and video renditions, so a refetched URL keeps resolving to the PNG already on disk. Legacy keys remain readable and are included when pruning.
 
 Player and collection artwork use square, centered crops. Full-player video thumbnails use the same preview source as song rows, including the thumbnail without encoded letterboxing. Dedicated video shelves, episode previews and video playback keep their wide layouts. On iOS, managed playlist-cover identifiers resolve against the current Application Support directory so container relocation does not break covers. Delete only managed files after the database change succeeds.
 
@@ -59,7 +59,7 @@ Verify on API 29 and Android 12 or newer. Check standard and modern miniplayers 
 
 The cache applies Compose's `BlurEffect` filter, including its radius-to-sigma conversion, and draws the scrim into the snapshot. It keeps the original crop, scale, saturation, source background and clip. Apply the modifier directly to artwork drawing; child graphics layers can update independently of their raster parent. The shared mini-player uses this cache on desktop, native blur on Android API 31+ and iOS, and the artwork bitmap fallback on older Android. Shared shader backgrounds use their own preblurred texture cache.
 
-On GPU backends the raster path can differ from the GPU filter by one channel step from rounding. `ArtworkBlurTest` compares the raster path with the Compose/Skia RenderNode pipeline across sizes, densities, edges, backdrops and scrims.
+On GPU backends the raster path can differ from the GPU filter by one channel step from rounding.
 
 Wavy, Squiggly and Now Playing bars advance their phase from monotonic time at 30 updates per second. A phase write schedules its own rendering; waiting on the frame clock first schedules another render of the previous phase. The animated gradient background steps on the same clock's 50 ms grid, like Liquid, so its repaints can share frames with other ticks on that clock. Lifecycle and window visibility suspend hidden work. Visible unfocused windows keep animating.
 
@@ -123,6 +123,6 @@ Current-song rows use a pill container, scalloped artwork and matching content c
 
 ## Verification
 
-Run affected [platform checks](checks.md#platform-checks). Relevant backend suites include `VisibleWorkTest`, `PlayerArtworkHandoffTest`, `LibraryCoversTest` and `ArtworkBlurTest`. Backend tests cover popup guard release paths; native checks must verify taps, keyboard actions, dismissal and rendering.
+Run affected [platform checks](checks.md#platform-checks). Native checks must verify taps, keyboard actions, dismissal and rendering.
 
 Native checks must cover interrupted motion, missing and portrait artwork, theme changes, reduced motion, large fonts and accessibility. Compare CPU/GPU use when changing shaders, blur or visibility work. Backend tests do not establish rendering or power behavior.

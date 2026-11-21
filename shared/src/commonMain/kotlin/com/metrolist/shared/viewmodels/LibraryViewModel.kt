@@ -773,7 +773,7 @@ class LibraryViewModel(
                             .takeIf { duration -> duration > 0 }
                             ?.toLong(),
                     playtime = it.timeListened,
-                    libraryAddedAt = (it.album.bookmarkedAt ?: it.album.inLibrary).toEpochMilliseconds(),
+                    libraryAddedAt = it.libraryAddedAt.toEpochMilliseconds(),
                     libraryUpdatedAt = it.album.lastUpdateTime.toEpochMilliseconds(),
                 )
             }
