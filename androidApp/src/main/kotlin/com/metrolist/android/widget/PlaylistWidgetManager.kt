@@ -14,6 +14,7 @@ import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.RectF
+import android.net.Uri
 import android.os.Bundle
 import android.util.LruCache
 import android.view.View
@@ -600,6 +601,7 @@ class PlaylistWidgetManager(
             item.key.hashCode(),
             Intent(context, MainActivity::class.java).apply {
                 action = MainActivity.ACTION_OPEN_WIDGET_TARGET
+                data = item.pendingIntentData()
                 flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
                 putExtra(MainActivity.EXTRA_WIDGET_TARGET_TYPE, item.targetType)
                 putExtra(MainActivity.EXTRA_WIDGET_TARGET_ID, item.targetId)
@@ -613,12 +615,22 @@ class PlaylistWidgetManager(
             item.key.hashCode() xor 0x3522,
             Intent(context, WidgetActionReceiver::class.java).apply {
                 action = PlaylistWidgetReceiver.ACTION_PLAY_TARGET
+                data = item.pendingIntentData()
                 putExtra(PlaylistWidgetReceiver.EXTRA_TARGET_TYPE, item.targetType)
                 putExtra(PlaylistWidgetReceiver.EXTRA_TARGET_ID, item.targetId)
                 putExtra(PlaylistWidgetReceiver.EXTRA_TARGET_TITLE, item.title)
             },
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
+
+    private fun QuickPick.pendingIntentData(): Uri =
+        Uri
+            .Builder()
+            .scheme("metrolist-widget")
+            .authority("playlist-target")
+            .appendPath(targetType)
+            .appendPath(targetId)
+            .build()
 
     private fun getMusicWidgetIntent(
         action: String,
