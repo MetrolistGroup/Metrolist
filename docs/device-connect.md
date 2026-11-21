@@ -46,6 +46,8 @@ REMOVE may carry `advanceCurrentToSuccessor`, `successorIndex` and `expectedTrac
 
 Radio replacement can set `preserveCurrentTrack`. A matching ready seed retains its instance and position; otherwise it starts at zero. Older targets ignore the flag and may reload using the supplied position. Queue replacement requires complete snapshots. Partial queues need negotiated continuation ownership, cancellation and acknowledgement before use.
 
+A `REPLACE_QUEUE` command carries `recommendationsLocked` to keep a selected-song-only queue from expanding on the target. The target applies it before any bootstrap or auto-load and reports it in snapshots; a later replacement clears it. Explicit Radio replacements send repeat OFF so the target and its controllers expand the seed instead of repeating it. A transient Radio seed lock stays local and is never persisted.
+
 ## Transport and account identity
 
 Admission allows two unauthenticated incoming connections per source and four total. Preserve capacity for authenticated/outgoing peers. Discovery retains alternate endpoints and does not replace a live authenticated endpoint with advertisements.

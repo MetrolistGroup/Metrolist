@@ -54,6 +54,7 @@ data class PersistPlayerState(
     val radioQueueParams: String? = null,
     val radioQueueExplicitFeed: Boolean? = null,
     val revision: String? = null,
+    val recommendationLocked: Boolean = false,
 ) : java.io.Serializable
 
 internal class PlaybackPersistenceWriter(

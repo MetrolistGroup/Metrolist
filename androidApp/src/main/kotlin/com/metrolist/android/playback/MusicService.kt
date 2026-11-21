@@ -10,7 +10,6 @@ import android.media.AudioManager
 import android.net.ConnectivityManager
 import android.net.Uri
 import android.os.Binder
-import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.IBinder
@@ -55,7 +54,6 @@ import com.metrolist.android.listentogether.AndroidListenTogetherManager
 import com.metrolist.android.models.PersistPlayerState
 import com.metrolist.android.models.PlaybackPersistenceWriter
 import com.metrolist.android.models.decodePersistPlayerState
-import com.metrolist.android.models.playbackPersistenceJson
 import com.metrolist.android.widget.EXTRA_WIDGET_COMMAND_TOKEN
 import com.metrolist.android.widget.MetrolistWidgetManager
 import com.metrolist.android.widget.MusicWidgetReceiver
@@ -64,7 +62,6 @@ import com.metrolist.android.widget.WidgetControls
 import com.metrolist.android.widget.sampleWidgetProgress
 import com.metrolist.android.widget.shouldSampleWidgetProgress
 import com.metrolist.android.widget.widgetScreenInteractive
-import com.metrolist.innertubex.extraction.ContentHints
 import com.metrolist.innertubex.extraction.TokenProvider
 import com.metrolist.innertubex.sabr.findSabrProtocolException
 import com.metrolist.shared.BuildConfig
@@ -83,6 +80,7 @@ import com.metrolist.shared.cast.shouldHandleCastPlaybackEnd
 import com.metrolist.shared.db.MusicDatabase
 import com.metrolist.shared.deviceconnect.DcPlaybackAction
 import com.metrolist.shared.deviceconnect.DcPlaybackCommand
+import com.metrolist.shared.deviceconnect.DcRepeatMode
 import com.metrolist.shared.deviceconnect.DcSyncError
 import com.metrolist.shared.deviceconnect.DeviceConnectManager
 import com.metrolist.shared.discord.DiscordActivityBuilder
@@ -124,6 +122,7 @@ import com.metrolist.shared.playback.shouldSkipAfterPlaybackFailure
 import com.metrolist.shared.playback.sponsorblock.observeSponsorBlockSkipping
 import com.metrolist.shared.scrobble.ScrobbleManager
 import com.metrolist.shared.scrobble.ScrobbleSessions
+import com.metrolist.shared.settings.AutomotiveSongPlaybackMode
 import com.metrolist.shared.settings.BlockedContent
 import com.metrolist.shared.settings.MusicVideoQuality
 import com.metrolist.shared.settings.Settings
@@ -160,7 +159,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.flow.onEach
@@ -183,7 +181,6 @@ import kotlin.time.Clock
 import kotlin.time.Duration.Companion.milliseconds
 import android.provider.Settings as AndroidSettings
 import com.metrolist.shared.generated.resources.Res as SharedRes
-import com.metrolist.shared.generated.resources.shuffle as sharedShuffle
 import com.metrolist.shared.generated.resources.start_radio as sharedStartRadio
 
 private const val QUEUE_RESOLVE_RETRY_DELAY_MS = 350L
@@ -302,7 +299,9 @@ class MusicService :
     private val automotiveRootChildrenLimit = ConcurrentHashMap<MediaSession.ControllerInfo, Int>()
     private val automotiveRootBrowsableOnly = ConcurrentHashMap<MediaSession.ControllerInfo, Boolean>()
     private val automotivePlaybackRequestGate =
-        AutomotivePlaybackRequestGate { songs, startIndex, queueTitle, shuffleModeEnabled, playlistPage, replacement ->
+        AutomotivePlaybackRequestGate { songs, startIndex, queueTitle, shuffleModeEnabled, playlistPage, songPlaybackMode, replacement ->
+            val intent = automotivePlaybackIntent(songPlaybackMode)
+            val radioSeed = songs.getOrNull(startIndex)?.takeIf { intent.radioSeed }
             val shuffleEnabled =
                 newQueueShuffleEnabled(
                     requestedShuffle = shuffleModeEnabled,
@@ -314,17 +313,46 @@ class MusicService :
                         DcPlaybackAction.REPLACE_QUEUE,
                         songs = songs,
                         index = startIndex,
-                        title = queueTitle,
-                        finite = true,
+                        title = radioSeed?.let { getString(R.string.song_mix_title, it.title) } ?: queueTitle,
+                        finite = radioSeed == null,
                         enabled = shuffleEnabled,
                         preserveHistory = shuffleModeEnabled != true,
+                        recommendationsLocked = intent.selectedSongOnly,
+                        repeatMode = intent.remoteRepeatMode,
                     ),
                 )
             ) {
                 queueCoordinator.replaceQueueSession(songs, startIndex, queueTitle, finite = true, playlistPage = playlistPage) {
+                    when {
+                        intent.selectedSongOnly -> queueCoordinator.lockRecommendationsForSelectedSong()
+                        intent.radioSeed -> queueCoordinator.lockRecommendationsForRadioSeed()
+                    }
+                    val initialRequestId = player.latestQueuePlaybackRequestId
                     replacement()
                     if (shuffleEnabled) player.toggleShuffle(preserveHistory = shuffleModeEnabled != true)
                     _shuffleModeEnabled.value = player.isShuffleEnabled
+                    if (songPlaybackMode == AutomotiveSongPlaybackMode.RADIO) {
+                        songs.getOrNull(startIndex)?.let { song ->
+                            val sessionId = queueCoordinator.queueSessionId
+                            pendingRadioJob =
+                                serviceScope.launch {
+                                    awaitAutomotiveRadioSeed(
+                                        song = song,
+                                        initialRequestId = initialRequestId,
+                                        requests = player.queuePlaybackRequests,
+                                        currentSong = player.currentSong,
+                                        isPlaying =
+                                            combine(player.isPlaying, castManager.state) { local, cast ->
+                                                local || (cast.isConnected && cast.isPlaying)
+                                            },
+                                        transitionPending = player.playbackTransitionPending,
+                                        latestRequestId = { player.latestQueuePlaybackRequestId },
+                                        isCurrentSession = { queueCoordinator.queueSessionId == sessionId },
+                                        playMix = { playMix(it, true) },
+                                    )
+                                }
+                        }
+                    }
                 }
             }
         }
@@ -377,6 +405,8 @@ class MusicService :
     private val playbackPersistenceRequests = Channel<PlaybackPersistenceWriter.Request>(Channel.CONFLATED)
 
     private val playbackPersistenceLifecycle = PlaybackPersistenceLifecycle()
+
+    private var pendingRadioJob: Job? = null
 
     private lateinit var audioManager: AudioManager
     private val pauseOnMute = PauseOnMuteController()
@@ -466,6 +496,7 @@ class MusicService :
                 },
                 onVideoSelected = { song -> videoMode.selectVideoForQueue(song) },
                 castState = { castManager.state.value },
+                onRemotePlay = { serviceScope.launch { castManager.play() } },
             )
         transitions =
             AndroidQueueTransitions(
@@ -680,6 +711,7 @@ class MusicService :
                     )
                 ) {
                     automotivePlaybackRequestGate.cancelPendingRequests()
+                    pendingRadioJob?.cancel()
                     pauseOnMute.cancelResume()
                     // Pause even after focus loss so its delayed recovery cannot restart on the phone speaker.
                     player.pause()
@@ -3484,6 +3516,7 @@ class MusicService :
         ): ListenableFuture<MediaSession.MediaItemsWithStartPosition> =
             serviceScope.future {
                 (application as App).startup.await()
+                pendingRadioJob?.cancel()
                 if (!canResolveMediaSessionItems(
                         canBrowse = canBrowseLibrary(session, controller),
                         isAssistant = isAssistantController(controller),
@@ -3533,7 +3566,14 @@ class MusicService :
                 }
 
                 val pinnedQueue = requestedItem?.let { automotiveLibrary.resolvePinnedPlaylist(it) }
-                val songQueue = requestedItem?.let { automotiveLibrary.resolveSongQueue(it) }
+                val songQueue =
+                    requestedItem?.let { item ->
+                        resolveAutomotiveSearchSongQueue(
+                            item = item,
+                            library = automotiveLibrary,
+                            mode = Settings.shared.androidAutoSongPlaybackMode,
+                        )
+                    }
                 val individuallyResolvedSongs =
                     if (mediaItems.size != 1 || (pinnedQueue == null && songQueue == null)) {
                         mediaItems.map { item ->
@@ -3576,6 +3616,7 @@ class MusicService :
                     queueTitle = pinnedQueue?.title,
                     shuffleModeEnabled = pinnedQueue?.shuffle ?: songQueue?.shuffle?.takeIf { it },
                     playlistPage = pinnedQueue?.playlistPage ?: songQueue?.playlistPage,
+                    songPlaybackMode = songQueue?.songPlaybackMode,
                     canApply = playable != null && !AndroidListenTogetherManager.isGuestPlaybackLocked,
                 )
             }

@@ -49,8 +49,13 @@ import com.metrolist.shared.generated.resources.android_auto_pinned_playlists
 import com.metrolist.shared.generated.resources.android_auto_pinned_playlists_count
 import com.metrolist.shared.generated.resources.android_auto_pinned_playlists_desc
 import com.metrolist.shared.generated.resources.android_auto_play_in_order
+import com.metrolist.shared.generated.resources.android_auto_play_queue
+import com.metrolist.shared.generated.resources.android_auto_play_radio
+import com.metrolist.shared.generated.resources.android_auto_play_single_song
 import com.metrolist.shared.generated.resources.android_auto_playlists_load_failed
 import com.metrolist.shared.generated.resources.android_auto_quick_add_playlist
+import com.metrolist.shared.generated.resources.android_auto_song_playback_mode
+import com.metrolist.shared.generated.resources.android_auto_song_playback_mode_desc
 import com.metrolist.shared.generated.resources.android_auto_title
 import com.metrolist.shared.generated.resources.android_auto_youtube_playlist
 import com.metrolist.shared.generated.resources.cached_playlist
@@ -71,6 +76,7 @@ import com.metrolist.shared.settings.AutomotiveAutoPlaylist
 import com.metrolist.shared.settings.AutomotivePinnedPlaylist
 import com.metrolist.shared.settings.AutomotivePinnedPlaylistPlaybackMode
 import com.metrolist.shared.settings.AutomotivePlaylistSource
+import com.metrolist.shared.settings.AutomotiveSongPlaybackMode
 import com.metrolist.shared.settings.MAX_AUTOMOTIVE_PINNED_PLAYLISTS
 import com.metrolist.shared.settings.Settings
 import com.metrolist.shared.settings.getAutomotivePinnedPlaylists
@@ -233,6 +239,20 @@ fun AndroidAutoScreen(onNavigateBack: () -> Unit) {
                             Settings.shared.androidAutoPinnedPlaylistPlaybackMode = mode
                             notifyAutomotiveLibraryChanged(context)
                         },
+                    ),
+                    listChooserSettingsItem(
+                        title = stringResource(Res.string.android_auto_song_playback_mode),
+                        description = stringResource(Res.string.android_auto_song_playback_mode_desc),
+                        options = AutomotiveSongPlaybackMode.entries,
+                        selectedOption = Settings.shared.androidAutoSongPlaybackMode,
+                        optionToString = { mode ->
+                            when (mode) {
+                                AutomotiveSongPlaybackMode.QUEUE -> stringResource(Res.string.android_auto_play_queue)
+                                AutomotiveSongPlaybackMode.SINGLE_SONG -> stringResource(Res.string.android_auto_play_single_song)
+                                AutomotiveSongPlaybackMode.RADIO -> stringResource(Res.string.android_auto_play_radio)
+                            }
+                        },
+                        onOptionSelected = { mode -> Settings.shared.androidAutoSongPlaybackMode = mode },
                     ),
                 ),
         )

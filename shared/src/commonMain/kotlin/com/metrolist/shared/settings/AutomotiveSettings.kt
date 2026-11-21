@@ -12,6 +12,12 @@ enum class AutomotivePlaylistSource {
     AUTO,
 }
 
+enum class AutomotiveSongPlaybackMode {
+    QUEUE,
+    SINGLE_SONG,
+    RADIO,
+}
+
 @Serializable
 enum class AutomotiveAutoPlaylist(
     val id: String,

@@ -24,7 +24,6 @@ import com.metrolist.shared.model.selectRadioQueueChip
 import com.metrolist.shared.playback.MusicQueue
 import com.metrolist.shared.playback.MusicQueueSnapshot
 import com.metrolist.shared.playback.PlaybackSeekSource
-import com.metrolist.shared.playback.QUEUE_SOURCE_ADDED_MANUALLY
 import com.metrolist.shared.playback.QUEUE_SOURCE_AUTO_MIX
 import com.metrolist.shared.playback.QUEUE_SOURCE_RECOMMENDED
 import com.metrolist.shared.playback.isAutoMixQueueSource
@@ -38,7 +37,6 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.cancel
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -49,7 +47,6 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import org.jetbrains.compose.resources.getString
 import timber.log.Timber
 import java.util.concurrent.atomic.AtomicInteger
 
@@ -63,6 +60,7 @@ internal class AndroidQueueCoordinator(
     private val onSessionReset: () -> Unit,
     private val onVideoSelected: (SongItem) -> Unit = {},
     private val castState: () -> CastState = { CastState() },
+    private val onRemotePlay: () -> Unit = {},
 ) {
     companion object {
         private const val TAG = "MusicService"
@@ -118,6 +116,27 @@ internal class AndroidQueueCoordinator(
         private set
     private val pendingRestorePosition = PendingQueueRestorePosition()
     private var remoteLoadGeneration = 0L
+    var recommendationLockedSessionId: Long? = null
+    private var radioSeedLockedSessionId: Long? = null
+    val recommendationsLocked: Boolean get() = recommendationLockedSessionId == queueSessionId
+
+    fun lockRecommendationsForSelectedSong() {
+        synchronized(queueSessionLock) {
+            recommendationLockedSessionId = queueSessionId
+        }
+    }
+
+    fun lockRecommendationsForRadioSeed() {
+        synchronized(queueSessionLock) {
+            radioSeedLockedSessionId = queueSessionId
+        }
+    }
+
+    fun applyRemoteRecommendationLock(locked: Boolean) {
+        synchronized(queueSessionLock) {
+            recommendationLockedSessionId = queueSessionId.takeIf { locked }
+        }
+    }
 
     fun saveShuffleMode() {
         val queue = player.queueSnapshots.value
@@ -165,6 +184,7 @@ internal class AndroidQueueCoordinator(
             radioQueuePlaylistId = radioQueuePlaylistId,
             radioQueueParams = radioQueueParams,
             radioQueueExplicitFeed = radioQueueExplicitFeed,
+            recommendationLocked = recommendationsLocked,
         )
     }
 
@@ -190,6 +210,7 @@ internal class AndroidQueueCoordinator(
                 sessionId = state.queueSessionId,
             )
             val restoredPosition = state.currentPosition
+            recommendationLockedSessionId = queueSessionId.takeIf { state.recommendationLocked }
             isRadioQueue = state.radioQueue || restoredMix
             isExplicitRadioQueue = state.explicitRadioQueue ?: false
             radioQueueContinuation = null
@@ -465,6 +486,10 @@ internal class AndroidQueueCoordinator(
         if (seed.isUnavailable || BlockedContent.isBlocked(seed)) return
         val title = context.getString(R.string.song_mix_title, seed.title)
         val current = player.currentSong.value?.takeIf { it.id == seed.id }
+        val remote =
+            castState()
+                .takeIf { it.isConnected && it.queueEntry != null }
+                ?.forQueueEntry(player.queueState.value)
         if (AndroidDeviceConnect.intercept(
                 DcPlaybackCommand(
                     DcPlaybackAction.REPLACE_QUEUE,
@@ -473,7 +498,7 @@ internal class AndroidQueueCoordinator(
                     title = title,
                     finite = false,
                     explicitRadioQueue = true,
-                    positionMs = if (current != null) player.getRealtimePositionMs() else 0L,
+                    positionMs = if (current != null) remote?.positionMs ?: player.getRealtimePositionMs() else 0L,
                     preserveCurrentTrack = true,
                 ),
             )
@@ -482,17 +507,24 @@ internal class AndroidQueueCoordinator(
             if (startPlaying) AndroidDeviceConnect.intercept(DcPlaybackCommand(DcPlaybackAction.PLAY))
             return
         }
-        val preserveCurrent = current != null && player.isReady && !player.playbackTransitionPending.value
+        val preserveCurrent = current != null && (remote != null || player.isReady) && !player.playbackTransitionPending.value
         if (preserveCurrent) {
             replaceQueueSession(listOf(requireNotNull(current)), 0, title, finite = false, radioQueue = true) {
-                val queue = MusicQueue().apply { setQueue(listOf(current)) }
-                if (Settings.shared.persistentShuffleAcrossQueues &&
-                    player.isShuffleEnabled
-                ) {
-                    queue.toggleShuffle(legacyShuffle = Settings.shared.useLegacyShuffle)
+                if (remote != null) {
+                    val state = player.queueState.value
+                    player.removeQueueItems(state.entries.indices.filterTo(mutableSetOf()) { it != state.currentIndex })
+                    if (!Settings.shared.persistentShuffleAcrossQueues && player.isShuffleEnabled) player.toggleShuffle()
+                    if (startPlaying && !remote.isPlaying) onRemotePlay()
+                } else {
+                    val queue = MusicQueue().apply { setQueue(listOf(current)) }
+                    if (Settings.shared.persistentShuffleAcrossQueues &&
+                        player.isShuffleEnabled
+                    ) {
+                        queue.toggleShuffle(legacyShuffle = Settings.shared.useLegacyShuffle)
+                    }
+                    player.restoreQueue(queue.snapshot())
+                    if (startPlaying && !castState().isConnected && !player.wantsPlayback) player.resume()
                 }
-                player.restoreQueue(queue.snapshot())
-                if (startPlaying && !castState().isConnected && !player.wantsPlayback) player.resume()
                 _shuffleModeEnabled.value = player.isShuffleEnabled
             }
         } else {
@@ -619,7 +651,9 @@ internal class AndroidQueueCoordinator(
         )
 
     private fun canBootstrapRecommendations(): Boolean =
-        shouldBootstrapQueueRecommendations(isFiniteQueue, Settings.shared.autoLoadMore, playlistPage?.hasMore == true)
+        recommendationLockedSessionId != queueSessionId &&
+            radioSeedLockedSessionId != queueSessionId &&
+            shouldBootstrapQueueRecommendations(isFiniteQueue, Settings.shared.autoLoadMore, playlistPage?.hasMore == true)
 
     fun selectQueueChip(chipId: String) {
         if (AndroidDeviceConnect.manager.remote.isFollowing || AndroidListenTogetherManager.isGuestPlaybackLocked) return
@@ -826,6 +860,7 @@ internal class AndroidQueueCoordinator(
         recommendationBootstrapJob?.join()
         if (!PlaybackNetworkStateStore.current.connected || sessionId != queueSessionId) return false
         if (!Settings.shared.autoLoadMore || repeatMode.value != Player.REPEAT_MODE_OFF) return false
+        if (recommendationLockedSessionId == sessionId || radioSeedLockedSessionId == sessionId) return false
 
         val currentQueue = player.songQueue.value
         val currentIndex = player.currentMediaItemIndex.value

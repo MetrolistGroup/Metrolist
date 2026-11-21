@@ -6,11 +6,19 @@ import androidx.media3.common.Player
 import androidx.media3.session.SessionError
 import androidx.media3.session.SessionResult
 import com.metrolist.innertubex.extraction.StreamResolveException
+import com.metrolist.shared.deviceconnect.DcRepeatMode
 import com.metrolist.shared.model.SongItem
 import com.metrolist.shared.playback.MusicQueueEntry
 import com.metrolist.shared.playback.PlaybackFailureCategory
 import com.metrolist.shared.playback.PlaybackFailureClassifier
+import com.metrolist.shared.playback.QueuePlaybackRequest
+import com.metrolist.shared.settings.AutomotiveSongPlaybackMode
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import timber.log.Timber
 
 internal fun nextMediaSessionRepeatMode(mode: Int): Int =
@@ -115,4 +123,80 @@ internal suspend fun addAutomotiveSongToQueue(
         Timber.e(error, "Automotive queue addition failed")
         SessionResult(SessionError.ERROR_IO)
     }
+}
+
+internal suspend fun resolveAutomotiveSearchSongQueue(
+    item: MediaItem,
+    library: AutomotiveMediaLibrary,
+    mode: AutomotiveSongPlaybackMode,
+): AutomotiveSongQueue? {
+    val isSearchSong =
+        AutomotiveMediaIds
+            .browseSong(item.mediaId)
+            ?.parentId
+            ?.startsWith("auto:search:") == true
+
+    if (isSearchSong && mode != AutomotiveSongPlaybackMode.QUEUE) {
+        return library.resolveSong(item)?.let { song ->
+            AutomotiveSongQueue(songs = listOf(song), startIndex = 0, songPlaybackMode = mode)
+        } ?: library.resolveSongQueue(item)
+    }
+    return library.resolveSongQueue(item)
+}
+
+internal data class AutomotivePlaybackIntent(
+    val selectedSongOnly: Boolean,
+    val radioSeed: Boolean,
+    val remoteRepeatMode: DcRepeatMode?,
+)
+
+internal fun automotivePlaybackIntent(mode: AutomotiveSongPlaybackMode?): AutomotivePlaybackIntent =
+    AutomotivePlaybackIntent(
+        selectedSongOnly = mode == AutomotiveSongPlaybackMode.SINGLE_SONG,
+        radioSeed = mode == AutomotiveSongPlaybackMode.RADIO,
+        remoteRepeatMode = DcRepeatMode.OFF.takeIf { mode == AutomotiveSongPlaybackMode.RADIO },
+    )
+
+private data class AutomotiveRadioSeedState(
+    val request: QueuePlaybackRequest,
+    val currentSongId: String?,
+    val playing: Boolean,
+    val transitionPending: Boolean,
+)
+
+internal suspend fun awaitAutomotiveRadioSeed(
+    song: SongItem,
+    initialRequestId: Long,
+    requests: SharedFlow<QueuePlaybackRequest>,
+    currentSong: StateFlow<SongItem?>,
+    isPlaying: Flow<Boolean>,
+    transitionPending: StateFlow<Boolean>,
+    latestRequestId: () -> Long,
+    isCurrentSession: () -> Boolean,
+    playMix: (SongItem) -> Unit,
+) {
+    var unrelatedSelection = false
+    combine(requests, currentSong, isPlaying, transitionPending) { request, current, playing, pending ->
+        AutomotiveRadioSeedState(request, current?.id, playing, pending)
+    }.first { state ->
+        when {
+            state.request.requestId <= initialRequestId -> {
+                false
+            }
+
+            state.request.song.id != song.id -> {
+                unrelatedSelection = true
+                true
+            }
+
+            else -> {
+                state.currentSongId == song.id && state.playing && !state.transitionPending
+            }
+        }
+    }
+    // A seek or resume can supersede the seed request while it is still resolving;
+    // follow the newest request instead of the one that started the wait.
+    val newest = requests.replayCache.lastOrNull()?.takeIf { it.requestId > initialRequestId } ?: return
+    if (unrelatedSelection || newest.song.id != song.id || newest.requestId != latestRequestId() || !isCurrentSession()) return
+    currentSong.value?.let(playMix)
 }
