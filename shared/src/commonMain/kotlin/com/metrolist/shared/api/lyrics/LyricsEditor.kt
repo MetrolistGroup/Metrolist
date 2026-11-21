@@ -150,7 +150,8 @@ class LyricsEditor(
 
     fun timestamp(positionMs: Long) {
         if (current.text.isEmpty()) {
-            edit("[${editorTimestamp(positionMs.coerceIn(0, MAX_TIME_MS))}] ", 0)
+            val line = "[${editorTimestamp(positionMs.coerceIn(0, MAX_TIME_MS))}] "
+            edit(line, line.length)
             return
         }
         val rows = current.text.split('\n').toMutableList()
