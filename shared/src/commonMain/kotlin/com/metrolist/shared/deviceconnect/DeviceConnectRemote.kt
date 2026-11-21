@@ -740,6 +740,7 @@ class DeviceConnectRemote(
             val target = port ?: return commandError(sender, DcSyncError.UNAVAILABLE)
             target.setVolume(playback.volume)
         }
+        if (command.action == DcPlaybackAction.REPLACE_QUEUE && command.explicitRadioQueue) port?.onExplicitRadioRequest()
         canonical = updated
         publishState()
         if (command.action != DcPlaybackAction.VOLUME) applyCanonical(updated, seek = seek)

@@ -112,6 +112,8 @@ data class DcSyncState(
 )
 
 interface DeviceConnectPlaybackPort {
+    fun onExplicitRadioRequest() = Unit
+
     val canStartDefaultPlayback: Boolean get() = true
 
     suspend fun snapshot(): DcLocalPlaybackState

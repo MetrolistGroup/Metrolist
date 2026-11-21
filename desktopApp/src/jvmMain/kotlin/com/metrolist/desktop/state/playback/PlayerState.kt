@@ -511,9 +511,14 @@ object PlayerState {
     internal var externalReportingEnabled = true
     private val syncSession by lazy { DesktopDeviceConnectSession(queue) { deviceConnect } }
 
+    @Volatile private var pendingExplicitRadioRequest = false
     private var controllerPlayback: DcLocalPlaybackState? = null
     private val deviceConnectPlayback =
         object : DeviceConnectPlaybackPort {
+            override fun onExplicitRadioRequest() {
+                pendingExplicitRadioRequest = true
+            }
+
             override val canStartDefaultPlayback: Boolean get() = castManager.state.value.status == CastConnectionStatus.DISCONNECTED
 
             override suspend fun snapshot(): DcLocalPlaybackState =
@@ -2306,7 +2311,9 @@ object PlayerState {
         val state = snapshot.playback
         val queueIdentity = Triple(snapshot.sessionId, snapshot.queueRevision, snapshot.queueStateId)
         val startsExplicitRadio =
-            state.explicitRadioQueue && state.queue.displayedItems.size == 1 && appliedDeviceQueue != queueIdentity
+            state.explicitRadioQueue && state.queue.displayedItems.size == 1 &&
+                (pendingExplicitRadioRequest || !syncSession.explicitRadioQueue)
+        pendingExplicitRadioRequest = false
         val reuseInitialTrack =
             syncSession.sessionId == null && !deviceConnect.isFollowing &&
                 deviceConnectCanReusePlayback(
