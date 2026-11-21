@@ -130,9 +130,13 @@ class ParametricEqualizer(
             var lastGain = 1.0
             while (frameStart < count) {
                 val frameEnd = minOf(frameStart + channelCount, count)
-                var peak = 0
-                for (i in frameStart until frameEnd) peak = maxOf(peak, abs(samples[i].toInt()))
-                val gain = limiterGain(peak / 32768.0, 1.0)
+                var peak = 0.0
+                for (i in frameStart until frameEnd) {
+                    val s = softClip(samples[i] / 32768.0)
+                    peak = maxOf(peak, abs(s))
+                    samples[i] = (s * 32768.0).coerceIn(-32768.0, 32767.0).roundToInt().toShort()
+                }
+                val gain = limiterGain(peak, 1.0)
                 lastGain = gain
                 if (gain != 1.0) {
                     for (i in frameStart until frameEnd) samples[i] = (samples[i] * gain).roundToInt().toShort()
@@ -164,7 +168,11 @@ class ParametricEqualizer(
             while (frameStart < count) {
                 val frameEnd = minOf(frameStart + channelCount, count)
                 var peak = 0.0
-                for (i in frameStart until frameEnd) peak = maxOf(peak, abs(samples[i].toDouble()))
+                for (i in frameStart until frameEnd) {
+                    val s = softClip(samples[i].toDouble())
+                    peak = maxOf(peak, abs(s))
+                    samples[i] = s.toFloat()
+                }
                 val gain = limiterGain(peak, 1.0)
                 lastGain = gain
                 if (gain != 1.0 || !(peak <= 1.0)) {
@@ -225,19 +233,25 @@ class ParametricEqualizer(
         outputGain: Double,
     ) {
         var frameStart = 0
-        var lastGain = outputGain
+        var lastGain = 1.0
         while (frameStart < count) {
             val frameEnd = minOf(frameStart + channelCount, count)
             var peak = 0.0
-            for (i in frameStart until frameEnd) peak = maxOf(peak, abs(processingBuffer[i]))
-            val gain = limiterGain(peak, outputGain)
-            lastGain = gain
             for (i in frameStart until frameEnd) {
-                processingBuffer[i] = softClip(processingBuffer[i] * gain)
+                val saturated = softClip(processingBuffer[i] * outputGain)
+                processingBuffer[i] = saturated
+                peak = maxOf(peak, abs(saturated))
+            }
+            val gain = limiterGain(peak, 1.0)
+            lastGain = gain
+            if (gain != 1.0) {
+                for (i in frameStart until frameEnd) {
+                    processingBuffer[i] = (processingBuffer[i] * gain).coerceIn(-1.0, 1.0)
+                }
             }
             frameStart = frameEnd
         }
-        gainReductionDb = -20.0 * log10(lastGain / outputGain)
+        gainReductionDb = -20.0 * log10(lastGain)
     }
 
     private fun softClip(sample: Double): Double {
