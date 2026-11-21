@@ -149,7 +149,7 @@ internal class DesktopDeviceConnectSession(
                 indices = indices,
                 advanceCurrentToSuccessor = true,
                 successorIndex = successorIndex,
-                expectedTrackRevision = trackRevision,
+                expectedTrackRevision = sync.trackRevision,
             ),
             expectedQueueRevision = revision,
             expectedQueue = expectedQueue,
