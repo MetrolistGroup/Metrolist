@@ -573,7 +573,7 @@
     <string name="lyrics_timing_line_synced">Sincronizate</string>
     <string name="lyrics_timing_word_synced">Silabă</string>
     <string name="lyrics_providers_loading">Se caută furnizori de versuri…</string>
-    <string name="use_rounded_rect_play_button">Button de redare cu colțuri rotunjite</string>
+    <string name="use_rounded_rect_play_button">Buton de redare cu colțuri rotunjite</string>
     <string name="artwork">Coperte de album</string>
     <string name="updates_title">Actualizare aplicație</string>
     <string name="updates_check">Verifică pentru actualizări</string>
@@ -681,7 +681,7 @@
     <string name="could_not_queue_download">Nu s-a putut adăuga descărcarea în coadă</string>
     <string name="deepl_api_key">Cheie API DeepL</string>
     <string name="delete_all_recent_from_searches_question">Ștergi toate melodiile din căutările recente?</string>
-    <string name="delete_all_recent_searches_question">Ștergeți toate căutările recente?</string>
+    <string name="delete_all_recent_searches_question">Ștergi toate căutările recente?</string>
     <string name="delete_downloaded_audio">Șterge audio descărcat</string>
     <string name="delete_downloaded_episodes">Șterge episoadele descărcate</string>
     <string name="delete_failed">Ștergere eșuată</string>
@@ -696,7 +696,7 @@
     <string name="dislike_song">Nu îmi place melodia</string>
     <string name="done">Gata</string>
     <string name="download_not_found">Descărcarea nu a fost găsită</string>
-    <string name="drag_to_reorder">Trageți pentru a reordona</string>
+    <string name="drag_to_reorder">Trage pentru a reordona</string>
     <string name="duplicate_song">Melodie duplicată</string>
     <string name="duration">Durată</string>
     <string name="edit_song_description">Editează titlul și artistul melodiei</string>
@@ -2697,6 +2697,8 @@
     <string name="slider_standard_buffered">Standard cu buffer</string>
     <string name="hide_playlist_recommendations">Ascunde recomandările pentru playlist</string>
     <string name="hide_playlist_recommendations_desc">Ascunde melodiile recomandate afișate sub playlisturi</string>
-    <string name="updates_nightly_builds_desc"></string>
-    <string name="updates_nightly_builds"></string>
+    <string name="updates_nightly_builds_desc">Obține o versiune nouă după fiecare modificare. Versiunile nightly pot fi instabile.</string>
+    <string name="updates_nightly_builds">Versiuni nightly</string>
+    <string name="updates_force_install">Instalează oricum</string>
+    <string name="ai_api_key_optional">Opțional, modelele gratuite funcționează fără cheie</string>
 </resources>
