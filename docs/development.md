@@ -325,7 +325,7 @@ LyricsPlus and Zemer are not lookup providers. Stored provider settings drop the
 
 Each candidate includes cached translations and dictionary-free romanization before display. When romanization dictionary preparation is needed and nothing is displayed, plain lyrics publish first. Enrichment replaces only the displayed entries and keeps source timestamps. Cancelled requests and late enrichment cannot overwrite newer results. Songwriter lookups run independently.
 
-The shared player keeps empty results loading until the request releases its deduplication key. Refetch bypasses the saved result; empty or failed refreshes keep the displayed lyrics. Player captions request lyrics when enabled, but hidden mobile players do not. Next-song prefetch requires full lyrics or subtitles.
+The shared player keeps empty results loading until the request releases its deduplication key. In the **Refetch** menu, **Automatic** bypasses the saved provider result and uses the configured lookup. Picking a provider searches only that provider and shows its candidates in the existing source picker. Empty or failed refreshes keep the displayed lyrics. Player captions request lyrics when enabled, but hidden mobile players do not. Next-song prefetch requires full lyrics or subtitles.
 
 ### Timing
 
