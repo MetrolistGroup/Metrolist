@@ -2648,4 +2648,9 @@
     <string name="matugen_colors">Culori Matugen</string>
     <string name="search_online_short">Online</string>
     <string name="lyrics_search_online_query">%1$s %2$s versuri</string>
+    <string name="devtools_playback_log_title">Jurnal de evenimente al aplicației</string>
+    <string name="devtools_playback_log_count">%1$d evenimente capturate</string>
+    <string name="devtools_playback_log_cleared">Jurnalul aplicației a fost șters</string>
+    <string name="devtools_playback_log_export_failed">Nu s-a putut exporta jurnalul aplicației</string>
+    <string name="devtools_playback_log_share_title">Exportă jurnalul aplicației</string>
 </resources>
