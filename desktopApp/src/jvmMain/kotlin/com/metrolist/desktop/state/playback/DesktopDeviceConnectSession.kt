@@ -79,6 +79,7 @@ internal class DesktopDeviceConnectSession(
     }
 
     fun applyPlayback(playback: DcLocalPlaybackState) {
+        targetCurrentIndex = playback.queue.currentIndex
         val requested = requestedPlaying
         if (requested == null) {
             desiredPlaying = playback.playing
