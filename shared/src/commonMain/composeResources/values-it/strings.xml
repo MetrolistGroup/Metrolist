@@ -525,8 +525,8 @@
     <string name="hide_video_songs_desc">Nascondi la versione video dei brani nella ricerca e nelle playlist</string>
     <string name="hide_non_musical_videos">Nascondi video non musicali</string>
     <string name="hide_non_musical_videos_desc">Mantieni i video musicali ufficiali e nascondi gli altri contenuti video, come vlog e trailer</string>
-    <string name="hide_podcasts">Nascondi i podcast</string>
-    <string name="hide_podcasts_desc">Nascondi i podcast e gli episodi dalla navigazione, ricerca e riproduzione</string>
+    <string name="hide_podcasts">Nascondi podcast</string>
+    <string name="hide_podcasts_desc">Nascondi podcast ed episodi durante l'esplorazione, la ricerca e la riproduzione</string>
     <string name="hide_short_songs">Nascondi i brani brevi</string>
     <string name="hide_short_songs_desc">Nascondi anteprime, audio degli Shorts e altri brani più brevi della durata impostata</string>
     <string name="minimum_song_duration">Durata minima dei brani</string>
