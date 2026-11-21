@@ -4336,10 +4336,9 @@ object PlayerState {
 
     fun seekRelative(deltaMs: Long) {
         if (isLiveStream) return
-        val newPos =
-            (currentMediaPositionMs() + deltaMs)
-                .coerceIn(0, playbackDuration.value)
-        seekToPosition(newPos)
+        val newPos = (currentMediaPositionMs() + deltaMs).coerceAtLeast(0L)
+        val duration = playbackDuration.value
+        seekToPosition(if (duration > 0L) newPos.coerceAtMost(duration) else newPos)
     }
 
     internal fun currentMediaPositionMs(): Long =
