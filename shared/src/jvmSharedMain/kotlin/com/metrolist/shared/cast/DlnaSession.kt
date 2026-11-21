@@ -281,7 +281,7 @@ internal class DlnaSession(
             val isBuffering = transportState == "TRANSITIONING"
             normalizeSonosPlayMode()
             if (pollGeneration != mediaGeneration || pollSeekGeneration != seekGeneration) return@synchronized
-            if (trackUri != null && lastPlayingTrackUri != null && trackUri != lastPlayingTrackUri) {
+            if (!trackUri.isNullOrEmpty() && lastPlayingTrackUri != null && trackUri != lastPlayingTrackUri) {
                 restartPending = false
                 lastPlayingPositionMs = null
                 lastPlayingTrackUri = trackUri
