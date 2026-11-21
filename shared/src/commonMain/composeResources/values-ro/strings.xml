@@ -730,7 +730,7 @@
     <string name="history_no_search_results">Niciun rezultat în istoric pentru căutarea ta</string>
     <string name="history_refresh">Reîmprospătează istoricul</string>
     <string name="history_remote_delete_unavailable">Ștergerea de la distanță nu este disponibilă până când acest element nu s-a sincronizat de pe YouTube cât timp ești autentificat.</string>
-    <string name="history_remove_item_message">Șterge %1$s din istoricul tău de ascultare.</string>
+    <string name="history_remove_item_message">Elimină %1$s din istoricul tău de ascultare.</string>
     <string name="history_sort_listening_time">Timp de ascultare</string>
     <string name="home_load_item_failed">Nu s-a putut încărca %1$s</string>
     <string name="hours_and_minutes" translatable="false">%1$s %2$s</string>
@@ -2701,10 +2701,10 @@
     <string name="updates_nightly_builds">Versiuni nightly</string>
     <string name="updates_force_install">Instalează oricum</string>
     <string name="ai_api_key_optional">Opțional, modelele gratuite funcționează fără o cheie</string>
-    <string name="lyrics_romanization_show_romanization"></string>
-    <string name="lyrics_romanization_larger_text"></string>
-    <string name="lyrics_romanization_larger_text_description"></string>
-    <string name="lyrics_romanization_show_original_description"></string>
-    <string name="lyrics_romanization_show_original"></string>
-    <string name="lyrics_romanization_show_romanization_description"></string>
+    <string name="lyrics_romanization_show_romanization">Afișează romanizarea</string>
+    <string name="lyrics_romanization_larger_text">Text mai mare: romanizare sau versuri</string>
+    <string name="lyrics_romanization_larger_text_description">Alege dacă versurile sau romanizarea apare mai mare când amândouă sunt afișate.</string>
+    <string name="lyrics_romanization_show_original_description">Afișează versul original dedesubt</string>
+    <string name="lyrics_romanization_show_original">Afișează originalul</string>
+    <string name="lyrics_romanization_show_romanization_description">Afișează romanizarea sub versuri</string>
 </resources>
