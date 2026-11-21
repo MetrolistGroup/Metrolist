@@ -434,7 +434,7 @@ internal class LinuxPhysicalKeyCapture : PlatformPhysicalKeyCapture {
 
         // XRecord reports data lengths in 4-byte units; core events occupy 32 bytes.
         const val MIN_DATUM_LENGTH = 8L
-        const val WIRE_EVENT_TIME_OFFSET = 8
+        const val WIRE_EVENT_TIME_OFFSET = 4
         const val MODIFIER_COUNT = 8
         const val MAX_KEYS_PER_MODIFIER = 255
         const val KEYSYMS_PER_KEYCODE = 4
