@@ -11,7 +11,7 @@
         <item quantity="many">%1$d selezionati</item>
         <item quantity="other">%1$d selezionati</item>
     </plurals>
-    <string name="history">Cronologia d'ascolto</string>
+    <string name="history">Cronologia di ascolto</string>
     <string name="mood_and_genres">Mood e generi</string>
     <string name="account">Account</string>
     <string name="quick_picks">Scelte rapide</string>
@@ -215,7 +215,7 @@
     <string name="animated_cover_resolution_original">Originale</string>
     <string name="enable_animated_covers">Copertine animate</string>
     <string name="enable_animated_covers_desc">Mostra le copertine animate da Apple Music, quando disponibili. Richiede più spazio di archiviazione e dati mobili.</string>
-    <string name="pause_listen_history">Sospendi cronologia ascolti</string>
+    <string name="pause_listen_history">Sospendi cronologia di ascolto</string>
     <string name="queue_youtube_history_when_offline">Metti in coda la cronologia di YouTube offline</string>
     <string name="queue_youtube_history_when_offline_desc">L'app salva i dati di ascolto sul dispositivo e riprova a inviarli dopo la riconnessione mentre è in esecuzione. Non registra gli ascolti quando la cronologia è sospesa.</string>
     <string name="search_history">Cronologia ricerche</string>
@@ -658,8 +658,8 @@
     <string name="choose_lyrics">Scegli il provider del testo</string>
     <string name="clear_recent_from_searches_question">Cancellare i brani dalle ricerche recenti?</string>
     <string name="clear_recent_searches_question">Cancellare le ricerche recenti?</string>
-    <string name="clear_recognition_history_description">Tutti i brani riconosciuti verranno cancellati dalla cronologia.</string>
-    <string name="clear_recognition_history_question">Cancellare la cronologia?</string>
+    <string name="clear_recognition_history_description">Tutti i brani riconosciuti verranno cancellati da questo dispositivo.</string>
+    <string name="clear_recognition_history_question">Cancellare la cronologia dei riconoscimenti?</string>
     <string name="clear_section">Cancella %1$s</string>
     <string name="clear_selection">Cancella selezione</string>
     <string name="client">Client</string>
@@ -708,7 +708,7 @@
     <string name="import_error_unsupported_playlist_entries">Questa playlist contiene file locali o link diretti a cui Android non può accedere. Importa una playlist contenente link di YouTube, oppure scegli i file locali sul computer.</string>
     <string name="import_error_local_files_require_local_playlist">I file audio locali possono essere importati solo in una playlist locale.</string>
     <string name="import_error_file_read_failed">Impossibile leggere il file della playlist. Selezionalo di nuovo e concedi l’accesso ai file.</string>
-    <string name="history_deleting_title">Eliminando l'elemento dalla cronologia</string>
+    <string name="history_deleting_title">Eliminazione dell'elemento dalla cronologia</string>
     <string name="enter_fullscreen" tools:ignore="MissingTranslation">Modalità schermo intero</string>
     <string name="export_format_csv_description">Elenco brani per i fogli di calcolo</string>
     <string name="export_saved">Esportazione salvata</string>
@@ -724,7 +724,7 @@
     <string name="full_screen">Schermo intero</string>
     <string name="enter_pip" tools:ignore="MissingTranslation">Modalità picture-in-picture</string>
     <string name="history_also_delete_from_youtube">Lo elimina anche da YouTube</string>
-    <string name="history_delete_item_title">Eliminarlo dalla cronologia?</string>
+    <string name="history_delete_item_title">Eliminare l'elemento dalla cronologia?</string>
     <string name="history_deleting_message">Eliminazione dell'elemento in corso…</string>
     <string name="lyrics_source_preference">Fonti manuali dei testi</string>
     <string name="expanded">Espanso</string>
@@ -752,7 +752,7 @@
     <string name="history_sort_listening_time">Tempo di ascolto</string>
     <string name="home_load_item_failed">Impossibile caricare %1$s</string>
     <string name="language_ukrainian">Ucraino</string>
-    <string name="history_remove_item_message">Rimuovi %1$s dalla cronologia d'ascolto.</string>
+    <string name="history_remove_item_message">Rimuovi %1$s dalla cronologia di ascolto.</string>
     <string name="library_uploaded_songs">I tuoi brani caricati</string>
     <string name="device_connect_pair">Associa</string>
     <string name="device_connect_paired">Associati</string>
@@ -806,7 +806,7 @@
     <string name="local_file">File locale</string>
     <string name="lyrics_romanization_detect_cyrillic_per_line_description">Utile per brani che mischiano diverse lingue cirilliche</string>
     <string name="play_playlist">Riproduci playlist</string>
-    <string name="recognition_microphone_permission_not_granted">Accesso al microfono negato</string>
+    <string name="recognition_microphone_permission_not_granted">Autorizzazione per il microfono non concessa</string>
     <string name="remove_recent_search_question">Rimuovere la ricerca recente?</string>
     <string name="required">Obbligatorio</string>
     <string name="settings_solid">Tinta unita</string>
@@ -847,7 +847,7 @@
     <string name="podcast">Podcast</string>
     <string name="queued_song">%1$s in coda</string>
     <string name="recent_from_searches">Dalle ricerche recenti</string>
-    <string name="recognition_no_match_try_clearer_section">Nessuna corrispondenza. Prova con una parte più nitida o a volume più alto.</string>
+    <string name="recognition_no_match_try_clearer_section">Nessuna corrispondenza. Riprova con una parte più chiara o a volume più alto.</string>
     <string name="recognition_too_many_requests">Troppe richieste di riconoscimento</string>
     <string name="recognize_nearby_music">Riconosci musica nelle vicinanze</string>
     <string name="recommended">Consigliato</string>
@@ -932,7 +932,7 @@
         <item quantity="many">Aggiunti %1$d brani a %2$s</item>
         <item quantity="other">Aggiunti %1$d brani a %2$s</item>
     </plurals>
-    <string name="onboarding_migration_complete_description">Il tuo account, le playlist, la cronologia, i preferiti e i dati della libreria sono pronti in questa versione di Metrolist.</string>
+    <string name="onboarding_migration_complete_description">Il tuo account, le playlist, la cronologia, i brani che ti piacciono e i dati della libreria sono pronti in questa versione di Metrolist.</string>
     <string name="statistics_play_count_duration">%1$s · %2$s</string>
     <string name="stored_remove_selected_message">I file audio salvati selezionati verranno rimossi.</string>
     <string name="suggested_to_host">Suggerito all\u0027host</string>
@@ -1003,7 +1003,7 @@
     <string name="removed_from_library">Rimossi dalla libreria</string>
     <string name="song_details">Dettagli brano</string>
     <string name="unlike">Non mi piace</string>
-    <string name="history_empty">Cronologia d'ascolto vuota</string>
+    <string name="history_empty">Nessuna cronologia di ascolto ancora disponibile</string>
     <plurals name="history_hours_ago">
         <item quantity="one">%1$d h fa</item>
         <item quantity="many">%1$d h fa</item>
@@ -1060,8 +1060,8 @@
         <item quantity="other">%1$d min fa</item>
     </plurals>
     <string name="history_duration">Durata cronologia</string>
-    <string name="recognition_history">Cronologia brani riconosciuti</string>
-    <string name="onboarding_migration_description">È stato trovato un database autonomo di Metrolist. Importa playlist, cronologia, preferiti e dati della libreria direttamente qui. Potrai recuperare il database originale in caso di errore.</string>
+    <string name="recognition_history">Cronologia dei riconoscimenti</string>
+    <string name="onboarding_migration_description">Abbiamo trovato un database autonomo di Metrolist. Migra sul posto playlist, cronologia, brani che ti piacciono e dati della libreria. Se la migrazione non riesce, puoi ripristinare il database originale.</string>
     <string name="menu_history">Cronologia</string>
     <string name="remove_from_search_history">Rimuovi %1$s dalla cronologia ricerche</string>
     <string name="top_playlist_subtitle">In base alla tua cronologia di ascolto</string>
@@ -1252,7 +1252,7 @@
     <string name="ai_deepl_formality_less">Meno formale</string>
     <string name="recognize_music">Riconosci musica</string>
     <string name="listening">In ascolto…</string>
-    <string name="recognition_notification_no_match">Nessuna corrispondenza</string>
+    <string name="recognition_notification_no_match">Nessuna corrispondenza trovata</string>
     <string name="continue_action">Continua</string>
     <string name="discord_button_1">Pulsante 1</string>
     <string name="discord_button_2">Pulsante 2</string>
@@ -1835,7 +1835,7 @@
     <string name="widget_recognizer_notification_text">Registrazione dell’audio per identificare il brano…</string>
     <string name="history_playlist_weekly">Brani più ascoltati della settimana</string>
     <string name="settings_history_playlists">Playlist della cronologia di ascolto</string>
-    <string name="settings_history_playlists_desc">Crea playlist settimanali e mensili dalla tua cronologia d'ascolto. Si aggiornano automaticamente e vengono visualizzate nella libreria.</string>
+    <string name="settings_history_playlists_desc">Crea playlist settimanali e mensili dalla tua cronologia di ascolto. Si aggiornano automaticamente e vengono visualizzate nella libreria.</string>
     <string name="history_playlist_monthly">Brani più ascoltati del mese</string>
     <plurals name="downloads_failed_banner">
         <item quantity="one">%1$d download non riuscito</item>
@@ -2026,7 +2026,7 @@
     <string name="listen_together_enter_code_hint">Chiedi al tuo amico il codice da 8 caratteri.</string>
     <string name="listen_together_room">Stanza</string>
     <string name="listen_together_now_playing">In riproduzione per tutti</string>
-    <string name="recognition_network_error">Impossibile collegarsi al servizio di riconoscimento. Controlla la tua connessione e riprova.</string>
+    <string name="recognition_network_error">Impossibile raggiungere il servizio di riconoscimento. Controlla la connessione Internet e riprova.</string>
     <string name="seek_seconds_addup">Avanzamento progressivo</string>
     <string name="seek_seconds_addup_desc">Incrementa il tempo di salto ad ogni tocco consecutivo</string>
     <string name="pause_music_when_media_is_muted">Metti in pausa quando l'audio è disattivato</string>
@@ -2048,7 +2048,7 @@
     <string name="audio_track_playback_params_description">Usa AudioTrack di Android per la velocità di riproduzione. Per le modifiche dell'intonazione, l'app passa automaticamente all'elaborazione software. Richiede il riavvio dell'app.</string>
     <string name="no_other_devices_nearby">Nessun dispositivo nelle vicinanze</string>
     <string name="recognition_match_found">Corrispondenza trovata</string>
-    <string name="recognition_listening_hint">Mantieni il telefono vicino alla musica</string>
+    <string name="recognition_listening_hint">Avvicina il telefono alla musica</string>
     <string name="no_recognized_songs_hint">I brani che identifichi verranno mostrati qui.</string>
     <string name="recognition_history_earlier">Meno recenti</string>
     <string name="recognition_no_match_message">Non abbiamo potuto riconoscere questo brano.</string>
@@ -2135,7 +2135,7 @@
     <string name="onboarding_continue_without_migration">Continua con una libreria vuota</string>
     <string name="onboarding_migration_recovery_description">Puoi riprovare o continuare con una libreria vuota. Una copia di recupero del database originale rimarrà su questo dispositivo. Potrai ripristinare un backup dopo la configurazione.</string>
     <string name="onboarding_migration_failed">Impossibile preparare la libreria. I tuoi dati originali sono stati conservati.</string>
-    <string name="onboarding_library_migrated_description">Le tue playlist, la cronologia, i brani piaciuti e i dati della libreria sono pronti in questa versione di Metrolist.</string>
+    <string name="onboarding_library_migrated_description">Le tue playlist, la cronologia, i brani che ti piacciono e i dati della libreria sono pronti in questa versione di Metrolist.</string>
     <string name="onboarding_notifications_denied">Le notifiche sono disattivate. Puoi attivarle in seguito nelle impostazioni dell'app di Android oppure scegliere No per continuare.</string>
     <string name="mini_player_video_prerequisite">Attiva prima Riproduci video musicali nelle impostazioni di riproduzione</string>
     <string name="download_folder_access_failed">Impossibile salvare l'accesso a questa cartella. Scegli una cartella con accesso in lettura e scrittura.</string>
@@ -2146,7 +2146,7 @@
     <string name="download_error_generic">Download non riuscito. Riprova.</string>
     <string name="amazon_music_marketplace">Scegli il tuo mercato Amazon Music</string>
     <string name="import_cancelled_partial">Importazione annullata. Destinazione: %2$s. Brani salvati: almeno %1$d. Per continuare, avvia di nuovo l'importazione e scegli questa destinazione.</string>
-    <string name="recognition_history_save_failed">Impossibile salvare questo brano nella cronologia dei brani riconosciuti.</string>
+    <string name="recognition_history_save_failed">Impossibile salvare questo brano nella cronologia di riconoscimento.</string>
     <string name="device_connect_server_failed">Impossibile avviare Device Connect. Controlla la rete e riprova.</string>
     <string name="device_connect_discovery_failed">Ricerca dei dispositivi non riuscita. Controlla l'accesso alla rete locale e ripeti la scansione.</string>
     <string name="home_offline_empty">Sei offline e non ci sono contenuti salvati per la schermata Home. Connettiti a Internet e aggiorna per caricare i consigli.</string>
@@ -2187,7 +2187,7 @@
         <item quantity="many">%1$d riproduzioni</item>
         <item quantity="other">%1$d riproduzioni</item>
     </plurals>
-    <string name="queue_youtube_history_paused_desc">Riattiva la cronologia di ascolto per accodare le riproduzioni effettuate offline</string>
+    <string name="queue_youtube_history_paused_desc">Riprendi la cronologia di ascolto per mettere in coda le riproduzioni quando sei offline</string>
     <string name="search_online_failed">Impossibile cercare online. Controlla la connessione e riprova.</string>
     <string name="search_load_more_failed">Impossibile caricare altri risultati.</string>
     <string name="discord_error_gateway_configuration">Discord ha rifiutato la configurazione della connessione. Aggiorna Metrolist prima di riprovare.</string>
