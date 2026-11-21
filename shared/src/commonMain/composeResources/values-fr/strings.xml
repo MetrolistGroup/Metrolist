@@ -2614,4 +2614,19 @@
     <string name="recently_played">Écoutés récemment</string>
     <string name="search_online_short">En ligne</string>
     <string name="matugen_colors_description"></string>
+    <string name="add_to_library">Ajouter à la bibliothèque</string>
+    <string name="automatic_backup_daily">Quotidien</string>
+    <string name="automatic_backup_weekly">Hebdomadaire</string>
+    <string name="automatic_backup_monthly">Mensuel</string>
+    <string name="automatic_backup_frequency">Fréquence de sauvegarde</string>
+    <string name="automatic_backup">Sauvegarde automatique</string>
+    <string name="automatic_backup_restore">Restaurer une sauvegarde automatique</string>
+    <string name="automatic_backup_restore_empty">Aucune sauvegarde automatique n'est disponible.</string>
+    <string name="automatic_backup_restore_desc">Sélectionnez une sauvegarde automatique enregistrée à restaurer.</string>
+    <string name="foreign_import_error_generic">L'importation de la sauvegarde a échoué</string>
+    <string name="updates_nightly_builds">Versions de développement</string>
+    <string name="updates_force_install">Installer quand même</string>
+    <string name="ai_api_key_optional">Optionnel, les modèles gratuits fonctionnent sans clé</string>
+    <string name="lastfm_session_expired_title">Connexion Last.fm expiré</string>
+    <string name="lastfm_session_expired">Reconnectez-vous à Last.fm</string>
 </resources>
