@@ -518,6 +518,7 @@ class MusicService :
                 onRemoteSeek = ::seekCastTo,
                 onRemoteVolumeChange = ::setCastVolume,
                 onQueueChanged = ::synchronizeMediaSessionQueue,
+                onQueueCleared = ::clearPersistedPlaybackState,
                 extendPlaylistBeforeSkip = ::extendPlaylistBeforeSkip,
                 mediaItemResolver = automotiveLibrary::resolveCachedSong,
                 automotivePlaybackRequestGate = automotivePlaybackRequestGate,
@@ -2623,7 +2624,11 @@ class MusicService :
     private fun savePlaybackState() {
         if (!playbackPersistenceLifecycle.restoring) queueCoordinator.saveShuffleMode()
         if (!playbackPersistenceLifecycle.canSave(Settings.shared.persistentQueue)) return
-        val state = buildPersistPlayerState()
+        if (!Settings.shared.persistentQueue) {
+            clearPersistedPlaybackState()
+            return
+        }
+        val state = buildPersistPlayerState() ?: return
         if (!shouldPersistPlaybackState(lastPersistenceState, state)) return
         lastPersistenceState = state
         playbackPersistenceRequests.trySend(playbackPersistenceWriter.request(state))
@@ -2632,7 +2637,22 @@ class MusicService :
     private fun saveFinalPlaybackState(): Job? {
         if (!playbackPersistenceLifecycle.restoring) queueCoordinator.saveShuffleMode()
         if (!playbackPersistenceLifecycle.canSave(Settings.shared.persistentQueue)) return finalPlaybackPersistence
-        val request = playbackPersistenceWriter.request(buildPersistPlayerState())
+        if (!Settings.shared.persistentQueue) return clearFinalPersistedPlaybackState()
+        val state = buildPersistPlayerState() ?: return finalPlaybackPersistence
+        return launchFinalPersistence(playbackPersistenceWriter.request(state))
+    }
+
+    internal fun clearPersistedPlaybackState() {
+        lastPersistenceState = null
+        playbackPersistenceRequests.trySend(playbackPersistenceWriter.requestClear())
+    }
+
+    private fun clearFinalPersistedPlaybackState(): Job? {
+        lastPersistenceState = null
+        return launchFinalPersistence(playbackPersistenceWriter.requestClear())
+    }
+
+    private fun launchFinalPersistence(request: PlaybackPersistenceWriter.Request): Job? {
         finalPlaybackPersistence =
             CoroutineScope(Dispatchers.IO).launch {
                 runCatching { playbackPersistenceWriter.write(request) }

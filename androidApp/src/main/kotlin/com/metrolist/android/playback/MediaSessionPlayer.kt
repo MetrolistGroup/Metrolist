@@ -345,6 +345,7 @@ class MediaSessionPlayer(
     private val onRemoteSeek: (Long) -> Unit = {},
     private val onRemoteVolumeChange: (Float) -> Unit = {},
     private val onQueueChanged: (replacesQueue: Boolean) -> Unit = {},
+    private val onQueueCleared: () -> Unit = {},
     private val artworkUri: (String?) -> Uri? = { it?.let(::canonicalArtworkUrl)?.toUri() },
     private val mediaItemResolver: (MediaItem) -> SongItem? = { null },
     currentArtworkUri: (String?) -> Uri? = artworkUri,
@@ -1197,15 +1198,18 @@ class MediaSessionPlayer(
     private inline fun mutateQueueItems(
         replacesQueue: Boolean = false,
         mutation: () -> Unit,
-    ) {
+    ): Boolean {
         val previousState = musicPlayer.queueState.value
         mutation()
         val currentState = musicPlayer.queueState.value
-        if (currentState == previousState) return
+        if (currentState == previousState) return false
         onQueueChanged(replacesQueue || previousState.entries.isEmpty())
-        if (previousState.entries.isNotEmpty() && currentState.entries.isEmpty() && remotePlaybackState?.value?.isConnected == true) {
-            onRemoteStop()
+        val cleared = previousState.entries.isNotEmpty() && currentState.entries.isEmpty()
+        if (cleared) {
+            onQueueCleared()
+            if (remotePlaybackState?.value?.isConnected == true) onRemoteStop()
         }
+        return cleared
     }
 
     override fun moveMediaItem(
@@ -1265,13 +1269,18 @@ class MediaSessionPlayer(
 
     override fun clearMediaItems() {
         if (isPlaybackLockedProvider()) return
-        if (interceptDeviceConnect(DcPlaybackCommand(DcPlaybackAction.CLEAR))) return
-        mutateQueueItems {
-            musicPlayer.removeQueueItems(
-                musicPlayer.songQueue.value.indices
-                    .toSet(),
-            )
+        if (interceptDeviceConnect(DcPlaybackCommand(DcPlaybackAction.CLEAR))) {
+            onQueueCleared()
+            return
         }
+        val cleared =
+            mutateQueueItems {
+                musicPlayer.removeQueueItems(
+                    musicPlayer.songQueue.value.indices
+                        .toSet(),
+                )
+            }
+        if (!cleared) onQueueCleared()
         shuffleModeEnabled.value = false
     }
 
