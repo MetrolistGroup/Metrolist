@@ -111,11 +111,11 @@ internal fun moveAudioToDirectory(
         if (preferred.createNewFile()) {
             preferred
         } else {
-            File.createTempFile(
-                "${preferred.nameWithoutExtension}-".padEnd(3, '_'),
-                ".${preferred.extension}",
-                directory,
-            )
+            val suffix = ".${preferred.extension}"
+            // File.createTempFile can append up to 20 decimal digits for its random name.
+            val collisionPrefixBytes = 255 - suffix.encodeToByteArray().size - 1 - 20
+            val collisionBase = preferred.nameWithoutExtension.boundedDownloadBaseName(collisionPrefixBytes)
+            File.createTempFile("$collisionBase-".padEnd(3, '_'), suffix, directory)
         }
     try {
         if (!source.renameTo(target)) {
@@ -129,15 +129,41 @@ internal fun moveAudioToDirectory(
     }
 }
 
-internal fun downloadFileBaseName(song: SongItem): String {
-    val artist = song.artists.joinToString(", ") { it.name }.trim()
-    return listOf(artist, song.title.trim())
+internal fun downloadFileBaseName(song: SongItem): String =
+    downloadFileBaseName(song.artists.joinToString(", ") { it.name }.trim(), song.title.trim(), song.id)
+
+internal fun downloadFileBaseName(
+    artist: String,
+    title: String,
+    fallbackId: String,
+): String =
+    listOf(artist, title)
         .filter(String::isNotBlank)
         .joinToString(" - ")
         .replace(Regex("""[\\/:*?\"<>|\p{Cc}]"""), "_")
         .trim(' ', '.')
-        .take(120)
-        .ifBlank { song.id }
+        .boundedDownloadBaseName()
+        .ifBlank { fallbackId }
+
+// The normal basename leaves room for the longest audio extension.
+private fun String.boundedDownloadBaseName(maxBytes: Int = 255 - ".audio".length): String {
+    var end = 0
+    var bytes = 0
+    while (end < length) {
+        val codePoint = codePointAt(end)
+        val charCount = Character.charCount(codePoint)
+        val byteCount =
+            when {
+                codePoint <= 0x7F -> 1
+                codePoint <= 0x7FF -> 2
+                codePoint <= 0xFFFF -> 3
+                else -> 4
+            }
+        if (end + charCount > 120 || bytes + byteCount > maxBytes) break
+        end += charCount
+        bytes += byteCount
+    }
+    return substring(0, end)
 }
 
 internal fun cacheableAudioResource(
@@ -785,14 +811,7 @@ class AudioCacheManager(
                             )
 
                         val extension = extensionForMimeType(mimeType)
-                        val baseName =
-                            listOf(entry.artist, entry.title)
-                                .filter(String::isNotBlank)
-                                .joinToString(" - ")
-                                .replace(Regex("""[\\/:*?\"<>|\p{Cc}]"""), "_")
-                                .trim(' ', '.')
-                                .take(120)
-                                .ifBlank { safeId }
+                        val baseName = downloadFileBaseName(entry.artist, entry.title, safeId)
                         publishStoredAudio(entry, {
                             when {
                                 targetCustom -> {

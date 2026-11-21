@@ -673,11 +673,16 @@ object DownloadManager {
         return resolver.resolveRemote(song.id, hints, resolveAudioQuality(), sourceSong = song, refresh = refresh)
     }
 
+    private var playlistDownloadOwnershipRevision = 0L
+
     fun downloadPlaylist(
         playlistId: String,
         songs: List<SongItem>,
     ) {
-        synchronized(metadataLock) { DownloadedPlaylists.track(playlistId) }
+        synchronized(metadataLock) {
+            DownloadedPlaylists.track(playlistId)
+            playlistDownloadOwnershipRevision++
+        }
         downloadAll(songs)
     }
 
@@ -685,18 +690,48 @@ object DownloadManager {
         playlistId: String,
         songs: List<SongItem>,
     ) {
-        synchronized(metadataLock) { DownloadedPlaylists.stop(playlistId) }
+        synchronized(metadataLock) {
+            DownloadedPlaylists.stop(playlistId)
+            playlistDownloadOwnershipRevision++
+        }
         scope.launch {
-            val retainedIds = retainedPlaylistDownloadIds() ?: return@launch
-            deleteDownloads(songs.map(SongItem::id).filterNot { it in retainedIds })
+            try {
+                repeat(3) {
+                    val (owners, revision) =
+                        synchronized(metadataLock) { DownloadedPlaylists.ids() to playlistDownloadOwnershipRevision }
+                    val retainedIds = retainedPlaylistDownloadIds(owners) ?: return@launch
+                    val ids =
+                        songs
+                            .map(SongItem::id)
+                            .filterNot { it in retainedIds }
+                            .filter(::isValidSongId)
+                            .toSet()
+                    val removed =
+                        withContext(Dispatchers.IO) {
+                            synchronized(metadataLock) {
+                                coroutineContext.ensureActive()
+                                if (playlistDownloadOwnershipRevision != revision || DownloadedPlaylists.ids() != owners) {
+                                    false
+                                } else {
+                                    if (ids.isNotEmpty()) deleteStoredDownloads(ids)
+                                    true
+                                }
+                            }
+                        }
+                    if (removed) return@launch
+                }
+            } catch (error: CancellationException) {
+                throw error
+            } catch (error: Exception) {
+                AppLogger.error("DownloadManager", "Failed to delete playlist downloads", error)
+            }
         }
     }
 
-    private suspend fun retainedPlaylistDownloadIds(): Set<String>? {
+    private suspend fun retainedPlaylistDownloadIds(owners: Set<String>): Set<String>? {
         val activeDatabase = database ?: return null
         return try {
-            DownloadedPlaylists
-                .ids()
+            owners
                 .flatMap { DownloadedPlaylists.songs(it, activeDatabase) }
                 .mapTo(mutableSetOf(), SongItem::id)
         } catch (error: CancellationException) {

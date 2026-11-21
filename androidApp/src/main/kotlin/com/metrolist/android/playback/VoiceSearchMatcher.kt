@@ -6,6 +6,8 @@ internal object VoiceSearchMatcher {
     const val STRONG_MATCH_THRESHOLD = 0.60
     private val PUNCTUATION_REGEX = Regex("[^\\p{L}\\p{N}\\s]")
     const val FUZZY_THRESHOLD = 0.85
+    private const val UNORDERED_MATCH_SCORE = 0.99
+    private const val MAX_FUZZY_MATCH_SCORE = 0.98
 
     data class ScoredSong(
         val song: SongItem,
@@ -26,13 +28,15 @@ internal object VoiceSearchMatcher {
         artists: List<String> = emptyList(),
     ): Double {
         val queryLower = query.lowercase().trim()
-        val queryTokens = tokenize(queryLower)
-        if (queryTokens.isEmpty()) return 0.0
-        val isTooGeneric = (queryTokens.size == 1 && queryTokens.first().length < 4) || queryLower.length < 5
-        val normalizedTitle = title.lowercase().trim()
-        val titleTokens = tokenize(normalizedTitle)
+        val queryWords = tokenize(queryLower)
+        if (queryWords.isEmpty()) return 0.0
+        val titleWords = tokenize(title)
+        if (titleWords == queryWords) return 1.0
 
-        if (titleTokens == queryTokens || normalizedTitle == queryLower) return 1.0
+        val queryTokens = queryWords.toSet()
+        val titleTokens = titleWords.toSet()
+        if (titleTokens == queryTokens) return UNORDERED_MATCH_SCORE
+        val isTooGeneric = (queryTokens.size == 1 && queryTokens.first().length < 4) || queryLower.length < 5
 
         val remaining = stripArtistTokens(queryTokens, artists)
 
@@ -40,7 +44,7 @@ internal object VoiceSearchMatcher {
         if (titleTokens == remaining) return 0.95
         if (isTooGeneric) return 0.0
 
-        return fuzzyScore(remaining, titleTokens)
+        return fuzzyScore(remaining, titleTokens).coerceAtMost(MAX_FUZZY_MATCH_SCORE)
     }
 
     private fun stripArtistTokens(
@@ -87,12 +91,11 @@ internal object VoiceSearchMatcher {
         }
     }
 
-    internal fun tokenize(text: String): Set<String> =
+    private fun tokenize(text: String): List<String> =
         PUNCTUATION_REGEX
             .replace(text.lowercase(), " ")
             .split(Regex("\\s+"))
             .filter { it.isNotBlank() }
-            .toSet()
 
     /** Uses Jaro-Winkler distance for token similarity. */
     internal fun jaroWinkler(

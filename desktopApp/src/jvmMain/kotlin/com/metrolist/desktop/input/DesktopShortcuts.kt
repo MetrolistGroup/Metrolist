@@ -565,7 +565,7 @@ internal fun handleShortcut(
             true
         }
 
-        keyCodeMatches(keyCode, Key.Minus, AwtKeyEvent.VK_MINUS) -> {
+        isVolumeDecreaseShortcut(keyCode) -> {
             PlayerState.setVolumeLevel((PlayerState.volume - 0.1f).coerceIn(0f, 1f))
             true
         }
@@ -822,6 +822,10 @@ private fun isComposeModalActive(): Boolean =
         UiState.showPrivacySettings ||
         PlayerState.showAddToPlaylistSong != null ||
         PlayerState.showPlayerError
+
+internal fun isVolumeDecreaseShortcut(keyCode: Any): Boolean =
+    keyCodeMatches(keyCode, Key.Minus, AwtKeyEvent.VK_MINUS) ||
+        keyCodeMatches(keyCode, Key.NumPadSubtract, AwtKeyEvent.VK_SUBTRACT)
 
 private fun keyCodeMatches(
     keyCode: Any,

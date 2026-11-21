@@ -2,6 +2,7 @@ package com.metrolist.shared.db
 
 import androidx.room3.RoomRawQuery
 import androidx.room3.useWriterConnection
+import com.metrolist.shared.api.isAlbumBrowseId
 import com.metrolist.shared.db.entities.HistoryStatExclusion
 import com.metrolist.shared.db.entities.toSongItem
 import com.metrolist.shared.model.HistorySortMode
@@ -349,6 +350,8 @@ private fun albumStatistics(
                 latest.thumbnailUrl,
                 plays.sumOf { it.playCount },
                 plays.sumOf { it.playTimeMs },
+                // Foreign backups can carry release IDs that aren't YouTube browse IDs.
+                id = latest.albumId?.takeIf { it.isAlbumBrowseId() || it.startsWith("FEmusic_library_privately_owned_release") },
             )
         }.sortedByDescending { it.playCount }
 }

@@ -75,7 +75,6 @@ Desktop song details use the shared draggable scrollbar when the content exceeds
 
 ## Verification
 
-`MediaMenuPlaybackActionsTest` covers ordered album/playlist playback, artist shuffle, shuffled duplicate occurrences, queue insertion, empty loads, failures and cancellation without a UI harness.
 
 Run affected [platform checks](checks.md#platform-checks). Compile and exercise iOS on macOS. Check each changed host with available and unavailable items, guests, local audio and duplicate queue entries. Compare song, album, artist, playlist, queue and player menus with and without a playing track, including missing album/artist IDs, like/dislike, download progress, alternate sharing and playlist picker dismissal. Test touch, mouse, TV focus, keyboard and screen-reader actions, dismissal, failed loading and native callbacks on the target platform.
 

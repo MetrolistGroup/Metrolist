@@ -100,8 +100,11 @@ class MusicVideoResolver(
 
     private data class TrackLookupKey(
         val videoId: String,
+        val musicVideoType: String?,
         val title: String,
         val artists: List<ArtistTiny>,
+        val canonicalTitle: String?,
+        val canonicalArtists: List<ArtistTiny>?,
         val duration: Long?,
         val endpointParams: String?,
         val session: List<String>,
@@ -254,7 +257,18 @@ class MusicVideoResolver(
     suspend fun resolveMusicTrack(video: SongItem): MusicTrackResult {
         if (!video.canSwitchToAudioTrack) return MusicTrackResult.NotFound
         while (true) {
-            val key = TrackLookupKey(video.id, video.title, video.artists, video.duration, video.endpointParams, trackSession())
+            val key =
+                TrackLookupKey(
+                    video.id,
+                    video.musicVideoType,
+                    video.title,
+                    video.artists,
+                    video.canonicalTitle,
+                    video.canonicalArtists,
+                    video.duration,
+                    video.endpointParams,
+                    trackSession(),
+                )
             val request = CompletableDeferred<MusicTrackResult>()
             val (cached, pending, generation) =
                 cacheMutex.withLock {

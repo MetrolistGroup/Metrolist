@@ -6,12 +6,14 @@ import androidx.compose.runtime.setValue
 import com.metrolist.desktop.state.app.AppState
 import com.metrolist.desktop.state.app.DesktopNavigation
 import com.metrolist.desktop.state.playback.PlayerState
+import com.metrolist.innertubex.InnerTube
 import com.metrolist.shared.db.MusicDatabase
 import com.metrolist.shared.generated.resources.Res
 import com.metrolist.shared.generated.resources.unable_to_load_podcast
 import com.metrolist.shared.model.EpisodeItem
 import com.metrolist.shared.model.PodcastPage
 import com.metrolist.shared.model.toSongItem
+import com.metrolist.shared.state.GlobalYouTube
 import com.metrolist.shared.state.GlobalYouTubeRepository
 import com.metrolist.shared.state.PodcastLibrary
 import com.metrolist.shared.ui.navigation.Screen
@@ -28,6 +30,7 @@ import org.koin.core.context.GlobalContext
 object PodcastState {
     private var loadJob: Job? = null
     private var pager: PodcastPager? = null
+    private var pagerSession: InnerTube.SessionSnapshot? = null
     var selectedPodcastId by mutableStateOf<String?>(null)
     var page by mutableStateOf<PodcastPage?>(null)
     var isLoading by mutableStateOf(false)
@@ -46,6 +49,7 @@ object PodcastState {
         BrowseState.clear()
         loadJob?.cancel()
         pager?.cancel()
+        pagerSession = GlobalYouTube.innerTube.sessionSnapshot()
         val loader = PodcastPager(AppState.scope, GlobalYouTubeRepository.instance.podcastPageLoader(podcastId)).also { pager = it }
         page = null
         isLoading = true
@@ -87,12 +91,14 @@ object PodcastState {
 
     fun playAll() {
         val current = page ?: return
+        val loadedSession = pagerSession
         AppState.scope.launch {
             val complete =
-                if (current.continuation == null) {
-                    current
-                } else {
-                    withContext(Dispatchers.IO) { GlobalYouTubeRepository.instance.getPodcast(current.podcast.id) }
+                loadPodcastForPlayback(current) { loaded ->
+                    withContext(Dispatchers.IO) {
+                        val initial = loaded.takeIf { loadedSession == GlobalYouTube.innerTube.sessionSnapshot() }
+                        GlobalYouTubeRepository.instance.getPodcast(loaded.podcast.id, initial)
+                    }
                 }
             val songs = complete?.episodes?.map { it.toSongItem(current.podcast.title) }.orEmpty()
             songs.firstOrNull()?.let { PlayerState.playTrack(it, songs) }
@@ -126,9 +132,15 @@ object PodcastState {
         loadJob = null
         pager?.cancel()
         pager = null
+        pagerSession = null
         isLoading = false
         selectedPodcastId = null
         page = null
         error = null
     }
 }
+
+internal suspend fun loadPodcastForPlayback(
+    page: PodcastPage,
+    loadRemaining: suspend (PodcastPage) -> PodcastPage?,
+): PodcastPage? = if (page.continuation == null) page else loadRemaining(page)

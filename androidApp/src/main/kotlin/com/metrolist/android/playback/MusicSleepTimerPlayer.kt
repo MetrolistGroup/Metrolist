@@ -6,10 +6,11 @@ import kotlinx.coroutines.flow.combine
 internal class MusicSleepTimerPlayer(
     private val player: AndroidPlaybackPlayer,
     private val pausePlayback: () -> Unit,
+    private val hasRemotePlaybackRoute: () -> Boolean = { false },
     private val cancelCrossfade: () -> Unit,
 ) : SleepTimerPlayer {
     override val isAvailable: Boolean
-        get() = true
+        get() = player.currentSong.value != null || hasRemotePlaybackRoute()
     override val currentPositionMs: Long
         get() = player.currentPosition.value
     override val durationMs: Long

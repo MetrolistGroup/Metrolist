@@ -14,14 +14,16 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import java.io.EOFException
 import java.io.File
 import java.io.FileOutputStream
 import java.io.OutputStream
 import java.io.PrintStream
 import java.io.PrintWriter
-import java.io.RandomAccessFile
 import java.io.StringWriter
+import java.nio.ByteBuffer
 import java.nio.file.Files
+import java.nio.file.NoSuchFileException
 import java.nio.file.StandardCopyOption
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -430,10 +432,25 @@ internal fun readLogTail(
     file: File,
     maxChars: Int = 10_000,
 ): String =
-    RandomAccessFile(file, "r").use { input ->
-        val length = input.length()
-        val bytes = ByteArray(minOf(length, maxChars.toLong() * 4).toInt())
-        input.seek(length - bytes.size)
-        input.readFully(bytes)
-        bytes.decodeToString().takeLast(maxChars)
+    Files.newByteChannel(file.toPath()).use { input ->
+        val length = input.size()
+        val bytes = ByteBuffer.allocate(minOf(length, maxChars.toLong() * 4).toInt())
+        input.position(length - bytes.capacity())
+        while (bytes.hasRemaining()) {
+            if (input.read(bytes) == -1) throw EOFException()
+        }
+        bytes.array().decodeToString().takeLast(maxChars)
     }
+
+internal fun readLogPreview(files: List<File>): String =
+    files
+        .asSequence()
+        .mapNotNull { file ->
+            try {
+                "--- ${file.name} ---\n${readLogTail(file)}"
+            } catch (_: NoSuchFileException) {
+                // Rotation may move the path after the dialog listed it.
+                null
+            }
+        }.take(3)
+        .joinToString("\n\n---\n\n")

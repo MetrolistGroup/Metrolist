@@ -7,7 +7,7 @@ import com.metrolist.shared.model.SongItem
 import com.metrolist.shared.settings.Settings
 import kotlinx.serialization.json.Json
 
-internal const val DATABASE_LIKES_RECOVERY_VERSION = 3
+internal const val DATABASE_LIKES_RECOVERY_VERSION = 4
 
 private fun Settings.hasAccountLikes(): Boolean =
     credentialsPending || innerTubeCookie.isNotBlank() || dataSyncId.isNotBlank() ||
@@ -22,9 +22,10 @@ internal fun Settings.recoverDatabaseLikes(
     if (credentialsPending) return false
     val accountLikes = hasAccountLikes()
     val existing = currentSongs ?: Json.decodeFromString<List<SongItem>>(likedSongsJson)
-    // An activated v14 account may have acknowledged unlikes that no longer have pending votes. An empty account catalog
-    // is still seeded: a startup refresh can activate it first, and a later complete refresh drops rows YouTube lacks.
-    if ((accountLikes && likedSongsOrderAccount.isNotBlank() && existing.isNotEmpty()) ||
+    // An activated account without a session may have acknowledged unlikes that no longer have pending votes. Signed-in
+    // and empty catalogs are still merged: a startup refresh can activate the account before recovery, likes added since
+    // then make the catalog non-empty, and the next complete refresh drops rows YouTube no longer has.
+    if ((accountLikes && likedSongsOrderAccount.isNotBlank() && existing.isNotEmpty() && innerTubeCookie.isBlank()) ||
         (!accountLikes && databaseLikesRecoveryVersion >= 1)
     ) {
         databaseLikesRecoveryVersion = DATABASE_LIKES_RECOVERY_VERSION

@@ -133,10 +133,12 @@ class UniversalPlaylistParserTest {
             2. "Hotel California" by Eagles
             3. Pink Floyd - Comfortably Numb
             4. https://music.youtube.com/watch?v=dQw4w9WgXcQ
+            5. AC/DC - Thunderstruck
+            6. Performer - Love/Hate
             """.trimIndent()
 
-        val tracks = UniversalPlaylistParser.parse(textInput)
-        assertEquals(4, tracks.size)
+        val tracks = UniversalPlaylistParser.parseImportable(textInput)
+        assertEquals(6, tracks.size)
         assertEquals("Bohemian Rhapsody", tracks[0].title)
         assertEquals("Queen", tracks[0].artist)
         assertEquals("Hotel California", tracks[1].title)
@@ -144,6 +146,10 @@ class UniversalPlaylistParserTest {
         assertEquals("Comfortably Numb", tracks[2].title)
         assertEquals("Pink Floyd", tracks[2].artist)
         assertEquals("dQw4w9WgXcQ", tracks[3].videoId)
+        assertEquals("AC/DC", tracks[4].artist)
+        assertEquals("Thunderstruck", tracks[4].title)
+        assertEquals("Performer", tracks[5].artist)
+        assertEquals("Love/Hate", tracks[5].title)
     }
 
     @Test
