@@ -77,7 +77,7 @@ object LayoutUtils {
             }
 
             Screen.Library -> {
-                LibraryContentState.fetchLibraryData()
+                LibraryContentState.fetchLibraryData(force = true)
             }
 
             Screen.History -> {
