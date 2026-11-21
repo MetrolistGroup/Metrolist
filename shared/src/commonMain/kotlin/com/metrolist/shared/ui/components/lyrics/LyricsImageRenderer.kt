@@ -70,18 +70,18 @@ private fun DrawScope.drawCover(
 }
 
 internal fun prepareLyricsArtwork(image: ImageBitmap): Pair<List<Color>, ImageBitmap> {
-    val sample = ImageBitmap(128, 128)
-    CanvasDrawScope().draw(Density(1f), LayoutDirection.Ltr, Canvas(sample), Size(128f, 128f)) {
+    val sample = ImageBitmap(64, 64)
+    CanvasDrawScope().draw(Density(1f), LayoutDirection.Ltr, Canvas(sample), Size(64f, 64f)) {
         drawRect(Color.Black)
-        drawCover(image, Offset.Zero, 128f)
+        drawCover(image, Offset.Zero, 64f)
     }
-    val pixels = IntArray(128 * 128)
+    val pixels = IntArray(64 * 64)
     sample.readPixels(pixels)
     val palette = lyricsArtworkPalette(pixels)
-    val blurred = blurLyricsArtwork(pixels, 128, 128, 12)
-    CanvasDrawScope().draw(Density(1f), LayoutDirection.Ltr, Canvas(sample), Size(128f, 128f)) {
+    val blurred = blurLyricsArtwork(pixels, 64, 64, 6)
+    CanvasDrawScope().draw(Density(1f), LayoutDirection.Ltr, Canvas(sample), Size(64f, 64f)) {
         blurred.forEachIndexed { index, pixel ->
-            drawRect(Color(pixel), Offset((index % 128).toFloat(), (index / 128).toFloat()), Size(1f, 1f))
+            drawRect(Color(pixel), Offset((index % 64).toFloat(), (index / 64).toFloat()), Size(1f, 1f))
         }
     }
     return palette to sample
