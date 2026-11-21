@@ -43,7 +43,7 @@ class ParametricEqualizer(
     private var peakHoldFrames = 0
     private var sustainedOverloadRatio = 0.0
     private val peakHoldDuration = (sampleRate * PEAK_HOLD_SECONDS).toInt()
-    private val sustainedOverloadDuration = (sampleRate * SUSTAIN_DETECTION_SECONDS / channelCount).toInt().coerceAtLeast(1)
+    private val sustainedOverloadDuration = (sampleRate * SUSTAIN_DETECTION_SECONDS).toInt().coerceAtLeast(1)
     private val sustainedOverloadAlpha = 1.0 / sustainedOverloadDuration
     private val releaseDecay = exp(-1.0 / (sampleRate * LIMITER_RELEASE_SECONDS))
     var gainReductionDb = 0.0
