@@ -11,6 +11,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.withLock
 import platform.Foundation.NSDate
 import platform.Foundation.NSDocumentDirectory
 import platform.Foundation.NSFileManager
@@ -95,25 +96,29 @@ fun createIosAutomaticBackup(completion: (Boolean) -> Unit) {
                             Settings.shared.autoBackupLastSuccessEpochMillis = (NSDate().timeIntervalSince1970 * 1000).toLong()
                             Settings.shared.flush()
                         }
-                        val entries =
-                            fileManager
-                                .contentsOfDirectoryAtPath(backupDirectory, error = null)
-                                .orEmpty()
-                                .filterIsInstance<String>()
-                        entries
-                            .filter { it.endsWith(".tmp") }
-                            .forEach { filename -> check(fileManager.removeItemAtPath("$backupDirectory/$filename", error = null)) }
-                        val files = entries.filter { it.endsWith(".zip") }
-                        files
-                            .map { filename ->
-                                val path = "$backupDirectory/$filename"
-                                val modifiedAt =
-                                    (fileManager.attributesOfItemAtPath(path, error = null)?.get(NSFileModificationDate) as? NSDate)
-                                        ?.timeIntervalSince1970 ?: 0.0
-                                filename to modifiedAt
-                            }.sortedByDescending { it.second }
-                            .drop(MAX_RETAINED_BACKUPS)
-                            .forEach { (filename, _) -> check(fileManager.removeItemAtPath("$backupDirectory/$filename", error = null)) }
+                        iosBackupOperationMutex.withLock {
+                            val entries =
+                                fileManager
+                                    .contentsOfDirectoryAtPath(backupDirectory, error = null)
+                                    .orEmpty()
+                                    .filterIsInstance<String>()
+                            entries
+                                .filter { it.endsWith(".tmp") }
+                                .forEach { filename -> check(fileManager.removeItemAtPath("$backupDirectory/$filename", error = null)) }
+                            val files = entries.filter { it.endsWith(".zip") }
+                            files
+                                .map { filename ->
+                                    val path = "$backupDirectory/$filename"
+                                    val modifiedAt =
+                                        (fileManager.attributesOfItemAtPath(path, error = null)?.get(NSFileModificationDate) as? NSDate)
+                                            ?.timeIntervalSince1970 ?: 0.0
+                                    filename to modifiedAt
+                                }.sortedByDescending { it.second }
+                                .drop(MAX_RETAINED_BACKUPS)
+                                .forEach { (filename, _) ->
+                                    check(fileManager.removeItemAtPath("$backupDirectory/$filename", error = null))
+                                }
+                        }
                         true
                     }.getOrDefault(false)
                 completion(succeeded)

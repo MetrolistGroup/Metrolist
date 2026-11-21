@@ -63,6 +63,8 @@ private const val PRISM_ARTIST_PREFERENCES = "shared_prefs/artist_prefs.xml"
 
 /** File-based backup API; copy document-provider URLs into the app container before calling. */
 @OptIn(ExperimentalForeignApi::class, BetaInteropApi::class)
+internal val iosBackupOperationMutex = Mutex()
+
 class IosBackupRestoreManager(
     private val databasePath: String = iosDatabaseFilePath(),
     private val settings: Settings = Settings.shared,
@@ -131,11 +133,11 @@ class IosBackupRestoreManager(
 
     suspend fun backup(destinationPath: String): Result<Unit> =
         withContext(Dispatchers.IO) {
-            operationMutex.lock()
+            iosBackupOperationMutex.lock()
             try {
                 backupLocked(destinationPath)
             } finally {
-                operationMutex.unlock()
+                iosBackupOperationMutex.unlock()
             }
         }
 
@@ -362,11 +364,11 @@ class IosBackupRestoreManager(
         reopenDatabase: suspend () -> Unit,
     ): Result<Unit> =
         withContext(Dispatchers.IO) {
-            operationMutex.lock()
+            iosBackupOperationMutex.lock()
             try {
                 restoreLocked(sourcePath, closeDatabase, reopenDatabase)
             } finally {
-                operationMutex.unlock()
+                iosBackupOperationMutex.unlock()
             }
         }
 
@@ -1033,7 +1035,6 @@ class IosBackupRestoreManager(
         const val MAX_ARCHIVE_BYTES = BackupArchiveLimits.TOTAL_UNCOMPRESSED_BYTES + 2L * 1024 * 1024
 
         // shortcut: One lock serializes all databases; use per-database locks if multiple profiles are supported.
-        val operationMutex = Mutex()
     }
 }
 

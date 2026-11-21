@@ -66,7 +66,7 @@ object DesktopBackupRestoreManager {
     private val json = Json { ignoreUnknownKeys = true }
     internal var databaseFileOverride: File? = null
     internal var restoreDirOverride: File? = null
-    private val backupLock = ReentrantLock()
+    internal val backupLock = ReentrantLock()
     private val databaseFile get() = databaseFileOverride ?: File(XdgUtils.getXdgDataHome(), "metrolist/metrolist.db")
     private val restoreDir get() = restoreDirOverride ?: File(XdgUtils.getXdgStateHome(), "metrolist/pending-restore")
 

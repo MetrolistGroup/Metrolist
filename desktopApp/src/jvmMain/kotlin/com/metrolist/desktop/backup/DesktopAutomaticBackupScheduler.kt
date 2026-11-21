@@ -14,6 +14,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
+import kotlin.concurrent.withLock
 
 object DesktopAutomaticBackupScheduler {
     private var scope: CoroutineScope? = null
@@ -99,17 +100,18 @@ object DesktopAutomaticBackupScheduler {
             .orEmpty()
             .sortedByDescending(File::lastModified)
 
-    private fun pruneBackups(directory: File) {
-        directory
-            .listFiles { file -> file.isFile && (file.extension == "tmp" || file.name.endsWith(".tmp")) }
-            ?.forEach { it.delete() }
-        directory
-            .listFiles { file -> file.isFile && file.extension == "zip" }
-            .orEmpty()
-            .sortedByDescending(File::lastModified)
-            .drop(MAX_RETAINED_BACKUPS)
-            .forEach { check(it.delete()) { "Could not remove expired automatic backup" } }
-    }
+    private fun pruneBackups(directory: File) =
+        DesktopBackupRestoreManager.backupLock.withLock {
+            directory
+                .listFiles { file -> file.isFile && (file.extension == "tmp" || file.name.endsWith(".tmp")) }
+                ?.forEach { it.delete() }
+            directory
+                .listFiles { file -> file.isFile && file.extension == "zip" }
+                .orEmpty()
+                .sortedByDescending(File::lastModified)
+                .drop(MAX_RETAINED_BACKUPS)
+                .forEach { check(it.delete()) { "Could not remove expired automatic backup" } }
+        }
 
     private const val BACKUP_FILENAME_PREFIX = "metrolist-backup"
     private const val CREDENTIAL_RECOVERY_POLL_MILLIS = 1_000L
