@@ -73,7 +73,8 @@ private final class AutomaticBackupAppDelegate: NSObject, UIApplicationDelegate 
 
     @objc private func schedule() {
         BGTaskScheduler.shared.cancel(taskRequestWithIdentifier: Self.taskIdentifier)
-        guard IosAutomaticBackupBridgeKt.iosAutomaticBackupEnabled() else { return }
+        guard !IosCrashRecovery.shared.hasPendingReport,
+              IosAutomaticBackupBridgeKt.iosAutomaticBackupEnabled() else { return }
 
         let interval = TimeInterval(IosAutomaticBackupBridgeKt.iosAutomaticBackupIntervalMillis()) / 1000
         let lastSuccess = TimeInterval(IosAutomaticBackupBridgeKt.iosAutomaticBackupLastSuccessEpochMillis()) / 1000
@@ -87,6 +88,10 @@ private final class AutomaticBackupAppDelegate: NSObject, UIApplicationDelegate 
     }
 
     private func run(_ task: BGProcessingTask) {
+        guard !IosCrashRecovery.shared.hasPendingReport else {
+            task.setTaskCompleted(success: false)
+            return
+        }
         let completionLock = NSLock()
         var didComplete = false
         let complete: (Bool) -> Void = { [weak self] succeeded in

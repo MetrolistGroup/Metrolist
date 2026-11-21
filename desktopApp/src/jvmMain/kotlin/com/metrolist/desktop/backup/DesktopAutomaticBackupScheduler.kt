@@ -21,6 +21,7 @@ object DesktopAutomaticBackupScheduler {
     private var pruningPending = false
 
     fun start(applicationScope: CoroutineScope) {
+        pruningPending = true
         scope = applicationScope
         schedule()
     }

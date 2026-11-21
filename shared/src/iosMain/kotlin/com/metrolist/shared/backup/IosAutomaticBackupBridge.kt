@@ -25,9 +25,21 @@ private const val AUTOMATIC_BACKUP_SETTINGS_CHANGED = "com.metrolist.automaticBa
 private const val BACKUP_FILENAME_PREFIX = "metrolist-backup"
 private const val MAX_RETAINED_BACKUPS = 10
 private var activeAutomaticBackup: Job? = null
-private var automaticBackupCleanupPending = false
 
-fun iosAutomaticBackupNeedsCleanup(): Boolean = automaticBackupCleanupPending
+private fun automaticBackupDirectory(): String? =
+    (NSFileManager.defaultManager.URLsForDirectory(NSDocumentDirectory, NSUserDomainMask).firstOrNull() as? NSURL)
+        ?.path
+        ?.plus("/Metrolist/Automatic Backups")
+
+fun iosAutomaticBackupNeedsCleanup(): Boolean {
+    val directory = automaticBackupDirectory() ?: return false
+    val entries =
+        NSFileManager.defaultManager
+            .contentsOfDirectoryAtPath(directory, error = null)
+            .orEmpty()
+            .filterIsInstance<String>()
+    return entries.any { it.endsWith(".tmp") } || entries.count { it.endsWith(".zip") } > MAX_RETAINED_BACKUPS
+}
 
 fun iosAutomaticBackupEnabled(): Boolean = Settings.shared.autoBackupEnabled
 
@@ -40,7 +52,10 @@ fun notifyIosAutomaticBackupSettingsChanged() {
 }
 
 fun createIosAutomaticBackup(completion: (Boolean) -> Unit) {
-    activeAutomaticBackup?.cancel()
+    if (activeAutomaticBackup != null) {
+        completion(false)
+        return
+    }
     val backupJob =
         CoroutineScope(SupervisorJob() + Dispatchers.Default).launch(start = CoroutineStart.LAZY) {
             try {
@@ -49,8 +64,7 @@ fun createIosAutomaticBackup(completion: (Boolean) -> Unit) {
                     return@launch
                 }
                 val fileManager = NSFileManager.defaultManager
-                val documentsPath = (fileManager.URLsForDirectory(NSDocumentDirectory, NSUserDomainMask).firstOrNull() as? NSURL)?.path
-                val backupDirectory = documentsPath?.plus("/Metrolist/Automatic Backups")
+                val backupDirectory = automaticBackupDirectory()
                 val destination = backupDirectory?.plus("/${defaultBackupFilename(BACKUP_FILENAME_PREFIX)}.zip")
                 val succeeded =
                     runCatching {
@@ -71,9 +85,13 @@ fun createIosAutomaticBackup(completion: (Boolean) -> Unit) {
                             ),
                         )
                         check(destination != null)
-                        if (!automaticBackupCleanupPending) {
+                        if (isAutoBackupDue(
+                                Settings.shared.autoBackupLastSuccessEpochMillis,
+                                (NSDate().timeIntervalSince1970 * 1000).toLong(),
+                                AutoBackupFrequency.fromSetting(Settings.shared.autoBackupFrequency),
+                            )
+                        ) {
                             IosBackupRestoreManager().backup(destination).getOrThrow()
-                            automaticBackupCleanupPending = true
                             Settings.shared.autoBackupLastSuccessEpochMillis = (NSDate().timeIntervalSince1970 * 1000).toLong()
                             Settings.shared.flush()
                         }
@@ -84,7 +102,7 @@ fun createIosAutomaticBackup(completion: (Boolean) -> Unit) {
                                 .filterIsInstance<String>()
                         entries
                             .filter { it.endsWith(".tmp") }
-                            .forEach { filename -> fileManager.removeItemAtPath("$backupDirectory/$filename", error = null) }
+                            .forEach { filename -> check(fileManager.removeItemAtPath("$backupDirectory/$filename", error = null)) }
                         val files = entries.filter { it.endsWith(".zip") }
                         files
                             .map { filename ->
@@ -96,7 +114,6 @@ fun createIosAutomaticBackup(completion: (Boolean) -> Unit) {
                             }.sortedByDescending { it.second }
                             .drop(MAX_RETAINED_BACKUPS)
                             .forEach { (filename, _) -> check(fileManager.removeItemAtPath("$backupDirectory/$filename", error = null)) }
-                        automaticBackupCleanupPending = false
                         true
                     }.getOrDefault(false)
                 completion(succeeded)

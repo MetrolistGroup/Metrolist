@@ -177,6 +177,7 @@ import com.metrolist.shared.generated.resources.or_choose_existing_playlist
 import com.metrolist.shared.generated.resources.playlist
 import com.metrolist.shared.generated.resources.playlist_imports_title
 import com.metrolist.shared.generated.resources.playlist_name
+import com.metrolist.shared.generated.resources.restore_backup
 import com.metrolist.shared.generated.resources.restore_confirm_message
 import com.metrolist.shared.generated.resources.restore_confirm_title
 import com.metrolist.shared.generated.resources.restore_database_incompatible

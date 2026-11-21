@@ -583,6 +583,7 @@ fun MainViewController(): UIViewController {
                     CrashLogsScreen(IosCrashRecovery, onClose = {
                         IosCrashRecovery.acknowledge()
                         MetrolistPlatform.initialize()
+                        notifyIosAutomaticBackupSettingsChanged()
                         configureIosImageLoader()
                         showingReport = false
                     }, onShare = { IosNativeFiles.shareText(presenter, it) })
