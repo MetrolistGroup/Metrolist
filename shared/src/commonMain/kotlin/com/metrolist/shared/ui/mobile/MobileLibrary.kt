@@ -19,6 +19,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Checkbox
@@ -53,6 +54,7 @@ import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.metrolist.shared.constants.ThumbnailCornerRadius
 import com.metrolist.shared.db.MusicDatabase
 import com.metrolist.shared.db.collectionPlayCounts
 import com.metrolist.shared.db.entities.CachedAudioEntity
@@ -174,8 +176,10 @@ internal fun MobileLibrary(
     viewModel: LibraryViewModel,
     database: MusicDatabase,
     playbackController: PlaybackController,
+    guestPlaybackLocked: Boolean,
     onItemClick: (YTItem) -> Unit,
     onAutoPlaylistClick: (String, String) -> Unit,
+    onSwipeFeedback: (String) -> Unit,
     modifier: Modifier = Modifier,
     onItemLongClick: ((YTItem) -> Unit)? = null,
     onCreatePlaylist: (() -> Unit)? = null,
@@ -331,31 +335,44 @@ internal fun MobileLibrary(
                         } else {
                             onItemLongClick?.let { callback -> { callback(ytItem) } }
                         }
-                    Box {
-                        LibraryItemContainer(
-                            isGridView = isGridView,
-                            onMenuClick = onMenuClick,
-                            modifier = Modifier.combinedClickable(onClick = onClick, onLongClick = onMenuClick),
-                            content = content,
-                        )
-                        DropdownMenuPopup(expanded = autoMenuExpanded, onDismissRequest = { autoMenuExpanded = false }) {
-                            val builtin = BuiltinPlaylist.fromId("auto:${hiddenItem.id}")
-                            val menuItemCount = if (builtin == null) 1 else 2
-                            DropdownMenuGroup(shapes = MenuDefaults.groupShape(0, 1)) {
-                                builtin?.let { builtin ->
-                                    val playlist = builtin.playlist(stringResource(builtin.title))
-                                    SpeedDialPinMenuItem(playlist, database, count = menuItemCount) { autoMenuExpanded = false }
+                    val libraryItemContent: @Composable () -> Unit = {
+                        Box {
+                            LibraryItemContainer(
+                                isGridView = isGridView,
+                                onMenuClick = onMenuClick,
+                                modifier = Modifier.combinedClickable(onClick = onClick, onLongClick = onMenuClick),
+                                content = content,
+                            )
+                            DropdownMenuPopup(expanded = autoMenuExpanded, onDismissRequest = { autoMenuExpanded = false }) {
+                                val builtin = BuiltinPlaylist.fromId("auto:${hiddenItem.id}")
+                                val menuItemCount = if (builtin == null) 1 else 2
+                                DropdownMenuGroup(shapes = MenuDefaults.groupShape(0, 1)) {
+                                    builtin?.let { builtin ->
+                                        val playlist = builtin.playlist(stringResource(builtin.title))
+                                        SpeedDialPinMenuItem(playlist, database, count = menuItemCount) { autoMenuExpanded = false }
+                                    }
+                                    DropdownMenuItem(
+                                        text = { Text(stringResource(Res.string.hide_from_library_local)) },
+                                        shape = groupedMenuItemShapes(menuItemCount - 1, menuItemCount).shape,
+                                        onClick = {
+                                            HiddenLibraryItems.hide(hiddenItem)
+                                            autoMenuExpanded = false
+                                        },
+                                    )
                                 }
-                                DropdownMenuItem(
-                                    text = { Text(stringResource(Res.string.hide_from_library_local)) },
-                                    shape = groupedMenuItemShapes(menuItemCount - 1, menuItemCount).shape,
-                                    onClick = {
-                                        HiddenLibraryItems.hide(hiddenItem)
-                                        autoMenuExpanded = false
-                                    },
-                                )
                             }
                         }
+                    }
+                    if (ytItem is SongItem && !isGridView) {
+                        SongSwipeActions(
+                            ytItem,
+                            onSwipeFeedback,
+                            enabled = !guestPlaybackLocked && !ytItem.isUnavailable,
+                            shape = RoundedCornerShape(ThumbnailCornerRadius),
+                            content = libraryItemContent,
+                        )
+                    } else {
+                        libraryItemContent()
                     }
                 },
                 scrollState = libraryGridState,
