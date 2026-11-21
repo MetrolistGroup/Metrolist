@@ -7,9 +7,12 @@ import android.content.Context
 import android.content.pm.PackageManager
 import android.database.Cursor
 import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.net.Uri
 import android.os.ParcelFileDescriptor
+import android.os.SystemClock
 import androidx.core.net.toUri
+import coil3.Image
 import coil3.disk.DiskCache
 import coil3.imageLoader
 import coil3.request.CachePolicy
@@ -19,15 +22,24 @@ import coil3.toBitmap
 import com.metrolist.shared.ui.components.libraryCover
 import com.metrolist.shared.utils.artworkCacheCandidates
 import com.metrolist.shared.utils.canonicalArtworkUrl
+import com.metrolist.shared.utils.sizedArtworkUrl
+import com.metrolist.shared.youtube.playback.PlaybackNetworkStateStore
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.withTimeoutOrNull
 import org.jetbrains.compose.resources.ExperimentalResourceApi
 import org.jetbrains.compose.resources.getDrawableResourceBytes
 import org.jetbrains.compose.resources.getSystemResourceEnvironment
 import java.io.File
 import java.io.FileNotFoundException
+import java.io.IOException
 import java.util.concurrent.ConcurrentHashMap
+
+private const val CURRENT_ARTWORK_TARGET_PX = 512
+private const val CURRENT_ARTWORK_UPGRADE_TIMEOUT_MS = 4_000L
+private const val CURRENT_ARTWORK_RETRY_INTERVAL_MS = 30_000L
 
 internal fun mediaArtworkUri(
     context: Context,
@@ -63,6 +75,8 @@ private fun artworkContentUri(
 }
 
 class MediaArtworkProvider : ContentProvider() {
+    private val artworkUpgrade = CurrentArtworkUpgradeCooldown()
+
     companion object {
         // Cached artwork reveals listening history, so only trusted connected media controllers may read it.
         internal val allowedPackages: MutableSet<String> = ConcurrentHashMap.newKeySet()
@@ -97,8 +111,9 @@ class MediaArtworkProvider : ContentProvider() {
             throw SecurityException()
         }
         val key = uri.getQueryParameter("key") ?: throw FileNotFoundException()
+        val currentUrl = currentArtwork?.takeIf { it.first == key }?.second
         val url =
-            currentArtwork?.takeIf { it.first == key }?.second
+            currentUrl
                 ?: synchronized(approvedArtwork) { approvedArtwork[key] }
                 ?: throw FileNotFoundException()
         val appContext = context ?: throw FileNotFoundException()
@@ -115,6 +130,9 @@ class MediaArtworkProvider : ContentProvider() {
                         }
                     }
                     val retained = DownloadedArtwork(appContext).file(url)
+                    if (currentUrl != null) {
+                        openCurrentMediaArtwork(appContext, url, key, retained)?.let { return@withTimeout it }
+                    }
                     if (retained.length() > 0) {
                         try {
                             return@withTimeout ParcelFileDescriptor.open(retained, ParcelFileDescriptor.MODE_READ_ONLY)
@@ -159,6 +177,45 @@ class MediaArtworkProvider : ContentProvider() {
         } catch (error: Exception) {
             throw FileNotFoundException().apply { initCause(error) }
         }
+    }
+
+    private suspend fun openCurrentMediaArtwork(
+        context: Context,
+        url: String,
+        key: String,
+        retained: File,
+    ): ParcelFileDescriptor? {
+        val retainedArtwork = retained.openSizedArtwork()
+        if (retainedArtwork != null && retainedArtwork.detail >= CURRENT_ARTWORK_TARGET_PX) return retainedArtwork.descriptor
+        val cache =
+            try {
+                context.imageLoader.diskCache
+            } catch (error: CancellationException) {
+                retainedArtwork?.let { runCatching { it.descriptor.close() } }
+                throw error
+            } catch (error: Exception) {
+                return retainedArtwork?.descriptor ?: throw error
+            }
+        val fallback = findCurrentArtwork(cache, url, initial = retainedArtwork) ?: return null
+        if (fallback.detail >= CURRENT_ARTWORK_TARGET_PX) return fallback.descriptor
+        return preferCurrentArtwork(
+            fallback = fallback.descriptor,
+            shouldUpgrade = {
+                PlaybackNetworkStateStore.current.connected &&
+                    url.toUri().scheme == "https" &&
+                    sizedArtworkUrl(url, 1) != sizedArtworkUrl(url, CURRENT_ARTWORK_TARGET_PX) &&
+                    artworkUpgrade.tryStart(key, SystemClock.elapsedRealtime())
+            },
+            upgrade = {
+                val image =
+                    withTimeoutOrNull(CURRENT_ARTWORK_UPGRADE_TIMEOUT_MS) {
+                        fetchArtwork(context, url, key)
+                    }
+                val imageDetail = image?.let { artworkDetail(it.width, it.height) } ?: 0
+                findCurrentArtwork(cache, url, minimumDetail = maxOf(fallback.detail + 1, imageDetail))?.descriptor
+                    ?: image?.takeIf { imageDetail > fallback.detail }?.openArtworkBitmap(context)
+            },
+        )
     }
 
     // System UI reads session metadata artwork without connecting as a Media3 controller.
@@ -208,4 +265,126 @@ internal fun openMediaArtwork(
         }
     }
     throw FileNotFoundException()
+}
+
+private suspend fun fetchArtwork(
+    context: Context,
+    url: String,
+    key: String,
+): Image? =
+    (
+        context.imageLoader.execute(
+            ImageRequest
+                .Builder(context)
+                .data(url)
+                .size(CURRENT_ARTWORK_TARGET_PX)
+                .diskCacheKey(key)
+                .memoryCachePolicy(CachePolicy.DISABLED)
+                .build(),
+        ) as? SuccessResult
+    )?.image
+
+private fun Image.openArtworkBitmap(context: Context): ParcelFileDescriptor {
+    val file = File.createTempFile("media-artwork-", ".png", context.cacheDir)
+    try {
+        file.outputStream().use { output ->
+            if (!toBitmap().compress(Bitmap.CompressFormat.PNG, 100, output)) throw FileNotFoundException()
+        }
+        return ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY)
+    } finally {
+        file.delete()
+    }
+}
+
+private data class SizedArtwork(
+    val descriptor: ParcelFileDescriptor,
+    val detail: Int,
+)
+
+// A long, thin bitmap does not have the same usable detail as a normal square or landscape cover.
+private fun artworkDetail(
+    width: Int,
+    height: Int,
+): Int {
+    if (width <= 0 || height <= 0) return 0
+    return minOf(maxOf(width, height).toLong(), 2L * minOf(width, height)).toInt()
+}
+
+private fun File.openSizedArtwork(minimumDetail: Int = 1): SizedArtwork? {
+    if (length() <= 0) return null
+    val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+    BitmapFactory.decodeFile(absolutePath, bounds)
+    val detail = artworkDetail(bounds.outWidth, bounds.outHeight)
+    if (detail < minimumDetail) return null
+    return try {
+        SizedArtwork(ParcelFileDescriptor.open(this, ParcelFileDescriptor.MODE_READ_ONLY), detail)
+    } catch (_: FileNotFoundException) {
+        null
+    }
+}
+
+private fun findCurrentArtwork(
+    cache: DiskCache?,
+    url: String,
+    initial: SizedArtwork? = null,
+    minimumDetail: Int = 1,
+): SizedArtwork? {
+    var best = initial
+    try {
+        for (key in (listOf(url) + artworkCacheCandidates(url, 1)).distinct()) {
+            val bestDetail = best?.detail ?: 0
+            if (bestDetail >= maxOf(CURRENT_ARTWORK_TARGET_PX, minimumDetail)) break
+            cache?.openSnapshot(key)?.use {
+                // Open the descriptor before releasing the snapshot so eviction cannot race the open.
+                val candidate = it.data.toFile().openSizedArtwork(maxOf(minimumDetail, bestDetail + 1))
+                if (candidate != null) {
+                    best?.let { runCatching { it.descriptor.close() } }
+                    best = candidate
+                }
+            }
+        }
+        return best
+    } catch (error: CancellationException) {
+        best?.let { runCatching { it.descriptor.close() } }
+        throw error
+    } catch (_: IOException) {
+        return best
+    } catch (error: Exception) {
+        return best ?: throw error
+    }
+}
+
+// Both the session and System UI can ask for the same cover. Do not repeatedly refresh a small source.
+private class CurrentArtworkUpgradeCooldown {
+    private var lastAttempt: Pair<String, Long>? = null
+
+    @Synchronized
+    fun tryStart(
+        key: String,
+        nowMs: Long,
+    ): Boolean {
+        val previous = lastAttempt
+        if (previous != null && previous.first == key && nowMs - previous.second < CURRENT_ARTWORK_RETRY_INTERVAL_MS) return false
+        lastAttempt = key to nowMs
+        return true
+    }
+}
+
+private suspend fun preferCurrentArtwork(
+    fallback: ParcelFileDescriptor,
+    shouldUpgrade: () -> Boolean,
+    upgrade: suspend () -> ParcelFileDescriptor?,
+): ParcelFileDescriptor {
+    try {
+        if (!shouldUpgrade()) return fallback
+        val upgraded = upgrade() ?: return fallback
+        runCatching { fallback.close() }
+        return upgraded
+    } catch (error: CancellationException) {
+        runCatching { fallback.close() }
+        throw error
+    } catch (_: Exception) {
+        // A failed quality upgrade must not hide an already readable cover.
+        return fallback
+    }
 }
