@@ -2248,13 +2248,11 @@ object PlayerState {
     }
 
     private fun canLoadRecommendations(song: SongItem): Boolean =
-        (Settings.shared.autoLoadMore || syncSession.explicitRadioQueue) &&
-            (repeatMode == RepeatMode.OFF || syncSession.explicitRadioQueue) &&
-            !isListenTogetherGuest() && !deviceConnect.isFollowing &&
+        Settings.shared.autoLoadMore && repeatMode == RepeatMode.OFF && !isListenTogetherGuest() && !deviceConnect.isFollowing &&
             !syncSession.finite && queue.currentItem()?.id == song.id
 
     private fun maybePrefetchRecommendationsForCurrentQueue(song: SongItem) {
-        if (!canLoadRecommendations(song) ||
+        if (repeatMode != RepeatMode.OFF || !canLoadRecommendations(song) ||
             initialRecommendationsGeneration == playbackTransitionGeneration
         ) {
             return
@@ -2306,6 +2304,19 @@ object PlayerState {
     ) = withContext(Dispatchers.Main) {
         if (!shouldCommit()) return@withContext
         val state = snapshot.playback
+        val startsExplicitRadio =
+            state.explicitRadioQueue &&
+                (
+                    !syncSession.explicitRadioQueue || (
+                        state.queue.displayedItems.size == 1 &&
+                            queue.items.value
+                                .firstOrNull()
+                                ?.id !=
+                            state.queue.displayedItems
+                                .firstOrNull()
+                                ?.id
+                    )
+                )
         val reuseInitialTrack =
             syncSession.sessionId == null && !deviceConnect.isFollowing &&
                 deviceConnectCanReusePlayback(
@@ -2372,7 +2383,23 @@ object PlayerState {
             player.isPlaying.value,
             state.scrobbleSession,
         )
-        if (!deviceConnect.isFollowing) maybePrefetchRecommendationsForCurrentQueue(track)
+        if (!deviceConnect.isFollowing) {
+            if (startsExplicitRadio) {
+                val generation = playbackTransitionGeneration
+                scope.launch {
+                    try {
+                        val songs = freshRadioRecommendations(track.id, generation)
+                        if (shouldCommit() && syncSession.explicitRadioQueue) appendRadioRecommendations(songs, generation)
+                    } catch (error: CancellationException) {
+                        throw error
+                    } catch (error: Exception) {
+                        Logger.w("PlayerState", "Failed to start remote radio (${error::class.simpleName})")
+                    }
+                }
+            } else {
+                maybePrefetchRecommendationsForCurrentQueue(track)
+            }
+        }
     }
 
     internal fun setPlayingFromSync(playing: Boolean) {

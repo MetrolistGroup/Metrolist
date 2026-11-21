@@ -116,7 +116,7 @@ internal class AndroidDeviceConnectPlayback(
                 transitions.cancelNextTrackPreload()
                 val seedId = desiredQueue.originalItems.firstOrNull()?.id
                 if (AndroidDeviceConnect.manager.remote.isFollowing || desired.finite != queue.isFiniteQueue ||
-                    seedId != queue.recommendationSeedSongId
+                    seedId != queue.recommendationSeedSongId || desired.explicitRadioQueue != queue.explicitRadioQueue
                 ) {
                     queue.resetQueueSession(seedId, desired.title, desired.finite)
                 }
