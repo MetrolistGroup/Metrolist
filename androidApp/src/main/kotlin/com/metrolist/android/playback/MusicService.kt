@@ -374,6 +374,9 @@ class MusicService :
     private val healthyQueueRequestIds = linkedSetOf<Long>()
 
     private var lastPersistenceState: PersistPlayerState? = null
+
+    // The service-owned channel can be cancelled before its clear write runs; keep the request for the final checkpoint.
+    @Volatile private var pendingPlaybackClear: PlaybackPersistenceWriter.Request? = null
     private val playbackPersistenceRequests = Channel<PlaybackPersistenceWriter.Request>(Channel.CONFLATED)
 
     private val playbackPersistenceLifecycle = PlaybackPersistenceLifecycle()
@@ -518,6 +521,7 @@ class MusicService :
                 onRemoteSeek = ::seekCastTo,
                 onRemoteVolumeChange = ::setCastVolume,
                 onQueueChanged = ::synchronizeMediaSessionQueue,
+                onQueueCleared = ::clearPersistedPlaybackState,
                 extendPlaylistBeforeSkip = ::extendPlaylistBeforeSkip,
                 mediaItemResolver = automotiveLibrary::resolveCachedSong,
                 automotivePlaybackRequestGate = automotivePlaybackRequestGate,
@@ -542,6 +546,7 @@ class MusicService :
                 fetchPlaybackResource = { song, wantVideo -> fetchPlaybackResource(song, wantVideo).resource },
                 isCasting = { castManager.state.value.status != CastConnectionStatus.DISCONNECTED },
                 onSave = ::savePlaybackState,
+                onQueueCleared = ::clearPersistedPlaybackState,
                 onDiscordUpdate = ::syncDiscordState,
             )
         sleepTimerController =
@@ -2622,17 +2627,54 @@ class MusicService :
 
     private fun savePlaybackState() {
         if (!playbackPersistenceLifecycle.restoring) queueCoordinator.saveShuffleMode()
-        if (!playbackPersistenceLifecycle.canSave(Settings.shared.persistentQueue)) return
-        val state = buildPersistPlayerState()
-        if (!shouldPersistPlaybackState(lastPersistenceState, state)) return
-        lastPersistenceState = state
-        playbackPersistenceRequests.trySend(playbackPersistenceWriter.request(state))
+        val decision =
+            decidePlaybackCheckpoint(
+                writer = playbackPersistenceWriter,
+                lifecycle = playbackPersistenceLifecycle,
+                persistentQueue = Settings.shared.persistentQueue,
+                previous = lastPersistenceState,
+                state = ::buildPersistPlayerState,
+            )
+        val request = decision.request ?: return
+        pendingPlaybackClear = request.takeIf { it.clear }
+        lastPersistenceState = decision.state
+        playbackPersistenceRequests.trySend(request)
     }
 
     private fun saveFinalPlaybackState(): Job? {
         if (!playbackPersistenceLifecycle.restoring) queueCoordinator.saveShuffleMode()
         if (!playbackPersistenceLifecycle.canSave(Settings.shared.persistentQueue)) return finalPlaybackPersistence
-        val request = playbackPersistenceWriter.request(buildPersistPlayerState())
+        if (!Settings.shared.persistentQueue) return clearFinalPersistedPlaybackState()
+        val state = buildPersistPlayerState()
+        if (state == null) {
+            val clear = pendingPlaybackClear
+            if (clear != null) {
+                pendingPlaybackClear = null
+                return launchFinalPersistence(clear)
+            }
+            // A transient empty queue can still have a queued non-empty checkpoint; flush it before the scope is cancelled.
+            val pendingState = lastPersistenceState ?: return finalPlaybackPersistence
+            return launchFinalPersistence(playbackPersistenceWriter.request(pendingState))
+        }
+        pendingPlaybackClear = null
+        lastPersistenceState = state
+        return launchFinalPersistence(playbackPersistenceWriter.request(state))
+    }
+
+    internal fun clearPersistedPlaybackState() {
+        lastPersistenceState = null
+        val clear = playbackPersistenceWriter.requestClear()
+        pendingPlaybackClear = clear
+        playbackPersistenceRequests.trySend(clear)
+    }
+
+    private fun clearFinalPersistedPlaybackState(): Job? {
+        lastPersistenceState = null
+        pendingPlaybackClear = null
+        return launchFinalPersistence(playbackPersistenceWriter.requestClear())
+    }
+
+    private fun launchFinalPersistence(request: PlaybackPersistenceWriter.Request): Job? {
         finalPlaybackPersistence =
             CoroutineScope(Dispatchers.IO).launch {
                 runCatching { playbackPersistenceWriter.write(request) }
