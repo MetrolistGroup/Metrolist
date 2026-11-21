@@ -55,6 +55,7 @@ import com.metrolist.shared.auth.singleAccountDataSyncId
 import com.metrolist.shared.generated.resources.Res
 import com.metrolist.shared.generated.resources.account_picker_subtitle
 import com.metrolist.shared.generated.resources.account_picker_title
+import com.metrolist.shared.generated.resources.authentication_data_extraction_failed
 import com.metrolist.shared.generated.resources.cancel
 import com.metrolist.shared.generated.resources.channel_switch_browse_hint
 import com.metrolist.shared.generated.resources.channel_switch_recovery_hint
