@@ -11,6 +11,7 @@ import com.metrolist.shared.playback.normalizationBoostPcm16
 import com.metrolist.shared.settings.Settings
 import com.metrolist.shared.youtube.playback.PlaybackEventKind
 import com.metrolist.shared.youtube.playback.PlaybackEventLog
+import java.util.ArrayDeque
 import javax.sound.sampled.AudioFormat
 import javax.sound.sampled.FloatControl
 import javax.sound.sampled.SourceDataLine
@@ -21,10 +22,10 @@ private data class RenderedAudioChunk(
     val playbackSpeed: Float,
 )
 
-class AudioRenderer private constructor(
+class AudioRenderer internal constructor(
     private val sampleRate: Int,
     private val channelCount: Int,
-    lineFactory: (AudioFormat, Int) -> SourceDataLine,
+    private val lineFactory: (AudioFormat, Int) -> SourceDataLine,
     private val configuration: () -> EqualizerConfiguration,
     private val silenceSettings: () -> Pair<Boolean, Boolean>,
 ) {
@@ -40,16 +41,18 @@ class AudioRenderer private constructor(
         line: SourceDataLine,
         silenceSettings: () -> Pair<Boolean, Boolean> = { false to false },
         activeEqualizer: () -> EqualizerProfile? = { null },
-    ) : this(sampleRate, channelCount, {
-        _,
-        _,
-        ->
-        line
-    }, { EqualizerConfiguration(activeEqualizer(), Settings.shared.audioBoostDb.toDouble()) }, silenceSettings)
+    ) : this(
+        sampleRate,
+        channelCount,
+        { _, _ -> line },
+        { EqualizerConfiguration(activeEqualizer(), Settings.shared.audioBoostDb.toDouble()) },
+        silenceSettings,
+    )
 
     private val audioFormat = AudioFormat(sampleRate.toFloat(), 16, channelCount, true, false)
-    private val line: SourceDataLine
-    private val masterGainControl: FloatControl?
+    private var line: SourceDataLine
+    private var masterGainControl: FloatControl? = null
+    private val lineBufferSize = (0.15 * audioFormat.sampleRate * audioFormat.frameSize).toInt()
 
     @Volatile
     private var hardwareVolumeApplied = false
@@ -72,6 +75,16 @@ class AudioRenderer private constructor(
     private var processorPitch = 1f
     private var positionSpeed = 1f
     private var writtenFrameCount = 0L
+
+    // Retain the unplayed tail so a replacement line can replay frames accepted by a closed device.
+    private val pendingOutputChunks = ArrayDeque<ByteArray>()
+    private var pendingOutputChunkOffset = 0
+    private var pendingOutputBaseFrame = 0L
+    private var lineFrameOffset = 0L
+    private var lastValidOutputFrame = 0L
+    private var replayOutputChunks = emptyList<ByteArray>()
+    private var replayOutputChunkIndex = 0
+    private var replayOutputChunkOffset = 0
     private var expectingOutput = false
     private var lastWriteAtNs = 0L
     private var lastUnderrunAtNs = 0L
@@ -79,6 +92,7 @@ class AudioRenderer private constructor(
 
     @Volatile
     private var outputGeneration = 0L
+    private var closed = false
     private var tempoProcessor: AudioTempoProcessor? = null
     private val equalizer = ParametricEqualizer(sampleRate, channelCount)
     private val positionClock = AudioPositionClock(audioFormat.sampleRate)
@@ -94,21 +108,9 @@ class AudioRenderer private constructor(
     private val safeLock = Object()
 
     init {
-        val latency = 0.15
-        val bufferSize = (latency * audioFormat.sampleRate * audioFormat.frameSize).toInt()
-        line =
-            lineFactory(audioFormat, bufferSize).apply {
-                if (!isOpen) open(audioFormat, bufferSize)
-                start()
-                isPlaying = true
-            }
-
-        masterGainControl =
-            if (line.isControlSupported(FloatControl.Type.MASTER_GAIN)) {
-                line.getControl(FloatControl.Type.MASTER_GAIN) as? FloatControl
-            } else {
-                null
-            }
+        line = createOutputLine(start = true)
+        isPlaying = true
+        updateMasterGainControl()
     }
 
     fun writePcmData(
@@ -118,7 +120,9 @@ class AudioRenderer private constructor(
         if (data == null || data.isEmpty()) return
         val (output, generation) =
             synchronized(safeLock) {
-                if (!line.isOpen || !isCurrent()) return
+                if (closed) return
+                if (!isCurrent()) return
+                reopenOutputLineIfClosed()
                 val current = configuration()
                 equalizer.update(current.profile)
                 val boostDb = current.preampDb.coerceIn(MIN_AUDIO_PREAMP_DB, MAX_AUDIO_BOOST_DB)
@@ -168,19 +172,11 @@ class AudioRenderer private constructor(
         outputSpeed: Float,
         isCurrent: () -> Boolean = { true },
     ): Boolean {
-        val currentVol = if (volume == 0f || !hardwareVolumeApplied) volume else 1f
-        val boost = normalizationGain
-        val processedData =
-            if (currentVol != 1f || boost > 1f) {
-                applyVolume(data, currentVol, boost)
-            } else {
-                data
-            }
         var offset = 0
-        while (offset < processedData.size) {
-            val writtenBytes =
+        while (offset < data.size) {
+            val result =
                 synchronized(safeLock) {
-                    while (generation == outputGeneration && line.isOpen && !isPlaying) {
+                    while (!closed && generation == outputGeneration && !isPlaying) {
                         try {
                             safeLock.wait()
                         } catch (_: InterruptedException) {
@@ -188,11 +184,42 @@ class AudioRenderer private constructor(
                             return false
                         }
                     }
-                    if (generation != outputGeneration || !line.isOpen || !isCurrent()) return false
+                    if (closed || generation != outputGeneration || !isCurrent()) return false
+                    reopenOutputLineIfClosed()
+                    if (replayOutputChunkIndex < replayOutputChunks.size) {
+                        val replayedBytes = writePendingReplayOutput()
+                        if (replayedBytes == 0) {
+                            try {
+                                safeLock.wait(10L)
+                            } catch (_: InterruptedException) {
+                                Thread.currentThread().interrupt()
+                                return false
+                            }
+                        }
+                        return@synchronized OutputWriteResult(inputBytesWritten = 0)
+                    }
+                    val currentVol = if (volume == 0f || !hardwareVolumeApplied) volume else 1f
+                    val boost = normalizationGain
+                    val outputData =
+                        if (currentVol != 1f || boost > 1f) {
+                            applyVolume(data, currentVol, boost)
+                        } else {
+                            data
+                        }
+                    val availableBytes =
+                        try {
+                            line.available()
+                        } catch (error: Exception) {
+                            if (!line.isOpen) {
+                                reopenOutputLineIfClosed()
+                                return@synchronized OutputWriteResult(inputBytesWritten = 0)
+                            }
+                            throw error
+                        }
                     val writableBytes =
-                        minOf(processedData.size - offset, line.available()) / audioFormat.frameSize * audioFormat.frameSize
+                        minOf(outputData.size - offset, availableBytes) / audioFormat.frameSize * audioFormat.frameSize
                     if (writableBytes == 0) {
-                        val bufferedFrames = (line.bufferSize - line.available()).coerceAtLeast(0) / audioFormat.frameSize
+                        val bufferedFrames = (line.bufferSize - availableBytes).coerceAtLeast(0) / audioFormat.frameSize
                         val waitMs = (bufferedFrames * 500L / sampleRate).coerceIn(1L, 20L)
                         try {
                             safeLock.wait(waitMs)
@@ -200,28 +227,43 @@ class AudioRenderer private constructor(
                             Thread.currentThread().interrupt()
                             return false
                         }
-                        0
+                        OutputWriteResult(inputBytesWritten = 0)
                     } else {
                         if (outputSpeed != positionSpeed) {
                             positionClock.changeSpeed(writtenFrameCount, outputSpeed)
                             positionSpeed = outputSpeed
                         }
-                        line.write(processedData, offset, writableBytes).also { writtenBytes ->
+                        try {
+                            line.write(outputData, offset, writableBytes)
+                        } catch (error: Exception) {
+                            if (!line.isOpen) {
+                                reopenOutputLineIfClosed()
+                                return@synchronized OutputWriteResult(inputBytesWritten = 0)
+                            }
+                            throw error
+                        }.let { writtenBytes ->
                             if (writtenBytes > 0) {
+                                rememberWrittenOutput(data, offset, writtenBytes)
                                 writtenFrameCount += writtenBytes / audioFormat.frameSize
+                                discardPlayedOutput()
                                 hasWrittenAudio = true
                                 expectingOutput = true
                                 lastWriteAtNs = System.nanoTime()
                             }
+                            OutputWriteResult(inputBytesWritten = writtenBytes)
                         }
                     }
                 }
-            if (writtenBytes > 0) {
-                offset += writtenBytes
+            if (result.inputBytesWritten > 0) {
+                offset += result.inputBytesWritten
             }
         }
         return true
     }
+
+    private data class OutputWriteResult(
+        val inputBytesWritten: Int,
+    )
 
     private fun recordOutputUnderrun(generation: Long) {
         val details =
@@ -242,7 +284,7 @@ class AudioRenderer private constructor(
                     "lastAudioWriteMs" to ((now - lastWriteAtNs) / 1_000_000L).toString(),
                     "lineActive" to line.isActive.toString(),
                     "lineRunning" to line.isRunning.toString(),
-                    "lineFramePosition" to line.longFramePosition.toString(),
+                    "lineFramePosition" to currentOutputFrame().toString(),
                     "writtenFrames" to writtenFrameCount.toString(),
                     "sampleRate" to sampleRate.toString(),
                     "channels" to channelCount.toString(),
@@ -250,6 +292,147 @@ class AudioRenderer private constructor(
                 )
             }
         PlaybackEventLog.warn(PlaybackEventKind.PLAYER, "Desktop audio output buffer emptied between writes.", details = details)
+    }
+
+    private fun createOutputLine(start: Boolean): SourceDataLine =
+        lineFactory(audioFormat, lineBufferSize).apply {
+            if (!isOpen) open(audioFormat, lineBufferSize)
+            if (start) start()
+        }
+
+    private fun reopenOutputLineIfClosed() {
+        if (closed || line.isOpen) return
+        val playedFrame = currentOutputFrame().coerceIn(0L, writtenFrameCount)
+        discardPlayedOutput()
+        val replacement = createOutputLine(start = isPlaying)
+        line = replacement
+        lineFrameOffset = playedFrame - replacement.longFramePosition
+        lastValidOutputFrame = playedFrame
+        updateMasterGainControl()
+        replayOutputChunks =
+            pendingOutputChunks.mapIndexed { index, chunk ->
+                if (index == 0 && pendingOutputChunkOffset > 0) chunk.copyOfRange(pendingOutputChunkOffset, chunk.size) else chunk.copyOf()
+            }
+        replayOutputChunkIndex = 0
+        replayOutputChunkOffset = 0
+        expectingOutput = pendingOutputChunks.isNotEmpty()
+    }
+
+    private fun rememberWrittenOutput(
+        data: ByteArray,
+        offset: Int,
+        length: Int,
+    ) {
+        if (pendingOutputChunks.isEmpty()) {
+            pendingOutputChunkOffset = 0
+            pendingOutputBaseFrame = writtenFrameCount
+        }
+        pendingOutputChunks.addLast(data.copyOfRange(offset, offset + length))
+    }
+
+    private fun discardPlayedOutput() {
+        if (pendingOutputChunks.isEmpty()) {
+            pendingOutputBaseFrame = writtenFrameCount
+            pendingOutputChunkOffset = 0
+            return
+        }
+        val playedFrames = (currentOutputFrame().coerceAtMost(writtenFrameCount) - pendingOutputBaseFrame).coerceAtLeast(0L)
+        var bytesToDiscard = (playedFrames * audioFormat.frameSize).coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
+        while (bytesToDiscard > 0 && pendingOutputChunks.isNotEmpty()) {
+            val first = pendingOutputChunks.first()
+            val available = first.size - pendingOutputChunkOffset
+            val discarded = minOf(bytesToDiscard, available)
+            pendingOutputChunkOffset += discarded
+            bytesToDiscard -= discarded
+            if (pendingOutputChunkOffset == first.size) {
+                pendingOutputChunks.removeFirst()
+                pendingOutputChunkOffset = 0
+            }
+        }
+        val discardedFrames = playedFrames - bytesToDiscard / audioFormat.frameSize
+        pendingOutputBaseFrame += discardedFrames
+        if (pendingOutputChunks.isEmpty()) {
+            pendingOutputBaseFrame = writtenFrameCount
+            pendingOutputChunkOffset = 0
+        }
+    }
+
+    private fun writePendingReplayOutput(): Int {
+        val chunk = replayOutputChunks.getOrNull(replayOutputChunkIndex) ?: return 0
+        val currentVol = if (volume == 0f || !hardwareVolumeApplied) volume else 1f
+        val boost = normalizationGain
+        val outputData = if (currentVol != 1f || boost > 1f) applyVolume(chunk, currentVol, boost) else chunk
+        val availableBytes =
+            try {
+                line.available()
+            } catch (error: Exception) {
+                if (!line.isOpen) {
+                    reopenOutputLineIfClosed()
+                    return 0
+                }
+                throw error
+            }
+        val writableBytes = minOf(outputData.size - replayOutputChunkOffset, availableBytes) / audioFormat.frameSize * audioFormat.frameSize
+        if (writableBytes <= 0) return 0
+        val writtenBytes =
+            try {
+                line.write(outputData, replayOutputChunkOffset, writableBytes)
+            } catch (error: Exception) {
+                if (!line.isOpen) {
+                    reopenOutputLineIfClosed()
+                    return 0
+                }
+                throw error
+            }
+        if (writtenBytes > 0) {
+            replayOutputChunkOffset += writtenBytes
+            if (replayOutputChunkOffset >= chunk.size) {
+                replayOutputChunkIndex++
+                replayOutputChunkOffset = 0
+            }
+            discardPlayedOutput()
+            expectingOutput = replayOutputChunkIndex < replayOutputChunks.size || pendingOutputChunks.isNotEmpty()
+            lastWriteAtNs = System.nanoTime()
+        }
+        return writtenBytes
+    }
+
+    private fun currentOutputFrame(): Long {
+        if (line.isOpen) {
+            lastValidOutputFrame = maxOf(lastValidOutputFrame, lineFrameOffset + line.longFramePosition)
+        }
+        return lastValidOutputFrame
+    }
+
+    private fun updateMasterGainControl() {
+        synchronized(safeLock) {
+            masterGainControl =
+                if (line.isControlSupported(FloatControl.Type.MASTER_GAIN)) {
+                    line.getControl(FloatControl.Type.MASTER_GAIN) as? FloatControl
+                } else {
+                    null
+                }
+            hardwareVolumeApplied = false
+            setHardwareVolume()
+        }
+    }
+
+    private fun setHardwareVolume() {
+        synchronized(safeLock) {
+            masterGainControl?.let { control ->
+                try {
+                    if (volume <= 0.0001f) {
+                        control.value = control.minimum
+                    } else {
+                        val dB = (20.0f * log10(volume)).coerceIn(control.minimum, control.maximum)
+                        control.value = dB
+                    }
+                    hardwareVolumeApplied = true
+                } catch (_: Exception) {
+                    runCatching { control.value = 0f.coerceIn(control.minimum, control.maximum) }
+                }
+            }
+        }
     }
 
     private var equalizerSamples = ShortArray(0)
@@ -311,8 +494,14 @@ class AudioRenderer private constructor(
             outputGeneration++
             expectingOutput = false
             safeLock.notifyAll()
-            val lineFrame = line.longFramePosition
+            val lineFrame = currentOutputFrame()
             writtenFrameCount = lineFrame
+            pendingOutputChunks.clear()
+            pendingOutputChunkOffset = 0
+            pendingOutputBaseFrame = lineFrame
+            replayOutputChunks = emptyList()
+            replayOutputChunkIndex = 0
+            replayOutputChunkOffset = 0
             positionSpeed = playbackSpeed
             positionClock.reset(mediaMs, lineFrame, playbackSpeed)
             silenceSkipper.reset()
@@ -321,10 +510,8 @@ class AudioRenderer private constructor(
     }
 
     fun getPlayedPositionMs(): Long =
-        if (line.isOpen) {
-            positionClock.position(line.longFramePosition)
-        } else {
-            0L
+        synchronized(safeLock) {
+            runCatching { positionClock.position(currentOutputFrame()) }.getOrDefault(positionClock.position(0L))
         }
 
     fun pause() {
@@ -343,6 +530,7 @@ class AudioRenderer private constructor(
 
     fun resume() {
         synchronized(safeLock) {
+            if (closed) return
             isPlaying = true
             if (line.isOpen && !line.isActive) {
                 try {
@@ -359,6 +547,12 @@ class AudioRenderer private constructor(
             outputGeneration++
             expectingOutput = false
             safeLock.notifyAll()
+            pendingOutputChunks.clear()
+            pendingOutputChunkOffset = 0
+            pendingOutputBaseFrame = writtenFrameCount
+            replayOutputChunks = emptyList()
+            replayOutputChunkIndex = 0
+            replayOutputChunkOffset = 0
             tempoProcessor?.close()
             tempoProcessor = null
             equalizer.reset()
@@ -391,7 +585,7 @@ class AudioRenderer private constructor(
     fun drain(shouldContinue: () -> Boolean): Boolean {
         val (pending, generation) =
             synchronized(safeLock) {
-                if (!shouldContinue()) return false
+                if (closed || !shouldContinue()) return false
                 expectingOutput = false
                 val chunks =
                     buildList {
@@ -407,9 +601,23 @@ class AudioRenderer private constructor(
         for (chunk in pending) {
             if (!shouldContinue() || !writeOutput(chunk.data, generation, chunk.playbackSpeed)) return false
         }
+        while (true) {
+            val replayPending =
+                synchronized(safeLock) {
+                    if (closed || generation != outputGeneration || !shouldContinue()) return false
+                    reopenOutputLineIfClosed()
+                    replayOutputChunkIndex < replayOutputChunks.size
+                }
+            if (!replayPending) break
+            val written = synchronized(safeLock) { writePendingReplayOutput() }
+            if (written == 0) {
+                synchronized(safeLock) { safeLock.wait(10L) }
+            }
+        }
         val drainTimeoutMs =
             synchronized(safeLock) {
-                if (generation != outputGeneration || !shouldContinue()) return false
+                if (closed || generation != outputGeneration || !shouldContinue()) return false
+                reopenOutputLineIfClosed()
                 expectingOutput = false
                 positionClock.finishSilence(writtenFrameCount, silenceSkipper.outputFrames)
                 val bufferedBytes = (line.bufferSize.toLong() - line.available()).coerceAtLeast(0L)
@@ -434,20 +642,11 @@ class AudioRenderer private constructor(
 
     fun setVolume(volume: Float) {
         val clampedVol = volume.coerceIn(0.0f, 1.0f)
-        this.volume = clampedVol
-        hardwareVolumeApplied = false
-        masterGainControl?.let { control ->
-            try {
-                if (clampedVol <= 0.0001f) {
-                    control.value = control.minimum
-                } else {
-                    val dB = (20.0f * log10(clampedVol)).coerceIn(control.minimum, control.maximum)
-                    control.value = dB
-                }
-                hardwareVolumeApplied = true
-            } catch (_: Exception) {
-                runCatching { control.value = 0f.coerceIn(control.minimum, control.maximum) }
-            }
+        synchronized(safeLock) {
+            if (closed) return
+            this.volume = clampedVol
+            hardwareVolumeApplied = false
+            setHardwareVolume()
         }
     }
 
@@ -462,8 +661,12 @@ class AudioRenderer private constructor(
 
     fun close() {
         synchronized(safeLock) {
+            if (closed) return
+            closed = true
             outputGeneration++
             safeLock.notifyAll()
+            pendingOutputChunks.clear()
+            pendingOutputChunkOffset = 0
             isPlaying = false
             hasWrittenAudio = false
             tempoProcessor?.close()

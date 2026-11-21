@@ -46,6 +46,7 @@ import coil3.network.ktor3.KtorNetworkFetcherFactory
 import com.metrolist.shared.backup.BackupArchiveLimits
 import com.metrolist.shared.backup.IosBackupRestoreManager
 import com.metrolist.shared.backup.defaultBackupFilename
+import com.metrolist.shared.backup.foreignImportMessage
 import com.metrolist.shared.crash.IosCrashRecovery
 import com.metrolist.shared.db.MusicDatabase
 import com.metrolist.shared.discord.IosDiscordPresenceEffect
@@ -53,6 +54,7 @@ import com.metrolist.shared.generated.resources.Res
 import com.metrolist.shared.generated.resources.back
 import com.metrolist.shared.generated.resources.backup_filename_prefix
 import com.metrolist.shared.generated.resources.import_playlist
+import com.metrolist.shared.generated.resources.playlist_imports_title
 import com.metrolist.shared.listentogether.IosListenTogetherPlayback
 import com.metrolist.shared.listentogether.ListenTogetherLogLevel
 import com.metrolist.shared.listentogether.ListenTogetherLogger
@@ -111,6 +113,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
 import kotlinx.coroutines.cancelAndJoin
@@ -205,6 +208,7 @@ fun MetrolistIOSApp() {
                 database,
                 appScope,
                 audioStorage = downloadManager,
+                musicVideoResolver = koin.get(),
             )
         }
     IosDiscordPresenceEffect(playbackController.state, player.playbackSpeed)
@@ -251,6 +255,7 @@ fun MetrolistIOSApp() {
     var backupStatus by remember { mutableStateOf<BackupRestoreStatus?>(null) }
     var backupFailure by remember { mutableStateOf<Throwable?>(null) }
     var backupBusy by remember { mutableStateOf(false) }
+    var foreignImportStatus by remember { mutableStateOf<String?>(null) }
     var showPlaylistImporter by rememberSaveable { mutableStateOf(false) }
     val storageUsage by downloadManager.storageUsageUpdates.collectAsState()
     val cleanupSession by rememberUpdatedState {
@@ -258,6 +263,7 @@ fun MetrolistIOSApp() {
             listenTogetherManager.close()
             listenTogetherClient.close()
             downloadManager.close()
+            playbackController.releaseMusicVideoSurfacePlayer()
             appJob.cancel()
             player.release()
         }
@@ -294,6 +300,7 @@ fun MetrolistIOSApp() {
         runCatching { downloadManager.pauseAll() }.onFailure { shutdownFailure = it }
         downloadManager.close()
         player.stop()
+        playbackController.releaseMusicVideoSurfacePlayer()
         appJob.cancelAndJoin()
         player.release()
         database.close()
@@ -359,10 +366,11 @@ fun MetrolistIOSApp() {
                 try {
                     val sourcePath =
                         withContext(Dispatchers.IO) {
-                            IosNativeFiles.copyPickedFile(
-                                url,
-                                BackupArchiveLimits.TOTAL_UNCOMPRESSED_BYTES + 2L * 1024L * 1024L,
-                            )
+                            IosNativeFiles
+                                .copyPickedFile(
+                                    url,
+                                    BackupArchiveLimits.TOTAL_UNCOMPRESSED_BYTES + 2L * 1024L * 1024L,
+                                ).also { copiedPath = it }
                         }
                     copiedPath = sourcePath
                     val generationBeforeRestore = databaseGeneration
@@ -387,12 +395,55 @@ fun MetrolistIOSApp() {
                     backupStatus = BackupRestoreStatus.RESTORE_FAILED
                 } finally {
                     copiedPath?.let { path ->
-                        withContext(Dispatchers.IO) {
+                        withContext(NonCancellable + Dispatchers.IO) {
                             NSFileManager.defaultManager.removeItemAtPath(path, error = null)
                         }
                     }
                     backupBusy = false
                 }
+            }
+        }
+    }
+
+    fun importForeignBackup() {
+        if (backupBusy) return
+        backupBusy = true
+        backupStatus = BackupRestoreStatus.BUSY
+        foreignImportStatus = null
+        IosNativeFiles.pickDocument(presenter, listOf("public.data")) { url ->
+            if (url == null) {
+                backupBusy = false
+                backupStatus = null
+                return@pickDocument
+            }
+            scope.launch {
+                var copiedPath: String? = null
+                val result =
+                    try {
+                        val sourcePath =
+                            withContext(Dispatchers.IO) {
+                                IosNativeFiles
+                                    .copyPickedFile(
+                                        url,
+                                        BackupArchiveLimits.TOTAL_UNCOMPRESSED_BYTES + 2L * 1024L * 1024L,
+                                    ).also { copiedPath = it }
+                            }
+                        copiedPath = sourcePath
+                        backupManager.importForeignBackup(sourcePath, database)
+                    } catch (error: CancellationException) {
+                        throw error
+                    } catch (error: Exception) {
+                        Result.failure(error)
+                    } finally {
+                        copiedPath?.let { path ->
+                            withContext(NonCancellable + Dispatchers.IO) {
+                                NSFileManager.defaultManager.removeItemAtPath(path, error = null)
+                            }
+                        }
+                    }
+                foreignImportStatus = result.foreignImportMessage()
+                backupBusy = false
+                backupStatus = null
             }
         }
     }
@@ -522,8 +573,15 @@ fun MetrolistIOSApp() {
                                         BackupRestorePage(
                                             onExport = ::exportBackup,
                                             onImport = ::importBackup,
+                                            onImportForeign = ::importForeignBackup,
                                             status = backupStatus,
                                             failure = backupFailure,
+                                            foreignImportStatus = foreignImportStatus,
+                                        )
+                                        Text(
+                                            stringResource(Res.string.playlist_imports_title),
+                                            modifier = Modifier.padding(horizontal = 20.dp),
+                                            style = MaterialTheme.typography.titleMedium,
                                         )
                                         Button(
                                             onClick = { showPlaylistImporter = true },

@@ -305,6 +305,7 @@ internal fun lyricsAiProviderLabel(provider: String): String =
         "XAi" -> stringResource(Res.string.brand_xai)
         "OpenCodeZen" -> stringResource(Res.string.brand_opencode_zen)
         "OpenCodeGo" -> stringResource(Res.string.brand_opencode_go)
+        "Kilo" -> stringResource(Res.string.brand_kilo)
         "Groq" -> stringResource(Res.string.brand_groq)
         "DeepSeek" -> stringResource(Res.string.brand_deepseek)
         "Inception" -> stringResource(Res.string.brand_inception)

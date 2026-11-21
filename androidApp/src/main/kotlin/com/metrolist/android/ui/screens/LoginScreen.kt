@@ -70,6 +70,7 @@ import com.metrolist.shared.auth.AccountDiscoveryAction
 import com.metrolist.shared.auth.AuthManager
 import com.metrolist.shared.auth.accountDiscoveryAction
 import com.metrolist.shared.auth.selectionDataSyncId
+import com.metrolist.shared.auth.singleAccountDataSyncId
 import com.metrolist.shared.generated.resources.Res
 import com.metrolist.shared.generated.resources.authentication_data_extraction_failed
 import com.metrolist.shared.generated.resources.back
@@ -340,7 +341,8 @@ fun LoginScreen(
             }
 
             AccountDiscoveryAction.COMPLETE_LOGIN -> {
-                finalizeLogin(authData)
+                val dataSyncId = singleAccountDataSyncId(authData.dataSyncId, accounts)
+                finalizeLogin(authData.copy(dataSyncId = dataSyncId))
             }
         }
     }

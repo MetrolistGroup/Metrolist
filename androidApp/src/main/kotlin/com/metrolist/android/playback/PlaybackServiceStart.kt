@@ -1,5 +1,6 @@
 package com.metrolist.android.playback
 
+import android.app.ForegroundServiceStartNotAllowedException
 import android.app.PendingIntent
 import android.app.Service
 import android.content.Intent
@@ -24,6 +25,10 @@ internal fun shouldReconcilePlaybackServiceStart(
 ): Boolean =
     player?.currentMediaItem == null || player.playbackState == Player.STATE_IDLE ||
         (intent?.action == Intent.ACTION_MEDIA_BUTTON && !player.playWhenReady)
+
+internal fun isForegroundStartDenied(error: RuntimeException): Boolean =
+    error is SecurityException ||
+        (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && error is ForegroundServiceStartNotAllowedException)
 
 internal fun Service.promotePlaybackServiceStart(notification: MediaNotification?) {
     val startupNotification =

@@ -125,6 +125,7 @@ fun SongSwipeActions(
     song: SongItem,
     onFeedback: (String) -> Unit,
     enabled: Boolean = true,
+    shape: Shape = ComponentShapes.CardShape,
     content: @Composable () -> Unit,
 ) {
     val playback = LocalPlaybackController.current
@@ -133,6 +134,7 @@ fun SongSwipeActions(
         onSwipeRight = { playback.playNext(listOf(song)) },
         onFeedback = onFeedback,
         enabled = enabled && Settings.shared.swipeToSong,
+        shape = shape,
         content = content,
     )
 }
