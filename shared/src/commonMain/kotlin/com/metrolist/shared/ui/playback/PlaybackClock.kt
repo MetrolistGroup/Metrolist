@@ -9,8 +9,9 @@ fun Flow<Long>.wholeSecondPosition(): Flow<Long> = map { it / 1_000L * 1_000L }.
 data class PlaybackListState(
     val currentSongId: String?,
     val isPlaying: Boolean,
+    val originalQueueItemId: String? = null,
 )
 
-fun PlaybackUiState.listState(): PlaybackListState = PlaybackListState(currentSong?.id, isPlaying)
+fun PlaybackUiState.listState(): PlaybackListState = PlaybackListState(currentSong?.id, isPlaying, currentSong?.originalQueueItemId)
 
 fun Flow<PlaybackUiState>.listStates(): Flow<PlaybackListState> = map { it.listState() }.distinctUntilChanged()
