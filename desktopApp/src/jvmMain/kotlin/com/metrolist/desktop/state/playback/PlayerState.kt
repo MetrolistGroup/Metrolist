@@ -514,11 +514,18 @@ object PlayerState {
     private val syncSession by lazy { DesktopDeviceConnectSession(queue) { deviceConnect } }
 
     @Volatile private var pendingExplicitRadioRequest = false
+
+    @Volatile private var explicitRadioRequestGeneration = 0L
+
+    @Volatile private var deviceRadioBootstrapJob: Job? = null
+    private var deviceRadioBootstrapPending = false
     private var controllerPlayback: DcLocalPlaybackState? = null
     private val deviceConnectPlayback =
         object : DeviceConnectPlaybackPort {
             override fun onExplicitRadioRequest() {
+                explicitRadioRequestGeneration++
                 pendingExplicitRadioRequest = true
+                deviceRadioBootstrapJob?.cancel()
             }
 
             override val canStartDefaultPlayback: Boolean get() = castManager.state.value.status == CastConnectionStatus.DISCONNECTED
@@ -2317,6 +2324,12 @@ object PlayerState {
             state.explicitRadioQueue && state.queue.displayedItems.size == 1 &&
                 (pendingExplicitRadioRequest || !syncSession.explicitRadioQueue || syncSession.sessionId != snapshot.sessionId)
         pendingExplicitRadioRequest = false
+        if (startsExplicitRadio) {
+            deviceRadioBootstrapPending = true
+        } else if (appliedDeviceQueue != queueIdentity) {
+            deviceRadioBootstrapPending = false
+            deviceRadioBootstrapJob?.cancel()
+        }
         val reuseInitialTrack =
             syncSession.sessionId == null && !deviceConnect.isFollowing &&
                 deviceConnectCanReusePlayback(
@@ -2383,20 +2396,26 @@ object PlayerState {
             state.scrobbleSession,
         )
         if (!deviceConnect.isFollowing) {
-            if (startsExplicitRadio) {
+            if (deviceRadioBootstrapPending) {
+                if (deviceRadioBootstrapJob?.isActive == true) return@withContext
                 val generation = playbackTransitionGeneration
-                scope.launch {
-                    try {
-                        val songs = freshRadioRecommendations(track.id, generation)
-                        if (appliedDeviceQueue == queueIdentity && syncSession.explicitRadioQueue && !deviceConnect.isFollowing) {
-                            appendRadioRecommendations(songs, generation)
+                val requestGeneration = explicitRadioRequestGeneration
+                deviceRadioBootstrapJob =
+                    scope.launch {
+                        try {
+                            val songs = freshRadioRecommendations(track.id, generation)
+                            if (requestGeneration == explicitRadioRequestGeneration && appliedDeviceQueue == queueIdentity &&
+                                syncSession.explicitRadioQueue && !deviceConnect.isFollowing
+                            ) {
+                                deviceRadioBootstrapPending = false
+                                appendRadioRecommendations(songs, generation)
+                            }
+                        } catch (error: CancellationException) {
+                            throw error
+                        } catch (error: Exception) {
+                            Logger.w("PlayerState", "Failed to start remote radio (${error::class.simpleName})")
                         }
-                    } catch (error: CancellationException) {
-                        throw error
-                    } catch (error: Exception) {
-                        Logger.w("PlayerState", "Failed to start remote radio (${error::class.simpleName})")
                     }
-                }
             } else {
                 maybePrefetchRecommendationsForCurrentQueue(track)
             }

@@ -205,7 +205,7 @@ internal class AndroidDeviceConnectPlayback(
                         queue.recommendationSeedSongId ?: song.id,
                         allowRepeatMode = desired.explicitRadioQueue,
                     )
-                    explicitRadioBootstrapPending = false
+                    explicitRadioBootstrapPending = queue.recommendationBootstrapJob == null
                 }
                 onSave()
             }
