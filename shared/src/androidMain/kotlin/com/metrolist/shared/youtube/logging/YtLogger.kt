@@ -18,7 +18,7 @@ actual object YtLogger {
         message: String,
     ) {
         PlaybackEventLog.captureYtLogger(PlaybackEventLevel.WARN, tag, message)
-        Timber.tag(tag).w(message)
+        Timber.tag(tag).w("[YtLogger] $message")
     }
 
     actual fun e(
@@ -28,9 +28,9 @@ actual object YtLogger {
     ) {
         PlaybackEventLog.captureYtLogger(PlaybackEventLevel.ERROR, tag, message, throwable)
         if (throwable != null) {
-            Timber.tag(tag).e(throwable, message)
+            Timber.tag(tag).e(throwable, "[YtLogger] $message")
         } else {
-            Timber.tag(tag).e(message)
+            Timber.tag(tag).e("[YtLogger] $message")
         }
     }
 }

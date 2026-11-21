@@ -13,6 +13,7 @@ import com.metrolist.shared.utils.Logger
 import com.metrolist.shared.utils.OsUtil
 import com.metrolist.shared.utils.XdgUtils
 import com.metrolist.shared.youtube.playback.PlaybackEventKind
+import com.metrolist.shared.youtube.playback.PlaybackEventLevel
 import com.metrolist.shared.youtube.playback.PlaybackEventLog
 import com.sun.jna.platform.win32.Crypt32Util
 import java.io.ByteArrayOutputStream
@@ -168,6 +169,15 @@ private fun credentialWarning(message: String) {
     } else {
         Logger.w("DesktopCredentials", message)
     }
+}
+
+internal fun captureDesktopSettingsFailure(error: Exception) {
+    PlaybackEventLog.captureApplicationFailure(
+        PlaybackEventLevel.ERROR,
+        "Settings",
+        "Failed to persist desktop settings",
+        error,
+    )
 }
 
 fun refreshRecoveredDesktopCredentials() {
@@ -479,7 +489,8 @@ internal class DesktopFileSettings(
                 try {
                     persistPending()
                 } catch (e: Exception) {
-                    System.err.println("Failed to persist desktop settings: ${e.message}")
+                    captureDesktopSettingsFailure(e)
+                    System.err.println("Failed to persist desktop settings (${e::class.simpleName})")
                 }
             }, 250, TimeUnit.MILLISECONDS)
     }
