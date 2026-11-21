@@ -32,30 +32,49 @@ internal fun openAudioLine(
     getLine: (Mixer.Info?, DataLine.Info) -> SourceDataLine,
     sleep: (Long) -> Unit,
 ): SourceDataLine {
-    val info = DataLine.Info(SourceDataLine::class.java, format)
     var failure: Exception? = null
-    for (attempt in 0..3) {
-        if (attempt > 0) sleep(100L shl (attempt - 1))
-        for (mixer in audioOutputMixers(osName, configuredLine, mixers())) {
-            var line: SourceDataLine? = null
-            var opened = false
-            try {
-                line = getLine(mixer, info)
-                line.open(format, bufferSize)
-                opened = true
-                return line
-            } catch (error: Exception) {
-                if (error !is LineUnavailableException && error !is IllegalArgumentException) throw error
-                failure = error
-            } finally {
-                if (!opened) {
-                    runCatching { line?.close() }
+    for (outputFormat in audioOutputFormats(format, osName)) {
+        val unsupportedMixers = mutableSetOf<Mixer.Info?>()
+        for (attempt in 0..3) {
+            if (attempt > 0) sleep(100L shl (attempt - 1))
+            for (mixer in audioOutputMixers(osName, configuredLine, mixers())) {
+                if (mixer in unsupportedMixers) continue
+                val outputBufferSize = bufferSize * outputFormat.frameSize / format.frameSize
+                var line: SourceDataLine? = null
+                var opened = false
+                try {
+                    val info = DataLine.Info(SourceDataLine::class.java, outputFormat)
+                    line = getLine(mixer, info)
+                    line.open(outputFormat, outputBufferSize)
+                    opened = true
+                    return line
+                } catch (error: Exception) {
+                    if (error is IllegalArgumentException) {
+                        unsupportedMixers += mixer
+                    } else if (error !is LineUnavailableException) {
+                        throw error
+                    }
+                    failure = error
+                } finally {
+                    if (!opened) {
+                        runCatching { line?.close() }
+                    }
                 }
             }
         }
     }
     throw LineUnavailableException().apply { failure?.let(::initCause) }
 }
+
+internal fun audioOutputFormats(
+    format: AudioFormat,
+    osName: String,
+): List<AudioFormat> =
+    if (osName.startsWith("Windows", ignoreCase = true) && format.channels == 2 && format.sampleSizeInBits == 16) {
+        listOf(format, AudioFormat(format.sampleRate, 16, 4, true, format.isBigEndian))
+    } else {
+        listOf(format)
+    }
 
 internal fun audioOutputMixers(
     osName: String,
