@@ -16,6 +16,7 @@ import com.metrolist.shared.generated.resources.Res
 import com.metrolist.shared.generated.resources.playback_unable_to_play_queued_track
 import com.metrolist.shared.model.SongItem
 import com.metrolist.shared.model.isVideoSong
+import com.metrolist.shared.playback.MusicQueueSnapshot
 import com.metrolist.shared.playback.PlaybackSeekSource
 import com.metrolist.shared.scrobble.ScrobbleManager
 import com.metrolist.shared.settings.Settings
@@ -27,6 +28,16 @@ import kotlinx.coroutines.withContext
 import org.jetbrains.compose.resources.getString
 import java.io.IOException
 import kotlin.math.abs
+
+internal fun shouldClearPersistedPlaybackForAppliedQueue(queue: MusicQueueSnapshot): Boolean = queue.displayedItems.isEmpty()
+
+internal fun shouldClearPersistedPlaybackForControllerState(
+    previous: DcLocalPlaybackState?,
+    next: DcLocalPlaybackState?,
+): Boolean =
+    previous != null && next != null &&
+        previous.queue.displayedItems.isNotEmpty() &&
+        next.queue.displayedItems.isEmpty()
 
 internal class AndroidDeviceConnectPlayback(
     private val context: Context,
@@ -209,10 +220,8 @@ internal class AndroidDeviceConnectPlayback(
                     explicitRadioBootstrapPending = queue.recommendationBootstrapJob == null
                 }
                 onSave()
-                // Only an applied empty snapshot is an explicit clear; transient empty states stay no-ops.
-                if (previousQueue.displayedItems.isNotEmpty() && desiredQueue.displayedItems.isEmpty()) {
-                    onQueueCleared()
-                }
+                // A committed empty snapshot is an explicit clear even if the local queue was already empty.
+                if (shouldClearPersistedPlaybackForAppliedQueue(desiredQueue)) onQueueCleared()
             }
 
             override suspend fun acknowledge(snapshot: DcPlaybackSnapshot) =
@@ -237,6 +246,7 @@ internal class AndroidDeviceConnectPlayback(
             override suspend fun setControllerPlayback(playback: DcLocalPlaybackState?) =
                 withContext(Dispatchers.Main.immediate) {
                     if (playbackReleased) return@withContext
+                    val clearsQueue = shouldClearPersistedPlaybackForControllerState(controllerPlayback, playback)
                     if (playback != null && controllerPlayback?.queue != playback.queue) {
                         transitions.cancelNextTrackPreload()
                         video.clearVideoMode()
@@ -257,6 +267,7 @@ internal class AndroidDeviceConnectPlayback(
                     if (playback != null) queue.setExplicitRadioQueue(playback.explicitRadioQueue)
                     controllerPlayback = playback
                     player.setControllerPlayback(playback)
+                    if (clearsQueue) onQueueCleared()
                     if (playback !=
                         null
                     ) {
