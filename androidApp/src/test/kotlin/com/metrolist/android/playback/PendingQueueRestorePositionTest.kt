@@ -2,9 +2,11 @@ package com.metrolist.android.playback
 
 import com.metrolist.android.models.PersistPlayerState
 import com.metrolist.android.models.PlaybackPersistenceWriter
+import com.metrolist.shared.deviceconnect.DcLocalPlaybackState
 import com.metrolist.shared.model.SongItem
 import com.metrolist.shared.playback.MusicQueue
 import com.metrolist.shared.playback.MusicQueueEntry
+import com.metrolist.shared.playback.MusicQueueSnapshot
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
@@ -92,6 +94,28 @@ class PendingQueueRestorePositionTest {
         assertEquals("", stored)
         assertEquals("", position)
     }
+
+    @Test
+    fun anAppliedEmptyDeviceConnectQueueClearsTheSavedQueue() {
+        assertTrue(shouldClearPersistedPlaybackForAppliedQueue(MusicQueueSnapshot()))
+        assertFalse(shouldClearPersistedPlaybackForAppliedQueue(queuedSnapshot()))
+    }
+
+    @Test
+    fun aFollowedControllerClearsTheSavedQueueOnlyAfterItsQueueEmpties() {
+        val previous = DcLocalPlaybackState(queue = queuedSnapshot())
+        val empty = DcLocalPlaybackState()
+
+        assertTrue(shouldClearPersistedPlaybackForControllerState(previous, empty))
+        assertFalse(shouldClearPersistedPlaybackForControllerState(null, empty))
+        assertFalse(shouldClearPersistedPlaybackForControllerState(previous, previous))
+    }
+
+    private fun queuedSnapshot() =
+        MusicQueueSnapshot(
+            displayedItems = listOf(SongItem("first", "First", null, emptyList(), null)),
+            currentIndex = 0,
+        )
 
     private fun pausedQueueState() =
         PersistPlayerState(
