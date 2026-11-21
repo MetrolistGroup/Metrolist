@@ -13,6 +13,8 @@ import com.metrolist.shared.backup.AutoBackupFrequency
 import com.metrolist.shared.backup.defaultBackupFilename
 import com.metrolist.shared.db.MusicDatabase
 import com.metrolist.shared.settings.Settings
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import org.koin.core.context.GlobalContext
 import java.io.File
 import java.util.concurrent.TimeUnit
@@ -21,7 +23,9 @@ class AutomaticBackupWorker(
     context: Context,
     parameters: WorkerParameters,
 ) : CoroutineWorker(context, parameters) {
-    override suspend fun doWork(): Result {
+    override suspend fun doWork(): Result = backupMutex.withLock { doWorkLocked() }
+
+    private suspend fun doWorkLocked(): Result {
         if (inputData.getBoolean(PRUNE_ONLY_KEY, false)) {
             return runCatching { pruneBackups(File(applicationContext.filesDir, BACKUP_DIRECTORY)) }
                 .fold({ Result.success() }, { Result.retry() })
@@ -70,6 +74,7 @@ class AutomaticBackupWorker(
     }
 
     companion object {
+        private val backupMutex = Mutex()
         private const val BACKUP_DIRECTORY = "automatic-backups"
         private const val BACKUP_FILENAME_PREFIX = "metrolist-backup"
         private const val MAX_RETAINED_BACKUPS = 10

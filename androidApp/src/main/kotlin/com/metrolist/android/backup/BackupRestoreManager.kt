@@ -215,11 +215,9 @@ class BackupRestoreManager(
             }
         }
 
-    suspend fun restore(uri: Uri): Result<Unit> =
-        restoreInput { context.contentResolver.openInputStream(uri) }
+    suspend fun restore(uri: Uri): Result<Unit> = restoreInput { context.contentResolver.openInputStream(uri) }
 
-    suspend fun restore(file: File): Result<Unit> =
-        restoreInput { file.inputStream() }
+    suspend fun restore(file: File): Result<Unit> = restoreInput { file.inputStream() }
 
     private suspend fun restoreInput(openInput: () -> InputStream?): Result<Unit> =
         withContext(Dispatchers.IO) {

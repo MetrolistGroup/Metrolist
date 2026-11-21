@@ -9,6 +9,7 @@ import com.metrolist.shared.utils.XdgUtils
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -26,13 +27,15 @@ object DesktopAutomaticBackupScheduler {
 
     fun schedule() {
         val activeScope = scope ?: return
-        job?.cancel()
+        val previousJob = job
+        previousJob?.cancel()
         val settings = Settings.shared
         if (!settings.autoBackupEnabled) return
 
         val frequency = AutoBackupFrequency.fromSetting(settings.autoBackupFrequency)
         job =
             activeScope.launch {
+                previousJob?.join()
                 while (true) {
                     if (settings.credentialsPending) {
                         delay(CREDENTIAL_RECOVERY_POLL_MILLIS)
@@ -54,18 +57,17 @@ object DesktopAutomaticBackupScheduler {
                         val directory = File(XdgUtils.getXdgDataHome(), "metrolist/automatic-backups")
                         val destination = File(directory, "${defaultBackupFilename(BACKUP_FILENAME_PREFIX)}.zip")
                         val result =
-                            withContext(Dispatchers.IO) {
-                                DesktopBackupRestoreManager.backup(destination)
+                            withContext(Dispatchers.IO + NonCancellable) {
+                                DesktopBackupRestoreManager.backup(destination).onSuccess {
+                                    settings.autoBackupLastSuccessEpochMillis = System.currentTimeMillis()
+                                    pruningPending = true
+                                    runCatching { settings.flush() }
+                                        .onFailure { error ->
+                                            AppLogger.warning("AutomaticBackup", "Could not persist automatic backup time", error)
+                                        }
+                                }
                             }
                         if (result.isSuccess) {
-                            settings.autoBackupLastSuccessEpochMillis = System.currentTimeMillis()
-                            runCatching { settings.flush() }
-                                .onFailure { error ->
-                                    AppLogger.warning(
-                                        "AutomaticBackup",
-                                        "Could not persist automatic backup time: ${error.message ?: "Unknown error"}",
-                                    )
-                                }
                             val pruneResult = withContext(Dispatchers.IO) { runCatching { pruneBackups(directory) } }
                             pruningPending = pruneResult.isFailure
                             if (pruningPending) {

@@ -1,6 +1,9 @@
+@file:OptIn(ExperimentalForeignApi::class)
+
 package com.metrolist.shared.backup
 
 import com.metrolist.shared.settings.Settings
+import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
@@ -16,16 +19,19 @@ import platform.Foundation.NSNotificationCenter
 import platform.Foundation.NSURL
 import platform.Foundation.NSURLIsExcludedFromBackupKey
 import platform.Foundation.NSUserDomainMask
+import platform.Foundation.timeIntervalSince1970
 
 private const val AUTOMATIC_BACKUP_SETTINGS_CHANGED = "com.metrolist.automaticBackupSettingsChanged"
 private const val BACKUP_FILENAME_PREFIX = "metrolist-backup"
 private const val MAX_RETAINED_BACKUPS = 10
 private var activeAutomaticBackup: Job? = null
+private var automaticBackupCleanupPending = false
+
+fun iosAutomaticBackupNeedsCleanup(): Boolean = automaticBackupCleanupPending
 
 fun iosAutomaticBackupEnabled(): Boolean = Settings.shared.autoBackupEnabled
 
-fun iosAutomaticBackupIntervalMillis(): Long =
-    AutoBackupFrequency.fromSetting(Settings.shared.autoBackupFrequency).intervalMillis
+fun iosAutomaticBackupIntervalMillis(): Long = AutoBackupFrequency.fromSetting(Settings.shared.autoBackupFrequency).intervalMillis
 
 fun iosAutomaticBackupLastSuccessEpochMillis(): Long = Settings.shared.autoBackupLastSuccessEpochMillis
 
@@ -43,7 +49,7 @@ fun createIosAutomaticBackup(completion: (Boolean) -> Unit) {
                     return@launch
                 }
                 val fileManager = NSFileManager.defaultManager
-                val documentsPath = fileManager.URLsForDirectory(NSDocumentDirectory, NSUserDomainMask).firstOrNull()?.path
+                val documentsPath = (fileManager.URLsForDirectory(NSDocumentDirectory, NSUserDomainMask).firstOrNull() as? NSURL)?.path
                 val backupDirectory = documentsPath?.plus("/Metrolist/Automatic Backups")
                 val destination = backupDirectory?.plus("/${defaultBackupFilename(BACKUP_FILENAME_PREFIX)}.zip")
                 val succeeded =
@@ -65,10 +71,12 @@ fun createIosAutomaticBackup(completion: (Boolean) -> Unit) {
                             ),
                         )
                         check(destination != null)
-                        IosBackupRestoreManager().backup(destination).getOrThrow()
-                        Settings.shared.autoBackupLastSuccessEpochMillis =
-                            (NSDate().timeIntervalSince1970 * 1000).toLong()
-                        Settings.shared.flush()
+                        if (!automaticBackupCleanupPending) {
+                            IosBackupRestoreManager().backup(destination).getOrThrow()
+                            automaticBackupCleanupPending = true
+                            Settings.shared.autoBackupLastSuccessEpochMillis = (NSDate().timeIntervalSince1970 * 1000).toLong()
+                            Settings.shared.flush()
+                        }
                         val entries =
                             fileManager
                                 .contentsOfDirectoryAtPath(backupDirectory, error = null)
@@ -85,10 +93,10 @@ fun createIosAutomaticBackup(completion: (Boolean) -> Unit) {
                                     (fileManager.attributesOfItemAtPath(path, error = null)?.get(NSFileModificationDate) as? NSDate)
                                         ?.timeIntervalSince1970 ?: 0.0
                                 filename to modifiedAt
-                            }
-                            .sortedByDescending { it.second }
+                            }.sortedByDescending { it.second }
                             .drop(MAX_RETAINED_BACKUPS)
-                            .forEach { (filename, _) -> fileManager.removeItemAtPath("$backupDirectory/$filename", error = null) }
+                            .forEach { (filename, _) -> check(fileManager.removeItemAtPath("$backupDirectory/$filename", error = null)) }
+                        automaticBackupCleanupPending = false
                         true
                     }.getOrDefault(false)
                 completion(succeeded)

@@ -93,9 +93,9 @@ import com.metrolist.shared.generated.resources.automatic_backup_daily
 import com.metrolist.shared.generated.resources.automatic_backup_description
 import com.metrolist.shared.generated.resources.automatic_backup_frequency
 import com.metrolist.shared.generated.resources.automatic_backup_location
+import com.metrolist.shared.generated.resources.automatic_backup_monthly
 import com.metrolist.shared.generated.resources.automatic_backup_restore
 import com.metrolist.shared.generated.resources.automatic_backup_restore_empty
-import com.metrolist.shared.generated.resources.automatic_backup_monthly
 import com.metrolist.shared.generated.resources.automatic_backup_weekly
 import com.metrolist.shared.generated.resources.back
 import com.metrolist.shared.generated.resources.backup_create_failed
