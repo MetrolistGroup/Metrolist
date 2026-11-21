@@ -239,7 +239,12 @@ internal fun mergeBackgroundLyricsEntries(lyrics: List<LyricsEntry>): List<Lyric
                     val representedByWords =
                         original != null &&
                             background.romanizedWords.orEmpty().any { roman ->
-                                (roman.isBackground == original.isBackground || background.isBackground) &&
+                                (
+                                    roman.isBackground == original.isBackground ||
+                                        background.words.orEmpty().all(
+                                            WordTimestamp::isBackground,
+                                        )
+                                ) &&
                                     roman.startTime < raw.endTime && roman.endTime > raw.startTime
                             }
                     val representedByText =
