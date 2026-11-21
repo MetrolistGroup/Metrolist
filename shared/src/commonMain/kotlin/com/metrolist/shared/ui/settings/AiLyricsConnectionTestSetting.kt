@@ -23,6 +23,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.metrolist.shared.api.lyrics.AiLyricsProbeResult
 import com.metrolist.shared.api.lyrics.AiProviderPreset
+import com.metrolist.shared.api.lyrics.AiProviderPresets
 import com.metrolist.shared.api.lyrics.LyricsTranslationClient
 import com.metrolist.shared.api.lyrics.lyricsTranslationTargetLanguage
 import com.metrolist.shared.generated.resources.*
@@ -59,7 +60,7 @@ private fun ProviderConnectionTest(
         when (provider) {
             "DeepL" -> settings.lyricsDeepLApiKey.isNotBlank()
             "DeepL (keyless)", "Google Translate" -> true
-            else -> oauthConnected || apiKey.isNotBlank()
+            else -> oauthConnected || apiKey.isNotBlank() || AiProviderPresets.find(provider)?.keyless == true
         }
     Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 16.dp)) {
         Text(

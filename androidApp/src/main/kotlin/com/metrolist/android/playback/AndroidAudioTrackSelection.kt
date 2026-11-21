@@ -111,7 +111,7 @@ internal fun mergeSelectedQueueSong(
         queueSourceTitle = currentQueueSong.queueSourceTitle,
         customTitle = customTitle,
         customArtist = customArtist,
-    )
+    ).copy(originalQueueItemId = sourceSongAtSelection.originalQueueItemId ?: sourceSongAtSelection.id)
 }
 
 private fun applyAudioTrackMetadata(

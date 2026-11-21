@@ -54,6 +54,8 @@ Outgoing queues are bounded. Coalesce only adjacent redundant clock samples; pre
 
 Normalize personal sync IDs `||account-id` to `account-id` and channel IDs `channel-id||account-id` to `channel-id`. Use one helper for login and pairing. Cache identity by exact cookie and data-sync ID; invalidate on logout or credential changes.
 
+Login retains a valid identity extracted from the WebView. If it is missing, account discovery may recover the identity from exactly one account; multiple accounts require selection. Windows uses the helper credentials for discovery before validating and saving the selected account. An empty selectable list after helper login may reuse its validated identity.
+
 Unresolved account IDs cannot pair. Exchange the `resolved` flag without an account proof so peers can show identity recovery instead of a false account mismatch. Obtain fresh account identity by signing in and selecting the same channel. Never guess a channel or allow unresolved identities. Genuine mismatches stay blocked.
 
 ## Verification
