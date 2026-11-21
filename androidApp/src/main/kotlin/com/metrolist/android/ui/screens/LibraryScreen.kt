@@ -94,6 +94,7 @@ import com.metrolist.android.ui.utils.playSong
 import com.metrolist.android.utils.startActivitySafely
 import com.metrolist.android.viewmodels.LibraryViewModel
 import com.metrolist.android.viewmodels.loadOrderedCachedSongs
+import com.metrolist.shared.api.playlistSongs
 import com.metrolist.shared.constants.ThumbnailCornerRadius
 import com.metrolist.shared.db.MusicDatabase
 import com.metrolist.shared.db.entities.toSongItem
@@ -735,7 +736,16 @@ fun LibraryScreen(
         CollectionExportDialog(
             title = item.title,
             onDismiss = { exportItem = null },
-            loadSongs = { loadSongs(item) },
+            loadSongs = {
+                if (item is PlaylistItem && !item.isLocal) {
+                    GlobalYouTubeRepository.instance
+                        .getPlaylistResult(item.id)
+                        .getOrThrow()
+                        .playlistSongs()
+                } else {
+                    loadSongs(item)
+                }
+            },
         )
     }
 
