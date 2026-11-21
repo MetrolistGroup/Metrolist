@@ -131,7 +131,7 @@ internal object MlxJsonParser {
                                     lineStarts.getOrNull(lineStarts.binarySearch(start) + 1)
                                         ?: source.song.durationMs?.takeIf { it > start }
                                 },
-                            isBackground = line.background,
+                            isBackground = line.background || (line.text.isBlank() && line.words.isEmpty() && backgroundWords.isNotEmpty()),
                             translatedText = line.translatedText,
                             romanizedText = line.romanizedText,
                             romanizedWords = line.romanizedWords.map { it.timestamp() }.takeIf { it.isNotEmpty() },

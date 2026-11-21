@@ -188,13 +188,21 @@ class MlxParserTest {
               {"background":true,"backgroundText":"Echo"},
               {"background":true,"backgroundWords":[{"text":"Echo ","startMs":1000,"endMs":1500},{"text":"again","startMs":1500,"endMs":2000}]},
               {"text":"Lead","backgroundText":"Echo"},
-              {"words":[{"text":"Lead","startMs":1000,"endMs":2000}],"backgroundText":"Echo"}
+              {"words":[{"text":"Lead","startMs":1000,"endMs":2000}],"backgroundText":"Echo"},
+              {"backgroundText":"Unmarked echo"}
             ]
             """.trimIndent()
         val mlx = """{"version":2,"lines":$lines}"""
 
         assertTrue(MlxParser.isMlxFormat(mlx))
-        assertEquals(listOf("Echo", "Echo again", "Lead", "Lead"), MlxParser.parse(mlx).lines.map { it.text })
+        assertEquals(listOf("Echo", "Echo again", "Lead", "Lead", "Unmarked echo"), MlxParser.parse(mlx).lines.map { it.text })
+        assertTrue(
+            MlxParser
+                .parse(mlx)
+                .lines
+                .last()
+                .isBackground,
+        )
     }
 
     @Test
@@ -221,5 +229,30 @@ class MlxParserTest {
         val timedBackground =
             """{"version":2,"lines":[{"startMs":1000,"endMs":2000,"backgroundWords":[{"text":"Echo","startMs":1000,"endMs":2000}]}]}"""
         assertEquals(LyricsTimingKind.WORD_SYNCED, lyricsTimingKind(MlxParser.parse(timedBackground).lines))
+    }
+
+    @Test
+    fun backgroundRowsKeepPrimaryAndNestedWordGroupsSeparate() {
+        val document =
+            MlxParser.parse(
+                """
+                [meta]
+                [lyrics]
+                [00:01.000~00:02.000]{bg}<00:01.000>你好<00:02.000> [bg:<00:01.000>Oh<00:02.000>]
+                [romanlyrics]
+                [00:01.000~00:02.000]<00:01.000>ni hao<00:02.000>
+                """.trimIndent(),
+            )
+        val entry = document.lines.single()
+        assertTrue(entry.isBackground)
+        assertEquals(listOf(false, true), entry.words.orEmpty().map { it.isBackground })
+        assertEquals(
+            "Oh",
+            entry.words
+                .orEmpty()
+                .last()
+                .text,
+        )
+        assertTrue(entry.romanizedWords.orEmpty().none { it.isBackground })
     }
 }

@@ -229,21 +229,28 @@ internal fun mergeBackgroundLyricsEntries(lyrics: List<LyricsEntry>): List<Lyric
             } else {
                 incomingBackgroundWords
             }
+        val backgroundOnlyWordGroup =
+            background.words.orEmpty().all(WordTimestamp::isBackground) &&
+                (
+                    background.text.isBlank() ||
+                        normalizeBackgroundText(background.text) == normalizeBackgroundText(wordBackgroundText.orEmpty())
+                )
+        val remainingOriginalWords = background.words.orEmpty().toMutableList()
         val unromanizedIncomingWords =
             if (incomingRomanizedWords != null || incomingRomanizedTextWord != null) {
                 incomingBackgroundWords.filterNot { raw ->
-                    val original =
-                        background.words?.firstOrNull {
-                            it.startTime == raw.startTime && it.endTime == raw.endTime && it.text == raw.text
+                    val originalIndex =
+                        remainingOriginalWords.indexOfFirst {
+                            it.startTime == raw.startTime && it.endTime == raw.endTime && it.text == raw.text &&
+                                it.isLineTimed == raw.isLineTimed
                         }
+                    val original = originalIndex.takeIf { it >= 0 }?.let(remainingOriginalWords::removeAt)
                     val representedByWords =
                         original != null &&
                             background.romanizedWords.orEmpty().any { roman ->
                                 (
                                     roman.isBackground == original.isBackground ||
-                                        background.words.orEmpty().all(
-                                            WordTimestamp::isBackground,
-                                        )
+                                        backgroundOnlyWordGroup
                                 ) &&
                                     roman.startTime < raw.endTime && roman.endTime > raw.startTime
                             }

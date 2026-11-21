@@ -124,6 +124,7 @@ object MusicVideoLyricsRetimer {
         val tokens = mutableListOf<LyricToken>()
         val hasTiming = lines.any { it.time > 0L || (it.endTime ?: 0L) > 0L }
         lines.forEachIndexed { lineIdx, entry ->
+            if (entry.isBackground) return@forEachIndexed
             val words = entry.words
             val lineStartTokenCount = tokens.size
             if (!words.isNullOrEmpty()) {
