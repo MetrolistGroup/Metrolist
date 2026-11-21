@@ -2602,7 +2602,7 @@
     <string name="cast_stream_unreachable">Lo speaker non ha richiesto il flusso audio. Controlla che il tuo firewall abbia abilitato TCP alla porta 57643 dallo speaker e che entrambi i dispositivi siano sulla stessa rete.</string>
     <string name="listen_together_location_custom">Personalizzata</string>
     <string name="auto_download_saved_collections">Scarica automaticamente album e playlist salvate</string>
-    <string name="desktop_tray_toggle_on_click_desc_mac">Cliccare sull'icona della barra di sistema aprirà o chiuderà la finestra di Metrolist</string>
+    <string name="desktop_tray_toggle_on_click_desc_mac">Un clic con il tasto destro sull'icona della barra di sistema aprirà o chiuderà la finestra di Metrolist</string>
     <string name="listen_together_custom_server_name">Server personalizzato</string>
     <string name="add_to_library">Aggiungi alla libreria</string>
     <string name="spotify_import_create_new_local_playlist">Crea una nuova playlist locale</string>
