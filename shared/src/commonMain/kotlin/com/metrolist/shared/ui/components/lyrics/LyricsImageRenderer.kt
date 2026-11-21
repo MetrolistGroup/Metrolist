@@ -9,7 +9,6 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.RoundRect
 import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Canvas
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
@@ -39,7 +38,6 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.sp
-import com.metrolist.shared.ui.theme.getGradientColors
 
 internal enum class LyricsImageBackground { SOLID, BLUR, GRADIENT }
 
@@ -69,32 +67,12 @@ private fun DrawScope.drawCover(
     )
 }
 
-internal fun prepareLyricsArtwork(image: ImageBitmap): Pair<List<Color>, ImageBitmap> {
-    val sample = ImageBitmap(64, 64)
-    CanvasDrawScope().draw(Density(1f), LayoutDirection.Ltr, Canvas(sample), Size(64f, 64f)) {
-        drawRect(Color.Black)
-        drawCover(image, Offset.Zero, 64f)
-    }
-    val pixels = IntArray(64 * 64)
-    sample.readPixels(pixels)
-    val palette = lyricsArtworkPalette(pixels)
-    val blurred = blurLyricsArtwork(pixels, 64, 64, 6)
-    CanvasDrawScope().draw(Density(1f), LayoutDirection.Ltr, Canvas(sample), Size(64f, 64f)) {
-        blurred.forEachIndexed { index, pixel ->
-            drawRect(Color(pixel), Offset((index % 64).toFloat(), (index / 64).toFloat()), Size(1f, 1f))
-        }
-    }
-    return palette to sample
-}
-
 internal fun renderLyricsImage(
     lyrics: String,
     title: String,
     artist: String,
     appName: String,
     artwork: ImageBitmap?,
-    blurredArtwork: ImageBitmap?,
-    palette: List<Color>,
     style: LyricsImageStyle,
     textMeasurer: TextMeasurer,
     logo: Painter,
@@ -156,9 +134,9 @@ internal fun renderLyricsImage(
     val renderedLyricsHeight = lyricsLayout.size.height * fit.drawScale
     val footerTop =
         minOf(layout.footerTop, layout.lyricsTop + 12f * contentScale + renderedLyricsHeight / scale + 18f * contentScale)
-    val cardBottom = footerTop + 34f * contentScale
+    val cardBottom = footerTop + layout.footerHeight
     val cardHeight = cardBottom - layout.cardTop
-    val canvasHeight = if (story) 340f * 16f / 9f else 340f
+    val canvasHeight = layout.canvasHeight
     val verticalOffset = maxOf(0f, ((canvasHeight - cardHeight) / 2f) - layout.cardTop)
     val verticalOffsetPx = verticalOffset * scale
     val textTop = lyricsTop + lyricsInsetY + verticalOffsetPx

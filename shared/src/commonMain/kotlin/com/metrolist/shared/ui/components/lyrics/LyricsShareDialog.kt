@@ -44,7 +44,6 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.rememberTextMeasurer
@@ -68,6 +67,7 @@ import com.metrolist.shared.generated.resources.lyrics_share_story_image
 import com.metrolist.shared.generated.resources.lyrics_share_story_style
 import com.metrolist.shared.generated.resources.lyrics_share_text_size
 import com.metrolist.shared.generated.resources.preview
+import com.metrolist.shared.generated.resources.share
 import com.metrolist.shared.settings.Settings
 import com.metrolist.shared.ui.components.ContainedLoadingIndicator
 import com.metrolist.shared.ui.components.Dialog
@@ -122,8 +122,6 @@ fun LyricsShareDialog(
     DisposableEffect(Unit) { onDispose { Settings.shared.lyricsShareImageStyle = latestStyle.encodeForStorage() } }
     val context = LocalPlatformContext.current
     var artwork by remember { mutableStateOf<ImageBitmap?>(null) }
-    var blurredArtwork by remember { mutableStateOf<ImageBitmap?>(null) }
-    var palette by remember { mutableStateOf(emptyList<Color>()) }
     var loadingArtwork by remember { mutableStateOf(artworkUrl != null) }
     var artworkFailed by remember { mutableStateOf(false) }
     LaunchedEffect(artworkUrl) {
@@ -139,10 +137,7 @@ fun LyricsShareDialog(
                     )
                 val image = result.image?.toImageBitmap()
                 if (image != null) {
-                    val prepared = withContext(Dispatchers.Default) { prepareLyricsArtwork(image) }
                     artwork = image
-                    palette = prepared.first
-                    blurredArtwork = prepared.second
                 } else {
                     artworkFailed = true
                 }
@@ -179,8 +174,6 @@ fun LyricsShareDialog(
         appName,
         style,
         artwork,
-        blurredArtwork,
-        palette,
         loadingArtwork,
         direction,
         useStoryLayout,
@@ -202,8 +195,6 @@ fun LyricsShareDialog(
                                 artist,
                                 appName,
                                 artwork,
-                                blurredArtwork,
-                                palette,
                                 style,
                                 measurer,
                                 logo,
@@ -338,8 +329,6 @@ fun LyricsShareDialog(
                                                     artist,
                                                     appName,
                                                     artwork,
-                                                    blurredArtwork,
-                                                    palette,
                                                     style,
                                                     measurer,
                                                     logo,
@@ -363,7 +352,7 @@ fun LyricsShareDialog(
                             }
                         },
                         shapes = ButtonDefaults.shapes(),
-                    ) { Text(exportLabel) }
+                    ) { Text(if (storyMode && !useStoryLayout) stringResource(Res.string.share) else exportLabel) }
                 }
             }
         }

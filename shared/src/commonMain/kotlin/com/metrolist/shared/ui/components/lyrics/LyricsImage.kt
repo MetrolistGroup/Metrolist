@@ -8,9 +8,7 @@ package com.metrolist.shared.ui.components.lyrics
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.text.style.TextAlign
-import com.materialkolor.quantize.QuantizerCelebi
 import com.metrolist.shared.model.LyricsEntry
-import com.metrolist.shared.ui.theme.toHsv
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -54,51 +52,11 @@ internal fun selectedLyricsText(
             }
         }.joinToString("\n")
 
-internal fun lyricsArtworkPalette(pixels: IntArray): List<Color> =
-    QuantizerCelebi
-        .quantize(pixels.filter { it ushr 24 >= 128 }.toIntArray(), 16)
-        .entries
-        .sortedByDescending { it.value }
-        .map { Color(it.key) }
-        .filter { it.toHsv()[1] > 0.2f }
-        .take(5)
-
-internal fun blurLyricsArtwork(
-    pixels: IntArray,
-    width: Int,
-    height: Int,
-    radius: Int,
-): IntArray {
-    require(width > 0 && height > 0 && pixels.size == width * height && radius >= 0)
-    var source = pixels.copyOf()
-    for (horizontal in listOf(true, false)) {
-        val output = IntArray(source.size)
-        for (y in 0 until height) {
-            for (x in 0 until width) {
-                var red = 0
-                var green = 0
-                var blue = 0
-                for (offset in -radius..radius) {
-                    val sx = if (horizontal) (x + offset).coerceIn(0, width - 1) else x
-                    val sy = if (horizontal) y else (y + offset).coerceIn(0, height - 1)
-                    val color = source[sy * width + sx]
-                    red += color ushr 16 and 255
-                    green += color ushr 8 and 255
-                    blue += color and 255
-                }
-                val count = radius * 2 + 1
-                output[y * width + x] = (255 shl 24) or ((red / count) shl 16) or ((green / count) shl 8) or (blue / count)
-            }
-        }
-        source = output
-    }
-    return source
-}
-
 internal data class LyricsImageLayout(
     val contentScale: Float,
     val story: Boolean = false,
 ) {
+    val canvasHeight = if (story) 340f * 16f / 9f else 340f
     val padding = (if (story) 28f else 24f) * contentScale
     val artworkSize = (if (story) 64f else 56f) * contentScale
     val artworkX = padding + (if (story) 18f else 16f) * contentScale
@@ -112,7 +70,13 @@ internal data class LyricsImageLayout(
     val titleTop = if (story) 58f * contentScale else artworkTop + 6f * contentScale
     val artistTop = if (story) 84f * contentScale else titleTop + 22f * contentScale
     val lyricsTop = if (story) 138f * contentScale else artworkTop + artworkSize + 14f * contentScale
-    val footerTop = if (story) 544f else 264f * contentScale
+    val footerHeight = 34f * contentScale
+    val footerTop =
+        if (story) {
+            544f
+        } else {
+            minOf(264f * contentScale, canvasHeight - cardTop - footerHeight)
+        }
     val lyricsWidth = 340f - 2f * padding
     val lyricsHeight = footerTop - 10f * contentScale - lyricsTop
 }
