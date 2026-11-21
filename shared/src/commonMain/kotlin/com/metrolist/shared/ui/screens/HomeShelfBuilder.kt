@@ -31,17 +31,28 @@ object HomeShelfBuilder {
 
         fun sourceFor(shelf: HomeShelf): HomeSection? {
             if (shelf.style == HomeShelfStyle.SPEED_DIAL) return null
+            val itemIds = shelf.items.mapTo(mutableSetOf(), ::canonicalHomeItemId)
+            if (shelf.key == "quick_picks") {
+                val candidates =
+                    sourceSections.filter { section ->
+                        section.hasTitle &&
+                            (section.browseId?.startsWith("FEmusic_quickpicks") == true || section.title == shelf.title) &&
+                            section.items.mapTo(mutableSetOf(), ::canonicalHomeItemId).containsAll(itemIds)
+                    }
+                return candidates.firstOrNull { it.title == shelf.title } ?: candidates.firstOrNull()
+            }
             state.sections
                 .singleOrNull { section ->
                     section.hasTitle && section.title == shelf.title && section.browseId == shelf.browseId &&
                         section.params == shelf.params && section.subtitle == shelf.label && section.items.containsAll(shelf.items)
                 }?.let { return it }
-            val itemIds = shelf.items.mapTo(mutableSetOf(), ::canonicalHomeItemId)
             val candidates =
                 sourceSections.filter { section ->
                     section.hasTitle && section.items.any { canonicalHomeItemId(it) in itemIds }
                 }
-            return candidates.singleOrNull { it.browseId == shelf.browseId && (shelf.params == null || it.params == shelf.params) }
+            return candidates.singleOrNull {
+                shelf.browseId != null && it.browseId == shelf.browseId && (shelf.params == null || it.params == shelf.params)
+            }
                 ?: candidates.singleOrNull {
                     it.title == shelf.title && (shelf.label == null || it.subtitle == shelf.label) &&
                         (shelf.params == null || it.params == shelf.params)
@@ -147,7 +158,6 @@ object HomeShelfBuilder {
                             style = HomeShelfStyle.SONG_GRID,
                             headerAction = HomeShelfHeaderAction.PLAY_ALL,
                             rows = 4,
-                            browseId = "FEmusic_quickpicks",
                         ),
                     )
                 }
