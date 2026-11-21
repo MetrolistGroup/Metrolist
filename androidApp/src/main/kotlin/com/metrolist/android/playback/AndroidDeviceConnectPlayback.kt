@@ -249,14 +249,14 @@ internal class AndroidDeviceConnectPlayback(
                 provisional: Boolean,
             ) = withContext(Dispatchers.Main.immediate) {
                 if (playbackReleased) return@withContext
-                val localQueue = player.queueSnapshot()
                 val confirmedEmpty = !provisional && playback?.queue?.displayedItems?.isEmpty() == true
                 val clearsQueue =
                     shouldClearPersistedPlaybackForControllerState(controllerPlayback, playback) ||
                         (provisionalControllerClearPending && confirmedEmpty)
+                // A provisional empty state is meaningful even when the local queue is already empty:
+                // persisted playback can still hold a queue from an earlier session.
                 provisionalControllerClearPending =
-                    provisional && playback?.queue?.displayedItems?.isEmpty() == true &&
-                    localQueue.displayedItems.isNotEmpty()
+                    provisional && playback?.queue?.displayedItems?.isEmpty() == true
                 if (playback != null && controllerPlayback?.queue != playback.queue) {
                     transitions.cancelNextTrackPreload()
                     video.clearVideoMode()
