@@ -2386,8 +2386,8 @@ class YouTubeRepository(
         playlistId: String? = null,
         params: String? = null,
         continuation: String? = null,
+        session: InnerTube.SessionSnapshot = innerTube.sessionSnapshot(),
     ): JsonObject {
-        val session = innerTube.sessionSnapshot()
         val voteRevision = SongLikeState.voteObservationRevision()
         val key = NextRequestKey(session, videoId, playlistId, params, continuation)
         while (true) {
@@ -2430,11 +2430,48 @@ class YouTubeRepository(
         }
     }
 
-    suspend fun startRadio(videoId: String): List<SongItem> = startRadioQueue(videoId).songs
+    suspend fun startRadio(videoId: String): List<SongItem> =
+        startRadioQueue(videoId, playlistId = if (Settings.shared.classicRecommendations) null else "RDAMVM$videoId").songs
 
     suspend fun startRadioQueue(
         videoId: String,
-        playlistId: String? = if (Settings.shared.classicRecommendations) null else "RDAMVM$videoId",
+        classic: Boolean = Settings.shared.classicRecommendations,
+    ): RadioQueuePage {
+        val mixPlaylistId = "RDAMVM$videoId"
+        if (!classic) return startRadioQueue(videoId, playlistId = mixPlaylistId)
+
+        val session = innerTube.sessionSnapshot()
+        val firstPage = parseRadioQueueResponse(nextResponse(videoId, session = session))
+        val page =
+            if (firstPage.continuation == null && firstPage.songs.isNotEmpty() && firstPage.songs.all { it.id == videoId }) {
+                currentCoroutineContext().ensureActive()
+                try {
+                    val fallback = parseRadioQueueResponse(nextResponse(videoId, playlistId = mixPlaylistId, session = session))
+                    when {
+                        fallback.continuation == null && fallback.songs.none { it.id != videoId } -> firstPage
+
+                        fallback.songs.any { it.id == videoId } -> fallback
+
+                        // Playback from a pasted link can fall back to the seed metadata.
+                        else -> fallback.copy(songs = listOf(firstPage.songs.first()) + fallback.songs)
+                    }
+                } catch (cancelled: CancellationException) {
+                    throw cancelled
+                } catch (error: Exception) {
+                    requireCurrentSession(session)
+                    YtLogger.w(TAG, "Classic radio fallback failed type=${error::class.simpleName}")
+                    firstPage
+                }
+            } else {
+                firstPage
+            }
+        requireCurrentSession(session)
+        return page.copy(songs = BlockedContent.filterSongs(page.songs))
+    }
+
+    suspend fun startRadioQueue(
+        videoId: String,
+        playlistId: String?,
         params: String? = null,
     ): RadioQueuePage {
         val page = parseRadioQueueResponse(nextResponse(videoId, playlistId, params))

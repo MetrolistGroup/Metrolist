@@ -1474,7 +1474,7 @@ internal class IosPlaybackController(
         selectedChipId: String? = null,
     ) {
         radioJob?.cancel()
-        // Classic recommendations ask /next with the video id alone; explicit chip choices keep their playlist.
+        // Classic starts with the video id alone; explicit chip choices keep their playlist.
         val requestClassic = Settings.shared.classicRecommendations
         val explicitFeed = selectedChipId != null || params != null || (playlistId != null && playlistId != "RDAMVM$seedSongId")
         radioExplicitFeed = explicitFeed
@@ -1497,11 +1497,15 @@ internal class IosPlaybackController(
                 try {
                     val page =
                         loadRadioRecommendations(
-                            repository().startRadioQueue(
-                                videoId = seedSongId,
-                                playlistId = requestPlaylistId,
-                                params = params,
-                            ),
+                            if (requestPlaylistId == null && !explicitFeed) {
+                                repository().startRadioQueue(seedSongId, classic = requestClassic)
+                            } else {
+                                repository().startRadioQueue(
+                                    videoId = seedSongId,
+                                    playlistId = requestPlaylistId,
+                                    params = params,
+                                )
+                            },
                             seedSongId,
                             isBootstrap = true,
                             requestClassic = requestClassic,
@@ -1755,8 +1759,7 @@ internal class IosPlaybackController(
             if (dao.hasRelatedSongs(songId)) return
             val related =
                 repository()
-                    .startRadioQueue(songId)
-                    .songs
+                    .startRadio(songId)
                     .filter { it.id.isNotBlank() && it.id != songId }
                     .distinctBy { it.id }
                     .take(RELATED_SONGS_LIMIT)
