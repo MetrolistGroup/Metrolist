@@ -8,8 +8,8 @@ import coil3.request.CachePolicy
 import coil3.request.ImageRequest
 import coil3.request.SuccessResult
 import coil3.toBitmap
-import com.metrolist.shared.utils.canonicalArtworkUrl
-import com.metrolist.shared.utils.persistentArtworkUrl
+import com.metrolist.shared.utils.retainedArtworkUrl
+import com.metrolist.shared.utils.retainedArtworkUrlCandidates
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -17,6 +17,7 @@ import kotlinx.coroutines.withTimeoutOrNull
 import okio.ByteString.Companion.encodeUtf8
 import timber.log.Timber
 import java.io.File
+import java.io.IOException
 
 internal class DownloadedArtwork(
     private val context: Context,
@@ -24,8 +25,28 @@ internal class DownloadedArtwork(
     private val directory = File(context.filesDir, "downloaded-artwork")
 
     fun file(url: String): File {
-        val current = keyedFile(canonicalArtworkUrl(url))
-        return current.takeIf { it.length() > 0 } ?: keyedFile(persistentArtworkUrl(url))
+        val stable = keyedFile(retainedArtworkUrl(url))
+        retainedArtworkUrlCandidates(url).forEach { candidate ->
+            val existing = keyedFile(candidate)
+            if (existing.length() == 0L) return@forEach
+            if (existing == stable) return stable
+            // Promote a pre-stability file so later URL variants find it under the stable key.
+            try {
+                val temporary = File.createTempFile("artwork-promote-", ".tmp", directory)
+                try {
+                    existing.inputStream().use { input ->
+                        temporary.outputStream().use { output -> input.copyTo(output) }
+                    }
+                    if (temporary.renameTo(stable)) return stable
+                } finally {
+                    temporary.delete()
+                }
+            } catch (_: IOException) {
+                Timber.w("Could not promote retained artwork; using the existing cover")
+            }
+            return existing
+        }
+        return stable
     }
 
     private fun keyedFile(url: String): File = File(directory, url.encodeUtf8().sha256().hex() + ".png")
@@ -90,7 +111,10 @@ internal class DownloadedArtwork(
 
     // Call while audio storage is locked so an in-flight download cannot lose its cover.
     fun prune(urls: List<String>) {
-        val retained = urls.mapTo(mutableSetOf()) { file(it).name }
+        val retained =
+            urls.flatMapTo(mutableSetOf()) { url ->
+                retainedArtworkUrlCandidates(url).map { keyedFile(it).name }
+            }
         directory.listFiles()?.filter { it.name !in retained }?.forEach {
             if (!it.delete()) Timber.w("Could not delete unused download artwork")
         }
