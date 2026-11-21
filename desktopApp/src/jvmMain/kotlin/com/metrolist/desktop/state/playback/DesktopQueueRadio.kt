@@ -144,7 +144,9 @@ internal class DesktopQueueRadio(
                 if (page != null) continuation = page.continuation
                 // The buffered path skips select()'s freshness check; recheck here.
                 if (!canLoad()) return@withLock null
-                val available = buffered + (page?.songs ?: emptyList())
+                val fetched = page?.songs.orEmpty()
+                // Blocking can change while the top-up request is suspended.
+                val available = if (classic) currentFilter(buffered + fetched) else fetched
                 val candidates = available.take(limit)
                 pendingClassicSongs = if (classic) available.drop(limit) else emptyList()
                 var changed = false
