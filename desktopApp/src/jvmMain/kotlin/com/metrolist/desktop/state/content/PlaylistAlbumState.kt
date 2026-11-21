@@ -27,6 +27,7 @@ import com.metrolist.shared.generated.resources.Res
 import com.metrolist.shared.generated.resources.error_occurred
 import com.metrolist.shared.generated.resources.playlist_removed_from_youtube
 import com.metrolist.shared.model.AlbumPage
+import com.metrolist.shared.model.EpisodeItem
 import com.metrolist.shared.model.PlaylistItem
 import com.metrolist.shared.model.SongItem
 import com.metrolist.shared.model.YTItem
@@ -821,7 +822,13 @@ object PlaylistAlbumState {
     private fun Map<String, List<YTItem>>.withPlaylistSongs(songs: List<SongItem>): Map<String, List<YTItem>> {
         if (containsKey("Tracks")) return this + ("Tracks" to songs) + ("Continuation" to emptyList())
         if (containsKey("Continuation")) return this + ("Continuation" to songs)
-        return mapValues { (_, items) -> items.filterNot { it is SongItem } }.filterValues { it.isNotEmpty() } + ("songs" to songs)
+        return mapValues { (title, items) ->
+            if (title.equals("header", ignoreCase = true) || title.contains("suggest", ignoreCase = true)) {
+                items
+            } else {
+                items.filterNot { it is SongItem || it is EpisodeItem }
+            }
+        }.filterValues { it.isNotEmpty() } + ("songs" to songs)
     }
 }
 
