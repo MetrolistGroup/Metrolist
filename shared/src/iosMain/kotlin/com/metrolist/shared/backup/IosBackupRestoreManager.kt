@@ -61,10 +61,10 @@ private const val MAX_ZIP_CENTRAL_DIRECTORY_BYTES = 16L * 1024 * 1024
 private const val PRISM_ARCHIVE_DIRECTORY = ".prism/"
 private const val PRISM_ARTIST_PREFERENCES = "shared_prefs/artist_prefs.xml"
 
-/** File-based backup API; copy document-provider URLs into the app container before calling. */
-@OptIn(ExperimentalForeignApi::class, BetaInteropApi::class)
 internal val iosBackupOperationMutex = Mutex()
 
+/** File-based backup API; copy document-provider URLs into the app container before calling. */
+@OptIn(ExperimentalForeignApi::class, BetaInteropApi::class)
 class IosBackupRestoreManager(
     private val databasePath: String = iosDatabaseFilePath(),
     private val settings: Settings = Settings.shared,
