@@ -222,7 +222,7 @@
     <string name="search_history">Istoric căutări</string>
     <string name="pause_search_history">Întrerupe istoricul căutărilor</string>
     <string name="clear_search_history">Șterge istoricul căutărilor</string>
-    <string name="settings_clear_search_history_description">Șterge căutările salvate de pe acest dispozitiv și din YouTube</string>
+    <string name="settings_clear_search_history_description">Elimină căutările salvate de pe acest dispozitiv și din YouTube</string>
     <string name="settings_clear_search_history_confirm_message">Această acțiune va elimina toate interogările de căutare salvate. Aceasta nu poate fi anulată.</string>
     <string name="settings_show_secret">Afișează secretul</string>
     <string name="settings_hide_secret">Ascunde secretul</string>
