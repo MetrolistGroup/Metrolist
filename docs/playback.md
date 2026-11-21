@@ -49,3 +49,5 @@ Finish current song arms an end-of-song stop when the countdown expires and canc
 Run affected [platform checks](checks.md#platform-checks). Check both error-setting values, repeat modes, pause, local audio, synchronized playback and retry. For timers, check cancellation, unknown duration, crossfade and background/suspend behavior on each affected platform.
 
 FCast v3 subscribes to media-end events and matches their media URL to the loaded item before advancing the queue. Older receivers retain playback-update completion detection. Stop keeps late playback updates from reactivating the item; Play reloads stopped media at the latest requested seek position. Verify end-to-next, Stop then Play, and seeking before replay on a receiver.
+
+Desktop Radio retains the initial page continuation and its recommendation mode for autoplay. Android persists explicit chip selection separately from the default selected chip, so restoring a queue keeps the chosen feed.

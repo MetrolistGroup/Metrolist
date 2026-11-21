@@ -43,6 +43,13 @@ internal class DesktopQueueRadio(
         pendingClassicSongs = emptyList()
     }
 
+    fun acceptBootstrap(bootstrap: DesktopRadioBootstrap) {
+        cancelPrefetch()
+        continuation = bootstrap.page.continuation
+        radioClassicMode = bootstrap.classic
+        pendingClassicSongs = emptyList()
+    }
+
     fun cancelPrefetch() {
         prefetchJob?.cancel()
         prefetchJob = null

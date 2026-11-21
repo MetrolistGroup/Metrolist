@@ -164,6 +164,7 @@ internal class AndroidQueueCoordinator(
             radioQueueContinuation = radioQueueContinuation,
             radioQueuePlaylistId = radioQueuePlaylistId,
             radioQueueParams = radioQueueParams,
+            radioQueueExplicitFeed = radioQueueExplicitFeed,
         )
     }
 
@@ -194,8 +195,16 @@ internal class AndroidQueueCoordinator(
             radioQueueContinuation = null
             // A persisted continuation's recommendations mode is not stored, so after a
             // restart its mode is unknown: discard it and let autoplay fetch a fresh page.
-            radioQueuePlaylistId = state.radioQueuePlaylistId
-            radioQueueParams = state.radioQueueParams
+            val selectedChip =
+                state.radioQueueChips.firstOrNull { chip ->
+                    state.radioQueueSelectedChipId?.let { it == chip.id } ?: chip.isSelected
+                }
+            radioQueuePlaylistId = state.radioQueuePlaylistId ?: selectedChip?.playlistId
+            radioQueueParams = state.radioQueueParams ?: selectedChip?.params
+            radioQueueExplicitFeed = state.radioQueueExplicitFeed ?: (
+                radioQueueParams != null ||
+                    radioQueuePlaylistId?.let { it != "RDAMVM$recommendationSeedSongId" } == true
+            )
             queueChipsState.value =
                 state.radioQueueChips.map { chip ->
                     RadioQueueChip(
