@@ -1370,7 +1370,7 @@ class MusicService :
         }
 
         var failedResource = player.currentPlaybackResource.value
-        val hints = song.toAndroidContentHints(wantVideo = failedResource?.hasVideo ?: Settings.shared.videoViewerVisible)
+        var hints = song.toAndroidContentHints(wantVideo = failedResource?.hasVideo ?: Settings.shared.videoViewerVisible)
         var lastFailure = failure.cause ?: IllegalStateException(failure.message)
         var lastHttpStatusCode = failure.httpStatusCode ?: lastFailure.findMedia3HttpStatusCode()
         var failureCategory =
@@ -1511,6 +1511,7 @@ class MusicService :
             }
 
             failedResource = freshResource
+            hints = song.toAndroidContentHints(wantVideo = freshResource.hasVideo)
             lastFailure = prepareFailure ?: IllegalStateException("Refreshed stream could not be prepared")
             lastHttpStatusCode = lastFailure.findMedia3HttpStatusCode() ?: lastFailure.findPlaybackHttpStatusCode()
             failureCategory =
