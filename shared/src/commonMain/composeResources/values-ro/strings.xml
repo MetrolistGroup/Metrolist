@@ -190,7 +190,7 @@
     <string name="song_cache">Cache melodii</string>
     <string name="unlimited">Nelimitată</string>
     <string name="clear_all_downloads">Elimină toate descărcările</string>
-    <string name="clear_all_downloads_dialog">Ștergi toate fișierele audio descărcate?</string>
+    <string name="clear_all_downloads_dialog">Elimini toate fișierele audio descărcate?</string>
     <string name="max_image_cache_size">Dimensiunea maximă a cache-ului imaginilor</string>
     <string name="clear_image_cache">Șterge cache-ul imaginilor</string>
     <string name="max_song_cache_size">Dimensiunea maximă pentru cache-ul melodiilor</string>
@@ -2631,4 +2631,5 @@
     <string name="widget_time_pair">%1$s / %2$s</string>
     <string name="widget_track_description">%1$s, %2$s</string>
     <string name="widget_play_item">Redă %1$s</string>
+    <string name="classic_recommendations">Recomandări clasice</string>
 </resources>
