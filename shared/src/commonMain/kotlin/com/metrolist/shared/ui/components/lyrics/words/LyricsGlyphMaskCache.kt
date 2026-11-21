@@ -345,7 +345,7 @@ internal fun computeWipe(
     val effectiveLineIdx = if (isPartOfActiveSyl) clusterLineIdx else activeLineIdx
 
     val rawLocalX = curGX - lineStart
-    if (syllableIndex != -1 && activeSylIdx >= 0 && lastSylIdx < activeSylIdx && rawLocalX < localStart) {
+    if (syllableIndex != -1 && activeSylIdx >= 0 && lastSylIdx < activeSylIdx) {
         out.mode = WIPE_PAST
         return
     }
