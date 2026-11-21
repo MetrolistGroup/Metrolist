@@ -83,7 +83,11 @@ internal class DlnaSession(
 
     @Volatile private var lastPlayingTrackUri: String? = null
 
+    private val seekLock = Any()
+
     @Volatile private var seekGeneration = 0L
+
+    private var restartPending = false
 
     @Volatile private var stopRequested = false
 
@@ -106,6 +110,7 @@ internal class DlnaSession(
         pollingJob = null
         this@DlnaSession.mediaGeneration = mediaGeneration
         seekGeneration++
+        restartPending = false
         if (::descriptor.isInitialized) {
             runCatching { stop() }
         } else {
@@ -202,16 +207,19 @@ internal class DlnaSession(
 
     override suspend fun seekTo(positionMs: Long) =
         withContext(Dispatchers.IO) {
-            seekGeneration++
-            lastPlayingPositionMs = null
-            lastPlayingTrackUri = null
-            soap(
-                descriptor.avTransportUrl,
-                descriptor.avTransportType,
-                "Seek",
-                "<InstanceID>0</InstanceID><Unit>REL_TIME</Unit><Target>${formatDlnaTime(positionMs)}</Target>",
-                logFailure = false,
-            )
+            synchronized(seekLock) {
+                seekGeneration++
+                restartPending = false
+                lastPlayingPositionMs = null
+                lastPlayingTrackUri = null
+                soap(
+                    descriptor.avTransportUrl,
+                    descriptor.avTransportType,
+                    "Seek",
+                    "<InstanceID>0</InstanceID><Unit>REL_TIME</Unit><Target>${formatDlnaTime(positionMs)}</Target>",
+                    logFailure = false,
+                )
+            }
             Unit
         }
 
@@ -242,91 +250,97 @@ internal class DlnaSession(
             Unit
         }
 
-    private fun pollState() {
-        val pollIntervalMs = lastPoll?.elapsedNow()?.inWholeMilliseconds?.coerceAtLeast(POLL_INTERVAL_MS) ?: POLL_INTERVAL_MS
-        lastPoll = TimeSource.Monotonic.markNow()
-        val pollGeneration = mediaGeneration
-        val pollSeekGeneration = seekGeneration
-        val position =
-            soap(
-                descriptor.avTransportUrl,
-                descriptor.avTransportType,
-                "GetPositionInfo",
-                "<InstanceID>0</InstanceID>",
-            )
-        val transport =
-            soap(
-                descriptor.avTransportUrl,
-                descriptor.avTransportType,
-                "GetTransportInfo",
-                "<InstanceID>0</InstanceID>",
-            )
-        if (pollGeneration != mediaGeneration || pollSeekGeneration != seekGeneration) return
-        val current = _state.value
-        val positionMs = position.text("RelTime")?.let(::parseDlnaTime) ?: current.positionMs
-        val durationMs = position.text("TrackDuration")?.let(::parseDlnaTime)?.takeIf { it > 0L } ?: current.durationMs
-        val trackUri = position.text("TrackURI")
-        val transportState = transport.text("CurrentTransportState")
-        val volume = readVolume(logFailure = false) ?: current.volume
-        val isPlaying = transportState == "PLAYING" || transportState == "TRANSITIONING"
-        val isBuffering = transportState == "TRANSITIONING"
-        normalizeSonosPlayMode()
-        if (pollGeneration != mediaGeneration || pollSeekGeneration != seekGeneration) return
-        if (trackUri != null && lastPlayingTrackUri != null && trackUri != lastPlayingTrackUri && isPlaying) {
-            lastPlayingPositionMs = null
-            lastPlayingTrackUri = trackUri
-        }
-        val wasPlaying = current.isPlaying && lastPlayingPositionMs != null
-        val restarted =
-            descriptor.isSonos &&
-                castPlaybackRestartedNearDuration(
-                    wasPlaying = wasPlaying,
-                    isPlaying = transportState == "PLAYING",
-                    sameMedia = trackUri != null && trackUri == lastPlayingTrackUri,
-                    positionMs = positionMs,
-                    durationMs = durationMs,
-                    lastPlayingPositionMs = lastPlayingPositionMs ?: positionMs,
-                    pollIntervalMs = pollIntervalMs,
-                )
-        if (restarted) {
-            lastPlayingPositionMs = null
-            lastPlayingTrackUri = null
-            runCatching {
+    private fun pollState() =
+        synchronized(seekLock) {
+            val pollIntervalMs = lastPoll?.elapsedNow()?.inWholeMilliseconds?.coerceAtLeast(POLL_INTERVAL_MS) ?: POLL_INTERVAL_MS
+            lastPoll = TimeSource.Monotonic.markNow()
+            val pollGeneration = mediaGeneration
+            val pollSeekGeneration = seekGeneration
+            val position =
                 soap(
                     descriptor.avTransportUrl,
                     descriptor.avTransportType,
-                    "Stop",
+                    "GetPositionInfo",
                     "<InstanceID>0</InstanceID>",
-                    logFailure = false,
                 )
+            val transport =
+                soap(
+                    descriptor.avTransportUrl,
+                    descriptor.avTransportType,
+                    "GetTransportInfo",
+                    "<InstanceID>0</InstanceID>",
+                )
+            if (pollGeneration != mediaGeneration || pollSeekGeneration != seekGeneration) return@synchronized
+            val current = _state.value
+            val positionMs = position.text("RelTime")?.let(::parseDlnaTime) ?: current.positionMs
+            val durationMs = position.text("TrackDuration")?.let(::parseDlnaTime)?.takeIf { it > 0L } ?: current.durationMs
+            val trackUri = position.text("TrackURI")
+            val transportState = transport.text("CurrentTransportState")
+            val volume = readVolume(logFailure = false) ?: current.volume
+            val isPlaying = transportState == "PLAYING" || transportState == "TRANSITIONING"
+            val isBuffering = transportState == "TRANSITIONING"
+            normalizeSonosPlayMode()
+            if (pollGeneration != mediaGeneration || pollSeekGeneration != seekGeneration) return@synchronized
+            if (trackUri != null && lastPlayingTrackUri != null && trackUri != lastPlayingTrackUri && isPlaying) {
+                lastPlayingPositionMs = null
+                lastPlayingTrackUri = trackUri
             }
-        } else if (transportState == "PLAYING") {
-            lastPlayingPositionMs = positionMs
-            lastPlayingTrackUri = trackUri
-        }
-        _state.value =
-            CastSessionState(
-                connected = true,
-                isPlaying = isPlaying,
-                isBuffering = isBuffering,
-                positionMs = positionMs,
-                durationMs = durationMs,
-                volume = volume,
-                hasEnded =
-                    !stopRequested && (
-                        (current.hasEnded && transportState == "STOPPED") ||
-                            castPlaybackEndedNearDuration(
-                                wasPlaying,
-                                transportState == "STOPPED",
-                                positionMs,
-                                durationMs,
+            val wasPlaying = current.isPlaying && lastPlayingPositionMs != null
+            val restarted =
+                descriptor.isSonos &&
+                    (
+                        restartPending ||
+                            castPlaybackRestartedNearDuration(
+                                wasPlaying = wasPlaying,
+                                isPlaying = transportState == "PLAYING",
+                                sameMedia = trackUri != null && trackUri == lastPlayingTrackUri,
+                                positionMs = positionMs,
+                                durationMs = durationMs,
                                 lastPlayingPositionMs = lastPlayingPositionMs ?: positionMs,
                                 pollIntervalMs = pollIntervalMs,
-                            ) || restarted
-                    ),
-                mediaGeneration = pollGeneration,
-            )
-    }
+                            )
+                    )
+            if (restarted) {
+                restartPending = true
+                runCatching {
+                    soap(
+                        descriptor.avTransportUrl,
+                        descriptor.avTransportType,
+                        "Stop",
+                        "<InstanceID>0</InstanceID>",
+                        logFailure = false,
+                    )
+                }.getOrElse { return@synchronized }
+                restartPending = false
+                lastPlayingPositionMs = null
+                lastPlayingTrackUri = null
+            } else if (transportState == "PLAYING") {
+                lastPlayingPositionMs = positionMs
+                lastPlayingTrackUri = trackUri
+            }
+            _state.value =
+                CastSessionState(
+                    connected = true,
+                    isPlaying = isPlaying,
+                    isBuffering = isBuffering,
+                    positionMs = positionMs,
+                    durationMs = durationMs,
+                    volume = volume,
+                    hasEnded =
+                        !stopRequested && (
+                            (current.hasEnded && transportState == "STOPPED") ||
+                                castPlaybackEndedNearDuration(
+                                    wasPlaying,
+                                    transportState == "STOPPED",
+                                    positionMs,
+                                    durationMs,
+                                    lastPlayingPositionMs = lastPlayingPositionMs ?: positionMs,
+                                    pollIntervalMs = pollIntervalMs,
+                                ) || restarted
+                        ),
+                    mediaGeneration = pollGeneration,
+                )
+        }
 
     private fun normalizeSonosPlayMode() {
         if (!descriptor.isSonos) return
