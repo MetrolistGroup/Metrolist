@@ -508,6 +508,7 @@ class MusicService :
             MediaSessionPlayer(
                 artworkUri = { mediaArtworkUri(this, it) },
                 currentArtworkUri = { mediaArtworkUri(this, it, isCurrent = true) },
+                currentArtworkAuthority = "$packageName.media-artwork",
                 musicPlayer = player,
                 repeatMode = _repeatMode,
                 shuffleModeEnabled = _shuffleModeEnabled,

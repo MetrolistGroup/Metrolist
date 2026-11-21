@@ -107,21 +107,24 @@ internal class MediaSessionItemCache(
     private var entryKey: Long? = null
     private var revision = -1L
     private var aliases: String? = null
+    private var artworkRevision = 0L
     private var item: MediaItem? = null
 
     fun get(
         song: SongItem?,
         entryKey: Long? = null,
+        artworkRevision: Long = 0L,
     ): MediaItem? {
         val revision = SongMetadataState.revision.value
         val aliases = Settings.shared.artistNameAliasesJson
         if (this.song !== song || this.entryKey != entryKey || this.revision != revision ||
-            this.aliases != aliases
+            this.aliases != aliases || this.artworkRevision != artworkRevision
         ) {
             this.song = song
             this.entryKey = entryKey
             this.revision = revision
             this.aliases = aliases
+            this.artworkRevision = artworkRevision
             item = song?.let(SongMetadataState::apply)?.toMediaItem(entryKey, artworkUri)
         }
         return item
@@ -345,6 +348,7 @@ class MediaSessionPlayer(
     private val artworkUri: (String?) -> Uri? = { it?.let(::canonicalArtworkUrl)?.toUri() },
     private val mediaItemResolver: (MediaItem) -> SongItem? = { null },
     currentArtworkUri: (String?) -> Uri? = artworkUri,
+    currentArtworkAuthority: String? = null,
     private val automotivePlaybackRequestGate: AutomotivePlaybackRequestGate? = null,
     private val isAutomotiveSongBlocked: (SongItem) -> Boolean = { it.isUnavailable || BlockedContent.isBlocked(it) },
     private val isDeviceConnectFollowing: () -> Boolean = { false },
@@ -363,7 +367,9 @@ class MediaSessionPlayer(
     private val timelineCache = MediaSessionTimelineCache(artworkUri)
     private var publishedTimeline: Timeline? = null
     private val currentItemCache = MediaSessionItemCache(artworkUri)
-    private val metadataItemCache = MediaSessionItemCache(currentArtworkUri)
+    private val currentArtwork = CurrentSessionArtwork(currentArtworkAuthority, PlaybackNetworkStateStore.current.connected)
+    private val metadataItemCache =
+        MediaSessionItemCache { thumbnail -> currentArtworkUri(thumbnail)?.let(currentArtwork::uriForMetadata) }
     private val timelineDurationPublicationTracker = TimelineDurationPublicationTracker()
     private val castTimelineDurationPublicationTracker = CastTimelineDurationPublicationTracker()
 
@@ -469,13 +475,13 @@ class MediaSessionPlayer(
         }
         scope.launch {
             merge(
-                SongMetadataState.revision.map { Unit },
+                SongMetadataState.revision.map { null },
                 PlaybackNetworkStateStore.state
                     .map { it.connected }
-                    .distinctUntilChanged()
-                    .map { Unit },
-                snapshotFlow { Settings.shared.artistNameAliasesJson }.map { Unit },
-            ).collectLatest {
+                    .distinctUntilChanged(),
+                snapshotFlow { Settings.shared.artistNameAliasesJson }.map { null },
+            ).collectLatest { connected ->
+                if (connected != null) currentArtwork.updateConnectivity(connected)
                 if (musicPlayer.currentSong.value != null) {
                     listeners.forEach { it.onMediaMetadataChanged(getMediaMetadata()) }
                     publishTimeline(Player.TIMELINE_CHANGE_REASON_SOURCE_UPDATE)
@@ -758,7 +764,7 @@ class MediaSessionPlayer(
 
     override fun getMediaMetadata(): MediaMetadata =
         metadataItemCache
-            .get(musicPlayer.currentSong.value)
+            .get(musicPlayer.currentSong.value, artworkRevision = currentArtwork.revision)
             ?.mediaMetadata
             ?.buildUpon()
             ?.setUserRating(
