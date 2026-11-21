@@ -1,3 +1,45 @@
+---v14.0.1
+# Fixes after 14.0.0
+Metrolist 14.0.1 fixes upgrades from 13.x, playback and desktop stability, and brings back several 13.x features.
+
+## Highlights
+- Restored gapless playback on Android (@nyxiereal)
+- Recovered likes, saved albums, lyrics, downloads and cached audio lost when upgrading from 13.x (@nyxiereal)
+- Added iOS 15 support (@nyxiereal)
+- Added an IzzyOnDroid build without Sentry or the in-app updater (@nyxiereal)
+- Added opt-in nightly updates (@nyxiereal)
+
+## New features
+- Added 1440p music-video quality (@nyxiereal)
+- Added episode search on podcast pages (@nyxiereal)
+- Added 150%, 175% and 200% display density presets (@mayuur-naik)
+- Added system tray minimize settings on desktop (@l6t9)
+- Desktop shows the current song in the window title (@nyxiereal)
+- Improved lyrics romanization with on-device language detection (@nyxiereal)
+- Added an option to hide the original script when romanization is shown (@ibratabian17)
+- Restored adding songs to the library and sorting by listening time or download date (@nyxiereal)
+- Saving an album or playlist no longer downloads it unless you turn that on, as in 13.x (@nyxiereal)
+- Unavailable songs are greyed out (@nyxiereal)
+- Added a Homebrew tap for macOS and Linux, and macOS support in the Nix flake (@nyxiereal @BierDav)
+
+## Fixes
+- Fixed shuffle, Repeat All and radio from Speed Dial (@kairosci @nyxiereal)
+- Fixed Android playback stalling with audio offload or when audio focus is denied (@kairosci @nyxiereal)
+- Fixed playlist imports from Spotify, Apple Music, Deezer and Tidal (@adrielGGmotion @kairosci @nyxiereal)
+- Fixed macOS not reopening after being hidden and a macOS tray hang (@ibratabian17 @applxcake)
+- Fixed Linux window crashes and audio output (@kairosci @nyxiereal)
+- Reduced desktop CPU use (@nyxiereal)
+- Fixed downloads not resuming after a restart (@adrielGGmotion)
+- Fixed word-by-word lyrics while casting and Gemini translations (@ibratabian17)
+- Fixed desktop cast receivers disconnecting and DLNA on Android (@adrielGGmotion @nyxiereal)
+- Last.fm scrobbles are kept until you sign in again after a session expires (@nyxiereal)
+- Fixed iOS playback startup and seeking (@nyxiereal)
+- Fixed the AI-artist blocklist and desktop clipboard (@CrackedOnTiti @f6466553-lab)
+
+New contributors: @mayuur-naik (#4718), @f6466553-lab (#4731), @CrackedOnTiti (#4818) and @BierDav (#4953)
+
+Full changelog: https://github.com/MetrolistGroup/Metrolist/commits/v14.0.1
+
 ---v14.0.0
 # First public multiplatform release
 Metrolist 14.0.0 replaces the standalone Android app with Metrolist-KMP.

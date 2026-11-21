@@ -6,6 +6,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
+import kotlin.random.Random
 
 data class MusicQueueEntry(
     val key: Long,
@@ -168,7 +169,16 @@ class MusicQueue {
         if (songs.isEmpty()) return
         val entries = songs.filterNot { it.isUnavailable }.map { Entry(nextEntryKey++, it) }
         originalEntries = originalEntries + entries
-        displayedEntries = displayedEntries + if (isShuffled) entries.shuffled() else entries
+        displayedEntries =
+            if (isShuffled) {
+                // Inserting each song at a random upcoming position keeps later pages mixed with the loaded ones.
+                displayedEntries.toMutableList().apply {
+                    val firstUpcoming = (_currentIndex.value + 1).coerceIn(0, size)
+                    entries.forEach { add(Random.nextInt(firstUpcoming, size + 1), it) }
+                }
+            } else {
+                displayedEntries + entries
+            }
         publishItems()
     }
 

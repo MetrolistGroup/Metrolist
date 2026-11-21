@@ -20,6 +20,11 @@ class GenerateAndroidStringsTest(unittest.TestCase):
         self.output = self.root / 'build/generated/androidStrings/res'
         source = (ROOT / 'androidApp/build.gradle.kts').read_text()
         task = source.split('abstract class VerifyComposeResourcesTask', 1)[0]
+        # The isolated build has no Android Gradle Plugin, so drop the bytecode-instrumentation imports.
+        task = ''.join(
+            line for line in task.splitlines(keepends=True)
+            if not line.startswith(('import com.android.build.api.', 'import org.objectweb.asm.'))
+        )
         registration = 'val generateAndroidStrings =' + source.split(
             'val generateAndroidStrings =', 1
         )[1].split('\nandroidComponents {', 1)[0]

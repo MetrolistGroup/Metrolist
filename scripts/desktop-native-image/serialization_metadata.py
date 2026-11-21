@@ -160,7 +160,7 @@ def generate(classpath, output):
                 for _, descriptor, _ in found]
         return max((descriptor.split(')')[0].count(SERIALIZER) for _, descriptor, _ in found), default=0)
 
-    # Platform.kt in kotlinx-serialization-core-jvm 1.12.0 checks the default
+    # Platform.kt in kotlinx-serialization-core-jvm 1.13.0 checks the default
     # companion, objects, named companions / $$serializer, then polymorphic annotations.
     for name, clazz in sorted(classes.items()):
         companions = [(member, classes[descriptor[1:-1]])

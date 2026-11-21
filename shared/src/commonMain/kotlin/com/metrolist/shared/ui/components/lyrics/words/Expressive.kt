@@ -225,8 +225,10 @@ internal fun ExpressiveWordAnimation(
 
     val animationVisibility = rememberLyricsAnimationVisibility()
     LaunchedEffect(isActiveLine, isPlaying, animationVisibility) {
-        if (isActiveLine || exitOpacity.value > 0f) {
-            animateLyricsFrames(animationVisibility, shouldAnimate = { isActiveLine || exitOpacity.value > 0f }) { frameWallTimeMs = it }
+        // The position is snapshot state, so a paused line still redraws when it moves; only the wave needs wall-clock frames.
+        val animating = { if (isActiveLine) isPlaying else exitOpacity.value > 0f }
+        if (animating()) {
+            animateLyricsFrames(animationVisibility, shouldAnimate = animating) { frameWallTimeMs = it }
         }
     }
 

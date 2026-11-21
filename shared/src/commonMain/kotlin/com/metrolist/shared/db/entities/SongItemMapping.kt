@@ -57,3 +57,15 @@ fun Song.toSongItem(): SongItem {
 
 fun SongItem.withStoredDownloadMetadata(stored: Song?): SongItem =
     stored?.toSongItem()?.copy(thumbnail = thumbnail ?: stored.thumbnailUrl) ?: this
+
+fun CachedAudioEntity.toSongItem(stored: Song?): SongItem =
+    SongItem(
+        id = songId,
+        title = title,
+        thumbnail = thumbnailUrl,
+        artists =
+            artist.split(",").mapNotNull { name ->
+                name.trim().takeIf { it.isNotBlank() && it != "Unknown" }?.let { ArtistTiny(null, it) }
+            },
+        album = album?.let { AlbumTiny(null, it) },
+    ).withStoredDownloadMetadata(stored)

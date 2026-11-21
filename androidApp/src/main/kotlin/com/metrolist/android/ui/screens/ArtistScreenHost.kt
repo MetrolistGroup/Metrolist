@@ -217,10 +217,10 @@ fun ArtistScreenHost(
         onAlbumArtworkClick = { album, token ->
             onNavigateToAlbum(album.id, sections.values.flatten().filterIsInstance<AlbumItem>(), token)
         },
-        onItemClick = { item ->
+        onItemClick = { sectionTitle, item ->
             if (item is SongItem) {
                 scope.launch {
-                    val tracks = fullArtistShelfQueue(item, sections, sectionBrowseIds)
+                    val tracks = fullArtistShelfQueue(item, sectionTitle, sections, sectionBrowseIds)
                     playerConnection?.playQueue(tracks, startIndex = tracks.indexOfFirst { it.id == item.id }, finite = true)
                 }
             } else {

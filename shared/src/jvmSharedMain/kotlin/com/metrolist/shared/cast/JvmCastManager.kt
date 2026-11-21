@@ -7,6 +7,7 @@ import com.metrolist.shared.youtube.playback.PlaybackEventKind
 import com.metrolist.shared.youtube.playback.PlaybackEventLog
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable
@@ -30,6 +31,7 @@ import java.net.InetAddress
 import java.net.InetSocketAddress
 import java.net.NetworkInterface
 import java.net.URI
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicLong
 import kotlin.concurrent.thread
@@ -272,9 +274,10 @@ class JvmCastManager(
         positionMs: Long,
         autoplay: Boolean,
         volume: Float,
+        shouldCommit: () -> Boolean = { true },
     ): Boolean =
         operationLock.withLock {
-            if (!settings.castEnabled) return@withLock false
+            if (!settings.castEnabled || !shouldCommit()) return@withLock false
             val activeSession = session ?: return@withLock false
             val device = _state.value.device ?: return@withLock false
             if (!isCastable(media, device.protocol)) {
@@ -288,6 +291,12 @@ class JvmCastManager(
                 val replacementUrl = activeProxy.stageMedia(media).also { stagedUrl = it }
                 sessionStateJob?.cancelAndJoin()
                 sessionStateJob = null
+                if (!shouldCommit()) {
+                    activeProxy.discardMedia(replacementUrl)
+                    stagedUrl = null
+                    observeSessionState(activeSession, device, mediaGeneration)
+                    return@withLock false
+                }
                 activeSession.load(
                     mediaUrl = replacementUrl,
                     media = media,
@@ -427,7 +436,7 @@ class JvmCastManager(
         expectedMediaGeneration: Long,
     ) {
         sessionStateJob =
-            scope.launch {
+            scope.launch(start = CoroutineStart.UNDISPATCHED) {
                 activeSession.state.collect { playback ->
                     if (
                         session !== activeSession ||
@@ -603,6 +612,9 @@ class JvmCastManager(
             devicesById.values.sortedWith(compareBy<CastDevice> { it.name.lowercase() }.thenBy { it.protocol.ordinal })
     }
 
+    // Logs each unreadable device once per session, since discovery repeats every few seconds.
+    private val failedDlnaLocations = ConcurrentHashMap.newKeySet<String>()
+
     private suspend fun discoverDlna(
         addresses: List<InetAddress>,
         generation: Long,
@@ -631,14 +643,31 @@ class JvmCastManager(
                                     port = uri.port.takeIf { it >= 0 } ?: 80,
                                     endpoint = location,
                                 )
+                            }.onFailure { error ->
+                                if (error is CancellationException) throw error
+                                if (failedDlnaLocations.add(location)) {
+                                    PlaybackEventLog.error(
+                                        PlaybackEventKind.NETWORK,
+                                        "CastDiscovery",
+                                        "DLNA device description failed",
+                                        error,
+                                    )
+                                }
                             }.getOrNull()
                         }
                     }.awaitAll()
                     .filterNotNull()
             }
+        val sonos = discovered.filter { it.protocol == CastProtocol.SONOS }
+        val visible =
+            sonos
+                .takeIf { it.isNotEmpty() }
+                ?.let { sonosGroupDevices(it) }
+                ?.let { groups -> discovered.filterNot { it.protocol == CastProtocol.SONOS } + groups }
+                ?: discovered
         synchronized(devicesLock) {
             if (!settings.castEnabled || !discovering.get() || generation != discoveryGeneration.get()) return
-            devicesById.replaceDlnaDevices(discovered)
+            devicesById.replaceDlnaDevices(visible)
             publishDevices()
         }
     }

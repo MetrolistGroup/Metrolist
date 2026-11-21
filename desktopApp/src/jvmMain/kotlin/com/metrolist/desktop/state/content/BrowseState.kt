@@ -33,6 +33,8 @@ object BrowseState {
     private var unfilteredBrowsePageData = BrowsePageData()
     var isBrowseLoading by mutableStateOf(false)
     var isLoadingMore by mutableStateOf(false)
+    var loadFailed by mutableStateOf(false)
+        private set
     var loadMoreFailed by mutableStateOf(false)
     private var generation = 0L
     private var pageCount = 1
@@ -60,6 +62,7 @@ object BrowseState {
         pageCount = 1
         seenTokens.clear()
         isLoadingMore = false
+        loadFailed = false
         loadMoreFailed = false
         setLogin = GlobalYouTube.innerTube.useLoginForBrowse || browseId.startsWith("FEmusic_library") ||
             browseId.startsWith("FEmusic_moods_and_genres") || browseId == "VLSE" || browseId == "VLRDPN"
@@ -96,11 +99,18 @@ object BrowseState {
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
+                    if (generation == requestGeneration) loadFailed = true
                     YtLogger.e("BrowseState", "fetchBrowseData failed for $browseId: ${e.message}", e)
                 } finally {
                     if (generation == requestGeneration) isBrowseLoading = false
                 }
             }
+    }
+
+    fun retry() {
+        if (!loadFailed) return
+        val browseId = selectedBrowseId ?: return
+        fetchBrowseData(browseId, selectedBrowseParams, selectedBrowseTitle, addToHistory = false)
     }
 
     fun loadMore() {
@@ -149,6 +159,7 @@ object BrowseState {
     fun clear() {
         generation++
         isLoadingMore = false
+        loadFailed = false
         loadMoreFailed = false
         browseLoadJob?.cancel()
         selectedBrowseId = null

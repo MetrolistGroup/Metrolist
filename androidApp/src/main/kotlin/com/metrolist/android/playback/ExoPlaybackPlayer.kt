@@ -1,5 +1,6 @@
 package com.metrolist.android.playback
 
+import android.app.AppOpsManager
 import android.content.Context
 import android.content.Intent
 import android.media.AudioDeviceInfo
@@ -9,6 +10,7 @@ import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.os.PowerManager
+import android.os.Process
 import android.os.SystemClock
 import android.view.Surface
 import android.view.SurfaceHolder
@@ -54,7 +56,6 @@ import com.metrolist.shared.deviceconnect.DcLocalPlaybackState
 import com.metrolist.shared.deviceconnect.DeviceConnectControllerClock
 import com.metrolist.shared.equalizer.AudioSpectrumMeter
 import com.metrolist.shared.equalizer.EqualizerProfiles
-import com.metrolist.shared.model.MUSIC_VIDEO_TYPE_LIVE
 import com.metrolist.shared.model.SongItem
 import com.metrolist.shared.model.isLive
 import com.metrolist.shared.playback.MusicQueue
@@ -91,6 +92,7 @@ import com.metrolist.shared.youtube.playback.PlaybackBandwidthMeter
 import com.metrolist.shared.youtube.playback.PlaybackEventKind
 import com.metrolist.shared.youtube.playback.PlaybackEventLog
 import com.metrolist.shared.youtube.playback.PlaybackResource
+import com.metrolist.shared.youtube.playback.matchingLiveState
 import com.metrolist.shared.youtube.playback.sabrAudioPlaybackChunks
 import com.metrolist.shared.youtube.playback.toPlaybackLogDetails
 import com.metrolist.shared.youtube.playback.withClientPlaybackNonce
@@ -199,6 +201,35 @@ internal fun shouldRestartCurrentItem(
     currentQueueIndex: Int,
 ): Boolean = playbackPositionMs >= RESTART_CURRENT_ITEM_THRESHOLD_MS || currentQueueIndex <= 0
 
+internal fun shouldWrapToLastItem(
+    repeatAll: Boolean,
+    playbackPositionMs: Long,
+    currentQueueIndex: Int,
+    lastQueueIndex: Int,
+    isLive: Boolean = false,
+): Boolean =
+    repeatAll && currentQueueIndex == 0 && lastQueueIndex > 0 &&
+        (isLive || playbackPositionMs < RESTART_CURRENT_ITEM_THRESHOLD_MS)
+
+internal fun AndroidPlaybackPlayer.skipToPrevious(
+    repeatAll: Boolean,
+    resumePlayback: Boolean,
+) {
+    val lastIndex = songQueue.value.lastIndex
+    if (shouldWrapToLastItem(
+            repeatAll,
+            currentPosition.value,
+            currentMediaItemIndex.value,
+            lastIndex,
+            isLive = currentSong.value?.isLive == true,
+        )
+    ) {
+        skipToQueueItem(lastIndex, resumePlayback = resumePlayback)
+    } else {
+        skipToPrevious(resumePlayback)
+    }
+}
+
 internal fun MusicQueue.selectFirstIfUnselected(): Boolean {
     if (currentSong() != null || items.value.isEmpty()) return false
     skipTo(0)
@@ -272,6 +303,23 @@ internal enum class AndroidPlaybackPlayerRole(
     PRIMARY(true),
     SECONDARY(false),
 }
+
+// Users who deny the take-audio-focus app op to mix with other apps could play in v13. Media3 refuses to play
+// when the focus request fails, so skip its focus handling for them.
+internal fun appMayTakeAudioFocus(context: Context): Boolean =
+    runCatching {
+        val appOps = context.getSystemService(AppOpsManager::class.java) ?: return true
+        val mode =
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                appOps.unsafeCheckOpNoThrow(OPSTR_TAKE_AUDIO_FOCUS, Process.myUid(), context.packageName)
+            } else {
+                @Suppress("DEPRECATION")
+                appOps.checkOpNoThrow(OPSTR_TAKE_AUDIO_FOCUS, Process.myUid(), context.packageName)
+            }
+        mode != AppOpsManager.MODE_IGNORED && mode != AppOpsManager.MODE_ERRORED
+    }.getOrDefault(true)
+
+private const val OPSTR_TAKE_AUDIO_FOCUS = "android:take_audio_focus"
 
 internal fun transferPlaybackAudioFocus(
     retirePrimary: () -> Unit,
@@ -354,6 +402,7 @@ class ExoPlaybackPlayer(
     private val playerInstanceIds = WeakHashMap<Player, Long>()
     private val pendingVolumeLogs = mutableMapOf<Player, Job>()
     private val systemAudioEffects = SystemAudioEffects(this.context)
+    private var sharedAudioSessionId = Util.generateAudioSessionIdV21(this.context)
     private var exo = createPlayer()
     private val _playbackState = MutableStateFlow(exo.playbackState)
     private val tempoPitchLock = Any()
@@ -370,6 +419,7 @@ class ExoPlaybackPlayer(
     private fun createPlayer(
         bufferForPlaybackMs: Int = 2_000,
         role: AndroidPlaybackPlayerRole = AndroidPlaybackPlayerRole.PRIMARY,
+        audioSessionId: Int = sharedAudioSessionId,
     ): ExoPlayer {
         val normalization = NormalizationAudioProcessor { it.normalizationGain() }
         lateinit var createdPlayer: ExoPlayer
@@ -401,11 +451,12 @@ class ExoPlaybackPlayer(
             .Builder(context)
             .setRenderersFactory(silence.renderersFactory)
             .setLoadControl(createPlaybackLoadControl(bufferForPlaybackMs))
-            .setAudioAttributes(playbackAudioAttributes, role.handlesAudioFocus)
+            .setAudioAttributes(playbackAudioAttributes, role.handlesAudioFocus && appMayTakeAudioFocus(context))
             .setWakeMode(C.WAKE_MODE_NETWORK)
             .build()
             .apply {
                 createdPlayer = this
+                setAudioSessionId(audioSessionId)
                 setHandleAudioBecomingNoisy(true)
                 normalizationProcessors[this] = normalization
                 silenceSupport[this] = silence
@@ -1754,6 +1805,8 @@ class ExoPlaybackPlayer(
                 createPlayer(
                     bufferForPlaybackMs = SWITCH_READY_BUFFER_MS.toInt(),
                     role = AndroidPlaybackPlayerRole.SECONDARY,
+                    // Some ROMs (HyperOS) stall a whole session after a muted track idles on it for 60s in the background.
+                    audioSessionId = Util.generateAudioSessionIdV21(context),
                 )
             normalizationProcessors[candidate]?.resource = resource
             var candidateAudioSource: SeekableMediaSource? = null
@@ -2322,6 +2375,7 @@ class ExoPlaybackPlayer(
         nextPlayerListener?.let(candidate::removeListener)
         nextPlayerListener = null
         exo = candidate
+        sharedAudioSessionId = candidate.audioSessionId
         if (!usesPlaylist) offloadSleepStallTracker.reset()
         sabrPlaybackCache.release(activeAudioSource)
         activeAudioSource?.closePlaybackSource()
@@ -2355,12 +2409,7 @@ class ExoPlaybackPlayer(
         minimumPositionMs = candidate.currentPosition.coerceAtLeast(0L)
         _currentPosition.value = minimumPositionMs
         _bufferedPosition.value = candidate.bufferedPosition.coerceAtLeast(0L)
-        val effectiveSong =
-            if (resource.isLive && !song.isLive) {
-                song.copy(musicVideoType = MUSIC_VIDEO_TYPE_LIVE, duration = null)
-            } else {
-                song
-            }
+        val effectiveSong = song.matchingLiveState(resource)
         _duration.value =
             playbackDurationMs(
                 backendDurationMs = candidate.duration,
@@ -2384,14 +2433,14 @@ class ExoPlaybackPlayer(
                 },
                 enablePromotedPlayer = {
                     applyPlaybackGains()
-                    candidate.setAudioAttributes(playbackAudioAttributes, true)
+                    candidate.setAudioAttributes(playbackAudioAttributes, appMayTakeAudioFocus(context))
                     candidate.playWhenReady = shouldPlay
                 },
             )
         }
         _isPlaying.value = candidate.isPlaying
         queue.next()
-        if (effectiveSong.id != queueSong.id || (effectiveSong.isLive && !queueSong.isLive)) queue.replaceCurrent(effectiveSong)
+        if (effectiveSong.id != queueSong.id || effectiveSong.isLive != queueSong.isLive) queue.replaceCurrent(effectiveSong)
         sabrPlaybackCache.start(effectiveSong.id, resource, activeAudioSource, candidate.isPlaying, newPlayback = true)
         onPreloadedPlaybackCommitted?.invoke(effectiveSong, resource)
         currentSongValue = effectiveSong
@@ -2641,6 +2690,7 @@ class ExoPlaybackPlayer(
                     createPlayer(
                         bufferForPlaybackMs = SWITCH_READY_BUFFER_MS.toInt(),
                         role = AndroidPlaybackPlayerRole.SECONDARY,
+                        audioSessionId = if (freshAudioSession) Util.generateAudioSessionIdV21(context) else sharedAudioSessionId,
                     )
                 } else {
                     previousPlayer
@@ -2892,6 +2942,8 @@ class ExoPlaybackPlayer(
                     val surface = activeVideoSurface
                     removeVideoSurface(previousPlayer, surface)
                     detachPlayerListeners(previousPlayer)
+                    // Keep the shared effects session open while the outgoing player releases.
+                    if (!freshAudioSession) systemAudioEffects.attach(candidate)
                     replaceAudioOutput(
                         outgoing = previousPlayer,
                         incoming = candidate,
@@ -2899,6 +2951,7 @@ class ExoPlaybackPlayer(
                         promoteIncoming = {
                             offloadSleepStallTracker.reset()
                             exo = candidate
+                            if (freshAudioSession) sharedAudioSessionId = candidate.audioSessionId
                             currentResource = preparedResource
                             activeAudioSource = nextAudioSource
                             activeVideoSource = nextVideoSource
@@ -2907,7 +2960,7 @@ class ExoPlaybackPlayer(
                             attachPlayerListeners(candidate)
                             setVideoTrackEnabled(candidate, shouldEnableVideoTrackAfterWarmup(preparedResource.hasVideo, surface != null))
                             applyVideoSurface(candidate, surface)
-                            candidate.setAudioAttributes(playbackAudioAttributes, true)
+                            candidate.setAudioAttributes(playbackAudioAttributes, appMayTakeAudioFocus(context))
                             applyPlaybackGains()
                             candidate.playWhenReady = continuePlaying
                         },
@@ -2986,12 +3039,7 @@ class ExoPlaybackPlayer(
                     } else {
                         song
                     }
-                val committedSong =
-                    if (preparedResource.isLive && !baseSong.isLive) {
-                        baseSong.copy(musicVideoType = MUSIC_VIDEO_TYPE_LIVE, duration = null)
-                    } else {
-                        baseSong
-                    }
+                val committedSong = baseSong.matchingLiveState(preparedResource)
                 sabrPlaybackCache.release(previousAudioSource)
                 previousAudioSource?.closePlaybackSource()
                 previousVideoSource?.closePlaybackSource()
@@ -3056,7 +3104,7 @@ class ExoPlaybackPlayer(
                 }
                 eofInstance = currentInstance
                 lastEofInstance = 0L
-                if (!stageQueueReplacement && (replaceCurrentQueueItem || (preparedResource.isLive && currentQueueSong?.isLive != true))) {
+                if (!stageQueueReplacement && (replaceCurrentQueueItem || committedSong.isLive != (currentQueueSong?.isLive == true))) {
                     queue.replaceCurrent(committedSong)
                 }
                 Timber.tag(MUSIC_VIDEO_TAG).d(

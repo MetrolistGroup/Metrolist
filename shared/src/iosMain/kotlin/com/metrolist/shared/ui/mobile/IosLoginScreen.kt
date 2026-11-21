@@ -38,6 +38,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.UIKitView
 import com.metrolist.innertubex.models.response.AccountsListResponse
@@ -260,6 +261,8 @@ internal fun IosLoginScreen(
                         stringResource(
                             if (isSwitchingChannel) Res.string.switch_youtube_channel else Res.string.sign_in_to_youtube_music,
                         ),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
                     )
                 },
                 navigationIcon = {
@@ -280,13 +283,13 @@ internal fun IosLoginScreen(
                             shapes = ButtonDefaults.shapes(),
                         ) { Text(stringResource(Res.string.complete_sign_in)) }
                     }
-                    TextButton(
+                    IconButton(
                         onClick = {
                             scope.cancel()
                             onTokenLogin()
                         },
-                        shapes = ButtonDefaults.shapes(),
-                    ) { Text(stringResource(Res.string.token_login)) }
+                        shapes = IconButtonDefaults.shapes(),
+                    ) { Icon(MetrolistIcons.Outlined.Token, stringResource(Res.string.token_login)) }
                 },
             )
         },

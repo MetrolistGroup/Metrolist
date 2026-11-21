@@ -916,10 +916,6 @@
         <item quantity="one">%1$d na minuto</item>
         <item quantity="other">%1$d na minuto</item>
     </plurals>
-    <plurals name="minutes_short">
-        <item quantity="one">%1$d min</item>
-        <item quantity="other">%1$d min</item>
-    </plurals>
     <plurals name="n_track">
         <item quantity="one">%1$d track</item>
         <item quantity="other">%1$d tracks</item>
@@ -943,10 +939,6 @@
     <plurals name="removed_songs_from_playlist">
         <item quantity="one">Inalis ang %1$d kanta mula sa playlist</item>
         <item quantity="other">Inalis ang %1$d kanta mula sa playlist</item>
-    </plurals>
-    <plurals name="seconds_short">
-        <item quantity="one">%1$d s</item>
-        <item quantity="other">%1$d s</item>
     </plurals>
     <plurals name="song_count">
         <item quantity="one">%1$d kanta</item>
@@ -1912,7 +1904,6 @@
     <string name="sponsorblock_skipped">Nilaktawan ang bahaging pampromosyon</string>
     <string name="episode_played">Napakinggan</string>
     <string name="lastfm_service_error">Hindi available ang pag-sign in sa Last.fm. Pakisubukan muli mamaya.</string>
-
     <string name="settings_appearance_overview">Tema, mga font, at hitsura ng player</string>
     <string name="settings_android_auto_overview">Mga playlist sa sasakyan at patutunguhan ng mabilisang pagdagdag</string>
     <string name="settings_about_overview">Mga nag-ambag, link ng komunidad, at lisensya</string>

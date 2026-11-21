@@ -1,5 +1,11 @@
 @file:Suppress("UnstableApiUsage")
 
+import com.android.build.api.instrumentation.AsmClassVisitorFactory
+import com.android.build.api.instrumentation.ClassContext
+import com.android.build.api.instrumentation.ClassData
+import com.android.build.api.instrumentation.FramesComputationMode
+import com.android.build.api.instrumentation.InstrumentationParameters
+import com.android.build.api.instrumentation.InstrumentationScope
 import org.gradle.api.DefaultTask
 import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.DirectoryProperty
@@ -13,6 +19,9 @@ import org.gradle.api.tasks.PathSensitive
 import org.gradle.api.tasks.PathSensitivity
 import org.gradle.api.tasks.TaskAction
 import org.gradle.api.tasks.testing.Test
+import org.objectweb.asm.ClassVisitor
+import org.objectweb.asm.MethodVisitor
+import org.objectweb.asm.Opcodes
 import org.w3c.dom.Element
 import org.w3c.dom.Node
 import java.util.Locale
@@ -129,6 +138,45 @@ abstract class VerifyComposeResourcesTask : DefaultTask() {
     }
 }
 
+// navigation3-ui 1.3.0-alpha04 drops z-indices of settled scenes that AnimatedContent can still build
+// transitions for, so NavDisplay's zIndices[key] throws NoSuchElementException. A missing z-index reads as 0.
+abstract class NavDisplayZIndexFallback : AsmClassVisitorFactory<InstrumentationParameters.None> {
+    override fun createClassVisitor(
+        classContext: ClassContext,
+        nextClassVisitor: ClassVisitor,
+    ): ClassVisitor =
+        object : ClassVisitor(Opcodes.ASM9, nextClassVisitor) {
+            override fun visitMethod(
+                access: Int,
+                name: String?,
+                descriptor: String?,
+                signature: String?,
+                exceptions: Array<out String>?,
+            ): MethodVisitor =
+                object : MethodVisitor(Opcodes.ASM9, super.visitMethod(access, name, descriptor, signature, exceptions)) {
+                    override fun visitMethodInsn(
+                        opcode: Int,
+                        owner: String,
+                        name: String,
+                        descriptor: String,
+                        isInterface: Boolean,
+                    ) {
+                        if (owner == "androidx/collection/MutableObjectFloatMap" && name == "get" &&
+                            descriptor == "(Ljava/lang/Object;)F"
+                        ) {
+                            super.visitInsn(Opcodes.FCONST_0)
+                            super.visitMethodInsn(opcode, owner, "getOrDefault", "(Ljava/lang/Object;F)F", isInterface)
+                        } else {
+                            super.visitMethodInsn(opcode, owner, name, descriptor, isInterface)
+                        }
+                    }
+                }
+        }
+
+    override fun isInstrumentable(classData: ClassData): Boolean =
+        classData.className.startsWith("androidx.navigation3.ui.NavDisplayKt__NavDisplayKt")
+}
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.compose.compiler)
@@ -183,7 +231,7 @@ sentry {
     autoInstallation {
         enabled.set(false)
     }
-    ignoredBuildTypes.set(setOf("debug", "benchmark"))
+    ignoredBuildTypes.set(setOf("debug", "benchmark", "izzy"))
     tracingInstrumentation.enabled.set(false)
     org.set("metrolistgroup")
     projectName.set("metrolist-kmp")
@@ -207,13 +255,14 @@ android {
         applicationId = "com.metrolist.music"
         minSdk = 24
         targetSdk = 37
-        versionCode = 154
+        versionCode = 155
         versionName = appVersion
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables.useSupportLibrary = true
 
         buildConfigField("Long", "DISCORD_APP_ID", "1447278780795064401L")
+        buildConfigField("Boolean", "UPDATER_ENABLED", "true")
         buildConfigField("String", "BUNDLED_LANGUAGE_TAGS", "\"${bundledLanguageTags.joinToString(",")}\"")
     }
 
@@ -260,6 +309,12 @@ android {
             isProfileable = true
             matchingFallbacks += "release"
         }
+        // IzzyOnDroid ships updates itself and must not carry Sentry or Lyprio credentials.
+        create("izzy") {
+            initWith(getByName("release"))
+            buildConfigField("Boolean", "UPDATER_ENABLED", "false")
+            matchingFallbacks += "release"
+        }
         debug {
             applicationIdSuffix = ".debug"
             manifestPlaceholders["appLabel"] = "Metrolist KMP Debug"
@@ -290,6 +345,8 @@ android {
             kotlin.directories += "src/release/kotlin"
             manifest.srcFile("src/benchmark/AndroidManifest.xml")
         }
+        // The debug source set holds the no-op Sentry reporters.
+        getByName("izzy").kotlin.directories += "src/debug/kotlin"
     }
 
     packaging {
@@ -348,13 +405,15 @@ val generateAndroidStrings =
 androidComponents {
     onVariants { variant ->
         variant.sources.res?.addGeneratedSourceDirectory(generateAndroidStrings, GenerateAndroidStringsTask::outputDirectory)
+        variant.instrumentation.transformClassesWith(NavDisplayZIndexFallback::class.java, InstrumentationScope.ALL) {}
+        variant.instrumentation.setAsmFramesComputationMode(FramesComputationMode.COMPUTE_FRAMES_FOR_INSTRUMENTED_METHODS)
     }
 }
 
 val composeStringsResource =
     "assets/composeResources/com.metrolist.shared.generated.resources/values/strings.commonMain.cvr"
 
-listOf("debug", "release", "benchmark").forEach { variant ->
+listOf("debug", "release", "benchmark", "izzy").forEach { variant ->
     val verification =
         tasks.register<VerifyComposeResourcesTask>("verify${variant.replaceFirstChar(Char::uppercaseChar)}ComposeResources") {
             apkDirectory.set(layout.buildDirectory.dir("outputs/apk/$variant"))
@@ -370,7 +429,7 @@ configurations["benchmarkImplementation"].extendsFrom(configurations["releaseImp
 
 configurations
     .matching {
-        it.name in setOf("debugRuntimeClasspath", "releaseRuntimeClasspath", "benchmarkRuntimeClasspath")
+        it.name in setOf("debugRuntimeClasspath", "releaseRuntimeClasspath", "benchmarkRuntimeClasspath", "izzyRuntimeClasspath")
     }.configureEach {
         exclude(group = "org.jetbrains.kotlin", module = "kotlin-reflect")
     }

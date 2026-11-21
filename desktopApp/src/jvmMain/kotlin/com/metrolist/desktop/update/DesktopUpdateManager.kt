@@ -10,7 +10,10 @@ import com.metrolist.shared.generated.resources.Res
 import com.metrolist.shared.generated.resources.update_not_published_stable
 import com.metrolist.shared.network.sharedOkHttpClient
 import com.metrolist.shared.settings.Settings
+import com.metrolist.shared.update.NIGHTLY_TAG
 import com.metrolist.shared.update.ReleaseVersion
+import com.metrolist.shared.update.checkNightly
+import com.metrolist.shared.update.followsNightlyUpdates
 import com.metrolist.shared.utils.OsUtil
 import com.sun.jna.platform.win32.Advapi32Util
 import com.sun.jna.platform.win32.WinReg
@@ -57,7 +60,9 @@ object DesktopUpdateManager {
     suspend fun checkForRecovery(): Result<RecoveryRelease?> =
         withContext(Dispatchers.IO) {
             runCatching {
-                findUpdate(getReleaseJson(RELEASES_URL), BuildConfig.APP_VERSION)
+                val releasesJson = getReleaseJson(RELEASES_URL)
+                // A crash offers the nightly even on the stable channel, since it may already carry the fix.
+                (findUpdate(releasesJson, BuildConfig.APP_VERSION) ?: newNightly(parseReleases(releasesJson), confirm = false))
                     ?.let {
                         RecoveryRelease(
                             it.version,
@@ -96,8 +101,26 @@ object DesktopUpdateManager {
     internal fun parseReleases(releasesJson: String): List<GitHubDesktopRelease> =
         json
             .decodeFromString<List<GitHubDesktopRelease>>(releasesJson)
-            .filter { !it.draft && ReleaseVersion.parse(it.version) != null }
+            .filter { !it.draft && (ReleaseVersion.parse(it.version) != null || it.isNightly) }
             .sortedByDescending { ReleaseVersion.parse(it.version) }
+
+    /** The nightly when it differs from the installed package and this platform has a build. */
+    internal fun newNightly(
+        releases: List<GitHubDesktopRelease>,
+        confirm: Boolean,
+        currentVersion: String = BuildConfig.APP_VERSION,
+    ): GitHubDesktopRelease? {
+        val nightly = releases.firstOrNull { it.isNightly } ?: return null
+        val asset = nightly.nightlyAsset ?: return null
+        val result = checkNightly(currentVersion, nightly.targetCommit, asset.digest, Settings.shared.installedNightlyDigest)
+        if (confirm) Settings.shared.installedNightlyDigest = result.installedDigest
+        return nightly.takeIf { result.available }
+    }
+
+    internal fun availableUpdate(releases: List<GitHubDesktopRelease>): GitHubDesktopRelease? =
+        releases.firstOrNull { isNewerDesktopVersion(it.version, BuildConfig.APP_VERSION) }
+            ?: newNightly(releases, confirm = true)
+                ?.takeIf { followsNightlyUpdates(Settings.shared.updateChannel, BuildConfig.APP_VERSION) }
 
     internal fun findUpdate(
         releasesJson: String,
@@ -267,11 +290,30 @@ data class GitHubDesktopRelease(
     val body: String? = null,
     @SerialName("published_at") val publishedAt: String? = null,
     val assets: List<GitHubDesktopAsset>,
+    @SerialName("target_commitish") val targetCommit: String? = null,
 ) {
     val version: String get() = tagName.removePrefix("v")
+    val isNightly: Boolean get() = tagName == NIGHTLY_TAG
+
+    /** Nightlies share one tag, so their package digest tells them apart. */
+    val updateKey: String get() = if (isNightly) "$NIGHTLY_TAG:${nightlyAsset?.digest}" else version
+
+    // Nightly assets keep fixed names so their download links never change.
+    val nightlyAsset: GitHubDesktopAsset?
+        get() =
+            assets.firstOrNull { asset ->
+                asset.state == "uploaded" &&
+                    when {
+                        OsUtil.isWindows -> asset.name.endsWith("-windows.zip")
+                        OsUtil.isMac -> asset.name.contains("-macos", ignoreCase = true)
+                        else -> asset.name.endsWith("-linux-${desktopArchitecture()}.AppImage")
+                    }
+            }
     val installer: GitHubDesktopAsset?
         get() = assets.singleOrNull { it.name == "metrolist-installer-windows-x64-$version.exe" }
-    val url: String get() = "https://github.com/MetrolistGroup/Metrolist/releases/tag/$tagName"
+    val url: String get() =
+        nightlyAsset?.takeIf { isNightly }?.downloadUrl
+            ?: "https://github.com/MetrolistGroup/Metrolist/releases/tag/$tagName"
 
     internal fun canInstall(registeredInstallation: Boolean): Boolean =
         registeredInstallation && !draft && !prerelease && ReleaseVersion.parse(version)?.prerelease?.isEmpty() == true
@@ -344,3 +386,9 @@ internal fun desktopUpdateCheckIsDue(
     lastAttempt: Long,
     now: Long,
 ): Boolean = lastAttempt !in 1..now || now - lastAttempt >= 60 * 60 * 1_000L
+
+private fun desktopArchitecture(): String =
+    when (System.getProperty("os.arch").lowercase()) {
+        "aarch64", "arm64" -> "arm64"
+        else -> "x64"
+    }

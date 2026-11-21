@@ -776,7 +776,7 @@ internal class DesktopVideoLifecycle(
     fun updateVideoAudioRouting(level: Float = status().volume) {
         val videoOwnsAudio = isVideoActive && videoPlayer.hasOwnAudio
         player.setAudioOutputEnabled(status().audioOutputEnabled && !videoOwnsAudio)
-        player.setVolume((level * 100).toInt())
+        player.setVolumeFraction(level)
         videoPlayer.setVolume(if (status().audioOutputEnabled) player.outputVolume else 0f)
     }
 

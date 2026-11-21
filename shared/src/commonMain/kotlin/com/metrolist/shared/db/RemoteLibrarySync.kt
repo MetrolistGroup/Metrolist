@@ -126,9 +126,9 @@ internal suspend fun MusicDatabase.syncRemoteLibraryItems(
                         val bookmark = if ("album:${item.id}" in preserveBookmarkKeys) old?.bookmarkedAt else old?.bookmarkedAt ?: now
                         albums[item.id] =
                             old?.copy(
-                                playlistId = item.playlistId,
+                                playlistId = item.playlistId ?: old.playlistId,
                                 title = item.title,
-                                year = item.year?.toIntOrNull(),
+                                year = item.year?.toIntOrNull() ?: old.year,
                                 thumbnailUrl = item.thumbnail ?: old.thumbnailUrl,
                                 explicit = item.isExplicit,
                                 bookmarkedAt = bookmark,

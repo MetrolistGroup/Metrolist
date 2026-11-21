@@ -378,7 +378,7 @@ kotlin {
         getByName("androidHostTest") {
             dependsOn(jvmSharedTest)
             dependencies {
-                implementation("org.robolectric:robolectric:4.17")
+                implementation("org.robolectric:robolectric:4.18")
             }
         }
         getByName("androidDeviceTest") {
@@ -538,9 +538,11 @@ val generateBuildConfig =
                 .orElse(providers.provider { "" })
                 .get()
                 .trim()
+        val isIzzyTask = gradle.startParameter.taskNames.any { it.contains("Izzy", ignoreCase = true) }
         val isReleaseTask =
             gradle.startParameter.taskNames.any { name ->
-                name.contains("Release", ignoreCase = true) ||
+                name.contains("Izzy", ignoreCase = true) ||
+                    name.contains("Release", ignoreCase = true) ||
                     name.contains("Benchmark", ignoreCase = true) ||
                     (name.contains("package", ignoreCase = true) && !name.contains("Debug", ignoreCase = true)) ||
                     name.contains("Distributable", ignoreCase = true)
@@ -595,8 +597,9 @@ val generateBuildConfig =
         }
         inputs.property("lastFmKey", lastFmKey)
         inputs.property("lastFmSecret", lastFmSecret)
-        inputs.property("lyprioBaseUrl", lyprioBaseUrl)
-        inputs.property("lyprioHmacKey", lyprioHmacKey)
+        // shortcut: BuildConfig is per invocation, so an Izzy build leaves Lyprio out of every APK it assembles; build Izzy alone.
+        inputs.property("lyprioBaseUrl", if (isIzzyTask) "" else lyprioBaseUrl)
+        inputs.property("lyprioHmacKey", if (isIzzyTask) "" else lyprioHmacKey)
         val sourceRevision =
             providers
                 .gradleProperty("metrolist.sourceRevision")

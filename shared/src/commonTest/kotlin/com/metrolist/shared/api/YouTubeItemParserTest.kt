@@ -13,6 +13,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 class YouTubeItemParserTest {
     @Test
@@ -35,6 +36,29 @@ class YouTubeItemParserTest {
         val album = assertIs<AlbumItem>(YouTubeItemParser.parseItem(item))
         assertEquals("MPREb_album", album.id)
         assertEquals("Album", album.title)
+    }
+
+    @Test
+    fun greyedAlbumTracksWithoutWatchEndpointsAreUnavailableDespiteDuration() {
+        val song =
+            assertIs<SongItem>(
+                YouTubeItemParser.parseItem(
+                    renderer(
+                        """{"musicResponsiveListItemRenderer":{
+                          "flexColumns":[{"musicResponsiveListItemFlexColumnRenderer":{"text":{"runs":[{"text":"Track",
+                            "navigationEndpoint":{"showDialogCommand":{"panelLoadingStrategy":{"requestTemplate":{"panelId":"PApremium_upsell"}}}}
+                          }]}}}],
+                          "fixedColumns":[{"musicResponsiveListItemFixedColumnRenderer":{"text":{"runs":[{"text":"2:08"}]}}}],
+                          "overlay":{"musicItemThumbnailOverlayRenderer":{"content":{"musicPlayButtonRenderer":{"playIcon":{"iconType":"PLAY_ARROW"}}}}},
+                          "playlistItemData":{"videoId":"track"},
+                          "musicItemRendererDisplayPolicy":"MUSIC_ITEM_RENDERER_DISPLAY_POLICY_GREY_OUT"
+                        }}""",
+                    ),
+                ),
+            )
+        assertTrue(song.isUnavailable)
+        assertEquals("track", song.id)
+        assertEquals(128L, song.duration)
     }
 
     @Test

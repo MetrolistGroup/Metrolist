@@ -9,6 +9,7 @@ import com.metrolist.desktop.storage.DownloadState
 import com.metrolist.shared.auth.YouTubeSyncState
 import com.metrolist.shared.db.MusicDatabase
 import com.metrolist.shared.db.entities.PlaylistEntity
+import com.metrolist.shared.db.preserveKnownPlaylistEditability
 import com.metrolist.shared.model.PlaylistItem
 import com.metrolist.shared.model.SongItem
 import com.metrolist.shared.model.UserPlaylist
@@ -84,6 +85,7 @@ object LibraryContentState {
         private set
     private var unfilteredLibraryItems: List<YTItem> = emptyList()
     private val playlistSources = UserPlaylistSourceCache()
+    private val playlistRenameRequests = PlaylistRenameRequests()
     private var playlistObservationJob: Job? = null
     private var playlistRefreshJob: Job? = null
     private var playlistRefreshGeneration = 0L
@@ -180,31 +182,31 @@ object LibraryContentState {
     ) {
         AppState.scope.launch {
             val result =
-                withContext(Dispatchers.IO) {
-                    renameStoredPlaylist(database, GlobalYouTubeRepository.instance, playlist.id, name)
+                playlistRenameRequests.save(playlist.id) {
+                    withContext(Dispatchers.IO) {
+                        renameStoredPlaylist(database, GlobalYouTubeRepository.instance, playlist.id, name)
+                    }
                 }
-            if (result.isSuccess) fetchLibraryData(force = true)
             onResult(result)
+            if (result.isSuccess) fetchLibraryData(force = true)
         }
     }
 
     fun deletePlaylist(
         playlist: PlaylistItem,
         onResult: (Result<Unit>) -> Unit,
-    ) {
-        AppState.scope.launch {
-            val result =
-                withContext(Dispatchers.IO) {
-                    deleteStoredPlaylist(database, GlobalYouTubeRepository.instance, playlist.id)
-                }
-            if (result.isSuccess) {
-                libraryViewModel.onPlaylistDeleted(playlist.id)
-                val normalizedId = playlist.id.removePrefix("VL")
-                userPlaylists = userPlaylists.filterNot { it.id.removePrefix("VL") == normalizedId }
-                fetchLibraryData(force = true)
+    ) = AppState.scope.launch {
+        val result =
+            withContext(Dispatchers.IO) {
+                deleteStoredPlaylist(database, GlobalYouTubeRepository.instance, playlist.id)
             }
-            onResult(result)
+        if (result.isSuccess) {
+            libraryViewModel.onPlaylistDeleted(playlist.id)
+            val normalizedId = playlist.id.removePrefix("VL")
+            userPlaylists = userPlaylists.filterNot { it.id.removePrefix("VL") == normalizedId }
+            fetchLibraryData(force = true)
         }
+        onResult(result)
     }
 
     private fun applyBlockedContentFilter() {
@@ -226,7 +228,9 @@ object LibraryContentState {
                                 return@launch
                             }
                             YouTubeSyncState.succeeded("playlists")
-                            result.items.filterIsInstance<PlaylistItem>()
+                            database
+                                .preserveKnownPlaylistEditability(result.items, result.unresolvedPlaylistEditabilityIds)
+                                .filterIsInstance<PlaylistItem>()
                         } else {
                             emptyList()
                         }

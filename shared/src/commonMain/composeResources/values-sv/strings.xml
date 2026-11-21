@@ -970,10 +970,6 @@
         <item quantity="one">%1$d minut</item>
         <item quantity="other">%1$d minuter</item>
     </plurals>
-    <plurals name="minutes_short">
-        <item quantity="one">%1$d min</item>
-        <item quantity="other">%1$d min</item>
-    </plurals>
     <plurals name="n_track">
         <item quantity="one">%1$d spår</item>
         <item quantity="other">%1$d spår</item>
@@ -997,10 +993,6 @@
     <plurals name="removed_songs_from_playlist">
         <item quantity="one">Tog bort %1$d låt från spellista</item>
         <item quantity="other">Tog bort %1$d låtar från spellista</item>
-    </plurals>
-    <plurals name="seconds_short">
-        <item quantity="one">%1$d sekund</item>
-        <item quantity="other">%1$d sekunder</item>
     </plurals>
     <plurals name="song_count">
         <item quantity="one">%1$d låt</item>

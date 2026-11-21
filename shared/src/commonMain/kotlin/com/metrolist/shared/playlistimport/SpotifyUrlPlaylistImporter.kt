@@ -222,8 +222,8 @@ object SpotifyUrlPlaylistImporter {
                 ?: return Result.failure(IllegalStateException("Spotify metadata not found in embed"))
 
         val title =
-            entity["name"]?.jsonPrimitive?.content
-                ?: entity["title"]?.jsonPrimitive?.content
+            entity["name"]?.jsonPrimitive?.contentOrNull
+                ?: entity["title"]?.jsonPrimitive?.contentOrNull
                 ?: (if (type == "playlist") fallbackTitles?.playlist else fallbackTitles?.album)
                 ?: getString(if (type == "playlist") Res.string.playlist else Res.string.album)
         val coverUrl =
@@ -242,8 +242,18 @@ object SpotifyUrlPlaylistImporter {
 
         for (item in trackList) {
             val trackObj = item.jsonObject
-            val trackTitle = trackObj["title"]?.jsonPrimitive?.content?.trim() ?: continue
-            val rawArtist = trackObj["subtitle"]?.jsonPrimitive?.content?.trim() ?: ""
+            val trackTitle =
+                trackObj["title"]
+                    ?.jsonPrimitive
+                    ?.contentOrNull
+                    ?.trim()
+                    ?.takeIf(String::isNotBlank) ?: continue
+            val rawArtist =
+                trackObj["subtitle"]
+                    ?.jsonPrimitive
+                    ?.contentOrNull
+                    ?.trim()
+                    .orEmpty()
             val artistName = rawArtist.replace('\u00A0', ' ')
             tracks += PlaylistImportManager.CsvTrack(trackTitle, artistName, null)
         }

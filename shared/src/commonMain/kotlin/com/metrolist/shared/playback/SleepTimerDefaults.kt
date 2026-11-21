@@ -10,9 +10,18 @@ fun sleepTimerDurationMs(
     hours: String,
     minutes: String,
 ): Long? {
-    if (hours.length > 2 || minutes.length > 2 || (hours + minutes).any { it !in '0'..'9' }) return null
-    val hour = if (hours.isEmpty()) 0 else hours.toIntOrNull() ?: return null
-    val minute = if (minutes.isEmpty()) 0 else minutes.toIntOrNull() ?: return null
+    val hour = sleepTimerFieldValue(hours) ?: return null
+    val minute = sleepTimerFieldValue(minutes) ?: return null
     if (hour !in 0..23 || minute !in 0..59) return null
     return ((hour * 60L + minute) * 60_000L).takeIf { it > 0L }
+}
+
+internal fun sleepTimerFieldValue(input: String): Int? {
+    if (input.length > 2) return null
+    var number = 0
+    for (character in input) {
+        val digit = character.digitToIntOrNull() ?: return null
+        number = number * 10 + digit
+    }
+    return number
 }

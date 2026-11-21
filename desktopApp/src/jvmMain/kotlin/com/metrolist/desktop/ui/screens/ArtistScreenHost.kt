@@ -156,7 +156,7 @@ fun ArtistScreenHost() {
         onRefresh = {
             ArtistState.fetchArtistData(artistId, addToHistory = false)
         },
-        onItemClick = { openArtistItem(it) },
+        onItemClick = ::openArtistItem,
         onAlbumArtworkClick = { album, token -> PlaylistAlbumState.fetchAlbumData(album.id, artworkSource = token) },
         onItemLongClick = { item ->
             if (item !is BrowseItem) {
@@ -267,12 +267,15 @@ fun ArtistScreenHost() {
     )
 }
 
-private fun openArtistItem(item: YTItem) {
+private fun openArtistItem(
+    sectionTitle: String,
+    item: YTItem,
+) {
     when (item) {
         is SongItem -> {
             val sections = ArtistState.artistData.toMap()
             val browseIds = ArtistState.artistSectionBrowseIds
-            AppState.scope.launch { PlayerState.playTrack(item, fullArtistShelfQueue(item, sections, browseIds)) }
+            AppState.scope.launch { PlayerState.playTrack(item, fullArtistShelfQueue(item, sectionTitle, sections, browseIds)) }
         }
 
         is AlbumItem -> {

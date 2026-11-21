@@ -389,9 +389,6 @@ internal fun SettingsUiRegistryBuilder.registerLyricsSettings(host: SharedSettin
                             settings.lyricsDeepLApiKey = it
                         } else {
                             settings.setLyricsAiApiKey(provider, it)
-                            if (it.isBlank() && preset.keyless && !preset.isKeylessFreeModel(settings.lyricsAiModel)) {
-                                settings.lyricsAiModel = preset.defaultModel
-                            }
                         }
                     }
                     if (preset.editableEndpoint) {

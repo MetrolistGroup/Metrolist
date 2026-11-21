@@ -378,18 +378,20 @@ object WaylandScale {
         return theme?.takeIf(String::isNotBlank) to size
     }
 
+    private fun kdeConfigHome(environment: Map<String, String>): File =
+        environment["XDG_CONFIG_HOME"]?.takeIf(String::isNotBlank)?.let(::File)?.takeIf(File::isAbsolute)
+            ?: File(System.getProperty("user.home"), ".config")
+
+    internal fun readKdeCursorConfig(environment: Map<String, String> = System.getenv()): String? =
+        File(kdeConfigHome(environment), "kcminputrc").takeIf(File::isFile)?.readText()
+
     private fun applyCursorTheme() {
         try {
             val (theme, size) =
                 resolveCursorSettings(
                     environment = System.getenv(),
                     query = { runCommand("gsettings", "get", "org.gnome.desktop.interface", it) },
-                    readConfig = {
-                        val configHome =
-                            System.getenv("XDG_CONFIG_HOME")?.takeIf(String::isNotBlank)?.let(::File)
-                                ?: File(System.getProperty("user.home"), ".config")
-                        File(configHome, "kcminputrc").takeIf(File::isFile)?.readText()
-                    },
+                    readConfig = { readKdeCursorConfig() },
                 )
             if (theme == null && size == null) return
             val libc = Native.load("c", LibC::class.java) as LibC
@@ -407,10 +409,7 @@ object WaylandScale {
         wayland: Boolean = isWayland(),
         query: (String, List<String>) -> String? = { command, arguments -> runCommand(command, *arguments.toTypedArray()) },
         readConfig: () -> String? = {
-            val configHome =
-                environment["XDG_CONFIG_HOME"]?.takeIf(String::isNotBlank)?.let(::File)
-                    ?: File(System.getProperty("user.home"), ".config")
-            runCatching { File(configHome, "kdeglobals").takeIf(File::isFile)?.readText() }.getOrNull()
+            runCatching { File(kdeConfigHome(environment), "kdeglobals").takeIf(File::isFile)?.readText() }.getOrNull()
         },
     ): Float? {
         val desktop = environment["XDG_CURRENT_DESKTOP"]?.lowercase().orEmpty()

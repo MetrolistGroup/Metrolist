@@ -9,7 +9,7 @@ on:
         default: false
         type: boolean
       windows-manager:
-        description: Build and test the Windows installer against its portable package
+        description: Build and test the Windows installer against the native portable package
         required: false
         default: false
         type: boolean
@@ -58,14 +58,14 @@ jobs:
   windows:
     name: Windows package
     if: github.event_name == 'workflow_dispatch' && inputs.windows-manager
-    uses: ./.github/workflows/reusable-desktop-windows.yml
+    # Stable releases install the native x64 package, so the installer test uses it too.
+    uses: ./.github/workflows/reusable-desktop-native.yml
     permissions:
       contents: read
     with:
-      upload-artifact: true
-      cache-read-only: ${{ github.ref != 'refs/heads/main' }}
+      platform: windows-x64
+      artifact-name: desktop-windows
     secrets:
-      GRADLE_ENCRYPTION_KEY: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
       LASTFM_API_KEY: ${{ secrets.LASTFM_API_KEY }}
       LASTFM_SECRET: ${{ secrets.LASTFM_SECRET }}
       LYPRIO_BASE_URL: ${{ secrets.LYPRIO_BASE_URL }}

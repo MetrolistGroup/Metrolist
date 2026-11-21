@@ -485,7 +485,14 @@ fun PlayerProgressSection() {
     }
 
     val displayPosition = {
-        if (isDragging || pendingSeekTargetMs != null) (sliderValue * duration).toLong() else position.value
+        when {
+            isDragging || pendingSeekTargetMs != null -> (sliderValue * duration).toLong()
+
+            isLive -> position.value
+
+            // The seek bar's clock, so the label changes in the same repaint as a progress step.
+            else -> smoothPosition.longValue
+        }
     }
 
     val isSolid = Settings.shared.playerBackgroundStyle == PlayerBackgroundStyle.SOLID

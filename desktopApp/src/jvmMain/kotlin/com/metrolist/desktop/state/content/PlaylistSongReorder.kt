@@ -79,7 +79,7 @@ internal suspend fun commitRemotePlaylistReorder(
                         ?: dao.findPlaylistEntity("VL${playlistId.removePrefix("VL")}")
                         ?: dao.findPlaylistEntity(playlistId.removePrefix("VL"))
                 if (local != null) {
-                    val mappings = dao.playlistSongMaps(local.id, 0)
+                    val mappings = dao.playlistSongMaps(local.id, Int.MIN_VALUE)
                     val from = mappings.indexOfFirst { it.setVideoId == move.setVideoId }
                     val to =
                         if (move.successorSetVideoId != null) {
@@ -88,7 +88,7 @@ internal suspend fun commitRemotePlaylistReorder(
                         } else {
                             mappings.lastIndex
                         }
-                    if (from >= 0 && to >= 0 && from != to) dao.move(local.id, mappings[from].position, mappings[to].position)
+                    if (from >= 0 && to >= 0 && from != to) dao.moveMapping(local.id, mappings[from].id, mappings[to].id)
                 }
             }
         }

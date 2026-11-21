@@ -101,6 +101,7 @@ import com.metrolist.shared.generated.resources.sleep_timer_set_default
 import com.metrolist.shared.playback.SleepTimerDefaults
 import com.metrolist.shared.playback.SleepTimerState
 import com.metrolist.shared.playback.sleepTimerDurationMs
+import com.metrolist.shared.playback.sleepTimerFieldValue
 import com.metrolist.shared.settings.Settings
 import com.metrolist.shared.ui.LocalIsTv
 import com.metrolist.shared.ui.icons.MetrolistIcons
@@ -371,7 +372,7 @@ private fun DurationField(
         OutlinedTextField(
             value = input,
             onValueChange = {
-                if (it.text.length <= 2 && it.text.all { char -> char in '0'..'9' }) {
+                if (sleepTimerFieldValue(it.text) != null) {
                     input = it
                     onValueChange(it.text)
                 }
@@ -385,7 +386,7 @@ private fun DurationField(
                     }.semantics { contentDescription = label },
             textStyle = MaterialTheme.typography.displayMedium.copy(textAlign = TextAlign.Center),
             singleLine = true,
-            isError = value.toIntOrNull()?.let { it > maximum } == true,
+            isError = sleepTimerFieldValue(value)?.let { it > maximum } == true,
             shape = MaterialTheme.shapes.small,
             colors =
                 OutlinedTextFieldDefaults.colors(

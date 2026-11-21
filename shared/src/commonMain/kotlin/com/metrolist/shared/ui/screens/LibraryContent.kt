@@ -278,6 +278,12 @@ fun LibraryContent(
         }
     var reorderOrder by remember(manualOrder) { mutableStateOf(manualOrder) }
     val reorderEnabled = effectiveSortType == LibrarySortType.MANUAL && searchQuery.isBlank()
+    val artistAliases =
+        if (effectiveSortType == LibrarySortType.NAME && (effectiveFilter == null || effectiveFilter == LibraryFilter.ARTISTS)) {
+            ArtistNameAliases.aliases
+        } else {
+            emptyMap()
+        }
     val presentationInput =
         remember(
             items,
@@ -289,6 +295,7 @@ fun LibraryContent(
             contentFilterVersion,
             searchQuery,
             contentMatchedSongs,
+            artistAliases,
         ) {
             LibraryPresentationInput(
                 items,
@@ -300,6 +307,7 @@ fun LibraryContent(
                 contentFilterVersion,
                 searchQuery,
                 contentMatchedSongs,
+                artistAliases,
             )
         }
     val cachedItems = remember(presentation, presentationInput) { presentation.cached(presentationInput) }
@@ -1067,6 +1075,7 @@ internal fun sortLibraryItems(
     sort: LibrarySortType,
     manualOrder: String,
     direction: SortDirection = sort.defaultDirection,
+    artistAliases: Map<String, String> = emptyMap(),
 ): List<YTItem> =
     when (sort) {
         LibrarySortType.DOWNLOADED -> {
@@ -1078,7 +1087,10 @@ internal fun sortLibraryItems(
         }
 
         LibrarySortType.NAME -> {
-            items.sortedByLibraryMetadata(direction) { it.title.lowercase() }
+            items.sortedByLibraryMetadata(direction) { item ->
+                val title = if (item is ArtistItem) ArtistNameAliases.resolve(artistAliases, item.id, item.title) else item.title
+                title.lowercase()
+            }
         }
 
         LibrarySortType.LAST_UPDATED -> {
@@ -1147,7 +1159,7 @@ private fun librarySongCount(item: YTItem): Int? =
     when (item) {
         is ArtistItem -> item.songCount
         is AlbumItem -> item.songCount
-        is PlaylistItem -> item.songCount?.toIntOrNull()
+        is PlaylistItem -> parseDisplayCount(item.songCount)
         else -> null
     }
 
@@ -1178,6 +1190,7 @@ internal fun prepareLibraryItems(
     direction: SortDirection,
     query: String,
     contentMatchedSongs: List<SongItem>,
+    artistAliases: Map<String, String> = emptyMap(),
 ): List<YTItem> {
     val visibleItems =
         items
@@ -1189,7 +1202,7 @@ internal fun prepareLibraryItems(
         } else {
             visibleItems.filterForLibrarySearch(query) + contentMatchedSongs.filterForLibrary(filter, hiddenItemKeys)
         }
-    return sortLibraryItems(matches.distinctBy { it::class to it.id }, sort, manualOrder, direction)
+    return sortLibraryItems(matches.distinctBy { it::class to it.id }, sort, manualOrder, direction, artistAliases)
 }
 
 internal fun dispatchLibraryItemClick(

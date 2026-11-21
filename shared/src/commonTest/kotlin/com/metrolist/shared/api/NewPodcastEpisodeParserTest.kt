@@ -107,6 +107,19 @@ class NewPodcastEpisodeParserTest {
     }
 
     @Test
+    fun parsesSecondsInEpisodeDurationLabels() {
+        for ((label, seconds) in listOf("45 seconds" to 45L, "2 min 8 sec" to 128L, "1 hr 3 secs" to 3603L)) {
+            for (simpleText in listOf(false, true)) {
+                val episode = parseEpisodeMetadata("4.9K views • 4d ago", " · $label", simpleText)
+
+                assertEquals(label, episode.durationText)
+                assertEquals(seconds, episode.duration)
+                assertEquals("4d ago", episode.publishDateText)
+            }
+        }
+    }
+
+    @Test
     fun ignoresEmptyMetadataAndKeepsFixedColumnDuration() {
         for (simpleText in listOf(false, true)) {
             val episode = parseEpisodeMetadata("  ", " • ", simpleText, fixedDuration = "1:02")

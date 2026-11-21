@@ -118,7 +118,6 @@ import java.util.Locale
 @Composable
 fun SettingsOverlay(colorScheme: ColorScheme) {
     val formatFileSize = rememberFileSizeFormatter()
-    var showSpotifyLogin by remember { mutableStateOf(false) }
     var devtoolsUnlocked by remember { mutableStateOf(Settings.shared.devtoolsUnlocked) }
     val openDevtoolsOnLaunch = remember { UiState.openDevtoolsSettingsRequested }
     val openPlaylistImportOnLaunch = remember { UiState.openPlaylistImportRequested }
@@ -328,7 +327,6 @@ fun SettingsOverlay(colorScheme: ColorScheme) {
                 host =
                     SharedSettingsHost(
                         platform = SettingsPlatform.DESKTOP,
-                        onSpotifySignIn = { showSpotifyLogin = true },
                         onSwitchYouTubeChannel = if (AuthState.isSignedIn) ({ UiState.showSwitchChannel = true }) else null,
                         lyricsPreview = { modifier ->
                             val song = PlayerState.currentTrack
@@ -518,40 +516,5 @@ fun SettingsOverlay(colorScheme: ColorScheme) {
                 modifier = Modifier.fillMaxSize(),
             )
         }
-    }
-
-    if (showSpotifyLogin) {
-        val spotifyManager =
-            remember {
-                SpotifyImportManager(
-                    clientFactory = { SpotifyClient.create(SpotifyConfig(engine = sharedHttpEngine)) },
-                    saveStoredSession = { Settings.shared.spotifySession = it },
-                )
-            }
-        var spotifyCookie by remember { mutableStateOf<String?>(null) }
-        var authenticationFailed by remember { mutableStateOf(false) }
-        DisposableEffect(spotifyManager) {
-            onDispose { spotifyManager.close() }
-        }
-        LaunchedEffect(spotifyCookie) {
-            val cookie = spotifyCookie ?: return@LaunchedEffect
-            authenticationFailed = false
-            try {
-                spotifyManager.authenticate(cookie)
-                showSpotifyLogin = false
-            } catch (error: CancellationException) {
-                throw error
-            } catch (_: Exception) {
-                authenticationFailed = true
-            } finally {
-                spotifyCookie = null
-            }
-        }
-        SpotifyLoginDialog(
-            isAuthenticating = spotifyCookie != null,
-            authenticationFailed = authenticationFailed,
-            onDismissRequest = { showSpotifyLogin = false },
-            onSessionCookie = { spotifyCookie = it },
-        )
     }
 }

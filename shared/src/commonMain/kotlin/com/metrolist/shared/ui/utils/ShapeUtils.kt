@@ -81,6 +81,9 @@ fun RoundedPolygon.toPolygonShape(startAngle: Int = 0): Shape {
     return remember(this, startAngle) { FittedPolygonShape(path) }
 }
 
+// Desktop Skia syncs a mutated path lazily on first read; syncing here keeps two readers from closing its builder twice (#4956).
+internal fun Path.settled(): Path = apply { getBounds() }
+
 /** Rotation can expand polygon bounds past 0..1; fit the rotated bounds to avoid covering captions. */
 internal class FittedPolygonShape(
     private val sourcePath: Path,
@@ -98,6 +101,6 @@ internal class FittedPolygonShape(
             path.transform(Matrix().apply { scale(scale, scale) })
             path.translate(Offset(size.width / 2f, size.height / 2f))
         }
-        return Outline.Generic(path)
+        return Outline.Generic(path.settled())
     }
 }

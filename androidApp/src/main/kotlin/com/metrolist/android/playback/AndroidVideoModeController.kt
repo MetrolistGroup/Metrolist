@@ -360,7 +360,12 @@ internal class AndroidVideoModeController(
                     } else if (!wantVideo && originalAudio != null) {
                         playbackSong = originalAudio
                         positionMap = videoModePositionMap?.reversed()
-                    } else if (shouldResolveMusicTrackCounterpart(sourceSong.isVideoSong, wantVideo)) {
+                    } else if (shouldResolveMusicTrackCounterpart(
+                            sourceSong.isVideoSong,
+                            wantVideo,
+                            Settings.shared.musicVideoPlaybackEnabled,
+                        )
+                    ) {
                         if (!isDownloaded(sourceSong.id)) {
                             when (val result = musicVideoResolver.resolveMusicTrack(sourceSong)) {
                                 is MusicTrackResult.Found -> {

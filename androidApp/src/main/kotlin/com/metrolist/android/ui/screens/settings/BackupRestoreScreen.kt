@@ -69,6 +69,7 @@ import com.metrolist.android.playlistimport.PlaylistImportPreparationType
 import com.metrolist.android.playlistimport.TidalLoginScreen
 import com.metrolist.android.playlistimport.containsAndroidInaccessibleReference
 import com.metrolist.android.playlistimport.preparePlaylistBatch
+import com.metrolist.android.playlistimport.preparePlaylistPreview
 import com.metrolist.android.playlistimport.readPlaylistFile
 import com.metrolist.android.spotifyimport.SpotifyLoginScreen
 import com.metrolist.android.spotifyimport.SpotifyPlaylistPickerSheet
@@ -441,12 +442,38 @@ fun BackupRestoreScreen(onNavigateBack: () -> Unit) {
             }
         }
 
+    fun importPlaylistFile(uri: Uri) {
+        scope.launch {
+            val fullFileName =
+                withContext(Dispatchers.IO) {
+                    context.getDisplayName(uri) ?: uri.lastPathSegment?.substringAfterLast('/')
+                }
+            val baseName =
+                fullFileName?.substringBeforeLast('.')?.takeIf { it.isNotBlank() }
+                    ?: importedPlaylistText
+            reportPreparationStartFailure(
+                AndroidPlaylistImportTransfer.prepareForeground(
+                    context = context,
+                    playlistTitle = baseName,
+                    source = fileSource,
+                    type = PlaylistImportPreparationType.IMPORT_DATA,
+                ) {
+                    readPlaylistFile(context, uri, fullFileName.orEmpty(), baseName, fileSource).getOrThrow()
+                },
+            )
+        }
+    }
+
     val restoreLauncher =
         rememberLauncherForActivityResult(
             contract = ActivityResultContracts.OpenDocument(),
         ) { uri ->
             if (uri != null) {
-                restoreUri = uri
+                scope.launch {
+                    val extension = withContext(Dispatchers.IO) { context.getDisplayName(uri) }?.substringAfterLast('.', "")?.lowercase()
+                    // Exported playlists picked from Restore belong to the playlist file import, not the backup reader.
+                    if (extension in playlistFileExtensions) importPlaylistFile(uri) else restoreUri = uri
+                }
             }
         }
 
@@ -490,27 +517,7 @@ fun BackupRestoreScreen(onNavigateBack: () -> Unit) {
         rememberLauncherForActivityResult(
             contract = ActivityResultContracts.OpenDocument(),
         ) { uri ->
-            if (uri != null) {
-                scope.launch {
-                    val fullFileName =
-                        withContext(Dispatchers.IO) {
-                            context.getDisplayName(uri) ?: uri.lastPathSegment?.substringAfterLast('/')
-                        }
-                    val baseName =
-                        fullFileName?.substringBeforeLast('.')?.takeIf { it.isNotBlank() }
-                            ?: importedPlaylistText
-                    reportPreparationStartFailure(
-                        AndroidPlaylistImportTransfer.prepareForeground(
-                            context = context,
-                            playlistTitle = baseName,
-                            source = fileSource,
-                            type = PlaylistImportPreparationType.IMPORT_DATA,
-                        ) {
-                            readPlaylistFile(context, uri, fullFileName.orEmpty(), baseName, fileSource).getOrThrow()
-                        },
-                    )
-                }
-            }
+            if (uri != null) importPlaylistFile(uri)
         }
 
     fun openPlaylistFile() {
@@ -1395,29 +1402,9 @@ fun BackupRestoreScreen(onNavigateBack: () -> Unit) {
                         startBatchImport(loaded, spotifySource, ImportSourceType.SPOTIFY)
                         return@continueImport
                     }
-                    val allTracks =
-                        loaded.flatMap { pl ->
-                            pl.tracks.map {
-                                PlaylistImportManager.CsvTrack(
-                                    it.title,
-                                    it.artist,
-                                    null,
-                                    album = it.album,
-                                    durationSeconds = it.durationSeconds,
-                                )
-                            }
-                        }
-                    val spotifyDefaultName = importProviderSpotifyText
-                    val name = if (loaded.size == 1) loaded.first().name else spotifyDefaultName
-                    customPlaylistTitle = name
                     val data =
-                        ImportedPlaylistData(
-                            title = name,
-                            tracks = allTracks,
-                            source = spotifySource,
-                            provider = ImportSourceType.SPOTIFY,
-                            sourcePlaylistCount = loaded.size,
-                        )
+                        preparePlaylistPreview(loaded.singleOrNull(), importProviderSpotifyText, spotifySource, ImportSourceType.SPOTIFY)
+                    customPlaylistTitle = data.title
                     pendingImportData = data
                     AndroidPlaylistImportTransfer.replacePreparationResult(data)
                     showDestinationPicker = true
@@ -1525,28 +1512,9 @@ fun BackupRestoreScreen(onNavigateBack: () -> Unit) {
                         startBatchImport(loaded, appleMusicSource, ImportSourceType.APPLE_MUSIC)
                         return@continueImport
                     }
-                    val allTracks =
-                        loaded.flatMap { pl ->
-                            pl.tracks.map {
-                                PlaylistImportManager.CsvTrack(
-                                    it.title,
-                                    it.artist,
-                                    null,
-                                    album = it.album,
-                                    durationSeconds = it.durationSeconds,
-                                )
-                            }
-                        }
-                    val name = if (loaded.size == 1) loaded.first().name else appleMusicDefaultName
-                    customPlaylistTitle = name
                     val data =
-                        ImportedPlaylistData(
-                            title = name,
-                            tracks = allTracks,
-                            source = appleMusicSource,
-                            provider = ImportSourceType.APPLE_MUSIC,
-                            sourcePlaylistCount = loaded.size,
-                        )
+                        preparePlaylistPreview(loaded.singleOrNull(), appleMusicDefaultName, appleMusicSource, ImportSourceType.APPLE_MUSIC)
+                    customPlaylistTitle = data.title
                     pendingImportData = data
                     AndroidPlaylistImportTransfer.replacePreparationResult(data)
                     showDestinationPicker = true
@@ -1988,6 +1956,8 @@ private val BackupRestoreManager.RestoreStage.descriptionResource: StringResourc
             BackupRestoreManager.RestoreStage.APPLYING_SETTINGS -> Res.string.restore_stage_applying_settings
             BackupRestoreManager.RestoreStage.RESTARTING_APP -> Res.string.restore_stage_restarting_app
         }
+
+private val playlistFileExtensions = setOf("csv", "tsv", "m3u", "m3u8", "json", "txt")
 
 private fun Context.getDisplayName(uri: Uri): String? {
     if (uri.scheme == ContentResolver.SCHEME_CONTENT) {

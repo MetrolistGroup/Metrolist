@@ -316,7 +316,26 @@ internal fun prepareQueueTracks(
 internal fun QueueTrack.durationText(
     isActive: Boolean,
     currentDuration: Long?,
-): String = formatQueueDuration(duration ?: currentDuration?.takeIf { isActive && it > 0L })
+): String = formatQueueDuration(duration?.takeIf { it > 0L } ?: currentDuration?.takeIf { isActive && it > 0L })
+
+internal fun queueTotalDuration(
+    items: List<PlayerViewModel.QueueItemUiModel>,
+    entryKeys: List<Long>,
+    currentQueueIndex: Int,
+    currentDuration: Long,
+): Long? {
+    var totalDuration = 0L
+    items.forEachIndexed { index, item ->
+        if (entryKeys[index] >= 0L) {
+            val duration =
+                item.duration?.takeIf { it > 0L }
+                    ?: currentDuration.takeIf { index == currentQueueIndex && it > 0L }
+                    ?: return null
+            totalDuration += duration
+        }
+    }
+    return totalDuration
+}
 
 internal fun QueueTrack.isReorderTarget(
     draggingEntryKey: Long?,
@@ -1723,15 +1742,7 @@ fun QueueScreen(
 
     val totalDuration =
         remember(uiState.queueItems, uiState.queueEntryKeys, uiState.currentQueueIndex, uiState.duration) {
-            val durations =
-                uiState.queueItems.mapIndexed { index, item ->
-                    if (uiState.queueEntryKeys[index] < 0) {
-                        0L
-                    } else {
-                        item.duration ?: uiState.duration.takeIf { index == uiState.currentQueueIndex && it > 0L }
-                    }
-                }
-            if (durations.any { it == null }) null else durations.filterNotNull().sumOf { it.coerceAtLeast(0L) }
+            queueTotalDuration(uiState.queueItems, uiState.queueEntryKeys, uiState.currentQueueIndex, uiState.duration)
         }
     val (queuedTracks, suggestedTracks) =
         remember(reorderableTracks, tracks) {

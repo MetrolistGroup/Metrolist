@@ -122,7 +122,7 @@
     <string name="error_unknown">未知的錯誤</string>
     <string name="action_like">按讚</string>
     <string name="repeat_mode_off">重複播放已關閉</string>
-    <string name="repeat_mode_one">重複播放此歌曲</string>
+    <string name="repeat_mode_one">重複播放這個歌曲</string>
     <string name="repeat_mode_all">重複播放佇列</string>
     <string name="up_next">下一首</string>
     <string name="queue_loading">載入佇列…</string>
@@ -163,7 +163,7 @@
     <string name="music_video_quality_desc" tools:ignore="MissingTranslation">音樂影片預設解析度</string>
     <string name="music_video_quality_auto" tools:ignore="MissingTranslation">自動</string>
     <string name="music_video_resolution" tools:ignore="MissingTranslation">影片解析度</string>
-    <string name="music_video_resolution_desc" tools:ignore="MissingTranslation">調整此影片解析度</string>
+    <string name="music_video_resolution_desc" tools:ignore="MissingTranslation">調整這個影片的解析度</string>
     <string name="music_video_resolution_current" tools:ignore="MissingTranslation">正在播放</string>
     <string name="music_video_cache" tools:ignore="MissingTranslation">音樂影片快取</string>
     <string xmlns:tools="http://schemas.android.com/tools" name="clear_music_video_cache" tools:ignore="MissingTranslation">清除音樂影片快取</string>
@@ -205,7 +205,7 @@
     <string name="pause_search_history">暫停搜尋記錄</string>
     <string name="clear_search_history">清除搜尋記錄</string>
     <string name="settings_clear_search_history_description">從本裝置和 YouTube 中移除儲存的搜尋查詢</string>
-    <string name="settings_clear_search_history_confirm_message">即將移除所有已儲存的搜尋查詢。此動作無法復原。</string>
+    <string name="settings_clear_search_history_confirm_message">即將移除所有已儲存的搜尋查詢。這個動作無法復原。</string>
     <string name="settings_show_secret">顯示機密</string>
     <string name="settings_hide_secret">隱藏機密</string>
     <string name="block_screenshots">封鎖螢幕擷取</string>
@@ -213,9 +213,9 @@
     <string name="hidden_playlists">媒體庫中隱藏的項目</string>
     <string name="hidden_playlists_desc">恢復您在媒體庫中隱藏的項目</string>
     <string name="hidden_playlists_empty">媒體庫中沒有隱藏的項目</string>
-    <string name="hidden_playlists_empty_desc">從沒有畫面隱藏的項目會在此顯示</string>
+    <string name="hidden_playlists_empty_desc">從媒體庫隱藏的項目會在這裡顯示</string>
     <string name="hide_from_library">從媒體庫中隱藏</string>
-    <string name="hide_from_library_local">在此裝置上隱藏</string>
+    <string name="hide_from_library_local">在這個裝置上隱藏</string>
     <string name="hide_explicit">隱藏兒童不宜內容</string>
     <string name="action_backup">備份</string>
     <string name="action_restore">還原</string>
@@ -239,7 +239,7 @@
     <string name="open_github_profile">開啟GitHub個人資料</string>
     <string name="sponsor_developer">贊助開發者</string>
     <string name="credits_license_name">授權</string>
-    <string name="credits_license_desc">Metrolist 依據 GPL-3.0 授權。</string>
+    <string name="credits_license_desc">Metrolist 依據 GPL-3.0 授權</string>
     <string name="devmode_already_active" translatable="true">開發模式已啟用</string>
     <string name="discord_enable_rich_presence">啟用 Discord Rich Presence</string>
     <string name="discord_listen_to_metrolist">用 Metrolist 收聽</string>
@@ -340,7 +340,7 @@
     <string name="imported_playlist">已匯入的播放清單</string>
     <string name="bitrate_value">%1$d 千位元/秒</string>
     <string name="sample_rate_value">%1$d 赫茲</string>
-    <string name="import_error_unsupported_playlist_entries">此播放清單包含 Android 無法存取的本機檔案或直接連結。請匯入包含 YouTube 連結的播放清單，或在桌面版選擇本機檔案。</string>
+    <string name="import_error_unsupported_playlist_entries">這個播放清單包含 Android 無法存取的本機檔案或直接連結。請匯入包含 YouTube 連結的播放清單，或在桌面版選擇本機檔案。</string>
     <string name="import_error_local_files_require_local_playlist">本機音訊檔案只能匯入本機播放清單。</string>
     <string name="import_error_file_read_failed">無法讀取播放清單檔案。請重新選擇並授予檔案存取權限。</string>
     <string name="startup_error_title">Metrolist 啟動錯誤</string>
@@ -435,7 +435,7 @@
     <string name="playlist_add_stopped">%1$d 首歌曲已加入或已存在；%2$d 首歌曲是否已加入仍未確認。已加入的歌曲皆已保留。</string>
     <string name="playlist_add_uncertain">上次要求可能已成功。重試前請檢查播放清單。</string>
     <string name="upload_sign_in_required">上傳歌曲前請先登入 YouTube Music。</string>
-    <string name="upload_unsupported_type">不支援此檔案類型。請使用 mp3、m4a、wma、flac 或 ogg。</string>
+    <string name="upload_unsupported_type">不支援這種檔案類型。請使用 mp3、m4a、wma、flac 或 ogg。</string>
     <string name="upload_empty_file">所選檔案為空或無法取得其大小。</string>
     <string name="upload_too_large">上傳至 YouTube Music 的檔案必須小於 300 MB。</string>
     <string name="upload_http_error">上傳失敗（%1$d）。</string>
@@ -453,19 +453,19 @@
     <string name="listen_together_pending_approvals">待核准</string>
     <string name="onboarding_library_migrated_title">您的音樂庫已完成遷移。</string>
     <string name="onboarding_continue_without_migration">以空白音樂庫繼續</string>
-    <string name="onboarding_migration_recovery_description">您可以重試，或以空白音樂庫繼續。原始資料庫的復原副本會保留在此裝置上。設定完成後，您可以還原備份。</string>
+    <string name="onboarding_migration_recovery_description">您可以重試，或以空白音樂庫繼續。原始資料庫的復原副本會保留在這個裝置上。設定完成後，您可以還原備份。</string>
     <string name="onboarding_migration_failed">無法準備您的音樂庫。原始資料已保留。</string>
-    <string name="onboarding_library_migrated_description">您的播放清單、歷史記錄、喜歡的歌曲和音樂庫資料已可在此版本的 Metrolist 中使用。</string>
+    <string name="onboarding_library_migrated_description">您的播放清單、歷史記錄、喜歡的歌曲和音樂庫資料已可在這個 Metrolist 版本中使用。</string>
     <string name="onboarding_notifications_denied">通知已停用。您可以稍後在 Android 應用程式設定中啟用，或選擇「否」以繼續。</string>
     <string name="mini_player_video_prerequisite">請先在播放設定中啟用「播放音樂影片」</string>
-    <string name="download_folder_access_failed">無法儲存此資料夾的存取權限。請選擇具有讀取及寫入權限的資料夾。</string>
+    <string name="download_folder_access_failed">無法儲存這個資料夾的存取權限。請選擇具有讀取及寫入權限的資料夾。</string>
     <string name="download_migration_failed">部分下載項目無法移動，仍保留在原本的位置。請檢查儲存空間的存取權限及可用空間後重試。</string>
     <string name="download_error_storage_full">儲存空間不足。請釋出一些空間後重試。</string>
     <string name="download_error_storage_access">無法存取下載資料夾。請在儲存設定中重新選取後重試。</string>
     <string name="download_error_network">連線失敗。請檢查連線後重試。</string>
     <string name="download_error_generic">下載失敗。請重試。</string>
     <string name="amazon_music_marketplace">選擇您的 Amazon Music 市場區域</string>
-    <string name="import_cancelled_partial">匯入已取消。目的地：%2$s。已儲存歌曲：至少 %1$d 首。若要繼續，請重新匯入並選擇此目的地。</string>
+    <string name="import_cancelled_partial">匯入已取消。目的地：%2$s。已儲存歌曲：至少 %1$d 首。若要繼續，請重新匯入並選擇目的地。</string>
     <string name="recognition_history_save_failed">無法將這首歌曲儲存至辨識記錄。</string>
     <string name="device_connect_server_failed">無法啟動裝置連線功能。請檢查網路後重試。</string>
     <string name="device_connect_discovery_failed">搜尋裝置失敗。請檢查區域網路存取權限後重新掃描。</string>
@@ -480,9 +480,9 @@
     <string name="updates_notification_settings">Android 通知設定</string>
     <string name="widget_recognizer_open_result">開啟已辨識的歌曲</string>
     <string name="statistics_load_failed">無法更新統計資料。請重試。</string>
-    <string name="desktop_platform_unsupported">Metrolist 不支援此作業系統。請使用 Windows 10 或更新版本、macOS，或 Omarchy 以外的 Linux 發行版。</string>
+    <string name="desktop_platform_unsupported">Metrolist 不支援這個作業系統。請使用 Windows 10 或更新版本、macOS，或 Omarchy 以外的 Linux 發行版。</string>
     <string name="shortcut_toggle_expanded">展開或收合播放器</string>
-    <string name="desktop_display_unavailable">Metrolist 無法連線至此工作階段的 X 顯示伺服器。請從已設定 DISPLAY 的桌面工作階段啟動。</string>
+    <string name="desktop_display_unavailable">Metrolist 無法連線至這個工作階段的 X 顯示伺服器。請從已設定 DISPLAY 的桌面工作階段啟動。</string>
     <string name="webkit_install_hint">內嵌登入需要 WebKitGTK 4.1（%1$s）。請使用系統套件管理員安裝。</string>
     <string name="webkit_install_command">使用以下指令安裝：\n%1$s</string>
     <string name="webkit_appimage_hint">AppImage 版本也會使用系統的 WebKitGTK 程式庫進行登入。</string>
@@ -495,10 +495,10 @@
     <string name="video_stats_latency_value">%1$s 毫秒</string>
     <string name="video_stats_media_stream_value">%1$s / %2$s MB（%3$s%）</string>
     <string name="video_stats_position_volume_value">%1$s | 音量：%2$s</string>
-    <string name="download_folder_unavailable">無法使用此資料夾。請選擇可寫入，且系統或沙箱允許 Metrolist 存取的資料夾。</string>
+    <string name="download_folder_unavailable">無法使用這個資料夾。請選擇可寫入，且系統或沙箱允許 Metrolist 存取的資料夾。</string>
     <string name="window_maximize">最大化</string>
     <string name="window_restore">還原視窗</string>
-    <string name="equalizer_stream_unavailable">此串流無法使用等化器及前置放大器。播放支援的曲目時，變更才會生效。</string>
+    <string name="equalizer_stream_unavailable">這個串流無法使用等化器及前置放大器。播放支援的曲目時，變更才會生效。</string>
     <string name="sleep_timer_end_current_song_description">睡眠定時器：目前歌曲結束時</string>
     <string name="repeat_mode_description">重複播放：%1$s</string>
     <string name="statistics_plays_label">播放次數</string>
@@ -509,7 +509,7 @@
     <string name="search_online_failed">無法線上搜尋。請檢查連線後重試。</string>
     <string name="search_load_more_failed">無法載入更多結果。</string>
     <string name="discord_error_gateway_configuration">Discord 拒絕了連線設定。請更新 Metrolist 後再試。</string>
-    <string name="discord_preview_buttons_adjusted">Discord 會縮短過長的按鈕文字，並省略連結過長的按鈕。此預覽顯示將傳送的按鈕。</string>
+    <string name="discord_preview_buttons_adjusted">Discord 會縮短過長的按鈕文字，並省略連結過長的按鈕。這個預覽顯示即將被傳送的按鈕。</string>
     <string name="discord_presence_status_warning">詳細活動狀態會向 Discord 傳送「線上」狀態。它可能覆蓋「隱形」或「請勿打擾」，即使播放停止也一樣。</string>
     <string name="discord_refresh_queued">活動狀態更新已加入佇列。</string>
     <string name="metroeq_delete_profile_confirm">要刪除已儲存的設定檔「%1$s」嗎？</string>
@@ -536,15 +536,15 @@
     <string name="onboarding_privacy_open_failed">無法開啟隱私權政策。您可以複製下方網址並在瀏覽器中開啟。</string>
     <string name="deselect_track_by_artist">取消選取 %2$s 的 %1$s</string>
     <string name="pause_track_by_artist">暫停 %2$s 的 %1$s</string>
-    <string name="settings_requires_enabled">請啟用 %1$s 以變更此設定</string>
+    <string name="settings_requires_enabled">請啟用 %1$s 以變更這個設定</string>
     <string name="theme_color_purple">紫色</string>
     <string name="theme_color_teal">藍綠色</string>
     <string name="theme_color_green">綠色</string>
     <string name="theme_color_rose">玫瑰色</string>
     <string name="theme_color_red">紅色</string>
     <string name="theme_color_gold">金色</string>
-    <string name="backup_unsupported_format">此版本的 Metrolist 不支援此備份格式。</string>
-    <string name="backup_unsupported_database">此版本的 Metrolist 不支援此備份中的資料庫版本。</string>
+    <string name="backup_unsupported_format">這個 Metrolist 版本不支援這種備份格式。</string>
+    <string name="backup_unsupported_database">這個 Metrolist 版本不支援備份中的資料庫版本。</string>
     <string name="backup_too_large">備份超出支援的大小或項目數量上限。</string>
     <string name="backup_invalid_data">無法讀取或驗證備份。備份可能已損毀或含有不支援的資料。</string>
     <string name="search_history_removal_failed">無法清除帳戶的搜尋記錄。請連線後重試。</string>
@@ -557,9 +557,9 @@
     <string name="onboarding_migration_title">已找到您的 v13 音樂庫</string>
     <string name="onboarding_migration_description">我們找到了獨立版 Metrolist 的資料庫。您可以就地移轉播放清單、歷史記錄、喜歡的歌曲和音樂庫資料。如果移轉失敗，您可以復原原始資料庫。</string>
     <string name="onboarding_migration_complete_title">您的帳戶已移轉</string>
-    <string name="onboarding_migration_complete_description">您的帳戶、播放清單、歷史記錄、喜歡的歌曲和音樂庫資料已可在此版本的 Metrolist 中使用。</string>
+    <string name="onboarding_migration_complete_description">您的帳戶、播放清單、歷史記錄、喜歡的歌曲和音樂庫資料已可在這個 Metrolist 版本中使用。</string>
     <string name="onboarding_crash_reports_title">協助改善 Metrolist</string>
-    <string name="onboarding_crash_reports_description">您可以選擇透過 Sentry 分享診斷資訊，協助我們找出並修正問題。您隨時都可以在設定中變更此選項。</string>
+    <string name="onboarding_crash_reports_description">您可以選擇透過 Sentry 分享診斷資訊，協助我們找出並修正問題。您隨時都可以在設定中變更這個選項。</string>
     <string name="onboarding_notifications_title">允許通知</string>
     <string name="onboarding_notifications_description">啟用播放和下載通知。</string>
     <string name="onboarding_begin_setup">開始設定</string>
@@ -615,7 +615,7 @@
     <string name="settings_content_country_summary">YouTube Music 排行榜與推薦使用的地區</string>
     <string name="settings_artist_icon_summary">選擇 YouTube、Apple Music、Last.fm 或自訂頭像</string>
     <string name="settings_artist_banner_summary">選擇 YouTube、Apple Music、Last.fm 或自訂橫幅圖片</string>
-    <string name="settings_auto_playlist_summary">在音樂庫顯示此自動播放清單</string>
+    <string name="settings_auto_playlist_summary">在音樂庫顯示這個自動播放清單</string>
     <string name="settings_palette_style_summary">變更應用程式組合產生之主題色彩的方式</string>
     <string name="settings_library_density_summary">音樂庫網格的欄數</string>
     <string name="settings_interface_density_summary">整個應用程式中文字、圖示與控制項的大小</string>
@@ -623,8 +623,8 @@
     <string name="settings_bottom_navigation_summary">在寬螢幕上仍將導覽列放在底部</string>
     <string name="settings_app_layout_summary">選擇內容與播放器在視窗中的配置</string>
     <string name="settings_swipe_sensitivity_summary">調整滑動切換歌曲的靈敏度</string>
-    <string name="settings_player_control_summary">在展開的播放器中顯示此控制項</string>
-    <string name="settings_mini_player_control_summary">在迷你播放器中顯示此控制項</string>
+    <string name="settings_player_control_summary">在展開的播放器中顯示這個控制項</string>
+    <string name="settings_mini_player_control_summary">在迷你播放器中顯示這個控制項</string>
     <string name="settings_mini_player_progress_summary">在迷你播放器封面周圍顯示播放進度</string>
     <string name="settings_canvas_playback_summary">在播放器背景播放短片段或完整音樂影片</string>
     <string name="settings_normalization_summary">平衡歌曲之間的音量，避免音量變化過大</string>
@@ -663,7 +663,7 @@
     </plurals>
     <string name="download_paused">已暫停</string>
     <string name="downloads_empty">沒有正在下載的歌曲</string>
-    <string name="downloads_empty_hint">正在下載以供離線收聽的歌曲將在此顯示。</string>
+    <string name="downloads_empty_hint">正在下載以供離線收聽的歌曲將在這裡顯示。</string>
     <string name="remove_all_downloads">移除全部下載</string>
     <string name="lyrics_song_artist">藝人</string>
     <string name="lyrics_capability_unsynced">未同步</string>
@@ -753,4 +753,36 @@
     <string name="artwork_sources">封面來源</string>
     <string name="immersive_player">沈浸式播放器</string>
     <string name="immersive_player_description">播放器擴大時隱藏系統資訊列</string>
+    <string name="lyrics_curated_by">(由 %1$s 提供歌詞)</string>
+    <string name="hide_from_home">從首頁隱藏</string>
+    <string name="hidden_from_home">%1$s 以從首頁隱藏</string>
+    <string name="hidden_home_items">從首頁隱藏</string>
+    <string name="speed_dial">快速存取</string>
+    <string name="hidden_home_items_desc">顯示先前從首頁隱藏的藝人與播客。已儲存至「快速存取」的兒童不宜歌曲仍會顯示。</string>
+    <string name="hidden_home_items_empty">沒有從首頁隱藏的歌曲</string>
+    <string name="show_on_home">在首頁上顯示</string>
+    <string name="show_again">再次顯示</string>
+    <string name="restore_hidden_item_title">再次顯示？</string>
+    <string name="restore_hidden_item_message">再次顯示「%1$s」？</string>
+    <string name="unblock_artist_title">確定要解除封鎖這位藝人嗎？</string>
+    <string name="song_details">歌曲詳細資訊</string>
+    <string name="unblock_artist_message">允許「%1$s」再次在佇列，推薦的歌曲與統計中出現嗎？</string>
+    <string name="credits_leads_section">領頭開發人員</string>
+    <string name="device_connect_peer_details">%1$s\n%2$s</string>
+    <string name="devtools_render_backend">渲染後端</string>
+    <string name="devtools_render_backend_description">重啟應用程式以套用變更。</string>
+    <string name="devtools_render_backend_auto">自動</string>
+    <string name="devtools_render_backend_direct3d">Direct3D</string>
+    <string name="devtools_render_backend_opengl">OpenGL</string>
+    <string name="devtools_render_backend_software">軟體</string>
+    <string name="devtools_render_backend_metal">Metal</string>
+    <string name="theme_palette_content">內容</string>
+    <string name="theme_palette_style">調色板樣式</string>
+    <string name="theme_palette_tonal_spot">色調點</string>
+    <string name="app_icon_zenith_white">白色</string>
+    <string name="song_gestures">歌曲手勢</string>
+    <string name="appearance_enable_swipe_to_change_track">滑動封面以切換歌曲</string>
+    <string name="appearance_play_videos_in_mini_player" tools:ignore="MissingTranslation">用迷你播放器播放影片</string>
+    <string name="appearance_play_videos_in_mini_player_desc" tools:ignore="MissingTranslation">迷你播放器關閉時，仍然顯示音樂影片</string>
+    <string name="appearance_mini_player_swipe_sensitivity">滑動敏感度</string>
 </resources>

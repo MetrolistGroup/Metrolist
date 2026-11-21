@@ -817,7 +817,7 @@ class PlaylistViewModel(
                 moveRemoteSong(remoteId, localMovingSetVideoId, successor).getOrThrow()
             }
             if (playlist != null && moving != null && target != null) {
-                database.dao().move(playlist.id, moving.position, target.position)
+                database.dao().moveMapping(playlist.id, moving.id, target.id)
             }
         }
     }

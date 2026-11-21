@@ -2,22 +2,20 @@ Klien YouTube Music berbasis Material 3 untuk Android
 
 Fitur:
 
-- Putar lagu atau video apa pun dari YouTube Music
-- Pemutaran di latar belakang
-- Pilihan cepat yang dipersonalisasi
-- Pengelolaan pustaka
-- Unduh dan simpan lagu untuk diputar luring
-- Cari lagu, album, artis, video, dan daftar putar
-- Lirik langsung
-- Dukungan masuk akun YouTube Music
-- Sinkronisasi lagu, artis, album, dan daftar putar dari dan ke akun Anda
-- Lewati bagian hening
-- Impor daftar putar
-- Normalisasi audio
-- Atur tempo/tinggi nada
-- Pengelolaan daftar putar lokal
-- Ubah urutan lagu di daftar putar atau antrean
-- Tema terang, gelap, hitam, dan dinamis
-- Pengatur waktu tidur
-- Material 3
-- dan lainnya.
+- Pemutaran YouTube Music yang sangat cepat dan tanpa gangguan
+- Mendukung login YouTube Music; pengguna yang tidak login pun tetap dapat menikmati aplikasi ini sepenuhnya
+- Desain **Material 3 Expressive**
+- **Discord Rich Presence**, Serta scrobbling melalui **Last.fm dan Listenbrainz**
+- **Tanpa iklan**, selamanya
+- Fitur *Dengar Bersama* (mendengarkan musik bersama) dengan pengguna lain secara daring dan waktu nyata
+- Mendukung Casting ke **Google Cast**, F-Cast, perangkat SONOS, dan melalui DLNA
+- Impor cadangan/playlist dari lebih dari 29 klien lain dan 6 layanan berbeda
+- Pengenalan musik melalui **Shazam**
+- Penyedia lirik kustom yang cepat, dengan dukungan untuk terjemahan dan romanisasi lirik
+- Tersedia dalam lebih dari 15 bahasa
+- Mendukung **pemutaran video**
+- Penyaringan konten yang komprehensif
+- **Kanvas** dari Apple Music, Spotify, dan YouTube Music
+- Beragam pilihan tampilan pemutar, thumbnail, pemutar mini, dan mode latar belakang
+- Mendukung penggunaan font dan ikon aplikasi kustom
+- ... dan masih banyak lagi!

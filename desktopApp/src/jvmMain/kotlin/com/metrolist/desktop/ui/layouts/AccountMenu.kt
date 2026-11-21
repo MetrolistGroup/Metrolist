@@ -37,10 +37,12 @@ import com.metrolist.desktop.state.app.UiState
 import com.metrolist.desktop.state.auth.AuthState
 import com.metrolist.desktop.state.playback.PlayerState
 import com.metrolist.shared.generated.resources.Res
+import com.metrolist.shared.generated.resources.account_downloading_nightly_update
 import com.metrolist.shared.generated.resources.account_downloading_update
 import com.metrolist.shared.generated.resources.account_keyring_required
 import com.metrolist.shared.generated.resources.account_linux_keyring_required
 import com.metrolist.shared.generated.resources.account_logout_webview_failed
+import com.metrolist.shared.generated.resources.account_nightly_update_available
 import com.metrolist.shared.generated.resources.account_retry_cleanup
 import com.metrolist.shared.generated.resources.account_update_available
 import com.metrolist.shared.generated.resources.account_webview_remove_failed
@@ -170,10 +172,22 @@ fun AccountMenu(onDismiss: () -> Unit) {
                             modifier = Modifier.size(20.dp),
                         )
                         Text(
-                            if (UiState.isDownloadingUpdate) {
-                                stringResource(Res.string.account_downloading_update, pendingUpdate.version)
-                            } else {
-                                stringResource(Res.string.account_update_available, pendingUpdate.version)
+                            when {
+                                UiState.isDownloadingUpdate && pendingUpdate.isNightly -> {
+                                    stringResource(Res.string.account_downloading_nightly_update)
+                                }
+
+                                UiState.isDownloadingUpdate -> {
+                                    stringResource(Res.string.account_downloading_update, pendingUpdate.version)
+                                }
+
+                                pendingUpdate.isNightly -> {
+                                    stringResource(Res.string.account_nightly_update_available)
+                                }
+
+                                else -> {
+                                    stringResource(Res.string.account_update_available, pendingUpdate.version)
+                                }
                             },
                             style = MaterialTheme.typography.bodyMedium,
                             color = colorScheme.primary,

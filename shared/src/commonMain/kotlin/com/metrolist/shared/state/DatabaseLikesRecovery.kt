@@ -7,7 +7,7 @@ import com.metrolist.shared.model.SongItem
 import com.metrolist.shared.settings.Settings
 import kotlinx.serialization.json.Json
 
-internal const val DATABASE_LIKES_RECOVERY_VERSION = 2
+internal const val DATABASE_LIKES_RECOVERY_VERSION = 4
 
 private fun Settings.hasAccountLikes(): Boolean =
     credentialsPending || innerTubeCookie.isNotBlank() || dataSyncId.isNotBlank() ||
@@ -21,8 +21,13 @@ internal fun Settings.recoverDatabaseLikes(
     if (databaseLikesRecoveryVersion >= DATABASE_LIKES_RECOVERY_VERSION) return false
     if (credentialsPending) return false
     val accountLikes = hasAccountLikes()
-    // An activated v14 account may have acknowledged unlikes that no longer have pending votes.
-    if ((accountLikes && likedSongsOrderAccount.isNotBlank()) || (!accountLikes && databaseLikesRecoveryVersion == 1)) {
+    val existing = currentSongs ?: Json.decodeFromString<List<SongItem>>(likedSongsJson)
+    // An activated account without a session may have acknowledged unlikes that no longer have pending votes. Signed-in
+    // and empty catalogs are still merged: a startup refresh can activate the account before recovery, likes added since
+    // then make the catalog non-empty, and the next complete refresh drops rows YouTube no longer has.
+    if ((accountLikes && likedSongsOrderAccount.isNotBlank() && existing.isNotEmpty() && innerTubeCookie.isBlank()) ||
+        (!accountLikes && databaseLikesRecoveryVersion >= 1)
+    ) {
         databaseLikesRecoveryVersion = DATABASE_LIKES_RECOVERY_VERSION
         flush()
         return false
@@ -31,7 +36,6 @@ internal fun Settings.recoverDatabaseLikes(
     // Recovery seeds the local cache only; a complete YouTube refresh remains authoritative.
     val votes = Json.decodeFromString<Map<String, SongVote>>(pendingSongVotesJson)
     val excluded = votes.filterValues { it != SongVote.LIKE }.keys + dislikedSongIds.split(",")
-    val existing = currentSongs ?: Json.decodeFromString<List<SongItem>>(likedSongsJson)
     val ids = existing.mapTo(hashSetOf(), SongItem::id)
     val missing = databaseLikesOldestFirst.asReversed().filter { it.id !in excluded && ids.add(it.id) }
     val recovered = existing + missing

@@ -52,7 +52,7 @@ DO NOT REMOVE THIS SECTION, I WANT TO ADD IT LATER!!!
 </div>
 
 - YouTube Music playback with or without signing in
-- Android 7+, iOS 17+, Windows 10+, macOS 15+ and Linux support
+- Android 7+, iOS 15+, Windows 10+, macOS 15+ and Linux support
 - Material 3 Expressive design
 - Discord Rich Presence and scrobbling through Last.fm and ListenBrainz
 - No ads
@@ -77,111 +77,77 @@ DO NOT REMOVE THIS SECTION, I WANT TO ADD IT LATER!!!
 
 <h1><a id="download-now"></a>Download now</h1>
 
-<p>Install Metrolist: <a href="docs/install/android.md">Android</a>, <a href="docs/install/ios.md">iOS</a>, <a href="docs/install/windows.md">Windows</a>, <a href="docs/install/macos.md">macOS</a> or <a href="docs/install/linux.md">Linux</a>. Check <a href="docs/install/README.md#get-the-package">download availability</a> before choosing a package.</p>
+<p>Setup guides: <a href="docs/install/android.md">Android</a> · <a href="docs/install/ios.md">iOS</a> · <a href="docs/install/windows.md">Windows</a> · <a href="docs/install/macos.md">macOS</a> · <a href="docs/install/linux.md">Linux</a></p>
 
+<h3>Android</h3>
+<p><sub>Android 7+ · updates itself from inside the app</sub></p>
 <p>
-  <a href="https://github.com/MetrolistGroup/Metrolist/releases/latest">Choose a release for your device</a>
+  <a href="https://github.com/MetrolistGroup/Metrolist/releases/latest/download/Metrolist.apk"><img alt="Download the stable Android APK" src="assets/badges/platform/android-stable.svg"></a>
+  <a href="https://github.com/MetrolistGroup/Metrolist/releases/download/nightly/Metrolist.apk"><img alt="Download the nightly Android APK" src="assets/badges/platform/android-nightly.svg"></a>
+</p>
+<p>
+  <a href="https://apps.obtainium.imranr.dev/redirect?r=obtainium://add/https://github.com/MetrolistGroup/Metrolist/"><img alt="Add Metrolist to Obtainium" src="assets/badges/platform/store-obtainium.svg"></a>
+  <a href="https://apt.izzysoft.de/fdroid/index/apk/com.metrolist.music"><img alt="Get Metrolist from IzzyOnDroid" src="assets/badges/platform/store-izzyondroid.svg"></a>
+  <a href="https://www.openapk.net/metrolist/com.metrolist.music/"><img alt="Get Metrolist on OpenAPK" src="assets/badges/platform/store-openapk.svg"></a>
 </p>
 
-<table>
-  <tr>
-    <td align="center" valign="top" width="33%">
-      <h2>Windows</h2>
-      <p>Windows 10+ · pick your chip</p>
-      <p><sub>x64 · installer and portable</sub></p>
-      <p>
-        <a href="https://github.com/MetrolistGroup/Metrolist/releases/latest">
-          <img alt="Download the Windows installer (.exe)" src="assets/badges/platform/windows-installer.svg">
-        </a>
-      </p>
-      <p>
-        <a href="https://github.com/MetrolistGroup/Metrolist/releases/latest/download/Metrolist-Desktop-windows.zip"><img alt="Download the portable Windows x64 package (.zip)" src="assets/badges/platform/windows-portable.svg"></a>
-      </p>
-      <p><sub>ARM64 · portable only</sub></p>
-      <p>
-        <a href="https://github.com/MetrolistGroup/Metrolist/releases/latest"><img alt="Download the portable Windows ARM64 package (.zip)" src="assets/badges/platform/windows-portable.svg"></a>
-      </p>
-    </td>
-    <td align="center" valign="top" width="33%">
-      <h2>macOS</h2>
-      <p>macOS 15+ · pick your chip</p>
-      <p>
-        <a href="https://github.com/MetrolistGroup/Metrolist/releases/latest">
-          <img alt="Download Metrolist for macOS on Apple silicon (.dmg)" src="assets/badges/platform/macos-apple-silicon.svg">
-        </a>
-      </p>
-      <p>
-        <a href="https://github.com/MetrolistGroup/Metrolist/releases/latest">
-          <img alt="Download Metrolist for macOS on Intel (.dmg)" src="assets/badges/platform/macos-intel.svg">
-        </a>
-      </p>
-      <p><sub>Unsigned app, you need to trust it first</sub></p>
-      <p><sub>Or install with <a href="docs/install/macos.md#homebrew">Homebrew</a></sub></p>
-    </td>
-    <td align="center" valign="top" width="33%">
-      <h2>iOS</h2>
-      <p>iPhone &amp; iPad · iOS 17+</p>
-      <p>
-        <a href="https://github.com/MetrolistGroup/Metrolist/releases/latest/download/Metrolist.ipa">
-          <img alt="Download the iOS IPA package" src="assets/badges/platform/ios-ipa.svg">
-        </a>
-      </p>
-      <p><sub>AltStore, SideStore, TrollStore or Sideloadly</sub></p>
-    </td>
-  </tr>
-  <tr>
-    <td align="center" valign="top" width="33%">
-      <h2>Android</h2>
-      <p>Android 7+</p>
-      <p>
-        <a href="https://github.com/MetrolistGroup/Metrolist/releases/latest/download/Metrolist.apk">
-          <img alt="Download the stable Android APK" src="assets/badges/platform/android-stable.svg">
-        </a>
-      </p>
-    </td>
-    <td align="center" valign="top" width="33%">
-      <h2>Linux</h2>
-      <p>glibc · pick your chip</p>
-      <p><sub>x86_64 · AppImage or packages</sub></p>
-      <p>
-        <a href="https://github.com/MetrolistGroup/Metrolist/releases/latest"><img alt="Download the x86_64 Linux AppImage" src="assets/badges/platform/linux-appimage.svg"></a>
-      </p>
-      <p>
-        <a href="https://aur.archlinux.org/packages/metrolist-desktop-bin"><img alt="Get the AUR PKGBUILD for Metrolist" src="assets/badges/platform/linux-aur.svg"></a>
-      </p>
-      <p>
-        <a href="docs/install/linux.md#nix"><img alt="Get the Nix flake" src="assets/badges/platform/linux-nix.svg"></a>
-      </p>
-      <p><sub>ARM64 · AppImage or Nix</sub></p>
-      <p>
-        <a href="https://github.com/MetrolistGroup/Metrolist/releases/latest"><img alt="Download the ARM64 Linux AppImage" src="assets/badges/platform/linux-appimage.svg"></a>
-      </p>
-      <p>
-        <a href="docs/install/linux.md#nix"><img alt="Get the Nix flake" src="assets/badges/platform/linux-nix.svg"></a>
-      </p>
-      <p><sub>Or install with <a href="docs/install/linux.md#homebrew">Homebrew</a></sub></p>
-    </td>
-    <td align="center" valign="top" width="33%">
-      <h2>Android stores</h2>
-      <p>The app already has a built-in updater.</p>
-      <p>
-        <a href="https://apps.obtainium.imranr.dev/redirect?r=obtainium://add/https://github.com/MetrolistGroup/Metrolist/">
-          <img alt="Add the Metrolist repository to Obtainium" src="assets/badges/platform/store-obtainium.svg">
-        </a>
-      </p>
-      <p>
-        <a href="https://apt.izzysoft.de/fdroid/index/apk/com.metrolist.music">
-          <img alt="Find Metrolist in the IzzyOnDroid F-Droid repository" src="assets/badges/platform/store-izzyondroid.svg">
-        </a>
-      </p>
-      <p>
-        <a href="https://www.openapk.net/metrolist/com.metrolist.music/">
-          <img alt="Find the Metrolist APK on OpenAPK" src="assets/badges/platform/store-openapk.svg">
-        </a>
-      </p>
-    </td>
-  </tr>
-</table>
+<h3>iOS</h3>
+<p><sub>iPhone and iPad · iOS 15+ · sideload with AltStore, SideStore, TrollStore or Sideloadly</sub></p>
+<p>
+  <a href="https://github.com/MetrolistGroup/Metrolist/releases/latest/download/Metrolist.ipa"><img alt="Download the iOS IPA" src="assets/badges/platform/ios-ipa.svg"></a>
+</p>
+<p><sub>For updates, add the <a href="https://github.com/MetrolistGroup/Metrolist/releases/latest/download/metrolist-altstore.json">AltStore and SideStore source</a></sub></p>
+
+<h3>Windows</h3>
+<p><sub>Windows 10+</sub></p>
+<p>
+  <a href="https://github.com/MetrolistGroup/Metrolist/releases/latest"><img alt="Download the Windows x64 installer" src="assets/badges/platform/windows-installer.svg"></a>
+  <a href="https://github.com/MetrolistGroup/Metrolist/releases/latest/download/Metrolist-Desktop-windows.zip"><img alt="Download the portable Windows x64 ZIP" src="assets/badges/platform/windows-portable.svg"></a>
+  <a href="https://github.com/MetrolistGroup/Metrolist/releases/latest"><img alt="Download the portable Windows ARM64 ZIP" src="assets/badges/platform/windows-arm64.svg"></a>
+</p>
+
+<h3>macOS</h3>
+<p><sub>macOS 15+ · unsigned, so you need to trust it on first launch</sub></p>
+<p>
+  <a href="https://github.com/MetrolistGroup/Metrolist/releases/latest"><img alt="Download the macOS DMG for Apple silicon" src="assets/badges/platform/macos-apple-silicon.svg"></a>
+  <a href="https://github.com/MetrolistGroup/Metrolist/releases/latest"><img alt="Download the macOS DMG for Intel" src="assets/badges/platform/macos-intel.svg"></a>
+</p>
+<p><b>Homebrew</b></p>
+
+```sh
+brew trust metrolistgroup/tap
+brew install --cask metrolistgroup/tap/metrolist
+```
+
+<h3>Linux</h3>
+<p><sub>glibc · x86_64 and ARM64</sub></p>
+<p>
+  <a href="https://github.com/MetrolistGroup/Metrolist/releases/latest"><img alt="Download the Linux AppImage" src="assets/badges/platform/linux-appimage.svg"></a>
+</p>
+<p><b>Flatpak</b> <sub>from <a href="https://flatpark.org/apps/com.metrolist.desktop/">flatpark</a></sub></p>
+
+```sh
+flatpak install https://dl.flatpark.org/com.metrolist.desktop.flatpakref
+```
+
+<p><b>Arch Linux</b> <sub>community <a href="https://aur.archlinux.org/packages/metrolist-desktop-bin">AUR package</a>, x86_64 only</sub></p>
+
+```sh
+yay -S metrolist-desktop-bin
+```
+
+<p><b>Nix</b></p>
+
+```sh
+nix profile install github:MetrolistGroup/Metrolist
+```
+
+<p><b>Homebrew</b></p>
+
+```sh
+brew trust metrolistgroup/tap
+brew install metrolistgroup/tap/metrolist
+```
 
 </div>
 

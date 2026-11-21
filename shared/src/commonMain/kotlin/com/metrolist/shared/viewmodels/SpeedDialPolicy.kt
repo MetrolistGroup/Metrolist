@@ -102,6 +102,10 @@ internal fun enrichSpeedDialPins(
                 )
             }
 
+            pin is PlaylistItem && stored == null && !pin.isLocal -> {
+                pin.withRemoteBrowseAlias(metadata)
+            }
+
             pin is PodcastItem && stored is PodcastItem -> {
                 stored.copy(
                     title = stored.title.ifBlank { pin.title },
@@ -117,5 +121,15 @@ internal fun enrichSpeedDialPins(
             }
         }
     }
+
+private fun PlaylistItem.withRemoteBrowseAlias(metadata: Map<String, YTItem>): PlaylistItem {
+    val alias = if (id.startsWith("VL")) id.removePrefix("VL") else "VL$id"
+    val remote = (metadata[alias] as? PlaylistItem)?.takeUnless { it.isLocal } ?: return this
+    return copy(
+        thumbnail = thumbnail.orFallback(remote.thumbnail),
+        playEndpointParams = playEndpointParams.orFallback(remote.playEndpointParams),
+        radioEndpointParams = radioEndpointParams.orFallback(remote.radioEndpointParams),
+    )
+}
 
 private fun String?.orFallback(fallback: String?): String? = takeUnless { it.isNullOrBlank() } ?: fallback

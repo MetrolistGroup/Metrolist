@@ -136,6 +136,7 @@ import com.metrolist.desktop.utils.DesktopNativeCrashRecovery
 import com.metrolist.desktop.utils.DesktopSingleInstance
 import com.metrolist.desktop.utils.DesktopStartup
 import com.metrolist.desktop.utils.DesktopUrlHandler
+import com.metrolist.desktop.utils.MatugenColors
 import com.metrolist.desktop.utils.NativeMemoryTrimmer
 import com.metrolist.desktop.utils.STOP_OMARCHY_URL
 import com.metrolist.desktop.utils.SentryManager
@@ -176,6 +177,8 @@ import com.metrolist.shared.generated.resources.copy
 import com.metrolist.shared.generated.resources.desktop_display_unavailable
 import com.metrolist.shared.generated.resources.desktop_omarchy_unsupported
 import com.metrolist.shared.generated.resources.desktop_platform_unsupported
+import com.metrolist.shared.generated.resources.lastfm_session_expired_description
+import com.metrolist.shared.generated.resources.lastfm_session_expired_title
 import com.metrolist.shared.generated.resources.learn_more
 import com.metrolist.shared.generated.resources.liked_songs
 import com.metrolist.shared.generated.resources.ok
@@ -218,8 +221,11 @@ import com.metrolist.shared.ui.navigation.Navigator
 import com.metrolist.shared.ui.navigation.Screen
 import com.metrolist.shared.ui.navigation.rememberNavigationState
 import com.metrolist.shared.ui.playback.LocalPlaybackController
+import com.metrolist.shared.ui.screens.SupportPrompt
+import com.metrolist.shared.ui.settings.SettingsPageId
 import com.metrolist.shared.ui.utils.LocalMouseScrollFactors
 import com.metrolist.shared.ui.utils.desktopMouseScrollFactors
+import com.metrolist.shared.ui.utils.softwareRendering
 import com.metrolist.shared.ui.utils.verticalScrollWithDrag
 import com.metrolist.shared.utils.OsUtil
 import com.metrolist.shared.utils.XdgUtils
@@ -239,6 +245,7 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import org.jetbrains.compose.resources.getString
 import org.jetbrains.compose.resources.stringResource
+import org.jetbrains.skiko.GraphicsApi
 import org.koin.core.context.GlobalContext
 import org.koin.core.context.startKoin
 import org.koin.core.context.stopKoin
@@ -271,7 +278,6 @@ fun WindowScope.App(
     toggleWindowFullscreen: () -> Unit,
     checkDarkMode: (Boolean) -> Unit,
     isLinux: Boolean = false,
-    integrationsReady: Boolean = false,
 ) {
     val playbackController = remember { DesktopPlaybackController(AppState.scope) }
     val downloadStates = LibraryState.downloadStates
@@ -284,7 +290,7 @@ fun WindowScope.App(
         LocalMouseScrollFactors provides desktopMouseScrollFactors(LocalDensity.current),
         desktopScrollConfig(),
     ) {
-        AppContent(navigator, onMaximized, toggleWindowFullscreen, checkDarkMode, isLinux, integrationsReady)
+        AppContent(navigator, onMaximized, toggleWindowFullscreen, checkDarkMode, isLinux)
     }
 }
 
@@ -295,7 +301,6 @@ private fun WindowScope.AppContent(
     toggleWindowFullscreen: () -> Unit,
     checkDarkMode: (Boolean) -> Unit,
     isLinux: Boolean,
-    integrationsReady: Boolean,
 ) {
     MetrolistTheme {
         val colorScheme = MaterialTheme.colorScheme
@@ -336,6 +341,11 @@ private fun WindowScope.AppContent(
             DesktopImageLoader.create(context)
         }
         UpdateArtworkTheme()
+        SupportPrompt()
+        val matugenEnabled = Settings.shared.matugenTheme
+        LaunchedEffect(matugenEnabled) {
+            if (matugenEnabled) MatugenColors.watch()
+        }
         LaunchedEffect(colorScheme) {
             try {
                 val bg = colorScheme.background.toArgb()
@@ -471,6 +481,30 @@ private fun WindowScope.AppContent(
                     },
                 )
             }
+            PopupVisibility(visible = ScrobbleSessions.showLastFmExpiredNotice && !YouTubeSessionState.showExpiredSessionNotice) {
+                AlertDialog(
+                    onDismissRequest = ScrobbleSessions::dismissLastFmExpiredNotice,
+                    title = { Text(stringResource(Res.string.lastfm_session_expired_title)) },
+                    text = { Text(stringResource(Res.string.lastfm_session_expired_description)) },
+                    confirmButton = {
+                        TextButton(
+                            onClick = {
+                                ScrobbleSessions.dismissLastFmExpiredNotice()
+                                UiState.integrationsInitialPage = SettingsPageId.LAST_FM
+                                UiState.showIntegrationsSettings = true
+                            },
+                            shapes = ButtonDefaults.shapes(),
+                        ) {
+                            Text(stringResource(Res.string.action_login))
+                        }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = ScrobbleSessions::dismissLastFmExpiredNotice, shapes = ButtonDefaults.shapes()) {
+                            Text(stringResource(Res.string.action_not_now))
+                        }
+                    },
+                )
+            }
             PopupVisibility(visible = PlayerState.showPlayerError) {
                 AlertDialog(
                     onDismissRequest = { PlayerState.showPlayerError = false },
@@ -590,8 +624,6 @@ private fun WindowScope.AppContent(
                 )
             }
         }
-
-        if (integrationsReady) MiniplayerWindow()
 
         if (UiState.showFloatingSearch) {
             FloatingSearchOverlay(
@@ -884,6 +916,7 @@ private fun runDesktopApp(args: Array<String>) {
         WaylandScale.detectAndApply()
         configureLinuxWindowIdentity()
     }
+    DesktopSingleInstance.startRestoreWatcher()
 
     // Initialize logging only after settings migration to avoid java.util.prefs/JUL class-init deadlocks.
     AppLogger.initialize(applicationScope)
@@ -1071,6 +1104,7 @@ private fun runDesktopApp(args: Array<String>) {
         startup.appFrame.await()
         applicationScope.launch(Dispatchers.IO) {
             if (settings.desktopOnboardingComplete) SentryManager.initialize()
+            SentryManager.reportPlaybackClientStats()
         }
         applicationScope.launch {
             observeDiscordInitialization { DiscordRpcManager.init(GlobalYouTube.client) }
@@ -1285,10 +1319,12 @@ private fun runDesktopApp(args: Array<String>) {
                 while (!window.isShowing) delay(16L)
                 startup.windowShown.complete(Unit)
                 startup.firstFrame.await()
+                val renderApi = window.findSkiaLayer()?.renderApi
+                softwareRendering = renderApi == GraphicsApi.SOFTWARE_FAST || renderApi == GraphicsApi.SOFTWARE_COMPAT
                 AppLogger.info(
                     "Main",
                     "Skiko render API: requested=${System.getenv("SKIKO_RENDER_API") ?: System.getProperty("skiko.renderApi") ?: "AUTO"} " +
-                        "actual=${window.findSkiaLayer()?.renderApi}",
+                        "actual=$renderApi",
                 )
             }
             if (!backendReady) {
@@ -1594,13 +1630,16 @@ private fun runDesktopApp(args: Array<String>) {
                                     toggleWindowFullscreen = toggleFullscreen,
                                     checkDarkMode = { areWeInDarkMode.value = it },
                                     isLinux = isLinux,
-                                    integrationsReady = integrationsReady,
                                 )
                             }
                         }
                     }
                 }
             }
+        }
+
+        if (integrationsReady && Settings.shared.desktopOnboardingComplete) {
+            MiniplayerWindow()
         }
 
         // System tray icon (stock Compose Tray on macOS, ComposeNativeTray on Linux/Windows)

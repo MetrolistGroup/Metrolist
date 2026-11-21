@@ -208,10 +208,11 @@ class ReleaseGateTest(unittest.TestCase):
         with self.assertRaises(ValueError):
             release.verify_run("test/repo", self.sha, "ci.yml", "Android / APK", self.api, required=False)
 
-    def test_installer_verification_remains_available_without_serializing_releases(self):
+    def test_release_installer_verifies_the_native_payload(self):
         text = (ROOT / ".github/workflows/release.yml").read_text().split("  windows-manager:\n", 1)[1].split("  publish:", 1)[0]
-        self.assertIn("needs: prepare", text)
-        self.assertNotIn("- windows", text)
+        self.assertIn("needs: [prepare, windows-native]", text)
+        self.assertIn("portable-artifact: release-desktop-windows", text)
+        self.assertNotIn("run-verification: false", text)
         workflow = (ROOT / ".github/workflows/reusable-windows-manager.yml").read_text()
         for step in ("Test manager", "Validate portable payload", "Install, repair and uninstall end to end"):
             block = workflow.split(f"- name: {step}\n", 1)[1].split("- name:", 1)[0]

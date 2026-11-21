@@ -26,6 +26,7 @@ import com.metrolist.shared.listentogether.network.ReconnectedPayload
 import com.metrolist.shared.listentogether.network.RoomCreatedPayload
 import com.metrolist.shared.listentogether.network.RoomState
 import com.metrolist.shared.listentogether.network.ServerCapabilities
+import com.metrolist.shared.listentogether.network.ServerRestartingPayload
 import com.metrolist.shared.listentogether.network.SuggestTrackPayload
 import com.metrolist.shared.listentogether.network.SuggestionApprovedPayload
 import com.metrolist.shared.listentogether.network.SuggestionReceivedPayload
@@ -67,7 +68,10 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.filterIsInstance
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.take
+import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.advanceTimeBy
@@ -1617,6 +1621,37 @@ class ListenTogetherManagerLifecycleTest {
                     }
                 manager.createRoom("Listener")
                 assertEquals(1, withTimeout(5_000L.milliseconds) { newRoomRetry.await() }.attempt)
+            } finally {
+                manager.close()
+                client.close()
+                callerScope.cancel()
+            }
+        }
+
+    @Test
+    fun `announced server restart reconnects after its delay without consuming a retry`() =
+        runBlocking {
+            val client = HttpClient(MockEngine { error("Offline") })
+            val callerScope = CoroutineScope(coroutineContext + SupervisorJob())
+            val manager =
+                handoffManager(
+                    callerScope,
+                    client,
+                    sessionPersistenceEnabled = false,
+                    reconnectDelayMillis = 60_000L,
+                )
+            try {
+                val retries =
+                    async(start = CoroutineStart.UNDISPATCHED) {
+                        manager.events
+                            .filterIsInstance<ListenTogetherEvent.Reconnecting>()
+                            .take(2)
+                            .toList()
+                    }
+                manager.handleBinary(MessageCodec().encode(MessageTypes.SERVER_RESTARTING, ServerRestartingPayload(0)))
+                manager.createRoom("Listener")
+                // The announced zero delay replaces the 60 s backoff, so both retries arrive at once.
+                assertEquals(listOf(1, 1), withTimeout(5_000L.milliseconds) { retries.await() }.map { it.attempt })
             } finally {
                 manager.close()
                 client.close()

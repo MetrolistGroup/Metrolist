@@ -50,7 +50,7 @@ Artist subscriber and monthly-audience counts use the same extractor without con
 
 ## Audio counterparts
 
-Video-to-audio lookup prefers YouTube's explicit counterpart and rejects changes between studio and alternate versions. Search fallback requires the complete title after artist-prefix and presentation-decorator removal and an exact artist name or shared artist ID. Known durations use the existing music-video ratio and intro/outro limits; the audio track may exceed the video's duration by at most 30 seconds. Matching tracks rank by shared artist ID, audio type, closest known duration and search order. The selected video stays when the title names a live performance, remix or other alternate version. Title normalization preserves Unicode combining marks. Audio-to-video selection rules and counterpart position maps remain unchanged.
+Video-to-audio lookup prefers YouTube's explicit counterpart and rejects changes between studio and alternate versions. Search fallback requires the complete title after artist-prefix and presentation-decorator removal and an exact artist name or shared artist ID. Known durations use the existing music-video ratio and intro/outro limits; the audio track may exceed the video's duration by at most 30 seconds. Matching tracks rank by shared artist ID, audio type, closest known duration and search order. The selected video stays when the title names a live performance, remix or other alternate version. Title normalization preserves Unicode combining marks. Audio-to-video selection rules and counterpart position maps remain unchanged. With music videos turned off, Android plays a requested video's own audio and looks up no audio counterpart; only Song mode with videos on swaps to the audio track.
 
 ## History and uploads
 
@@ -68,7 +68,11 @@ A CDN 403 for an explicitly untokenized `_nopo` profile excludes that profile wi
 
 After a web-token rejection, audio requests try tokenless VISIONOS first. A failed probe continues through the normal clients. Video and YouTube canvas requests keep their video requirement and skip this audio-only preference.
 
+Android and desktop playback allow InnerTubeX's progressive transport, which iOS, downloads and canvas requests do not. `IOS_PRODUCER` needs no PO token, but YouTube only returns muxed 360p itag 18 for it, so selection tries it after every other healthy client. `PlaybackResource.isMuxedProgressive` keeps those files out of the persistent song caches, so a later play resolves a full-quality stream again.
+
 Token callbacks keep request-local results. A canceled Kotlin caller does not cancel a WebView promise; late results cannot overwrite another request. Check this with `node --test scripts/test_page_bound_po_token.mjs`.
+
+With crash reporting enabled, `PlaybackClientStats` counts resolve outcomes per client profile and playback successes and failures by category. It stores only catalog profile IDs and counters, never video IDs. Every fifth launch Android and desktop send one Sentry log per profile and reset the counts; sum `playback.play.ok` and `playback.play.fail.*` by `playback.profile` in Sentry Logs to compare clients. iOS counts locally but does not send them yet.
 
 ## SABR
 
@@ -106,4 +110,4 @@ For signed-out runs, use `-DinnerTubeSignedOut=true`. Upload probes need a new f
 
 ## Backend verification
 
-Run affected [platform checks](checks.md#platform-checks). Relevant suites include `SabrInputStreamTest`, `SabrPlaybackStreamsTest`, `SabrAudioFetchTest`, `DefaultStreamResolverTest` and the repository/parser tests beside changed code. Fixture sources and limits are in [test fixtures](test-fixtures.md).
+Run affected [platform checks](checks.md#platform-checks). Relevant suites are the parser tests beside changed code. Fixture sources and limits are in [test fixtures](test-fixtures.md).

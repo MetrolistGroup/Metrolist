@@ -17,11 +17,6 @@ internal data class PlaybackQueueDecision(
     val song: SongItem? = null,
 )
 
-internal fun PlaybackQueueAction.replacesCastMedia(): Boolean =
-    this == PlaybackQueueAction.REPLAY_CURRENT ||
-        this == PlaybackQueueAction.PLAY_NEXT ||
-        this == PlaybackQueueAction.RESTART_QUEUE
-
 internal fun decidePlaybackQueueTransition(
     repeatMode: RepeatMode,
     fromEof: Boolean,

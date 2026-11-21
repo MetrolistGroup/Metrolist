@@ -626,7 +626,7 @@ class YouTubeRepository(
         val uploadedIds = uploadedSongs?.mapTo(mutableSetOf()) { it.id }
         return LibraryItemsResult(
             items = items.filterNot { it is SongItem && it.isUploaded && uploadedIds != null && it.id !in uploadedIds },
-            complete = results.all { it.getOrNull()?.complete == true } && unresolvedPlaylistEditabilityIds.isEmpty(),
+            complete = results.all { it.getOrNull()?.complete == true },
             unresolvedPlaylistEditabilityIds = unresolvedPlaylistEditabilityIds,
             uploadedSongs = uploadedSongs,
         )
@@ -1424,7 +1424,7 @@ class YouTubeRepository(
 
             requireCurrentSession(requestSession)
             stage = "tracks"
-            val initialTracks =
+            val playlistTracks =
                 if (albumId.startsWith("FEmusic_library_privately_owned_release")) {
                     val parsed = parseBrowseResponse(response)
                     PlaylistPage(
@@ -1438,6 +1438,11 @@ class YouTubeRepository(
                 } else {
                     getPlaylistPlaybackPage(albumItem.playlistId ?: return loadLocal()).copy(album = albumItem)
                 }
+            // An album's playlist comes back empty when the account cannot play most of it; the browse shelf still lists every track.
+            val shelfSongs =
+                if (playlistTracks.songs.isEmpty() && !playlistTracks.hasMore) secondaryContents.albumShelfSongs() else emptyList()
+            val initialTracks =
+                if (shelfSongs.isEmpty()) playlistTracks else playlistTracks.copy(sections = mapOf("songs" to shelfSongs))
             if (initialTracks.songs.isEmpty() && !initialTracks.hasMore) {
                 loadLocal()?.let { return it }
             }
@@ -1485,6 +1490,14 @@ class YouTubeRepository(
         )
     }
 
+    private fun JsonArray.albumShelfSongs(): List<SongItem> =
+        firstNotNullOfOrNull { it.jsonObject["musicShelfRenderer"] ?: it.jsonObject["musicPlaylistShelfRenderer"] }
+            ?.jsonObject
+            ?.get("contents")
+            ?.jsonArray
+            ?.mapNotNull { parseItem(it.jsonObject["musicResponsiveListItemRenderer"]?.jsonObject) as? SongItem }
+            .orEmpty()
+
     suspend fun getAlbumVideoPage(albumId: String): AlbumPage? {
         return try {
             val response =
@@ -1505,21 +1518,7 @@ class YouTubeRepository(
                     ?.get("contents")
                     ?.jsonArray ?: JsonArray(emptyList())
 
-            val songsShelf =
-                secondaryContents
-                    .mapNotNull {
-                        it.jsonObject["musicShelfRenderer"]?.jsonObject
-                            ?: it.jsonObject["musicPlaylistShelfRenderer"]?.jsonObject
-                    }.firstOrNull() ?: return null
-
-            val directSongs = mutableListOf<SongItem>()
-            val shelfContents = songsShelf["contents"]?.jsonArray ?: emptyList()
-            shelfContents.forEach {
-                val item = parseItem(it.jsonObject["musicResponsiveListItemRenderer"]?.jsonObject)
-                if (item is SongItem) {
-                    directSongs.add(item)
-                }
-            }
+            val directSongs = secondaryContents.albumShelfSongs()
             if (directSongs.isEmpty()) return null
 
             AlbumPage(
@@ -2156,7 +2155,7 @@ class YouTubeRepository(
                             }
                     }
                 requireCurrentSession(requestSession)
-                return LibraryItemsResult(items, result.complete && unresolvedIds.isEmpty(), unresolvedIds).also(request::complete)
+                return LibraryItemsResult(items, result.complete, unresolvedIds).also(request::complete)
             } catch (error: Throwable) {
                 request.completeExceptionally(error)
                 throw error

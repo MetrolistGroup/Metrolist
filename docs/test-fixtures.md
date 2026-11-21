@@ -8,16 +8,11 @@ Checked-in media is synthesized with FFmpeg, not downloaded music, footage or ar
 
 `generateOpusTestFixture` embeds `opus-251.webm` in generated common test code for JVM and iOS parser/remux tests. The source fixture and its CC0 provenance stay here.
 
-`shared/src/iosTest/kotlin/com/metrolist/shared/storage/FragmentedAacFixture.kt` embeds a four-second 440 Hz 44.1 kHz stereo AAC-LC tone as Base64. The fragmented MP4 contains `ftyp`, `moov`, `sidx`, four `moof`/`mdat` pairs and `mfra`. The iOS capture tests serve this fixture and the remuxed Opus control through the production SABR capture and resource loader, with no YouTube requests. `IosFragmentedAacDecodeTest` decodes it with AVAssetReader.
-
-`opus-peaks.webm` contains 2.013 seconds of distinct stereo tones with 5 ms Opus packets. Its floating-point decode exceeds full scale. The remux regression compares every float sample before integer conversion, including these peaks, pre-skip and final padding. Set `METROLIST_OPUS_WEBM` to a local mono/stereo WebM path to include a real capture in that JVM comparison. Captures stay outside git and require no network during the test.
-
 Regenerate with FFmpeg n9.0.2, from the repository root:
 
 ```sh
 cd shared/src/desktopTest/resources/ffmpeg
 ffmpeg -f lavfi -i 'sine=frequency=440:sample_rate=48000:duration=2' -ac 2 -c:a libopus -b:a 128k opus-251.webm
-ffmpeg -f lavfi -i 'aevalsrc=1.1*sin(2*PI*997*t)+0.2*sin(2*PI*13001*t)|0.8*sin(2*PI*2203*t):s=48000:d=2.013' -c:a libopus -b:a 128k -frame_duration 5 -map_metadata -1 opus-peaks.webm
 ffmpeg -f lavfi -i 'sine=frequency=440:sample_rate=44100:duration=2' -ac 2 -c:a aac -b:a 128k -movflags +faststart aac-140.m4a
 ffmpeg -f lavfi -i 'sine=frequency=440:sample_rate=44100:duration=4' -ac 2 -c:a aac -b:a 32k -map_metadata -1 -movflags +dash+global_sidx -frag_duration 1000000 fragmented-aac.mp4
 ffmpeg -i aac-140.m4a -c:a copy -f hls -hls_time 1 -hls_playlist_type vod -hls_segment_filename 'hls-%d.ts' hls.m3u8
@@ -61,12 +56,6 @@ Prism ZIPs contain `databases/prism.db`, optional SQLite sidecars and these comp
 
 Raw database imports cannot recover those companion collections. Listening durations come from `play_events`, never a fabricated duration from `lastPlayed`. Preserve existing Metrolist metadata and import deduplication. Do not fetch missing data from the network or import credentials/settings, local media or Prism-specific caches. Malformed recognized companion data and external XML entities must fail before merging. Preserve extraction size limits and the 4,096-entry cap; export oversized backups without downloads.
 
-## Uploaded-song response shapes
-
-`shared/src/commonTest/kotlin/com/metrolist/shared/api/UploadedSongsTest.kt` uses invented JSON titles, IDs and cookies, not captured account responses. Shapes derive from existing parser fixtures and the pinned InnerTubeX `BrowseResponse` model. Prism's upload parser was reviewed as source only.
-
-These fixtures and `DefaultStreamResolverTest` check upload parsing, authentication and identity propagation without YouTube access. They cannot establish the live response or immediate post-upload visibility for any particular Google account.
-
 ## Playlist header responses
 
 `shared/src/desktopTest/resources/youtube/playlist-header-*.json` contains reduced signed-out WEB_REMIX browse responses. They keep header paths, text, artwork URLs and creator browse endpoints. Track bodies, menus and telemetry were removed. `PlaylistHeaderTest` covers facepiles, straplines, legacy detail headers, editable wrappers and localized statistics.
@@ -83,15 +72,7 @@ To refresh, POST to `https://music.youtube.com/youtubei/v1/browse?prettyPrint=fa
 
 The file names identify the request pairs. They cover en/US, de/DE, fr/FR, es/ES, pt-BR/BR, it/IT, nl/NL, pl/PL, cs/CZ, ru/RU, uk/UA, tr/TR, ar/EG, fa/US, iw/IL, he/IL, hi/IN, bn/BD, th/TH, vi/VN, id/ID, ja/JP, ko/KR, zh-CN/SG, zh-TW/TW, hu/HU and fi/FI. Persian requests with IR and AF returned HTTP 400; fa/US returned Persian text. The supplied probe ID `UCvoQ3TJRxv-g8uPvnz5Nqfg` returned no artist header.
 
-`ArtistAudienceFixturesTest` loads every capture on desktop and Android host, checks both subscriber fields and asserts the displayed count with its app label. `AudienceCountTest` covers Unicode digits and separators, units before the number and unchanged text without an added label when extraction is uncertain. Neither test uses settings or Android APIs.
-
-## Music-video round trips
-
-`MusicVideoResolverTest.audioSwitchRetainsUgcVideoWhenNextAndVideoSearchHaveNoCounterpart` uses reduced `/next` rows from signed-out WEB_REMIX requests with client version `1.20260707.12.00`. `W5ww34C76Gk` is the UGC upload of Myth In Slaughter; `olNdzTu5QYg` is its ATV audio track. Both responses contain an ordinary `playlistPanelVideoRenderer` without a counterpart wrapper. The fixture keeps the video ID and type, with a shortened containing path. Search results are supplied by the test, not captured. The authoritative timing fixture in the adjacent test is synthetic.
-
-## Home renderer projection
-
-`HomeRendererParityTest` uses reduced synthetic JSON for ordinary and immersive Home headers, mix subtitle runs and initial/shelf/page continuation tokens. Its IDs, titles and artwork strings are invented; it is not a signed-in Home capture. `HomeShelfBuilderTest` exercises the shared data projection without rendering UI. See [Home projection](innertube.md#home) for the shared behavior.
+`ArtistAudienceFixturesTest` loads every capture on desktop and Android host, checks both subscriber fields and asserts the displayed count with its app label. It uses no settings or Android APIs.
 
 ## Glyphmind dictionary downloads
 

@@ -90,19 +90,106 @@ jobs:
       LYPRIO_BASE_URL: ${{ secrets.LYPRIO_BASE_URL }}
       LYPRIO_HMAC_KEY: ${{ secrets.LYPRIO_HMAC_KEY }}
 
-  publish:
-    name: Publish nightly prerelease
-    needs: [version, android, linux, windows]
+  notes:
+    name: Write nightly notes
+    needs: version
     runs-on: blacksmith-2vcpu-ubuntu-2604
     timeout-minutes: 10
     permissions:
-      contents: write
+      contents: read
     steps:
       - name: Check out nightly history
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           fetch-depth: 0
           persist-credentials: false
+
+      - name: Write nightly notes
+        shell: bash
+        env:
+          APP_VERSION: ${{ needs.version.outputs.value }}
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          OPENROUTER_MODEL: z-ai/glm-5.3-flash
+          PROMPT: >-
+            You write release notes for Metrolist, a YouTube Music client for Android and desktop.
+            The input is a list of Conventional Commit subjects with short hashes.
+            Write a short Markdown list of the changes users will notice under the subheadings
+            "### New", "### Fixed" and "### Improved", leaving out empty subheadings.
+            Combine all commits about the same feature, screen or component into one bullet
+            that starts with the area's name, such as "Import:" or "Lyrics:", followed by its
+            changes as brief comma-separated phrases of a few words, not full sentences.
+            End each bullet with all of its short hashes in parentheses. Leave out CI, build,
+            test, docs, refactor and chore commits unless users would notice them.
+            Output only the subheadings and bullets, without an introduction, conclusion or emoji.
+            If no commit is user-facing, output exactly: Internal changes only.
+        run: |
+          set -euo pipefail
+          summarise() {
+            [[ -n "${OPENROUTER_API_KEY:-}" ]] || return 1
+            jq -nc --arg model "$OPENROUTER_MODEL" --arg prompt "$PROMPT" --arg commits "$1" \
+              '{model: $model, reasoning: {effort: "low"}, messages: [{role: "system", content: $prompt}, {role: "user", content: $commits}]}' |
+              curl -fsS --max-time 240 https://openrouter.ai/api/v1/chat/completions \
+                -H "Authorization: Bearer $OPENROUTER_API_KEY" -H 'Content-Type: application/json' --data @- |
+              jq -er '.choices[0].message.content | select(length > 0)'
+          }
+          section() {
+            local heading="$1" commits summary
+            shift
+            commits="$(git log --first-parent --format='* %s (%h)' "$@")"
+            printf '\n## %s\n\n' "$heading"
+            if [[ -z "$commits" ]]; then
+              printf 'No changes.\n'
+            elif summary="$(summarise "$commits")"; then
+              printf '%s\n' "$summary"
+              summarised=true
+            else
+              head -n 50 <<< "$commits"
+              (( $(wc -l <<< "$commits") <= 50 )) || printf '\nOnly the latest 50 first-parent commits are shown.\n'
+            fi
+          }
+          summarised=false
+          # The nightly tag never moves, so the previous build is read back from the notes it published.
+          previous="$(gh release view nightly --json body \
+            --jq '.body | capture("built from \\[(?<sha>[0-9a-f]{40})\\]").sha' 2>/dev/null)" || previous=""
+          if [[ -n "$previous" ]] && ! git merge-base --is-ancestor "$previous" "$GITHUB_SHA" 2>/dev/null; then
+            previous=""
+          fi
+          release="$(gh release view --json tagName,publishedAt --jq '[.tagName, .publishedAt] | @tsv' 2>/dev/null)" || release=""
+          {
+            printf 'Version %s, built from [%s](https://github.com/%s/commit/%s). This prerelease may be unstable.\n' \
+              "$APP_VERSION" "$GITHUB_SHA" "$GITHUB_REPOSITORY" "$GITHUB_SHA"
+            [[ -z "$previous" ]] || section 'Changes since previous nightly' "$previous..$GITHUB_SHA"
+            if [[ -n "$release" ]]; then
+              # By date, because release tags need not be ancestors of main after a history rewrite.
+              section "Changes since ${release%%$'\t'*}" --since="${release#*$'\t'}" "$GITHUB_SHA"
+            fi
+            if [[ "$summarised" == true ]]; then
+              printf '\nSummarised from commit messages by %s.\n' "$OPENROUTER_MODEL"
+            fi
+          } > "$RUNNER_TEMP/nightly-notes.md"
+
+      - name: Upload nightly notes
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: nightly-notes
+          path: ${{ runner.temp }}/nightly-notes.md
+          if-no-files-found: error
+
+  publish:
+    name: Publish nightly prerelease
+    needs: [version, notes, android, linux, windows]
+    runs-on: blacksmith-2vcpu-ubuntu-2604
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - name: Download nightly notes
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          name: nightly-notes
+          path: artifacts/notes
 
       - name: Download signed Android APK
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
@@ -143,24 +230,6 @@ jobs:
           cp "${appimages[0]}" nightly-assets/Metrolist-Desktop-linux-x64.AppImage
           cp "${zips[0]}" nightly-assets/Metrolist-Desktop-windows.zip
 
-      - name: Write nightly notes
-        shell: bash
-        env:
-          APP_VERSION: ${{ needs.version.outputs.value }}
-        run: |
-          set -euo pipefail
-          {
-            printf 'Version %s, built from [%s](https://github.com/%s/commit/%s). This prerelease may be unstable.\n' \
-              "$APP_VERSION" "$GITHUB_SHA" "$GITHUB_REPOSITORY" "$GITHUB_SHA"
-            printf '\n## Changes since previous nightly\n\n'
-            if previous="$(git rev-parse --verify 'refs/tags/nightly^{commit}' 2>/dev/null)"; then
-              git log --first-parent --max-count=50 --format='* %s (%h)' "$previous..$GITHUB_SHA"
-            else
-              git log --first-parent --max-count=50 --format='* %s (%h)' "$GITHUB_SHA"
-            fi
-            printf '\nAt most 50 first-parent commits are shown.\n'
-          } > "$RUNNER_TEMP/nightly-notes.md"
-
       - name: Publish nightly prerelease
         shell: bash
         env:
@@ -168,14 +237,6 @@ jobs:
           GH_REPO: ${{ github.repository }}
         run: |
           set -euo pipefail
-          if git show-ref --verify --quiet refs/tags/nightly; then
-            gh api --method PATCH "repos/$GH_REPO/git/refs/tags/nightly" \
-              -f sha="$GITHUB_SHA" -F force=true
-          else
-            gh api --method POST "repos/$GH_REPO/git/refs" \
-              -f ref=refs/tags/nightly -f sha="$GITHUB_SHA"
-          fi
-
           # Keep partial uploads in a draft until all three current assets are present.
           if gh release view nightly --json assets --jq '.assets[].name' > "$RUNNER_TEMP/old-nightly-assets.txt"; then
             gh release edit nightly --draft --prerelease --latest=false
@@ -183,10 +244,12 @@ jobs:
               gh release delete-asset nightly "$asset" --yes
             done < "$RUNNER_TEMP/old-nightly-assets.txt"
           else
-            gh release create nightly --verify-tag --target "$GITHUB_SHA" \
+            # Only a missing tag is created here; it is never moved, so publishing pushes no ref.
+            gh release create nightly --target "$GITHUB_SHA" \
               --title "Metrolist Nightly" --draft --prerelease --latest=false
           fi
           gh release upload nightly nightly-assets/* --clobber
+          # Apps match the built commit through target_commitish, which GitHub stores apart from the tag.
           gh release edit nightly --target "$GITHUB_SHA" \
-            --title "Metrolist Nightly" --notes-file "$RUNNER_TEMP/nightly-notes.md" \
+            --title "Metrolist Nightly" --notes-file artifacts/notes/nightly-notes.md \
             --draft=false --prerelease --latest=false

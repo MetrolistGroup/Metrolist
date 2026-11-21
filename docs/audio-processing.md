@@ -10,7 +10,7 @@ MetroEQ band gains and AutoEQ imports support -30 to +30 dB. The separate output
 - Desktop decodes through FFmpeg. `AudioRenderer` applies EQ and gain before silence skipping, then normalization and user volume at output.
 - iOS attaches `MTAudioProcessingTap` through `AVAudioMix` before starting a prepared player. Each tap owns its processing state. HLS fallback bypasses the tap, so MetroEQ, independent pitch and the meter are unavailable for that stream. Speed remains available.
 
-Android's System equalizer opens the installed audio-effects panel for the current audio session. Each new player opens its own effects session; releasing an outgoing player closes only that session. Panel availability depends on the device and route. Changing hardware audio processing requires restart because the sink reads it at construction.
+Android's System equalizer opens the installed audio-effects panel for the current audio session. The primary player, gapless next tracks and ordinary stream replacements share one session ID, so system effects stay attached across those track changes. A next track prepared in its own player, as for crossfades and videos, gets its own ID because some ROMs, including HyperOS, stall a whole session after a muted track idles on it for about a minute in the background. The preload's ID becomes the current session when it is promoted, so that handoff sends one open and one close notification. The session stays open until its last attached player releases. Bluetooth stuck-output recovery prepares a fresh ID and adopts it after a successful handoff, with one close and one open notification. A failed replacement leaves the current session unchanged. MetroEQ and normalization still process PCM separately for each player. Panel availability depends on the device and route. Changing hardware audio processing requires restart because the sink reads it at construction.
 
 ## Tempo and pitch
 
@@ -32,4 +32,4 @@ The shared 18-band meter captures PCM only while the MetroEQ page requests it. A
 
 ## Verification
 
-Run affected [platform checks](checks.md#platform-checks), including `AudioTempoProcessorTest` for desktop tempo changes. Check audible output on each affected route with effects on and off, speed/pitch changes, silence skipping, crossfade and interruption. iOS HLS needs a separate check for its unavailable-processing state. Backend tests cannot verify offload, Bluetooth output or tap installation on devices.
+Run affected [platform checks](checks.md#platform-checks). Check audible output on each affected route with effects on and off, speed/pitch changes, silence skipping, crossfade and interruption. iOS HLS needs a separate check for its unavailable-processing state. Backend tests cannot verify offload, Bluetooth output or tap installation on devices.

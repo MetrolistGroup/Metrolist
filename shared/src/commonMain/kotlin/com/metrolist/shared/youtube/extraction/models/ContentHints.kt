@@ -48,8 +48,11 @@ fun SongItem.toContentHints(wantVideo: Boolean? = null): ContentHints {
                 MusicVideoQuality.AUTO -> automaticVideoMaxHeight()
                 else -> quality.targetHeight
             },
-    )
+    ).withStreamCapabilities(allowProgressive = playbackPlaysProgressiveAudio)
 }
+
+/** Whether this platform's player can play audio from a muxed progressive file. */
+internal expect val playbackPlaysProgressiveAudio: Boolean
 
 fun automaticVideoMaxHeight(
     networkState: PlaybackNetworkState = PlaybackNetworkStateStore.current,

@@ -396,7 +396,7 @@ class ScrobbleManager internal constructor(
                     pending.forEach { (account, entry) ->
                         if (!canReport(reportingGeneration)) return@withLock
                         val queued = withContext(persistenceDispatcher) { PendingScrobbleStore.get(entry.id) }
-                        if (queued != entry) return@forEach
+                        if (queued != entry || isHeldForExpiredSession(account)) return@forEach
                         Logger.i(REPORTING_TAG, "scrobble attempt provider=${account.provider} generation=$reportingGeneration")
                         val result = submit(account, artist, track, timestamp, album, albumArtist, duration)
                         Logger.i(
@@ -461,6 +461,7 @@ class ScrobbleManager internal constructor(
                     REPORTING_TAG,
                     "now-playing outcome=${if (result.isSuccess) "success" else "failure"} provider=${account.provider} generation=$reportingGeneration",
                 )
+                if (isExpiredLastFmSession(account, result.exceptionOrNull())) markLastFmSessionExpired(account)
             }
         }
     }
@@ -506,6 +507,10 @@ class ScrobbleManager internal constructor(
         pending: PendingScrobble,
         failure: Throwable?,
     ) {
+        if (isExpiredLastFmSession(account, failure)) {
+            markLastFmSessionExpired(account)
+            return
+        }
         val apiFailure = failure as? ScrobbleApiException
         if (failure == null || apiFailure?.disposition == ScrobbleFailureDisposition.AUTHENTICATION ||
             apiFailure?.disposition == ScrobbleFailureDisposition.PERMANENT
@@ -529,7 +534,7 @@ class ScrobbleManager internal constructor(
                 for (pending in PendingScrobbleStore.all()) {
                     if (pending.provider in blockedProviders || pending.nextAttemptAtMs > now) continue
                     val account = currentAccounts().firstOrNull { it.provider == pending.provider } ?: continue
-                    if (account.account != pending.account) continue
+                    if (account.account != pending.account || isHeldForExpiredSession(account)) continue
                     if (!canReport(reportingGeneration)) return@withLock
                     Logger.i(
                         REPORTING_TAG,
@@ -559,6 +564,11 @@ class ScrobbleManager internal constructor(
                             delay(1_000.milliseconds)
                         }
 
+                        isExpiredLastFmSession(account, failure) -> {
+                            markLastFmSessionExpired(account)
+                            blockedProviders += pending.provider
+                        }
+
                         apiFailure?.disposition == ScrobbleFailureDisposition.AUTHENTICATION -> {
                             PendingScrobbleStore.remove(pending.id)
                         }
@@ -569,7 +579,8 @@ class ScrobbleManager internal constructor(
 
                         else -> {
                             val attempts = pending.attemptCount + 1
-                            PendingScrobbleStore.upsert(
+                            PendingScrobbleStore.replaceIfUnchanged(
+                                pending,
                                 pending.copy(
                                     attemptCount = attempts,
                                     nextAttemptAtMs = nextAttemptAt(attempts, apiFailure?.retryAfterMs, pending.id.hashCode()),
@@ -586,7 +597,7 @@ class ScrobbleManager internal constructor(
         accountsOverride?.invoke(nowPlaying) ?: buildList {
             if (Settings.shared.lastFmEnabled &&
                 Settings.shared.lastFmActivityEnabled &&
-                (!nowPlaying || Settings.shared.lastFmUseNowPlaying)
+                (!nowPlaying || (Settings.shared.lastFmUseNowPlaying && !Settings.shared.lastFmSessionExpired))
             ) {
                 ScrobbleSessions.current(ScrobbleProvider.LAST_FM)?.let(::add)
             }
@@ -594,6 +605,17 @@ class ScrobbleManager internal constructor(
                 ScrobbleSessions.current(ScrobbleProvider.LISTEN_BRAINZ)?.let(::add)
             }
         }
+
+    private fun isHeldForExpiredSession(account: ScrobbleAccount): Boolean =
+        account.provider == ScrobbleProvider.LAST_FM && Settings.shared.lastFmSessionExpired
+
+    // Error 9 means the stored session no longer matches the API key; only signing in again fixes it.
+    private fun isExpiredLastFmSession(
+        account: ScrobbleAccount,
+        failure: Throwable?,
+    ): Boolean = account.provider == ScrobbleProvider.LAST_FM && (failure as? ScrobbleApiException)?.apiErrorCode == 9
+
+    private fun markLastFmSessionExpired(account: ScrobbleAccount) = ScrobbleSessions.markLastFmSessionExpired(account)
 
     private fun nextAttemptAt(
         attempt: Int,
@@ -634,10 +656,6 @@ class ScrobbleManager internal constructor(
         const val BASE_RETRY_MS = 30_000L
         const val MAX_RETRY_MS = 6 * 60 * 60 * 1000L
     }
-
-    internal val playedMsForTest get() = totalPlayedMs
-    internal val startedAtForTest get() = songStartedAtTimestamp
-    internal val hasActiveTickerForTest get() = scrobbleJob?.isActive == true
 
     internal suspend fun retryPendingScrobblesForTest() = retryPendingScrobbles()
 }

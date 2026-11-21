@@ -22,7 +22,7 @@ Cancellation after a native handover commits the playing track's identity, resou
 
 Other crossfades keep separate players and their gain ramps. Same-album gapless transitions use the playlist path and do not ramp, even when crossfade is enabled. Video, live streams and tracks restored at a nonzero position keep the separate-player preload path. Queue edits, repeat-one and end-of-song sleep timers cancel the queued source.
 
-On Android, `MusicService.seekTo` cancels an active crossfade and leaves an unstarted preload queued.
+On Android, `MusicService.seekTo` cancels an active crossfade and leaves an unstarted preload queued. A ready preload is discarded before EOF or crossfade handoff if its requested audio/video mode no longer matches the current settings.
 
 ## Seek diagnostics
 
@@ -30,7 +30,7 @@ Export the playback log immediately after a jump. Android's 500-event buffer rec
 
 Lyrics taps include line indices, timestamps and offsets. Media-session seeks identify the command. Warm replacements remain muted until the outgoing player releases, while intentional crossfades keep their gain ramps.
 
-Android keeps silent preloads out of system audio-effect sessions. A secondary player opens its effects session when overlap starts or when it becomes the primary player. Canceling a silent preload sends no effect-session broadcasts.
+Android keeps silent preloads out of system audio-effect session registration. A secondary player uses its own session ID and registers when overlap starts or when it becomes the primary player, which then adopts that ID. Silent preparation and cancellation send no effect-session broadcasts.
 
 Seek-bar release requires a changed value and the same song and duration as the gesture. Track/duration changes cancel pending gestures. Unknown-duration and live tracks cannot use the shared scrubber.
 

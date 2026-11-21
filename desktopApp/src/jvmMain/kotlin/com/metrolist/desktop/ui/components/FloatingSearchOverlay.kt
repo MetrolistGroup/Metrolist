@@ -179,8 +179,8 @@ fun FloatingSearchOverlay(
     LaunchedEffect(isVisible, searchFieldPlaced) {
         if (isVisible && searchFieldPlaced) focusRequester.requestFocus()
     }
-    LaunchedEffect(transition.currentState, transition.targetState, transition.isRunning) {
-        if (hasBeenVisible && !transition.currentState && !transition.targetState && !transition.isRunning) onDismiss()
+    LaunchedEffect(isVisible, transition.currentState, transition.targetState, transition.isRunning) {
+        if (hasBeenVisible && !isVisible && !transition.currentState && !transition.targetState && !transition.isRunning) onDismiss()
     }
 
     val animateDismiss = {

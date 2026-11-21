@@ -30,6 +30,7 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.LayoutDirection
 import com.metrolist.shared.ui.utils.markPixelsImmutable
+import com.metrolist.shared.utils.isDesktop
 import kotlin.math.ceil
 import kotlin.math.max
 import kotlin.math.min
@@ -109,6 +110,7 @@ internal class ClusterMaskCache(
     private val scales = FloatArray(count)
     private val rasterScope = CanvasDrawScope()
     private val white = SolidColor(Color.White)
+    private val maskConfig = if (isDesktop) ImageBitmapConfig.Argb8888 else ImageBitmapConfig.Alpha8
 
     val layerPaint = Paint()
 
@@ -140,12 +142,13 @@ internal class ClusterMaskCache(
         val w = ceil(lw * s).toInt().coerceIn(1, MAX_MASK_SIDE.toInt())
         val h = ceil(lh * s).toInt().coerceIn(1, MAX_MASK_SIDE.toInt())
 
-        val bmp = ImageBitmap(w, h, ImageBitmapConfig.Alpha8)
+        val bmp = ImageBitmap(w, h, maskConfig)
 
         val fullW = ceil(lw).toInt().coerceIn(1, MAX_GLOW_FULL_SIDE)
         val fullH = ceil(lh).toInt().coerceIn(1, MAX_GLOW_FULL_SIDE)
-        val full = ImageBitmap(fullW, fullH, ImageBitmapConfig.Alpha8)
+        val full = ImageBitmap(fullW, fullH, maskConfig)
         rasterScope.draw(density, LayoutDirection.Ltr, Canvas(full), Size(fullW.toFloat(), fullH.toFloat())) {
+            drawRect(color = Color.Transparent, blendMode = BlendMode.Clear)
             drawText(
                 textLayoutResult = layout,
                 topLeft = Offset(padPx, padPx),
@@ -154,6 +157,7 @@ internal class ClusterMaskCache(
             )
         }
         rasterScope.draw(density, LayoutDirection.Ltr, Canvas(bmp), Size(w.toFloat(), h.toFloat())) {
+            drawRect(color = Color.Transparent, blendMode = BlendMode.Clear)
             withTransform({ scale(s, s, Offset.Zero) }) {
                 drawImage(
                     image = full,
@@ -245,8 +249,9 @@ internal class ClusterMaskCache(
         val w = ceil(lw * s).toInt().coerceIn(1, MAX_MASK_SIDE.toInt())
         val h = ceil(lh * s).toInt().coerceIn(1, MAX_MASK_SIDE.toInt())
 
-        val bmp = ImageBitmap(w, h, ImageBitmapConfig.Alpha8)
+        val bmp = ImageBitmap(w, h, maskConfig)
         rasterScope.draw(density, LayoutDirection.Ltr, Canvas(bmp), Size(w.toFloat(), h.toFloat())) {
+            drawRect(color = Color.Transparent, blendMode = BlendMode.Clear)
             withTransform({ scale(s, s, Offset.Zero) }) {
                 drawText(
                     textLayoutResult = layout,
@@ -296,16 +301,57 @@ internal fun computeWipe(
     activeSylProgress: Float,
     gradientWidth: Float,
     out: WipeResult,
+) = computeWipe(
+    syllableIndex = vc.syllableIndex,
+    lastSyllableIndex = vc.lastSyllableIndex,
+    clusterLineIdx = vc.lineIdx,
+    clusterWidth = vc.width,
+    isRtlLine = isRtlLine,
+    lineStart = lineStart,
+    lineWidth = lineWidth,
+    localStart = localStart,
+    localEnd = localEnd,
+    activeSylIdx = activeSylIdx,
+    activeLineIdx = activeLineIdx,
+    curGX = curGX,
+    isActiveSylLastOfLine = isActiveSylLastOfLine,
+    activeSylProgress = activeSylProgress,
+    gradientWidth = gradientWidth,
+    out = out,
+)
+
+internal fun computeWipe(
+    syllableIndex: Int,
+    lastSyllableIndex: Int,
+    clusterLineIdx: Int,
+    clusterWidth: Float,
+    isRtlLine: Boolean,
+    lineStart: Float,
+    lineWidth: Float,
+    localStart: Float,
+    localEnd: Float,
+    activeSylIdx: Int,
+    activeLineIdx: Int,
+    curGX: Float,
+    isActiveSylLastOfLine: Boolean,
+    activeSylProgress: Float,
+    gradientWidth: Float,
+    out: WipeResult,
 ) {
     val halfGradientWidth = gradientWidth / 2f
 
-    val lastSylIdx = if (vc.lastSyllableIndex != -1) vc.lastSyllableIndex else vc.syllableIndex
-    val isPartOfActiveSyl = vc.syllableIndex != -1 && activeSylIdx in vc.syllableIndex..lastSylIdx
-    val effectiveLineIdx = if (isPartOfActiveSyl) vc.lineIdx else activeLineIdx
+    val lastSylIdx = if (lastSyllableIndex != -1) lastSyllableIndex else syllableIndex
+    val isPartOfActiveSyl = syllableIndex != -1 && activeSylIdx in syllableIndex..lastSylIdx
+    // A sung syllable stays fully lit; otherwise the next word's band would dim its tail again.
+    if (syllableIndex != -1 && activeSylIdx >= 0 && lastSylIdx < activeSylIdx) {
+        out.mode = WIPE_PAST
+        return
+    }
+    val effectiveLineIdx = if (isPartOfActiveSyl) clusterLineIdx else activeLineIdx
 
     val rawLocalX = curGX - lineStart
     val brushShift =
-        if (vc.lineIdx == effectiveLineIdx && isActiveSylLastOfLine) {
+        if (clusterLineIdx == effectiveLineIdx && isActiveSylLastOfLine) {
             activeSylProgress * halfGradientWidth
         } else {
             0f
@@ -314,9 +360,14 @@ internal fun computeWipe(
     val localX =
         when {
             activeSylIdx == -1 -> -gradientWidth * 2f
-            isPartOfActiveSyl -> rawLocalX + brushShift
-            vc.lineIdx < activeLineIdx -> lineWidth + gradientWidth * 2f
-            vc.lineIdx > activeLineIdx -> -gradientWidth * 2f
+
+            // The band leaves the syllable's own glyphs as it ends, so a pause before the next word shows no dim tail.
+            isPartOfActiveSyl -> rawLocalX + activeSylProgress * halfGradientWidth
+
+            clusterLineIdx < activeLineIdx -> lineWidth + gradientWidth * 2f
+
+            clusterLineIdx > activeLineIdx -> -gradientWidth * 2f
+
             else -> rawLocalX + brushShift
         }
 
@@ -335,16 +386,16 @@ internal fun computeWipe(
         val growProgress = (localX / halfGradientWidth).coerceIn(0f, 1f)
         val growWidth = max(0.1f, gradientWidth * growProgress)
         if (isRtlLine) {
-            out.bandStart = vc.width + localStart
-            out.bandEnd = vc.width + localStart - growWidth
+            out.bandStart = clusterWidth + localStart
+            out.bandEnd = clusterWidth + localStart - growWidth
         } else {
             out.bandStart = -localStart
             out.bandEnd = growWidth - localStart
         }
     } else {
         if (isRtlLine) {
-            out.bandStart = vc.width - (relWiperX - halfGradientWidth)
-            out.bandEnd = vc.width - (relWiperX + halfGradientWidth)
+            out.bandStart = clusterWidth - (relWiperX - halfGradientWidth)
+            out.bandEnd = clusterWidth - (relWiperX + halfGradientWidth)
         } else {
             out.bandStart = relWiperX - halfGradientWidth
             out.bandEnd = relWiperX + halfGradientWidth

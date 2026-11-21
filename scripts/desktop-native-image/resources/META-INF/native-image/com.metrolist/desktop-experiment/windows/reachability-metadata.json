@@ -1,6 +1,19 @@
 {
   "reflection": [
     {
+      "type": "com.sun.jna.Callback$UncaughtExceptionHandler",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "uncaughtException",
+          "parameterTypes": [
+            "com.sun.jna.Callback",
+            "java.lang.Throwable"
+          ]
+        }
+      ]
+    },
+    {
       "type": "com.metrolist.desktop.window.jna.User32Extend",
       "jniAccessible": true,
       "allDeclaredFields": true,
@@ -4660,6 +4673,27 @@
           "com.sun.jna.platform.win32.Wtsapi32"
         ]
       }
+    },
+    {
+      "type": {
+        "proxy": [
+          "io.github.vinceglb.filekit.dialogs.platform.windows.jna.Shell32"
+        ]
+      }
+    },
+    {
+      "type": "io.github.vinceglb.filekit.dialogs.platform.windows.jna.Shell32",
+      "allPublicMethods": true
+    },
+    {
+      "type": "io.github.vinceglb.filekit.dialogs.platform.windows.jna.ShTypes$COMDLG_FILTERSPEC",
+      "allDeclaredFields": true,
+      "allPublicConstructors": true
+    },
+    {
+      "type": "io.github.vinceglb.filekit.dialogs.platform.windows.jna.ShTypes$PROPERTYKEY",
+      "allDeclaredFields": true,
+      "allPublicConstructors": true
     }
   ],
   "resources": [

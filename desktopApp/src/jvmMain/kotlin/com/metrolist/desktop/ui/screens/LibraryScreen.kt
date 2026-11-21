@@ -41,8 +41,10 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -51,6 +53,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.metrolist.desktop.state.app.AppState
 import com.metrolist.desktop.state.app.UiState
 import com.metrolist.desktop.state.content.ArtistState
 import com.metrolist.desktop.state.content.HomeState
@@ -111,6 +114,7 @@ import com.metrolist.shared.settings.initialLibraryFilter
 import com.metrolist.shared.ui.components.AlertDialog
 import com.metrolist.shared.ui.components.FabMenuPopup
 import com.metrolist.shared.ui.components.LibraryItemContainer
+import com.metrolist.shared.ui.components.PlaylistDeleteConfirmation
 import com.metrolist.shared.ui.components.PopupContent
 import com.metrolist.shared.ui.components.PopupVisibility
 import com.metrolist.shared.ui.components.ScrollingAddButton
@@ -130,6 +134,8 @@ import com.metrolist.shared.ui.screens.libraryContentText
 import com.metrolist.shared.ui.screens.rememberLibrarySearchScrollState
 import com.metrolist.shared.ui.theme.MdSpacing
 import com.metrolist.shared.ui.utils.verticalScrollWithDrag
+import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.getString
 import org.jetbrains.compose.resources.stringResource
 
 @Composable
@@ -176,10 +182,10 @@ fun LibraryScreen(
     }
     var showNewPlaylistMenu by remember { mutableStateOf(false) }
     var createName by remember { mutableStateOf("") }
-    var playlistToRename by remember { mutableStateOf<PlaylistItem?>(null) }
-    var renameName by remember { mutableStateOf("") }
-    var playlistToDelete by remember { mutableStateOf<PlaylistItem?>(null) }
-    var playlistDeleteFailed by remember { mutableStateOf(false) }
+    var createDraftRevision by remember { mutableLongStateOf(0L) }
+    val renameDialog = remember { PlaylistRenameDialogState() }
+    val deleteConfirmationScope = rememberCoroutineScope()
+    val deleteConfirmation = remember { PlaylistDeleteConfirmation(deleteConfirmationScope) }
     var showHiddenItems by remember { mutableStateOf(false) }
     val hiddenItemKeys = remember(hiddenItemVersion) { HiddenLibraryItems.keys() }
     val hiddenItems = remember(hiddenItemVersion) { HiddenLibraryItems.all() }
@@ -335,14 +341,12 @@ fun LibraryScreen(
                                 onRename =
                                     item.takeIf { it.isEditable }?.let {
                                         {
-                                            renameName = it.title
-                                            playlistToRename = it
+                                            renameDialog.open(it)
                                         }
                                     },
                                 onDelete =
                                     {
-                                        playlistDeleteFailed = false
-                                        playlistToDelete = item
+                                        deleteConfirmation.open(item)
                                     }.takeUnless { isHistoryPlaylist },
                                 onDismiss = contextMenu::dismiss,
                             )
@@ -460,36 +464,48 @@ fun LibraryScreen(
             title = stringResource(Res.string.create_playlist_dialog_title),
             confirmActionLabel = stringResource(Res.string.playlist_create_action),
             value = createName,
-            onValueChange = { createName = it },
+            onValueChange = {
+                createName = it
+                createDraftRevision++
+            },
             onDismiss = { showCreateDialog = false },
         ) {
             val name = createName
+            val revision = ++createDraftRevision
             showCreateDialog = false
             createName = ""
-            LibraryContentState.createPlaylist(name) { result -> result.onSuccess { PlaylistAlbumState.fetchPlaylistData(it) } }
+            LibraryContentState.createPlaylist(name) { result ->
+                result
+                    .onSuccess { PlaylistAlbumState.fetchPlaylistData(it) }
+                    .onFailure {
+                        if (createDraftRevision == revision) createName = name
+                        AppState.scope.launch {
+                            AppState.snackbarHostState.showSnackbar(getString(Res.string.error_occurred))
+                        }
+                    }
+            }
         }
     }
-    PopupContent(playlistToRename) { playlist ->
+    PopupContent(renameDialog.playlist) {
         PlaylistNameDialog(
             title = stringResource(Res.string.rename_playlist_dialog_title),
             confirmActionLabel = stringResource(Res.string.playlist_rename_action),
-            value = renameName,
-            onValueChange = { renameName = it },
-            onDismiss = { playlistToRename = null },
+            value = renameDialog.name,
+            onValueChange = { renameDialog.name = it },
+            onDismiss = renameDialog::dismiss,
+            isSaving = renameDialog.isSaving,
+            error = if (renameDialog.failed) stringResource(Res.string.error_occurred) else null,
         ) {
-            LibraryContentState.renamePlaylist(playlist, renameName) {}
-            playlistToRename = null
+            renameDialog.submit(LibraryContentState::renamePlaylist)
         }
     }
-    playlistToDelete?.let { playlist ->
+    deleteConfirmation.request?.let { request ->
+        val playlist = request.playlist
         val deletesPlaylist = playlist.isLocal || playlist.isEditable
         val cancelFocusRequester = remember { FocusRequester() }
         LaunchedEffect(playlist.id) { cancelFocusRequester.requestFocus() }
         AlertDialog(
-            onDismissRequest = {
-                playlistToDelete = null
-                playlistDeleteFailed = false
-            },
+            onDismissRequest = { deleteConfirmation.dismiss(request) },
             title = {
                 Text(
                     if (deletesPlaylist) stringResource(Res.string.delete_playlist_confirm) else playlist.title,
@@ -502,22 +518,15 @@ fun LibraryScreen(
                             if (deletesPlaylist) Res.string.action_cannot_be_undone else Res.string.remove_from_library,
                         ),
                     )
-                    if (playlistDeleteFailed) {
+                    if (deleteConfirmation.failed) {
                         Text(stringResource(Res.string.error_occurred), color = colorScheme.error)
                     }
                 }
             },
             confirmButton = {
                 Button(
-                    onClick = {
-                        LibraryContentState.deletePlaylist(playlist) { result ->
-                            result.onSuccess {
-                                playlistToDelete = null
-                                playlistDeleteFailed = false
-                            }
-                            result.onFailure { playlistDeleteFailed = true }
-                        }
-                    },
+                    enabled = !deleteConfirmation.isSubmitting(request),
+                    onClick = { deleteConfirmation.confirm(request, LibraryContentState::deletePlaylist) },
                     colors = ButtonDefaults.buttonColors(containerColor = colorScheme.error),
                     shapes = ButtonDefaults.shapes(),
                 ) {
@@ -526,10 +535,7 @@ fun LibraryScreen(
             },
             dismissButton = {
                 TextButton(
-                    onClick = {
-                        playlistToDelete = null
-                        playlistDeleteFailed = false
-                    },
+                    onClick = { deleteConfirmation.dismiss(request) },
                     modifier = Modifier.focusRequester(cancelFocusRequester),
                     shapes = ButtonDefaults.shapes(),
                 ) { Text(stringResource(Res.string.cancel)) }
@@ -577,14 +583,26 @@ internal fun PlaylistNameDialog(
     value: String,
     onValueChange: (String) -> Unit,
     onDismiss: () -> Unit,
+    isSaving: Boolean = false,
+    error: String? = null,
     onConfirm: () -> Unit,
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(title) },
-        text = { OutlinedTextField(value, onValueChange, label = { Text(stringResource(Res.string.playlist_name)) }, singleLine = true) },
+        text = {
+            OutlinedTextField(
+                value,
+                onValueChange,
+                enabled = !isSaving,
+                label = { Text(stringResource(Res.string.playlist_name)) },
+                singleLine = true,
+                isError = error != null,
+                supportingText = if (error != null) ({ Text(error) }) else null,
+            )
+        },
         confirmButton = {
-            TextButton(enabled = value.isNotBlank(), onClick = onConfirm, shapes = ButtonDefaults.shapes()) {
+            TextButton(enabled = !isSaving && value.isNotBlank(), onClick = onConfirm, shapes = ButtonDefaults.shapes()) {
                 Text(confirmActionLabel)
             }
         },

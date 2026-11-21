@@ -110,6 +110,7 @@ fun BrowseContent(
     onAlbumPlay: ((AlbumItem) -> Unit)? = null,
     isItemEnabled: (YTItem) -> Boolean = { true },
     headerContent: (@Composable () -> Unit)? = null,
+    songContainer: @Composable (SongItem, @Composable () -> Unit) -> Unit = { _, content -> content() },
 ) {
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     val layoutDirection = LocalLayoutDirection.current
@@ -343,20 +344,23 @@ fun BrowseContent(
                                     val enabled = !item.isUnavailable && isItemEnabled(item)
                                     val menu = onItemLongClick?.let { callback -> { callback(item) } }
                                     if (isList) {
-                                        YTListItem(
-                                            item = item,
-                                            onClick = { onItemClick(item, songs) },
-                                            onLongClick = menu,
-                                            onShowMenu = menu,
-                                            onArtistClick = onArtistClick.takeIf { enabled },
-                                            onAlbumClick = onAlbumClick.takeIf { enabled },
-                                            onAlbumPlay = onAlbumPlay?.let { play -> (item as? AlbumItem)?.let { { play(it) } } },
-                                            isCurrent = playback.isCurrent,
-                                            isPlaying = playback.isPlaying,
-                                            enabled = enabled,
-                                            clickableMetadata = !sectionPage,
-                                            modifier = if (sectionPage) Modifier.tvFocusHighlight() else Modifier,
-                                        )
+                                        val row: @Composable () -> Unit = {
+                                            YTListItem(
+                                                item = item,
+                                                onClick = { onItemClick(item, songs) },
+                                                onLongClick = menu,
+                                                onShowMenu = menu,
+                                                onArtistClick = onArtistClick.takeIf { enabled },
+                                                onAlbumClick = onAlbumClick.takeIf { enabled },
+                                                onAlbumPlay = onAlbumPlay?.let { play -> (item as? AlbumItem)?.let { { play(it) } } },
+                                                isCurrent = playback.isCurrent,
+                                                isPlaying = playback.isPlaying,
+                                                enabled = enabled,
+                                                clickableMetadata = !sectionPage,
+                                                modifier = if (sectionPage) Modifier.tvFocusHighlight() else Modifier,
+                                            )
+                                        }
+                                        if (item is SongItem && enabled) songContainer(item, row) else row()
                                     } else {
                                         YTGridItem(
                                             item = item,

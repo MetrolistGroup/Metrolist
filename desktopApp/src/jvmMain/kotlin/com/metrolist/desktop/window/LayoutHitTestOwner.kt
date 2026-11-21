@@ -45,6 +45,11 @@ interface LayoutHitTestOwner {
         x: Float,
         y: Float,
     ): Boolean = false
+
+    fun overlayHitTest(
+        x: Float,
+        y: Float,
+    ): Boolean? = null
 }
 
 private val Any?.isPopupSourceResetObserver: Boolean
@@ -162,13 +167,18 @@ internal class CanvasLayersLayoutHitTestOwner(
     override fun hitTest(
         x: Float,
         y: Float,
-    ): Boolean =
+    ): Boolean = overlayHitTest(x, y) ?: getLayoutNode(mainOwnerRef).layoutNodeHitTest(x, y)
+
+    override fun overlayHitTest(
+        x: Float,
+        y: Float,
+    ): Boolean? =
         hitTestSceneLayers(
             layers = layers,
             focusedLayer = focusedLayerField.get(scene),
             isInBounds = { layer -> layerIsInBoundMethod?.invoke(layer, packFloats(x, y)) == true },
             hitTest = { layer -> getLayoutNode(layerOwnerField.get(layer)).layoutNodeHitTest(x, y) },
-        ) ?: getLayoutNode(mainOwnerRef).layoutNodeHitTest(x, y)
+        )
 }
 
 internal fun hitTestSceneLayers(

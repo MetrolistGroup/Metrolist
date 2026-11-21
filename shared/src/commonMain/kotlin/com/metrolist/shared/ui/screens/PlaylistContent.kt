@@ -50,11 +50,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.metrolist.shared.generated.resources.Res
 import com.metrolist.shared.generated.resources.add_a_song
-import com.metrolist.shared.generated.resources.minutes_short
 import com.metrolist.shared.generated.resources.n_hidden_song
 import com.metrolist.shared.generated.resources.partial_song_count
 import com.metrolist.shared.generated.resources.search_no_results
-import com.metrolist.shared.generated.resources.seconds_short
 import com.metrolist.shared.generated.resources.song_count_with_hidden
 import com.metrolist.shared.model.PlaylistItem
 import com.metrolist.shared.model.SongItem
@@ -78,6 +76,7 @@ import com.metrolist.shared.ui.components.SongListItem
 import com.metrolist.shared.ui.components.mediumCollectionArtworkSize
 import com.metrolist.shared.ui.components.rememberItemPlayback
 import com.metrolist.shared.ui.components.rememberScrollingFabState
+import com.metrolist.shared.ui.components.totalDurationText
 import com.metrolist.shared.ui.haptics.HapticEvent
 import com.metrolist.shared.ui.haptics.rememberMetrolistHaptics
 import com.metrolist.shared.ui.menu.artworkMenuActions
@@ -124,6 +123,7 @@ fun PlaylistContent(
     durationSongs: List<SongItem> = artworkSongs,
     hasMoreSongs: Boolean = false,
     hiddenSongCount: Int = 0,
+    loadedSongCount: Int = artworkSongs.size + hiddenSongCount,
     isLoading: Boolean = false,
     previewThumbnail: String? = null,
     loadingHeader: (@Composable () -> Unit)? = null,
@@ -177,7 +177,6 @@ fun PlaylistContent(
     val onEdit = onEdit.takeIf { canEdit }
     val headerPlaylist = remember(playlist, artworkSongs) { playlist?.withLocalArtwork(artworkSongs) }
     val reportedSongCount = playlist?.songCount?.takeIf { it.isNotBlank() }
-    val loadedSongCount = artworkSongs.size + hiddenSongCount
     val totalSongLabel =
         reportedSongCount?.toIntOrNull()?.let { text.songCount(it) }
             ?: reportedSongCount
@@ -201,15 +200,8 @@ fun PlaylistContent(
         remember(durationSongs, hasMoreSongs, loadedSongCount) {
             playlistTotalDuration(durationSongs, hasMoreSongs, loadedSongCount)
         }
-    val durationText =
-        playlist?.durationText?.takeIf(String::isNotBlank) ?: duration?.let {
-            if (it < 60) {
-                pluralStringResource(Res.plurals.seconds_short, it.toInt(), it.toInt())
-            } else {
-                val minutes = (it / 60).toInt()
-                pluralStringResource(Res.plurals.minutes_short, minutes, minutes)
-            }
-        }
+    // YouTube's own text is only a fallback until every song has loaded and the total is known.
+    val durationText = duration?.let { totalDurationText(it) } ?: playlist?.durationText?.takeIf(String::isNotBlank)
     val songCountLabel = listOfNotNull(playlist?.viewCount, songCountWithHidden, durationText).joinToString(" • ")
 
     var internalSearchOpen by remember(playlist?.id) { mutableStateOf(searchQuery.isNotBlank()) }
@@ -343,7 +335,7 @@ fun PlaylistContent(
                     } else {
                         160.dp
                     }
-                LaunchedEffect(isSearchOpen, activeListState, isWide, loadingHeader) {
+                LaunchedEffect(isSearchOpen, activeListState, isWide, loadingHeader, displayedSongs.size) {
                     if (isSearchOpen && !isWide) {
                         activeListState.animateScrollToItem(listOfNotNull(header).size + 1)
                     }
@@ -735,7 +727,8 @@ fun PlaylistContent(
                             }
 
                             item {
-                                Spacer(Modifier.height(32.dp))
+                                // Keep the search row at the top even when results do not fill the viewport.
+                                Spacer(if (isSearchOpen) Modifier.fillParentMaxHeight() else Modifier.height(32.dp))
                             }
                         }
                         LazyListScrollbar(

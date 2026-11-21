@@ -16,6 +16,7 @@ import android.provider.DocumentsContract
 import android.provider.MediaStore
 import android.provider.OpenableColumns
 import androidx.core.net.toUri
+import androidx.media3.common.ParserException
 import androidx.media3.exoplayer.offline.Download
 import coil3.annotation.ExperimentalCoilApi
 import coil3.decode.BlackholeDecoder
@@ -110,11 +111,11 @@ internal fun moveAudioToDirectory(
         if (preferred.createNewFile()) {
             preferred
         } else {
-            File.createTempFile(
-                "${preferred.nameWithoutExtension}-".padEnd(3, '_'),
-                ".${preferred.extension}",
-                directory,
-            )
+            val suffix = ".${preferred.extension}"
+            // File.createTempFile can append up to 20 decimal digits for its random name.
+            val collisionPrefixBytes = 255 - suffix.encodeToByteArray().size - 1 - 20
+            val collisionBase = preferred.nameWithoutExtension.boundedDownloadBaseName(collisionPrefixBytes)
+            File.createTempFile("$collisionBase-".padEnd(3, '_'), suffix, directory)
         }
     try {
         if (!source.renameTo(target)) {
@@ -128,15 +129,41 @@ internal fun moveAudioToDirectory(
     }
 }
 
-internal fun downloadFileBaseName(song: SongItem): String {
-    val artist = song.artists.joinToString(", ") { it.name }.trim()
-    return listOf(artist, song.title.trim())
+internal fun downloadFileBaseName(song: SongItem): String =
+    downloadFileBaseName(song.artists.joinToString(", ") { it.name }.trim(), song.title.trim(), song.id)
+
+internal fun downloadFileBaseName(
+    artist: String,
+    title: String,
+    fallbackId: String,
+): String =
+    listOf(artist, title)
         .filter(String::isNotBlank)
         .joinToString(" - ")
         .replace(Regex("""[\\/:*?\"<>|\p{Cc}]"""), "_")
         .trim(' ', '.')
-        .take(120)
-        .ifBlank { song.id }
+        .boundedDownloadBaseName()
+        .ifBlank { fallbackId }
+
+// The normal basename leaves room for the longest audio extension.
+private fun String.boundedDownloadBaseName(maxBytes: Int = 255 - ".audio".length): String {
+    var end = 0
+    var bytes = 0
+    while (end < length) {
+        val codePoint = codePointAt(end)
+        val charCount = Character.charCount(codePoint)
+        val byteCount =
+            when {
+                codePoint <= 0x7F -> 1
+                codePoint <= 0x7FF -> 2
+                codePoint <= 0xFFFF -> 3
+                else -> 4
+            }
+        if (end + charCount > 120 || bytes + byteCount > maxBytes) break
+        end += charCount
+        bytes += byteCount
+    }
+    return substring(0, end)
 }
 
 internal fun cacheableAudioResource(
@@ -144,7 +171,8 @@ internal fun cacheableAudioResource(
     now: Instant = Clock.System.now(),
 ): PlaybackResource? =
     resource?.takeIf {
-        (it.isDirectFile || it.isSabr) && it.profileId != "cached-audio" && !it.url.startsWith("file:") &&
+        (it.isDirectFile || it.isSabr) && !it.isMuxedProgressive && it.profileId != CACHED_AUDIO_PROFILE_ID &&
+            !it.url.startsWith("file:") &&
             (it.expiresAt?.let { expiry -> expiry > now + 60.seconds } != false)
     }
 
@@ -318,7 +346,7 @@ class AudioCacheManager(
                 expiresAt = null,
                 contentLengthBytes = fileSize.takeIf { it >= 0L },
                 clientName = "local",
-                profileId = "cached-audio",
+                profileId = CACHED_AUDIO_PROFILE_ID,
                 requireBoundedRange = false,
                 allowPlaybackTrackingFallback = !song.isLocal && !song.isUploaded && !song.isPodcast && !song.id.startsWith("local_"),
             ).withCachedFormat(database.dao().format(songId).first())
@@ -449,6 +477,9 @@ class AudioCacheManager(
         }
 
     suspend fun removeDownload(songId: String): Boolean = removeAudio(songId, KIND_DOWNLOAD)
+
+    // A corrupt cached file fails on every play; dropping it lets the next play stream and cache again.
+    suspend fun removeCorruptCache(songId: String): Boolean = removeAudio(songId, KIND_CACHE)
 
     suspend fun removeCache(
         songId: String,
@@ -780,14 +811,7 @@ class AudioCacheManager(
                             )
 
                         val extension = extensionForMimeType(mimeType)
-                        val baseName =
-                            listOf(entry.artist, entry.title)
-                                .filter(String::isNotBlank)
-                                .joinToString(" - ")
-                                .replace(Regex("""[\\/:*?\"<>|\p{Cc}]"""), "_")
-                                .trim(' ', '.')
-                                .take(120)
-                                .ifBlank { safeId }
+                        val baseName = downloadFileBaseName(entry.artist, entry.title, safeId)
                         publishStoredAudio(entry, {
                             when {
                                 targetCustom -> {
@@ -1732,3 +1756,12 @@ internal class DownloadSpaceBudget(
 }
 
 internal class InsufficientAudioStorageException : IOException("Insufficient space for audio download")
+
+internal const val CACHED_AUDIO_PROFILE_ID = "cached-audio"
+
+internal fun isCorruptCachedAudioFailure(
+    resource: PlaybackResource?,
+    error: Throwable?,
+): Boolean =
+    resource?.profileId == CACHED_AUDIO_PROFILE_ID &&
+        generateSequence(error) { it.cause?.takeUnless { cause -> cause === it } }.any { it is ParserException }

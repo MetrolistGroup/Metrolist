@@ -12,6 +12,8 @@ import io.github.vinceglb.filekit.dialogs.FileKitDialogSettings
 import io.github.vinceglb.filekit.dialogs.openFileSaver
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.jetbrains.compose.resources.getString
@@ -54,6 +56,7 @@ internal suspend fun writeCollectionExport(
         val temporary = Files.createTempFile(file.absoluteFile.parentFile.toPath(), ".playlist-", ".tmp")
         try {
             Files.writeString(temporary, format.render(songs))
+            currentCoroutineContext().ensureActive()
             Files.move(temporary, file.toPath(), StandardCopyOption.REPLACE_EXISTING)
         } finally {
             Files.deleteIfExists(temporary)

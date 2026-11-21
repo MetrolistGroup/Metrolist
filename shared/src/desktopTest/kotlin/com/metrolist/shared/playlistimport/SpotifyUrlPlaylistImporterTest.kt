@@ -9,6 +9,7 @@ import io.ktor.client.engine.mock.MockRequestHandleScope
 import io.ktor.client.engine.mock.respond
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
+import io.ktor.http.content.TextContent
 import io.ktor.http.headersOf
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -252,6 +253,86 @@ class SpotifyUrlPlaylistImporterTest {
 
             assertEquals(fallbackTitles.playlist, result.title)
             assertEquals(ImportSourceType.SPOTIFY, result.provider)
+        }
+
+    @Test
+    fun embedNullAndBlankTrackMetadataDoesNotBecomeSearchTerms() =
+        runBlocking {
+            val html =
+                createEmbedHtml(1, false).replace(
+                    """{"title": "Track 1", "subtitle": "Artist 1"}""",
+                    """
+                    {"title": null, "subtitle": "Artist"},
+                    {"subtitle": "Artist"},
+                    {"title": "   ", "subtitle": "Artist"},
+                    {"title": "Real track", "subtitle": null},
+                    {"title": "null", "subtitle": "null"}
+                    """.trimIndent(),
+                )
+            val client = HttpClient(MockEngine { respondHtml(html) })
+            try {
+                SpotifyUrlPlaylistImporter.resetClientForTests(client)
+                val result = SpotifyUrlPlaylistImporter.loadPlaylist("spotify:playlist:test").getOrThrow()
+                assertEquals(listOf("Real track", "null"), result.tracks.map { it.title })
+                assertEquals(listOf("", "null"), result.tracks.map { it.artist })
+            } finally {
+                client.close()
+            }
+        }
+
+    @Test
+    fun skippedEmbedTracksStillCountTowardThePaginationOffset() =
+        runBlocking {
+            val html = createEmbedHtml(100, true).replace("\"title\": \"Track 1\"", "\"title\": null")
+            var requestedOffset: Int? = null
+            val client =
+                HttpClient(
+                    MockEngine { request ->
+                        when {
+                            request.url.toString().contains("/embed/") -> {
+                                respondHtml(html)
+                            }
+
+                            request.url.toString().contains("clienttoken") -> {
+                                respondJson("""{"granted_token":{"token":"test","expires_after_seconds":3600}}""")
+                            }
+
+                            else -> {
+                                val body = (request.body as TextContent).text
+                                requestedOffset =
+                                    Regex("\"offset\":(\\d+)")
+                                        .find(body)
+                                        ?.groupValues
+                                        ?.get(1)
+                                        ?.toInt()
+                                respondJson("""{"data":{"playlistV2":{"content":{"totalCount":100,"items":[]}}}}""")
+                            }
+                        }
+                    },
+                )
+            try {
+                SpotifyUrlPlaylistImporter.resetClientForTests(client)
+                val result = SpotifyUrlPlaylistImporter.loadPlaylist("spotify:playlist:test").getOrThrow()
+                assertEquals(100, requestedOffset)
+                assertEquals(99, result.tracks.size)
+                assertEquals("Track 2", result.tracks.first().title)
+            } finally {
+                client.close()
+            }
+        }
+
+    @Test
+    fun nullEmbedNameUsesItsAlternativeTitle() =
+        runBlocking {
+            val html = createEmbedHtml(1, false).replace("\"name\": \"Test Playlist\",", "\"name\": null, \"title\": \"Actual playlist\",")
+            val client = HttpClient(MockEngine { respondHtml(html) })
+            try {
+                SpotifyUrlPlaylistImporter.resetClientForTests(client)
+                val result = SpotifyUrlPlaylistImporter.loadPlaylist("spotify:playlist:test").getOrThrow()
+                assertEquals("Actual playlist", result.title)
+            } finally {
+                client.close()
+            }
         }
 
     @Test

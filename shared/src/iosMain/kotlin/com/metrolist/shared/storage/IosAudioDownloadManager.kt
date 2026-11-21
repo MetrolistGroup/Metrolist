@@ -436,7 +436,8 @@ class IosAudioDownloadManager(
         try {
             saveAudio(
                 song,
-                directResource,
+                // A remuxed Opus file is MP4 and its length differs from the WebM stream.
+                if (capture.isRemuxed) directResource.copy(mimeType = "audio/mp4", contentLengthBytes = null) else directResource,
                 KIND_CACHE,
                 cacheMayPublish = { capture.mayPublish && Settings.shared.songCacheEnabled },
             ) { _, path ->

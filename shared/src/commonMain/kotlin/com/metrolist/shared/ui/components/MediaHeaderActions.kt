@@ -56,19 +56,23 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.input.InputMode
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalInputModeManager
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import com.metrolist.shared.generated.resources.Res
 import com.metrolist.shared.generated.resources.clear_search
@@ -160,8 +164,10 @@ fun InlineSearchRow(
             LaunchedEffect(isSearchOpen) {
                 if (isSearchOpen) focusRequester.requestFocus()
             }
-            LaunchedEffect(visibility.isIdle, visibility.currentState, imeBottom) {
-                if (visibility.isIdle && visibility.currentState) bringIntoViewRequester.bringIntoView()
+            var barSize by remember { mutableStateOf(IntSize.Zero) }
+            val revealHeight = searchResultsRevealHeight(imeBottom)
+            LaunchedEffect(visibility.isIdle, visibility.currentState, imeBottom, barSize) {
+                if (visibility.isIdle && visibility.currentState) bringIntoViewRequester.revealBelow(barSize, revealHeight)
             }
             CompactSearchBar(
                 query = query,
@@ -169,7 +175,11 @@ fun InlineSearchRow(
                 placeholder = stringResource(Res.string.search_songs),
                 focusRequester = focusRequester,
                 onClose = onClose,
-                modifier = Modifier.fillMaxWidth().bringIntoViewRequester(bringIntoViewRequester),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .onSizeChanged { barSize = it }
+                        .bringIntoViewRequester(bringIntoViewRequester),
             )
         }
     }
@@ -201,9 +211,11 @@ fun ExpandableSearchBar(
                 focusRequester.requestFocus()
             }
         }
-        LaunchedEffect(visibility.isIdle, visibility.currentState, imeBottom) {
+        var barSize by remember { mutableStateOf(IntSize.Zero) }
+        val revealHeight = searchResultsRevealHeight(imeBottom)
+        LaunchedEffect(visibility.isIdle, visibility.currentState, imeBottom, barSize) {
             if (visibility.isIdle && visibility.currentState) {
-                bringIntoViewRequester.bringIntoView()
+                bringIntoViewRequester.revealBelow(barSize, revealHeight)
             }
         }
         CompactSearchBar(
@@ -216,9 +228,21 @@ fun ExpandableSearchBar(
                 Modifier
                     .fillMaxWidth()
                     .then(if (maxWidth != null) Modifier.widthIn(max = maxWidth) else Modifier)
+                    .onSizeChanged { barSize = it }
                     .bringIntoViewRequester(bringIntoViewRequester),
         )
     }
+}
+
+// Part of the visible window to keep in view below an opened search bar, so its results show above the keyboard.
+@Composable
+private fun searchResultsRevealHeight(imeBottom: Int): Float = (LocalWindowInfo.current.containerSize.height - imeBottom) * 0.4f
+
+private suspend fun BringIntoViewRequester.revealBelow(
+    barSize: IntSize,
+    revealHeight: Float,
+) {
+    bringIntoView(Rect(0f, 0f, barSize.width.toFloat(), barSize.height + revealHeight))
 }
 
 @Composable
