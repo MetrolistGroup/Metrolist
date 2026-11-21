@@ -2352,7 +2352,7 @@
     <string name="lyrics_editor_import">Импортировать/вставить JSON или LRC</string>
     <string name="lyrics_editor_import_error">Не удалось импортировать эти тексты песен. Используйте MLX v2 JSON или LRC.</string>
     <string name="lyrics_editor_invalid_timestamp">Неверная метка времени в строке %1$d. Используйте формат [мм:сс.cc]. Ваш черновик будет сохранен до тех пор, пока вы не исправите ошибку.</string>
-    <string name="lyrics_editor_save_error">Не удалось сохранить текст песни. Попробуйте снова, прежде чем выйти из редактора.</string>
+    <string name="lyrics_editor_save_error">Не удалось сохранить текст песни. Повторите попытку, прежде чем выйти из редактора.</string>
     <string name="lyrics_editor_limit_error">Этот текст превышает допустимый размер. Ваш черновик сохранен. Сократите его перед экспортом или синхронизацией.</string>
     <string name="song_count_with_hidden">%1$s, %2$s</string>
     <plurals name="n_hidden_song">
@@ -2547,7 +2547,7 @@
     <string name="system_equalizer_unavailable">Системный эквалайзер недоступен. Запустите локальное воспроизведение и убедитесь, что на устройстве установлен эквалайзер.</string>
     <string name="download_filter_in_playlist">В плейлисте</string>
     <string name="download_filter_not_in_playlist">Нет в плейлисте</string>
-    <string name="download_filter_unavailable">Не удалось загрузить плейлист полностью. Отображаются все загруженные файлы. Попробуйте еще раз применить фильтр плейлиста.</string>
+    <string name="download_filter_unavailable">Не удалось загрузить плейлист полностью. Отображаются все загруженные файлы. Повторите попытку, чтобы применить фильтр плейлиста.</string>
     <string name="statistics_share">Поделиться статистикой прослушивания</string>
     <string name="statistics_save_image">Сохранить изображение со статистикой</string>
     <string name="statistics_share_failed">Не удалось создать или поделиться изображением со статистикой. Повторите попытку.</string>
