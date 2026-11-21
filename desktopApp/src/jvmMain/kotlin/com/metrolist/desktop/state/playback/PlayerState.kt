@@ -2304,19 +2304,9 @@ object PlayerState {
     ) = withContext(Dispatchers.Main) {
         if (!shouldCommit()) return@withContext
         val state = snapshot.playback
+        val queueIdentity = Triple(snapshot.sessionId, snapshot.queueRevision, snapshot.queueStateId)
         val startsExplicitRadio =
-            state.explicitRadioQueue &&
-                (
-                    !syncSession.explicitRadioQueue || (
-                        state.queue.displayedItems.size == 1 &&
-                            queue.items.value
-                                .firstOrNull()
-                                ?.id !=
-                            state.queue.displayedItems
-                                .firstOrNull()
-                                ?.id
-                    )
-                )
+            state.explicitRadioQueue && state.queue.displayedItems.size == 1 && appliedDeviceQueue != queueIdentity
         val reuseInitialTrack =
             syncSession.sessionId == null && !deviceConnect.isFollowing &&
                 deviceConnectCanReusePlayback(
@@ -2332,7 +2322,6 @@ object PlayerState {
         if (reuseInitialTrack) syncSession.setReady(true)
         syncSession.apply(snapshot)
         localRepeatMode = RepeatMode.valueOf(state.repeatMode.name)
-        val queueIdentity = Triple(snapshot.sessionId, snapshot.queueRevision, snapshot.queueStateId)
         if (appliedDeviceQueue != queueIdentity) {
             if (!queue.snapshots.value.hasSameStructure(state.queue)) queue.restore(state.queue)
             appliedDeviceQueue = queueIdentity
@@ -2389,7 +2378,9 @@ object PlayerState {
                 scope.launch {
                     try {
                         val songs = freshRadioRecommendations(track.id, generation)
-                        if (shouldCommit() && syncSession.explicitRadioQueue) appendRadioRecommendations(songs, generation)
+                        if (appliedDeviceQueue == queueIdentity && syncSession.explicitRadioQueue && !deviceConnect.isFollowing) {
+                            appendRadioRecommendations(songs, generation)
+                        }
                     } catch (error: CancellationException) {
                         throw error
                     } catch (error: Exception) {
