@@ -164,7 +164,6 @@ object PlaybackEventLog {
         if (level != PlaybackEventLevel.WARN && level != PlaybackEventLevel.ERROR) return
         val structuredFailure = lastStructuredFailure
         lastStructuredFailure = null
-        if (tag == "DesktopCredentials") return
         if (error != null && structuredFailure?.matches(tag, error) == true) return
         val failureDetails = error?.let(::safeFailureDetails).orEmpty()
         record(
