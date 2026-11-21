@@ -356,11 +356,16 @@ object PlaylistAlbumState {
                             ?: database.dao().playlistByBrowseId(id).first()
                     }
                 val storedSongs =
-                    playlist?.let {
-                        withContext(Dispatchers.IO) {
-                            database.dao().playlistSongs(it.id).first().map { song -> song.toSongItem() }
-                        }
-                    }.orEmpty()
+                    playlist
+                        ?.let {
+                            withContext(Dispatchers.IO) {
+                                database
+                                    .dao()
+                                    .playlistSongs(it.id)
+                                    .first()
+                                    .map { song -> song.toSongItem() }
+                            }
+                        }.orEmpty()
                 val songs =
                     if (playlist?.playlist?.isLocal == true) {
                         storedSongs
