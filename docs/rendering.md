@@ -6,7 +6,7 @@ Shared collection covers resolve through `LibraryCovers.kt`. Keep user-selected 
 
 Player and collection artwork use square, centered crops. Full-player video thumbnails use the same preview source as song rows, including the thumbnail without encoded letterboxing. Dedicated video shelves, episode previews and video playback keep their wide layouts. On iOS, managed playlist-cover identifiers resolve against the current Application Support directory so container relocation does not break covers. Delete only managed files after the database change succeeds.
 
-Apple Music animated covers match versioned tracks against their full catalog titles before using the album artwork. Album notes beginning with `+` in trailing parentheses or brackets are ignored when matching names. Release labels such as Taylor's Version and Deluxe remain significant.
+Apple Music animated covers match versioned tracks against their full catalog titles before using the album artwork. Track and album qualifiers treat brackets and parentheses equally. Album notes beginning with `+` in trailing parentheses or brackets are ignored before matching names and detecting explicit or clean editions. Release labels such as Taylor's Version and Deluxe remain significant. The updated matcher discards stored lookup results from the previous rules.
 
 The portrait full-screen artwork continuation starts before a wide thumbnail's bottom edge. Its preview and detailed blur keep their fades, with no uncovered band between the image and continuation.
 

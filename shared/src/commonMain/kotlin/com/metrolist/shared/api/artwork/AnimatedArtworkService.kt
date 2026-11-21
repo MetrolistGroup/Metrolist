@@ -47,6 +47,8 @@ private val artworkEditionSuffix =
         RegexOption.IGNORE_CASE,
     )
 
+private val artworkAlbumNoteSuffix = Regex("""\s*(?:\(\s*\+[^)]*\)|\[\s*\+[^\]]*])\s*$""")
+
 internal fun resolveArtworkExplicitness(
     album: String?,
     trackExplicitness: Boolean?,
@@ -54,7 +56,7 @@ internal fun resolveArtworkExplicitness(
     if (album.isNullOrBlank()) return trackExplicitness
     val edition =
         artworkEditionSuffix
-            .find(album)
+            .find(album.replace(artworkAlbumNoteSuffix, ""))
             ?.groupValues
             ?.drop(1)
             ?.firstOrNull(String::isNotBlank)
@@ -116,7 +118,7 @@ class AnimatedArtworkService internal constructor(
         private const val TAG = "AnimatedArtwork"
         private const val UA = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36"
 
-        private const val CACHE_KEY_VERSION = "v9"
+        private const val CACHE_KEY_VERSION = "v10"
         private const val CACHE_MAX_AGE_SECONDS = 30L * 24 * 60 * 60
         private const val CACHE_MISS_MAX_AGE_SECONDS = 60L
         private const val MAX_COVER_CACHE_ENTRIES = 1_000
@@ -880,7 +882,9 @@ class AnimatedArtworkService internal constructor(
             .lowercase()
             .replace(smartQuotePattern, "'")
             .replace(Regex("""\s+"""), " ")
-            .replace(Regex("""\s*(?:\(\s*\+[^)]*\)|\[\s*\+[^\]]*])\s*$"""), "")
+            .replace(artworkAlbumNoteSuffix, "")
+            .replace('[', '(')
+            .replace(']', ')')
 
     private fun stripReleaseSuffixes(name: String): String {
         var stripped = name
