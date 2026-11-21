@@ -1369,7 +1369,6 @@ class PlayerConnection(
                 expectedQueue = expectedQueue,
             )
         ) {
-            if (after.displayedItems.isEmpty()) musicService?.clearPersistedPlaybackState()
             queueUndo =
                 (
                     queueUndo ?: QueueUndo(
