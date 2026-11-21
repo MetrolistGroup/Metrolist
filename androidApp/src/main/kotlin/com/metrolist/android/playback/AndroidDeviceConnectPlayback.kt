@@ -41,6 +41,7 @@ internal class AndroidDeviceConnectPlayback(
     private val fetchPlaybackResource: suspend (SongItem, Boolean) -> PlaybackResource?,
     private val isCasting: () -> Boolean,
     private val onSave: () -> Unit,
+    private val onQueueCleared: () -> Unit,
     private val onDiscordUpdate: () -> Unit,
 ) {
     var playbackReleased = false
@@ -208,6 +209,10 @@ internal class AndroidDeviceConnectPlayback(
                     explicitRadioBootstrapPending = queue.recommendationBootstrapJob == null
                 }
                 onSave()
+                // Only an applied empty snapshot is an explicit clear; transient empty states stay no-ops.
+                if (previousQueue.displayedItems.isNotEmpty() && desiredQueue.displayedItems.isEmpty()) {
+                    onQueueCleared()
+                }
             }
 
             override suspend fun acknowledge(snapshot: DcPlaybackSnapshot) =

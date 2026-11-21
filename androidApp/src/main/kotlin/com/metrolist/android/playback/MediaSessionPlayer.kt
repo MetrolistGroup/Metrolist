@@ -1269,10 +1269,7 @@ class MediaSessionPlayer(
 
     override fun clearMediaItems() {
         if (isPlaybackLockedProvider()) return
-        if (interceptDeviceConnect(DcPlaybackCommand(DcPlaybackAction.CLEAR))) {
-            onQueueCleared()
-            return
-        }
+        if (interceptDeviceConnect(DcPlaybackCommand(DcPlaybackAction.CLEAR))) return
         val cleared =
             mutateQueueItems {
                 musicPlayer.removeQueueItems(
