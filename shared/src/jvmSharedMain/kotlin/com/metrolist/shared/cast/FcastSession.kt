@@ -97,6 +97,7 @@ internal class FcastSession(
     private var currentMediaUrl: String? = null
 
     private var loadedMedia: LoadedMedia? = null
+    private var replayPositionMs = 0L
 
     @Volatile
     private var stopRequested = false
@@ -118,6 +119,7 @@ internal class FcastSession(
             this@FcastSession.mediaGeneration = mediaGeneration
             currentMediaUrl = mediaUrl
             loadedMedia = LoadedMedia(mediaUrl, media)
+            replayPositionMs = 0L
             stopRequested = false
             awaitingCurrentMediaUpdate = true
             awaitingMediaStartPositionMs = positionMs
@@ -179,12 +181,12 @@ internal class FcastSession(
                     synchronized(mediaStateLock) {
                         loadedMedia?.takeIf { stopRequested || _state.value.hasEnded }?.also {
                             awaitingCurrentMediaUpdate = true
-                            awaitingMediaStartPositionMs = 0L
+                            awaitingMediaStartPositionMs = replayPositionMs
                             _state.value =
                                 _state.value.copy(
                                     isPlaying = true,
                                     isBuffering = true,
-                                    positionMs = 0L,
+                                    positionMs = replayPositionMs,
                                     hasEnded = false,
                                     mediaGeneration = mediaGeneration,
                                 )
@@ -194,7 +196,8 @@ internal class FcastSession(
                         }
                     }
                 if (stoppedMedia != null) {
-                    sendPlay(stoppedMedia.url, stoppedMedia.media, 0L)
+                    sendPlay(stoppedMedia.url, stoppedMedia.media, replayPositionMs)
+                    synchronized(mediaStateLock) { stopRequested = false }
                 } else {
                     send(OPCODE_RESUME)
                 }
@@ -205,7 +208,18 @@ internal class FcastSession(
 
     override suspend fun seekTo(positionMs: Long) =
         withContext(Dispatchers.IO) {
-            send(OPCODE_SEEK, buildJsonObject { put("time", positionMs / 1000.0) }.toString())
+            synchronized(writeLock) {
+                val stopped =
+                    synchronized(mediaStateLock) {
+                        (stopRequested || _state.value.hasEnded).also { stopped ->
+                            if (stopped) {
+                                replayPositionMs = positionMs
+                                _state.value = _state.value.copy(positionMs = positionMs)
+                            }
+                        }
+                    }
+                if (!stopped) send(OPCODE_SEEK, buildJsonObject { put("time", positionMs / 1000.0) }.toString())
+            }
         }
 
     override suspend fun setVolume(volume: Float) =
@@ -218,6 +232,7 @@ internal class FcastSession(
             synchronized(writeLock) {
                 synchronized(mediaStateLock) {
                     stopRequested = true
+                    replayPositionMs = 0L
                     _state.value = _state.value.copy(isPlaying = false, isBuffering = false, positionMs = 0L, hasEnded = false)
                 }
                 send(OPCODE_STOP)
@@ -306,6 +321,7 @@ internal class FcastSession(
                         ?.times(1000.0)
                         ?.toLong()
                 synchronized(mediaStateLock) {
+                    if (stopRequested) return
                     val current = _state.value
                     val positionMs = reportedPositionMs ?: current.positionMs
                     val durationMs =
@@ -337,7 +353,6 @@ internal class FcastSession(
                         return
                     }
                     awaitingCurrentMediaUpdate = false
-                    if (isPlaying) stopRequested = false
                     _state.value =
                         current.copy(
                             isPlaying = isPlaying,
@@ -370,6 +385,7 @@ internal class FcastSession(
                 synchronized(mediaStateLock) {
                     if (closed || stopRequested || !isCurrentFcastMediaItemEndEvent(body, currentMediaUrl)) return
                     val current = _state.value
+                    replayPositionMs = 0L
                     _state.value =
                         current.copy(
                             isPlaying = false,
