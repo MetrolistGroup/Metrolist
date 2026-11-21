@@ -242,10 +242,7 @@ internal fun mergeBackgroundLyricsEntries(lyrics: List<LyricsEntry>): List<Lyric
                                 (
                                     roman.isBackground == original.isBackground ||
                                         (
-                                            background.backgroundText.isNullOrBlank() &&
-                                                background.words.orEmpty().all(
-                                                    WordTimestamp::isBackground,
-                                                )
+                                            background.words.orEmpty().all(WordTimestamp::isBackground)
                                         )
                                 ) &&
                                     roman.startTime < raw.endTime && roman.endTime > raw.startTime
