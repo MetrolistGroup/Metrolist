@@ -2685,9 +2685,14 @@ class MusicService :
         if (!Settings.shared.persistentQueue) return clearFinalPersistedPlaybackState()
         val state = buildPersistPlayerState()
         if (state == null) {
-            val clear = pendingPlaybackClear ?: return finalPlaybackPersistence
-            pendingPlaybackClear = null
-            return launchFinalPersistence(clear)
+            val clear = pendingPlaybackClear
+            if (clear != null) {
+                pendingPlaybackClear = null
+                return launchFinalPersistence(clear)
+            }
+            // A transient empty queue can still have a queued non-empty checkpoint; flush it before the scope is cancelled.
+            val pendingState = lastPersistenceState ?: return finalPlaybackPersistence
+            return launchFinalPersistence(playbackPersistenceWriter.request(pendingState))
         }
         pendingPlaybackClear = null
         return launchFinalPersistence(playbackPersistenceWriter.request(state))
