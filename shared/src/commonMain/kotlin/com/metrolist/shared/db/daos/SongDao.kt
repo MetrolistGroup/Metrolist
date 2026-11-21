@@ -465,9 +465,10 @@ interface SongDao {
         SELECT album.*,
                (SELECT MIN(song.inLibrary)
                 FROM song
-                WHERE song.albumId = album.id OR EXISTS (
-                    SELECT 1 FROM song_album_map
-                    WHERE song_album_map.albumId = album.id AND song_album_map.songId = song.id
+                WHERE song.id IN (
+                    SELECT direct.id FROM song AS direct WHERE direct.albumId = album.id
+                    UNION
+                    SELECT songId FROM song_album_map WHERE albumId = album.id
                 )) AS firstSongAddedAt,
                (SELECT SUM(song.totalPlayTime)
                 FROM song
