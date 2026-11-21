@@ -21,7 +21,7 @@
     <string name="similar_to">Podobné</string>
     <string name="new_releases">Nově vydané</string>
     <string name="podcasts_for_you">Podcasty pro vás</string>
-    <string name="recap">Recap</string>
+    <string name="recap">Shrnutí</string>
     <string name="home_unavailable">Domovská stránka není k dispozici</string>
     <string name="today">Dnes</string>
     <string name="yesterday">Včera</string>
@@ -86,13 +86,13 @@
     <string name="bitrate">Přenosová rychlost</string>
     <string name="sample_rate">Vzorkovací frekvence</string>
     <string name="loudness">Hlučnost</string>
-    <string name="loudness_value">%1$s dB</string>
+    <string name="loudness_value">%1$s dB</string>
     <string name="volume">Hlasitost</string>
     <string name="file_size">Velikost souboru</string>
     <string name="unknown">Neznámé</string>
     <string name="copied">Zkopírováno do schránky</string>
     <string name="edit_lyrics">Upravit text skladby</string>
-    <string name="search_lyrics">Hledat v textu</string>
+    <string name="search_lyrics">Hledat texty</string>
     <string name="select_songs">Vybrat skladby</string>
     <string name="edit_song">Upravit skladbu</string>
     <string name="song_title">Název skladby</string>
@@ -116,22 +116,22 @@
         <item quantity="other">%1$d alb</item>
     </plurals>
     <plurals name="n_week">
-        <item quantity="one">%1$d týden</item>
-        <item quantity="few">%1$d týdny</item>
-        <item quantity="many">%1$d týdnů</item>
-        <item quantity="other">%1$d týdnů</item>
+        <item quantity="one">%1$d týden</item>
+        <item quantity="few">%1$d týdny</item>
+        <item quantity="many">%1$d týdnů</item>
+        <item quantity="other">%1$d týdnů</item>
     </plurals>
     <plurals name="n_month">
-        <item quantity="one">%1$d měsíc</item>
-        <item quantity="few">%1$d měsíce</item>
-        <item quantity="many">%1$d měsíců</item>
-        <item quantity="other">%1$d měsíců</item>
+        <item quantity="one">%1$d měsíc</item>
+        <item quantity="few">%1$d měsíce</item>
+        <item quantity="many">%1$d měsíců</item>
+        <item quantity="other">%1$d měsíců</item>
     </plurals>
     <plurals name="n_year">
-        <item quantity="one">%1$d rok</item>
-        <item quantity="few">%1$d roky</item>
-        <item quantity="many">%1$d let</item>
-        <item quantity="other">%1$d let</item>
+        <item quantity="one">%1$d rok</item>
+        <item quantity="few">%1$d roky</item>
+        <item quantity="many">%1$d let</item>
+        <item quantity="other">%1$d let</item>
     </plurals>
     <string name="undo">Zrušit</string>
     <string name="lyrics_not_found">Text skladby nenalezen</string>
@@ -150,10 +150,10 @@
     <string name="queue_loading">Načítání fronty…</string>
     <string name="calculating">Vypočítavám…</string>
     <plurals name="queue_track_count_duration">
-        <item quantity="one">%1$d skladba · %2$s</item>
-        <item quantity="few">%1$d skladby · %2$s</item>
-        <item quantity="many">%1$d skladeb · %2$s</item>
-        <item quantity="other">%1$d skladeb · %2$s</item>
+        <item quantity="one">%1$d skladba · %2$s</item>
+        <item quantity="few">%1$d skladby · %2$s</item>
+        <item quantity="many">%1$d skladeb · %2$s</item>
+        <item quantity="other">%1$d skladeb · %2$s</item>
     </plurals>
     <string name="suggested_tracks">Navrhované</string>
     <string name="playback_notification_channel_name">Přehrávání</string>
@@ -168,7 +168,7 @@
     <string name="action_login">Přihlásit se</string>
     <string name="action_not_now">Teď ne</string>
     <string name="youtube_session_expired_title">Byl jste pravděpodobně odhlášen</string>
-    <string name="youtube_session_expired_message">Přihlašte se znovu pro používaní funkcí YouTube účtu. Nadále můžete používat váš stáhnutý a obsah v mezipaměti.</string>
+    <string name="youtube_session_expired_message">Přihlaste se znovu pro používání funkcí účtu YouTube. Stažený obsah a obsah v mezipaměti můžete nadále používat offline.</string>
     <string name="audio_quality">Kvalita zvuku</string>
     <string name="audio_quality_auto">Automatická</string>
     <string name="audio_quality_high">Vysoká</string>
@@ -309,7 +309,7 @@
     <string name="settings_privacy_description">Historie, omezení snímků obrazovky</string>
     <string name="settings_storage_data">Úložiště a data</string>
     <string name="settings_backup_restore_description">Uložte svou knihovnu nebo ji přeneste z jiných aplikací</string>
-    <string name="settings_application_about">O aplikaci</string>
+    <string name="settings_application_about">Aplikace a informace</string>
     <string name="settings_open_supported_links_title">Otevřít podporované odkazy</string>
     <string name="settings_updates_title">Aktualizace</string>
     <string name="settings_updates_available_description">Je dostupná nová aktualizace Metrolistu</string>
@@ -347,14 +347,14 @@
     <string name="app_font_picker_desc">Vyberte TTF nebo OTF soubor. Metrolist ho zkopíruje do soukromého úložiště aplikace.</string>
     <string name="app_font_system">Podle systému</string>
     <string name="app_font_applied">Používá se %1$s</string>
-    <string name="app_font_invalid">Nepodařilo se použít toto písmo. Vyberte platný TTF nebo OTF soubor menší než 20 MB.</string>
+    <string name="app_font_invalid">Nepodařilo se použít toto písmo. Vyberte platný TTF nebo OTF soubor menší než 20 MB.</string>
     <string name="app_font_downloads">Rychlé stahování písem</string>
     <string name="app_font_checking">Kontrola nainstalovaného písma…</string>
     <string name="app_font_reset">Resetovat písmo</string>
     <string name="app_font_reset_description">Použít systémové písmo a odstranit importované písmo</string>
     <string name="app_font_downloading">Stahování %1$s…</string>
     <string name="app_font_active">Aktivní</string>
-    <string name="app_font_installed">Nainstalované · Klepněte pro použití</string>
+    <string name="app_font_installed">Nainstalované · Klepněte pro použití</string>
     <string name="app_font_download_and_use">Klepněte pro stáhnutí a použití</string>
     <string name="app_font_download_error">Nepodařilo se stáhnout %1$s. Zkontrolujte své připojení a zkuste to znovu.</string>
     <string name="app_font_import_custom">Importovat TTF nebo OTF soubor</string>
@@ -403,7 +403,7 @@
     <string name="lyrics_provider_unison_description">Komunitní přiřazování zdrojů podle ID YouTube nebo metadat. Vrací texty synchronizované po slovech či řádcích nebo prostý text.</string>
     <string name="lyrics_provider_lrclib_description">Komunitní databáze s textem skladeb synchronizovaným po řádcích nebo v čisté textové podobě</string>
     <string name="lyrics_provider_kugou_description">Texty ve formátu LRC synchonizované po řádcích s odpovídající délkou skladeb, vhodné zejména pro čínskou a asijskou hudbu</string>
-    <string name="lyrics_provider_paxsenix_description">Paxsenxi vyhledává na Apple Music a stahuje texty skladeb synchronizované po slovech, doprovodné vokály a přepisy</string>
+    <string name="lyrics_provider_paxsenix_description">Paxsenix vyhledává na Apple Music a stahuje texty skladeb synchronizované po slovech, doprovodné vokály a přepisy</string>
     <string name="lyrics_provider_lyrics_plus_description">Vícezdrojový poskytovatel s časováním slov či řádků, rolemi zpěváků, doprovodnými vokály a přepisy</string>
     <string name="lyrics_provider_unknown_description">Další zdroj textů skladeb</string>
     <string name="lyrics_text_position_left">Vlevo</string>
@@ -546,7 +546,7 @@
     <string name="hide_short_songs">Skrýt krátké skladby</string>
     <string name="hide_short_songs_desc">Skrýt náhledy, Shorts audio a ostatní skladby kratší než stanovený limit</string>
     <string name="minimum_song_duration">Minimální délka skladby</string>
-    <string name="minimum_song_duration_desc">Skrýt skladby kratší než %1$d sekund</string>
+    <string name="minimum_song_duration_desc">Skrýt skladby kratší než %1$d sekund</string>
     <string name="block_ai_slop_artists">Zablokovat známé AI vygenerované umělce</string>
     <string name="block_ai_slop_artists_desc">Skrýt kanály ze seznamu Override92/AiSList. CC BY-NC 4.0 seznam se aktualizuje denně a zůstavá dostupný offline.</string>
     <string name="listen_together_entry_subtitle">Poslouchejte hudbu s přáteli v reálném čase.</string>
@@ -905,7 +905,7 @@
     <string name="statistics_listening_habits">Posluchačské zvyky</string>
     <string name="statistics_overview">Přehled</string>
     <string name="statistics_period_summary">Během %1$s jste poslouchali %2$s, %3$s.</string>
-    <string name="statistics_play_count_duration">%1$s · %2$s</string>
+    <string name="statistics_play_count_duration">%1$s · %2$s</string>
     <string name="statistics_time">Čas</string>
     <string name="statistics_top_albums">Top alba</string>
     <string name="statistics_top_artists">Top umělci</string>
@@ -987,10 +987,10 @@
         <item quantity="other">Před %1$d minutami</item>
     </plurals>
     <plurals name="hours">
-        <item quantity="one">%1$d hodina</item>
-        <item quantity="few">%1$d hodiny</item>
-        <item quantity="many">%1$d hodin</item>
-        <item quantity="other">%1$d hodin</item>
+        <item quantity="one">%1$d hodina</item>
+        <item quantity="few">%1$d hodiny</item>
+        <item quantity="many">%1$d hodin</item>
+        <item quantity="other">%1$d hodin</item>
     </plurals>
     <plurals name="listening_times">
         <item quantity="one">%1$skrát</item>
@@ -1011,10 +1011,10 @@
         <item quantity="other">Navrhněte %1$d skladeb hostiteli. Pouze hostitel je schopen nahradit frontu.</item>
     </plurals>
     <plurals name="minutes">
-        <item quantity="one">%1$d minuta</item>
-        <item quantity="few">%1$d minuty</item>
-        <item quantity="many">%1$d minut</item>
-        <item quantity="other">%1$d minut</item>
+        <item quantity="one">%1$d minuta</item>
+        <item quantity="few">%1$d minuty</item>
+        <item quantity="many">%1$d minut</item>
+        <item quantity="other">%1$d minut</item>
     </plurals>
     <plurals name="n_track">
         <item quantity="one">%1$d skladba</item>
@@ -1119,10 +1119,10 @@
     <string name="subscribe">Odebírat</string>
     <string name="subscribed">Odebíráno</string>
     <plurals name="seconds">
-        <item quantity="one">%1$d sekunda</item>
-        <item quantity="few">%1$d sekundy</item>
-        <item quantity="many">%1$d sekund</item>
-        <item quantity="other">%1$d sekund</item>
+        <item quantity="one">%1$d sekunda</item>
+        <item quantity="few">%1$d sekundy</item>
+        <item quantity="many">%1$d sekund</item>
+        <item quantity="other">%1$d sekund</item>
     </plurals>
     <string name="beta_tag">[BETA]</string>
     <string name="crossfade">Prolínání</string>
@@ -1346,7 +1346,7 @@
     <string name="settings_artist_icon_source">Zdroj ikony umělce</string>
     <string name="settings_artist_banner_source">Zdroj banneru umělce</string>
     <string name="settings_artist_source_custom">Vlastní</string>
-    <string name="settings_seconds_value">%1$d sekund</string>
+    <string name="settings_seconds_value">%1$d sekund</string>
     <string name="settings_playback_speed_locked_listen_together">Rychlost přehrávání je uzamčena při používání Poslouchat společně</string>
     <string name="settings_diagnostic_logging">Diagnostické záznamy</string>
     <string name="settings_diagnostic_logging_description">Ukládat diagnostiku aplikace do místního souboru záznamů</string>
@@ -1613,7 +1613,7 @@
     <string name="device_connect_device_type_desktop">Počítač</string>
     <string name="device_connect_device_type_android_auto">Android Auto</string>
     <string name="device_connect_device_type_unknown">Neznámé zařízení</string>
-    <string name="device_connect_device_type_and_model">%1$s · %2$s</string>
+    <string name="device_connect_device_type_and_model">%1$s · %2$s</string>
     <string name="settings_disable_wayland_fix">Vypnout Wayland opravu měřítka (Wayland scale fix)</string>
     <string name="device_connect_pair_code_message">Ověřte, zda se tento kód shoduje na zařízení %1$s, potom potvrďte na obou zařízeních.</string>
     <string name="device_connect_pair_code_accessibility">Párovací kód: %1$s</string>
@@ -1859,7 +1859,7 @@
     <string name="shortcut_toggle_shortcuts">Přepnout panel zkratek</string>
     <string name="seek_duration_description_android">Počet sekund posunu při dvojitém klepnutí na obal nebo použití ovládacích prvků posunu</string>
     <string name="seek_duration_description_skip_controls">Počet sekund posunu při použití ovládacích prvků posunu</string>
-    <string name="seek_feedback_seconds">%1$d s</string>
+    <string name="seek_feedback_seconds">%1$d s</string>
     <string name="seek_feedback_description">%2$s %1$s</string>
     <string name="keep_screen_on">Ponechat zapnutý displej</string>
     <string name="keep_screen_on_both">%1$s + %2$s</string>
@@ -1921,7 +1921,7 @@
     <string name="equalizer_invalid_profile">Tento soubor není parametrický EQ profil</string>
     <string name="equalizer_autoeq_unavailable">Nepodařilo se načíst AutoEQ profily</string>
     <string name="skip_silence_instant">Okamžité přeskočení ticha</string>
-    <string name="skip_silence_instant_desc">Po 2 sekundách ticha přeskočí až o 15 sekund. Může přeskočit tiché části zvuku.</string>
+    <string name="skip_silence_instant_desc">Po 2 sekundách ticha přeskočí až o 15 sekund. Může přeskočit tiché části zvuku.</string>
     <string name="share_lyrics">Sdílet text písně</string>
     <string name="share_as_text">Sdílet jako text</string>
     <string name="customize_colors">Přizpůsobit barvy</string>
@@ -1979,7 +1979,7 @@
     <string name="ai_provider_group_direct">Přímí poskytovatelé</string>
     <string name="ai_provider_group_custom">Vlastní endpointy</string>
     <string name="ai_model_free">Bezplatný</string>
-    <string name="ai_model_speed">~%1$s tokenů/s</string>
+    <string name="ai_model_speed">~%1$s tokenů/s</string>
     <string name="export_as_format">Exportovat jako %1$s</string>
     <string name="exporting_collection">Exportování %1$s</string>
     <string name="device_connect_pair_hint">Pro spárování nového zařízení otevřete Integrace v Nastavení.</string>
@@ -2001,7 +2001,7 @@
     <string name="ai_model_same_as_translation">Stejný jako překladový model</string>
     <string name="ai_model_search">Vyhledávání modelů</string>
     <string name="ai_model_custom_id">Použít vlastní ID modelu</string>
-    <string name="ai_model_price">%1$s vstup / %2$s výstup za 1M tokenů</string>
+    <string name="ai_model_price">%1$s vstup / %2$s výstup za 1M tokenů</string>
     <string name="ai_model_load_failed">Nepodařilo se načíst modely</string>
     <string name="ai_model_api_key_needed">Přidejte API klíč pro načtení seznamu modelů</string>
     <string name="ai_model_none_found">Žádné modely neodpovídají vašemu vyhledávání</string>
@@ -2077,16 +2077,16 @@
     <string name="pause_music_when_media_is_muted_desc">Pozastavit přehrávání při ztlumení hlasitosti médií zařízení. Po obnovení hlasitosti aplikace přehrávání opět spustí.</string>
     <string name="no_episode_description">Popis této epizody není k dispozici.</string>
     <plurals name="episode_duration_hours">
-        <item quantity="one">%1$d hod.</item>
-        <item quantity="few">%1$d hod.</item>
-        <item quantity="many">%1$d hod.</item>
-        <item quantity="other">%1$d hod.</item>
+        <item quantity="one">%1$d hod.</item>
+        <item quantity="few">%1$d hod.</item>
+        <item quantity="many">%1$d hod.</item>
+        <item quantity="other">%1$d hod.</item>
     </plurals>
     <plurals name="episode_duration_minutes">
-        <item quantity="one">%1$d min.</item>
-        <item quantity="few">%1$d min.</item>
-        <item quantity="many">%1$d min.</item>
-        <item quantity="other">%1$d min.</item>
+        <item quantity="one">%1$d min.</item>
+        <item quantity="few">%1$d min.</item>
+        <item quantity="many">%1$d min.</item>
+        <item quantity="other">%1$d min.</item>
     </plurals>
     <string name="varispeed">Povolit variabilní rychlost (varispeed)</string>
     <string name="varispeed_description">Propojit výšku tónu s rychlostí přehrávání pro zrychlení a zpomalení jako u páskového záznamu</string>
@@ -2206,7 +2206,7 @@
     <string name="backup_invalid_data">Zálohu se nepodařilo přečíst nebo ověřit. Může být poškozená nebo obsahovat nepodporovaná data.</string>
     <string name="search_history_removal_failed">Nepodařilo se vymazat historii vyhledávání účtu. Zkuste to znovu po připojení.</string>
     <string name="top_period_all_time">Za celou dobu</string>
-    <string name="top_period_past_24_hours">Posledních 24 hodin</string>
+    <string name="top_period_past_24_hours">Posledních 24 hodin</string>
     <string name="top_period_past_week">Poslední týden</string>
     <string name="top_period_past_month">Poslední měsíc</string>
     <string name="top_period_past_year">Poslední rok</string>
@@ -2305,7 +2305,7 @@
     <string name="show_on_home">Zobrazit na Domovské stránce</string>
     <string name="show_again">Zobrazit znovu</string>
     <string name="restore_hidden_item_title">Zobrazit znovu?</string>
-    <string name="restore_hidden_item_message">Zobrazit %1$s znovu?</string>
+    <string name="restore_hidden_item_message">Zobrazit "%1$s" znovu?</string>
     <string name="unblock_artist_title">Odblokovat umělce?</string>
     <string name="advanced">Pokročilé</string>
     <string name="integration_on">Zapnuto</string>
@@ -2462,7 +2462,7 @@
     <string name="server">Server</string>
     <string name="leave">Opustit</string>
     <string name="create_room">Vytvořit místnost</string>
-    <string name="suggest_track">Navhrnout skladbu</string>
+    <string name="suggest_track">Navrhnout skladbu</string>
     <string name="reconnect">Znovu připojit</string>
     <string name="all">Vše</string>
     <string name="errors">Chyby</string>
@@ -2566,8 +2566,8 @@
     <string name="lyrics_provider_user">Uživatel</string>
     <string name="lyrics_provider_user_description">Vaše úpravy mají vždy přednost. Chcete-li použít texty od poskytovatele, vraťte změny v editoru textu skladby.</string>
     <string name="lyrics_editor_title">Upravit %1$s</string>
-    <string name="lyrics_editor_earlier">-0.5 s</string>
-    <string name="lyrics_editor_later">+0.5 s</string>
+    <string name="lyrics_editor_earlier">-0,5 s</string>
+    <string name="lyrics_editor_later">+0,5 s</string>
     <string name="lyrics_editor_delete_line">Smazat vybrané řádky</string>
     <string name="lyrics_editor_undo">Vrátit zpět</string>
     <string name="lyrics_editor_shift_all_earlier">Posunout všechny řádky o -0,5 s</string>
@@ -2580,8 +2580,8 @@
     <string name="lyrics_editor_save_error">Nepodařilo se uložit váš text skladby. Zkuste to znovu před ukončením editoru.</string>
     <string name="lyrics_editor_limit_error">Tento text skladby překračuje podporovanou velikost. Váš koncept zůstává uložený. Před exportem nebo synchronizací jej zkraťte.</string>
     <string name="settings_library_grid_columns">Sloupce mřížky knihovny</string>
-    <string name="youtube_sync_failed">Synchronizace s YouTube Music nebyla úspěšná. Zkontrolujte své připojení nebo se přihlašte znovu.</string>
-    <string name="ai_setup_description">Vytvořte si OpenRouter účet, přihlašte se a vyberte bezplatný model.</string>
+    <string name="youtube_sync_failed">Synchronizace s YouTube Music nebyla úspěšná. Zkontrolujte své připojení nebo se přihlaste znovu.</string>
+    <string name="ai_setup_description">Vytvořte si OpenRouter účet, přihlaste se a vyberte bezplatný model.</string>
     <string name="ai_setup_step">Krok %1$d z %2$d</string>
     <string name="ai_setup_limits">Bezplatné modely umožňují %1$d požadavků za minutu a %2$d za den, nebo %4$d za den po pořízení alespoň %3$d kreditů.</string>
     <string name="ai_setup_create_account">Vytvořit účet</string>

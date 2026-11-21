@@ -80,7 +80,7 @@
     <string name="bitrate">比特率</string>
     <string name="sample_rate">采样率</string>
     <string name="loudness">响度</string>
-    <string name="loudness_value">%1$s dB</string>
+    <string name="loudness_value">%1$s dB</string>
     <string name="volume">音量</string>
     <string name="file_size">文件大小</string>
     <string name="unknown">未知</string>
@@ -104,13 +104,13 @@
         <item quantity="other">%1$d 张专辑</item>
     </plurals>
     <plurals name="n_week">
-        <item quantity="other">%1$d 周</item>
+        <item quantity="other">%1$d 周</item>
     </plurals>
     <plurals name="n_month">
-        <item quantity="other">%1$d 个月</item>
+        <item quantity="other">%1$d 个月</item>
     </plurals>
     <plurals name="n_year">
-        <item quantity="other">%1$d 年</item>
+        <item quantity="other">%1$d 年</item>
     </plurals>
     <string name="undo">撤销</string>
     <string name="lyrics_not_found">未找到歌词</string>
@@ -129,7 +129,7 @@
     <string name="queue_loading">正在加载队列…</string>
     <string name="calculating">正在计算…</string>
     <plurals name="queue_track_count_duration">
-        <item quantity="other">%1$d 首 · %2$s</item>
+        <item quantity="other">%1$d 首 · %2$s</item>
     </plurals>
     <string name="suggested_tracks">推荐</string>
     <string name="playback_notification_channel_name">播放</string>
@@ -292,14 +292,14 @@
     <string name="app_font_picker_desc">选择 TTF 或 OTF 文件。Metrolist 会将其复制到应用专属存储空间。</string>
     <string name="app_font_system">系统默认</string>
     <string name="app_font_applied">使用 %1$s</string>
-    <string name="app_font_invalid">无法使用该字体。请选择有效的 TTF 或 OTF 文件，大小小于 20 MB。</string>
+    <string name="app_font_invalid">无法使用该字体。请选择有效的 TTF 或 OTF 文件，大小小于 20 MB。</string>
     <string name="app_font_downloads">快速字体下载</string>
     <string name="app_font_checking">正在检查已安装字体…</string>
     <string name="app_font_reset">重置字体</string>
     <string name="app_font_reset_description">使用系统字体并移除导入的字体</string>
     <string name="app_font_downloading">正在下载 %1$s…</string>
     <string name="app_font_active">激活</string>
-    <string name="app_font_installed">已安装 · 点击使用</string>
+    <string name="app_font_installed">已安装 · 点击使用</string>
     <string name="app_font_download_and_use">点击下载并使用</string>
     <string name="app_font_download_error">无法下载 %1$s。请检查连接并重试。</string>
     <string name="app_font_import_custom">导入 TTF 或 OTF 文件</string>
@@ -530,8 +530,8 @@
     <string name="file_size_unit_terabyte">TB</string>
     <string name="partial_song_count">≥ %1$s</string>
     <string name="http_status_code">HTTP %1$d</string>
-    <string name="lyrics_offset_decrease">−%1$d 毫秒</string>
-    <string name="lyrics_offset_increase">+%1$d 毫秒</string>
+    <string name="lyrics_offset_decrease">−%1$d 毫秒</string>
+    <string name="lyrics_offset_increase">+%1$d 毫秒</string>
     <string name="milliseconds_unit">毫秒</string>
     <string name="playlist_add_progress">已处理 %1$d 首歌曲，共 %2$d 首</string>
     <string name="playlist_add_stopped">%1$d 首歌曲已添加或已存在；%2$d 首歌曲的添加状态仍未确认。已添加的歌曲已保留。</string>
