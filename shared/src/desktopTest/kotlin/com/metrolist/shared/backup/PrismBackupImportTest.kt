@@ -67,6 +67,60 @@ class PrismBackupImportTest {
     }
 
     @Test
+    fun nullFavoriteThumbnailRemainsMissing() {
+        val preferences =
+            checkNotNull(prismArchiveFile(directory, "shared_prefs/artist_prefs.xml"))
+        preferences.apply {
+            parentFile.mkdirs()
+            writeText("""<map><string name="favorites">[{"id":"UCartist","name":"Artist","thumbnail":null}]</string></map>""")
+        }
+        val library = ForeignLibrary(ForeignLibraryFamily.PRISM, emptyList(), emptyList(), emptyList(), emptyList(), emptyList())
+
+        assertNull(
+            library
+                .withPrismArchive(directory)
+                .artists
+                .single()
+                .thumbnailUrl,
+        )
+    }
+
+    @Test
+    fun favoritePreferencesDecodeNumericEntitiesAndCdata() {
+        val library = ForeignLibrary(ForeignLibraryFamily.PRISM, emptyList(), emptyList(), emptyList(), emptyList(), emptyList())
+
+        val numeric =
+            library.withPrismArtistPreferences(
+                "<map><string name=\"favorites\">&#91;{\"id\":\"UC&amp;1\",\"name\":\"Artist &#x1F3B5;\"}&#93;</string></map>",
+            )
+        val cdata =
+            library.withPrismArtistPreferences(
+                "<map><string name=\"favorites\"><![CDATA[[{\"id\":\"UCartist\",\"name\":\"Artist &quot;\"}]]]></string></map>",
+            )
+        val mixedContent =
+            library.withPrismArtistPreferences(
+                """<map><string name="favorites">[{"id":"UCmixed","name":"Artist <![CDATA[</string>]]> Name"}]</string></map>""",
+            )
+
+        assertEquals("UC&1" to "Artist 🎵", numeric.artists.single().let { it.id to it.name })
+        assertEquals("UCartist" to "Artist &quot;", cdata.artists.single().let { it.id to it.name })
+        assertEquals("UCmixed" to "Artist </string> Name", mixedContent.artists.single().let { it.id to it.name })
+    }
+
+    @Test
+    fun malformedPreferencesWithManyUnclosedStringTagsAreIgnored() {
+        val xml =
+            buildString {
+                append("<map>")
+                repeat(3_000) { append("<string name=\"entry$it\">value") }
+                append("</map>")
+            }
+        val library = ForeignLibrary(ForeignLibraryFamily.PRISM, emptyList(), emptyList(), emptyList(), emptyList(), emptyList())
+
+        assertTrue(library.withPrismArtistPreferences(xml).artists.isEmpty())
+    }
+
+    @Test
     fun malformedOptionalFavoritesDoNotDiscardValidLibraryCollections() =
         runBlocking {
             val source = sourceDatabase()
@@ -75,7 +129,11 @@ class PrismBackupImportTest {
                 withDestination { database ->
                     val summary = archive.inputStream().use { database.importForeignBackup(it, staging(), driver) }
                     assertEquals(ForeignLibraryFamily.PRISM, summary.family)
-                    assertNotNull(database.dao().getSongById("ddddddddddd"))
+                    assertNotNull(
+                        database
+                            .dao()
+                            .getSongById("ddddddddddd"),
+                    )
                     assertNotNull(database.dao().findPlaylistByName("My Prism list"))
                     assertNotNull(database.dao().getArtistById("UCfollowed")?.bookmarkedAt)
                     assertNotNull(database.dao().getArtistById("UCstarred"))

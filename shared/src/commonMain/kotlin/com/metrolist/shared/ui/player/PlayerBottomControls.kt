@@ -313,11 +313,13 @@ internal fun shouldShowVideoButton(
     videoPlaybackEnabled: Boolean,
     songId: String?,
     musicVideoType: String?,
+    isLocalSong: Boolean,
+    isUploadedSong: Boolean,
 ): Boolean {
     if (isListenTogetherGuest) return false
     if (hideVideoSongs || !videoPlaybackEnabled) return false
     if (songId == null) return false
-    if (songId.startsWith("local_")) return false
+    if (isLocalSong || isUploadedSong || songId.startsWith("local_")) return false
     return true
 }
 

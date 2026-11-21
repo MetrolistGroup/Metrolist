@@ -290,10 +290,15 @@ internal class CastProxyServer(
                 val body = response.body
                 if (response.code != 206 && !(response.code == 200 && range.start == 0L)) {
                     PlaybackEventLog.error(
-                        PlaybackEventKind.NETWORK,
-                        "CastProxy",
-                        "Upstream rejected range request",
-                        IllegalStateException("HTTP ${response.code}"),
+                        kind = PlaybackEventKind.NETWORK,
+                        message = "[CastProxy] Upstream rejected range request",
+                        details =
+                            buildMap {
+                                put("upstreamHttpStatus", response.code.toString())
+                                put("requestedRange", "bytes=${range.start}-${range.endInclusive}")
+                                response.header("Content-Range")?.let { put("upstreamContentRange", it) }
+                            },
+                        error = IllegalStateException("HTTP ${response.code}"),
                     )
                     Logger.w("CastProxy", "Upstream rejected range request (HTTP ${response.code})")
                     writeError(socket, 502, "Bad Gateway")

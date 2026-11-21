@@ -8,6 +8,7 @@ package com.metrolist.desktop.ui.screens
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -67,6 +68,7 @@ fun StatsScreen() {
     var period by remember { mutableStateOf(StatisticsPeriod.WEEK) }
     var dateRange by remember { mutableStateOf<StatisticsDateRange?>(null) }
     var refreshKey by remember { mutableStateOf(0) }
+    var artistLookupGeneration by remember { mutableIntStateOf(0) }
     var songItems by remember { mutableStateOf<Map<String, SongItem>>(emptyMap()) }
     var topSongs by remember { mutableStateOf<List<HistoryStatGroup>>(emptyList()) }
     var topArtists by remember { mutableStateOf<List<HistoryArtistStatistic>>(emptyList()) }
@@ -87,6 +89,10 @@ fun StatsScreen() {
     LaunchedEffect(period, mode, dateRange, refreshKey) {
         isLoading = true
         loadFailed = false
+        artistLookupGeneration++
+        artistThumbnails.clear()
+        artistIds.clear()
+        var refreshArtistLookups = false
         try {
             val (sinceMs, untilMs) = period.epochRange(dateRange, mode = mode)
             val snapshot = withContext(Dispatchers.IO) { HistoryRepository.getStatisticsSnapshot(sinceMs, untilMs) }
@@ -97,6 +103,7 @@ fun StatsScreen() {
             topSongs = songs
             songItems = snapshot.songItems.associateBy { it.id }
             topArtists = artists
+            refreshArtistLookups = true
             artistFallbacks =
                 topArtists.associate { artist ->
                     artist.name to snapshot.songs.firstOrNull { it.artists.contains(artist.name) }?.thumbnailUrl
@@ -113,8 +120,10 @@ fun StatsScreen() {
             throw error
         } catch (error: Exception) {
             loadFailed = true
+            refreshArtistLookups = true
         } finally {
             isLoading = false
+            if (refreshArtistLookups) artistLookupGeneration++
         }
     }
 
@@ -148,6 +157,7 @@ fun StatsScreen() {
         exportLabel = exportLabel,
         onExport = { saveImage(it, exportLabel, "metrolist-statistics.png") },
         modifier = Modifier.cursorContextMenu(songMenu, openOnSecondaryClick = false),
+        artistLookupGeneration = artistLookupGeneration,
         state =
             StatisticsUiState(
                 period = period,
@@ -181,12 +191,14 @@ fun StatsScreen() {
                     },
                 artists =
                     topArtists.mapIndexed { index, item ->
+                        val itemId = statisticsArtistItemId(index, item.name, item.id)
                         StatisticsItem(
-                            id = "artist:$index:${item.name}",
+                            id = itemId,
                             title = item.name,
                             rankedTitle = "${index + 1}. ${item.name}",
                             subtitle = statisticsPlayCountDuration(item.playCount, item.playTimeMs),
-                            thumbnailUrl = artistThumbnails[item.name] ?: artistFallbacks[item.name],
+                            thumbnailUrl =
+                                artistThumbnails[itemId] ?: item.thumbnailUrl ?: artistFallbacks[item.name],
                             circularArtwork = true,
                         )
                     },
@@ -195,8 +207,12 @@ fun StatsScreen() {
                 errorMessage = if (loadFailed) stringResource(Res.string.statistics_load_failed) else null,
             ),
         onArtistVisible = { item ->
-            val artistName = statisticsArtistName(item.id)
-            if (!artistThumbnails.containsKey(artistName)) {
+            if (isLoading) return@StatisticsScreen
+            val lookupGeneration = artistLookupGeneration
+            val artistName = item.title
+            val statistic = statisticsArtistStatistic(item.id, topArtists)
+            val statisticId = statistic?.id
+            if (!artistThumbnails.containsKey(item.id)) {
                 val match =
                     withContext(Dispatchers.IO) {
                         try {
@@ -204,15 +220,23 @@ fun StatsScreen() {
                                 .searchFiltered(artistName, SearchFilter.ARTIST)
                                 .items
                                 .filterIsInstance<ArtistItem>()
-                                .firstOrNull { it.title.equals(artistName, ignoreCase = true) }
+                                .firstOrNull { artist ->
+                                    if (statisticId != null) {
+                                        artist.id == statisticId
+                                    } else {
+                                        artist.title.equals(artistName, ignoreCase = true)
+                                    }
+                                }
                         } catch (error: CancellationException) {
                             throw error
                         } catch (_: Exception) {
                             null
                         }
                     }
-                artistThumbnails[artistName] = match?.thumbnail
-                match?.let { artistIds[artistName] = it.id }
+                if (lookupGeneration == artistLookupGeneration && statisticsArtistStatistic(item.id, topArtists) == statistic) {
+                    artistThumbnails[item.id] = match?.thumbnail
+                    statisticId?.let { artistIds[item.id] = it } ?: match?.let { artistIds[item.id] = it.id }
+                }
             }
         },
         onItemMenu = { item ->
@@ -246,13 +270,7 @@ fun StatsScreen() {
                                 }
 
                                 else -> {
-                                    topArtists
-                                        .getOrNull(
-                                            item.id
-                                                .removePrefix("artist:")
-                                                .substringBefore(':')
-                                                .toInt(),
-                                        )?.statisticsMediaItem()
+                                    statisticsArtistStatistic(item.id, topArtists)?.statisticsMediaItem()
                                 }
                             }
                         if (menuItem != null) songMenu.open() else AppState.snackbarHostState.showSnackbar(loadFailedMessage)
@@ -332,8 +350,9 @@ fun StatsScreen() {
                 }
 
                 item.id.startsWith("artist:") -> {
-                    val artistName = statisticsArtistName(item.id)
-                    val cachedId = artistIds[artistName]
+                    val artistName = item.title
+                    val artistStatistic = statisticsArtistStatistic(item.id, topArtists)
+                    val cachedId = statisticsArtistProfileId(artistStatistic, artistIds[item.id])
                     if (cachedId != null) {
                         ArtistState.fetchArtistData(cachedId)
                     } else {
@@ -358,7 +377,7 @@ fun StatsScreen() {
                                     }.getOrNull()
                                 }
                             if (foundId != null) {
-                                artistIds[artistName] = foundId
+                                artistIds[item.id] = foundId
                                 ArtistState.fetchArtistData(foundId)
                             }
                         }
