@@ -429,6 +429,8 @@ fun LyricsRefreshDialog(
                 val isAutoSelected = selectedProvider == null
                 GroupedListItem(0, 1) {
                     Surface(
+                        selected = isAutoSelected,
+                        modifier = Modifier.semantics { role = Role.RadioButton },
                         color =
                             if (isAutoSelected) {
                                 MaterialTheme.colorScheme.secondaryContainer
@@ -459,6 +461,8 @@ fun LyricsRefreshDialog(
                     val isSelected = selectedProvider == provider
                     GroupedListItem(index, providers.size) {
                         Surface(
+                            selected = isSelected,
+                            modifier = Modifier.semantics { role = Role.RadioButton },
                             color =
                                 if (isSelected) {
                                     MaterialTheme.colorScheme.secondaryContainer
