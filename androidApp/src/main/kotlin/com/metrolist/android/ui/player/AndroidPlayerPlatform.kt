@@ -352,6 +352,7 @@ class AndroidPlayerPlatform(
                 artworkUrl = song.displayThumbnail,
                 exportLabel = storyTitle,
                 storyMode = true,
+                isLocal = song.isLocal,
                 onExport = { shareImage(context, it, storyTitle) },
                 onShareText = { content ->
                     context.startActivity(

@@ -51,6 +51,7 @@ internal fun iosLyricsShareAction(
             artworkUrl = song.displayThumbnail,
             exportLabel = stringResource(Res.string.share_song_to_story),
             storyMode = true,
+            isLocal = song.isLocal,
             onExport = { shareLyricsImage(presenter, it) },
             onShareText = { IosNativeFiles.shareText(presenter, it) },
             onDismiss = { selectedText = null },

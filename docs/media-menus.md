@@ -83,3 +83,5 @@ Explicit-song headers must keep the badge visible after short, long and missing 
 For desktop placement, check right-click and button menus after scrolling, with the sidebar visible, at different display scales and near window edges. Right-click menus start at the cursor and stay inside the window; button menus leave the trigger visible. Check motion, scrolling, outside-click and Escape dismissal, keyboard activation, RTL and reduced motion.
 
 For collection headers and selection, check Liked Music, an empty playlist, a remote playlist, an editable playlist, an album, Downloads, Cache, History and Queue at phone, medium and two-pane widths, with long translations, large fonts, RTL and animations disabled.
+
+Android and iOS share selected lyrics as a 9:16 PNG story card with artwork and track metadata. The image footer includes a YouTube Music link only for remote tracks. Local tracks omit the link. Desktop keeps its square exporter. Verify both mobile share sheets, local songs and five selected lines.

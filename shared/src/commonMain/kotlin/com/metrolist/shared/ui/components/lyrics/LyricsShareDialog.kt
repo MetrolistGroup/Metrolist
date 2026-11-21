@@ -116,6 +116,7 @@ fun LyricsShareDialog(
     artworkUrl: String?,
     exportLabel: String,
     storyMode: Boolean = false,
+    isLocal: Boolean = false,
     onExport: suspend (ImageBitmap) -> Boolean,
     onShareText: (String) -> Unit,
     onDismiss: () -> Unit,
@@ -123,8 +124,8 @@ fun LyricsShareDialog(
     var busy by remember { mutableStateOf(false) }
     var failed by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
-    val shareUrl = ShareUrls.song(songId)
-    val shareText = stringResource(Res.string.lyrics_share_text, text, title, artist, shareUrl)
+    val shareUrl = ShareUrls.song(songId).takeUnless { isLocal }
+    val shareText = stringResource(Res.string.lyrics_share_text, text, title, artist, shareUrl.orEmpty())
     var style by remember {
         mutableStateOf(
             decodeLyricsImageStyle(
@@ -259,7 +260,7 @@ fun LyricsShareDialog(
                     .heightIn(max = 880.dp)
                     .fillMaxHeight(0.9f),
             shape = RoundedCornerShape(24.dp),
-            color = MaterialTheme.colorScheme.surfaceContainerHigh,
+            color = if (storyMode) MaterialTheme.colorScheme.surfaceContainerHigh else MaterialTheme.colorScheme.surface,
         ) {
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(
@@ -466,23 +467,26 @@ private fun LyricsColorSwatches(
 ) {
     Text(label, style = MaterialTheme.typography.titleSmall)
     val scrollState = rememberScrollState()
-    Row(
-        Modifier.fillMaxWidth().carouselScroll(scrollState).horizontalScroll(scrollState),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
+    Row(Modifier.fillMaxWidth().carouselScroll(scrollState).horizontalScroll(scrollState)) {
         colors.forEach { color ->
             val description = stringResource(Res.string.lyrics_share_color, label, color.toArgb().toUInt().toString(16))
             Box(
                 Modifier
-                    .size(48.dp)
+                    .size(56.dp)
                     .semantics { contentDescription = description }
                     .selectable(selected = color == selected, enabled = enabled, role = Role.RadioButton, onClick = { onSelect(color) })
-                    .padding(4.dp)
-                    .background(color, RoundedCornerShape(10.dp))
+                    .padding(3.dp)
+                    .background(color, RoundedCornerShape(8.dp))
                     .border(
-                        if (color == selected) 2.dp else 1.dp,
-                        if (color == selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant,
-                        RoundedCornerShape(10.dp),
+                        2.dp,
+                        if (color ==
+                            selected
+                        ) {
+                            MaterialTheme.colorScheme.primary
+                        } else {
+                            MaterialTheme.colorScheme.outline
+                        },
+                        RoundedCornerShape(8.dp),
                     ),
             )
         }
