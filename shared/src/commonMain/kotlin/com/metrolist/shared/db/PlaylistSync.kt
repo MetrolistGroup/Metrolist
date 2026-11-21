@@ -134,7 +134,12 @@ suspend fun MusicDatabase.cacheRemotePlaylist(
     val unmatchedBySongId = existingMappings.filterNot { it.id in claimed }.groupBy { it.songId }
     songs.indices.filterNot(matches::containsKey).groupBy { songs[it].id }.forEach { (songId, indices) ->
         val old = unmatchedBySongId[songId].orEmpty()
-        if (indices.size == old.size) indices.zip(old).forEach { (index, mapping) -> matches[index] = mapping }
+        if (indices.size == old.size) {
+            indices.zip(old).forEach { (index, mapping) ->
+                val token = songs[index].playlistSetVideoId
+                if (token == null || mapping.setVideoId == null || token == mapping.setVideoId) matches[index] = mapping
+            }
+        }
     }
     songs.forEachIndexed { index, song ->
         dao.upsertHistorySong(song)

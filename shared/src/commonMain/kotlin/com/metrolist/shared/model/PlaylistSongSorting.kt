@@ -218,7 +218,11 @@ fun List<SongItem>.preservePlaylistOccurrenceMappings(previousSongs: List<SongIt
             val previous = previousBySongId[songId] ?: continue
             if (current.size == previous.size) {
                 current.zip(previous).forEach { (currentIndex, previousIndex) ->
-                    matches[currentIndex] = previousIndex
+                    val currentToken = this[currentIndex].playlistSetVideoId
+                    val previousToken = previousSongs[previousIndex].playlistSetVideoId
+                    if (currentToken == null || previousToken == null || currentToken == previousToken) {
+                        matches[currentIndex] = previousIndex
+                    }
                 }
             }
         }
