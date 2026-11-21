@@ -7,6 +7,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -40,6 +41,7 @@ import com.metrolist.shared.ui.playback.PlaybackController
 import com.metrolist.shared.ui.screens.HistoryContent
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.collectLatest
@@ -72,6 +74,8 @@ internal fun MobileHistoryScreen(
     var sortDirection by remember { mutableStateOf(SortDirection.DESCENDING) }
     var sortMode by remember { mutableStateOf(HistorySortMode.NEWEST) }
     var selectedIds by remember { mutableStateOf(emptySet<String>()) }
+    var selectionJob by remember { mutableStateOf<Job?>(null) }
+    var selectionRevision by remember { mutableLongStateOf(0L) }
     var selectedHasRemoteEntries by remember(database) { mutableStateOf(false) }
     var isDeleting by remember { mutableStateOf(false) }
     var failedDeletion by remember { mutableStateOf<Pair<Set<String>, Boolean>?>(null) }
@@ -120,16 +124,25 @@ internal fun MobileHistoryScreen(
             }
         entries = result
         displayedEntries = result
-        if (selectedIds.isNotEmpty()) {
-            selectedIds =
-                selectedIds.intersect(
-                    database
-                        .visibleHistoryIds(
-                            query,
-                            catalogArtistIds = true,
-                            preserveUnicodeOrder = true,
-                        ).mapTo(mutableSetOf(), Long::toString),
-                )
+        val selectedQuery = query
+        while (selectedIds.isNotEmpty()) {
+            val selectedAtRead = selectedIds
+            val revisionAtRead = selectionRevision
+            val visibleIds =
+                database
+                    .visibleHistoryIds(
+                        selectedQuery,
+                        catalogArtistIds = true,
+                        preserveUnicodeOrder = true,
+                    ).mapTo(mutableSetOf(), Long::toString)
+            currentCoroutineContext().ensureActive()
+            if (query != selectedQuery) break
+            if (selectionRevision == revisionAtRead && selectedIds === selectedAtRead) {
+                selectedIds = selectedAtRead.intersect(visibleIds)
+                break
+            }
+            // A newer choice superseded this read. Recheck only if it still needs pruning.
+            if (selectedIds.all(visibleIds::contains)) break
         }
     }
 
@@ -149,6 +162,8 @@ internal fun MobileHistoryScreen(
         alsoRemote: Boolean,
     ) {
         if (ids.isEmpty() || isDeleting) return
+        selectionJob?.cancel()
+        selectionRevision++
         isDeleting = true
         failedDeletion = null
         failedUpdate = null
@@ -213,7 +228,13 @@ internal fun MobileHistoryScreen(
             },
         canDeleteRemote = GlobalYouTubeRepository.instance.isHistorySyncEnabled(),
         selectedHasRemoteEntries = selectedHasRemoteEntries,
-        onQueryChange = { query = it },
+        onQueryChange = { value ->
+            if (query != value) {
+                selectionJob?.cancel()
+                selectionRevision++
+            }
+            query = value
+        },
         onSortChange = {
             sortMode = it
             sortDirection = it.defaultDirection
@@ -227,22 +248,33 @@ internal fun MobileHistoryScreen(
         },
         onPlay = { entry -> scope.launch { database.historySong(entry.id.toLong())?.let(playbackController::play) } },
         onSongMenu = { entry -> scope.launch { database.historySong(entry.id.toLong())?.let(onSongMenu) } },
-        onToggleSelection = { id -> selectedIds = if (id in selectedIds) selectedIds - id else selectedIds + id },
+        onToggleSelection = { id ->
+            selectionJob?.cancel()
+            selectionRevision++
+            selectedIds = if (id in selectedIds) selectedIds - id else selectedIds + id
+        },
         onSelectAll = { ids ->
+            selectionJob?.cancel()
+            selectionRevision++
             if (ids.isEmpty() || ids.size < selectedIds.size) {
                 selectedIds = emptySet()
             } else {
                 val selectedQuery = query
-                scope.launch {
-                    val allIds =
-                        database
-                            .visibleHistoryIds(
-                                selectedQuery,
-                                catalogArtistIds = true,
-                                preserveUnicodeOrder = true,
-                            ).mapTo(mutableSetOf(), Long::toString)
-                    if (query == selectedQuery) selectedIds = allIds
-                }
+                selectionJob =
+                    scope.launch {
+                        val allIds =
+                            database
+                                .visibleHistoryIds(
+                                    selectedQuery,
+                                    catalogArtistIds = true,
+                                    preserveUnicodeOrder = true,
+                                ).mapTo(mutableSetOf(), Long::toString)
+                        currentCoroutineContext().ensureActive()
+                        if (query == selectedQuery) {
+                            selectedIds = allIds
+                            selectionRevision++
+                        }
+                    }
             }
         },
         onUpdate = { entry, title, artists, album -> updateEntry(entry.songId, title, artists, album) },
