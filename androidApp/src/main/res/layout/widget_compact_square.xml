@@ -144,7 +144,8 @@
                 <FrameLayout
                     android:layout_width="match_parent"
                     android:layout_height="18dp"
-                    android:importantForAccessibility="noHideDescendants">
+                    android:importantForAccessibility="noHideDescendants"
+                    android:layoutDirection="ltr">
 
                     <ImageView
                         android:id="@+id/widget_progress_track"

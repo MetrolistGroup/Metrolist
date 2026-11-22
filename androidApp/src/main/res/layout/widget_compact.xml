@@ -85,7 +85,8 @@
                     android:layout_width="match_parent"
                     android:layout_height="6dp"
                     android:layout_marginTop="4dp"
-                    android:importantForAccessibility="noHideDescendants">
+                    android:importantForAccessibility="noHideDescendants"
+                    android:layoutDirection="ltr">
 
                     <ImageView
                         android:id="@+id/widget_progress_track"
