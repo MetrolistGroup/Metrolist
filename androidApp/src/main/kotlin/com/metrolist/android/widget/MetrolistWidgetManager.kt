@@ -32,12 +32,14 @@ import coil3.toBitmap
 import com.metrolist.android.R
 import com.metrolist.android.playback.MusicService
 import com.metrolist.android.ui.theme.extractThemeColor
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import timber.log.Timber
 import kotlin.math.roundToInt
 import android.graphics.Color as AndroidColor
 
@@ -112,8 +114,9 @@ class MetrolistWidgetManager(
             val snapshot = musicWidgetViews[id] ?: return@forEach
             if (snapshot.sizes != widgetSizes(manager.getAppWidgetOptions(id))) return@forEach
             // Android merges only top-level actions, so wrapped layouts need their complete tree.
-            manager.updateAppWidget(id, snapshot.create(duration, position))
-            progressBuckets[id] = bucket
+            if (safeUpdateAppWidget(manager, id, snapshot.create(duration, position))) {
+                progressBuckets[id] = bucket
+            }
         }
         playlistWidgetManager.updateProgress(duration, position)
         refreshProgressDemand()
@@ -135,7 +138,13 @@ class MetrolistWidgetManager(
         lastWidgetState = WidgetState(title, artist, artworkUri, isPlaying, isLiked, duration, currentPosition)
         lastControls = controls
         renderPlaybackWidgets()
-        playlistWidgetManager.updateWidgets(title, artist, artworkUri, isPlaying, isLiked, duration, currentPosition, controls)
+        try {
+            playlistWidgetManager.updateWidgets(title, artist, artworkUri, isPlaying, isLiked, duration, currentPosition, controls)
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: Exception) {
+            Timber.w(error, "Failed to update playlist widgets")
+        }
         publishedPlayback = songId to playbackInstanceId
         refreshProgressDemand()
     }
@@ -167,21 +176,23 @@ class MetrolistWidgetManager(
                             controls = controls,
                             schemes = schemes,
                         )
-                    appWidgetManager.updateAppWidget(widgetId, snapshot.create())
-                    musicWidgetViews[widgetId] = snapshot
-                    if (duration > 0 &&
-                        widgetSizes(options).any { (width, height) ->
-                            musicWidgetSizePolicy(width, height, context.resources.configuration.fontScale).layout.showsProgress
+                    if (safeUpdateAppWidget(appWidgetManager, widgetId, snapshot.create())) {
+                        musicWidgetViews[widgetId] = snapshot
+                        if (duration > 0 &&
+                            widgetSizes(options).any { (width, height) ->
+                                musicWidgetSizePolicy(width, height, context.resources.configuration.fontScale).layout.showsProgress
+                            }
+                        ) {
+                            progressBuckets[widgetId] = currentPosition.coerceAtLeast(0L) / 1000L
                         }
-                    ) {
-                        progressBuckets[widgetId] = currentPosition.coerceAtLeast(0L) / 1000L
                     }
                 }
 
                 if (expressiveWidgetIds.isNotEmpty()) {
                     val pillArt = getCachedPillArtwork(albumArt)
                     expressiveWidgetIds.forEach { widgetId ->
-                        appWidgetManager.updateAppWidget(
+                        safeUpdateAppWidget(
+                            appWidgetManager,
                             widgetId,
                             createExpressiveRemoteViewsForSize(
                                 appWidgetManager.getAppWidgetOptions(widgetId),
@@ -196,7 +207,8 @@ class MetrolistWidgetManager(
                 if (turntableWidgetIds.isNotEmpty()) {
                     val cookieArt = getCachedCookie12Art(albumArt)
                     turntableWidgetIds.forEach { widgetId ->
-                        appWidgetManager.updateAppWidget(
+                        safeUpdateAppWidget(
+                            appWidgetManager,
                             widgetId,
                             createTurntableRemoteViewsForSize(
                                 appWidgetManager.getAppWidgetOptions(widgetId),
@@ -247,7 +259,8 @@ class MetrolistWidgetManager(
                 val schemes = resolveSchemesForArtwork(albumArt)
                 val pillArt = getCachedPillArtwork(albumArt)
                 appWidgetIds.forEach { widgetId ->
-                    appWidgetManager.updateAppWidget(
+                    safeUpdateAppWidget(
+                        appWidgetManager,
                         widgetId,
                         createExpressiveRemoteViewsForSize(
                             appWidgetManager.getAppWidgetOptions(widgetId),
@@ -280,8 +293,9 @@ class MetrolistWidgetManager(
                     controls = WidgetControls(),
                     schemes = schemes,
                 )
-            appWidgetManager.updateAppWidget(widgetId, snapshot.create())
-            musicWidgetViews[widgetId] = snapshot
+            if (safeUpdateAppWidget(appWidgetManager, widgetId, snapshot.create())) {
+                musicWidgetViews[widgetId] = snapshot
+            }
         }
     }
 
@@ -302,7 +316,8 @@ class MetrolistWidgetManager(
         val schemes = resolveSchemesForArtwork(albumArt)
         val artwork = getCachedCookie12Art(albumArt)
         appWidgetIds.forEach { widgetId ->
-            appWidgetManager.updateAppWidget(
+            safeUpdateAppWidget(
+                appWidgetManager,
                 widgetId,
                 createTurntableRemoteViewsForSize(
                     appWidgetManager.getAppWidgetOptions(widgetId),
@@ -314,6 +329,19 @@ class MetrolistWidgetManager(
             )
         }
     }
+
+    private fun safeUpdateAppWidget(
+        appWidgetManager: AppWidgetManager,
+        widgetId: Int,
+        views: RemoteViews,
+    ): Boolean =
+        try {
+            appWidgetManager.updateAppWidget(widgetId, views)
+            true
+        } catch (error: Exception) {
+            Timber.w(error, "Failed to update widget %d", widgetId)
+            false
+        }
 
     private fun idleWidgetState() =
         WidgetState(
@@ -749,14 +777,17 @@ class MetrolistWidgetManager(
         val playbackRequested = controls.playbackRequested
         val label = if (playbackRequested) R.string.pause else R.string.play
 
-        views.setImageViewBitmap(R.id.widget_expressive_artwork, pillArt ?: getPillDefaultIcon(schemes))
         views.setImageViewResource(
             R.id.widget_play_pause,
             if (playbackRequested) R.drawable.ic_widget_pause else R.drawable.ic_widget_play,
         )
         if (pillArt == null) {
+            views.setImageViewBitmap(R.id.widget_expressive_artwork, pillMaskBitmap())
+            views.setWidgetTint(context, R.id.widget_expressive_artwork, schemes) { it.primaryContainer }
             views.setWidgetTint(context, R.id.widget_play_pause, schemes) { it.onPrimaryContainer }
         } else {
+            views.setImageViewBitmap(R.id.widget_expressive_artwork, pillArt)
+            views.setWidgetTint(context, R.id.widget_expressive_artwork, schemes) { Color.Transparent }
             views.setInt(R.id.widget_play_pause, "setColorFilter", AndroidColor.WHITE)
         }
         views.setImageViewBitmap(R.id.widget_prev_background, cookie12MaskBitmap())
@@ -934,16 +965,6 @@ class MetrolistWidgetManager(
         return bitmap
     }
 
-    private fun getPillDefaultIcon(schemes: WidgetColorSchemes): Bitmap =
-        createThemedPlaceholderBitmap(
-            width = 280,
-            height = 152,
-            cornerRadius = 76f,
-            backgroundColor = schemes.current(context).primaryContainer.toArgb(),
-            iconColor = schemes.current(context).onPrimaryContainer.toArgb(),
-            drawGlyph = false,
-        )
-
     private fun getWideCardDefaultIcon(schemes: WidgetColorSchemes): Bitmap =
         createThemedPlaceholderBitmap(
             width = 280,
@@ -951,7 +972,6 @@ class MetrolistWidgetManager(
             cornerRadius = 38f,
             backgroundColor = schemes.current(context).primaryContainer.toArgb(),
             iconColor = schemes.current(context).onPrimaryContainer.toArgb(),
-            drawGlyph = true,
         )
 
     private fun createThemedPlaceholderBitmap(
@@ -960,7 +980,6 @@ class MetrolistWidgetManager(
         cornerRadius: Float,
         backgroundColor: Int,
         iconColor: Int,
-        drawGlyph: Boolean,
     ): Bitmap {
         val output = createBitmap(width, height)
         val canvas = Canvas(output)
@@ -969,15 +988,13 @@ class MetrolistWidgetManager(
                 color = backgroundColor
             }
         canvas.drawRoundRect(RectF(0f, 0f, width.toFloat(), height.toFloat()), cornerRadius, cornerRadius, paint)
-        if (drawGlyph) {
-            AppCompatResources.getDrawable(context, R.drawable.ic_launcher_foreground)?.mutate()?.let { glyph ->
-                glyph.setTint(iconColor)
-                val iconSize = (minOf(width, height) * 0.9f).roundToInt()
-                val left = (width - iconSize) / 2
-                val top = (height - iconSize) / 2
-                glyph.setBounds(left, top, left + iconSize, top + iconSize)
-                glyph.draw(canvas)
-            }
+        AppCompatResources.getDrawable(context, R.drawable.ic_launcher_foreground)?.mutate()?.let { glyph ->
+            glyph.setTint(iconColor)
+            val iconSize = (minOf(width, height) * 0.9f).roundToInt()
+            val left = (width - iconSize) / 2
+            val top = (height - iconSize) / 2
+            glyph.setBounds(left, top, left + iconSize, top + iconSize)
+            glyph.draw(canvas)
         }
         return output
     }

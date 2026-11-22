@@ -61,6 +61,7 @@ private const val LINEAR_BAR_HEIGHT = 10
 
 private val cookie12Mask: Bitmap by lazy { createMaterialShapeMask(cookie12Polygon()) }
 private val cookie9Mask: Bitmap by lazy { createMaterialShapeMask(cookie9Polygon()) }
+private val pillMask: Bitmap by lazy { createPillMask() }
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 private fun cookie12Polygon(): RoundedPolygon = MaterialShapes.Cookie12Sided
@@ -71,6 +72,8 @@ private fun cookie9Polygon(): RoundedPolygon = MaterialShapes.Cookie9Sided
 internal fun cookie12MaskBitmap(): Bitmap = cookie12Mask
 
 internal fun cookie9MaskBitmap(): Bitmap = cookie9Mask
+
+internal fun pillMaskBitmap(): Bitmap = pillMask
 
 internal fun artworkCornerRadius(size: Int): Float = size * ARTWORK_CORNER_FRACTION
 
@@ -155,6 +158,19 @@ private fun createMaterialShapeMask(polygon: RoundedPolygon): Bitmap {
             style = Paint.Style.FILL
         }
     Canvas(output).drawPath(path, paint)
+    return output
+}
+
+private fun createPillMask(): Bitmap {
+    val output = createBitmap(PILL_ARTWORK_WIDTH, PILL_ARTWORK_HEIGHT)
+    val rect = RectF(0f, 0f, PILL_ARTWORK_WIDTH.toFloat(), PILL_ARTWORK_HEIGHT.toFloat())
+    val radius = PILL_ARTWORK_HEIGHT / 2f
+    val paint =
+        Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = Color.WHITE
+            style = Paint.Style.FILL
+        }
+    Canvas(output).drawRoundRect(rect, radius, radius, paint)
     return output
 }
 
@@ -302,14 +318,15 @@ internal fun renderLinearProgressLayers(progressFraction: Float): WidgetProgress
             this.strokeWidth = strokeWidth
             strokeCap = Paint.Cap.ROUND
         }
-    val trackStart = if (fraction > 0.01f) max(cap, activeEndX + gap + cap) else cap
+    val hasProgress = fraction > 0f
+    val trackStart = if (hasProgress) max(cap, activeEndX + gap + cap) else cap
     if (width - cap > trackStart) {
         trackCanvas.drawLine(trackStart, centerY, width - cap, centerY, strokePaint)
     }
 
     val activeBitmap = createBitmap(LINEAR_BAR_WIDTH, LINEAR_BAR_HEIGHT)
     val activeCanvas = Canvas(activeBitmap)
-    if (fraction > 0.01f) {
+    if (hasProgress) {
         activeCanvas.drawLine(cap, centerY, activeEndX, centerY, strokePaint)
     }
     val stopRadius = min(strokeWidth, WavyProgressIndicatorDefaults.LinearTrackStopIndicatorSize.value * 1.4f) / 2f
