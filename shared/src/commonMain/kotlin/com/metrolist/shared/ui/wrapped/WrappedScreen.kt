@@ -117,6 +117,7 @@ import com.metrolist.shared.db.refreshYouTubeHistory
 import com.metrolist.shared.db.wrappedStatisticsSnapshot
 import com.metrolist.shared.generated.resources.Res
 import com.metrolist.shared.generated.resources.back
+import com.metrolist.shared.generated.resources.logo
 import com.metrolist.shared.generated.resources.n_album
 import com.metrolist.shared.generated.resources.n_artist
 import com.metrolist.shared.generated.resources.n_song
@@ -136,8 +137,6 @@ import com.metrolist.shared.generated.resources.wrapped_lastfm_loading
 import com.metrolist.shared.generated.resources.wrapped_measured_time
 import com.metrolist.shared.generated.resources.wrapped_merge_note
 import com.metrolist.shared.generated.resources.wrapped_minutes_listened
-import com.metrolist.shared.generated.resources.wrapped_share_caption
-import com.metrolist.shared.generated.resources.wrapped_share_lastfm_caption
 import com.metrolist.shared.generated.resources.wrapped_share_summary
 import com.metrolist.shared.generated.resources.wrapped_soundtrack
 import com.metrolist.shared.generated.resources.wrapped_summary
@@ -177,6 +176,7 @@ import kotlinx.coroutines.withTimeout
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.todayIn
+import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.pluralStringResource
 import org.jetbrains.compose.resources.stringResource
 import kotlin.math.abs
@@ -341,7 +341,6 @@ fun WrappedScreen(
                     onBack,
                     showBackButton,
                     notes,
-                    lastFmLoaded && appliedLastFm === lastFm,
                 )
             }
         }
@@ -372,7 +371,6 @@ private fun WrappedReport(
     onBack: () -> Unit,
     showBackButton: Boolean,
     notes: List<String>,
-    lastFmLoaded: Boolean,
 ) {
     val formatter = rememberStatisticsFormatter()
     val state =
@@ -433,23 +431,14 @@ private fun WrappedReport(
         StatisticsShareDialog(
             state = state,
             period = dateLabel,
-            summary =
-                if (lastFmLoaded) {
-                    stringResource(Res.string.wrapped_share_lastfm_caption) + " " +
-                        stringResource(
-                            Res.string.wrapped_lastfm_coverage,
-                            formatter.number(snapshot.lastFmPlays.toLong()),
-                            formatter.number(snapshot.lastFmAmbiguousPlays.toLong()),
-                        )
-                } else {
-                    stringResource(Res.string.wrapped_share_caption)
-                },
+            summary = "",
             exportLabel = exportLabel,
             onExport = onExport,
             onDismiss = { sharing = false },
             title = title,
             timeLabel = stringResource(Res.string.wrapped_measured_time),
             imageColors = wrappedShareColors(),
+            logo = painterResource(Res.drawable.logo),
         )
     }
     val scope = rememberCoroutineScope()

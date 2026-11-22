@@ -5597,13 +5597,11 @@
     <string name="wrapped_measured_time">Measured listening time</string>
     <string name="wrapped_time_coverage">Based on %1$s plays with recorded durations, out of %2$s combined plays. Imported durations may be incomplete.</string>
     <string name="wrapped_merge_note">Includes saved Metrolist and YouTube history, plus Last.fm when connected and loaded. Uniquely matched artist and title pairs use the largest daily count. Unmatched Last.fm songs add plays; ambiguous matches are excluded. This can undercount separate plays. Listening time includes recorded durations only.</string>
-    <string name="wrapped_share_caption">Saved Metrolist and YouTube history. Older YouTube plays may be missing. Daily overlap uses the larger count. Time includes recorded durations only.</string>
     <string name="wrapped_share_summary">Share your summary</string>
     <string name="wrapped_soundtrack">Soundtrack</string>
     <string name="wrapped_lastfm_loading">Loading this year of Last.fm history…</string>
     <string name="wrapped_lastfm_failed">Last.fm could not refresh. This recap uses the last complete result from this visit, if available.</string>
     <string name="wrapped_lastfm_coverage">%1$s Last.fm scrobbles included; %2$s ambiguous scrobbles excluded. Metadata differences can leave some overlap undetected.</string>
-    <string name="wrapped_share_lastfm_caption">Saved Metrolist and YouTube history, combined with Last.fm. Older YouTube plays may be missing. Matched songs use the largest daily count; unmatched Last.fm songs add plays. Time includes recorded durations only.</string>
     <string name="wrapped_sync_failed">YouTube history could not refresh. This recap uses history already saved on this device.</string>
     <string name="wrapped_top_song">Your top song</string>
     <string name="wrapped_top_artist">Your top artist</string>

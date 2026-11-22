@@ -197,15 +197,15 @@ internal fun wrappedShareColors(): StatisticsImageColors {
         background = c.primaryFixed,
         glow = c.tertiaryFixedDim,
         content = c.onPrimaryFixed,
-        muted = c.onPrimaryFixedVariant,
-        accent = c.onTertiaryFixedVariant,
+        muted = c.onPrimaryFixed,
+        accent = c.onPrimaryFixed,
         heroContainer = c.onPrimaryFixed,
         heroContent = c.primaryFixed,
         sections =
             listOf(
-                StatisticsImageSection(c.tertiaryFixedDim, c.onTertiaryFixed, c.onTertiaryFixed, c.onTertiaryFixedVariant),
-                StatisticsImageSection(c.onSecondaryFixed, c.secondaryFixed, c.tertiaryFixedDim, c.secondaryFixedDim),
-                StatisticsImageSection(c.primaryFixedDim, c.onPrimaryFixed, c.onPrimaryFixed, c.onPrimaryFixedVariant),
+                StatisticsImageSection(c.tertiaryFixedDim, c.onTertiaryFixed, c.onTertiaryFixed, c.onTertiaryFixed),
+                StatisticsImageSection(c.onSecondaryFixed, c.secondaryFixed, c.tertiaryFixedDim, c.secondaryFixed),
+                StatisticsImageSection(c.primaryFixedDim, c.onPrimaryFixed, c.onPrimaryFixed, c.onPrimaryFixed),
             ),
         artworkPlaceholder = c.secondaryFixedDim,
     )
@@ -532,6 +532,22 @@ internal fun wrappedTypography(): Typography {
             labelLarge = base.labelLarge.copy(fontFamily = text),
             labelMedium = base.labelMedium.copy(fontFamily = text),
             labelSmall = base.labelSmall.copy(fontFamily = text),
+            // Emphasized roles go heavy and wide, which is where Wrapped and its share image get their voice.
+            displayLargeEmphasized = base.displayLarge.copy(fontFamily = display, fontWeight = FontWeight.Black),
+            displayMediumEmphasized = base.displayMedium.copy(fontFamily = display, fontWeight = FontWeight.Black),
+            displaySmallEmphasized = base.displaySmall.copy(fontFamily = display, fontWeight = FontWeight.Black),
+            headlineLargeEmphasized = base.headlineLarge.copy(fontFamily = display, fontWeight = FontWeight.Black),
+            headlineMediumEmphasized = base.headlineMedium.copy(fontFamily = display, fontWeight = FontWeight.Black),
+            headlineSmallEmphasized = base.headlineSmall.copy(fontFamily = display, fontWeight = FontWeight.ExtraBold),
+            titleLargeEmphasized = base.titleLarge.copy(fontFamily = display, fontWeight = FontWeight.ExtraBold),
+            titleMediumEmphasized = base.titleMedium.copy(fontFamily = display, fontWeight = FontWeight.ExtraBold),
+            titleSmallEmphasized = base.titleSmall.copy(fontFamily = display, fontWeight = FontWeight.ExtraBold),
+            bodyLargeEmphasized = base.bodyLarge.copy(fontFamily = text, fontWeight = FontWeight.Bold),
+            bodyMediumEmphasized = base.bodyMedium.copy(fontFamily = text, fontWeight = FontWeight.Bold),
+            bodySmallEmphasized = base.bodySmall.copy(fontFamily = text, fontWeight = FontWeight.Bold),
+            labelLargeEmphasized = base.labelLarge.copy(fontFamily = text, fontWeight = FontWeight.Bold),
+            labelMediumEmphasized = base.labelMedium.copy(fontFamily = text, fontWeight = FontWeight.Bold),
+            labelSmallEmphasized = base.labelSmall.copy(fontFamily = text, fontWeight = FontWeight.Bold),
         )
     }
 }

@@ -21,6 +21,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.dp
@@ -71,6 +72,7 @@ internal fun StatisticsShareDialog(
     title: String? = null,
     timeLabel: String? = null,
     imageColors: StatisticsImageColors? = null,
+    logo: Painter? = null,
 ) {
     val scope = rememberCoroutineScope()
     val measurer = rememberTextMeasurer(cacheSize = 0)
@@ -118,6 +120,7 @@ internal fun StatisticsShareDialog(
         duration,
         playsLabel,
         imageTimeLabel,
+        logo,
     ) {
         bitmap = null
         failed = false
@@ -176,6 +179,7 @@ internal fun StatisticsShareDialog(
                         sectionShapes,
                         measurer,
                         direction,
+                        logo,
                     )
                 }
         } catch (error: CancellationException) {

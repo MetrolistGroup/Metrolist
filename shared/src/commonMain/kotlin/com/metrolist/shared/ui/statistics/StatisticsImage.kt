@@ -18,6 +18,7 @@ import androidx.compose.ui.graphics.drawOutline
 import androidx.compose.ui.graphics.drawscope.CanvasDrawScope
 import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.graphics.drawscope.translate
+import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextMeasurer
 import androidx.compose.ui.text.TextStyle
@@ -86,6 +87,7 @@ internal fun renderStatisticsImage(
     sectionShapes: List<Shape>,
     textMeasurer: TextMeasurer,
     layoutDirection: LayoutDirection,
+    logo: Painter? = null,
 ): ImageBitmap {
     val width = 1080
     val padding = 48f
@@ -113,19 +115,24 @@ internal fun renderStatisticsImage(
         layoutDirection = layoutDirection,
     )
 
-    val branding = measure(appName, typography.labelLarge, colors.accent)
+    // With a logo, the app name becomes a large lockup beside it instead of a small label.
+    val branding = measure(appName, if (logo != null) typography.headlineMediumEmphasized else typography.labelLarge, colors.accent)
+    val logoSize = if (logo != null) (branding.size.height * 1.5f).roundToInt() else 0
+    val brandingHeight = maxOf(branding.size.height, logoSize)
     val heading = measure(title, typography.headlineLargeEmphasized, lines = 2)
     val range = measure(period, typography.titleMedium, colors.accent, lines = 2)
-    val description = measure(summary, typography.bodyMedium, colors.muted, lines = Int.MAX_VALUE)
+    val description = summary.takeIf { it.isNotBlank() }?.let { measure(it, typography.bodyMedium, colors.muted, lines = Int.MAX_VALUE) }
     val metricWidth = (contentWidth - inset * 3).toInt() / 2
     val metrics =
         listOf(
             measure(plays, typography.displayLargeEmphasized, colors.heroContent, metricWidth, 2) to
-                measure(playsLabel, typography.labelLarge, colors.heroContent, metricWidth, 2),
+                measure(playsLabel, typography.titleMediumEmphasized, colors.heroContent, metricWidth, 2),
             measure(duration, typography.displaySmallEmphasized, colors.heroContent, metricWidth, 2) to
-                measure(timeLabel, typography.labelLarge, colors.heroContent, metricWidth, 2),
+                measure(timeLabel, typography.titleMediumEmphasized, colors.heroContent, metricWidth, 2),
         )
-    val metricHeight = metrics.maxOf { (value, label) -> value.size.height + label.size.height } + inset * 2
+    // Labels share one baseline under the taller value, so differently sized figures still line up.
+    val valueHeight = metrics.maxOf { (value, _) -> value.size.height }
+    val metricHeight = valueHeight + metrics.maxOf { (_, label) -> label.size.height } + inset * 2
     val sectionColors = sections.indices.map { colors.sections[it % colors.sections.size] }
     val labels = sections.mapIndexed { index, (label, _) -> measure(label, typography.titleLargeEmphasized, sectionColors[index].accent) }
     val rankings =
@@ -147,7 +154,9 @@ internal fun renderStatisticsImage(
         labels.mapIndexed { index, label ->
             inset * 2 + label.size.height + gap + rowHeights[index].sum() + gap * (rowHeights[index].size - 1).coerceAtLeast(0)
         }
-    val headerHeight = branding.size.height + heading.size.height + range.size.height + description.size.height + gap * 4 + metricHeight
+    val headerHeight =
+        brandingHeight + heading.size.height + range.size.height + (description?.let { it.size.height + gap } ?: 0f).toInt() +
+            gap * 3 + metricHeight
     val height = (padding * 2 + headerHeight + sectionHeights.sum() + gap * sections.size).roundToInt()
     val bitmap = ImageBitmap(width, height)
     CanvasDrawScope().draw(density, layoutDirection, Canvas(bitmap), Size(width.toFloat(), height.toFloat())) {
@@ -174,7 +183,16 @@ internal fun renderStatisticsImage(
             drawText(text, topLeft = Offset(x(start, text.size.width), top))
         }
         var y = padding
-        for (text in listOf(branding, heading, range, description)) {
+        if (logo != null) {
+            translate(x(padding, logoSize), y + (brandingHeight - logoSize) / 2f) {
+                with(logo) { draw(Size(logoSize.toFloat(), logoSize.toFloat())) }
+            }
+            textAt(branding, padding + logoSize + 20f, y + (brandingHeight - branding.size.height) / 2f)
+        } else {
+            textAt(branding, padding, y)
+        }
+        y += brandingHeight + gap
+        for (text in listOfNotNull(heading, range, description)) {
             textAt(text, padding, y)
             y += text.size.height + gap
         }
@@ -183,8 +201,8 @@ internal fun renderStatisticsImage(
         }
         metrics.forEachIndexed { index, (value, label) ->
             val start = padding + inset + index * (metricWidth + inset)
-            textAt(value, start, y + inset)
-            textAt(label, start, y + inset + value.size.height)
+            textAt(value, start, y + inset + valueHeight - value.size.height)
+            textAt(label, start, y + inset + valueHeight)
         }
         y += metricHeight + gap
         sections.forEachIndexed { sectionIndex, (_, items) ->
