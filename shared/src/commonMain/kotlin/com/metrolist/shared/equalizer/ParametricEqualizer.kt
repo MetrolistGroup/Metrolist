@@ -130,10 +130,11 @@ class ParametricEqualizer(
         outputGainDb: Double = 0.0,
     ) {
         val outputGain = 10.0.pow(outputGainDb.coerceIn(MIN_AUDIO_PREAMP_DB, MAX_AUDIO_BOOST_DB) / 20.0)
+        val identityPcm = activeFilters.isEmpty() && preampGain == 1.0 && outputGain == 1.0
         if (processingBuffer.size < count) processingBuffer = DoubleArray(count)
         for (i in 0 until count) processingBuffer[i] = samples[i] / 32768.0
         filterBuffer(count)
-        limitFrames(count, outputGain)
+        limitFrames(count, outputGain, identityPcm)
         for (i in 0 until count) {
             val y = processingBuffer[i] * 32768.0
             samples[i] = y.coerceIn(-32768.0, 32767.0).roundToInt().toShort()
@@ -146,10 +147,19 @@ class ParametricEqualizer(
         outputGainDb: Double = 0.0,
     ) {
         val outputGain = 10.0.pow(outputGainDb.coerceIn(MIN_AUDIO_PREAMP_DB, MAX_AUDIO_BOOST_DB) / 20.0)
+        // Out-of-range float frames still need per-frame protection; only in-range identity PCM can bypass.
+        var inRange = true
+        for (i in 0 until count) {
+            if (abs(samples[i]) > 1.0f) {
+                inRange = false
+                break
+            }
+        }
+        val identityPcm = inRange && activeFilters.isEmpty() && preampGain == 1.0 && outputGain == 1.0
         if (processingBuffer.size < count) processingBuffer = DoubleArray(count)
         for (i in 0 until count) processingBuffer[i] = samples[i].toDouble()
         filterBuffer(count)
-        limitFrames(count, outputGain)
+        limitFrames(count, outputGain, identityPcm)
         for (i in 0 until count) {
             val y = processingBuffer[i]
             samples[i] = y.coerceIn(-1.0, 1.0).toFloat()
@@ -194,6 +204,7 @@ class ParametricEqualizer(
     private fun limitFrames(
         count: Int,
         outputGain: Double,
+        identityPcm: Boolean,
     ) {
         var frameStart = 0
         var lastGain = 1.0
@@ -208,13 +219,22 @@ class ParametricEqualizer(
                 saturatedPeak = maxOf(saturatedPeak, abs(softClip(x)))
             }
             // A rolling overload fraction spans waveform cycles, so periodic peaks drive limiting without counting isolated transients.
-            val overloadTarget = if (rawPeak > LIMITER_CEILING) 1.0 else 0.0
+            val overloadTarget = if (!identityPcm && rawPeak > LIMITER_CEILING) 1.0 else 0.0
             sustainedOverloadRatio += (overloadTarget - sustainedOverloadRatio) * sustainedOverloadAlpha
             val peak = if (sustainedOverloadRatio >= SUSTAINED_OVERLOAD_RATIO) rawPeak else saturatedPeak
-            val gain = limiterGain(peak)
+            // Identity PCM cannot start a new reduction, but an existing release must still finish.
+            val gain =
+                if (identityPcm) {
+                    limiterGain(LIMITER_CEILING, allowAttack = false)
+                } else {
+                    limiterGain(peak, allowAttack = true)
+                }
             lastGain = gain
-            // Saturate only frames that actually need protection; valid peaks in other frames stay untouched.
-            if (gain != 1.0 || rawPeak > 1.0) {
+            if (identityPcm) {
+                if (gain != 1.0) for (i in frameStart until frameEnd) processingBuffer[i] *= gain
+            } else {
+                // Apply one continuous transfer to every sample. Gating the knee on the frame peak
+                // makes identical samples jump backward as a boosted waveform crosses full scale.
                 for (i in frameStart until frameEnd) processingBuffer[i] = softClip(processingBuffer[i] * gain)
             }
             frameStart = frameEnd
@@ -231,8 +251,11 @@ class ParametricEqualizer(
         return if (sample < 0.0) -compressed else compressed
     }
 
-    private fun limiterGain(peak: Double): Double {
-        if (peak >= peakEnvelope) {
+    private fun limiterGain(
+        peak: Double,
+        allowAttack: Boolean,
+    ): Double {
+        if (allowAttack && peak >= peakEnvelope) {
             peakEnvelope = peak
             peakHoldFrames = peakHoldDuration
         } else if (peakHoldFrames > 0) {
