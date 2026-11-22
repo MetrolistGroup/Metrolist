@@ -42,6 +42,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.relocation.BringIntoViewRequester
@@ -61,6 +62,8 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.TopAppBarScrollBehavior
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -105,6 +108,7 @@ import androidx.compose.ui.unit.round
 import com.metrolist.shared.generated.resources.*
 import com.metrolist.shared.ui.LocalIsTv
 import com.metrolist.shared.ui.components.ExpressiveSwitch
+import com.metrolist.shared.ui.components.RefreshIndicator
 import com.metrolist.shared.ui.components.SwipeBackLayout
 import com.metrolist.shared.ui.components.focusOutline
 import com.metrolist.shared.ui.components.singleLineMarquee
@@ -118,6 +122,7 @@ import com.metrolist.shared.ui.navigation.rememberNavigationMotion
 import com.metrolist.shared.ui.utils.DragScrollableColumn
 import com.metrolist.shared.ui.utils.desktopArrowScroll
 import com.metrolist.shared.ui.utils.segmentedGroupShape
+import com.metrolist.shared.utils.isPullToRefreshSupported
 import kotlinx.coroutines.delay
 import org.jetbrains.compose.resources.stringResource
 import kotlin.math.absoluteValue
@@ -149,6 +154,9 @@ fun SharedSettingsScreen(
         rememberMetrolistSettingsRegistry(settingsHost, settingsRevision)
     }
 }
+
+private fun SharedSettingsHost.pageRefresh(pageId: SettingsPageId): (() -> Unit)? =
+    if (pageId in refreshablePages) ({ onPageRefresh(pageId) }) else null
 
 val LocalSettingsPageBottomPadding = compositionLocalOf { 0.dp }
 
@@ -320,6 +328,7 @@ internal fun SharedSettingsRegistryScreen(
                             onBack = ::closePage,
                             onNavigate = { openPage(it, parentPageId = page.id) },
                             onSettingValueChanged = { settingsRevision++ },
+                            onRefresh = host.pageRefresh(page.id),
                         )
                     }
                 }
@@ -460,6 +469,7 @@ private fun CompactSettingsDetail(
     onBack: () -> Unit,
     onNavigate: (SettingsPageId) -> Unit,
     onSettingValueChanged: () -> Unit,
+    onRefresh: (() -> Unit)? = null,
 ) {
     val isTv = LocalIsTv.current
     val contentFocusRequester = remember { FocusRequester() }
@@ -519,6 +529,7 @@ private fun CompactSettingsDetail(
                             top = padding.calculateTopPadding() + 12.dp,
                             bottom = 24.dp + bottomContentPadding,
                         ),
+                    onRefresh = onRefresh,
                 )
             }
         }
@@ -658,6 +669,7 @@ private fun SettingsDetailPane(
             onNavigate = onNavigate,
             onSettingValueChanged = onSettingValueChanged,
             contentPadding = PaddingValues(top = 28.dp, bottom = 28.dp + host.bottomContentPadding),
+            onRefresh = host.pageRefresh(page.id),
         )
     }
 }
@@ -671,6 +683,7 @@ private fun SettingsPageList(
     onNavigate: (SettingsPageId) -> Unit,
     onSettingValueChanged: () -> Unit,
     contentPadding: PaddingValues,
+    onRefresh: (() -> Unit)? = null,
 ) {
     var dialogItem by remember { mutableStateOf<SettingsItemRegistration?>(null) }
     val groups = page.groups.filter { it.items.isNotEmpty() }
@@ -703,142 +716,162 @@ private fun SettingsPageList(
     }
     val hasPreview = page.id == SettingsPageId.LYRICS
     val fixedPreview = hasPreview && !LocalIsTv.current
+    val effectiveOnRefresh = onRefresh.takeIf { isPullToRefreshSupported && !LocalIsTv.current }
     BoxWithConstraints(Modifier.fillMaxSize().padding(top = if (fixedPreview) contentPadding.calculateTopPadding() else 0.dp)) {
         val previewHeight = minOf(300.dp, maxHeight * 0.4f)
+        val listContent: LazyListScope.() -> Unit = {
+            groups.forEachIndexed { groupIndex, group ->
+                item("heading_${group.id}", contentType = "heading") {
+                    AnimatedVisibility(
+                        visible = mainSwitch?.checked != false || groupIndex == 0,
+                        enter = expandVertically() + fadeIn(),
+                        exit = shrinkVertically() + fadeOut(),
+                    ) {
+                        Box(
+                            Modifier.padding(
+                                top =
+                                    if (group.title.isBlank()) {
+                                        0.dp
+                                    } else if (groupIndex == 0) {
+                                        8.dp
+                                    } else {
+                                        24.dp
+                                    },
+                            ),
+                        ) {
+                            SettingsItemGroup(group.copy(items = emptyList()), highlightedItemId, onSettingValueChanged, {})
+                        }
+                    }
+                }
+                items(
+                    group.items.size,
+                    key = { "${group.id}:${group.items[it].id}" },
+                    contentType = { group.items[it].control },
+                ) { index ->
+                    val item = group.items[index]
+                    AnimatedVisibility(
+                        visible = mainSwitch?.checked != false || groupIndex == 0,
+                        enter = expandVertically() + fadeIn(),
+                        exit = shrinkVertically() + fadeOut(),
+                    ) {
+                        Box(
+                            Modifier
+                                .padding(horizontal = 16.dp)
+                                .padding(bottom = if (index == group.items.lastIndex) 0.dp else 4.dp),
+                        ) {
+                            SettingsItemRow(
+                                item =
+                                    if (group.enabled &&
+                                        (mainSwitch?.checked != false || groupIndex == 0)
+                                    ) {
+                                        item
+                                    } else {
+                                        item.copy(enabled = false)
+                                    },
+                                first = index == 0,
+                                last = index == group.items.lastIndex,
+                                highlighted = item.id == highlightedItemId,
+                                onSettingValueChanged = onSettingValueChanged,
+                                onClick = {
+                                    when (item.control) {
+                                        SettingsControl.SWITCH, SettingsControl.MAIN_SWITCH -> {
+                                            item.onCheckedChange?.invoke(item.checked != true)
+                                            onSettingValueChanged()
+                                        }
+
+                                        SettingsControl.SLIDER, SettingsControl.TEXT -> {
+                                            dialogItem = item
+                                        }
+
+                                        SettingsControl.CHOICE -> {
+                                        }
+
+                                        SettingsControl.NAVIGATION -> {
+                                            item.destination?.let(onNavigate)
+                                        }
+
+                                        SettingsControl.ACTION -> {
+                                            if (item.confirmationMessage == null) {
+                                                item.onClick?.invoke()
+                                                onSettingValueChanged()
+                                            } else {
+                                                dialogItem = item
+                                            }
+                                        }
+
+                                        SettingsControl.CUSTOM -> {
+                                        }
+                                    }
+                                },
+                            )
+                        }
+                    }
+                }
+                if (groupIndex == 0 && mainSwitch != null) {
+                    item("integration_description") {
+                        AnimatedVisibility(
+                            visible = mainSwitch.checked == false,
+                            enter = expandVertically() + fadeIn(),
+                            exit = shrinkVertically() + fadeOut(),
+                        ) {
+                            Text(
+                                text = mainSwitch.description.orEmpty(),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(16.dp),
+                            )
+                        }
+                    }
+                }
+            }
+            if (hasPreview && !fixedPreview) {
+                item("lyrics_preview") {
+                    lyricsPreview(
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(top = 16.dp)
+                            .height(previewHeight)
+                            .padding(horizontal = 16.dp),
+                    )
+                }
+            }
+        }
         Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(if (fixedPreview) 16.dp else 0.dp)) {
             if (fixedPreview) {
                 lyricsPreview(Modifier.fillMaxWidth().height(previewHeight).padding(horizontal = 16.dp))
             }
-            DragScrollableColumn(
-                state = listState,
-                modifier = Modifier.weight(1f).fillMaxWidth().desktopArrowScroll(listState),
-                contentPadding =
-                    if (fixedPreview) {
-                        PaddingValues(
-                            bottom = contentPadding.calculateBottomPadding(),
-                        )
-                    } else {
-                        contentPadding
-                    },
-            ) {
-                groups.forEachIndexed { groupIndex, group ->
-                    item("heading_${group.id}", contentType = "heading") {
-                        AnimatedVisibility(
-                            visible = mainSwitch?.checked != false || groupIndex == 0,
-                            enter = expandVertically() + fadeIn(),
-                            exit = shrinkVertically() + fadeOut(),
-                        ) {
-                            Box(
-                                Modifier.padding(
-                                    top =
-                                        if (group.title.isBlank()) {
-                                            0.dp
-                                        } else if (groupIndex == 0) {
-                                            8.dp
-                                        } else {
-                                            24.dp
-                                        },
-                                ),
-                            ) {
-                                SettingsItemGroup(group.copy(items = emptyList()), highlightedItemId, onSettingValueChanged, {})
-                            }
-                        }
-                    }
-                    items(
-                        group.items.size,
-                        key = { "${group.id}:${group.items[it].id}" },
-                        contentType = { group.items[it].control },
-                    ) { index ->
-                        val item = group.items[index]
-                        AnimatedVisibility(
-                            visible = mainSwitch?.checked != false || groupIndex == 0,
-                            enter = expandVertically() + fadeIn(),
-                            exit = shrinkVertically() + fadeOut(),
-                        ) {
-                            Box(
-                                Modifier
-                                    .padding(horizontal = 16.dp)
-                                    .padding(bottom = if (index == group.items.lastIndex) 0.dp else 4.dp),
-                            ) {
-                                SettingsItemRow(
-                                    item =
-                                        if (group.enabled &&
-                                            (mainSwitch?.checked != false || groupIndex == 0)
-                                        ) {
-                                            item
-                                        } else {
-                                            item.copy(enabled = false)
-                                        },
-                                    first = index == 0,
-                                    last = index == group.items.lastIndex,
-                                    highlighted = item.id == highlightedItemId,
-                                    onSettingValueChanged = onSettingValueChanged,
-                                    onClick = {
-                                        when (item.control) {
-                                            SettingsControl.SWITCH, SettingsControl.MAIN_SWITCH -> {
-                                                item.onCheckedChange?.invoke(item.checked != true)
-                                                onSettingValueChanged()
-                                            }
-
-                                            SettingsControl.SLIDER, SettingsControl.TEXT -> {
-                                                dialogItem = item
-                                            }
-
-                                            SettingsControl.CHOICE -> {
-                                            }
-
-                                            SettingsControl.NAVIGATION -> {
-                                                item.destination?.let(onNavigate)
-                                            }
-
-                                            SettingsControl.ACTION -> {
-                                                if (item.confirmationMessage == null) {
-                                                    item.onClick?.invoke()
-                                                    onSettingValueChanged()
-                                                } else {
-                                                    dialogItem = item
-                                                }
-                                            }
-
-                                            SettingsControl.CUSTOM -> {
-                                            }
-                                        }
-                                    },
-                                )
-                            }
-                        }
-                    }
-                    if (groupIndex == 0 && mainSwitch != null) {
-                        item("integration_description") {
-                            AnimatedVisibility(
-                                visible = mainSwitch.checked == false,
-                                enter = expandVertically() + fadeIn(),
-                                exit = shrinkVertically() + fadeOut(),
-                            ) {
-                                Text(
-                                    text = mainSwitch.description.orEmpty(),
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.padding(16.dp),
-                                )
-                            }
-                        }
-                    }
-                }
-                if (hasPreview && !fixedPreview) {
-                    item("lyrics_preview") {
-                        lyricsPreview(
-                            Modifier
-                                .fillMaxWidth()
-                                .padding(top = 16.dp)
-                                .height(previewHeight)
-                                .padding(horizontal = 16.dp),
-                        )
-                    }
-                }
+            if (effectiveOnRefresh != null) {
+                SettingsPullToRefreshPageList(
+                    effectiveOnRefresh,
+                    listState,
+                    contentPadding =
+                        if (fixedPreview) {
+                            PaddingValues(
+                                bottom = contentPadding.calculateBottomPadding(),
+                            )
+                        } else {
+                            contentPadding
+                        },
+                    content = listContent,
+                )
+            } else {
+                DragScrollableColumn(
+                    state = listState,
+                    modifier = Modifier.weight(1f).fillMaxWidth().desktopArrowScroll(listState),
+                    contentPadding =
+                        if (fixedPreview) {
+                            PaddingValues(
+                                bottom = contentPadding.calculateBottomPadding(),
+                            )
+                        } else {
+                            contentPadding
+                        },
+                    content = listContent,
+                )
             }
         }
     }
+
     val activeDialogItem =
         dialogItem?.let { dialog ->
             groups
@@ -877,6 +910,46 @@ private fun SettingsPageList(
             else -> {
             }
         }
+    }
+}
+
+@Composable
+private fun SettingsPullToRefreshPageList(
+    onRefresh: () -> Unit,
+    listState: LazyListState,
+    contentPadding: PaddingValues,
+    content: LazyListScope.() -> Unit,
+) {
+    val pullToRefreshState = rememberPullToRefreshState()
+    var refreshing by remember { mutableStateOf(false) }
+    LaunchedEffect(refreshing) {
+        if (!refreshing) return@LaunchedEffect
+        delay(700.milliseconds)
+        refreshing = false
+    }
+    PullToRefreshBox(
+        isRefreshing = refreshing,
+        onRefresh = {
+            refreshing = true
+            onRefresh()
+        },
+        state = pullToRefreshState,
+        indicator = {
+            // Keep the indicator below the top bar, which overlays the box on compact screens.
+            RefreshIndicator(
+                state = pullToRefreshState,
+                isRefreshing = refreshing,
+                modifier = Modifier.align(Alignment.TopCenter).padding(top = contentPadding.calculateTopPadding()),
+            )
+        },
+        modifier = Modifier.fillMaxSize(),
+    ) {
+        DragScrollableColumn(
+            state = listState,
+            modifier = Modifier.fillMaxSize().desktopArrowScroll(listState),
+            contentPadding = contentPadding,
+            content = content,
+        )
     }
 }
 

@@ -68,6 +68,7 @@ import com.metrolist.shared.constants.DevtoolsBenchmarkClientsKey
 import com.metrolist.shared.constants.DevtoolsPlaybackClientKey
 import com.metrolist.shared.constants.DevtoolsUnlockedKey
 import com.metrolist.shared.constants.DisableAnimatedArtworkOnMobileDataKey
+import com.metrolist.shared.constants.DiscordAlbumTemplateKey
 import com.metrolist.shared.constants.DiscordPendingAuthSessionKey
 import com.metrolist.shared.constants.DownloadQueueJsonKey
 import com.metrolist.shared.constants.DownloadedCollectionSortDirectionKey
@@ -629,6 +630,7 @@ class Settings(
     var discordActivityName by preference("")
     var discordStateTemplate by preference("{artist.name}")
     var discordDetailsTemplate by preference("{song.name}")
+    var discordAlbumTemplate by preference(DiscordAlbumTemplateKey, "{album.name}")
     var discordButton1Enabled by preference(true)
     var discordButton1Text by preference("Listen on YouTube Music")
     var discordButton1Url by preference("{song.url}")
