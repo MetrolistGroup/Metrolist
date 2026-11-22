@@ -17,7 +17,9 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -86,6 +88,7 @@ import com.metrolist.shared.generated.resources.more_options
 import com.metrolist.shared.generated.resources.next
 import com.metrolist.shared.generated.resources.previous
 import com.metrolist.shared.generated.resources.share
+import com.metrolist.shared.generated.resources.unlike
 import com.metrolist.shared.settings.PlayerBackgroundStyle
 import com.metrolist.shared.settings.Settings
 import com.metrolist.shared.ui.LocalIsTv
@@ -108,6 +111,7 @@ data class PlayerControlAction(
     val text: String? = null,
     val wide: Boolean = false,
     val trailingText: String? = null,
+    val tooltip: String? = null,
 )
 
 @Composable
@@ -231,129 +235,145 @@ fun PlayerPrimaryControls(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.Center,
     ) {
-        FilledTonalButton(
-            onClick = { onSkipPrevious?.invoke() },
-            enabled = onSkipPrevious != null,
-            shapes = ButtonDefaults.shapes(shape = sideShape),
-            interactionSource = prevInteractionSource,
-            colors =
-                ButtonDefaults.filledTonalButtonColors(
-                    containerColor = sideButtonContainerColor.copy(alpha = 0.8f),
-                    contentColor = sideButtonContentColor,
-                ),
-            contentPadding = PaddingValues(horizontal = 0.dp, vertical = 0.dp),
-            modifier =
-                Modifier
-                    .height(effectiveSideButtonHeight)
-                    .pointerHoverIcon(PointerIcon.Hand)
-                    .weight(backButtonWeight)
-                    .tvFocusHighlight(sideShape, scale = 1f)
-                    .playerControlBlend(),
-        ) {
-            Icon(MetrolistIcons.Rounded.SkipPrevious, previousText, modifier = Modifier.size(iconSize))
+        HoverTooltip(text = previousText, modifier = Modifier.weight(backButtonWeight)) {
+            FilledTonalButton(
+                onClick = { onSkipPrevious?.invoke() },
+                enabled = onSkipPrevious != null,
+                shapes = ButtonDefaults.shapes(shape = sideShape),
+                interactionSource = prevInteractionSource,
+                colors =
+                    ButtonDefaults.filledTonalButtonColors(
+                        containerColor = sideButtonContainerColor.copy(alpha = 0.8f),
+                        contentColor = sideButtonContentColor,
+                    ),
+                contentPadding = PaddingValues(horizontal = 0.dp, vertical = 0.dp),
+                modifier =
+                    Modifier
+                        .height(effectiveSideButtonHeight)
+                        .pointerHoverIcon(PointerIcon.Hand)
+                        .fillMaxWidth()
+                        .tvFocusHighlight(sideShape, scale = 1f)
+                        .playerControlBlend(),
+            ) {
+                Icon(MetrolistIcons.Rounded.SkipPrevious, previousText, modifier = Modifier.size(iconSize))
+            }
         }
 
         Spacer(Modifier.width(if (isCompact) 6.dp else 8.dp))
 
-        FilledTonalButton(
-            onClick = {
-                haptics.toggle(!isPlaying)
-                onTogglePlay()
-            },
-            shapes = ButtonDefaults.shapes(shape = playShape),
-            interactionSource = playPauseInteractionSource,
-            colors =
-                ButtonDefaults.filledTonalButtonColors(
-                    containerColor = centerButtonContainerColor,
-                    contentColor = centerButtonContentColor,
-                ),
-            contentPadding = PaddingValues(horizontal = 0.dp, vertical = 0.dp),
-            modifier =
-                Modifier
-                    .height(buttonHeight)
-                    .pointerHoverIcon(PointerIcon.Hand)
-                    .widthIn(min = minPlayWidth)
-                    .weight(playPauseWeight)
-                    .tvFocusHighlight(playShape, scale = 1f, color = centerButtonContentColor)
-                    .then(
-                        if (playPauseFocusRequester != null) {
-                            Modifier.focusRequester(playPauseFocusRequester)
-                        } else {
-                            Modifier
-                        },
-                    ),
+        HoverTooltip(
+            text =
+                if (showLabels) {
+                    null
+                } else if (isLoading) {
+                    loadingText
+                } else if (isPlaying) {
+                    pauseText
+                } else {
+                    playText
+                },
+            modifier = Modifier.weight(playPauseWeight),
         ) {
-            if (isLoading && showLoadingIndicator) {
-                LoadingIndicator(
-                    modifier =
-                        Modifier.size(if (isCompact) 20.dp else 28.dp).semantics {
-                            contentDescription = loadingText
-                        },
-                    color = LocalContentColor.current,
-                )
-            } else {
-                Row(
-                    modifier = Modifier.padding(horizontal = if (isCompact) 0.dp else 8.dp),
-                    horizontalArrangement = Arrangement.Center,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Icon(
-                        if (isPlaying) MetrolistIcons.Rounded.Pause else MetrolistIcons.Rounded.PlayArrow,
-                        if (showLabels) {
-                            null
-                        } else if (isPlaying) {
-                            pauseText
-                        } else {
-                            playText
-                        },
-                        modifier =
-                            Modifier.size(
-                                if (isCompact) {
-                                    20.dp
-                                } else if (showLabels) {
-                                    28.dp
-                                } else {
-                                    IconButtonDefaults.largeIconSize
-                                },
-                            ),
-                    )
-                    if (showLabels) {
-                        val playPauseText = if (isPlaying) pauseText else playText
-                        val labelEffectsSpec = MaterialTheme.motionScheme.fastEffectsSpec<Float>()
-                        val labelSpatialSpec = MaterialTheme.motionScheme.fastSpatialSpec<IntSize>()
-                        Spacer(Modifier.width(if (isCompact) 6.dp else 10.dp))
-                        AnimatedContent(
-                            targetState = playPauseText,
-                            modifier =
-                                Modifier.weight(1f, fill = false).clearAndSetSemantics {
-                                    text = AnnotatedString(playPauseText)
-                                },
-                            transitionSpec = {
-                                (fadeIn(labelEffectsSpec) togetherWith fadeOut(labelEffectsSpec))
-                                    .using(SizeTransform { _, _ -> labelSpatialSpec })
+            FilledTonalButton(
+                onClick = {
+                    haptics.toggle(!isPlaying)
+                    onTogglePlay()
+                },
+                shapes = ButtonDefaults.shapes(shape = playShape),
+                interactionSource = playPauseInteractionSource,
+                colors =
+                    ButtonDefaults.filledTonalButtonColors(
+                        containerColor = centerButtonContainerColor,
+                        contentColor = centerButtonContentColor,
+                    ),
+                contentPadding = PaddingValues(horizontal = 0.dp, vertical = 0.dp),
+                modifier =
+                    Modifier
+                        .height(buttonHeight)
+                        .pointerHoverIcon(PointerIcon.Hand)
+                        .widthIn(min = minPlayWidth)
+                        .fillMaxWidth()
+                        .tvFocusHighlight(playShape, scale = 1f, color = centerButtonContentColor)
+                        .then(
+                            if (playPauseFocusRequester != null) {
+                                Modifier.focusRequester(playPauseFocusRequester)
+                            } else {
+                                Modifier
                             },
-                            contentAlignment = Alignment.Center,
-                            label = "playPauseLabel",
-                        ) { labelText ->
-                            Text(
-                                labelText,
-                                style =
-                                    (if (isCompact) MaterialTheme.typography.labelLarge else MaterialTheme.typography.titleLarge).copy(
-                                        lineHeightStyle = LineHeightStyle(LineHeightStyle.Alignment.Center, LineHeightStyle.Trim.Both),
-                                    ),
-                                autoSize =
+                        ),
+            ) {
+                if (isLoading && showLoadingIndicator) {
+                    LoadingIndicator(
+                        modifier =
+                            Modifier.size(if (isCompact) 20.dp else 28.dp).semantics {
+                                contentDescription = loadingText
+                            },
+                        color = LocalContentColor.current,
+                    )
+                } else {
+                    Row(
+                        modifier = Modifier.padding(horizontal = if (isCompact) 0.dp else 8.dp),
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Icon(
+                            if (isPlaying) MetrolistIcons.Rounded.Pause else MetrolistIcons.Rounded.PlayArrow,
+                            if (showLabels) {
+                                null
+                            } else if (isPlaying) {
+                                pauseText
+                            } else {
+                                playText
+                            },
+                            modifier =
+                                Modifier.size(
                                     if (isCompact) {
-                                        null
+                                        20.dp
+                                    } else if (showLabels) {
+                                        28.dp
                                     } else {
-                                        TextAutoSize.StepBased(
-                                            minFontSize = MaterialTheme.typography.labelSmall.fontSize,
-                                            maxFontSize = MaterialTheme.typography.titleLarge.fontSize,
-                                        )
+                                        IconButtonDefaults.largeIconSize
                                     },
-                                fontWeight = FontWeight.SemiBold,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                            )
+                                ),
+                        )
+                        if (showLabels) {
+                            val playPauseText = if (isPlaying) pauseText else playText
+                            val labelEffectsSpec = MaterialTheme.motionScheme.fastEffectsSpec<Float>()
+                            val labelSpatialSpec = MaterialTheme.motionScheme.fastSpatialSpec<IntSize>()
+                            Spacer(Modifier.width(if (isCompact) 6.dp else 10.dp))
+                            AnimatedContent(
+                                targetState = playPauseText,
+                                modifier =
+                                    Modifier.weight(1f, fill = false).clearAndSetSemantics {
+                                        text = AnnotatedString(playPauseText)
+                                    },
+                                transitionSpec = {
+                                    (fadeIn(labelEffectsSpec) togetherWith fadeOut(labelEffectsSpec))
+                                        .using(SizeTransform { _, _ -> labelSpatialSpec })
+                                },
+                                contentAlignment = Alignment.Center,
+                                label = "playPauseLabel",
+                            ) { labelText ->
+                                Text(
+                                    labelText,
+                                    style =
+                                        (if (isCompact) MaterialTheme.typography.labelLarge else MaterialTheme.typography.titleLarge).copy(
+                                            lineHeightStyle = LineHeightStyle(LineHeightStyle.Alignment.Center, LineHeightStyle.Trim.Both),
+                                        ),
+                                    autoSize =
+                                        if (isCompact) {
+                                            null
+                                        } else {
+                                            TextAutoSize.StepBased(
+                                                minFontSize = MaterialTheme.typography.labelSmall.fontSize,
+                                                maxFontSize = MaterialTheme.typography.titleLarge.fontSize,
+                                            )
+                                        },
+                                    fontWeight = FontWeight.SemiBold,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                )
+                            }
                         }
                     }
                 }
@@ -362,26 +382,28 @@ fun PlayerPrimaryControls(
 
         Spacer(Modifier.width(if (isCompact) 6.dp else 8.dp))
 
-        FilledTonalButton(
-            onClick = { onSkipNext?.invoke() },
-            enabled = onSkipNext != null,
-            shapes = ButtonDefaults.shapes(shape = sideShape),
-            interactionSource = nextInteractionSource,
-            colors =
-                ButtonDefaults.filledTonalButtonColors(
-                    containerColor = sideButtonContainerColor.copy(alpha = 0.85f),
-                    contentColor = sideButtonContentColor,
-                ),
-            contentPadding = PaddingValues(horizontal = 0.dp, vertical = 0.dp),
-            modifier =
-                Modifier
-                    .height(effectiveSideButtonHeight)
-                    .pointerHoverIcon(PointerIcon.Hand)
-                    .weight(nextButtonWeight)
-                    .tvFocusHighlight(sideShape, scale = 1f)
-                    .playerControlBlend(),
-        ) {
-            Icon(MetrolistIcons.Rounded.SkipNext, nextText, modifier = Modifier.size(iconSize))
+        HoverTooltip(text = nextText, modifier = Modifier.weight(nextButtonWeight)) {
+            FilledTonalButton(
+                onClick = { onSkipNext?.invoke() },
+                enabled = onSkipNext != null,
+                shapes = ButtonDefaults.shapes(shape = sideShape),
+                interactionSource = nextInteractionSource,
+                colors =
+                    ButtonDefaults.filledTonalButtonColors(
+                        containerColor = sideButtonContainerColor.copy(alpha = 0.85f),
+                        contentColor = sideButtonContentColor,
+                    ),
+                contentPadding = PaddingValues(horizontal = 0.dp, vertical = 0.dp),
+                modifier =
+                    Modifier
+                        .height(effectiveSideButtonHeight)
+                        .pointerHoverIcon(PointerIcon.Hand)
+                        .fillMaxWidth()
+                        .tvFocusHighlight(sideShape, scale = 1f)
+                        .playerControlBlend(),
+            ) {
+                Icon(MetrolistIcons.Rounded.SkipNext, nextText, modifier = Modifier.size(iconSize))
+            }
         }
     }
 }
@@ -413,7 +435,7 @@ fun PlayerLikeShareButtons(
 
     val linkCopiedDesc = stringResource(Res.string.link_copied_to_clipboard)
     val shareDesc = stringResource(Res.string.share)
-    val likeDesc = stringResource(Res.string.action_like)
+    val likeDesc = stringResource(if (isLiked) Res.string.unlike else Res.string.action_like)
     val moreDesc = stringResource(Res.string.more_options)
 
     val triggerCopied = {
@@ -477,49 +499,56 @@ fun PlayerLikeShareButtons(
                 customItem(
                     buttonGroupContent = {
                         val shareShape = ButtonGroupDefaults.connectedLeadingButtonShape
-                        Surface(
-                            shape = shareShape,
-                            color = MaterialTheme.colorScheme.secondaryContainer,
-                            contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                        HoverTooltip(
+                            text = if (isCopied) linkCopiedDesc else shareDesc,
                             modifier =
                                 Modifier
-                                    .size(width = buttonWidth, height = groupHeight)
                                     .animateWidth(shareInteractionSource, 12.dp)
-                                    .pointerInput(Unit) {
-                                        awaitPointerEventScope {
-                                            while (true) {
-                                                val event = awaitPointerEvent(PointerEventPass.Initial)
-                                                isShiftPressed = event.keyboardModifiers.isShiftPressed
-                                            }
-                                        }
-                                    }.clip(shareShape)
-                                    .combinedClickable(
-                                        hapticFeedbackEnabled = false,
-                                        interactionSource = shareInteractionSource,
-                                        indication = ripple(),
-                                        onClick = { handleShareClick() },
-                                        onLongClick = onAltShareClick?.let { { handleAltShareClick() } },
-                                    ).tvFocusHighlight(shareShape, scale = 1f)
-                                    .semantics {
-                                        contentDescription = if (isCopied) linkCopiedDesc else shareDesc
-                                        role = Role.Button
-                                        if (onAltShareClick != null) {
-                                            onLongClick {
-                                                handleAltShareClick()
-                                                true
-                                            }
-                                        }
-                                    },
+                                    .defaultMinSize(minWidth = buttonWidth, minHeight = groupHeight),
                         ) {
-                            Box(
-                                contentAlignment = Alignment.Center,
-                                modifier = Modifier.fillMaxSize(),
+                            Surface(
+                                shape = shareShape,
+                                color = MaterialTheme.colorScheme.secondaryContainer,
+                                contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                                modifier =
+                                    Modifier
+                                        .fillMaxSize()
+                                        .pointerInput(Unit) {
+                                            awaitPointerEventScope {
+                                                while (true) {
+                                                    val event = awaitPointerEvent(PointerEventPass.Initial)
+                                                    isShiftPressed = event.keyboardModifiers.isShiftPressed
+                                                }
+                                            }
+                                        }.clip(shareShape)
+                                        .combinedClickable(
+                                            hapticFeedbackEnabled = false,
+                                            interactionSource = shareInteractionSource,
+                                            indication = ripple(),
+                                            onClick = { handleShareClick() },
+                                            onLongClick = onAltShareClick?.let { { handleAltShareClick() } },
+                                        ).tvFocusHighlight(shareShape, scale = 1f)
+                                        .semantics {
+                                            contentDescription = if (isCopied) linkCopiedDesc else shareDesc
+                                            role = Role.Button
+                                            if (onAltShareClick != null) {
+                                                onLongClick {
+                                                    handleAltShareClick()
+                                                    true
+                                                }
+                                            }
+                                        },
                             ) {
-                                Icon(
-                                    if (isCopied) MetrolistIcons.Default.Check else MetrolistIcons.Outlined.Share,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(iconSize),
-                                )
+                                Box(
+                                    contentAlignment = Alignment.Center,
+                                    modifier = Modifier.fillMaxSize(),
+                                ) {
+                                    Icon(
+                                        if (isCopied) MetrolistIcons.Default.Check else MetrolistIcons.Outlined.Share,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(iconSize),
+                                    )
+                                }
                             }
                         }
                     },
@@ -546,35 +575,42 @@ fun PlayerLikeShareButtons(
             }
             customItem(
                 buttonGroupContent = {
-                    ToggleButton(
-                        checked = isLiked,
-                        onCheckedChange = { onLikeClick() },
-                        shapes =
-                            if (isTv) {
-                                ToggleButtonDefaults.shapesFor(groupHeight)
-                            } else {
-                                ButtonGroupDefaults.connectedTrailingButtonShapes(
-                                    checkedShape = ButtonGroupDefaults.connectedTrailingButtonShape,
-                                )
-                            },
-                        contentPadding = PaddingValues(0.dp),
-                        colors = likeButtonColors,
-                        interactionSource = likeInteractionSource,
+                    HoverTooltip(
+                        text = likeDesc,
                         modifier =
                             Modifier
-                                .size(width = buttonWidth, height = groupHeight)
                                 .animateWidth(likeInteractionSource, 12.dp)
-                                .tvFocusHighlight(
-                                    if (isTv) RoundedCornerShape(50) else ButtonGroupDefaults.connectedTrailingButtonShape,
-                                    scale = 1f,
-                                    color = if (isLiked) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.primary,
-                                ).semantics { contentDescription = likeDesc },
+                                .defaultMinSize(minWidth = buttonWidth, minHeight = groupHeight),
                     ) {
-                        Icon(
-                            if (isLiked) MetrolistIcons.Default.Favorite else MetrolistIcons.Outlined.FavoriteBorder,
-                            contentDescription = null,
-                            modifier = Modifier.size(iconSize),
-                        )
+                        ToggleButton(
+                            checked = isLiked,
+                            onCheckedChange = { onLikeClick() },
+                            shapes =
+                                if (isTv) {
+                                    ToggleButtonDefaults.shapesFor(groupHeight)
+                                } else {
+                                    ButtonGroupDefaults.connectedTrailingButtonShapes(
+                                        checkedShape = ButtonGroupDefaults.connectedTrailingButtonShape,
+                                    )
+                                },
+                            contentPadding = PaddingValues(0.dp),
+                            colors = likeButtonColors,
+                            interactionSource = likeInteractionSource,
+                            modifier =
+                                Modifier
+                                    .size(width = buttonWidth, height = groupHeight)
+                                    .tvFocusHighlight(
+                                        if (isTv) RoundedCornerShape(50) else ButtonGroupDefaults.connectedTrailingButtonShape,
+                                        scale = 1f,
+                                        color = if (isLiked) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.primary,
+                                    ).semantics { contentDescription = likeDesc },
+                        ) {
+                            Icon(
+                                if (isLiked) MetrolistIcons.Default.Favorite else MetrolistIcons.Outlined.FavoriteBorder,
+                                contentDescription = null,
+                                modifier = Modifier.size(iconSize),
+                            )
+                        }
                     }
                 },
                 menuContent = { menuState ->
@@ -597,24 +633,26 @@ fun PlayerLikeShareButtons(
 
         if (onMoreClick != null) {
             Spacer(Modifier.width(8.dp))
-            ToggleButton(
-                checked = isMoreActive,
-                onCheckedChange = { onMoreClick() },
-                shapes =
-                    ToggleButtonDefaults.shapesFor(groupHeight),
-                contentPadding = PaddingValues(0.dp),
-                colors = buttonColors,
-                modifier =
-                    Modifier
-                        .size(buttonWidth, groupHeight)
-                        .semantics { contentDescription = moreDesc }
-                        .navigationPopupSource(),
-            ) {
-                Icon(
-                    MetrolistIcons.Default.MoreVert,
-                    contentDescription = null,
-                    modifier = Modifier.size(iconSize),
-                )
+            HoverTooltip(text = moreDesc) {
+                ToggleButton(
+                    checked = isMoreActive,
+                    onCheckedChange = { onMoreClick() },
+                    shapes =
+                        ToggleButtonDefaults.shapesFor(groupHeight),
+                    contentPadding = PaddingValues(0.dp),
+                    colors = buttonColors,
+                    modifier =
+                        Modifier
+                            .size(buttonWidth, groupHeight)
+                            .semantics { contentDescription = moreDesc }
+                            .navigationPopupSource(),
+                ) {
+                    Icon(
+                        MetrolistIcons.Default.MoreVert,
+                        contentDescription = null,
+                        modifier = Modifier.size(iconSize),
+                    )
+                }
             }
         }
     }
