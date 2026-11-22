@@ -884,7 +884,7 @@
     <string name="choose_youtube_channel_description">Questo account Google ha più canali. Scegli quale usare.</string>
     <string name="switch_youtube_channel">Cambia canale YouTube</string>
     <string name="skip">Salta</string>
-    <string name="details_desc">Vedi le informazioni del brano</string>
+    <string name="details_desc">Mostra dettagli brano</string>
     <string name="recent_searches">Ricerche recenti</string>
     <string name="recognition_failed">Riconoscimento non riuscito</string>
     <string name="more_lyrics_options">Più opzioni dei testi</string>
@@ -1081,9 +1081,9 @@
         <item quantity="other">Suggerisci %1$d brani all'host. Solo l'host può sostituire la coda della stanza.</item>
     </plurals>
     <plurals name="minutes">
-        <item quantity="one">%1$d minuto</item>
-        <item quantity="many">%1$d minuti</item>
-        <item quantity="other">%1$d minuti</item>
+        <item quantity="one">%1$d minuto</item>
+        <item quantity="many">%1$d minuti</item>
+        <item quantity="other">%1$d minuti</item>
     </plurals>
     <plurals name="n_track">
         <item quantity="one">%1$d brano</item>
@@ -1153,7 +1153,7 @@
     <string name="general">Generale</string>
     <string name="persistent_shuffle_title">Riproduzione casuale persistente</string>
     <string name="persistent_shuffle_desc">Mantieni la riproduzione casuale attiva all'avvio di nuovi brani o playlist</string>
-    <string name="remember_shuffle_and_repeat">Ricorda shuffle e ripetizione</string>
+    <string name="remember_shuffle_and_repeat">Ricorda riproduzione casuale e ripetizione</string>
     <string name="remember_shuffle_and_repeat_desc">Memorizza le impostazioni di riproduzione casuale e ripetizione quando riapri l'app</string>
     <string name="export_playlist">Esporta playlist</string>
     <string name="export_failed">Impossibile esportare la playlist</string>
@@ -1169,9 +1169,9 @@
     <string name="subscribe">Iscriviti</string>
     <string name="subscribed">Iscritto</string>
     <plurals name="seconds">
-        <item quantity="one">%1$d secondo</item>
-        <item quantity="many">%1$d secondi</item>
-        <item quantity="other">%1$d secondi</item>
+        <item quantity="one">%1$d secondo</item>
+        <item quantity="many">%1$d secondi</item>
+        <item quantity="other">%1$d secondi</item>
     </plurals>
     <string name="beta_tag">[BETA]</string>
     <string name="crossfade">Dissolvenza</string>
@@ -1192,7 +1192,7 @@
     <string name="lyrics_romanization_syllable_description">Mostra il testo romanizzato sotto ogni parola nei testi sincronizzati per parola (come Apple Music)</string>
     <string name="username">Nome utente</string>
     <string name="password">Password</string>
-    <string name="play_next_desc">Riproduci il prossimo in coda</string>
+    <string name="play_next_desc">Aggiungi in cima alla coda</string>
     <string name="add_to_queue_desc">Aggiungi in fondo alla coda</string>
     <string name="download_desc">Rendilo disponibile per la riproduzione offline</string>
     <string name="refetch_desc">Recupera i metadati più recenti da YouTube Music</string>
@@ -1816,7 +1816,7 @@
     <string name="canvas_source_youtube_music_video">Video musicale da YouTube</string>
     <string name="seek_duration_description_android">Secondi da saltare toccando due volte sulla copertina o usando i comandi di salto</string>
     <string name="seek_duration_description_skip_controls">Secondi da saltare con i comandi di salto</string>
-    <string name="seek_feedback_seconds">%1$d s</string>
+    <string name="seek_feedback_seconds">%1$d s</string>
     <string name="seek_feedback_description">%1$s, %2$s</string>
     <string name="keep_screen_on">Mantieni lo schermo acceso</string>
     <string name="keep_screen_on_both">%1$s + %2$s</string>
@@ -2028,7 +2028,7 @@
     <string name="listen_together_now_playing">In riproduzione per tutti</string>
     <string name="recognition_network_error">Impossibile raggiungere il servizio di riconoscimento. Controlla la connessione Internet e riprova.</string>
     <string name="seek_seconds_addup">Avanzamento progressivo</string>
-    <string name="seek_seconds_addup_desc">Incrementa il tempo di salto ad ogni tocco consecutivo</string>
+    <string name="seek_seconds_addup_desc">Incrementa il tempo di salto a ogni tocco consecutivo</string>
     <string name="pause_music_when_media_is_muted">Metti in pausa quando l'audio è disattivato</string>
     <string name="pause_music_when_media_is_muted_desc">Metti in pausa la riproduzione quando il volume è azzerato e riprendi quando è attivato.</string>
     <string name="no_episode_description">Nessuna descrizione disponibile per questo episodio.</string>
