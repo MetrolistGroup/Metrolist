@@ -48,10 +48,11 @@ internal data class PlayerSheetContainerStyle(
     val border: BorderStroke?,
 ) {
     fun shape(progress: Float): Shape {
-        val radius = cornerRadius * (1f - progress.coerceIn(0f, 1f))
-        // Use the cheaper rounded-rectangle clip after the initial part of the sheet travel.
-        return if (expressive && progress <= EXPRESSIVE_SHAPE_MAX_PROGRESS) {
-            ExpressiveMiniPlayerShape(radius)
+        val clamped = progress.coerceIn(0f, 1f)
+        val radius = cornerRadius * (1f - clamped)
+        return if (expressive && clamped < EXPRESSIVE_SHAPE_MAX_PROGRESS) {
+            val smoothing = EXPRESSIVE_SHAPE_SMOOTHNESS_PERCENT * (1f - clamped / EXPRESSIVE_SHAPE_MAX_PROGRESS)
+            ExpressiveMiniPlayerShape(radius, smoothnessPercent = smoothing.toInt())
         } else {
             RoundedCornerShape(radius)
         }
@@ -59,6 +60,8 @@ internal data class PlayerSheetContainerStyle(
 }
 
 private const val EXPRESSIVE_SHAPE_MAX_PROGRESS = 0.2f
+
+private const val EXPRESSIVE_SHAPE_SMOOTHNESS_PERCENT = 60
 
 @Composable
 fun PlayerSheetSurface(
