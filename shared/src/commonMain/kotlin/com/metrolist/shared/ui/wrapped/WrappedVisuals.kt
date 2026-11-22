@@ -27,7 +27,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.TextAutoSize
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialShapes
@@ -38,36 +37,34 @@ import androidx.compose.material3.toPath
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.Stable
 import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableLongStateOf
-import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.MotionDurationScale
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.geometry.isSpecified
+import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Matrix
 import androidx.compose.ui.graphics.Outline
+import androidx.compose.ui.graphics.Paint
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.drawscope.clipPath
+import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.lerp
@@ -190,49 +187,21 @@ internal fun wrappedPalette(chapter: WrappedChapter): WrappedPalette {
     }
 }
 
-/** Expanding light rings, like the charging ripple, started from taps and chapter changes. */
-@Stable
-internal class WrappedRipples {
-    internal val origins = mutableStateListOf<Pair<Offset, Long>>()
-    internal var now by mutableLongStateOf(0L)
-
-    /** [origin] is in backdrop coordinates; [Offset.Unspecified] starts from the center. */
-    fun add(origin: Offset) {
-        origins += origin to now
-        if (origins.size > 6) origins.removeAt(0)
-    }
-}
-
-@Composable
-internal fun rememberWrappedRipples(motionEnabled: Boolean): WrappedRipples {
-    val ripples = remember { WrappedRipples() }
-    LaunchedEffect(ripples, motionEnabled) {
-        if (!motionEnabled) return@LaunchedEffect
-        while (true) {
-            withFrameNanos { time ->
-                ripples.now = time
-                ripples.origins.removeAll { time - it.second > WRAPPED_RIPPLE_NANOS }
-            }
-        }
-    }
-    return ripples
-}
-
-private const val WRAPPED_RIPPLE_NANOS = 1_300_000_000L
-
-/**
- * The poster ground: the chapter color, lit by soft pools of the accent color that drift like light on water,
- * with ripples spreading through it.
- */
+/** The poster ground: the chapter color, lit by soft pools of the accent color that drift like light on water. */
 @Composable
 internal fun WrappedBackdrop(
     chapters: List<WrappedChapter>,
     position: () -> Float,
     motionEnabled: Boolean,
     modifier: Modifier = Modifier,
-    ripples: WrappedRipples? = null,
 ) {
     val palettes = chapters.map { wrappedPalette(it) }
+    val drift: State<Float>? =
+        if (motionEnabled) {
+            rememberInfiniteTransition().animateFloat(0f, 1f, infiniteRepeatable(tween(60_000, easing = LinearEasing)))
+        } else {
+            null
+        }
     Canvas(modifier) {
         val raw = position().coerceIn(0f, palettes.lastIndex.toFloat())
         val progress = if (motionEnabled) raw else raw.roundToInt().toFloat()
@@ -243,41 +212,20 @@ internal fun WrappedBackdrop(
         val glow = lerp(palettes[index].glow, palettes[next].glow, fraction)
         val light = background.luminance() > 0.5f
         drawRect(background)
-        val seconds = (ripples?.now ?: 0L) / 1_000_000_000f
+        val turn = (drift?.value ?: 0f) * 2f * PI.toFloat()
         val span = maxOf(size.width, size.height)
         repeat(3) { pool ->
-            val drift = seconds * (0.07f + pool * 0.025f) * 2f * PI.toFloat()
+            // Whole turns per cycle keep the loop seamless; each pool moves at its own pace.
+            val drift = turn * (pool + 2)
             val center =
                 Offset(
                     size.width * (0.5f + 0.38f * sin(drift + pool * 2.1f)) - size.width * 0.2f * (progress - index) * (pool + 1),
-                    size.height * (0.3f + 0.25f * pool + 0.12f * cos(drift * 0.8f + pool * 1.7f)),
+                    size.height * (0.3f + 0.25f * pool + 0.12f * cos(drift + pool * 1.7f)),
                 )
             val radius = span * (0.42f + 0.08f * pool)
             val color = if (pool == 1) (if (light) Color.White else glow) else glow
             val alpha = if (light) (if (pool == 1) 0.55f else 0.5f) else (if (pool == 1) 0.18f else 0.3f)
             drawCircle(Brush.radialGradient(listOf(color.copy(alpha = alpha), color.copy(alpha = 0f)), center, radius), radius, center)
-        }
-        val rings = ripples ?: return@Canvas
-        val now = rings.now
-        rings.origins.forEach { (origin, start) ->
-            val t = ((now - start).toFloat() / WRAPPED_RIPPLE_NANOS).coerceIn(0f, 1f)
-            val eased = 1f - (1f - t) * (1f - t) * (1f - t)
-            val center = if (origin.isSpecified) origin else Offset(size.width / 2f, size.height / 2f)
-            val reach = hypot(maxOf(center.x, size.width - center.x), maxOf(center.y, size.height - center.y))
-            val radius = (reach * eased).coerceAtLeast(1f)
-            val ring = (if (light) Color.White else glow).copy(alpha = 0.7f * (1f - t))
-            drawCircle(
-                Brush.radialGradient(
-                    0f to Color.Transparent,
-                    0.72f to Color.Transparent,
-                    0.94f to ring,
-                    1f to Color.Transparent,
-                    center = center,
-                    radius = radius,
-                ),
-                radius,
-                center,
-            )
         }
     }
 }
@@ -314,29 +262,29 @@ internal fun Modifier.wrappedPattern(
     return drawBehind {
         val edge = bleed.toPx()
         val bottom = size.height + bottomBleed.toPx()
-        val amplitude = 7.dp.toPx()
-        val wavelength = 44.dp.toPx()
-        val shift = (phase?.value ?: 0f) * 2f * PI.toFloat()
-        // Wavy edges keep the pattern from ending in a flat cut under the rail and behind the headline.
-        val clip =
-            Path().apply {
-                moveTo(-edge, -edge + amplitude)
-                var x = -edge
-                while (x < size.width + edge) {
-                    x += 4.dp.toPx()
-                    lineTo(x, -edge + amplitude + sin(x / wavelength * 2f * PI.toFloat() - shift) * amplitude)
-                }
-                lineTo(x, bottom)
-                while (x > -edge) {
-                    x -= 4.dp.toPx()
-                    lineTo(x, bottom - amplitude + sin(x / wavelength * 2f * PI.toFloat() + shift) * amplitude)
-                }
-                close()
-            }
-        clipPath(clip) {
+        val area = Rect(-edge, -edge, size.width + edge, bottom)
+        // The pattern fades out at its top and bottom instead of ending in a hard cut.
+        val fade = 40.dp.toPx() / area.height
+        val tail = bottomBleed.toPx() / area.height
+        drawContext.canvas.saveLayer(area, Paint())
+        clipRect(area.left, area.top, area.right, area.bottom) {
             val swipe = if (motionEnabled) spin() else 0f
             drawWrappedPattern(pattern, palette, phase?.value ?: 0f, swipe, edge, bottomBleed.toPx())
         }
+        drawRect(
+            Brush.verticalGradient(
+                0f to Color.Transparent,
+                fade to Color.Black,
+                (1f - tail).coerceAtLeast(fade) to Color.Black,
+                1f to if (tail > 0f) Color.Transparent else Color.Black,
+                startY = area.top,
+                endY = area.bottom,
+            ),
+            area.topLeft,
+            area.size,
+            blendMode = BlendMode.DstIn,
+        )
+        drawContext.canvas.restore()
     }
 }
 

@@ -527,8 +527,6 @@ private fun WrappedReport(
         return
     }
     WrappedStatusBarAppearance(palette.background.luminance() > 0.5f)
-    val ripples = rememberWrappedRipples(motionEnabled)
-    LaunchedEffect(pager.settledPage) { ripples.add(Offset.Unspecified) }
     var held by remember { mutableStateOf(false) }
     val progress = remember { Animatable(0f) }
     var progressPage by remember { mutableIntStateOf(-1) }
@@ -553,7 +551,6 @@ private fun WrappedReport(
                 { pager.currentPage + pager.currentPageOffsetFraction },
                 motionEnabled,
                 Modifier.matchParentSize(),
-                ripples,
             )
             HorizontalPager(
                 state = pager,
@@ -565,11 +562,10 @@ private fun WrappedReport(
                 val scroll = rememberScrollState()
                 val direction = LocalLayoutDirection.current
                 BoxWithConstraints(
-                    Modifier.fillMaxSize().pointerInput(chapters.size, direction, scroll, pager, ripples) {
+                    Modifier.fillMaxSize().pointerInput(chapters.size, direction, scroll, pager) {
                         awaitEachGesture {
                             val down = awaitFirstDown(requireUnconsumed = false)
                             held = true
-                            ripples.add(down.position)
                             try {
                                 val scrollingAtDown = scroll.isScrollInProgress || pager.isScrollInProgress
                                 if (down.isConsumed) return@awaitEachGesture
