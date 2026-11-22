@@ -471,7 +471,7 @@ internal class LinuxPhysicalKeyCapture : PlatformPhysicalKeyCapture {
     }
 }
 
-private interface XRecordInterceptProc : Callback {
+internal interface XRecordInterceptProc : Callback {
     fun invoke(
         closure: Pointer?,
         dataPointer: Pointer?,
@@ -498,7 +498,7 @@ internal class XRecordInterceptData(
 }
 
 @Suppress("FunctionName")
-private interface X11 : Library {
+internal interface X11 : Library {
     fun XInitThreads(): Int
 
     fun XOpenDisplay(displayName: String?): Pointer?
@@ -532,7 +532,7 @@ private interface X11 : Library {
 }
 
 @Suppress("FunctionName")
-private interface XTestRecord : Library {
+internal interface XTestRecord : Library {
     fun XRecordAllocRange(): Pointer?
 
     fun XRecordProcessReplies(display: Pointer)
@@ -566,7 +566,7 @@ private interface XTestRecord : Library {
     fun XRecordFreeData(data: Pointer)
 }
 
-private interface Posix : Library {
+internal interface Posix : Library {
     fun pipe(fds: IntArray): Int
 
     fun poll(
