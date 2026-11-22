@@ -230,7 +230,9 @@ fun PlaylistScreen(
     var showDeleteDialog by remember { mutableStateOf(false) }
     var draftName by remember(playlistId) { mutableStateOf<String?>(null) }
     var draftDescription by remember(playlistId) { mutableStateOf<String?>(null) }
+
     fun editName() = draftName ?: playlistInfo?.title.orEmpty()
+
     fun editDescription() = draftDescription ?: playlistInfo?.description.orEmpty()
     var searchQuery by remember(playlistInfo?.id) { mutableStateOf("") }
     val sorting =
