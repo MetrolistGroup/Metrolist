@@ -1470,8 +1470,8 @@
     <string name="remove_from_playlist">Odstranit z playlistu</string>
     <string name="create_backup_countdown">Vytvořit zálohu (%1$d)</string>
     <string name="listen_together_how_it_works">Jak to funguje</string>
-    <string name="listen_together_how_it_works_body">Poslouchat Společně umožňuje poslouchat synchronizováně hudbu s přáteli. Hostitel ovládá přehrávání a hosté následují automaticky.</string>
-    <string name="listen_together_how_it_works_bullets">• Vytvoř místnost a staň se hostitelem\n• Sdílej kód místnosti s přáteli\n• Hosté se mohou připojit pomocí kódu\n• Pouze hostitel může ovládat přehrávání</string>
+    <string name="listen_together_how_it_works_body">Poslouchat Společně umožňuje poslouchat synchronizovaně hudbu s přáteli. Hostitel ovládá přehrávání a hosté následují automaticky.</string>
+    <string name="listen_together_how_it_works_bullets">• Vytvořte místnost a staňte se hostitelem\n• Sdílejte kód místnosti s přáteli\n• Hosté se mohou připojit pomocí kódu\n• Pouze hostitel může ovládat přehrávání</string>
     <string name="remove_server">Odstranit server</string>
     <string name="discord_disconnected">Odpojeno</string>
     <string name="radio">Rádio</string>
@@ -1565,7 +1565,7 @@
     <string name="export_logs">Export záznamů</string>
     <string name="close_miniplayer">Zavřít mini přehrávač</string>
     <string name="thumbnail">Miniatura</string>
-    <string name="backup_failed">Záloha selhala: %1$s</string>
+    <string name="backup_failed">Zálohování selhalo: %1$s</string>
     <string name="detail_in_library">V knihovně</string>
     <string name="technical_information">Technické informace</string>
     <string name="detail_remove_token">Odstranit token</string>
@@ -1738,9 +1738,9 @@
     <string name="no_provider_results_found">Nebyly nalezeny žádné výsledky poskytovatele</string>
     <string name="remove_from_saved_podcasts">Odstranit z uložených podcastů</string>
     <string name="save_podcast">Uložit podcast</string>
-    <string name="show_interval_indicator">Indikátor intervalu</string>
+    <string name="show_interval_indicator">Zobrazit indikátor intervalu</string>
     <string name="show_lyrics">Zobrazit text skladby</string>
-    <string name="dislike_this_song_on_youtube_music">Označit tuto skladbu že se mi nelíbí na Youtube Music</string>
+    <string name="dislike_this_song_on_youtube_music">Označit tuto skladbu jako nelíbí se mi na Youtube Music</string>
     <string name="could_not_open_file_picker">Nepodařilo se otevřít výběr souboru: %1$s</string>
     <string name="amazon_music_login_failed">Přihlášení k Amazon Music selhalo</string>
     <string name="import_notifier_title">Importování playlistu</string>
@@ -1793,10 +1793,10 @@
     <string name="shortcut_toggle_video">Přepnout režim videa / prohlížeč</string>
     <string name="shortcut_toggle_fullscreen_video">Přepnout video na celou obrazovku</string>
     <string name="shortcut_developer_log">Prohlížeč vývojářských záznamů</string>
-    <string name="restore_replaces_data">Tohle vám nahradí vaše stávající nastavení, údaje, účty a data v knihovně. Metrolist se restartuje automaticky.</string>
+    <string name="restore_replaces_data">Toto nahradí vaše stávající nastavení, údaje, účty a data v knihovně. Metrolist se restartuje automaticky.</string>
     <string name="discord_logged_in">Jste přihlášeni</string>
     <string name="lastfm_logged_in_as">Přihlášen jako %1$s</string>
-    <string name="lastfm_scrobble_percentage">Procento: %1$d%2$s</string>
+    <string name="lastfm_scrobble_percentage">Procento: %1$d %2$s</string>
     <string name="update_downloading_manager">Stahování správce aktualizací</string>
     <string name="cached_songs_title">Skladby v mezipaměti</string>
     <string name="cached_songs_empty">Žádné skladby v mezipaměti</string>
@@ -2660,4 +2660,7 @@
     <string name="widget_time_pair">%1$s / %2$s</string>
     <string name="widget_track_description">%1$s, %2$s</string>
     <string name="widget_play_item">Přehrát %1$s</string>
+    <string name="lastfm_session_expired_title">Relace Last.fm vypršela</string>
+    <string name="lastfm_session_expired">Přihlásit se do Last.fm znovu</string>
+    <string name="lastfm_session_expired_description">Vaše Last.fm přihlášení je již neplatné. Přehrání jsou uložena a budou odeslána po přihlášení.</string>
 </resources>
