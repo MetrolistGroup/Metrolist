@@ -386,7 +386,8 @@ fun MobileApp(
                 platformContext = platformContext,
                 platform = playerServices,
                 lyricsRepository = lyricsRepository,
-                animatedArtworkService = AnimatedArtworkService(GlobalYouTube.client),
+                animatedArtworkService =
+                    KoinPlatform.getKoinOrNull()?.getOrNull<AnimatedArtworkService>() ?: AnimatedArtworkService(GlobalYouTube.client),
                 musicVideoResolver = KoinPlatform.getKoin().get(),
                 viewModelScope = scope,
             )
