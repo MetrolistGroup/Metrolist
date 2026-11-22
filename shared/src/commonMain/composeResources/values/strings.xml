@@ -1418,6 +1418,8 @@
     <string name="automatic_backup_weekly">Weekly</string>
     <string name="automatic_backup_monthly">Monthly</string>
     <string name="automatic_backup_location">Mobile operating systems may defer automatic backups. Desktop backups run while Metrolist is open.</string>
+    <string name="automatic_backup_notification_channel">Automatic backups</string>
+    <string name="automatic_backup_notification">Saving a backup…</string>
     <string name="automatic_backup_restore">Restore an automatic backup</string>
     <string name="automatic_backup_restore_empty">No automatic backups are available.</string>
     <string name="automatic_backup_restore_desc">Choose a saved automatic backup to restore.</string>

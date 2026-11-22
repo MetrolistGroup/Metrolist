@@ -1,15 +1,21 @@
 package com.metrolist.android.backup
 
 import android.content.Context
+import android.content.pm.ServiceInfo
+import androidx.core.app.NotificationChannelCompat
+import androidx.core.app.NotificationCompat
+import androidx.core.app.NotificationManagerCompat
 import androidx.work.CoroutineWorker
 import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.ExistingWorkPolicy
+import androidx.work.ForegroundInfo
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import androidx.work.workDataOf
 import com.metrolist.android.BuildConfig
+import com.metrolist.android.R
 import com.metrolist.shared.backup.AutoBackupDestination
 import com.metrolist.shared.backup.AutoBackupFrequency
 import com.metrolist.shared.backup.DriveAccountConnectionState
@@ -18,6 +24,9 @@ import com.metrolist.shared.backup.DriveReauthorizationRequiredException
 import com.metrolist.shared.backup.GoogleDriveBackupClient
 import com.metrolist.shared.backup.defaultBackupFilename
 import com.metrolist.shared.db.MusicDatabase
+import com.metrolist.shared.generated.resources.Res
+import com.metrolist.shared.generated.resources.automatic_backup_notification
+import com.metrolist.shared.generated.resources.automatic_backup_notification_channel
 import com.metrolist.shared.settings.Settings
 import com.metrolist.shared.utils.Logger
 import kotlinx.coroutines.CancellationException
@@ -25,6 +34,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.io.files.Path
 import kotlinx.io.files.SystemFileSystem
+import org.jetbrains.compose.resources.getString
 import org.koin.core.context.GlobalContext
 import java.io.File
 import java.util.concurrent.TimeUnit
@@ -58,6 +68,8 @@ class AutomaticBackupWorker(
         val destination = File(directory, "${defaultBackupFilename(BACKUP_FILENAME_PREFIX)}.zip")
         var archiveCreated = false
         return try {
+            // WorkManager stops ordinary workers after ten minutes, which can strand a large resumable upload.
+            if (backupDestination == AutoBackupDestination.GOOGLE_DRIVE) setForegroundAsync(createForegroundInfo())
             check(directory.isDirectory || directory.mkdirs()) { "Could not create automatic backup directory" }
             if (backupDestination == AutoBackupDestination.GOOGLE_DRIVE) clearStagedArchives(directory)
             archiveCreated = true
@@ -105,6 +117,27 @@ class AutomaticBackupWorker(
                 clearStagedArchives(directory)
             }
         }
+    }
+
+    private suspend fun createForegroundInfo(): ForegroundInfo {
+        NotificationManagerCompat.from(applicationContext).createNotificationChannel(
+            NotificationChannelCompat
+                .Builder(CHANNEL_ID, NotificationManagerCompat.IMPORTANCE_LOW)
+                .setName(getString(Res.string.automatic_backup_notification_channel))
+                .build(),
+        )
+        val notification =
+            NotificationCompat
+                .Builder(applicationContext, CHANNEL_ID)
+                .setSmallIcon(R.drawable.ic_notification)
+                .setContentTitle(getString(Res.string.automatic_backup))
+                .setContentText(getString(Res.string.automatic_backup_notification))
+                .setOngoing(true)
+                .setOnlyAlertOnce(true)
+                .setPriority(NotificationCompat.PRIORITY_LOW)
+                .setCategory(NotificationCompat.CATEGORY_PROGRESS)
+                .build()
+        return ForegroundInfo(NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC)
     }
 
     private suspend fun uploadArchive(
@@ -159,6 +192,8 @@ class AutomaticBackupWorker(
 
     companion object {
         private val backupMutex = Mutex()
+        private const val CHANNEL_ID = "automatic_backup_progress"
+        private const val NOTIFICATION_ID = 4201
         private const val BACKUP_DIRECTORY = "automatic-backups"
         private const val BACKUP_FILENAME_PREFIX = "metrolist-backup"
         private const val MAX_RETAINED_BACKUPS = 10
