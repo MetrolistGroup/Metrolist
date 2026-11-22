@@ -533,6 +533,12 @@ private fun mergeLastFmHistory(
         artist: String,
     ) = normalize(title) to normalize(artist)
     val names = metadata.groupBy({ it.songId }, { it.name })
+    val albums =
+        visibleGroups
+            .filter { it.albumId != null && !it.album.isNullOrBlank() }
+            .flatMap { group -> group.names(names).map { key(checkNotNull(group.album), it) to group.albumId } }
+            .groupBy({ it.first }, { it.second })
+            .mapValues { (_, ids) -> ids.distinct().singleOrNull() }
 
     fun keys(group: HistoryStatGroup) = (group.names(names) + group.artists).map { key(group.title, it) }
     val candidates = visibleGroups.flatMap { group -> keys(group).map { it to group } }.groupBy({ it.first }, { it.second })
@@ -565,14 +571,7 @@ private fun mergeLastFmHistory(
                 artists = latest.artist,
                 artistNamesJson = Json.encodeToString(listOf(latest.artist)),
                 album = latest.album,
-                albumId =
-                    stored
-                        .filter { group ->
-                            group.album?.let(::normalize) == latest.album?.let(::normalize) && latest.album != null &&
-                                group.names(names).any { normalize(it) == identity.second }
-                        }.mapNotNull { it.albumId }
-                        .distinct()
-                        .singleOrNull(),
+                albumId = latest.album?.let { albums[key(it, latest.artist)] },
                 thumbnailUrl = latest.thumbnail,
                 hasSnapshot = true,
                 playCount = 0,
@@ -587,13 +586,22 @@ private fun mergeLastFmHistory(
         for ((date, plays) in tracks.groupBy { day(it.timestampMs) }) {
             val extra = (plays.size - (dailyCounts[template.songId to date] ?: 0)).coerceAtLeast(0)
             if (extra > 0) {
-                result +=
-                    template.copy(
-                        playCount = extra,
-                        playTimeMs = 0,
-                        measuredPlayCount = 0,
-                        lastPlayedAt = plays.maxOf { it.timestampMs },
-                    )
+                for ((album, albumPlays) in plays.sortedByDescending { it.timestampMs }.take(extra).groupBy { it.album }) {
+                    val latest = albumPlays.maxBy { it.timestampMs }
+                    result +=
+                        template.copy(
+                            album = album,
+                            albumId = album?.let { albums[key(it, latest.artist)] },
+                            thumbnailUrl =
+                                latest.thumbnail ?: template.thumbnailUrl.takeIf {
+                                    album?.let(::normalize) == template.album?.let(::normalize)
+                                },
+                            playCount = albumPlays.size,
+                            playTimeMs = 0,
+                            measuredPlayCount = 0,
+                            lastPlayedAt = latest.timestampMs,
+                        )
+                }
             }
         }
     }

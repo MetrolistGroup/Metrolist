@@ -228,7 +228,7 @@ fun WrappedScreen(
             lastFmLoading = false
         }
     }
-    LaunchedEffect(database, range, refreshKey, lastFm) {
+    LaunchedEffect(database, range, refreshKey, lastFm, lastFmUser) {
         database.historyChanges().collectLatest {
             try {
                 loadFailed = false
@@ -538,20 +538,20 @@ private fun WrappedReport(
                 if (soundtrack.enabled) {
                     val song = soundtrack.playingSong
                     Text(
-                        if (song == null ||
-                            soundtrack.preparedCount < soundtrack.songCount
-                        ) {
+                        if (soundtrack.preparing) {
                             stringResource(
                                 Res.string.wrapped_soundtrack_preparing,
                                 formatter.number(soundtrack.preparedCount.toLong()),
                                 formatter.number(soundtrack.songCount.toLong()),
                             )
-                        } else {
+                        } else if (song != null) {
                             stringResource(
                                 Res.string.wrapped_soundtrack_playing,
                                 song.title,
                                 song.artists.joinToString(", ") { it.name },
                             )
+                        } else {
+                            stringResource(Res.string.wrapped_soundtrack_loading)
                         },
                         Modifier.padding(horizontal = 24.dp, vertical = 4.dp),
                         style = MaterialTheme.typography.bodySmall,

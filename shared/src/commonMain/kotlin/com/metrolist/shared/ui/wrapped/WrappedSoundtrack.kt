@@ -104,6 +104,8 @@ class WrappedSoundtrack internal constructor(
         private set
     var preparedCount by mutableStateOf(0)
         private set
+    var preparing by mutableStateOf(false)
+        private set
     val songCount: Int get() = sessionSongs.size
     private var sessionSongs: List<SongItem> = emptyList()
     private var songIndex = 0
@@ -150,6 +152,7 @@ class WrappedSoundtrack internal constructor(
         sessionSongs = songs().distinctBy { it.id }.take(10)
         enabled = true
         loading = true
+        preparing = true
         normalPlayback = controller.state.value
         normalGeneration = controller.playbackReplacementGeneration
         songIndex = if (cycleExcerpts) 0 else chapter % sessionSongs.size
@@ -201,6 +204,8 @@ class WrappedSoundtrack internal constructor(
                     throw error
                 } catch (_: Exception) {
                     if (session == sessionId) fail()
+                } finally {
+                    if (session == sessionId) preparing = false
                 }
             }
     }
@@ -340,6 +345,7 @@ class WrappedSoundtrack internal constructor(
         sessionId++
         enabled = false
         loading = false
+        preparing = false
         job?.cancel()
         job = null
         transitionJob?.cancel()

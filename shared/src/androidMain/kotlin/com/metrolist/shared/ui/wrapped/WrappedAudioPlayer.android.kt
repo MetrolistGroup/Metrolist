@@ -20,7 +20,7 @@ import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import com.metrolist.shared.youtube.playback.AndroidContextProvider
 import kotlinx.coroutines.CompletableDeferred
-import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.withTimeoutOrNull
 import java.io.File
 import java.io.InputStream
 import android.media.AudioAttributes as SystemAudioAttributes
@@ -32,7 +32,12 @@ internal actual fun createWrappedAudioLibrary(onInterrupted: () -> Unit): Wrappe
             delete()
             check(mkdir())
         }
-    return AndroidWrappedAudioLibrary(context, directory, onInterrupted)
+    return try {
+        AndroidWrappedAudioLibrary(context, directory, onInterrupted)
+    } catch (error: Throwable) {
+        directory.deleteRecursively()
+        throw error
+    }
 }
 
 @Suppress("DEPRECATION")
@@ -154,7 +159,7 @@ private class AndroidWrappedAudioPlayer(
         )
         player.setMediaItem(MediaItem.fromUri(File(path).toURI().toString()))
         player.prepare()
-        withTimeout(15_000) { ready.await() }
+        checkNotNull(withTimeoutOrNull(15_000) { ready.await() })
     }
 
     override fun play() {

@@ -32,6 +32,9 @@ internal open class JvmWrappedAudioLibrary(
             val resource = resolver.resolve(song.id, hints, quality, song)
             currentCoroutineContext().ensureActive()
             check(!closed && !resource.isLive && !resource.isMuxedProgressive)
+            check(resource.clientName == "local" || resource.isSabr || resource.isDirectFile) {
+                "Wrapped soundtrack requires local, SABR or direct audio"
+            }
             check(directory.isDirectory || directory.mkdirs())
             val file = File.createTempFile("track-", ".audio", directory)
             var complete = false
