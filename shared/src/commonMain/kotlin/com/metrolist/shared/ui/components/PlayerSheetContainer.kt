@@ -49,9 +49,16 @@ internal data class PlayerSheetContainerStyle(
 ) {
     fun shape(progress: Float): Shape {
         val radius = cornerRadius * (1f - progress.coerceIn(0f, 1f))
-        return if (expressive) ExpressiveMiniPlayerShape(radius) else RoundedCornerShape(radius)
+        // Use the cheaper rounded-rectangle clip after the initial part of the sheet travel.
+        return if (expressive && progress <= EXPRESSIVE_SHAPE_MAX_PROGRESS) {
+            ExpressiveMiniPlayerShape(radius)
+        } else {
+            RoundedCornerShape(radius)
+        }
     }
 }
+
+private const val EXPRESSIVE_SHAPE_MAX_PROGRESS = 0.2f
 
 @Composable
 fun PlayerSheetSurface(
