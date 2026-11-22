@@ -873,7 +873,7 @@ class MusicService :
                 }
             if (!connected && isCurrentHandoff()) {
                 // A failed handoff must not undo the TV pause-on-background rule; phones restore normally.
-                if (shouldPauseLocalPlaybackInBackground()) player.pause() else restoreLocalPlaybackAfterCast(position, playing)
+                restoreLocalPlaybackAfterCast(position, playing && !shouldPauseLocalPlaybackInBackground())
             }
         }
     }
