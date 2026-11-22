@@ -14,6 +14,7 @@ import com.metrolist.shared.api.artwork.CanvasContentSource
 import com.metrolist.shared.api.artwork.isEnabled
 import com.metrolist.shared.listentogether.PlaybackReadiness
 import com.metrolist.shared.model.SongItem
+import com.metrolist.shared.model.artworkExplicitness
 import com.metrolist.shared.settings.Settings
 import com.metrolist.shared.state.GlobalYouTube
 import com.metrolist.shared.state.GlobalYouTubeRepository
@@ -287,6 +288,7 @@ class MusicPlayer internal constructor(
     private var metadataDurationSeconds: Long? = null
     private var artworkJob: Job? = null
     private var animatedArtworkJob: Job? = null
+    private var hasActiveNowPlayingSession = false
     private var nowPlayingArtwork: MPMediaItemArtwork? = null
     private var nowPlayingArtworkImage: UIImage? = null
     private var nowPlayingAnimatedArtwork: Map<String, Any> = emptyMap()
@@ -510,6 +512,7 @@ class MusicPlayer internal constructor(
                         initialized = true
                         return@collect
                     }
+                    if (!hasActiveNowPlayingSession) return@collect
                     val song = _currentSong.value ?: return@collect
                     if (!allowed || !isNowPlayingAnimatedArtworkEnabled()) {
                         clearNowPlayingAnimatedArtwork(updateInfo = true)
@@ -1172,6 +1175,7 @@ class MusicPlayer internal constructor(
         wantsPlayback = false
         _isPlaying.value = false
         _currentPosition.value = 0L
+        hasActiveNowPlayingSession = false
         artworkJob?.cancel()
         artworkJob = null
         nowPlayingArtwork = null
@@ -1894,6 +1898,7 @@ class MusicPlayer internal constructor(
         player.pause()
         remoteTargets.forEach { (command, target) -> command.removeTarget(target) }
         remoteTargets.clear()
+        hasActiveNowPlayingSession = false
         artworkJob?.cancel()
         artworkJob = null
         nowPlayingArtwork = null
@@ -2193,6 +2198,7 @@ class MusicPlayer internal constructor(
 
     @OptIn(BetaInteropApi::class)
     private fun loadNowPlayingArtwork(song: SongItem) {
+        hasActiveNowPlayingSession = true
         artworkJob?.cancel()
         nowPlayingArtwork = null
         nowPlayingArtworkImage = null
@@ -2298,7 +2304,7 @@ class MusicPlayer internal constructor(
                     } catch (_: Exception) {
                         null
                     }
-                if (_currentSong.value?.id != song.id || !isNowPlayingAnimatedArtworkEnabled()) return@launch
+                if (!hasActiveNowPlayingSession || _currentSong.value?.id != song.id || !isNowPlayingAnimatedArtworkEnabled()) return@launch
                 if (result == null) {
                     clearNowPlayingAnimatedArtwork(updateInfo = true)
                     return@launch
@@ -2334,7 +2340,7 @@ class MusicPlayer internal constructor(
                             squareDeferred?.await() to tallDeferred?.await()
                         }
                     } ?: (null to null)
-                if (_currentSong.value?.id != song.id || !isNowPlayingAnimatedArtworkEnabled()) return@launch
+                if (!hasActiveNowPlayingSession || _currentSong.value?.id != song.id || !isNowPlayingAnimatedArtworkEnabled()) return@launch
                 val spec =
                     IosNowPlayingAnimatedArtworkSpec(
                         squareArtworkId = squareId,

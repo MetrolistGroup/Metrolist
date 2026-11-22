@@ -2,8 +2,10 @@ package com.metrolist.shared.api.artwork
 
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 class AnimatedArtworkMediaPlaylistTest {
     private val playlistUrl =
@@ -98,5 +100,19 @@ class AnimatedArtworkMediaPlaylistTest {
             seg1.ts
             """.trimIndent()
         assertNull(parseAnimatedArtworkMediaPlaylist(playlistUrl, mpegTs))
+    }
+
+    @Test
+    fun validatesRangedHttpResponsesStrictly() {
+        val range = AnimatedArtworkByteRange(length = 100L, offset = 200L)
+        assertTrue(isValidAnimatedArtworkRangeResponse(206, "bytes 200-299/500", range, allowFullResponseAtZero = false))
+        assertTrue(isValidAnimatedArtworkRangeResponse(206, "bytes 200-299/*", range, allowFullResponseAtZero = false))
+        assertFalse(isValidAnimatedArtworkRangeResponse(200, null, range, allowFullResponseAtZero = false))
+        assertFalse(isValidAnimatedArtworkRangeResponse(206, "bytes 0-499/500", range, allowFullResponseAtZero = false))
+        assertFalse(isValidAnimatedArtworkRangeResponse(206, null, range, allowFullResponseAtZero = false))
+
+        val zeroRange = AnimatedArtworkByteRange(length = 500L, offset = 0L)
+        assertTrue(isValidAnimatedArtworkRangeResponse(200, null, zeroRange, allowFullResponseAtZero = true))
+        assertFalse(isValidAnimatedArtworkRangeResponse(200, null, zeroRange, allowFullResponseAtZero = false))
     }
 }

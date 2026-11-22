@@ -158,3 +158,19 @@ internal fun isSupportedMp4SegmentUrl(url: String): Boolean {
         }
     return path.endsWith(".mp4") || path.endsWith(".m4s") || path.endsWith(".m4v")
 }
+
+internal fun isValidAnimatedArtworkRangeResponse(
+    statusCode: Int,
+    contentRange: String?,
+    expectedRange: AnimatedArtworkByteRange,
+    allowFullResponseAtZero: Boolean,
+): Boolean {
+    if (statusCode == 206) {
+        val header = contentRange?.trim() ?: return false
+        val expectedPrefix = "bytes ${expectedRange.offset}-${expectedRange.endExclusive - 1L}/"
+        if (!header.startsWith(expectedPrefix, ignoreCase = true)) return false
+        val totalPart = header.substring(expectedPrefix.length)
+        return totalPart == "*" || totalPart.toLongOrNull()?.let { it >= expectedRange.endExclusive } == true
+    }
+    return allowFullResponseAtZero && expectedRange.offset == 0L && statusCode == 200
+}

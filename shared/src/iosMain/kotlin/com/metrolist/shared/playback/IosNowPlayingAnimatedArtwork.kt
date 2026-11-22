@@ -10,10 +10,12 @@ import coil3.request.SuccessResult
 import coil3.request.maxBitmapSize
 import coil3.size.Precision
 import coil3.size.Size
+import com.metrolist.shared.api.artwork.AnimatedArtworkByteRange
 import com.metrolist.shared.api.artwork.AnimatedArtworkDownloadPlan
 import com.metrolist.shared.api.artwork.MAX_ANIMATED_ARTWORK_VIDEO_BYTES
 import com.metrolist.shared.api.artwork.isSupportedMp4SegmentUrl
 import com.metrolist.shared.api.artwork.isTrustedAnimatedArtworkUrl
+import com.metrolist.shared.api.artwork.isValidAnimatedArtworkRangeResponse
 import com.metrolist.shared.api.artwork.parseAnimatedArtworkMediaPlaylist
 import com.metrolist.shared.network.readTextLimited
 import com.metrolist.shared.settings.Settings
@@ -38,6 +40,7 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
@@ -115,6 +118,7 @@ internal object IosNowPlayingAnimatedArtworkCache {
 
     private val mutex = Mutex()
     private val inFlight = mutableMapOf<String, CompletableDeferred<String?>>()
+    private val activeTempFileNames = mutableSetOf<String>()
     private val activeFileNames = atomic(emptySet<String>())
 
     private val directory: String by lazy {
@@ -139,7 +143,7 @@ internal object IosNowPlayingAnimatedArtworkCache {
                         .orEmpty()
                         .filterIsInstance<String>()
                 for (name in entries) {
-                    if (name !in pinned) {
+                    if (name !in pinned && name !in activeTempFileNames) {
                         fileManager.removeItemAtPath("$directory/$name", error = null)
                     }
                 }
@@ -209,22 +213,29 @@ internal object IosNowPlayingAnimatedArtworkCache {
         val fileManager = NSFileManager.defaultManager
         if (!ensureDirectory(fileManager)) return null
         val plan = resolveDownloadPlan(sourceUrl, httpClient) ?: return null
-        val tempPath = "$directory/${NSUUID().UUIDString}.mp4.tmp"
-        if (!fileManager.createFileAtPath(tempPath, contents = null, attributes = null)) return null
-        val handle = NSFileHandle.fileHandleForWritingAtPath(tempPath)
-        if (handle == null) {
-            fileManager.removeItemAtPath(tempPath, error = null)
-            return null
-        }
-
-        var succeeded = false
+        val tempFileName = "${NSUUID().UUIDString}.mp4.tmp"
+        val tempPath = "$directory/$tempFileName"
+        mutex.withLock { activeTempFileNames += tempFileName }
+        var published = false
+        var handle: NSFileHandle? = null
         try {
-            succeeded =
+            if (!fileManager.createFileAtPath(tempPath, contents = null, attributes = null)) return null
+            val openHandle = NSFileHandle.fileHandleForWritingAtPath(tempPath) ?: return null
+            handle = openHandle
+
+            val succeeded =
                 when (plan) {
                     is AnimatedArtworkDownloadPlan.SingleFile -> {
-                        val rangeHeader = plan.byteLength?.let { "bytes=0-${it - 1L}" }
+                        val expectedRange = plan.byteLength?.let { AnimatedArtworkByteRange(length = it, offset = 0L) }
                         val maxBytes = plan.byteLength ?: MAX_ANIMATED_ARTWORK_VIDEO_BYTES
-                        streamIntoFile(httpClient, plan.url, rangeHeader, handle, maxBytes) > 0L
+                        streamIntoFile(
+                            httpClient = httpClient,
+                            url = plan.url,
+                            expectedRange = expectedRange,
+                            allowFullResponseAtZero = true,
+                            file = openHandle,
+                            maxBytes = maxBytes,
+                        ) > 0L
                     }
 
                     is AnimatedArtworkDownloadPlan.Segments -> {
@@ -236,7 +247,15 @@ internal object IosNowPlayingAnimatedArtworkCache {
                                 ok = false
                                 break
                             }
-                            val written = streamIntoFile(httpClient, segment.url, segment.byteRange?.httpRangeHeader, handle, remaining)
+                            val written =
+                                streamIntoFile(
+                                    httpClient = httpClient,
+                                    url = segment.url,
+                                    expectedRange = segment.byteRange,
+                                    allowFullResponseAtZero = false,
+                                    file = openHandle,
+                                    maxBytes = remaining,
+                                )
                             if (written <= 0L) {
                                 ok = false
                                 break
@@ -246,26 +265,32 @@ internal object IosNowPlayingAnimatedArtworkCache {
                         ok && totalWritten > 0L
                     }
                 }
-        } finally {
-            handle.closeFile()
-        }
 
-        if (!succeeded || fileSizeBytes(fileManager, tempPath) <= 0L) {
-            fileManager.removeItemAtPath(tempPath, error = null)
-            return null
-        }
+            openHandle.closeFile()
+            handle = null
 
-        if (fileManager.fileExistsAtPath(destination)) {
-            fileManager.removeItemAtPath(tempPath, error = null)
-            touchFile(fileManager, destination)
-            return destination
-        }
-        val moved = fileManager.moveItemAtPath(tempPath, toPath = destination, error = null)
-        if (!moved) {
-            fileManager.removeItemAtPath(tempPath, error = null)
+            if (!succeeded || fileSizeBytes(fileManager, tempPath) <= 0L) {
+                return null
+            }
+
+            if (fileManager.fileExistsAtPath(destination)) {
+                touchFile(fileManager, destination)
+                return destination
+            }
+            if (fileManager.moveItemAtPath(tempPath, toPath = destination, error = null)) {
+                published = true
+                return destination
+            }
             return destination.takeIf { fileManager.fileExistsAtPath(it) && fileSizeBytes(fileManager, it) > 0L }
+        } finally {
+            handle?.closeFile()
+            if (!published && fileManager.fileExistsAtPath(tempPath)) {
+                fileManager.removeItemAtPath(tempPath, error = null)
+            }
+            withContext(NonCancellable) {
+                mutex.withLock { activeTempFileNames.remove(tempFileName) }
+            }
         }
-        return destination
     }
 
     private suspend fun resolveDownloadPlan(
@@ -296,18 +321,34 @@ internal object IosNowPlayingAnimatedArtworkCache {
     private suspend fun streamIntoFile(
         httpClient: HttpClient,
         url: String,
-        rangeHeader: String?,
+        expectedRange: AnimatedArtworkByteRange?,
+        allowFullResponseAtZero: Boolean,
         file: NSFileHandle,
         maxBytes: Long,
     ): Long {
         if (!isTrustedAnimatedArtworkUrl(url)) return -1L
         return httpClient
             .prepareGet(url) {
-                rangeHeader?.let { header(HttpHeaders.Range, it) }
+                expectedRange?.let { header(HttpHeaders.Range, it.httpRangeHeader) }
             }.execute { response ->
                 if (!response.status.isSuccess()) return@execute -1L
+                if (expectedRange != null &&
+                    !isValidAnimatedArtworkRangeResponse(
+                        statusCode = response.status.value,
+                        contentRange = response.headers[HttpHeaders.ContentRange],
+                        expectedRange = expectedRange,
+                        allowFullResponseAtZero = allowFullResponseAtZero,
+                    )
+                ) {
+                    return@execute -1L
+                }
+                val effectiveMaxBytes = expectedRange?.length?.coerceAtMost(maxBytes) ?: maxBytes
                 val declaredLength = response.headers[HttpHeaders.ContentLength]?.toLongOrNull()
-                if (declaredLength != null && declaredLength > maxBytes) return@execute -1L
+                if (declaredLength != null &&
+                    (declaredLength > effectiveMaxBytes || (expectedRange != null && declaredLength != expectedRange.length))
+                ) {
+                    return@execute -1L
+                }
                 val channel = response.bodyAsChannel()
                 var totalWritten = 0L
                 try {
@@ -315,7 +356,7 @@ internal object IosNowPlayingAnimatedArtworkCache {
                         val chunk = channel.readBuffer(CHUNK_BYTES).readByteArray()
                         if (chunk.isEmpty()) continue
                         totalWritten += chunk.size
-                        if (totalWritten > maxBytes) return@execute -1L
+                        if (totalWritten > effectiveMaxBytes) return@execute -1L
                         val wrote =
                             chunk.usePinned { pinned ->
                                 val data = NSData.create(pinned.addressOf(0), chunk.size.toULong())
@@ -323,6 +364,7 @@ internal object IosNowPlayingAnimatedArtworkCache {
                             }
                         if (!wrote) return@execute -1L
                     }
+                    if (expectedRange != null && totalWritten != expectedRange.length) return@execute -1L
                     totalWritten
                 } finally {
                     channel.cancel(null)
@@ -356,7 +398,9 @@ internal object IosNowPlayingAnimatedArtworkCache {
         for (name in names) {
             val path = "$directory/$name"
             if (name.endsWith(".tmp")) {
-                fileManager.removeItemAtPath(path, error = null)
+                if (name !in activeTempFileNames) {
+                    fileManager.removeItemAtPath(path, error = null)
+                }
                 continue
             }
             val attrs = fileManager.attributesOfItemAtPath(path, error = null)
