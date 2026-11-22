@@ -189,7 +189,17 @@ fun Application.driveBrokerModule(
                     }
 
                     GoogleAccessTokenResult.ReauthorizationRequired -> {
-                        call.respond(HttpStatusCode.Unauthorized, ErrorResponse("reauthorization_required"))
+                        // Google already rejected the grant, so retire its sessions before the client
+                        // reconnects; otherwise a later code exchange would revive the old tokens.
+                        val invalidated =
+                            driveAuthorizationMutex.withLock {
+                                safeOperation { repository.invalidateAccount(account) }
+                            }
+                        if (invalidated == null) {
+                            call.respond(HttpStatusCode.InternalServerError, ErrorResponse("session_cleanup_failed"))
+                        } else {
+                            call.respond(HttpStatusCode.Unauthorized, ErrorResponse("reauthorization_required"))
+                        }
                     }
 
                     else -> {

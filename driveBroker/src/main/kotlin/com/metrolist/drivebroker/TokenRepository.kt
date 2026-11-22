@@ -112,7 +112,7 @@ class TokenRepository(
                 .prepareStatement(
                     """SELECT a.google_subject, a.oauth_client_id, a.refresh_token_iv, a.refresh_token_ciphertext
                    FROM google_drive_sessions s JOIN google_drive_accounts a USING (google_subject, oauth_client_id)
-                   WHERE s.token_hash = ?""",
+                   WHERE s.token_hash = ? AND s.google_revoked_at IS NULL""",
                 ).use { statement ->
                     statement.setBytes(1, hash(tokenBytes))
                     statement.executeQuery().use { result ->
@@ -136,9 +136,10 @@ class TokenRepository(
     }
 
     /**
-     * The subject lock and revocation marker are held until Google has answered and the session is
-     * deleted, so a sign-in cannot commit a token that the revocation is about to invalidate. A
-     * failure rolls the whole transaction back, leaving the marker retriable.
+     * The subject lock is held until Google has answered and the session is deleted, so a sign-in
+     * cannot commit a token that the revocation is about to invalidate. A successful Google
+     * revocation is recorded outside this transaction so a failed local delete can be retried
+     * without revoking a newer grant.
      */
     suspend fun revokeSession(
         sessionToken: String,
@@ -156,29 +157,61 @@ class TokenRepository(
                 val subject = session.first
                 val clientId = session.second
                 lockSubject(connection, subject)
-                cleanupStaleRevocations(connection)
-                rejectPendingRevocation(connection, subject)
+                if (findSession(connection, tokenHash) == null) {
+                    connection.rollback()
+                    return false
+                }
                 lockAccount(connection, subject, clientId)
-                markRevocation(connection, subject)
+                val alreadyRevoked = isSessionRemoteRevoked(connection, tokenHash)
+                if (!alreadyRevoked) beginRevocation(subject)
                 val refreshToken = readRefreshToken(connection, subject, clientId)
                 // Google revocation invalidates every client in the project, not just this account's OAuth client.
                 val accountToRevoke =
-                    if (refreshToken == null || hasSession(connection, subject, excludedTokenHash = tokenHash)) {
+                    if (alreadyRevoked || refreshToken == null || hasSession(connection, subject, excludedTokenHash = tokenHash)) {
                         null
                     } else {
                         DriveAccount(subject, clientId, null, refreshToken)
                     }
-                revoke(accountToRevoke)
+                try {
+                    revoke(accountToRevoke)
+                } catch (error: Exception) {
+                    if (!alreadyRevoked) abortRevocation(subject)
+                    throw error
+                }
+                if (!alreadyRevoked) recordRemoteRevocation(subject, accountToRevoke != null)
                 connection
                     .prepareStatement("DELETE FROM google_drive_sessions WHERE token_hash = ?")
                     .use { statement ->
                         statement.setBytes(1, tokenHash)
-                        check(statement.executeUpdate() > 0) { "The revoked session is no longer stored" }
+                        statement.executeUpdate()
                     }
                 if (!hasSession(connection, subject, clientId)) deleteAccount(connection, subject, clientId)
-                finishRevocation(connection, subject)
                 connection.commit()
                 return true
+            } catch (error: Exception) {
+                connection.rollback()
+                throw error
+            }
+        }
+    }
+
+    fun invalidateAccount(account: DriveAccount) {
+        dataSource.connection.use { connection ->
+            connection.autoCommit = false
+            try {
+                lockSubject(connection, account.subject)
+                cleanupStaleRevocations(connection)
+                markRemoteRevocation(connection, account.subject, account.clientId)
+                connection
+                    .prepareStatement("DELETE FROM google_drive_sessions WHERE google_subject = ? AND oauth_client_id = ?")
+                    .use { statement ->
+                        statement.setString(1, account.subject)
+                        statement.setString(2, account.clientId)
+                        statement.executeUpdate()
+                    }
+                deleteAccount(connection, account.subject, account.clientId)
+                finishRevocation(connection, account.subject)
+                connection.commit()
             } catch (error: Exception) {
                 connection.rollback()
                 throw error
@@ -260,18 +293,50 @@ class TokenRepository(
                 statement.executeQuery().use { it.next() }
             }
 
-    private fun markRevocation(
-        connection: Connection,
+    private fun beginRevocation(subject: String) {
+        dataSource.connection.use { connection ->
+            connection.autoCommit = true
+            cleanupStaleRevocations(connection)
+            rejectPendingRevocation(connection, subject)
+            connection
+                .prepareStatement(
+                    """INSERT INTO google_drive_revocations (google_subject, started_at, finished_at) VALUES (?, clock_timestamp(), NULL)
+                       ON CONFLICT (google_subject) DO UPDATE SET started_at = clock_timestamp(), finished_at = NULL
+                       WHERE google_drive_revocations.finished_at IS NULL""",
+                ).use { statement ->
+                    statement.setString(1, subject)
+                    statement.executeUpdate()
+                }
+        }
+    }
+
+    private fun abortRevocation(subject: String) {
+        dataSource.connection.use { connection ->
+            connection.autoCommit = true
+            connection
+                .prepareStatement("DELETE FROM google_drive_revocations WHERE google_subject = ? AND finished_at IS NULL")
+                .use { statement ->
+                    statement.setString(1, subject)
+                    statement.executeUpdate()
+                }
+        }
+    }
+
+    private fun recordRemoteRevocation(
         subject: String,
+        markSessions: Boolean,
     ) {
-        connection
-            .prepareStatement(
-                """INSERT INTO google_drive_revocations (google_subject, finished_at) VALUES (?, NULL)
-                   ON CONFLICT (google_subject) DO UPDATE SET started_at = CURRENT_TIMESTAMP, finished_at = NULL""",
-            ).use { statement ->
-                statement.setString(1, subject)
-                statement.executeUpdate()
+        dataSource.connection.use { connection ->
+            connection.autoCommit = false
+            try {
+                finishRevocation(connection, subject)
+                if (markSessions) markRemoteRevocation(connection, subject)
+                connection.commit()
+            } catch (error: Exception) {
+                connection.rollback()
+                throw error
             }
+        }
     }
 
     private fun finishRevocation(
@@ -279,12 +344,45 @@ class TokenRepository(
         subject: String,
     ) {
         connection
-            .prepareStatement("UPDATE google_drive_revocations SET finished_at = CURRENT_TIMESTAMP WHERE google_subject = ?")
-            .use { statement ->
+            .prepareStatement(
+                """INSERT INTO google_drive_revocations (google_subject, started_at, finished_at)
+                   VALUES (?, clock_timestamp(), clock_timestamp())
+                   ON CONFLICT (google_subject) DO UPDATE SET finished_at = clock_timestamp()""",
+            ).use { statement ->
                 statement.setString(1, subject)
                 statement.executeUpdate()
             }
     }
+
+    private fun markRemoteRevocation(
+        connection: Connection,
+        subject: String,
+        clientId: String? = null,
+    ) {
+        connection
+            .prepareStatement(
+                buildString {
+                    append("UPDATE google_drive_sessions SET google_revoked_at = clock_timestamp()")
+                    append(" WHERE google_subject = ? AND google_revoked_at IS NULL")
+                    if (clientId != null) append(" AND oauth_client_id = ?")
+                },
+            ).use { statement ->
+                statement.setString(1, subject)
+                clientId?.let { statement.setString(2, it) }
+                statement.executeUpdate()
+            }
+    }
+
+    private fun isSessionRemoteRevoked(
+        connection: Connection,
+        tokenHash: ByteArray,
+    ): Boolean =
+        connection
+            .prepareStatement("SELECT 1 FROM google_drive_sessions WHERE token_hash = ? AND google_revoked_at IS NOT NULL")
+            .use { statement ->
+                statement.setBytes(1, tokenHash)
+                statement.executeQuery().use { it.next() }
+            }
 
     private fun hasSession(
         connection: Connection,
@@ -295,7 +393,7 @@ class TokenRepository(
         connection
             .prepareStatement(
                 buildString {
-                    append("SELECT 1 FROM google_drive_sessions WHERE google_subject = ?")
+                    append("SELECT 1 FROM google_drive_sessions WHERE google_subject = ? AND google_revoked_at IS NULL")
                     if (clientId != null) append(" AND oauth_client_id = ?")
                     if (excludedTokenHash != null) append(" AND token_hash <> ?")
                     append(" LIMIT 1")

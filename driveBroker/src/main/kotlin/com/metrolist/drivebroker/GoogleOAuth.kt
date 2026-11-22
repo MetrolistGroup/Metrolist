@@ -127,7 +127,8 @@ class GoogleOAuth(
         val tokenResponse = runCatching { response.body<GoogleTokenResponse>() }.getOrDefault(GoogleTokenResponse())
         if (response.status.isSuccess()) {
             val accessToken = tokenResponse.accessToken ?: return GoogleAccessTokenResult.Unavailable
-            return GoogleAccessTokenResult.Success(accessToken, tokenResponse.expiresIn ?: DEFAULT_EXPIRES_IN_SECONDS)
+            val expiresIn = tokenResponse.expiresIn?.takeIf { it > 0 } ?: return GoogleAccessTokenResult.Unavailable
+            return GoogleAccessTokenResult.Success(accessToken, expiresIn)
         }
         if (tokenResponse.error == INVALID_GRANT) return GoogleAccessTokenResult.ReauthorizationRequired
         return GoogleAccessTokenResult.Unavailable
@@ -159,7 +160,6 @@ class GoogleOAuth(
 
     private companion object {
         const val INVALID_GRANT = "invalid_grant"
-        const val DEFAULT_EXPIRES_IN_SECONDS = 3600L
     }
 
     private fun validVerifier(value: String?): Boolean =
