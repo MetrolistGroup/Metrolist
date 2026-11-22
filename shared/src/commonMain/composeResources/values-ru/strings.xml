@@ -390,7 +390,7 @@
     <string name="appearance_enable_haptic_feedback">Тактильная обратная связь</string>
     <string name="appearance_enable_haptic_feedback_description">Вибрирует при нажатии кнопок и взаимодействиях</string>
     <string name="appearance_auto_playlists">Автоматические плейлисты</string>
-    <string name="appearance_show_liked_playlist">Плейлист Понравившееся</string>
+    <string name="appearance_show_liked_playlist">Плейлист Понравившиеся</string>
     <string name="appearance_show_downloaded_playlist">Плейлист "Скачанное"</string>
     <string name="appearance_show_top_playlist">Плейлист "Топ"</string>
     <string name="appearance_show_uploaded_playlist">Плейлист "Загруженное"</string>
@@ -705,7 +705,7 @@
     <string name="device_connect_discovered">Найдено</string>
     <string name="device_has_no_microphone">Это устройство не имеет микрофона.</string>
     <string name="discord_unknown_album">Неизвестный альбом</string>
-    <string name="disliked_song">Не понравившаяся песня</string>
+    <string name="disliked_song">Отмечено "Не нравится"</string>
     <string name="dislike_song">Не нравится</string>
     <string name="done">Готово</string>
     <string name="download_not_found">Скачивание не найдено</string>
@@ -766,7 +766,7 @@
     <string name="less_than_one_minute">Меньше одной минуты</string>
     <string name="library_cached_songs">Кэшированные песни</string>
     <string name="library_favorite_songs">Любимые песни</string>
-    <string name="library_offline_songs">Офлайн песни</string>
+    <string name="library_offline_songs">Офлайн-треки</string>
     <string name="library_top_songs">Ваши топ песни</string>
     <string name="library_uploaded_songs">Ваши загруженные песни</string>
     <string name="listen_together_add_custom_server">Добавить свой сервер</string>
@@ -1110,7 +1110,7 @@
     <string name="remember_shuffle_and_repeat_desc">Запоминать режим перемешивания и повтора при перезапуске приложения</string>
     <string name="export_playlist">Экспортировать плейлист</string>
     <string name="export_failed">Не удалось экспортировать плейлист</string>
-    <string name="auto_download_on_like">Автоскачивание при отметке "Нравится"</string>
+    <string name="auto_download_on_like">Автоскачивание понравившихся</string>
     <string name="clear_song_cache_dialog">Очистить все кэшированные песни?</string>
     <string name="clear_image_cache_dialog">Очистить все кэшированные фото?</string>
     <string name="clear_music_video_cache_dialog" tools:ignore="MissingTranslation">Очистить все кэшированные разрешения музыкальных видео?</string>
@@ -1431,8 +1431,8 @@
     <string name="menu_show_artist_in_library">Показать исполнителя в библиотеке</string>
     <string name="menu_show_album_in_library">Показать альбом в библиотеке</string>
     <string name="menu_show_in_youtube_music">Показать в YouTube Music</string>
-    <string name="menu_love_song">Добавить в Понравившиеся песни</string>
-    <string name="menu_unlove_song">Убрать из Понравившихся песен</string>
+    <string name="menu_love_song">Добавить в понравившиеся</string>
+    <string name="menu_unlove_song">Удалить из понравившихся</string>
     <string name="menu_download">Скачать</string>
     <string name="menu_remove_download">Удалить из скачанных</string>
     <string name="menu_history">История</string>
@@ -1952,7 +1952,7 @@
     <string name="recognition_history_save_failed">Не удалось сохранить эту песню в истории распознавания.</string>
     <string name="device_connect_server_failed">Не удалось запустить Device Connect. Проверьте сеть и повторите попытку.</string>
     <string name="device_connect_discovery_failed">Не удалось обнаружить устройства. Проверьте доступ к локальной сети и повторите поиск.</string>
-    <string name="home_offline_empty">Вы не в сети, и содержимое главной страницы не сохранено. Подключитесь к интернету и обновите страницу, чтобы загрузить рекомендации.</string>
+    <string name="home_offline_empty">Вы не в сети, и содержимое главной страницы не сохранено. Подключитесь к интернету и обновите её, чтобы загрузить рекомендации.</string>
     <string name="home_load_failed">Не удалось загрузить главную страницу. Проверьте соединение и повторите попытку.</string>
     <string name="library_load_failed">Не удалось загрузить библиотеку. Проверьте соединение и повторите попытку.</string>
     <string name="recognition_microphone_permission_description">Разрешите доступ к микрофону для распознавания музыки. Если запрос разрешения больше не появляется, включите доступ в настройках приложения.</string>
@@ -1991,7 +1991,7 @@
         <item quantity="many">%1$d прослушиваний</item>
         <item quantity="other">%1$d прослушивания</item>
     </plurals>
-    <string name="queue_youtube_history_paused_desc">Возобновите запись истории прослушиваний, чтобы ставить прослушивания не в сети в очередь на отправку</string>
+    <string name="queue_youtube_history_paused_desc">Возобновите запись истории, чтобы в офлайн-режиме ставить прослушивания в очередь на отправку</string>
     <string name="search_online_failed">Не удалось выполнить поиск в интернете. Проверьте соединение и повторите попытку.</string>
     <string name="search_load_more_failed">Не удалось загрузить больше результатов.</string>
     <string name="discord_error_gateway_configuration">Discord отклонил настройки подключения. Обновите Metrolist перед повторной попыткой.</string>
@@ -2512,7 +2512,7 @@
     <string name="auto_playlist_liked_title">Понравившиеся</string>
     <string name="auto_playlist_liked_subtitle">Любимые песни</string>
     <string name="auto_playlist_downloaded_title">Скачанные</string>
-    <string name="auto_playlist_downloaded_subtitle">Песни в автономном режиме</string>
+    <string name="auto_playlist_downloaded_subtitle">Офлайн-треки</string>
     <string name="auto_playlist_top_title">Мой топ-100</string>
     <string name="auto_playlist_top_subtitle">Ваши самые популярные песни</string>
     <string name="auto_playlist_cached_title">В кэше</string>
@@ -2645,7 +2645,7 @@
     <string name="settings_library_grid_columns">Столбцы библиотеки</string>
     <string name="playlist_picker_library_order">Порядок библиотеки</string>
     <string name="blocked_songs">Заблокированные песни</string>
-    <string name="blocked_songs_desc">Восстановить заблокированные песни и песни с отметкой "Не нравится"</string>
+    <string name="blocked_songs_desc">Восстановить песни, которые вы заблокировали или отметили как Не нравится</string>
     <string name="blocked_songs_empty">Нет заблокированных песен</string>
     <string name="content_undo_hint">Это действие можно отменить здесь: %1$s.</string>
     <string name="content_undo_path">%1$s &gt; %2$s &gt; %3$s</string>
@@ -2720,6 +2720,6 @@
     <string name="lyrics_share_square_image">Квадратное изображение</string>
     <string name="lyrics_share_story_image">Изображение для истории</string>
     <string name="auto_download_saved_collections">Автоскачивание сохранённых альбомов и плейлистов</string>
-    <string name="classic_recommendations_desc">Формировать "Быстрый выбор" на основе собственной истории прослушивания и воспроизводить персональную очередь "Далее" от YouTube по порядку, как в Metrolist 13</string>
+    <string name="classic_recommendations_desc">Формировать "Рекомендуем" на основе собственной истории прослушивания и воспроизводить персональную очередь "Далее" от YouTube по порядку, как в Metrolist 13</string>
     <string name="classic_recommendations_desc_desktop">Воспроизводить персональную очередь "Далее" от YouTube по порядку, как в Metrolist 13</string>
 </resources>
