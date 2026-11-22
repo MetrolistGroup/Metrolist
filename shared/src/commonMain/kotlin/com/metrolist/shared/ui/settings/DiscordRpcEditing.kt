@@ -337,6 +337,7 @@ internal fun DiscordPresenceCard(
             val editInteraction = remember { MutableInteractionSource() }
             Surface(
                 onClick = { onToggleEditMode(!editMode) },
+                enabled = enabled,
                 interactionSource = editInteraction,
                 shape = CircleShape,
                 color =
