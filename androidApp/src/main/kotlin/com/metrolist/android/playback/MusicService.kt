@@ -2838,7 +2838,9 @@ class MusicService :
     ): PlaybackFetchResult =
         withContext(Dispatchers.IO) {
             val connected = PlaybackNetworkStateStore.current.connected
-            cachedAudioResource(wantVideo && connected) { audioCacheManager.getCachedPlaybackResource(song) }
+            // Video mode stays on across songs, but a plain song has no video of its own, so its saved file wins.
+            val skipSavedAudio = wantVideo && connected && (song.isVideoSong || song.isPodcast)
+            cachedAudioResource(skipSavedAudio) { audioCacheManager.getCachedPlaybackResource(song) }
                 ?.let { return@withContext PlaybackFetchResult(resource = it) }
             if (!connected && !song.isLocal && !song.id.startsWith("local_")) return@withContext PlaybackFetchResult()
             val hints = song.toAndroidContentHints(wantVideo = wantVideo)
