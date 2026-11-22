@@ -69,6 +69,7 @@ import com.metrolist.shared.generated.resources.queued
 import com.metrolist.shared.generated.resources.remove
 import com.metrolist.shared.generated.resources.retry
 import com.metrolist.shared.generated.resources.see_all
+import com.metrolist.shared.settings.Settings
 import com.metrolist.shared.ui.icons.MetrolistIcons
 import org.jetbrains.compose.resources.pluralStringResource
 import org.jetbrains.compose.resources.stringResource
@@ -249,7 +250,12 @@ private fun DownloadQueueRow(
     val songId = request.song.id
     Row(modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Text(request.song.title, style = MaterialTheme.typography.bodyMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(
+                request.song.title,
+                style = MaterialTheme.typography.bodyMedium,
+                maxLines = if (Settings.shared.multilineSongTitles) 3 else 1,
+                overflow = TextOverflow.Ellipsis,
+            )
             val progress = request.totalBytes?.takeIf { it > 0 }?.let { (request.downloadedBytes.toFloat() / it).coerceIn(0f, 1f) }
             val status =
                 when (request.state) {

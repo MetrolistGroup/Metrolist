@@ -1505,7 +1505,7 @@ private fun TrackItem(
                             lineHeight = 20.sp,
                             letterSpacing = 0.15.sp,
                         ),
-                    maxLines = 1,
+                    maxLines = if (Settings.shared.multilineSongTitles) 3 else 1,
                     overflow = TextOverflow.Ellipsis,
                     color = contentColor,
                 )

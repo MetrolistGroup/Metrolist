@@ -1017,15 +1017,21 @@ private fun HomeGallery(
     content: @Composable (Int, YTItem) -> Unit,
 ) {
     val pageCount = (shelf.items.size + rows - 1) / rows
+    val effectiveRowHeight =
+        if (!isWide && Settings.shared.multilineSongTitles && shelf.items.any { it is SongItem }) {
+            rowHeight.coerceAtLeast(112.dp)
+        } else {
+            rowHeight
+        }
     val galleryModifier =
-        Modifier.fillMaxWidth().height(rowHeight * rows + rowSpacing * (rows - 1)).clipToBounds()
+        Modifier.fillMaxWidth().height(effectiveRowHeight * rows + rowSpacing * (rows - 1)).clipToBounds()
     val contentPadding = PaddingValues(horizontal = if (isWide) 24.dp else GridScreenPadding)
     val pageContent: @Composable (Int) -> Unit = { page ->
         Column(Modifier.width(itemWidth), verticalArrangement = Arrangement.spacedBy(rowSpacing)) {
             repeat(rows) { row ->
                 val index = page * rows + row
                 shelf.items.getOrNull(index)?.let { item ->
-                    Box(Modifier.fillMaxWidth().height(rowHeight).clipToBounds()) {
+                    Box(Modifier.fillMaxWidth().height(effectiveRowHeight).clipToBounds()) {
                         content(index, item)
                     }
                 }

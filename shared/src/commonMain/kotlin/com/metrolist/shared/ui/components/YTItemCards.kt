@@ -363,6 +363,7 @@ fun SongListItem(
                 style = MaterialTheme.typography.bodyLarge,
                 fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.Medium,
                 color = contentColor,
+                maxLines = if (Settings.shared.multilineSongTitles) 3 else 1,
             )
 
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -430,8 +431,8 @@ fun ListItemTitle(
     style: TextStyle = MaterialTheme.typography.bodyLarge,
     fontWeight: FontWeight = FontWeight.Medium,
     color: Color = MaterialTheme.colorScheme.onSurface,
+    maxLines: Int = 1,
 ) {
-    val titleMaxLines = if (Settings.shared.multilineSongTitles) 3 else 1
     Row(
         modifier = modifier,
         verticalAlignment = Alignment.CenterVertically,
@@ -443,7 +444,7 @@ fun ListItemTitle(
             style = style,
             fontWeight = fontWeight,
             color = color,
-            maxLines = titleMaxLines,
+            maxLines = maxLines,
             overflow = TextOverflow.Ellipsis,
         )
         if (isExplicit) ExplicitBadge()
@@ -861,6 +862,7 @@ fun YTListItem(
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.Medium,
                 color = contentColor,
+                maxLines = if (item is SongItem && Settings.shared.multilineSongTitles) 3 else 1,
             )
 
             Row(

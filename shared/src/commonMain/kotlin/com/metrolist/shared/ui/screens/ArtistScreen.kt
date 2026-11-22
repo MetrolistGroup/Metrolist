@@ -155,6 +155,7 @@ import com.metrolist.shared.model.YTItem
 import com.metrolist.shared.model.isVideoShelf
 import com.metrolist.shared.model.previewAspectRatio
 import com.metrolist.shared.model.previewThumbnailUrl
+import com.metrolist.shared.settings.Settings
 import com.metrolist.shared.settings.displayName
 import com.metrolist.shared.settings.displayTitle
 import com.metrolist.shared.state.SongMetadataState
@@ -1669,6 +1670,7 @@ private fun ArtistSongListItem(
                 style = MaterialTheme.typography.bodyLarge,
                 fontWeight = FontWeight.Medium,
                 color = contentColor,
+                maxLines = if (Settings.shared.multilineSongTitles) 3 else 1,
             )
             if (SongMetadataState.isInLibrary(song)) {
                 Icon(
