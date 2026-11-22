@@ -157,6 +157,7 @@ internal fun RemoteViews.setWidgetIndeterminateTint(
     schemes: WidgetColorSchemes,
     role: (ColorScheme) -> Color,
 ) {
+    // RemoteViews.setColorStateList requires API 31; ProgressBar has no int tint setter on API 24-30.
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
         setColorStateList(
             viewId,

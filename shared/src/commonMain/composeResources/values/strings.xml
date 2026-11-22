@@ -3135,6 +3135,10 @@
     <string name="widget_expressive_player">Expressive player</string>
     <!-- Translators: Supporting text beneath the expressive pill-and-controls widget in the Android home-screen widget picker. -->
     <string name="widget_expressive_description">Pill artwork with scalloped playback controls</string>
+    <!-- Translators: Track duration with hours in a home-screen widget. Arguments are hours, two-digit minutes, and two-digit seconds. -->
+    <string name="widget_duration_hours">%1$s:%2$s:%3$s</string>
+    <!-- Translators: Track duration without hours in a home-screen widget. Arguments are minutes and two-digit seconds. -->
+    <string name="widget_duration_minutes">%1$s:%2$s</string>
     <!-- Translators: Elapsed time and total duration in a home-screen widget. Both arguments are formatted times. -->
     <string name="widget_time_pair">%1$s / %2$s</string>
     <!-- Translators: Song title and artist announced for widget artwork. -->

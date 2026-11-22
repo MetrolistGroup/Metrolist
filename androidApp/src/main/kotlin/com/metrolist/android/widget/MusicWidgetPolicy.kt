@@ -44,7 +44,7 @@ internal fun musicWidgetSizePolicy(
         }
     val artworkWidth =
         when (layout) {
-            MusicWidgetLayout.COMPACT -> 200f + 22f * (scale - 1f)
+            MusicWidgetLayout.COMPACT -> 250f + 22f * (scale - 1f)
             MusicWidgetLayout.WIDE -> 270f + 28f * (scale - 1f)
             MusicWidgetLayout.SQUARE -> 100f
             else -> 0f

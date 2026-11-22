@@ -52,8 +52,8 @@ internal class MusicWidgetRemoteViews(
                                     setImageViewBitmap(R.id.widget_progress_track, layers.track)
                                     setImageViewBitmap(R.id.widget_progress_fill, layers.active)
                                 }
-                                setTextViewText(R.id.widget_time_current, formatWidgetDuration(currentPosition))
-                                setTextViewText(R.id.widget_time_duration, formatWidgetDuration(duration))
+                                setTextViewText(R.id.widget_time_current, formatWidgetDuration(context, currentPosition))
+                                setTextViewText(R.id.widget_time_duration, formatWidgetDuration(context, duration))
                             }
 
                             R.layout.widget_compact_square -> {

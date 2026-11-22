@@ -230,7 +230,7 @@ class MetrolistWidgetManager(
 
     suspend fun updateIdleMusicWidgets(appWidgetIds: IntArray) =
         updateMutex.withLock {
-            if (appWidgetIds.isEmpty()) return@withLock
+            if (appWidgetIds.isEmpty() || MusicService.isRunning) return@withLock
             publishedPlayback = null
             withContext(Dispatchers.IO) {
                 updateMusicWidgets(appWidgetIds, idleWidgetState())
@@ -239,7 +239,7 @@ class MetrolistWidgetManager(
 
     suspend fun updateIdleExpressiveWidgets(appWidgetIds: IntArray) =
         updateMutex.withLock {
-            if (appWidgetIds.isEmpty()) return@withLock
+            if (appWidgetIds.isEmpty() || MusicService.isRunning) return@withLock
             withContext(Dispatchers.IO) {
                 val appWidgetManager = AppWidgetManager.getInstance(context)
                 val state = idleWidgetState()
@@ -287,7 +287,7 @@ class MetrolistWidgetManager(
 
     suspend fun updateIdleTurntableWidgets(appWidgetIds: IntArray) =
         updateMutex.withLock {
-            if (appWidgetIds.isEmpty()) return@withLock
+            if (appWidgetIds.isEmpty() || MusicService.isRunning) return@withLock
             withContext(Dispatchers.IO) {
                 updateTurntableWidgets(appWidgetIds, idleWidgetState())
             }
@@ -640,8 +640,8 @@ class MetrolistWidgetManager(
             views.setViewVisibility(R.id.widget_progress_container, View.VISIBLE)
             views.setImageViewBitmap(R.id.widget_progress_track, progressLayers.track)
             views.setImageViewBitmap(R.id.widget_progress_fill, progressLayers.active)
-            views.setTextViewText(R.id.widget_time_current, formatWidgetDuration(currentPosition))
-            views.setTextViewText(R.id.widget_time_duration, formatWidgetDuration(duration))
+            views.setTextViewText(R.id.widget_time_current, formatWidgetDuration(context, currentPosition))
+            views.setTextViewText(R.id.widget_time_duration, formatWidgetDuration(context, duration))
         } else {
             views.setViewVisibility(R.id.widget_progress_container, View.GONE)
         }

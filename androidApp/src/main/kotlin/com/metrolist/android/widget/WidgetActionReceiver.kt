@@ -69,6 +69,9 @@ class WidgetActionReceiver : BroadcastReceiver() {
                         manager.updateIdleTurntableWidgets(
                             widgets.getAppWidgetIds(ComponentName(context, TurntableWidgetReceiver::class.java)),
                         )
+                        if (MusicService.isRunning) {
+                            context.startService(Intent(context, MusicService::class.java).setAction(serviceAction))
+                        }
                     }
                     return@launchAsync
                 }

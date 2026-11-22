@@ -22,10 +22,12 @@ import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.MaterialShapes
 import androidx.compose.material3.WavyProgressIndicatorDefaults
 import androidx.core.graphics.createBitmap
+import androidx.core.os.ConfigurationCompat
 import androidx.graphics.shapes.RoundedPolygon
 import androidx.graphics.shapes.toPath
 import com.metrolist.android.MainActivity
 import com.metrolist.android.R
+import java.text.NumberFormat
 import java.util.Locale
 import kotlin.math.max
 import kotlin.math.min
@@ -362,15 +364,25 @@ internal fun progressFraction(
     currentPosition: Long,
 ): Float = if (duration > 0) (currentPosition.toFloat() / duration.toFloat()).coerceIn(0f, 1f) else 0f
 
-internal fun formatWidgetDuration(milliseconds: Long): String {
-    val totalSeconds = (milliseconds.coerceAtLeast(0L) / 1000L)
+internal fun formatWidgetDuration(
+    context: Context,
+    milliseconds: Long,
+): String {
+    val totalSeconds = milliseconds.coerceAtLeast(0L) / 1000L
     val hours = totalSeconds / 3600L
     val minutes = (totalSeconds % 3600L) / 60L
     val seconds = totalSeconds % 60L
+    val locale = ConfigurationCompat.getLocales(context.resources.configuration)[0] ?: Locale.getDefault()
+    val plain = NumberFormat.getIntegerInstance(locale).apply { isGroupingUsed = false }
+    val padded =
+        NumberFormat.getIntegerInstance(locale).apply {
+            isGroupingUsed = false
+            minimumIntegerDigits = 2
+        }
     return if (hours > 0) {
-        String.format(Locale.getDefault(), "%d:%02d:%02d", hours, minutes, seconds)
+        context.getString(R.string.widget_duration_hours, plain.format(hours), padded.format(minutes), padded.format(seconds))
     } else {
-        String.format(Locale.getDefault(), "%d:%02d", minutes, seconds)
+        context.getString(R.string.widget_duration_minutes, plain.format(minutes), padded.format(seconds))
     }
 }
 
@@ -378,7 +390,12 @@ internal fun formatWidgetTimePair(
     context: Context,
     currentPosition: Long,
     duration: Long,
-): String = context.getString(R.string.widget_time_pair, formatWidgetDuration(currentPosition), formatWidgetDuration(duration))
+): String =
+    context.getString(
+        R.string.widget_time_pair,
+        formatWidgetDuration(context, currentPosition),
+        formatWidgetDuration(context, duration),
+    )
 
 internal fun openAppPendingIntent(
     context: Context,
