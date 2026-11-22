@@ -765,7 +765,7 @@
     <string name="language_ukrainian">Украинский</string>
     <string name="less_than_one_minute">Меньше одной минуты</string>
     <string name="library_cached_songs">Кэшированные песни</string>
-    <string name="library_favorite_songs">Любимые песни</string>
+    <string name="library_favorite_songs">Любимые треки</string>
     <string name="library_offline_songs">Офлайн-треки</string>
     <string name="library_top_songs">Ваши топ песни</string>
     <string name="library_uploaded_songs">Ваши загруженные песни</string>
@@ -1119,7 +1119,7 @@
     <string name="information">Информация</string>
     <string name="description">Описание</string>
     <string name="views">Просмотры</string>
-    <string name="likes">Лайки</string>
+    <string name="likes">Отметки "Нравится"</string>
     <string name="subscribe">Подписаться</string>
     <string name="subscribed">Вы подписаны</string>
     <plurals name="seconds">
@@ -1615,10 +1615,10 @@
     <string name="rename_playlist_dialog_title">Переименовать плейлист</string>
     <string name="playlist_create_action">Создать</string>
     <string name="playlist_rename_action">Переименовать</string>
-    <string name="liked_songs_title">Понравившиеся песни</string>
-    <string name="liked_songs_subtitle">Ваши любимые песни</string>
-    <string name="liked_songs_empty">Нет понравившихся песен</string>
-    <string name="liked_songs_empty_hint">Здесь появятся песни, которые вы лайкнете.\nНажмите на иконку сердечка под любой песней, чтобы добавить в ваши понравившиеся песни.</string>
+    <string name="liked_songs_title">Понравившиеся треки</string>
+    <string name="liked_songs_subtitle">Ваши любимые треки</string>
+    <string name="liked_songs_empty">Нет понравившихся треков</string>
+    <string name="liked_songs_empty_hint">Здесь появятся треки, которым вы поставили отметку "Нравится".\nНажмите на значок сердечка у любого трека, чтобы добавить её в понравившиеся.</string>
     <string name="top_playlist_title">Мой топ-100</string>
     <string name="top_playlist_subtitle">Основано на вашей истории воспроизведения</string>
     <string name="top_playlist_empty">Нет песен</string>
@@ -2185,7 +2185,7 @@
     <string name="privacy_diagnostics">Диагностика</string>
     <string name="foreign_import_title">Импорт из другого приложения</string>
     <string name="foreign_import_desc">Импортировать понравившиеся, плейлисты и историю прослушивания из резервной копии InnerTune, OuterTune, ViMusic, RiMusic, Kreate, SimpMusic или Prism. Приложение сохранит текущую библиотеку.</string>
-    <string name="foreign_import_success">Импортировано %1$d песен, %2$d лайков, %3$d плейлистов и %4$d прослушиваний</string>
+    <string name="foreign_import_success">Импортировано %1$d треков, %2$d понравившихся, %3$d плейлистов и %4$d прослушиваний</string>
     <string name="foreign_import_unsupported">Этот файл не является резервной копией поддерживаемого музыкального приложения</string>
     <string name="foreign_import_failed">Ошибка импорта: %1$s</string>
     <string name="scrobble_create_account">Создать аккаунт</string>
@@ -2510,7 +2510,7 @@
     <string name="add_to_top_of_queue">Добавить в начало очереди</string>
     <string name="selected">Выбрано</string>
     <string name="auto_playlist_liked_title">Понравившиеся</string>
-    <string name="auto_playlist_liked_subtitle">Любимые песни</string>
+    <string name="auto_playlist_liked_subtitle">Любимые треки</string>
     <string name="auto_playlist_downloaded_title">Скачанные</string>
     <string name="auto_playlist_downloaded_subtitle">Офлайн-треки</string>
     <string name="auto_playlist_top_title">Мой топ-100</string>
