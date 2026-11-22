@@ -1508,7 +1508,7 @@ private fun runDesktopApp(args: Array<String>) {
                                             java.awt.Toolkit
                                                 .getDefaultToolkit()
                                                 .getScreenInsets(config)
-                                        val minTopY = insets.top
+                                        val minTopY = config.bounds.y + insets.top
                                         if (window.y < minTopY) {
                                             window.setLocation(window.x, minTopY)
                                         }
