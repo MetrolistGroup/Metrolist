@@ -999,5 +999,6 @@ internal suspend fun contentMatchedSongs(
     withContext(Dispatchers.Default) {
         val term = query.trim()
         if (term.length < 2) return@withContext emptyList()
-        database.dao().contentMatchedSongs(term, LIBRARY_SEARCH_PAGE_SIZE, offset, descending).map { it.toSongItem() }
+        val escapedTerm = term.replace("!", "!!").replace("%", "!%").replace("_", "!_")
+        database.dao().contentMatchedSongs(escapedTerm, LIBRARY_SEARCH_PAGE_SIZE, offset, descending).map { it.toSongItem() }
     }

@@ -520,13 +520,13 @@ interface SongDao {
         SELECT song.* FROM song
         WHERE song.inLibrary IS NOT NULL
           AND (
-              song.title LIKE '%' || :query || '%'
-              OR song.customTitle LIKE '%' || :query || '%'
-              OR song.customArtist LIKE '%' || :query || '%'
-              OR song.albumName LIKE '%' || :query || '%'
+              song.title LIKE '%' || :escapedQuery || '%' ESCAPE '!'
+              OR song.customTitle LIKE '%' || :escapedQuery || '%' ESCAPE '!'
+              OR song.customArtist LIKE '%' || :escapedQuery || '%' ESCAPE '!'
+              OR song.albumName LIKE '%' || :escapedQuery || '%' ESCAPE '!'
               OR EXISTS (
                   SELECT 1 FROM song_artist_map sam JOIN artist a ON a.id = sam.artistId
-                  WHERE sam.songId = song.id AND a.name LIKE '%' || :query || '%'
+                  WHERE sam.songId = song.id AND a.name LIKE '%' || :escapedQuery || '%' ESCAPE '!'
               )
           )
         ORDER BY
@@ -537,7 +537,7 @@ interface SongDao {
         """,
     )
     suspend fun contentMatchedSongs(
-        query: String,
+        escapedQuery: String,
         limit: Int,
         offset: Int,
         descending: Boolean,
