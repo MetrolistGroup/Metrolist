@@ -1867,6 +1867,7 @@ class ListenTogetherManager(
         } else if (track != null) {
             startRemotePlayback(track, state.queue, state.position, state.isPlaying, state.lastUpdate, barrier)
         } else {
+            if (_role.value == ListenTogetherRoomRole.GUEST) applyCanonicalQueue(state.queue)
             playback.setPlayingFromRemote(false)
         }
         applyHostVolume(state.volume)
@@ -2078,6 +2079,9 @@ class ListenTogetherManager(
 
     private suspend fun applyCanonicalQueue(queue: List<TrackInfo>) {
         val canonical = canonicalUpcomingQueue(queue)
+        // An idle room has no loaded track, so the guest loading guard would defer the clear forever
+        // and leave a queue from an earlier session saved on disk. Handle that confirmed clear first.
+        if (clearIdleGuestQueue(canonical)) return
         if (loadingTrackId != null || (_role.value == ListenTogetherRoomRole.GUEST && !hasLoadedRoomTrack)) {
             pendingCanonicalQueue = canonical.takeIf { it != loadingQueue }
             return
@@ -2107,6 +2111,16 @@ class ListenTogetherManager(
         if (_role.value == ListenTogetherRoomRole.HOST) {
             lastQueueSnapshot = canonical
         }
+    }
+
+    private suspend fun clearIdleGuestQueue(queue: List<TrackInfo>): Boolean {
+        if (_role.value != ListenTogetherRoomRole.GUEST || queue.isNotEmpty()) return false
+        if (loadingTrackId != null || _roomState.value?.currentTrack != null) return false
+        if (playback.currentQueueSnapshot().displayedItems.isNotEmpty()) {
+            playback.replaceUpcomingQueueFromRemote(emptyList())
+        }
+        playback.setQueueTitleFromRemote(_roomState.value?.queueTitle)
+        return true
     }
 
     private suspend fun applyPendingCanonicalQueue() {
