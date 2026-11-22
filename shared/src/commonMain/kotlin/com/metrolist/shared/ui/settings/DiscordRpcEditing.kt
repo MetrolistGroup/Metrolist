@@ -413,18 +413,21 @@ internal fun DiscordPresenceCard(
                 )
             }
         }
+        // Validate each configured button separately so its editor slot survives label truncation.
         val configuredButtons =
             listOfNotNull(
-                activity.button1Label?.let { label -> activity.button1Url?.let { label to it } },
-                activity.button2Label?.let { label -> activity.button2Url?.let { label to it } },
-            ).filter { (label, url) -> label.isNotEmpty() && url.isNotEmpty() }
-        val buttons = DiscordPresence.validatedButtons(configuredButtons)
-        buttons.forEach { button ->
-            val isFirstConfigured = configuredButtons.firstOrNull() == button
+                activity.button1Label?.let { label -> activity.button1Url?.let { url -> DiscordEditTarget.BUTTON1 to (label to url) } },
+                activity.button2Label?.let { label -> activity.button2Url?.let { url -> DiscordEditTarget.BUTTON2 to (label to url) } },
+            ).filter { (_, pair) -> pair.first.isNotEmpty() && pair.second.isNotEmpty() }
+        val buttons =
+            configuredButtons.mapNotNull { (slot, pair) ->
+                DiscordPresence.validatedButtons(listOf(pair)).firstOrNull()?.let { slot to it }
+            }
+        buttons.forEach { (slot, button) ->
             Button(
                 onClick = {
                     if (editMode) {
-                        onEditField(if (isFirstConfigured) DiscordEditTarget.BUTTON1 else DiscordEditTarget.BUTTON2)
+                        onEditField(slot)
                     } else {
                         onOpenUrl(button.second)
                     }
@@ -444,7 +447,7 @@ internal fun DiscordPresenceCard(
                 }
             }
         }
-        if (buttons != configuredButtons) {
+        if (buttons.map { it.second } != configuredButtons.map { it.second }) {
             Text(stringResource(Res.string.discord_preview_buttons_adjusted), style = MaterialTheme.typography.bodySmall)
         }
         if (editMode) {

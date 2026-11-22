@@ -445,7 +445,13 @@ private fun buildIntegrationsRegistry(
                     custom("discordButton1Editor", stringResource(Res.string.discord_button_1)) {
                         DiscordTemplateEditorRow(
                             title = stringResource(Res.string.discord_button_1),
-                            template = settings.discordButton1Text.ifBlank { DiscordDefaults.BUTTON1_LABEL },
+                            // Match the label the presence actually sends for a cleared custom label.
+                            template =
+                                resolveDiscordButtonLabel(
+                                    settings.discordButton1Text,
+                                    DiscordDefaults.BUTTON1_LABEL,
+                                    presenceStrings.button1Default,
+                                ),
                             context = discordTemplateContext,
                             enabled = true,
                         ) { discordEditTarget = DiscordEditTarget.BUTTON1 }
@@ -465,7 +471,13 @@ private fun buildIntegrationsRegistry(
                     custom("discordButton2Editor", stringResource(Res.string.discord_button_2)) {
                         DiscordTemplateEditorRow(
                             title = stringResource(Res.string.discord_button_2),
-                            template = settings.discordButton2Text.ifBlank { DiscordDefaults.BUTTON2_LABEL },
+                            // Match the label the presence actually sends for a cleared custom label.
+                            template =
+                                resolveDiscordButtonLabel(
+                                    settings.discordButton2Text,
+                                    DiscordDefaults.BUTTON2_LABEL,
+                                    presenceStrings.button2Default,
+                                ),
                             context = discordTemplateContext,
                             enabled = true,
                         ) { discordEditTarget = DiscordEditTarget.BUTTON2 }

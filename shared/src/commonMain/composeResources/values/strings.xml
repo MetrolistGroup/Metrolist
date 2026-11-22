@@ -5505,6 +5505,7 @@
     <string name="settings_translation_formality_summary">Choose formal or casual language for DeepL translations</string>
     <string name="settings_discord_advanced_summary">Show activity templates and custom link buttons</string>
     <string name="settings_discord_activity_type_summary">Choose how Discord labels your music activity</string>
+    <string name="settings_discord_activity_name_summary">Name shown beside the activity type on Discord</string>
     <string name="settings_discord_link_button_summary">Show a link button on your Discord profile</string>
     <string name="settings_quick_add_summary">Playlist for the Add to playlist button in Android Auto</string>
     <string name="settings_room_server_summary">Choose the server that connects room members</string>
