@@ -5583,4 +5583,7 @@
     <string name="discord_token_song_url" translatable="false">{song.url}</string>
     <string name="discord_token_artist_url" translatable="false">{artist.url}</string>
     <string name="discord_token_album_url" translatable="false">{album.url}</string>
+    <string name="discord_example_song_title" translatable="false">Never Gonna Give You Up</string>
+    <string name="discord_example_artist_name" translatable="false">Rick Astley</string>
+    <string name="discord_example_album_name" translatable="false">Whenever You Need Somebody</string>
 </resources>

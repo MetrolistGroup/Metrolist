@@ -63,6 +63,7 @@ import com.metrolist.shared.discord.DiscordPresence
 import com.metrolist.shared.discord.DiscordTemplateRenderer
 import com.metrolist.shared.discord.resolveDiscordButtonLabel
 import com.metrolist.shared.generated.resources.Res
+import com.metrolist.shared.generated.resources.album
 import com.metrolist.shared.generated.resources.cancel
 import com.metrolist.shared.generated.resources.details
 import com.metrolist.shared.generated.resources.discord_activity_competing
@@ -73,6 +74,9 @@ import com.metrolist.shared.generated.resources.discord_button1_label
 import com.metrolist.shared.generated.resources.discord_button1_url
 import com.metrolist.shared.generated.resources.discord_button2_label
 import com.metrolist.shared.generated.resources.discord_button2_url
+import com.metrolist.shared.generated.resources.discord_example_album_name
+import com.metrolist.shared.generated.resources.discord_example_artist_name
+import com.metrolist.shared.generated.resources.discord_example_song_title
 import com.metrolist.shared.generated.resources.discord_listen_to_metrolist
 import com.metrolist.shared.generated.resources.discord_logout
 import com.metrolist.shared.generated.resources.discord_position_duration
@@ -92,6 +96,9 @@ import com.metrolist.shared.generated.resources.discord_token_video_id
 import com.metrolist.shared.generated.resources.done
 import com.metrolist.shared.generated.resources.edit
 import com.metrolist.shared.generated.resources.preview
+import com.metrolist.shared.model.AlbumTiny
+import com.metrolist.shared.model.ArtistTiny
+import com.metrolist.shared.model.SongItem
 import com.metrolist.shared.settings.Settings
 import com.metrolist.shared.ui.components.focusOutline
 import com.metrolist.shared.ui.components.images.AsyncImage
@@ -106,6 +113,7 @@ internal enum class DiscordEditTarget {
     ACTIVITY_NAME,
     STATE,
     DETAILS,
+    ALBUM,
     BUTTON1,
     BUTTON2,
 }
@@ -114,6 +122,25 @@ private const val ACTIVITY_TYPE_PLAYING = 0
 private const val ACTIVITY_TYPE_LISTENING = 2
 private const val ACTIVITY_TYPE_WATCHING = 3
 private const val ACTIVITY_TYPE_COMPETING = 5
+
+@Composable
+internal fun discordExamplePlayback(): IntegrationPlaybackState {
+    val songId = "dQw4w9WgXcQ"
+    val durationMs = 213_000L
+    return IntegrationPlaybackState(
+        song =
+            SongItem(
+                id = songId,
+                title = stringResource(Res.string.discord_example_song_title),
+                thumbnail = "https://i.ytimg.com/vi/$songId/mqdefault.jpg",
+                artists = listOf(ArtistTiny(id = null, name = stringResource(Res.string.discord_example_artist_name))),
+                album = AlbumTiny(id = null, name = stringResource(Res.string.discord_example_album_name)),
+                duration = durationMs / 1000L,
+            ),
+        durationMs = durationMs,
+        isPlaying = true,
+    )
+}
 
 /** Snapshot of the current song used to render template previews next to the editor. */
 internal data class DiscordTemplateContext(
@@ -178,6 +205,10 @@ internal fun DiscordTemplateContext.renderDiscordTemplate(
 
         DiscordEditTarget.DETAILS -> {
             render(template.ifEmpty { DiscordDefaults.DETAILS_TEMPLATE })
+        }
+
+        DiscordEditTarget.ALBUM -> {
+            render(template.ifEmpty { DiscordDefaults.ALBUM_TEMPLATE })
         }
 
         DiscordEditTarget.BUTTON1 -> {
@@ -346,29 +377,31 @@ internal fun DiscordPresenceCard(
                 } else {
                     Modifier
                 }
-            Column(modifier = Modifier.weight(1f).then(headerModifier)) {
-                Text(
-                    activityVerb(activity.activityType).uppercase(),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                Text(
-                    activity.name.orEmpty(),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.singleLineMarquee(),
-                )
-            }
-            if (editMode) {
-                Spacer(Modifier.width(8.dp))
-                Icon(
-                    MetrolistIcons.Outlined.Edit,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(18.dp),
-                )
+            Row(modifier = Modifier.weight(1f).then(headerModifier), verticalAlignment = Alignment.CenterVertically) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        activityVerb(activity.activityType).uppercase(),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Text(
+                        activity.name.orEmpty(),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.singleLineMarquee(),
+                    )
+                }
+                if (editMode) {
+                    Spacer(Modifier.width(8.dp))
+                    Icon(
+                        MetrolistIcons.Outlined.Edit,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(18.dp),
+                    )
+                }
             }
             Spacer(Modifier.width(8.dp))
             val editInteraction = remember { MutableInteractionSource() }
@@ -445,14 +478,15 @@ internal fun DiscordPresenceCard(
                     enabled = enabled,
                     editMode = editMode,
                 ) { onEditField(DiscordEditTarget.STATE) }
-                playback.song.album?.name?.takeIf { it.isNotBlank() }?.let { album ->
-                    Text(
-                        album,
+                if (editMode || !activity.largeText.isNullOrBlank()) {
+                    DiscordEditableLine(
+                        text = activity.largeText.orEmpty(),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
+                        fontWeight = null,
+                        enabled = enabled,
+                        editMode = editMode,
+                    ) { onEditField(DiscordEditTarget.ALBUM) }
                 }
                 val now = MetrolistClock.nowMs()
                 val timeText =
@@ -650,6 +684,7 @@ internal fun DiscordTemplateEditorDialog(
     val initialName = settings.discordActivityName
     val initialState = settings.discordStateTemplate
     val initialDetails = settings.discordDetailsTemplate
+    val initialAlbum = settings.discordAlbumTemplate
     val initialLabel1 = settings.discordButton1Text
     val initialUrl1 = settings.discordButton1Url
     val initialLabel2 = settings.discordButton2Text
@@ -657,6 +692,7 @@ internal fun DiscordTemplateEditorDialog(
     var nameDraft by remember(target) { mutableStateOf(TextFieldValue(initialName)) }
     var stateDraft by remember(target) { mutableStateOf(TextFieldValue(initialState)) }
     var detailsDraft by remember(target) { mutableStateOf(TextFieldValue(initialDetails)) }
+    var albumDraft by remember(target) { mutableStateOf(TextFieldValue(initialAlbum)) }
     var label1Draft by remember(target) { mutableStateOf(TextFieldValue(initialLabel1)) }
     var url1Draft by remember(target) { mutableStateOf(TextFieldValue(initialUrl1)) }
     var label2Draft by remember(target) { mutableStateOf(TextFieldValue(initialLabel2)) }
@@ -670,6 +706,7 @@ internal fun DiscordTemplateEditorDialog(
             DiscordEditTarget.ACTIVITY_NAME -> stringResource(Res.string.discord_activity_name)
             DiscordEditTarget.STATE -> stringResource(Res.string.discord_state)
             DiscordEditTarget.DETAILS -> stringResource(Res.string.details)
+            DiscordEditTarget.ALBUM -> stringResource(Res.string.album)
             else -> buttonLabelTitle
         }
 
@@ -728,6 +765,7 @@ internal fun DiscordTemplateEditorDialog(
                     when (target) {
                         DiscordEditTarget.ACTIVITY_NAME -> stringResource(Res.string.discord_listen_to_metrolist)
                         DiscordEditTarget.STATE -> DiscordDefaults.STATE_TEMPLATE
+                        DiscordEditTarget.ALBUM -> stringResource(Res.string.discord_token_album_name)
                         else -> DiscordDefaults.DETAILS_TEMPLATE
                     }
                 DiscordTemplateTextField(
@@ -735,6 +773,7 @@ internal fun DiscordTemplateEditorDialog(
                         when (target) {
                             DiscordEditTarget.ACTIVITY_NAME -> nameDraft
                             DiscordEditTarget.STATE -> stateDraft
+                            DiscordEditTarget.ALBUM -> albumDraft
                             else -> detailsDraft
                         },
                     placeholder = placeholder,
@@ -742,6 +781,7 @@ internal fun DiscordTemplateEditorDialog(
                     when (target) {
                         DiscordEditTarget.ACTIVITY_NAME -> nameDraft = it
                         DiscordEditTarget.STATE -> stateDraft = it
+                        DiscordEditTarget.ALBUM -> albumDraft = it
                         else -> detailsDraft = it
                     }
                 }
@@ -749,6 +789,7 @@ internal fun DiscordTemplateEditorDialog(
                     when (target) {
                         DiscordEditTarget.ACTIVITY_NAME -> nameDraft = nameDraft.insert(token)
                         DiscordEditTarget.STATE -> stateDraft = stateDraft.insert(token)
+                        DiscordEditTarget.ALBUM -> albumDraft = albumDraft.insert(token)
                         else -> detailsDraft = detailsDraft.insert(token)
                     }
                 }
@@ -758,6 +799,7 @@ internal fun DiscordTemplateEditorDialog(
                         when (target) {
                             DiscordEditTarget.ACTIVITY_NAME -> nameDraft.text
                             DiscordEditTarget.STATE -> stateDraft.text
+                            DiscordEditTarget.ALBUM -> albumDraft.text
                             else -> detailsDraft.text
                         },
                         button1Default,
@@ -774,6 +816,7 @@ internal fun DiscordTemplateEditorDialog(
                         if (target == DiscordEditTarget.ACTIVITY_NAME) settings.discordActivityName = nameDraft.text
                         if (target == DiscordEditTarget.STATE) settings.discordStateTemplate = stateDraft.text
                         if (target == DiscordEditTarget.DETAILS) settings.discordDetailsTemplate = detailsDraft.text
+                        if (target == DiscordEditTarget.ALBUM) settings.discordAlbumTemplate = albumDraft.text
                         if (target == DiscordEditTarget.BUTTON1) {
                             settings.discordButton1Text = label1Draft.text
                             settings.discordButton1Url = url1Draft.text

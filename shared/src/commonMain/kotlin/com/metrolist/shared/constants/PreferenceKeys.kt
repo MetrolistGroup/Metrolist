@@ -13,6 +13,7 @@ val SupportPromptLaunchesKey = "supportPromptLaunches"
 val SupportPromptLaunchThresholdKey = "supportPromptLaunchThreshold"
 
 val DiscordPendingAuthSessionKey = "discordPendingAuthSession"
+val DiscordAlbumTemplateKey = "discordAlbumTemplate"
 val DesktopWindowPositionKey = "desktopWindowPosition"
 val DesktopWindowPlacementKey = "desktopWindowPlacement"
 

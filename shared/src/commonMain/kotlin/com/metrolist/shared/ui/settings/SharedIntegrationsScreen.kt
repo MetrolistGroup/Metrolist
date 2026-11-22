@@ -271,8 +271,9 @@ private fun buildIntegrationsRegistry(
     var discordEditMode by remember { mutableStateOf(false) }
     var discordEditTarget by remember { mutableStateOf<DiscordEditTarget?>(null) }
     var confirmDiscordLogout by remember { mutableStateOf(false) }
+    val discordPreviewPlayback = host.playback?.takeIf { it.isPlaying } ?: discordExamplePlayback()
     val discordTemplateContext =
-        DiscordTemplateContext(host.playback, presenceStrings.unknownArtist, presenceStrings.unknownAlbum)
+        DiscordTemplateContext(discordPreviewPlayback, presenceStrings.unknownArtist, presenceStrings.unknownAlbum)
 
     fun notifyDiscordChanged() {
         DiscordRpcManager.notifySettingsChanged()
@@ -344,13 +345,13 @@ private fun buildIntegrationsRegistry(
             description = stringResource(Res.string.discord_presence_status_warning),
             enabled = discordSettingsEnabled,
         ) {
-            host.playback?.takeIf { settings.enableDiscordIntegration }?.let { playback ->
+            if (settings.enableDiscordIntegration) {
                 custom("discordPreview", stringResource(Res.string.discord_rich_presence)) {
                     val position =
-                        host.playbackPosition?.let { source ->
+                        host.playbackPosition?.takeIf { host.playback?.isPlaying == true }?.let { source ->
                             remember(source) { source.wholeSecondPosition() }.collectAsState(source.value).value
-                        } ?: playback.positionMs
-                    val previewPlayback = playback.copy(positionMs = position)
+                        } ?: discordPreviewPlayback.positionMs
+                    val previewPlayback = discordPreviewPlayback.copy(positionMs = position)
                     DiscordPresenceCard(
                         activity =
                             buildDiscordActivity(
@@ -441,6 +442,19 @@ private fun buildIntegrationsRegistry(
                             ),
                         enabled = discordSettingsEnabled,
                     ) { discordEditTarget = DiscordEditTarget.DETAILS }
+                }
+                custom("discordAlbumEditor", stringResource(Res.string.album)) {
+                    DiscordTemplateEditorRow(
+                        title = stringResource(Res.string.album),
+                        rendered =
+                            discordTemplateContext.renderDiscordTemplate(
+                                DiscordEditTarget.ALBUM,
+                                settings.discordAlbumTemplate,
+                                presenceStrings.button1Default,
+                                presenceStrings.button2Default,
+                            ),
+                        enabled = discordSettingsEnabled,
+                    ) { discordEditTarget = DiscordEditTarget.ALBUM }
                 }
                 switch(
                     id = "discordButton1Enabled",
@@ -801,6 +815,7 @@ internal fun buildDiscordActivity(
         activityName = settings.discordActivityName,
         stateTemplate = settings.discordStateTemplate,
         detailsTemplate = settings.discordDetailsTemplate,
+        albumTemplate = settings.discordAlbumTemplate,
         btn1Enabled = settings.discordButton1Enabled,
         btn1Label = resolveDiscordButtonLabel(settings.discordButton1Text, DiscordDefaults.BUTTON1_LABEL, button1Default),
         btn1Url = settings.discordButton1Url,

@@ -154,6 +154,7 @@ object DiscordRpcState {
                 activityName = settings.discordActivityName,
                 stateTemplate = settings.discordStateTemplate,
                 detailsTemplate = settings.discordDetailsTemplate,
+                albumTemplate = settings.discordAlbumTemplate,
                 btn1Enabled = settings.discordButton1Enabled,
                 btn1Label =
                     resolveDiscordButtonLabel(

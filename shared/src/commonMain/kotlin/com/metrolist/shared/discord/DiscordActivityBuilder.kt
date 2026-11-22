@@ -25,6 +25,7 @@ object DiscordActivityBuilder {
         basicBtn1Label: String = DiscordDefaults.BUTTON1_LABEL,
         basicBtn2Label: String = DiscordDefaults.BUTTON2_LABEL,
         unknownAlbum: String = "",
+        albumTemplate: String = DiscordDefaults.ALBUM_TEMPLATE,
     ): DiscordActivity {
         val state: String
         val details: String?
@@ -152,7 +153,21 @@ object DiscordActivityBuilder {
             startTimestamp = startTimestamp,
             endTimestamp = endTimestamp,
             largeImage = song.thumbnail,
-            largeText = albumName,
+            largeText =
+                if (advancedMode) {
+                    DiscordTemplateRenderer.render(
+                        albumTemplate.ifEmpty { DiscordDefaults.ALBUM_TEMPLATE },
+                        songTitle,
+                        artistName,
+                        albumName,
+                        song.id,
+                        artistId,
+                        albumId,
+                        unknownAlbum,
+                    )
+                } else {
+                    albumName
+                },
             smallImage = artistThumbnail,
             smallText = artistName,
             button1Label = renderedBtn1Label,
