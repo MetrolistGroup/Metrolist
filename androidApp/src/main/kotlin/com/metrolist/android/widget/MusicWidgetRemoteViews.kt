@@ -22,53 +22,24 @@ internal class MusicWidgetRemoteViews(
         duration: Long? = null,
         currentPosition: Long? = null,
     ): RemoteViews {
-        val fraction =
-            if (duration != null && currentPosition != null && duration > 0) {
-                progressFraction(duration, currentPosition)
-            } else {
-                null
-            }
-        val sliderLayers =
-            if (fraction != null &&
-                layouts.any { it.layoutId == R.layout.widget_music_player || it.layoutId == R.layout.widget_compact_square }
-            ) {
-                renderLinearSliderLayers(fraction)
-            } else {
-                null
-            }
-        val linearLayers =
-            if (fraction != null && layouts.any { it.layoutId == R.layout.widget_compact }) {
-                renderLinearProgressLayers(fraction)
-            } else {
-                null
-            }
         val updated =
             layouts.map { template ->
                 template.copyRemoteViews().apply {
                     if (duration != null && currentPosition != null && duration > 0) {
                         when (layoutId) {
                             R.layout.widget_music_player -> {
-                                sliderLayers?.let { layers ->
-                                    setImageViewBitmap(R.id.widget_progress_track, layers.track)
-                                    setImageViewBitmap(R.id.widget_progress_fill, layers.active)
-                                }
+                                setWidgetProgress(musicWidgetProgressIds, duration, currentPosition)
                                 setTextViewText(R.id.widget_time_current, formatWidgetDuration(context, currentPosition))
                                 setTextViewText(R.id.widget_time_duration, formatWidgetDuration(context, duration))
                             }
 
                             R.layout.widget_compact_square -> {
-                                sliderLayers?.let { layers ->
-                                    setImageViewBitmap(R.id.widget_progress_track, layers.track)
-                                    setImageViewBitmap(R.id.widget_progress_fill, layers.active)
-                                }
+                                setWidgetProgress(musicWidgetProgressIds, duration, currentPosition)
                                 setTextViewText(R.id.widget_square_time, formatWidgetTimePair(context, currentPosition, duration))
                             }
 
                             R.layout.widget_compact -> {
-                                linearLayers?.let { layers ->
-                                    setImageViewBitmap(R.id.widget_progress_track, layers.track)
-                                    setImageViewBitmap(R.id.widget_progress_fill, layers.active)
-                                }
+                                setWidgetProgress(musicWidgetProgressIds, duration, currentPosition)
                             }
                         }
                     }

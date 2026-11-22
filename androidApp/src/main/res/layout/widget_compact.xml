@@ -85,7 +85,8 @@
                     android:layout_width="match_parent"
                     android:layout_height="6dp"
                     android:layout_marginTop="4dp"
-                    android:importantForAccessibility="noHideDescendants">
+                    android:importantForAccessibility="noHideDescendants"
+                    android:layoutDirection="ltr">
 
                     <ImageView
                         android:id="@+id/widget_progress_track"
@@ -93,7 +94,8 @@
                         android:layout_height="match_parent"
                         android:contentDescription="@null"
                         android:scaleType="fitXY"
-                        android:src="@drawable/widget_progress_track" />
+                        android:src="@drawable/widget_progress_track"
+                        android:visibility="gone" />
 
                     <ImageView
                         android:id="@+id/widget_progress_fill"
@@ -101,7 +103,26 @@
                         android:layout_height="match_parent"
                         android:contentDescription="@null"
                         android:scaleType="fitXY"
-                        android:src="@drawable/widget_progress_clip" />
+                        android:src="@drawable/widget_progress_clip"
+                        android:visibility="gone" />
+
+                    <ImageView
+                        android:id="@+id/widget_progress_stop"
+                        android:layout_width="4dp"
+                        android:layout_height="4dp"
+                        android:layout_gravity="end|center_vertical"
+                        android:contentDescription="@null"
+                        android:src="@drawable/widget_progress_stop"
+                        android:visibility="gone" />
+
+                    <ProgressBar
+                        android:id="@+id/widget_progress"
+                        style="@android:style/Widget.Material.ProgressBar.Horizontal"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:importantForAccessibility="no"
+                        android:max="1000"
+                        android:progressDrawable="@drawable/widget_progress" />
                 </FrameLayout>
             </LinearLayout>
 

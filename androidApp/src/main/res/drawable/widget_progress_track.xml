@@ -8,13 +8,4 @@
             <corners android:radius="2dp" />
         </shape>
     </item>
-    <!-- Stop indicator marking the end of the track -->
-    <item
-        android:width="4dp"
-        android:height="4dp"
-        android:gravity="end|center_vertical">
-        <shape android:shape="oval">
-            <solid android:color="@color/widget_primary" />
-        </shape>
-    </item>
 </layer-list>

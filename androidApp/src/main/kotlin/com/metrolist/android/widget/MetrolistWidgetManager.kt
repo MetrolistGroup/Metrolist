@@ -376,10 +376,6 @@ class MetrolistWidgetManager(
         controls: WidgetControls,
         schemes: WidgetColorSchemes,
     ): MusicWidgetRemoteViews {
-        val fraction = progressFraction(duration, currentPosition)
-        var sliderLayers: WidgetProgressLayers? = null
-        var linearLayers: WidgetProgressLayers? = null
-
         fun create(
             width: Int,
             height: Int,
@@ -392,13 +388,7 @@ class MetrolistWidgetManager(
                     }
 
                     MusicWidgetLayout.COMPACT -> {
-                        val layers =
-                            if (duration > 0) {
-                                linearLayers ?: renderLinearProgressLayers(fraction).also { linearLayers = it }
-                            } else {
-                                null
-                            }
-                        createCompactRemoteViews(title, artist, albumArt, duration, layers, policy.showArtwork)
+                        createCompactRemoteViews(title, artist, albumArt, duration, currentPosition, policy.showArtwork)
                     }
 
                     MusicWidgetLayout.WIDE -> {
@@ -406,32 +396,19 @@ class MetrolistWidgetManager(
                     }
 
                     MusicWidgetLayout.SQUARE -> {
-                        val layers =
-                            if (duration > 0) {
-                                sliderLayers ?: renderLinearSliderLayers(fraction).also { sliderLayers = it }
-                            } else {
-                                null
-                            }
                         createCompactSquareRemoteViews(
                             title,
                             artist,
                             albumArt,
                             duration,
                             currentPosition,
-                            layers,
                             policy.showArtwork,
                             schemes,
                         )
                     }
 
                     MusicWidgetLayout.PLAYER -> {
-                        val layers =
-                            if (duration > 0) {
-                                sliderLayers ?: renderLinearSliderLayers(fraction).also { sliderLayers = it }
-                            } else {
-                                null
-                            }
-                        createPlayerRemoteViews(title, artist, albumArt, duration, currentPosition, layers)
+                        createPlayerRemoteViews(title, artist, albumArt, duration, currentPosition)
                     }
                 }
             bindMusicControls(views, policy.layout, controls, isLiked)
@@ -596,8 +573,7 @@ class MetrolistWidgetManager(
                 views.setWidgetTint(context, R.id.widget_next, schemes) { it.onSecondaryContainer }
                 views.setWidgetTint(context, R.id.widget_play_background, schemes) { it.primary }
                 views.setWidgetTint(context, R.id.widget_play_pause, schemes) { it.onPrimary }
-                views.setWidgetTint(context, R.id.widget_progress_track, schemes) { it.secondaryContainer }
-                views.setWidgetTint(context, R.id.widget_progress_fill, schemes) { it.primary }
+                views.setWidgetProgressTint(context, musicWidgetProgressIds, schemes)
             }
 
             MusicWidgetLayout.WIDE -> {
@@ -621,8 +597,7 @@ class MetrolistWidgetManager(
                 views.setWidgetTint(context, R.id.widget_play_pause, schemes) {
                     if (isPlaying) it.onPrimary else it.onPrimaryContainer
                 }
-                views.setWidgetTint(context, R.id.widget_progress_track, schemes) { it.secondaryContainer }
-                views.setWidgetTint(context, R.id.widget_progress_fill, schemes) { it.primary }
+                views.setWidgetProgressTint(context, musicWidgetProgressIds, schemes)
                 views.setWidgetTextColor(context, R.id.widget_square_time, schemes) { it.onSurfaceVariant }
                 views.setWidgetTextColor(context, R.id.widget_square_song_title, schemes) { it.onSurface }
                 views.setWidgetTextColor(context, R.id.widget_square_artist_name, schemes) { it.onSurfaceVariant }
@@ -644,8 +619,7 @@ class MetrolistWidgetManager(
                 views.setWidgetTint(context, R.id.widget_like_button, schemes) {
                     if (isLiked) it.onTertiary else it.onSecondaryContainer
                 }
-                views.setWidgetTint(context, R.id.widget_progress_track, schemes) { it.secondaryContainer }
-                views.setWidgetTint(context, R.id.widget_progress_fill, schemes) { it.primary }
+                views.setWidgetProgressTint(context, musicWidgetProgressIds, schemes)
                 views.setWidgetTextColor(context, R.id.widget_time_current, schemes) { it.onSurfaceVariant }
                 views.setWidgetTextColor(context, R.id.widget_time_duration, schemes) { it.onSurfaceVariant }
             }
@@ -658,16 +632,14 @@ class MetrolistWidgetManager(
         albumArt: Bitmap?,
         duration: Long,
         currentPosition: Long,
-        progressLayers: WidgetProgressLayers?,
     ): RemoteViews {
         val views = RemoteViews(context.packageName, R.layout.widget_music_player)
         views.setTextViewText(R.id.widget_song_title, title)
         views.setTextViewText(R.id.widget_artist_name, artist)
         views.setImageViewBitmap(R.id.widget_album_art, getCachedCookie9Art(albumArt) ?: cookie9DefaultIcon)
-        if (duration > 0 && progressLayers != null) {
+        if (duration > 0) {
             views.setViewVisibility(R.id.widget_progress_container, View.VISIBLE)
-            views.setImageViewBitmap(R.id.widget_progress_track, progressLayers.track)
-            views.setImageViewBitmap(R.id.widget_progress_fill, progressLayers.active)
+            views.setWidgetProgress(musicWidgetProgressIds, duration, currentPosition)
             views.setTextViewText(R.id.widget_time_current, formatWidgetDuration(context, currentPosition))
             views.setTextViewText(R.id.widget_time_duration, formatWidgetDuration(context, duration))
         } else {
@@ -683,7 +655,6 @@ class MetrolistWidgetManager(
         albumArt: Bitmap?,
         duration: Long,
         currentPosition: Long,
-        progressLayers: WidgetProgressLayers?,
         showArtwork: Boolean,
         schemes: WidgetColorSchemes,
     ): RemoteViews {
@@ -695,11 +666,10 @@ class MetrolistWidgetManager(
         )
         views.setTextViewText(R.id.widget_square_song_title, title)
         views.setTextViewText(R.id.widget_square_artist_name, artist)
-        if (duration > 0 && progressLayers != null) {
+        if (duration > 0) {
             views.setViewVisibility(R.id.widget_progress_container, View.VISIBLE)
             views.setViewVisibility(R.id.widget_square_idle_section, View.GONE)
-            views.setImageViewBitmap(R.id.widget_progress_track, progressLayers.track)
-            views.setImageViewBitmap(R.id.widget_progress_fill, progressLayers.active)
+            views.setWidgetProgress(musicWidgetProgressIds, duration, currentPosition)
             views.setTextViewText(R.id.widget_square_time, formatWidgetTimePair(context, currentPosition, duration))
         } else {
             views.setViewVisibility(R.id.widget_progress_container, View.GONE)
@@ -718,7 +688,7 @@ class MetrolistWidgetManager(
         artist: String,
         albumArt: Bitmap?,
         duration: Long,
-        progressLayers: WidgetProgressLayers?,
+        currentPosition: Long,
         showArtwork: Boolean,
     ): RemoteViews {
         val views = RemoteViews(context.packageName, R.layout.widget_compact)
@@ -726,10 +696,9 @@ class MetrolistWidgetManager(
         views.setTextViewText(R.id.widget_wide_song_title, title)
         views.setTextViewText(R.id.widget_wide_artist_name, artist)
         views.setImageViewBitmap(R.id.widget_wide_album_art, getCachedCookie12Art(albumArt) ?: cookie12DefaultIcon)
-        if (duration > 0 && progressLayers != null) {
+        if (duration > 0) {
             views.setViewVisibility(R.id.widget_progress_container, View.VISIBLE)
-            views.setImageViewBitmap(R.id.widget_progress_track, progressLayers.track)
-            views.setImageViewBitmap(R.id.widget_progress_fill, progressLayers.active)
+            views.setWidgetProgress(musicWidgetProgressIds, duration, currentPosition)
         } else {
             views.setViewVisibility(R.id.widget_progress_container, View.GONE)
         }

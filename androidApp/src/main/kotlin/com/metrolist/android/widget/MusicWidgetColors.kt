@@ -168,4 +168,24 @@ internal fun RemoteViews.setWidgetIndeterminateTint(
     }
 }
 
+internal fun RemoteViews.setWidgetProgressTint(
+    context: Context,
+    ids: WidgetProgressIds,
+    schemes: WidgetColorSchemes,
+) {
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+        fun tint(role: (ColorScheme) -> Color) =
+            ColorStateList.valueOf(role(schemes.light).toArgb()) to ColorStateList.valueOf(role(schemes.dark).toArgb())
+        tint { it.primary }.let { (light, dark) -> setColorStateList(ids.bar, "setProgressTintList", light, dark) }
+        tint { it.secondaryContainer }.let { (light, dark) ->
+            setColorStateList(ids.bar, "setProgressBackgroundTintList", light, dark)
+        }
+    } else {
+        // Stop is a separate view so the track color filter does not wash out the end dot.
+        setWidgetTint(context, ids.track, schemes) { it.secondaryContainer }
+        setWidgetTint(context, ids.fill, schemes) { it.primary }
+        setWidgetTint(context, ids.stop, schemes) { it.primary }
+    }
+}
+
 internal fun widgetSurfaceRole(scheme: ColorScheme): Color = if (scheme.surface == Color.Black) Color.Black else scheme.surfaceContainer

@@ -17,9 +17,11 @@ import android.graphics.Paint
 import android.graphics.Path
 import android.graphics.RectF
 import android.graphics.Shader
+import android.os.Build
+import android.view.View
+import android.widget.RemoteViews
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.MaterialShapes
-import androidx.compose.material3.ProgressIndicatorDefaults
 import androidx.core.graphics.createBitmap
 import androidx.core.os.ConfigurationCompat
 import androidx.graphics.shapes.RoundedPolygon
@@ -28,8 +30,6 @@ import com.metrolist.android.MainActivity
 import com.metrolist.android.R
 import java.text.NumberFormat
 import java.util.Locale
-import kotlin.math.max
-import kotlin.math.min
 
 internal data class WidgetState(
     val title: String,
@@ -41,11 +41,6 @@ internal data class WidgetState(
     val currentPosition: Long,
 )
 
-internal data class WidgetProgressLayers(
-    val track: Bitmap,
-    val active: Bitmap,
-)
-
 private const val ARTWORK_CORNER_FRACTION = 0.28f
 private const val MAX_WIDGET_ARTWORK_SIZE = 240
 private const val SHAPE_MASK_SIZE = 96
@@ -53,11 +48,6 @@ private const val PILL_ARTWORK_WIDTH = 280
 private const val PILL_ARTWORK_HEIGHT = 152
 private const val WIDE_CARD_ARTWORK_WIDTH = 280
 private const val WIDE_CARD_ARTWORK_HEIGHT = 160
-private const val SLIDER_BAR_WIDTH = 260
-private const val SLIDER_BAR_HEIGHT = 28
-private const val SLIDER_CONTAINER_HEIGHT_DP = 18f
-private const val LINEAR_BAR_WIDTH = 160
-private const val LINEAR_BAR_HEIGHT = 10
 
 private val cookie12Mask: Bitmap by lazy { createMaterialShapeMask(cookie12Polygon()) }
 private val cookie9Mask: Bitmap by lazy { createMaterialShapeMask(cookie9Polygon()) }
@@ -195,126 +185,6 @@ private fun RoundedPolygon.toFittedAndroidPath(
     return path
 }
 
-/**
- * Renders the Material 3 linear determinate slider (straight active track, vertical pill playhead
- * thumb, gap, remaining track, and stop indicator dot) as two white alpha-mask bitmaps tinted by
- * RemoteViews so day/night switches stay automatic.
- */
-internal fun renderLinearSliderLayers(progressFraction: Float): WidgetProgressLayers {
-    val width = SLIDER_BAR_WIDTH.toFloat()
-    val height = SLIDER_BAR_HEIGHT.toFloat()
-    val centerY = height / 2f
-    val pxPerDp = height / SLIDER_CONTAINER_HEIGHT_DP
-    val strokeWidth = (3.6f * pxPerDp).coerceIn(3f, 7f)
-    val cap = strokeWidth / 2f
-    val gapPx = ProgressIndicatorDefaults.LinearIndicatorTrackGapSize.value * pxPerDp
-    val stopSize = min(strokeWidth, ProgressIndicatorDefaults.LinearTrackStopIndicatorSize.value * pxPerDp)
-    val thumbWidth = strokeWidth * 1.15f
-    val thumbHeight = (height - 4f).coerceAtLeast(strokeWidth * 3f)
-    val thumbHalfW = thumbWidth / 2f
-
-    val fraction = progressFraction.coerceIn(0f, 1f)
-    val playheadX = (thumbHalfW + fraction * (width - thumbWidth)).coerceIn(thumbHalfW, width - thumbHalfW)
-
-    val trackBitmap = createBitmap(SLIDER_BAR_WIDTH, SLIDER_BAR_HEIGHT)
-    val trackCanvas = Canvas(trackBitmap)
-    val trackPaint =
-        Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = Color.WHITE
-            style = Paint.Style.STROKE
-            this.strokeWidth = strokeWidth
-            strokeCap = Paint.Cap.ROUND
-        }
-    val trackStart = playheadX + thumbHalfW + gapPx + cap
-    if (width - cap > trackStart) {
-        trackCanvas.drawLine(trackStart, centerY, width - cap, centerY, trackPaint)
-    }
-
-    val activeBitmap = createBitmap(SLIDER_BAR_WIDTH, SLIDER_BAR_HEIGHT)
-    val activeCanvas = Canvas(activeBitmap)
-    val activeStrokePaint =
-        Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = Color.WHITE
-            style = Paint.Style.STROKE
-            this.strokeWidth = strokeWidth
-            strokeCap = Paint.Cap.ROUND
-        }
-    val activeFillPaint =
-        Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = Color.WHITE
-            style = Paint.Style.FILL
-        }
-
-    val activeEndX = playheadX - thumbHalfW - gapPx * 0.75f
-    if (activeEndX > cap) {
-        activeCanvas.drawLine(cap, centerY, activeEndX, centerY, activeStrokePaint)
-    }
-
-    // Vertical pill thumb at the playhead
-    val thumbRect =
-        RectF(
-            playheadX - thumbHalfW,
-            centerY - thumbHeight / 2f,
-            playheadX + thumbHalfW,
-            centerY + thumbHeight / 2f,
-        )
-    activeCanvas.drawRoundRect(thumbRect, thumbHalfW, thumbHalfW, activeFillPaint)
-
-    // Material 3 end-of-track stop indicator dot
-    val stopX = width - stopSize / 2f - cap * 0.35f
-    if (stopX - stopSize / 2f > playheadX + thumbHalfW + gapPx * 0.5f) {
-        activeCanvas.drawCircle(stopX, centerY, stopSize / 2f, activeFillPaint)
-    }
-
-    return WidgetProgressLayers(track = trackBitmap, active = activeBitmap)
-}
-
-/**
- * Renders the compact straight linear progress bar with rounded caps and end stop indicator dot.
- */
-internal fun renderLinearProgressLayers(progressFraction: Float): WidgetProgressLayers {
-    val width = LINEAR_BAR_WIDTH.toFloat()
-    val height = LINEAR_BAR_HEIGHT.toFloat()
-    val centerY = height / 2f
-    val strokeWidth = (height * 0.56f).coerceIn(3f, 6f)
-    val cap = strokeWidth / 2f
-    val gap = strokeWidth * 0.9f
-    val fraction = progressFraction.coerceIn(0f, 1f)
-    val activeEndX = (cap + fraction * (width - strokeWidth)).coerceIn(cap, width - cap)
-
-    val trackBitmap = createBitmap(LINEAR_BAR_WIDTH, LINEAR_BAR_HEIGHT)
-    val trackCanvas = Canvas(trackBitmap)
-    val strokePaint =
-        Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = Color.WHITE
-            style = Paint.Style.STROKE
-            this.strokeWidth = strokeWidth
-            strokeCap = Paint.Cap.ROUND
-        }
-    val hasProgress = fraction > 0f
-    val trackStart = if (hasProgress) max(cap, activeEndX + gap + cap) else cap
-    if (width - cap > trackStart) {
-        trackCanvas.drawLine(trackStart, centerY, width - cap, centerY, strokePaint)
-    }
-
-    val activeBitmap = createBitmap(LINEAR_BAR_WIDTH, LINEAR_BAR_HEIGHT)
-    val activeCanvas = Canvas(activeBitmap)
-    if (hasProgress) {
-        activeCanvas.drawLine(cap, centerY, activeEndX, centerY, strokePaint)
-    }
-    val stopRadius = min(strokeWidth, ProgressIndicatorDefaults.LinearTrackStopIndicatorSize.value * 1.4f) / 2f
-    val stopX = width - stopRadius - 1f
-    if (stopX - stopRadius > activeEndX + cap) {
-        val dotPaint =
-            Paint(Paint.ANTI_ALIAS_FLAG).apply {
-                color = Color.WHITE
-                style = Paint.Style.FILL
-            }
-        activeCanvas.drawCircle(stopX, centerY, stopRadius, dotPaint)
-    }
-    return WidgetProgressLayers(track = trackBitmap, active = activeBitmap)
-}
-
 private fun widgetArtworkShader(
     bitmap: Bitmap,
     targetWidth: Int,
@@ -334,10 +204,53 @@ private fun widgetArtworkShader(
     }
 }
 
-internal fun progressFraction(
+private const val WIDGET_PROGRESS_MAX = 1000
+private const val WIDGET_PROGRESS_LEVEL_MAX = 10000
+
+internal data class WidgetProgressIds(
+    val bar: Int,
+    val track: Int,
+    val fill: Int,
+    val stop: Int,
+)
+
+internal val musicWidgetProgressIds =
+    WidgetProgressIds(
+        bar = R.id.widget_progress,
+        track = R.id.widget_progress_track,
+        fill = R.id.widget_progress_fill,
+        stop = R.id.widget_progress_stop,
+    )
+
+internal val playlistWidgetProgressIds =
+    WidgetProgressIds(
+        bar = R.id.widget_playlist_progress,
+        track = R.id.widget_playlist_progress_track,
+        fill = R.id.widget_playlist_progress_fill,
+        stop = R.id.widget_playlist_progress_stop,
+    )
+
+internal fun RemoteViews.setWidgetProgress(
+    ids: WidgetProgressIds,
     duration: Long,
     currentPosition: Long,
-): Float = if (duration > 0) (currentPosition.toFloat() / duration.toFloat()).coerceIn(0f, 1f) else 0f
+) {
+    val fraction = if (duration > 0) (currentPosition.toFloat() / duration.toFloat()).coerceIn(0f, 1f) else 0f
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+        setViewVisibility(ids.bar, View.VISIBLE)
+        setViewVisibility(ids.track, View.GONE)
+        setViewVisibility(ids.fill, View.GONE)
+        setViewVisibility(ids.stop, View.GONE)
+        setProgressBar(ids.bar, WIDGET_PROGRESS_MAX, (fraction * WIDGET_PROGRESS_MAX).toInt(), false)
+    } else {
+        // RemoteViews cannot tint ProgressBar below API 31; clip ImageViews keep setColorFilter.
+        setViewVisibility(ids.bar, View.GONE)
+        setViewVisibility(ids.track, View.VISIBLE)
+        setViewVisibility(ids.fill, View.VISIBLE)
+        setViewVisibility(ids.stop, View.VISIBLE)
+        setInt(ids.fill, "setImageLevel", (fraction * WIDGET_PROGRESS_LEVEL_MAX).toInt())
+    }
+}
 
 internal fun formatWidgetDuration(
     context: Context,
