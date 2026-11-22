@@ -2116,9 +2116,9 @@ class ListenTogetherManager(
     private suspend fun clearIdleGuestQueue(queue: List<TrackInfo>): Boolean {
         if (_role.value != ListenTogetherRoomRole.GUEST || queue.isNotEmpty()) return false
         if (loadingTrackId != null || _roomState.value?.currentTrack != null) return false
-        if (playback.currentQueueSnapshot().displayedItems.isNotEmpty()) {
-            playback.replaceUpcomingQueueFromRemote(emptyList())
-        }
+        // Always issue the clear: the platform call also removes persisted state when nothing is loaded,
+        // so a queue saved by an earlier session cannot come back after a restart.
+        playback.replaceUpcomingQueueFromRemote(emptyList())
         playback.setQueueTitleFromRemote(_roomState.value?.queueTitle)
         return true
     }
