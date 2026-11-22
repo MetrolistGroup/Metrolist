@@ -12,7 +12,7 @@ Research dates: 2026-11-21 and 2026-11-22. The selected scope is recorded below;
 
 Metrolist's own git history contains an earlier Android Wrapped implementation. The files at commit `73ca593d4` include `WrappedScreen`, `WrappedPages`, `WrappedViewModel` and a separate audio controller. That implementation uses fixed 2026 half-year dates and prepares multiple streams before its audio flow is ready. These files are absent from the current shared application. Any reused work must retain its attribution and license notices.
 
-The current [Wrapped issue #5105](https://github.com/MetrolistGroup/Metrolist/issues/5105) asks for an always-available recap. It is unassigned. This work is tracked in [PR #5180](https://github.com/MetrolistGroup/Metrolist/pull/5180). The older [local Wrapped request #1973](https://github.com/MetrolistGroup/Metrolist/issues/1973) was closed after an implementation in the earlier Android release. Searches found no PR with Wrapped in its title; broad searches also return unrelated mentions.
+The current [Wrapped issue #5105](https://github.com/MetrolistGroup/Metrolist/issues/5105) asks for an always-available recap. It is unassigned. This work is tracked in [PR #5180](https://github.com/MetrolistGroup/Metrolist/pull/5180). The older [local Wrapped request #1973](https://github.com/MetrolistGroup/Metrolist/issues/1973) was closed after an implementation in the earlier Android release. Earlier work includes [Wrapped PR #2098](https://github.com/MetrolistGroup/Metrolist/pull/2098), [#2099](https://github.com/MetrolistGroup/Metrolist/pull/2099) and the [revert #2097](https://github.com/MetrolistGroup/Metrolist/pull/2097). These PRs are closed.
 
 ## What the current application provides
 
