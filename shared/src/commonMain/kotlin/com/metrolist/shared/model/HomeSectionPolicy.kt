@@ -49,14 +49,14 @@ fun mergeAndDeduplicateHomeSections(
 
     val result = mutableListOf<HomeSection>()
     var firstLibraryIndex = -1
-    val seenBrowseIds = mutableMapOf<String, Int>()
-    val seenTitles = mutableMapOf<String, Int>()
+    val seenBrowseDestinations = mutableMapOf<Pair<String, String?>, Int>()
+    val seenUnparameterizedTitles = mutableMapOf<String, Int>()
 
     for (section in sections) {
         val uniqueItems = section.items.distinctBy(::canonicalHomeItemId)
         if (uniqueItems.isEmpty()) continue
 
-        val browseIdKey = section.browseId?.takeIf { it.isNotBlank() }
+        val destination = section.browseDestination()
         val titleKey =
             section.title
                 .trim()
@@ -67,24 +67,25 @@ fun mergeAndDeduplicateHomeSections(
             if (firstLibraryIndex == -1) {
                 firstLibraryIndex = result.size
                 result.add(section.copy(items = uniqueItems))
-                browseIdKey?.let { seenBrowseIds[it] = firstLibraryIndex }
-                titleKey?.let { seenTitles[it] = firstLibraryIndex }
+                destination?.let { seenBrowseDestinations[it] = firstLibraryIndex }
+                if (destination?.second == null) titleKey?.let { seenUnparameterizedTitles[it] = firstLibraryIndex }
             } else {
                 val existing = result[firstLibraryIndex]
                 val mergedItems = (existing.items + uniqueItems).distinctBy(::canonicalHomeItemId)
                 result[firstLibraryIndex] = existing.copy(items = mergedItems)
-                browseIdKey?.let { seenBrowseIds[it] = firstLibraryIndex }
-                titleKey?.let { seenTitles[it] = firstLibraryIndex }
+                destination?.let { seenBrowseDestinations[it] = firstLibraryIndex }
+                if (destination?.second == null) titleKey?.let { seenUnparameterizedTitles[it] = firstLibraryIndex }
             }
             continue
         }
 
         val existingIndex =
-            browseIdKey?.let { seenBrowseIds[it] } ?: titleKey?.let { seenTitles[it] }?.takeIf { index ->
-                // Identical labels can refer to different destinations, such as library and discovery shelves.
-                val existingBrowseId = result[index].browseId
-                browseIdKey == null || existingBrowseId.isNullOrBlank() || browseIdKey == existingBrowseId
-            }
+            destination?.let { seenBrowseDestinations[it] }
+                ?: titleKey?.takeIf { destination?.second == null }?.let { seenUnparameterizedTitles[it] }?.takeIf { index ->
+                    // Identical labels can refer to different browse destinations.
+                    val existingDestination = result[index].browseDestination()
+                    destination == null || existingDestination == null || destination == existingDestination
+                }
         if (existingIndex != null) {
             val existing = result[existingIndex]
             val mergedItems = (existing.items + uniqueItems).distinctBy(::canonicalHomeItemId)
@@ -92,10 +93,13 @@ fun mergeAndDeduplicateHomeSections(
         } else {
             val index = result.size
             result.add(section.copy(items = uniqueItems))
-            browseIdKey?.let { seenBrowseIds[it] = index }
-            titleKey?.let { seenTitles.getOrPut(it) { index } }
+            destination?.let { seenBrowseDestinations[it] = index }
+            if (destination?.second == null) titleKey?.let { seenUnparameterizedTitles.getOrPut(it) { index } }
         }
     }
 
     return result
 }
+
+private fun HomeSection.browseDestination(): Pair<String, String?>? =
+    browseId?.takeIf(String::isNotBlank)?.let { id -> id to params?.takeIf(String::isNotBlank) }
