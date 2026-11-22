@@ -1146,6 +1146,10 @@
     <string name="appearance_swipe_song_gesture_playlists">Swipe song gesture in playlists</string>
     <!-- Translators: Supporting text beneath the swipe song gesture playlists option in the Appearance settings. -->
     <string name="appearance_swipe_song_gesture_playlists_description">Swipe on a song to remove it from a playlist</string>
+    <!-- Translators: Option or section label for swipe song gesture in queue in the Appearance settings. -->
+    <string name="appearance_swipe_song_gesture_queue">Swipe song gesture in queue</string>
+    <!-- Translators: Supporting text beneath the swipe song gesture in queue option in the Appearance settings. -->
+    <string name="appearance_swipe_song_gesture_queue_description">Swipe left on a song to remove it from the queue even when locked</string>
     <!-- Translators: Option or section label for enable haptic feedback in the Appearance settings. -->
     <string name="appearance_enable_haptic_feedback">Haptic feedback</string>
     <!-- Translators: Supporting text beneath the enable haptic feedback option in the Appearance settings. -->

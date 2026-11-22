@@ -518,6 +518,12 @@ internal fun SettingsUiRegistryBuilder.registerAppearanceSettings(host: SharedSe
                         checked = settings.swipeToRemoveSong,
                     ) { settings.swipeToRemoveSong = it }
                 }
+                switch(
+                    id = "swipeToRemoveFromQueue",
+                    title = stringResource(Res.string.appearance_swipe_song_gesture_queue),
+                    description = stringResource(Res.string.appearance_swipe_song_gesture_queue_description),
+                    checked = settings.swipeToRemoveFromQueue,
+                ) { settings.swipeToRemoveFromQueue = it }
             }
         }
         if (host.platform != SettingsPlatform.DESKTOP) {

@@ -194,6 +194,7 @@ import com.metrolist.shared.constants.SponsorBlockEnabledKey
 import com.metrolist.shared.constants.SupportPromptDismissedKey
 import com.metrolist.shared.constants.SupportPromptLaunchThresholdKey
 import com.metrolist.shared.constants.SupportPromptLaunchesKey
+import com.metrolist.shared.constants.SwipeToRemoveFromQueueKey
 import com.metrolist.shared.constants.SwipeToRemoveSongKey
 import com.metrolist.shared.constants.SwipeToSongKey
 import com.metrolist.shared.constants.TempoPitchPresetsJsonKey
@@ -708,6 +709,7 @@ class Settings(
     var swipeSensitivity by preference(73f)
     var swipeToSong by preference(SwipeToSongKey, false)
     var swipeToRemoveSong by preference(SwipeToRemoveSongKey, false)
+    var swipeToRemoveFromQueue by preference(SwipeToRemoveFromQueueKey, false)
     var autoLoadMore by preference(true)
     var classicRecommendations by preference(ClassicRecommendationsKey, false)
     var disableLoadMoreWhenRepeatAll by preference(false)
