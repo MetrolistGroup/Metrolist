@@ -134,6 +134,7 @@ import com.metrolist.shared.constants.LyricsShareImageStyleKey
 import com.metrolist.shared.constants.LyricsShowOriginalLyricsKey
 import com.metrolist.shared.constants.MatugenThemeKey
 import com.metrolist.shared.constants.MinimumSongDurationSecondsKey
+import com.metrolist.shared.constants.MultilineSongTitlesKey
 import com.metrolist.shared.constants.MusicVideoCacheJsonKey
 import com.metrolist.shared.constants.MusicVideoPlaybackEnabledKey
 import com.metrolist.shared.constants.MusicVideoQualityKey
@@ -413,6 +414,7 @@ class Settings(
     var isExpanded by preference(false)
     var densityScaleFactor by preference(DensityScaleKey, 1f)
     var enableLandscapeScaling by preference(EnableLandscapeScalingKey, false)
+    var multilineSongTitles by preference(MultilineSongTitlesKey, false)
     var forceBottomNavBar by preference(ForceBottomNavBarKey, false)
     var slimNavBar by preference(SlimNavBarKey, false)
     var floatingNavBar by preference(FloatingNavBarKey, false)

@@ -109,6 +109,7 @@ import com.metrolist.shared.model.previewAspectRatio
 import com.metrolist.shared.model.previewThumbnailUrl
 import com.metrolist.shared.model.thumbnailAspectRatio
 import com.metrolist.shared.settings.ArtistNameAliases
+import com.metrolist.shared.settings.Settings
 import com.metrolist.shared.settings.displayName
 import com.metrolist.shared.settings.displayTitle
 import com.metrolist.shared.state.SongMetadataState
@@ -430,6 +431,7 @@ fun ListItemTitle(
     fontWeight: FontWeight = FontWeight.Medium,
     color: Color = MaterialTheme.colorScheme.onSurface,
 ) {
+    val titleMaxLines = if (Settings.shared.multilineSongTitles) 3 else 1
     Row(
         modifier = modifier,
         verticalAlignment = Alignment.CenterVertically,
@@ -441,7 +443,7 @@ fun ListItemTitle(
             style = style,
             fontWeight = fontWeight,
             color = color,
-            maxLines = 1,
+            maxLines = titleMaxLines,
             overflow = TextOverflow.Ellipsis,
         )
         if (isExplicit) ExplicitBadge()

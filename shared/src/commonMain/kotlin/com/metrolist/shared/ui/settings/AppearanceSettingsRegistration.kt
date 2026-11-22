@@ -216,6 +216,12 @@ internal fun SettingsUiRegistryBuilder.registerAppearanceSettings(host: SharedSe
                     selectedChoiceId = selectedDensity.name,
                     description = stringResource(Res.string.settings_interface_density_summary),
                 ) { settings.densityScaleFactor = DensityScale.valueOf(it).value }
+                switch(
+                    id = "multilineSongTitles",
+                    title = stringResource(Res.string.multiline_song_titles),
+                    description = stringResource(Res.string.multiline_song_titles_description),
+                    checked = settings.multilineSongTitles,
+                ) { settings.multilineSongTitles = it }
                 if (host.platform == SettingsPlatform.ANDROID) {
                     switch(
                         id = "enableLandscapeScaling",
