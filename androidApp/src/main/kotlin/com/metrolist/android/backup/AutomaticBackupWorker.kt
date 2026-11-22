@@ -74,7 +74,15 @@ class AutomaticBackupWorker(
             if (backupDestination == AutoBackupDestination.GOOGLE_DRIVE) {
                 check(session.isNotBlank()) { "Google Drive account is not connected" }
                 // WorkManager stops ordinary workers after ten minutes, which can strand a large resumable upload.
-                setForegroundAsync(createForegroundInfo()).await()
+                // Android 12+ can refuse foreground promotion for a background periodic worker; keep uploading
+                // under the normal time limit instead of retrying forever under the same restriction.
+                try {
+                    setForegroundAsync(createForegroundInfo()).await()
+                } catch (cancelled: CancellationException) {
+                    throw cancelled
+                } catch (error: Exception) {
+                    Logger.w("AutomaticBackup", "Could not promote Drive backup to a foreground service", error)
+                }
             }
             check(directory.isDirectory || directory.mkdirs()) { "Could not create automatic backup directory" }
             if (backupDestination == AutoBackupDestination.GOOGLE_DRIVE) clearStagedArchives(directory)

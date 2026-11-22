@@ -1128,6 +1128,7 @@ private fun runDesktopApp(args: Array<String>) {
                             withContext(Dispatchers.Main) {
                                 refreshRecoveredDesktopCredentials()
                                 DriveAccountConnectionState.refresh()
+                                DesktopAutomaticBackupScheduler.schedule()
                                 ScrobbleSessions.restorePersistedAccounts()
                                 if (settings.enableDiscordIntegration) {
                                     DiscordRpcManager.init(GlobalYouTube.client)
