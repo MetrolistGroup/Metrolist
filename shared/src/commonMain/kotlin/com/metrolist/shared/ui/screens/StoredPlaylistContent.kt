@@ -58,6 +58,7 @@ import com.metrolist.shared.model.indexOfPlaylistOccurrence
 import com.metrolist.shared.model.isReordering
 import com.metrolist.shared.model.presentCollection
 import com.metrolist.shared.model.sortedForLikedPlaylist
+import com.metrolist.shared.settings.ArtistNameAliases
 import com.metrolist.shared.settings.SavedPlaylistCollectionSorting
 import com.metrolist.shared.settings.SavedPlaylistSongSorting
 import com.metrolist.shared.settings.Settings
@@ -209,6 +210,7 @@ fun StoredPlaylistContent(
         remember(isCachedCollection, Settings.shared.cachedSongsCustomOrder) {
             if (isCachedCollection) Settings.shared.cachedSongsOrder() else emptyList()
         }
+    val artistAliases = if (collectionMetadata != null && collectionSort == CollectionSort.ARTIST) ArtistNameAliases.aliases else emptyMap()
     val orderedSongs =
         remember(
             songs,
@@ -221,6 +223,7 @@ fun StoredPlaylistContent(
             collectionDirection,
             collectionSort,
             cachedCustomOrder,
+            artistAliases,
             isCachedCollection,
             playlistSort,
             playlistSortDirection,
@@ -234,6 +237,7 @@ fun StoredPlaylistContent(
                         collectionSort,
                         collectionDirection,
                         customOrder = if (isCachedCollection) cachedCustomOrder else emptyList(),
+                        artistAliases = artistAliases,
                     ) { song ->
                         collectionMetadata[song.id]?.copy(playCount = playCounts[song.id] ?: 0)
                     }

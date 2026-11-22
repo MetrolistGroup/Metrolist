@@ -95,6 +95,7 @@ import com.metrolist.shared.model.CollectionSort
 import com.metrolist.shared.model.PlaylistItem
 import com.metrolist.shared.model.SongItem
 import com.metrolist.shared.model.presentCollectionWithPlayCounts
+import com.metrolist.shared.settings.ArtistNameAliases
 import com.metrolist.shared.settings.HiddenLibraryItem
 import com.metrolist.shared.settings.HiddenLibraryItemType
 import com.metrolist.shared.settings.HiddenLibraryItems
@@ -465,12 +466,14 @@ private fun LocalPlaylistLayout(
             }
         }
     val availableSongs = remember(songs, hasMoreSongs) { songs.takeUnless { hasMoreSongs }.orEmpty() }
+    val artistAliases = if (isCachedCollection && cachedSorting?.sort == CollectionSort.ARTIST) ArtistNameAliases.aliases else emptyMap()
     val menuSongs =
         remember(
             availableSongs,
             isCachedCollection,
             cachedSorting,
             cachedCustomOrder,
+            artistAliases,
             collectionMetadata,
             playCounts,
             playCountsLoaded,
@@ -491,6 +494,7 @@ private fun LocalPlaylistLayout(
                         customOrder = cachedCustomOrder,
                         metadata = collectionMetadata.orEmpty(),
                         playCounts = playCounts,
+                        artistAliases = artistAliases,
                     )
                 }
             }
