@@ -109,6 +109,7 @@ fun BackupRestorePage(
     val driveConnected by DriveAccountConnectionState.connected.collectAsState()
     val driveReauthorizationRequired by DriveAccountConnectionState.reauthorizationRequired.collectAsState()
     val driveSignInFailed by DriveAccountConnectionState.signInFailed.collectAsState()
+    val driveSignInInProgress by DriveAccountConnectionState.signInInProgress.collectAsState()
     var pendingDriveDestination by remember { mutableStateOf<AutoBackupDestination?>(null) }
     var showBackupWarning by remember { mutableStateOf(false) }
     var showRestoreWarning by remember { mutableStateOf(false) }
@@ -225,6 +226,7 @@ fun BackupRestorePage(
                     }
                 },
                 modifier = Modifier.fillMaxWidth(),
+                enabled = !driveSignInInProgress,
                 shapes = ButtonDefaults.shapes(),
             ) {
                 Text(stringResource(if (driveConnected) Res.string.drive_disconnect else Res.string.drive_connect))

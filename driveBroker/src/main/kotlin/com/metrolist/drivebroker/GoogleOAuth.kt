@@ -35,6 +35,17 @@ data class GoogleIdentity(
     @SerialName("exp") val expiresAt: Long,
 )
 
+sealed interface GoogleAccessTokenResult {
+    data class Success(
+        val accessToken: String,
+        val expiresIn: Long,
+    ) : GoogleAccessTokenResult
+
+    data object ReauthorizationRequired : GoogleAccessTokenResult
+
+    data object Unavailable : GoogleAccessTokenResult
+}
+
 class GoogleOAuth(
     private val client: HttpClient,
     private val configuration: BrokerConfiguration,
@@ -94,7 +105,7 @@ class GoogleOAuth(
         return DriveAccount(identity.subject, clientId, identity.email, refreshToken)
     }
 
-    suspend fun accessToken(account: DriveAccount): Pair<String, Long>? {
+    suspend fun accessToken(account: DriveAccount): GoogleAccessTokenResult {
         val (clientId, clientSecret) =
             when (account.clientId) {
                 configuration.desktopClientId -> configuration.desktopClientId to null
@@ -102,24 +113,36 @@ class GoogleOAuth(
                 else -> configuration.webClientId to configuration.webClientSecret
             }
         val response =
-            client
-                .submitForm(
-                    "https://oauth2.googleapis.com/token",
-                    Parameters.build {
-                        append("refresh_token", account.refreshToken)
-                        append("client_id", clientId)
-                        clientSecret?.let { append("client_secret", it) }
-                        append("grant_type", "refresh_token")
-                    },
-                ).body<GoogleTokenResponse>()
-        return response.accessToken?.let { it to (response.expiresIn ?: 3600L) }
+            client.submitForm(
+                "https://oauth2.googleapis.com/token",
+                Parameters.build {
+                    append("refresh_token", account.refreshToken)
+                    append("client_id", clientId)
+                    clientSecret?.let { append("client_secret", it) }
+                    append("grant_type", "refresh_token")
+                },
+            )
+        val tokenResponse = runCatching { response.body<GoogleTokenResponse>() }.getOrDefault(GoogleTokenResponse())
+        if (response.status.isSuccess()) {
+            val accessToken = tokenResponse.accessToken ?: return GoogleAccessTokenResult.Unavailable
+            return GoogleAccessTokenResult.Success(accessToken, tokenResponse.expiresIn ?: DEFAULT_EXPIRES_IN_SECONDS)
+        }
+        if (tokenResponse.error == INVALID_GRANT) return GoogleAccessTokenResult.ReauthorizationRequired
+        return GoogleAccessTokenResult.Unavailable
     }
 
     suspend fun revoke(refreshToken: String) {
-        client.post("https://oauth2.googleapis.com/revoke") {
-            contentType(ContentType.Application.FormUrlEncoded)
-            setBody(Parameters.build { append("token", refreshToken) }.formUrlEncode())
-        }
+        val response =
+            client.post("https://oauth2.googleapis.com/revoke") {
+                contentType(ContentType.Application.FormUrlEncoded)
+                setBody(Parameters.build { append("token", refreshToken) }.formUrlEncode())
+            }
+        check(response.status.isSuccess()) { "Google revocation failed with HTTP ${response.status.value}" }
+    }
+
+    private companion object {
+        const val INVALID_GRANT = "invalid_grant"
+        const val DEFAULT_EXPIRES_IN_SECONDS = 3600L
     }
 
     private fun validVerifier(value: String?): Boolean =

@@ -59,6 +59,7 @@ class AutomaticBackupWorker(
         var archiveCreated = false
         return try {
             check(directory.isDirectory || directory.mkdirs()) { "Could not create automatic backup directory" }
+            if (backupDestination == AutoBackupDestination.GOOGLE_DRIVE) clearStagedArchives(directory)
             archiveCreated = true
             BackupRestoreManager(applicationContext, GlobalContext.get().get<MusicDatabase>())
                 .backup(destination)
@@ -68,7 +69,7 @@ class AutomaticBackupWorker(
                     return Result.success()
                 }
                 try {
-                    uploadAndDelete(destination, checkNotNull(brokerUrl), session)
+                    uploadArchive(destination, checkNotNull(brokerUrl), session)
                 } catch (cleanup: DriveCleanupException) {
                     DriveAccountConnectionState.recordCleanupFailure()
                 }
@@ -89,26 +90,24 @@ class AutomaticBackupWorker(
                         )
                 }
             } else {
-                directory
-                    .listFiles { file -> file.isFile }
-                    ?.forEach { it.delete() }
+                clearStagedArchives(directory)
             }
             Result.success()
         } catch (cancellation: CancellationException) {
             throw cancellation
         } catch (reauthorization: DriveReauthorizationRequiredException) {
-            DriveAccountConnectionState.requireReauthorization()
+            DriveAccountConnectionState.requireReauthorization(session)
             Result.failure()
         } catch (_: Exception) {
             Result.retry()
         } finally {
             if (archiveCreated && backupDestination == AutoBackupDestination.GOOGLE_DRIVE) {
-                deleteStagedArchive(destination)
+                clearStagedArchives(directory)
             }
         }
     }
 
-    private fun uploadAndDelete(
+    private suspend fun uploadArchive(
         destination: File,
         brokerUrl: String,
         session: String,
@@ -133,15 +132,17 @@ class AutomaticBackupWorker(
             ) { SystemFileSystem.source(Path(destination.absolutePath)) }
         } finally {
             driveClient.close()
-            deleteStagedArchive(destination)
         }
     }
 
-    private fun deleteStagedArchive(destination: File) {
-        check(!destination.exists() || destination.delete()) { "Could not remove temporary backup archive" }
-        destination.parentFile
-            ?.listFiles { file -> file.isFile && file.name.endsWith(".tmp") }
-            ?.forEach { file -> check(file.delete()) { "Could not remove temporary backup archive" } }
+    private fun clearStagedArchives(directory: File) {
+        directory
+            .listFiles { file -> file.isFile }
+            .orEmpty()
+            .forEach { file ->
+                runCatching { check(file.delete()) { "Could not remove temporary backup archive" } }
+                    .onFailure { error -> Logger.w("AutomaticBackup", "Could not remove staged backup archive", error) }
+            }
     }
 
     private fun pruneBackups(directory: File) {

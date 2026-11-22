@@ -12,6 +12,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -23,15 +24,22 @@ import platform.Security.errSecSuccess
 import platform.Security.kSecRandomDefault
 
 private const val DRIVE_CALLBACK_PATH = "/oauth2redirect"
+private const val DRIVE_SIGN_IN_TIMEOUT_MILLIS = 10 * 60 * 1000L
 private val iosDriveSignInMutex = Mutex()
 
 fun isIosDriveBrokerConfigured(): Boolean = iosDriveBrokerUrl() != null && iosGoogleScheme().startsWith("com.googleusercontent.apps.")
 
 fun startIosDriveSignIn() {
     DriveAccountConnectionState.clearSignInFailure()
+    DriveAccountConnectionState.signInInProgress.value = true
     CoroutineScope(SupervisorJob() + Dispatchers.Main).launch {
         iosDriveSignInMutex.withLock {
             try {
+                if (Settings.shared.driveBrokerSession.isNotBlank()) {
+                    DriveAccountConnectionState.refresh()
+                    DriveAccountConnectionState.signInInProgress.value = false
+                    return@withLock
+                }
                 val brokerUrl = checkNotNull(iosDriveBrokerUrl())
                 val broker = DriveTokenBrokerClient(brokerUrl)
                 val configuration =
@@ -72,6 +80,13 @@ fun startIosDriveSignIn() {
                                 }
                             }
                         }
+                    }
+                }
+                // Re-enable Connect if the browser is abandoned without a callback.
+                CoroutineScope(SupervisorJob() + Dispatchers.Main).launch {
+                    delay(DRIVE_SIGN_IN_TIMEOUT_MILLIS)
+                    iosDriveSignInMutex.withLock {
+                        if (Settings.shared.driveOAuthState == state) clearPendingDriveOAuth()
                     }
                 }
             } catch (cancelled: CancellationException) {
@@ -141,6 +156,7 @@ private fun clearPendingDriveOAuth() {
     Settings.shared.driveOAuthState = ""
     Settings.shared.driveOAuthVerifier = ""
     Settings.shared.flush()
+    DriveAccountConnectionState.signInInProgress.value = false
 }
 
 @OptIn(ExperimentalForeignApi::class)

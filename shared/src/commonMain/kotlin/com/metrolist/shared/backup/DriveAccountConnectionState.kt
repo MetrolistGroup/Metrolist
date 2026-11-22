@@ -7,6 +7,7 @@ object DriveAccountConnectionState {
     val connected = MutableStateFlow(Settings.shared.driveBrokerSession.isNotBlank())
     val reauthorizationRequired = MutableStateFlow(false)
     val signInFailed = MutableStateFlow(false)
+    val signInInProgress = MutableStateFlow(false)
 
     fun refresh() {
         connected.value = Settings.shared.driveBrokerSession.isNotBlank()
@@ -17,6 +18,7 @@ object DriveAccountConnectionState {
         if (sessionToken.isNotBlank()) {
             reauthorizationRequired.value = false
             signInFailed.value = false
+            signInInProgress.value = false
         }
     }
 
@@ -34,9 +36,10 @@ object DriveAccountConnectionState {
         return true
     }
 
-    fun requireReauthorization() {
-        clearConnectedAccount()
+    fun requireReauthorization(sessionToken: String): Boolean {
+        if (!clearIfCurrent(sessionToken)) return false
         reauthorizationRequired.value = true
+        return true
     }
 
     fun recordCleanupFailure() {
@@ -56,6 +59,7 @@ object DriveAccountConnectionState {
         settings.driveBrokerSession = ""
         connected.value = false
         signInFailed.value = false
+        signInInProgress.value = false
         if (AutoBackupDestination.fromSetting(settings.autoBackupDestination) == AutoBackupDestination.GOOGLE_DRIVE) {
             settings.autoBackupDestination = AutoBackupDestination.LOCAL.name
         }

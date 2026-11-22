@@ -80,9 +80,6 @@ fun createIosAutomaticBackup(completion: (Boolean) -> Unit) {
                     } else {
                         null
                     }
-                if (destinationType == AutoBackupDestination.GOOGLE_DRIVE) {
-                    check(brokerUrl != null && session != null)
-                }
                 val backupBasePath =
                     when (destinationType) {
                         AutoBackupDestination.LOCAL -> {
@@ -104,6 +101,7 @@ fun createIosAutomaticBackup(completion: (Boolean) -> Unit) {
                 val destination = backupDirectory?.plus("/${defaultBackupFilename(BACKUP_FILENAME_PREFIX)}.zip")
                 val result =
                     runCatching {
+                        check(destinationType != AutoBackupDestination.GOOGLE_DRIVE || (brokerUrl != null && session != null))
                         check(
                             backupDirectory != null &&
                                 fileManager.createDirectoryAtPath(
@@ -137,7 +135,9 @@ fun createIosAutomaticBackup(completion: (Boolean) -> Unit) {
                                     check(activeSession == session && activeSession.isNotBlank())
                                     try {
                                         IosBackupRestoreManager().backup(destination).getOrThrow()
-                                        if (AutoBackupDestination.fromSetting(settings.autoBackupDestination) != destinationType) {
+                                        if (!settings.autoBackupEnabled ||
+                                            AutoBackupDestination.fromSetting(settings.autoBackupDestination) != destinationType
+                                        ) {
                                             return@runCatching false
                                         }
                                         val archivePath = Path(destination)
@@ -163,7 +163,10 @@ fun createIosAutomaticBackup(completion: (Boolean) -> Unit) {
                                         }
                                     } finally {
                                         if (fileManager.fileExistsAtPath(destination)) {
-                                            check(fileManager.removeItemAtPath(destination, error = null))
+                                            runCatching { check(fileManager.removeItemAtPath(destination, error = null)) }
+                                                .onFailure { error ->
+                                                    Logger.w("AutomaticBackup", "Could not remove staged backup archive", error)
+                                                }
                                         }
                                     }
                                 }
@@ -185,7 +188,7 @@ fun createIosAutomaticBackup(completion: (Boolean) -> Unit) {
                         true
                     }
                 if (result.exceptionOrNull() is DriveReauthorizationRequiredException) {
-                    DriveAccountConnectionState.requireReauthorization()
+                    DriveAccountConnectionState.requireReauthorization(checkNotNull(session))
                 }
                 completion(result.getOrDefault(false))
             } finally {
@@ -196,7 +199,7 @@ fun createIosAutomaticBackup(completion: (Boolean) -> Unit) {
     backupJob.start()
 }
 
-private fun cleanupLocalBackups(fileManager: NSFileManager) {
+private suspend fun cleanupLocalBackups(fileManager: NSFileManager) {
     val directory = automaticBackupDirectory() ?: return
     iosBackupOperationMutex.withLock {
         val entries =

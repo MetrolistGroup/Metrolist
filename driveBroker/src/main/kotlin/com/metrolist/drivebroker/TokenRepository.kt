@@ -51,6 +51,7 @@ class TokenRepository(
             connection.autoCommit = false
             try {
                 lockSubject(connection, account.subject)
+                ensureNoRevocation(connection, account.subject)
                 lockAccount(connection, account.subject, account.clientId)
                 connection
                     .prepareStatement(
@@ -133,7 +134,11 @@ class TokenRepository(
                             }
                         }
                 lockSubject(connection, session.first)
+                ensureNoRevocation(connection, session.first)
                 lockAccount(connection, session.first, session.second)
+                // Hold a subject-scoped marker until completion so overlapping disconnects cannot both
+                // decide that the other session makes Google revocation unnecessary.
+                markRevocation(connection, session.first)
                 val refreshToken =
                     connection
                         .prepareStatement(
@@ -156,16 +161,14 @@ class TokenRepository(
                         }
                 // Google revocation invalidates every client in the project, not just this account's OAuth client.
                 val remainingForSubject = hasSession(connection, session.first, excludedTokenHash = tokenHash)
-                connection.commit()
-                return SessionRevocation(
-                    session.first,
-                    session.second,
+                val accountToRevoke =
                     if (remainingForSubject || refreshToken == null) {
                         null
                     } else {
                         DriveAccount(session.first, session.second, null, refreshToken)
-                    },
-                )
+                    }
+                connection.commit()
+                return SessionRevocation(session.first, session.second, accountToRevoke)
             } catch (error: Exception) {
                 connection.rollback()
                 throw error
@@ -205,6 +208,12 @@ class TokenRepository(
                     return false
                 }
                 if (!hasSession(connection, session.first, session.second)) deleteAccount(connection, session.first, session.second)
+                connection
+                    .prepareStatement("DELETE FROM google_drive_revocations WHERE google_subject = ?")
+                    .use { statement ->
+                        statement.setString(1, session.first)
+                        statement.executeUpdate()
+                    }
                 connection.commit()
                 return true
             } catch (error: Exception) {
@@ -212,6 +221,81 @@ class TokenRepository(
                 throw error
             }
         }
+    }
+
+    fun cancelSessionRevocation(sessionToken: String) {
+        val tokenHash = decodeToken(sessionToken)?.let(::hash) ?: return
+        dataSource.connection.use { connection ->
+            connection.autoCommit = false
+            try {
+                val subject =
+                    connection
+                        .prepareStatement("SELECT google_subject FROM google_drive_sessions WHERE token_hash = ?")
+                        .use { statement ->
+                            statement.setBytes(1, tokenHash)
+                            statement.executeQuery().use { result -> if (result.next()) result.getString(1) else null }
+                        }
+                if (subject == null) {
+                    connection.rollback()
+                    return
+                }
+                lockSubject(connection, subject)
+                val sessionStillExists =
+                    connection
+                        .prepareStatement("SELECT 1 FROM google_drive_sessions WHERE token_hash = ?")
+                        .use { statement ->
+                            statement.setBytes(1, tokenHash)
+                            statement.executeQuery().use { it.next() }
+                        }
+                if (sessionStillExists) {
+                    connection
+                        .prepareStatement("DELETE FROM google_drive_revocations WHERE google_subject = ?")
+                        .use { statement ->
+                            statement.setString(1, subject)
+                            statement.executeUpdate()
+                        }
+                }
+                connection.commit()
+            } catch (error: Exception) {
+                connection.rollback()
+                throw error
+            }
+        }
+    }
+
+    private fun ensureNoRevocation(
+        connection: Connection,
+        subject: String,
+    ) {
+        connection
+            .prepareStatement(
+                "DELETE FROM google_drive_revocations WHERE google_subject = ? AND started_at < CURRENT_TIMESTAMP - INTERVAL '10 minutes'",
+            ).use { statement ->
+                statement.setString(1, subject)
+                statement.executeUpdate()
+            }
+        val inProgress =
+            connection
+                .prepareStatement("SELECT 1 FROM google_drive_revocations WHERE google_subject = ? FOR UPDATE")
+                .use { statement ->
+                    statement.setString(1, subject)
+                    statement.executeQuery().use { it.next() }
+                }
+        check(!inProgress) { "Google account revocation is in progress" }
+    }
+
+    private fun markRevocation(
+        connection: Connection,
+        subject: String,
+    ) {
+        connection
+            .prepareStatement(
+                """INSERT INTO google_drive_revocations (google_subject) VALUES (?)
+                   ON CONFLICT (google_subject) DO UPDATE SET started_at = CURRENT_TIMESTAMP""",
+            ).use { statement ->
+                statement.setString(1, subject)
+                statement.executeUpdate()
+            }
     }
 
     private fun hasSession(

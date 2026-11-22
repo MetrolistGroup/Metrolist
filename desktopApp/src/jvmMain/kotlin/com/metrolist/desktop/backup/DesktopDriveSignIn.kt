@@ -150,7 +150,7 @@ object DesktopDriveSignIn {
 
     private fun brokerUrl(): String? = System.getenv(DRIVE_BROKER_URL_ENV)?.takeIf { it.startsWith("https://") }
 
-    private fun requireBrokerUrl(): String = brokerUrl() ?: error("Google Drive broker is not configured")
+    internal fun requireBrokerUrl(): String = brokerUrl() ?: error("Google Drive broker is not configured")
 
     private fun randomUrlSafe(byteCount: Int): String =
         ByteArray(byteCount).also(SecureRandom()::nextBytes).let {

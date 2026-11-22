@@ -51,6 +51,7 @@ import com.metrolist.shared.backup.IosBackupRestoreManager
 import com.metrolist.shared.backup.defaultBackupFilename
 import com.metrolist.shared.backup.foreignImportMessage
 import com.metrolist.shared.backup.handleIosDriveOAuthCallback
+import com.metrolist.shared.backup.iosDriveBrokerUrl
 import com.metrolist.shared.backup.isIosDriveBrokerConfigured
 import com.metrolist.shared.backup.notifyIosAutomaticBackupSettingsChanged
 import com.metrolist.shared.backup.startIosDriveSignIn
@@ -179,8 +180,12 @@ fun disconnectIosDriveAccount() {
     CoroutineScope(SupervisorJob() + Dispatchers.Main).launch {
         val settings = Settings.shared
         val session = settings.driveBrokerSession
-        val brokerUrl = iosDriveBrokerUrl()
-        if (session.isNotBlank() && brokerUrl != null) {
+        if (session.isNotBlank()) {
+            val brokerUrl = iosDriveBrokerUrl()
+            if (brokerUrl == null) {
+                DriveAccountConnectionState.reportSignInFailure()
+                return@launch
+            }
             val broker = DriveTokenBrokerClient(brokerUrl)
             val revoked =
                 try {

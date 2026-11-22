@@ -53,7 +53,7 @@ class DriveTokenBrokerClient(
     fun close() = httpClient.close()
 }
 
-class DriveBrokerException(
+open class DriveBrokerException(
     val statusCode: Int,
 ) : Exception("Drive broker request failed with HTTP $statusCode")
 

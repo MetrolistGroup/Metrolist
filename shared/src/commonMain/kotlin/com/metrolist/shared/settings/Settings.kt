@@ -252,7 +252,17 @@ class Settings(
     private val preferenceDefaults = mutableMapOf<String, Any?>()
 
     init {
+        migrateAutoBackupSettings()
         if ((settings as? DeferredSecretMigrationSettings)?.secretRecoveryPending != true) migrateInitialSettings()
+    }
+
+    private fun migrateAutoBackupSettings() {
+        settings.getStringOrNull(AutoBackupFrequencyKey)?.let { value ->
+            if (AutoBackupFrequency.entries.none { it.name == value }) settings.remove(AutoBackupFrequencyKey)
+        }
+        settings.getStringOrNull(AutoBackupDestinationKey)?.let { value ->
+            if (AutoBackupDestination.entries.none { it.name == value }) settings.remove(AutoBackupDestinationKey)
+        }
     }
 
     private fun migrateInitialSettings() {
@@ -1237,6 +1247,8 @@ class Settings(
                 "Invalid backup setting type for ${entry.key}"
             }
             if (entry.key == ArtistNameAliasesJsonKey) ArtistNameAliases.deserialize(entry.value)
+            if (entry.key == AutoBackupFrequencyKey) AutoBackupFrequency.fromSetting(entry.value)
+            if (entry.key == AutoBackupDestinationKey) AutoBackupDestination.fromSetting(entry.value)
             require(entry.isValidValue()) { "Invalid backup setting value for ${entry.key}" }
             if (entry.key == "maxImageCacheSize") {
                 require(entry.value.toInt() >= 0) { "Invalid backup setting value for ${entry.key}" }

@@ -9,7 +9,7 @@ enum class AutoBackupFrequency(
     ;
 
     companion object {
-        fun fromSetting(value: String): AutoBackupFrequency = entries.firstOrNull { it.name == value } ?: WEEKLY
+        fun fromSetting(value: String): AutoBackupFrequency = valueOf(value)
     }
 }
 
@@ -19,7 +19,7 @@ enum class AutoBackupDestination {
     ;
 
     companion object {
-        fun fromSetting(value: String): AutoBackupDestination = entries.firstOrNull { it.name == value } ?: LOCAL
+        fun fromSetting(value: String): AutoBackupDestination = valueOf(value)
     }
 }
 

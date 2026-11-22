@@ -45,12 +45,12 @@ class GoogleDriveBackupClient(
         require(filename.isNotBlank() && filename.none { it == '/' || it == '\\' })
         require(archiveSize > 0)
         val accessToken = broker.accessToken(sessionToken).accessToken
-        val folderId = getOrCreateBackupFolder(accessToken)
+        val folderIds = getOrCreateBackupFolders(accessToken)
         val metadata =
             DriveCreateMetadata(
                 name = filename,
                 mimeType = "application/zip",
-                parents = listOf(folderId),
+                parents = listOf(folderIds.first()),
                 appProperties = mapOf(APP_PROPERTY_KEY to "true"),
             )
         val uploadUrl =
@@ -68,7 +68,7 @@ class GoogleDriveBackupClient(
                 ?.also(::requireSafeUploadUrl)
                 ?: error("Drive did not provide a resumable upload URL")
         val uploaded = uploadArchive(accessToken, uploadUrl, archiveSize, archiveSource)
-        val cleanupError = runCatching { pruneOldBackups(accessToken, folderId) }.exceptionOrNull()
+        val cleanupError = runCatching { pruneOldBackups(accessToken, folderIds) }.exceptionOrNull()
         if (cleanupError != null) {
             if (cleanupError is CancellationException) throw cleanupError
             Logger.w("GoogleDriveBackup", "Could not prune expired Drive backups", cleanupError)
@@ -79,8 +79,9 @@ class GoogleDriveBackupClient(
 
     suspend fun cleanupBackups(sessionToken: String) {
         val accessToken = broker.accessToken(sessionToken).accessToken
-        val folderId = findBackupFolder(accessToken) ?: return
-        pruneOldBackups(accessToken, folderId)
+        val folderIds = findBackupFolders(accessToken)
+        if (folderIds.isEmpty()) return
+        pruneOldBackups(accessToken, folderIds)
     }
 
     private suspend fun uploadArchive(
@@ -147,40 +148,51 @@ class GoogleDriveBackupClient(
         return (lastByte + 1).coerceAtMost(archiveSize)
     }
 
-    private suspend fun findBackupFolder(accessToken: String): String? =
-        httpClient
-            .get("https://www.googleapis.com/drive/v3/files") {
-                header(HttpHeaders.Authorization, "Bearer $accessToken")
-                parameter(
-                    "q",
-                    "name = '$BACKUP_FOLDER_NAME' and mimeType = '$FOLDER_MIME_TYPE' and trashed = false",
-                )
-                parameter("fields", "files(id)")
-                parameter("pageSize", "10")
-            }.requireDriveApiSuccess()
-            .body<DriveFileList>()
-            .files
-            .firstOrNull()
-            ?.id
+    private suspend fun findBackupFolders(accessToken: String): List<String> {
+        val folderIds = mutableListOf<String>()
+        var pageToken: String? = null
+        do {
+            val page =
+                httpClient
+                    .get("https://www.googleapis.com/drive/v3/files") {
+                        header(HttpHeaders.Authorization, "Bearer $accessToken")
+                        parameter(
+                            "q",
+                            "name = '$BACKUP_FOLDER_NAME' and mimeType = '$FOLDER_MIME_TYPE' and trashed = false",
+                        )
+                        parameter("fields", "nextPageToken,files(id)")
+                        parameter("pageSize", "100")
+                        pageToken?.let { parameter("pageToken", it) }
+                    }.requireDriveApiSuccess()
+                    .body<DriveFileList>()
+            folderIds += page.files.map { it.id }
+            pageToken = page.nextPageToken
+        } while (pageToken != null)
+        return folderIds
+    }
 
-    private suspend fun getOrCreateBackupFolder(accessToken: String): String {
-        val existing = findBackupFolder(accessToken)
-        if (existing != null) return existing
-        return httpClient
-            .post("https://www.googleapis.com/drive/v3/files") {
-                header(HttpHeaders.Authorization, "Bearer $accessToken")
-                contentType(ContentType.Application.Json)
-                parameter("fields", "id")
-                setBody(DriveCreateMetadata(BACKUP_FOLDER_NAME, FOLDER_MIME_TYPE))
-            }.requireDriveApiSuccess()
-            .body<DriveBackupFile>()
-            .id
+    private suspend fun getOrCreateBackupFolders(accessToken: String): List<String> {
+        val existing = findBackupFolders(accessToken)
+        if (existing.isNotEmpty()) return existing
+        val created =
+            httpClient
+                .post("https://www.googleapis.com/drive/v3/files") {
+                    header(HttpHeaders.Authorization, "Bearer $accessToken")
+                    contentType(ContentType.Application.Json)
+                    parameter("fields", "id")
+                    setBody(DriveCreateMetadata(BACKUP_FOLDER_NAME, FOLDER_MIME_TYPE))
+                }.requireDriveApiSuccess()
+                .body<DriveBackupFile>()
+                .id
+        // Another device can create the same folder between the search and this request.
+        return findBackupFolders(accessToken).ifEmpty { listOf(created) }
     }
 
     private suspend fun pruneOldBackups(
         accessToken: String,
-        folderId: String,
+        folderIds: List<String>,
     ) {
+        val parentQuery = folderIds.joinToString(" or ") { "'$it' in parents" }
         val files = mutableListOf<DriveBackupFile>()
         var pageToken: String? = null
         do {
@@ -190,7 +202,7 @@ class GoogleDriveBackupClient(
                         header(HttpHeaders.Authorization, "Bearer $accessToken")
                         parameter(
                             "q",
-                            "'$folderId' in parents and appProperties has { key='$APP_PROPERTY_KEY' and value='true' } and trashed = false",
+                            "($parentQuery) and appProperties has { key='$APP_PROPERTY_KEY' and value='true' } and trashed = false",
                         )
                         parameter("orderBy", "modifiedTime desc")
                         parameter("fields", "nextPageToken,files(id,name,modifiedTime)")

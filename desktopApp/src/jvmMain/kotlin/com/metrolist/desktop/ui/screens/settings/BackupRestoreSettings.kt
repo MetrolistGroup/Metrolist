@@ -711,7 +711,13 @@ fun BackupRestoreSettingsScreen(colorScheme: ColorScheme) {
                                     ),
                                 )
                             },
-                            enabled = appSettings.autoBackupEnabled && driveDestinationAvailable,
+                            enabled =
+                                appSettings.autoBackupEnabled &&
+                                    (
+                                        driveDestinationAvailable ||
+                                            AutoBackupDestination.fromSetting(appSettings.autoBackupDestination) ==
+                                            AutoBackupDestination.GOOGLE_DRIVE
+                                    ),
                             onClick = {
                                 val destination = AutoBackupDestination.fromSetting(appSettings.autoBackupDestination)
                                 if (destination == AutoBackupDestination.GOOGLE_DRIVE) {
