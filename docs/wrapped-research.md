@@ -127,6 +127,7 @@ Google explicitly says [Recap uses music listening across YouTube platforms](htt
 
 The local desktop build had no Last.fm API key, so live pagination for the signed-in account remains unverified. A disposable SQLite database verified daily maxima, historical metadata matching, version separation, ambiguous matches, exclusions, artist totals and unchanged stored events. Desktop runtime checks prepared all ten selected songs, observed multiple excerpt changes and removed session audio after rapid cancellation. Playback used muted output. Native iOS runtime checks remain outstanding.
 
+[Google's channel-stats guidance](https://support.google.com/youtubemusic/answer/13407991) identifies private "On repeat" rankings based on watch history across YouTube services. This is another first-party statistics source, but the guidance does not document a calendar-year event ledger. A read-only account-menu probe found no existing channel browse endpoint in the saved desktop session; it advertised `channelCreationFormEndpoint` instead. No channel was created and no sharing setting was changed. This route therefore provided no additional counts for this session. Matching Google account identity does not establish that every YouTube surface exposes the same history.
 
 ## Bounded My Activity history investigation
 
