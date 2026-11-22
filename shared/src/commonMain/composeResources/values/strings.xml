@@ -5587,6 +5587,9 @@
     <string name="discord_example_artist_name" translatable="false">Rick Astley</string>
     <string name="discord_example_album_name" translatable="false">Whenever You Need Somebody</string>
     <string name="wrapped">Metrolist Wrapped</string>
+    <string name="wrapped_cover_heading">You pressed play.</string>
+    <string name="wrapped_time_heading">Time well spent</string>
+    <string name="wrapped_history_scope">Based on history saved on this device. The YouTube recent-history feed may omit older plays.</string>
     <string name="wrapped_year">Your %1$s Wrapped</string>
     <string name="wrapped_chapter">%1$s of %2$s</string>
     <string name="wrapped_summary">Your year in music</string>
@@ -5594,7 +5597,7 @@
     <string name="wrapped_measured_time">Measured listening time</string>
     <string name="wrapped_time_coverage">Based on %1$s plays with recorded durations, out of %2$s combined plays. Imported durations may be incomplete.</string>
     <string name="wrapped_merge_note">Includes history saved by Metrolist and synced from YouTube. For each song and date group, the larger play count is used. This can undercount separate plays. Listening time includes recorded durations only.</string>
-    <string name="wrapped_share_caption">Combined Metrolist and YouTube history. Daily overlap uses the larger count. Time includes recorded durations only.</string>
+    <string name="wrapped_share_caption">Saved Metrolist and YouTube history. Older YouTube plays may be missing. Daily overlap uses the larger count. Time includes recorded durations only.</string>
     <string name="wrapped_share_summary">Share your summary</string>
     <string name="wrapped_soundtrack">Soundtrack</string>
     <string name="wrapped_soundtrack_loading">Loading soundtrack</string>
