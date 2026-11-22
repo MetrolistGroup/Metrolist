@@ -369,7 +369,7 @@
     <string name="immersive_player">Иммерсивный плеер</string>
     <string name="immersive_player_description">Скрывает системные панели при развёрнутом плеере</string>
     <string name="song_gestures">Жесты песен</string>
-    <string name="appearance_enable_swipe_to_change_track">Проведите по обложке, чтобы переключить трек</string>
+    <string name="appearance_enable_swipe_to_change_track">Переключать треки свайпом по обложке</string>
     <string name="appearance_play_videos_in_mini_player" tools:ignore="MissingTranslation">Проигрывать клип в мини-плеере</string>
     <string name="appearance_play_videos_in_mini_player_desc" tools:ignore="MissingTranslation">Показывает клип, когда мини-плеер свернут</string>
     <string name="appearance_mini_player_swipe_sensitivity">Чувствительность свайпа</string>
@@ -383,7 +383,7 @@
     <string name="mysterious_fourth_tab_description">Остальные вкладки скрыты. Откройте меню аккаунта, перейдите в настройки и включите их снова.</string>
     <string name="appearance_slim_bottom_nav">Тонкая нижняя панель навигации</string>
     <string name="appearance_slim_bottom_nav_description">Убрать текст из панели навигации</string>
-    <string name="appearance_swipe_song_gesture">Жест свайпа песни</string>
+    <string name="appearance_swipe_song_gesture">Свайп по треку</string>
     <string name="appearance_swipe_song_gesture_description">Проведите по песне влево, чтобы добавить в очередь, или вправо, чтобы воспроизвести следующей</string>
     <string name="appearance_swipe_song_gesture_playlists">Жесты свайпа песни в плейлистах</string>
     <string name="appearance_swipe_song_gesture_playlists_description">Свайпните по песне, чтобы убрать её из плейлиста</string>
@@ -2086,7 +2086,7 @@
     <string name="settings_canvas_playback_summary">Воспроизводить короткие фрагменты или полный клип за плеером</string>
     <string name="settings_normalization_summary">Выравнивать громкость песен, чтобы избежать резких перепадов</string>
     <string name="settings_loudness_target_summary">Задайте целевую громкость при включённой нормализации звука</string>
-    <string name="settings_stop_on_close_summary">Останавливать воспроизведение при удалении Metrolist из недавних приложений</string>
+    <string name="settings_stop_on_close_summary">Останавливать воспроизведение при смахивании Metrolist из недавних приложений. На Android TV воспроизведение также приостанавливается при выходе из приложения.</string>
     <string name="settings_screen_awake_summary">Выберите, будет ли плеер или текст песни удерживать экран включённым</string>
     <string name="settings_translation_mode_summary">Переводить слова или записывать их произношение в целевой системе письма</string>
     <string name="settings_translation_provider_summary">Выберите сервис для перевода текстов</string>
