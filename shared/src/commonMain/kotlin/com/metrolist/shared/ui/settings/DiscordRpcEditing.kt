@@ -159,12 +159,27 @@ internal fun DiscordTemplateContext.renderDiscordTemplate(
     button2Default: String,
 ): String =
     when (target) {
-        DiscordEditTarget.ACTIVITY_NAME -> template.ifEmpty { title }
-        DiscordEditTarget.STATE -> template.ifEmpty { DiscordDefaults.STATE_TEMPLATE }
-        DiscordEditTarget.DETAILS -> template.ifEmpty { DiscordDefaults.DETAILS_TEMPLATE }
-        DiscordEditTarget.BUTTON1 -> resolveDiscordButtonLabel(template, DiscordDefaults.BUTTON1_LABEL, button1Default)
-        DiscordEditTarget.BUTTON2 -> resolveDiscordButtonLabel(template, DiscordDefaults.BUTTON2_LABEL, button2Default)
-    }.let(::render)
+        // The builder sends the raw song title for a cleared activity name without rendering it.
+        DiscordEditTarget.ACTIVITY_NAME -> {
+            if (template.isEmpty()) title else render(template)
+        }
+
+        DiscordEditTarget.STATE -> {
+            render(template.ifEmpty { DiscordDefaults.STATE_TEMPLATE })
+        }
+
+        DiscordEditTarget.DETAILS -> {
+            render(template.ifEmpty { DiscordDefaults.DETAILS_TEMPLATE })
+        }
+
+        DiscordEditTarget.BUTTON1 -> {
+            render(resolveDiscordButtonLabel(template, DiscordDefaults.BUTTON1_LABEL, button1Default))
+        }
+
+        DiscordEditTarget.BUTTON2 -> {
+            render(resolveDiscordButtonLabel(template, DiscordDefaults.BUTTON2_LABEL, button2Default))
+        }
+    }
 
 /** Renders a button URL the way the presence builder resolves it. */
 internal fun DiscordTemplateContext.renderDiscordButtonUrl(
