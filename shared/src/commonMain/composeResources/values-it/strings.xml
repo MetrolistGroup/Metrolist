@@ -1561,7 +1561,7 @@
     <string name="follow_agent_positioning_hints">Segui suggerimenti posizionamento agente</string>
     <string name="hide_lyrics">Nascondi testo</string>
     <string name="hide_queue">Nascondi coda</string>
-    <string name="lyrics_menu">Menù testi</string>
+    <string name="lyrics_menu">Menu testi</string>
     <string name="manual_translate_this_track">Manuale: traduci questo brano</string>
     <string name="make_available_offline">Rendilo disponibile per la riproduzione offline</string>
     <string name="media_details">Dettagli media</string>
@@ -1595,7 +1595,7 @@
     <string name="backup_failed">Backup non riuscito: %1$s</string>
     <string name="could_not_open_file_picker">Impossibile aprire il selettore di file: %1$s</string>
     <string name="listen_together_how_it_works">Come funziona</string>
-    <string name="listen_together_how_it_works_body">Ascolta la musica in contemporanea con i tuoi amici. L'host controlla la riproduzione e gli ospiti la seguono automaticamente.</string>
+    <string name="listen_together_how_it_works_body">Ascolta la musica in sincronia con i tuoi amici. L'host controlla la riproduzione e gli ospiti la seguono automaticamente.</string>
     <string name="listen_together_how_it_works_bullets">• Crea una stanza per diventare l'host\n• Condividi il codice stanza con i tuoi amici\n• Gli ospiti possono unirsi con il codice stanza\n• Solo l'host può controllare la riproduzione</string>
     <string name="remove_server">Rimuovi server</string>
     <string name="discord_disconnected">Disconnesso</string>
@@ -2033,14 +2033,14 @@
     <string name="pause_music_when_media_is_muted_desc">Metti in pausa la riproduzione quando il volume è azzerato e riprendi quando è attivato.</string>
     <string name="no_episode_description">Nessuna descrizione disponibile per questo episodio.</string>
     <plurals name="episode_duration_hours">
-        <item quantity="one">%1$d h</item>
-        <item quantity="many">%1$d h</item>
-        <item quantity="other">%1$d h</item>
+        <item quantity="one">%1$d h</item>
+        <item quantity="many">%1$d h</item>
+        <item quantity="other">%1$d h</item>
     </plurals>
     <plurals name="episode_duration_minutes">
-        <item quantity="one">%1$d min</item>
-        <item quantity="many">%1$d min</item>
-        <item quantity="other">%1$d min</item>
+        <item quantity="one">%1$d min</item>
+        <item quantity="many">%1$d min</item>
+        <item quantity="other">%1$d min</item>
     </plurals>
     <string name="varispeed">Varispeed</string>
     <string name="varispeed_description">Collega la tonalità alla velocità per accelerare e rallentare come su un nastro</string>
