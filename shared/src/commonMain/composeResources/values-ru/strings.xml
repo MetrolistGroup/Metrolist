@@ -705,7 +705,7 @@
     <string name="device_connect_discovered">Найдено</string>
     <string name="device_has_no_microphone">Это устройство не имеет микрофона.</string>
     <string name="discord_unknown_album">Неизвестный альбом</string>
-    <string name="disliked_song">Отмечено "Не нравится"</string>
+    <string name="disliked_song">Отмечено «Не нравится»</string>
     <string name="dislike_song">Не нравится</string>
     <string name="done">Готово</string>
     <string name="download_not_found">Скачивание не найдено</string>
@@ -846,10 +846,10 @@
     <string name="refreshing">Обновление</string>
     <string name="remove">Удалить</string>
     <string name="remove_all">Удалить все</string>
-    <string name="removed_dislike">Отметка "Не нравится" убрана</string>
+    <string name="removed_dislike">Отметка «Не нравится» убрана</string>
     <string name="removed_download">Скачивание удалено</string>
     <string name="removed_from_library">Удалено из библиотеки</string>
-    <string name="remove_dislike">Убрать отметку "Не нравится"</string>
+    <string name="remove_dislike">Убрать отметку «Не нравится»</string>
     <string name="remove_from_device">Удалить с устройства</string>
     <string name="remove_from_favorites">Удалить из Любимых</string>
     <string name="remove_from_recent_question">Удалить из недавних?</string>
@@ -895,7 +895,7 @@
     <string name="song_details">Детали трека</string>
     <string name="music_video_not_found">Музыкальное видео недоступно для этого трека.</string>
     <string name="music_video_unavailable">Не удалось воспроизвести музыкальное видео.</string>
-    <string name="song_liked">Вы лайкнули эту песню</string>
+    <string name="song_liked">Вы поставили отметку «Нравится»</string>
     <string name="song_mix_title">%1$s микс</string>
     <string name="recognition">Распознавание</string>
     <string name="song_saved_to_library_description">Сохранено в вашу библиотеку</string>
@@ -939,7 +939,7 @@
     <string name="unable_to_update_podcast">Не удалось обновить подкаст</string>
     <string name="unavailable">Недоступно</string>
     <string name="unknown_artist">Неизвестный исполнитель</string>
-    <string name="unlike">Разлайкнуть</string>
+    <string name="unlike">Убрать отметку «Нравится»</string>
     <string name="unlock_queue">Разблокировать очередь</string>
     <string name="upload">Загрузить</string>
     <string name="uploaded_song_to_youtube_music">Песня загружена в YouTube Music</string>
@@ -1119,7 +1119,7 @@
     <string name="information">Информация</string>
     <string name="description">Описание</string>
     <string name="views">Просмотры</string>
-    <string name="likes">Отметки "Нравится"</string>
+    <string name="likes">Отметки «Нравится»</string>
     <string name="subscribe">Подписаться</string>
     <string name="subscribed">Вы подписаны</string>
     <plurals name="seconds">
@@ -1157,7 +1157,7 @@
     <string name="cache_size_warning_message">Новый лимит кэша меньше текущего размера (%1$s). Приложение может удалить некоторые файлы из %2$s для соблюдения нового лимита. Продолжить?</string>
     <string name="lyrics_animation_style">Пословный стиль анимации</string>
     <string name="none">Никакой</string>
-    <string name="expressive_style">Выразительный</string>
+    <string name="expressive_style">Expressive</string>
     <string name="simple_style">Простой</string>
     <string name="lyrics_text_size">Размер текста песен</string>
     <string name="lyrics_line_spacing">Межстрочный интервал текста песен</string>
@@ -1242,9 +1242,9 @@
     <string name="upload_failed">Загрузка не удалась</string>
     <string name="onboarding_welcome_description">Настройте приватность и системные разрешения перед вашим первым прослушиванием.</string>
     <string name="onboarding_migration_title">Ваша библиотека v13 здесь</string>
-    <string name="onboarding_migration_description">Мы обнаружили отдельную базу данных Metrolist. Перенесите плейлисты, историю, лайки и данные библиотеки на месте. Ваш оригинал останется доступным для восстановления в случае провала переноса данных.</string>
+    <string name="onboarding_migration_description">Обнаружена отдельная база данных Metrolist. Перенесите плейлисты, историю, понравившиеся и данные библиотеки в эту версию приложения. Если перенос не удастся, исходную базу данных можно будет восстановить.</string>
     <string name="onboarding_migration_complete_title">Ваш аккаунт был перенесен</string>
-    <string name="onboarding_migration_complete_description">Ваш аккаунт, плейлисты, история, лайки и данные библиотеки готовы в этой версии Metrolist.</string>
+    <string name="onboarding_migration_complete_description">Ваш аккаунт, плейлисты, история, понравившиеся и данные библиотеки теперь доступны в этой версии Metrolist.</string>
     <string name="onboarding_crash_reports_title">Помогите улучшить Metrolist</string>
     <string name="onboarding_crash_reports_description">Поделитесь необязательной диагностикой через Sentry чтобы помочь нам находить и исправлять проблемы. Вы можете изменить это в любое время в Настройках.</string>
     <string name="onboarding_notifications_title">Разрешить уведомления</string>
@@ -1549,7 +1549,7 @@
     <string name="shortcut_reload_app">Перезагрузить приложение</string>
     <string name="add_romanization_below_lyrics">Добавить романизацию под текстом</string>
     <string name="ai_translation">AI перевод</string>
-    <string name="allow_song_to_be_liked_again">Разрешить снова лайкать эту песню</string>
+    <string name="allow_song_to_be_liked_again">Разрешить снова ставить этому треку отметку «Нравится»</string>
     <string name="automatic_mode">Авто-режим</string>
     <string name="display_gaps_between_sections">Показывать пробелы между разделами текста</string>
     <string name="follow_agent_positioning_hints">Следовать подсказкам по позиционированию агента</string>
@@ -1576,7 +1576,7 @@
     <string name="detail_available">Доступно</string>
     <string name="detail_in_library">В библиотеке</string>
     <string name="detail_remove_token">Убрать токен</string>
-    <string name="dislike_this_song_on_youtube_music">Поставить дизлайк этой песне в YouTube Music</string>
+    <string name="dislike_this_song_on_youtube_music">Поставить этому треку отметку «Не нравится» в YouTube Music</string>
     <string name="technical_information">Техническая информация</string>
     <plurals name="n_song">
         <item quantity="one">%1$d песня</item>
@@ -1618,7 +1618,7 @@
     <string name="liked_songs_title">Понравившиеся треки</string>
     <string name="liked_songs_subtitle">Ваши любимые треки</string>
     <string name="liked_songs_empty">Нет понравившихся треков</string>
-    <string name="liked_songs_empty_hint">Здесь появятся треки, которым вы поставили отметку "Нравится".\nНажмите на значок сердечка у любого трека, чтобы добавить её в понравившиеся.</string>
+    <string name="liked_songs_empty_hint">Здесь появятся треки, которым вы поставили отметку Нравится.\nНажмите на значок сердечка у любого трека, чтобы добавить её в понравившиеся.</string>
     <string name="top_playlist_title">Мой топ-100</string>
     <string name="top_playlist_subtitle">Основано на вашей истории воспроизведения</string>
     <string name="top_playlist_empty">Нет песен</string>
@@ -1938,7 +1938,7 @@
     <string name="onboarding_continue_without_migration">Продолжить с пустой библиотекой</string>
     <string name="onboarding_migration_recovery_description">Вы можете повторить попытку или продолжить с пустой библиотекой. Копия исходной базы данных для восстановления останется на этом устройстве. После настройки вы сможете восстановить резервную копию.</string>
     <string name="onboarding_migration_failed">Не удалось подготовить библиотеку. Ваши исходные данные сохранены.</string>
-    <string name="onboarding_library_migrated_description">Ваши плейлисты, история, отметки «Нравится» и данные библиотеки готовы к использованию в этой версии Metrolist.</string>
+    <string name="onboarding_library_migrated_description">Ваши плейлисты, история, понравившиеся и данные библиотеки теперь доступны в этой версии Metrolist.</string>
     <string name="onboarding_notifications_denied">Уведомления отключены. Вы можете включить их позже в настройках приложения в Android или выбрать «Нет», чтобы продолжить.</string>
     <string name="mini_player_video_prerequisite">Сначала включите «Воспроизводить музыкальные видео» в настройках воспроизведения</string>
     <string name="download_folder_access_failed">Не удалось сохранить разрешение на доступ к этой папке. Выберите папку с доступом для чтения и записи.</string>
@@ -2170,7 +2170,7 @@
     <string name="listen_together_server_label">%1$s ·%2$s</string>
     <string name="settings_sound">Звук</string>
     <string name="ui_enhancements">Улучшения UI</string>
-    <string name="ui_enhancements_description">Более скругленные обложки, выразительные формы аватаров исполнителей и индикаторы воспроизведения вместо кнопок</string>
+    <string name="ui_enhancements_description">Более скруглённые обложки, выразительные формы для аватаров исполнителей и индикаторы проигрывания вместо кнопок воспроизведения</string>
     <string name="app_icon_gradient">Градиент</string>
     <string name="appearance_floating_bottom_nav">Плавающая панель навигации</string>
     <string name="appearance_floating_bottom_nav_description">Отобразить плавающую панель над областью системной навигации. На ней - кнопки «Главная», «Библиотека» и отдельная кнопка «Поиск».</string>
@@ -2198,7 +2198,7 @@
     <string name="listen_together_room">Комната</string>
     <string name="listen_together_now_playing">Играет для всех</string>
     <string name="player_type_classic">Классический</string>
-    <string name="player_type_expressive">Экспрессивный</string>
+    <string name="player_type_expressive">Expressive</string>
     <string name="slider_standard">Стандартный</string>
     <plurals name="equalizer_profile_count">
         <item quantity="one">%1$d профиль</item>
@@ -2645,7 +2645,7 @@
     <string name="settings_library_grid_columns">Столбцы библиотеки</string>
     <string name="playlist_picker_library_order">Порядок библиотеки</string>
     <string name="blocked_songs">Заблокированные песни</string>
-    <string name="blocked_songs_desc">Восстановить песни, которые вы заблокировали или отметили как Не нравится</string>
+    <string name="blocked_songs_desc">Восстановить песни, которые вы заблокировали или отметили как «Не нравится»</string>
     <string name="blocked_songs_empty">Нет заблокированных песен</string>
     <string name="content_undo_hint">Это действие можно отменить здесь: %1$s.</string>
     <string name="content_undo_path">%1$s &gt; %2$s &gt; %3$s</string>
@@ -2720,6 +2720,14 @@
     <string name="lyrics_share_square_image">Квадратное изображение</string>
     <string name="lyrics_share_story_image">Изображение для истории</string>
     <string name="auto_download_saved_collections">Автоскачивание сохранённых альбомов и плейлистов</string>
-    <string name="classic_recommendations_desc">Формировать "Рекомендуем" на основе собственной истории прослушивания и воспроизводить персональную очередь "Далее" от YouTube по порядку, как в Metrolist 13</string>
-    <string name="classic_recommendations_desc_desktop">Воспроизводить персональную очередь "Далее" от YouTube по порядку, как в Metrolist 13</string>
+    <string name="classic_recommendations_desc">Формировать «Рекомендуем» на основе собственной истории прослушивания и воспроизводить персональную очередь «Далее» от YouTube по порядку, как в Metrolist 13</string>
+    <string name="classic_recommendations_desc_desktop">Воспроизводить персональную очередь «Далее» от YouTube по порядку, как в Metrolist 13</string>
+    <string name="clearing_search_history">Очистка истории поиска…</string>
+    <string name="widget_expressive_player">Плеер Expressive</string>
+    <string name="widget_expressive_description">Обложка в форме капсулы и кнопки с волнистым краем</string>
+    <string name="widget_duration_hours">%1$s:%2$s:%3$s</string>
+    <string name="widget_duration_minutes">%1$s:%2$s</string>
+    <string name="widget_time_pair">%1$s / %2$s</string>
+    <string name="widget_track_description">%1$s, %2$s</string>
+    <string name="widget_play_item">Играть %1$s</string>
 </resources>
