@@ -15,12 +15,11 @@ import android.graphics.Color
 import android.graphics.Matrix
 import android.graphics.Paint
 import android.graphics.Path
-import android.graphics.PathMeasure
 import android.graphics.RectF
 import android.graphics.Shader
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.MaterialShapes
-import androidx.compose.material3.WavyProgressIndicatorDefaults
+import androidx.compose.material3.ProgressIndicatorDefaults
 import androidx.core.graphics.createBitmap
 import androidx.core.os.ConfigurationCompat
 import androidx.graphics.shapes.RoundedPolygon
@@ -54,8 +53,9 @@ private const val PILL_ARTWORK_WIDTH = 280
 private const val PILL_ARTWORK_HEIGHT = 152
 private const val WIDE_CARD_ARTWORK_WIDTH = 280
 private const val WIDE_CARD_ARTWORK_HEIGHT = 160
-private const val WAVY_BAR_WIDTH = 260
-private const val WAVY_BAR_HEIGHT = 28
+private const val SLIDER_BAR_WIDTH = 260
+private const val SLIDER_BAR_HEIGHT = 28
+private const val SLIDER_CONTAINER_HEIGHT_DP = 18f
 private const val LINEAR_BAR_WIDTH = 160
 private const val LINEAR_BAR_HEIGHT = 10
 
@@ -196,24 +196,19 @@ private fun RoundedPolygon.toFittedAndroidPath(
 }
 
 /**
- * Renders the Material 3 Expressive wavy determinate progress indicator (active quadratic wave,
- * vertical pill playhead thumb, gap, straight remaining track, and stop indicator dot) as two
- * white alpha-mask bitmaps tinted by RemoteViews so day/night switches stay automatic.
+ * Renders the Material 3 linear determinate slider (straight active track, vertical pill playhead
+ * thumb, gap, remaining track, and stop indicator dot) as two white alpha-mask bitmaps tinted by
+ * RemoteViews so day/night switches stay automatic.
  */
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
-internal fun renderWavyProgressLayers(
-    progressFraction: Float,
-    wavy: Boolean = true,
-): WidgetProgressLayers {
-    val width = WAVY_BAR_WIDTH.toFloat()
-    val height = WAVY_BAR_HEIGHT.toFloat()
+internal fun renderLinearSliderLayers(progressFraction: Float): WidgetProgressLayers {
+    val width = SLIDER_BAR_WIDTH.toFloat()
+    val height = SLIDER_BAR_HEIGHT.toFloat()
     val centerY = height / 2f
-    val pxPerDp = height / (WavyProgressIndicatorDefaults.LinearContainerHeight.value * 1.8f)
+    val pxPerDp = height / SLIDER_CONTAINER_HEIGHT_DP
     val strokeWidth = (3.6f * pxPerDp).coerceIn(3f, 7f)
     val cap = strokeWidth / 2f
-    val wavelength = (WavyProgressIndicatorDefaults.LinearDeterminateWavelength.value * 0.72f * pxPerDp).coerceAtLeast(18f)
-    val gapPx = WavyProgressIndicatorDefaults.LinearIndicatorTrackGapSize.value * pxPerDp
-    val stopSize = min(strokeWidth, WavyProgressIndicatorDefaults.LinearTrackStopIndicatorSize.value * pxPerDp)
+    val gapPx = ProgressIndicatorDefaults.LinearIndicatorTrackGapSize.value * pxPerDp
+    val stopSize = min(strokeWidth, ProgressIndicatorDefaults.LinearTrackStopIndicatorSize.value * pxPerDp)
     val thumbWidth = strokeWidth * 1.15f
     val thumbHeight = (height - 4f).coerceAtLeast(strokeWidth * 3f)
     val thumbHalfW = thumbWidth / 2f
@@ -221,7 +216,7 @@ internal fun renderWavyProgressLayers(
     val fraction = progressFraction.coerceIn(0f, 1f)
     val playheadX = (thumbHalfW + fraction * (width - thumbWidth)).coerceIn(thumbHalfW, width - thumbHalfW)
 
-    val trackBitmap = createBitmap(WAVY_BAR_WIDTH, WAVY_BAR_HEIGHT)
+    val trackBitmap = createBitmap(SLIDER_BAR_WIDTH, SLIDER_BAR_HEIGHT)
     val trackCanvas = Canvas(trackBitmap)
     val trackPaint =
         Paint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -235,7 +230,7 @@ internal fun renderWavyProgressLayers(
         trackCanvas.drawLine(trackStart, centerY, width - cap, centerY, trackPaint)
     }
 
-    val activeBitmap = createBitmap(WAVY_BAR_WIDTH, WAVY_BAR_HEIGHT)
+    val activeBitmap = createBitmap(SLIDER_BAR_WIDTH, SLIDER_BAR_HEIGHT)
     val activeCanvas = Canvas(activeBitmap)
     val activeStrokePaint =
         Paint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -243,7 +238,6 @@ internal fun renderWavyProgressLayers(
             style = Paint.Style.STROKE
             this.strokeWidth = strokeWidth
             strokeCap = Paint.Cap.ROUND
-            strokeJoin = Paint.Join.ROUND
         }
     val activeFillPaint =
         Paint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -251,29 +245,9 @@ internal fun renderWavyProgressLayers(
             style = Paint.Style.FILL
         }
 
-    val waveEndX = playheadX - thumbHalfW - gapPx * 0.75f
-    if (waveEndX > cap + 1f) {
-        if (wavy) {
-            val amplitude = ((height - strokeWidth) * 0.24f).coerceAtLeast(2f)
-            val fullWave = Path()
-            fullWave.moveTo(cap, centerY)
-            val halfWave = wavelength / 2f
-            var x = cap + halfWave
-            var controlY = amplitude
-            while (x <= width + wavelength) {
-                fullWave.quadTo(x - halfWave / 2f, centerY + controlY, x, centerY)
-                x += halfWave
-                controlY = -controlY
-            }
-            val measure = PathMeasure(fullWave, false)
-            val endDist = findDistanceAtX(measure, waveEndX)
-            val clipped = Path()
-            if (measure.getSegment(0f, endDist, clipped, true)) {
-                activeCanvas.drawPath(clipped, activeStrokePaint)
-            }
-        } else {
-            activeCanvas.drawLine(cap, centerY, waveEndX, centerY, activeStrokePaint)
-        }
+    val activeEndX = playheadX - thumbHalfW - gapPx * 0.75f
+    if (activeEndX > cap) {
+        activeCanvas.drawLine(cap, centerY, activeEndX, centerY, activeStrokePaint)
     }
 
     // Vertical pill thumb at the playhead
@@ -286,7 +260,7 @@ internal fun renderWavyProgressLayers(
         )
     activeCanvas.drawRoundRect(thumbRect, thumbHalfW, thumbHalfW, activeFillPaint)
 
-    // M3E end-of-track stop indicator dot
+    // Material 3 end-of-track stop indicator dot
     val stopX = width - stopSize / 2f - cap * 0.35f
     if (stopX - stopSize / 2f > playheadX + thumbHalfW + gapPx * 0.5f) {
         activeCanvas.drawCircle(stopX, centerY, stopSize / 2f, activeFillPaint)
@@ -296,9 +270,8 @@ internal fun renderWavyProgressLayers(
 }
 
 /**
- * Renders the compact straight M3E progress bar with rounded caps and end stop indicator dot.
+ * Renders the compact straight linear progress bar with rounded caps and end stop indicator dot.
  */
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 internal fun renderLinearProgressLayers(progressFraction: Float): WidgetProgressLayers {
     val width = LINEAR_BAR_WIDTH.toFloat()
     val height = LINEAR_BAR_HEIGHT.toFloat()
@@ -329,7 +302,7 @@ internal fun renderLinearProgressLayers(progressFraction: Float): WidgetProgress
     if (hasProgress) {
         activeCanvas.drawLine(cap, centerY, activeEndX, centerY, strokePaint)
     }
-    val stopRadius = min(strokeWidth, WavyProgressIndicatorDefaults.LinearTrackStopIndicatorSize.value * 1.4f) / 2f
+    val stopRadius = min(strokeWidth, ProgressIndicatorDefaults.LinearTrackStopIndicatorSize.value * 1.4f) / 2f
     val stopX = width - stopRadius - 1f
     if (stopX - stopRadius > activeEndX + cap) {
         val dotPaint =
@@ -340,21 +313,6 @@ internal fun renderLinearProgressLayers(progressFraction: Float): WidgetProgress
         activeCanvas.drawCircle(stopX, centerY, stopRadius, dotPaint)
     }
     return WidgetProgressLayers(track = trackBitmap, active = activeBitmap)
-}
-
-private fun findDistanceAtX(
-    measure: PathMeasure,
-    targetX: Float,
-): Float {
-    var low = 0f
-    var high = measure.length
-    val pos = FloatArray(2)
-    repeat(16) {
-        val mid = (low + high) / 2f
-        measure.getPosTan(mid, pos, null)
-        if (pos[0] < targetX) low = mid else high = mid
-    }
-    return (low + high) / 2f
 }
 
 private fun widgetArtworkShader(

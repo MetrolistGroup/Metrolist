@@ -377,7 +377,7 @@ class MetrolistWidgetManager(
         schemes: WidgetColorSchemes,
     ): MusicWidgetRemoteViews {
         val fraction = progressFraction(duration, currentPosition)
-        var wavyLayers: WidgetProgressLayers? = null
+        var sliderLayers: WidgetProgressLayers? = null
         var linearLayers: WidgetProgressLayers? = null
 
         fun create(
@@ -408,7 +408,7 @@ class MetrolistWidgetManager(
                     MusicWidgetLayout.SQUARE -> {
                         val layers =
                             if (duration > 0) {
-                                wavyLayers ?: renderWavyProgressLayers(fraction).also { wavyLayers = it }
+                                sliderLayers ?: renderLinearSliderLayers(fraction).also { sliderLayers = it }
                             } else {
                                 null
                             }
@@ -427,7 +427,7 @@ class MetrolistWidgetManager(
                     MusicWidgetLayout.PLAYER -> {
                         val layers =
                             if (duration > 0) {
-                                wavyLayers ?: renderWavyProgressLayers(fraction).also { wavyLayers = it }
+                                sliderLayers ?: renderLinearSliderLayers(fraction).also { sliderLayers = it }
                             } else {
                                 null
                             }

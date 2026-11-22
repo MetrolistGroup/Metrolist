@@ -170,7 +170,7 @@ class PlaylistWidgetManager(
             val options = manager.getAppWidgetOptions(id)
             if (options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH) < PLAYLIST_WIDGET_COMPACT_MAX_WIDTH_DP) return@forEach
             val resolvedLayers =
-                layers ?: renderWavyProgressLayers(progressFraction(duration, position)).also { layers = it }
+                layers ?: renderLinearSliderLayers(progressFraction(duration, position)).also { layers = it }
             val views =
                 RemoteViews(context.packageName, R.layout.widget_playlist).apply {
                     setImageViewBitmap(R.id.widget_playlist_progress_track, resolvedLayers.track)
@@ -238,7 +238,7 @@ class PlaylistWidgetManager(
             val quickPicks = buildQuickPicks()
             val progressLayers =
                 if (state.duration > 0) {
-                    renderWavyProgressLayers(progressFraction(state.duration, state.currentPosition))
+                    renderLinearSliderLayers(progressFraction(state.duration, state.currentPosition))
                 } else {
                     null
                 }

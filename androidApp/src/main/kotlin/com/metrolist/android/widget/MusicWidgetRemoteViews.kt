@@ -28,11 +28,11 @@ internal class MusicWidgetRemoteViews(
             } else {
                 null
             }
-        val wavyLayers =
+        val sliderLayers =
             if (fraction != null &&
                 layouts.any { it.layoutId == R.layout.widget_music_player || it.layoutId == R.layout.widget_compact_square }
             ) {
-                renderWavyProgressLayers(fraction)
+                renderLinearSliderLayers(fraction)
             } else {
                 null
             }
@@ -48,7 +48,7 @@ internal class MusicWidgetRemoteViews(
                     if (duration != null && currentPosition != null && duration > 0) {
                         when (layoutId) {
                             R.layout.widget_music_player -> {
-                                wavyLayers?.let { layers ->
+                                sliderLayers?.let { layers ->
                                     setImageViewBitmap(R.id.widget_progress_track, layers.track)
                                     setImageViewBitmap(R.id.widget_progress_fill, layers.active)
                                 }
@@ -57,7 +57,7 @@ internal class MusicWidgetRemoteViews(
                             }
 
                             R.layout.widget_compact_square -> {
-                                wavyLayers?.let { layers ->
+                                sliderLayers?.let { layers ->
                                     setImageViewBitmap(R.id.widget_progress_track, layers.track)
                                     setImageViewBitmap(R.id.widget_progress_fill, layers.active)
                                 }
