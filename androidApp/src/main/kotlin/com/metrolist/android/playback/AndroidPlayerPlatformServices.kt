@@ -172,7 +172,7 @@ class AndroidPlayerPlatformServices(
                     }
                 }
             try {
-                if (mode != YouTubeCanvasMode.SHORT_CLIPS) {
+                if (mode != YouTubeCanvasMode.SHORT_CLIPS || canvas.clips.isEmpty() || resource.hasSabrVideo) {
                     val entry =
                         CanvasCache.get(context).preload(
                             cacheKey,
