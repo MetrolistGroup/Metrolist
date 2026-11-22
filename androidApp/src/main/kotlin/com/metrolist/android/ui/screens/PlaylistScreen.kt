@@ -52,6 +52,7 @@ import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -254,18 +255,9 @@ fun PlaylistScreen(
     var refreshedSuggestions by remember(playlistId) { mutableStateOf<List<SongItem>?>(null) }
     var shownSuggestionIds by remember(playlistId) { mutableStateOf(emptySet<String>()) }
     var refreshingSuggestions by remember(playlistId) { mutableStateOf(false) }
+    var suggestionsLoadFailed by remember(playlistId) { mutableStateOf(false) }
+    var suggestionsRetry by remember(playlistId) { mutableIntStateOf(0) }
     val noNewSuggestions = stringResource(Res.string.no_new_playlist_suggestions)
-    LaunchedEffect(playlistId, showRecommendations) {
-        if (showRecommendations && remoteSuggestions == null) {
-            try {
-                remoteSuggestions = viewModel.getPlaylistSuggestions()
-            } catch (e: CancellationException) {
-                throw e
-            } catch (_: Exception) {
-                // Keep any suggestions already supplied by the playlist page.
-            }
-        }
-    }
     val suggestionCandidates = remoteSuggestions?.songs.orEmpty() + suggestions
     val displayedSuggestions =
         when {
@@ -273,6 +265,23 @@ fun PlaylistScreen(
             !isEditablePlaylist -> suggestions
             else -> emptyList()
         }
+    val currentDisplayedSuggestions by rememberUpdatedState(displayedSuggestions)
+    LaunchedEffect(playlistId, showRecommendations, suggestionsRetry) {
+        if (showRecommendations && remoteSuggestions == null) {
+            suggestionsLoadFailed = false
+            try {
+                val result = viewModel.getPlaylistSuggestions()
+                shownSuggestionIds = shownSuggestionIds + currentDisplayedSuggestions.map { it.id }
+                remoteSuggestions = result
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Exception) {
+                suggestionsLoadFailed = true
+            } finally {
+                refreshingSuggestions = false
+            }
+        }
+    }
     val seenSuggestionIds = shownSuggestionIds + displayedSuggestions.map { it.id }
     val nextSuggestions = playlistRecommendationBatch(suggestionCandidates, durationSongs, seenSuggestionIds)
     val reorderMode = sortType.isReordering(Settings.shared.playlistEditLock, isEditablePlaylist, page?.hasMore == true)
@@ -780,14 +789,16 @@ fun PlaylistScreen(
                     isAddingSuggestion = operationState.inProgressSongIds.isNotEmpty(),
                     suggestionFooter =
                         if (showRecommendations &&
-                            suggestionCandidates.isNotEmpty() &&
-                            (nextSuggestions.isNotEmpty() || remoteSuggestions?.canReload == true)
+                            (nextSuggestions.isNotEmpty() || remoteSuggestions?.canReload == true || suggestionsLoadFailed)
                         ) {
                             {
                                 TextButton(
                                     enabled = !refreshingSuggestions,
                                     onClick = {
-                                        if (nextSuggestions.isNotEmpty()) {
+                                        if (suggestionsLoadFailed && nextSuggestions.isEmpty()) {
+                                            refreshingSuggestions = true
+                                            suggestionsRetry++
+                                        } else if (nextSuggestions.isNotEmpty()) {
                                             shownSuggestionIds = seenSuggestionIds
                                             refreshedSuggestions = nextSuggestions
                                         } else {
