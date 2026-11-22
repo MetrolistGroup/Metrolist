@@ -989,7 +989,7 @@
     <string name="downloading_count">Download in corso (%1$d)</string>
     <string name="account_downloading_update">Scaricando v%1$s</string>
     <string name="account_update_available">v%1$s disponibile</string>
-    <string name="cd_account_menu">Menù account</string>
+    <string name="cd_account_menu">Menu account</string>
     <string name="spotify_import_selected_count">%1$d selezionati</string>
     <string name="create_backup_countdown">Crea backup (%1$d)</string>
     <string name="skipped_duplicate">Salta duplicati</string>
@@ -1222,12 +1222,12 @@
     <string name="listen_together_disconnected">Disconnesso</string>
     <string name="listen_together_error">Errore di connessione</string>
     <string name="listen_together_room_code">Codice stanza</string>
-    <string name="mute">Muto</string>
+    <string name="mute">Silenzia</string>
     <string name="unmute">Riattiva audio</string>
     <string name="listen_together_logs">Log di connessione</string>
     <string name="listen_together_no_logs">Ancora nessun log</string>
     <string name="listen_together_auto_approval_joins">Approva automaticamente le richieste di partecipazione</string>
-    <string name="listen_together_auto_approval_suggestions">Approva automaticamente i suggerimenti dei brani</string>
+    <string name="listen_together_auto_approval_suggestions">Approva automaticamente i brani suggeriti</string>
     <string name="listen_together_auto_approval_suggestions_desc">Approva e inserisce in coda automaticamente le richieste dei brani dagli ospiti</string>
     <string name="listen_together_sync_volume">Sincronizza il volume dell'host</string>
     <string name="listen_together_sync_volume_desc">Gli ospiti seguono il livello del volume dell'host</string>
@@ -1257,8 +1257,8 @@
     <string name="discord_button_1">Pulsante 1</string>
     <string name="discord_button_2">Pulsante 2</string>
     <string name="discord_activity_type">Tipo di attività</string>
-    <string name="discord_activity_playing">In riproduzione</string>
-    <string name="discord_activity_listening">In ascolto</string>
+    <string name="discord_activity_playing">In gioco a</string>
+    <string name="discord_activity_listening">In ascolto di</string>
     <string name="discord_activity_watching">Guardando</string>
     <string name="discord_activity_name">Nome attività</string>
     <string name="discord_advanced_mode">Modalità avanzata</string>
@@ -1268,8 +1268,8 @@
     <string name="restore_confirm_message">Questo ripristinerà i tuoi dati dell'app dal backup.</string>
     <string name="uploading">Caricamento in corso…</string>
     <string name="upload_failed">Caricamento non riuscito</string>
-    <string name="discord_activity_competing">Competendo su</string>
-    <string name="onboarding_welcome_description">Imposta i permessi di sistema e di privacy prima dell'ascolto.</string>
+    <string name="discord_activity_competing">In gara in</string>
+    <string name="onboarding_welcome_description">Configura le autorizzazioni di sistema e della privacy prima del primo ascolto.</string>
     <string name="onboarding_migration_title">La tua libreria v13 è qui</string>
     <string name="onboarding_crash_reports_title">Aiutaci a migliorare Metrolist</string>
     <string name="onboarding_crash_reports_description">Condividi dati di diagnostica facoltativi tramite Sentry per aiutarci a trovare e risolvere i problemi. Puoi cambiare questa opzione quando vuoi nelle Impostazioni.</string>
@@ -1280,14 +1280,14 @@
     <string name="onboarding_sentry_opt_in">L'invio delle segnalazioni a Sentry è facoltativo ed è abilitato solo se scegli Sì.</string>
     <string name="onboarding_sentry_diagnostics">I report aiutano a diagnosticare crash ed errori dell'app o nella riproduzione.</string>
     <string name="onboarding_sentry_private">Credenziali, token, cookies, e URL con firma vengono esclusi dai report.</string>
-    <string name="onboarding_privacy_policy">Leggi la nostra informativa sulla privacy</string>
+    <string name="onboarding_privacy_policy">Leggi l'informativa sulla privacy</string>
     <string name="onboarding_notification_downloads">Avanzamento download</string>
     <string name="onboarding_notification_playback">Riproduzione in background affidabile</string>
     <string name="onboarding_step_of">Passaggio %1$d di %2$d</string>
     <string name="onboarding_finish_title">È tutto pronto</string>
     <string name="finish">Fine</string>
     <string name="onboarding_restore_backup">Ripristina da backup</string>
-    <string name="onboarding_settings_hint">Apri le Impostazioni dal menù in alto a destra per personalizzare Metrolist.</string>
+    <string name="onboarding_settings_hint">Apri le Impostazioni dal menu in alto a destra per personalizzare Metrolist.</string>
     <string name="migrated">Importato</string>
     <string name="ready_to_migrate">Pronto a importare</string>
     <string name="discord_logout">Disconnetti</string>
@@ -1316,12 +1316,12 @@
     <string name="spotify_login_open">Accesso aperto</string>
     <string name="spotify_login_button">Apri l'accesso a Spotify</string>
     <string name="spotify_import_picker_title">Scegli le playlist di Spotify</string>
-    <string name="spotify_import_picker_description">Scegli una playlist per aggiungerla ad una destinazione, oppure diverse per crearle separatamente.</string>
+    <string name="spotify_import_picker_description">Scegli una playlist per aggiungerla a una destinazione, oppure diverse per crearle separatamente.</string>
     <string name="spotify_import_playlist_label">Playlist Spotify</string>
     <string name="spotify_import_review">Rivedi (%1$d)</string>
     <string name="spotify_import_limit_warning">L'importazione da Spotify è limitata ai primi 5.000 brani per ciascuna playlist.</string>
     <string name="spotify_import_choose_destination">Scegli destinazione</string>
-    <string name="spotify_import_destination_description">Crea una playlist sincronizzata con YouTube Music o aggiungi questi brani ad una che puoi modificare.</string>
+    <string name="spotify_import_destination_description">Crea una playlist sincronizzata con YouTube Music o aggiungi questi brani a una che puoi modificare.</string>
     <string name="spotify_import_create_new_playlist">Crea una nuova playlist YouTube Music</string>
     <string name="spotify_import_existing_playlists">Playlist esistenti</string>
     <string name="spotify_import_loading_library">Caricamento della libreria di Spotify</string>
@@ -1370,7 +1370,7 @@
     <string name="import_source_youtube_music">YouTube Music</string>
     <string name="video_stats_mv_source">Fonte video musicale</string>
     <string name="video_stats_stream_source">Fonte stream</string>
-    <string name="settings_seconds_value">%1$d secondi</string>
+    <string name="settings_seconds_value">%1$d secondi</string>
     <string name="settings_playback_speed_locked_listen_together">La velocità di riproduzione è fissata quando si utilizza Listen Together</string>
     <string name="settings_diagnostic_logging">Log di diagnostica</string>
     <string name="settings_diagnostic_logging_description">Scrive la diagnostica dell'applicazione su un file di log locale</string>
@@ -1380,7 +1380,7 @@
     <string name="settings_theme_color_description">Scegli il colore utilizzato per generare la palette dell'app</string>
     <string name="settings_color_hex">Colore esadecimale</string>
     <string name="settings_home_sections">Sezioni Home</string>
-    <string name="settings_home_sections_description">Scegli quali sezioni far apparire nella schermata iniziale</string>
+    <string name="settings_home_sections_description">Scegli quali sezioni far apparire nella pagina iniziale</string>
     <string name="settings_home_section_items">%1$d elementi</string>
     <string name="settings_home_section_dynamic">Sezione dinamica dalla pagina iniziale</string>
     <string name="menu_file">File</string>
@@ -1405,7 +1405,7 @@
     <string name="menu_seek_backward">Indietro veloce</string>
     <string name="menu_shuffle">Casuale</string>
     <string name="menu_repeat">Ripeti</string>
-    <string name="menu_repeat_off">Spento</string>
+    <string name="menu_repeat_off">Disattivata</string>
     <string name="menu_repeat_all">Tutti</string>
     <string name="menu_repeat_one">Uno</string>
     <string name="menu_increase_volume">Alza il volume</string>
@@ -1414,9 +1414,9 @@
     <string name="menu_unmute">Riattiva audio</string>
     <string name="menu_sign_out">Disconnetti</string>
     <string name="menu_sign_in">Accesso in corso…</string>
-    <string name="menu_show_lyrics">Mostra testi</string>
-    <string name="menu_hide_lyrics">Nascondi testi</string>
-    <string name="menu_show_playing_next">Mostra brani successivi</string>
+    <string name="menu_show_lyrics">Mostra testo</string>
+    <string name="menu_hide_lyrics">Nascondi testo</string>
+    <string name="menu_show_playing_next">Mostra prossimi brani</string>
     <string name="menu_hide_playing_next">Nascondi prossimi brani</string>
     <string name="menu_fullscreen_player">Lettore a schermo intero</string>
     <string name="menu_library">Libreria</string>
@@ -1428,7 +1428,7 @@
     <string name="menu_keyboard_shortcuts">Scorciatoie da tastiera</string>
     <string name="menu_application_logs">Log dell'applicazione</string>
     <string name="menu_report_issue">Segnala un problema…</string>
-    <string name="menu_about_metrolist">A proposito di Metrolist</string>
+    <string name="menu_about_metrolist">Info su Metrolist</string>
     <string name="menu_song">Brano</string>
     <string name="menu_stop">Ferma</string>
     <string name="menu_go_to_current_song">Vai al brano in riproduzione</string>
@@ -1466,7 +1466,7 @@
     <string name="youtube_login_webview_unwritable">Impossibile accedere a YouTube perché il percorso dati della WebView non è sovrascrivibile.</string>
     <string name="discord_login_webview_unwritable">Impossibile accedere a Discord perché il percorso dati della WebView non è sovrascrivibile.</string>
     <string name="confirm_delete_stored_audio">I file audio salvati selezionati saranno cancellati.</string>
-    <string name="logout">Esci</string>
+    <string name="logout">Disconnetti</string>
     <string name="library">Libreria</string>
     <string name="lyrics">Testi</string>
     <string name="error">Errore</string>
@@ -2669,4 +2669,11 @@
     <string name="lyrics_share_square_image">Immagine quadrata</string>
     <string name="lyrics_share_story_image">Immagine per le storie</string>
     <string name="clearing_search_history">Cancellazione della cronologia delle ricerche in corso…</string>
+    <string name="widget_expressive_player">Lettore espressivo</string>
+    <string name="widget_expressive_description">Copertina a pillola con controlli di riproduzione ondulati</string>
+    <string name="widget_duration_hours">%1$s:%2$s:%3$s</string>
+    <string name="widget_duration_minutes">%1$s:%2$s</string>
+    <string name="widget_time_pair">%1$s / %2$s</string>
+    <string name="widget_track_description">%1$s, %2$s</string>
+    <string name="widget_play_item">Riproduci %1$s</string>
 </resources>
