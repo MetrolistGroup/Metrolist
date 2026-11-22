@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:width="160dp" android:height="160dp">
+        <shape><solid android:color="@android:color/transparent" /></shape>
+    </item>
+    <item android:width="132dp" android:height="72dp" android:left="14dp" android:top="4dp" android:gravity="top|left">
+        <shape>
+            <solid android:color="@color/widget_primary_container" />
+            <corners android:radius="36dp" />
+        </shape>
+    </item>
+    <item android:width="72dp" android:height="72dp" android:left="4dp" android:top="84dp" android:gravity="top|left" android:drawable="@drawable/widget_cookie12_background" />
+    <item android:width="72dp" android:height="72dp" android:left="84dp" android:top="84dp" android:gravity="top|left" android:drawable="@drawable/widget_cookie12_background" />
+    <item android:width="34dp" android:height="34dp" android:left="63dp" android:top="23dp" android:gravity="top|left">
+        <vector android:width="24dp" android:height="24dp" android:viewportWidth="960" android:viewportHeight="960">
+            <group android:translateY="960">
+                <path android:fillColor="@color/widget_on_primary_container" android:pathData="M320-273v-414q0-17 12-28.5t28-11.5q5 0 10.5 1.5T381-721l326 207q9 6 13.5 15t4.5 19q0 10-4.5 19T707-446L381-239q-5 3-10.5 4.5T360-233q-16 0-28-11.5T320-273Z" />
+            </group>
+        </vector>
+    </item>
+    <item android:width="28dp" android:height="28dp" android:left="26dp" android:top="106dp" android:gravity="top|left">
+        <vector android:width="24dp" android:height="24dp" android:viewportWidth="960" android:viewportHeight="960">
+            <group android:translateY="960">
+                <path android:fillColor="@color/widget_on_tertiary_container" android:pathData="M220-280v-400q0-17 11.5-28.5T260-720q17 0 28.5 11.5T300-680v400q0 17-11.5 28.5T260-240q-17 0-28.5-11.5T220-280Zm458-1L430-447q-9-6-13.5-14.5T412-480q0-10 4.5-18.5T430-513l248-166q5-4 11-5t11-1q16 0 28 11t12 29v330q0 18-12 29t-28 11q-5 0-11-1t-11-5Z" />
+            </group>
+        </vector>
+    </item>
+    <item android:width="28dp" android:height="28dp" android:left="106dp" android:top="106dp" android:gravity="top|left">
+        <vector android:width="24dp" android:height="24dp" android:viewportWidth="960" android:viewportHeight="960">
+            <group android:translateY="960">
+                <path android:fillColor="@color/widget_on_tertiary_container" android:pathData="M660-280v-400q0-17 11.5-28.5T700-720q17 0 28.5 11.5T740-680v400q0 17-11.5 28.5T700-240q-17 0-28.5-11.5T660-280Zm-440-35v-330q0-18 12-29t28-11q5 0 11 1t11 5l248 166q9 6 13.5 14.5T548-480q0 10-4.5 18.5T530-447L282-281q-5 4-11 5t-11 1q-16 0-28-11t-12-29Z" />
+            </group>
+        </vector>
+    </item>
+</layer-list>

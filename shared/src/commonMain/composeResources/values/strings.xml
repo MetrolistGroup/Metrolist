@@ -3131,6 +3131,16 @@
     <string name="turntable_widget_description">Circular artwork widget with playback controls</string>
     <!-- Translators: Label for music player in the Android home-screen widget. -->
     <string name="widget_music_player">Music player</string>
+    <!-- Translators: Label for the expressive pill-and-controls widget in the Android home-screen widget picker. -->
+    <string name="widget_expressive_player">Expressive player</string>
+    <!-- Translators: Supporting text beneath the expressive pill-and-controls widget in the Android home-screen widget picker. -->
+    <string name="widget_expressive_description">Pill artwork with scalloped playback controls</string>
+    <!-- Translators: Elapsed time and total duration in a home-screen widget. Both arguments are formatted times. -->
+    <string name="widget_time_pair">%1$s / %2$s</string>
+    <!-- Translators: Song title and artist announced for widget artwork. -->
+    <string name="widget_track_description">%1$s, %2$s</string>
+    <!-- Translators: Accessibility label for a playlist widget's play button. -->
+    <string name="widget_play_item">Play %1$s</string>
     <!-- Translators: Label for turntable in the Android home-screen widget. -->
     <string name="widget_turntable">Turntable</string>
     <!-- Translators: Label for the music recognizer option in the Android home-screen widget picker. -->

@@ -26,12 +26,13 @@
     </style>
 
     <style name="MetrolistPlaylistWidgetCardPlayButton">
+        <item name="android:clickable">true</item>
+        <item name="android:focusable">true</item>
         <item name="android:layout_width">48dp</item>
         <item name="android:layout_height">48dp</item>
         <item name="android:layout_gravity">bottom|end</item>
         <item name="android:layout_marginEnd">2dp</item>
         <item name="android:layout_marginBottom">2dp</item>
-        <item name="android:background">@drawable/widget_playlist_card_play_bg</item>
     </style>
 
     <style name="MetrolistPlaylistWidgetCardPlayIcon">
