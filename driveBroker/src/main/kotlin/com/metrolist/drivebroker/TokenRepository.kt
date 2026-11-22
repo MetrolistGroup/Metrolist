@@ -200,6 +200,12 @@ class TokenRepository(
             connection.autoCommit = false
             try {
                 lockSubject(connection, account.subject)
+                // A reconnect can replace the grant while this request waits on Google. Retire sessions
+                // only when the rejected token is still stored, so a fresh connection survives.
+                if (readRefreshToken(connection, account.subject, account.clientId) != account.refreshToken) {
+                    connection.rollback()
+                    return
+                }
                 cleanupStaleRevocations(connection)
                 markRemoteRevocation(connection, account.subject, account.clientId)
                 connection
