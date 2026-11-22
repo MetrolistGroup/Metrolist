@@ -16,7 +16,8 @@ TICK = os.sysconf("SC_CLK_TCK")
 
 
 def _stat(path):
-    name, rest = Path(path).read_text().rsplit(")", 1)
+    # comm truncates at 15 bytes, which can split a UTF-8 character; strict decoding must not abort a profile.
+    name, rest = Path(path).read_text(encoding="utf-8", errors="replace").rsplit(")", 1)
     fields = rest.split()
     return name.split("(", 1)[1], (int(fields[11]) + int(fields[12])) / TICK, int(fields[19])
 
