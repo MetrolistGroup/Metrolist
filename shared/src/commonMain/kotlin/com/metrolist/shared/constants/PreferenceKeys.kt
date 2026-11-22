@@ -211,6 +211,7 @@ enum class PlaylistSortType {
 }
 
 val LibraryGridColumnsKey = "library_grid_columns"
+val WrappedCardDismissedYearKey = "wrapped_card_dismissed_year"
 val LibraryPinchColumnsKey = "library_pinch_columns"
 val LikedSongSortKey = "likedSongSort"
 val LikedSongSortDirectionKey = "likedSongSortDirection"

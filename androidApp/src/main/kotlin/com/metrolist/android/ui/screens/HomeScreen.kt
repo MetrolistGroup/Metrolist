@@ -350,7 +350,10 @@ fun HomeScreen(
                             )
                         }
                         item(key = "wrapped_card") {
-                            WrappedHomeCard(onClick = onNavigateToWrapped)
+                            WrappedHomeCard(
+                                onClick = onNavigateToWrapped,
+                                onDismissed = { Toast.makeText(context, it, Toast.LENGTH_LONG).show() },
+                            )
                         }
                     }
                 }

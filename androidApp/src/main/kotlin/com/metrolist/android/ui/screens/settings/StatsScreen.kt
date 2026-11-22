@@ -73,6 +73,7 @@ fun AndroidWrappedScreen(onBack: () -> Unit) {
         onBack = onBack,
         onExport = { shareImage(context, it, shareLabel) },
         exportLabel = shareLabel,
+        onHomeCardRetired = { Toast.makeText(context, it, Toast.LENGTH_LONG).show() },
     )
 }
 

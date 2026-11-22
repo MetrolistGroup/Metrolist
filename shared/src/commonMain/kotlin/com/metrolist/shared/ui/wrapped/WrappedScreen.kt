@@ -131,6 +131,7 @@ import com.metrolist.shared.generated.resources.wrapped_chapter
 import com.metrolist.shared.generated.resources.wrapped_cover_heading
 import com.metrolist.shared.generated.resources.wrapped_empty
 import com.metrolist.shared.generated.resources.wrapped_history_scope
+import com.metrolist.shared.generated.resources.wrapped_home_card_dismissed
 import com.metrolist.shared.generated.resources.wrapped_lastfm_coverage
 import com.metrolist.shared.generated.resources.wrapped_lastfm_failed
 import com.metrolist.shared.generated.resources.wrapped_lastfm_loading
@@ -205,6 +206,7 @@ fun WrappedScreen(
     desktopLayout: Boolean = false,
     bottomContentPadding: Dp = 0.dp,
     showBackButton: Boolean = false,
+    onHomeCardRetired: (message: String) -> Unit = {},
 ) {
     val formatter = rememberStatisticsFormatter()
     val today = Clock.System.todayIn(TimeZone.currentSystemDefault())
@@ -341,6 +343,7 @@ fun WrappedScreen(
                     onBack,
                     showBackButton,
                     notes,
+                    onHomeCardRetired,
                 )
             }
         }
@@ -371,6 +374,7 @@ private fun WrappedReport(
     onBack: () -> Unit,
     showBackButton: Boolean,
     notes: List<String>,
+    onHomeCardRetired: (message: String) -> Unit,
 ) {
     val formatter = rememberStatisticsFormatter()
     val state =
@@ -518,6 +522,15 @@ private fun WrappedReport(
         return
     }
     WrappedStatusBarAppearance(palette.background.luminance() > 0.5f)
+    val retiredMessage = stringResource(Res.string.wrapped_home_card_dismissed, range.start.year.toString())
+    LaunchedEffect(pager.settledPage) {
+        // Reaching the last chapter finishes Wrapped, so its December Home card has done its job.
+        val today = Clock.System.todayIn(TimeZone.currentSystemDefault())
+        if (pager.settledPage == chapters.lastIndex && wrappedHomeCardDue(today)) {
+            Settings.shared.wrappedCardDismissedYear = today.year
+            onHomeCardRetired(retiredMessage)
+        }
+    }
     var held by remember { mutableStateOf(false) }
     val scrolls = remember(chapters.size) { List(chapters.size) { ScrollState(0) } }
     val pageScroll = scrolls[pager.settledPage.coerceIn(0, chapters.lastIndex)]

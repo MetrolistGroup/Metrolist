@@ -1125,7 +1125,10 @@ fun MobileApp(
                                                         }
                                                     }
                                                     item(key = "wrapped_card") {
-                                                        WrappedHomeCard(onClick = { open(MobileRoute.Wrapped) })
+                                                        WrappedHomeCard(
+                                                            onClick = { open(MobileRoute.Wrapped) },
+                                                            onDismissed = { scope.launch { snackbarHostState.showSnackbar(it) } },
+                                                        )
                                                     }
                                                 },
                                             )
@@ -1300,6 +1303,7 @@ fun MobileApp(
                                     exportLabel = stringResource(Res.string.share),
                                     bottomContentPadding = playerContentPadding,
                                     showBackButton = true,
+                                    onHomeCardRetired = { scope.launch { snackbarHostState.showSnackbar(it) } },
                                 )
                             }
 
