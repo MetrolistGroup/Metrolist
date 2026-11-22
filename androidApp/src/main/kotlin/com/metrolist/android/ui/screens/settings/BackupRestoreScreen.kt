@@ -69,6 +69,7 @@ import com.metrolist.android.playlistimport.DeezerLoginScreen
 import com.metrolist.android.playlistimport.PlaylistImportPreparationType
 import com.metrolist.android.playlistimport.TidalLoginScreen
 import com.metrolist.android.playlistimport.containsAndroidInaccessibleReference
+import com.metrolist.android.playlistimport.displayNameOf
 import com.metrolist.android.playlistimport.preparePlaylistBatch
 import com.metrolist.android.playlistimport.preparePlaylistPreview
 import com.metrolist.android.playlistimport.readPlaylistFile
@@ -2098,27 +2099,6 @@ private val BackupRestoreManager.RestoreStage.descriptionResource: StringResourc
             BackupRestoreManager.RestoreStage.RESTARTING_APP -> Res.string.restore_stage_restarting_app
         }
 
-private suspend fun Context.displayNameOf(uri: Uri): String? =
-    withContext(Dispatchers.IO) {
-        getDisplayName(uri) ?: uri.lastPathSegment?.substringAfterLast('/')
-    }
-
 private val PLAYLIST_FILE_EXTENSIONS = setOf("csv", "tsv", "m3u", "m3u8", "json", "txt")
 
 private fun String?.isPlaylistFileName(): Boolean = this?.substringAfterLast('.', "")?.lowercase() in PLAYLIST_FILE_EXTENSIONS
-
-private fun Context.getDisplayName(uri: Uri): String? {
-    if (uri.scheme == ContentResolver.SCHEME_CONTENT) {
-        runCatching {
-            contentResolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use { cursor ->
-                if (cursor.moveToFirst()) {
-                    val index = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
-                    if (index != -1) cursor.getString(index) else cursor.getString(0)
-                } else {
-                    null
-                }
-            }
-        }.getOrNull()?.let { return it }
-    }
-    return uri.lastPathSegment?.substringAfterLast('/')
-}
