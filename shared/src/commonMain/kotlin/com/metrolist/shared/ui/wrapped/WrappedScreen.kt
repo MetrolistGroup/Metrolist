@@ -2,9 +2,14 @@
 
 package com.metrolist.shared.ui.wrapped
 
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.snap
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.awaitEachGesture
@@ -23,6 +28,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
@@ -44,23 +51,24 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.FilledIconToggleButton
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.LinearWavyProgressIndicator
+import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialShapes
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MotionScheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.ToggleButton
-import androidx.compose.material3.ToggleButtonDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -68,20 +76,24 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
-import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
-import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.paneTitle
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
@@ -89,6 +101,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -104,14 +117,13 @@ import com.metrolist.shared.generated.resources.Res
 import com.metrolist.shared.generated.resources.back
 import com.metrolist.shared.generated.resources.n_album
 import com.metrolist.shared.generated.resources.n_artist
+import com.metrolist.shared.generated.resources.n_song
 import com.metrolist.shared.generated.resources.n_time
-import com.metrolist.shared.generated.resources.next
-import com.metrolist.shared.generated.resources.previous
-import com.metrolist.shared.generated.resources.refresh
 import com.metrolist.shared.generated.resources.statistics_load_failed
 import com.metrolist.shared.generated.resources.statistics_plays
 import com.metrolist.shared.generated.resources.statistics_plays_label
 import com.metrolist.shared.generated.resources.wrapped
+import com.metrolist.shared.generated.resources.wrapped_artist_mix
 import com.metrolist.shared.generated.resources.wrapped_chapter
 import com.metrolist.shared.generated.resources.wrapped_cover_heading
 import com.metrolist.shared.generated.resources.wrapped_empty
@@ -121,16 +133,11 @@ import com.metrolist.shared.generated.resources.wrapped_lastfm_failed
 import com.metrolist.shared.generated.resources.wrapped_lastfm_loading
 import com.metrolist.shared.generated.resources.wrapped_measured_time
 import com.metrolist.shared.generated.resources.wrapped_merge_note
+import com.metrolist.shared.generated.resources.wrapped_minutes_listened
 import com.metrolist.shared.generated.resources.wrapped_share_caption
 import com.metrolist.shared.generated.resources.wrapped_share_lastfm_caption
 import com.metrolist.shared.generated.resources.wrapped_share_summary
 import com.metrolist.shared.generated.resources.wrapped_soundtrack
-import com.metrolist.shared.generated.resources.wrapped_soundtrack_failed
-import com.metrolist.shared.generated.resources.wrapped_soundtrack_loading
-import com.metrolist.shared.generated.resources.wrapped_soundtrack_partial
-import com.metrolist.shared.generated.resources.wrapped_soundtrack_playing
-import com.metrolist.shared.generated.resources.wrapped_soundtrack_preparing
-import com.metrolist.shared.generated.resources.wrapped_soundtrack_unavailable
 import com.metrolist.shared.generated.resources.wrapped_summary
 import com.metrolist.shared.generated.resources.wrapped_sync_failed
 import com.metrolist.shared.generated.resources.wrapped_time_coverage
@@ -170,6 +177,9 @@ import kotlinx.datetime.todayIn
 import org.jetbrains.compose.resources.pluralStringResource
 import org.jetbrains.compose.resources.stringResource
 import kotlin.math.abs
+import kotlin.math.max
+import kotlin.math.min
+import kotlin.math.roundToInt
 import kotlin.time.Clock
 
 internal enum class WrappedChapter {
@@ -177,6 +187,7 @@ internal enum class WrappedChapter {
     TIME,
     TRACKS,
     ARTISTS,
+    MIX,
     ALBUMS,
     SUMMARY,
 }
@@ -190,11 +201,11 @@ fun WrappedScreen(
     exportLabel: String,
     desktopLayout: Boolean = false,
     bottomContentPadding: Dp = 0.dp,
+    showBackButton: Boolean = false,
 ) {
     val formatter = rememberStatisticsFormatter()
     val today = Clock.System.todayIn(TimeZone.currentSystemDefault())
     val range = remember(today) { StatisticsDateRange(LocalDate(today.year, 1, 1), today) }
-    var refreshKey by remember { mutableIntStateOf(0) }
     val lastFmUser =
         Settings.shared.lastFmUsername.takeIf {
             it.isNotBlank() && Settings.shared.lastFmSession.isNotBlank() &&
@@ -209,7 +220,7 @@ fun WrappedScreen(
     var lastFmLoading by remember(range, lastFmUser) { mutableStateOf(lastFmUser != null) }
     var lastFmFailed by remember(range, lastFmUser) { mutableStateOf(false) }
     var lastFmLoaded by remember(range, lastFmUser) { mutableStateOf(false) }
-    LaunchedEffect(range, refreshKey, lastFmUser) {
+    LaunchedEffect(range, lastFmUser) {
         if (lastFmUser.isNullOrBlank()) return@LaunchedEffect
         lastFmLoading = true
         lastFmFailed = false
@@ -236,7 +247,7 @@ fun WrappedScreen(
             lastFmLoading = false
         }
     }
-    LaunchedEffect(database, range, refreshKey, lastFm, lastFmUser) {
+    LaunchedEffect(database, range, lastFm, lastFmUser) {
         database.historyChanges().collectLatest {
             try {
                 loadFailed = false
@@ -252,7 +263,7 @@ fun WrappedScreen(
             }
         }
     }
-    LaunchedEffect(database, range, refreshKey) {
+    LaunchedEffect(database, range) {
         syncFailed = false
         try {
             syncFailed = withTimeout(30_000) { database.refreshYouTubeHistory() } == HistorySyncOutcome.FAILED
@@ -268,105 +279,76 @@ fun WrappedScreen(
     MaterialTheme(motionScheme = MotionScheme.expressive()) {
         val title = stringResource(Res.string.wrapped)
         Surface(Modifier.fillMaxSize().semantics { paneTitle = title }) {
-            Column(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.statusBars)) {
-                val result = snapshot
-                val hasReport = !loadFailed && result != null && result.totals.playCount > 0
-                if (!hasReport) {
-                    WrappedToolbar(title, onBack, { refreshKey++ })
-                    if (syncFailed) WrappedSyncFailure()
-                    if (lastFmLoading ||
-                        lastFmFailed
-                    ) {
-                        Text(
-                            stringResource(if (lastFmFailed) Res.string.wrapped_lastfm_failed else Res.string.wrapped_lastfm_loading),
-                            Modifier.padding(horizontal = 24.dp),
-                            style = MaterialTheme.typography.bodySmall,
-                        )
+            val result = snapshot
+            if (loadFailed || result == null || result.totals.playCount == 0) {
+                Column(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.statusBars)) {
+                    if (showBackButton || desktopLayout) {
+                        IconButton(onClick = onBack, modifier = Modifier.padding(8.dp)) {
+                            Icon(MetrolistIcons.AutoMirrored.Filled.ArrowBack, stringResource(Res.string.back))
+                        }
+                    }
+                    when {
+                        loading && result == null -> {
+                            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { ContainedLoadingIndicator() }
+                        }
+
+                        loadFailed -> {
+                            WrappedMessage(stringResource(Res.string.statistics_load_failed))
+                        }
+
+                        else -> {
+                            WrappedMessage(stringResource(Res.string.wrapped_empty))
+                        }
                     }
                 }
-                when {
-                    loading && result == null -> {
-                        Box(
-                            Modifier.fillMaxSize(),
-                            contentAlignment = Alignment.Center,
-                        ) { ContainedLoadingIndicator() }
-                    }
+            } else {
+                val notes =
+                    listOfNotNull(
+                        stringResource(Res.string.wrapped_sync_failed).takeIf { syncFailed },
+                        when {
+                            lastFmLoading || (lastFmLoaded && appliedLastFm !== lastFm) -> {
+                                stringResource(Res.string.wrapped_lastfm_loading)
+                            }
 
-                    loadFailed -> {
-                        WrappedMessage(stringResource(Res.string.statistics_load_failed))
-                    }
+                            lastFmFailed -> {
+                                stringResource(Res.string.wrapped_lastfm_failed)
+                            }
 
-                    result == null || result.totals.playCount == 0 -> {
-                        WrappedMessage(stringResource(Res.string.wrapped_empty))
-                    }
+                            lastFmLoaded -> {
+                                stringResource(
+                                    Res.string.wrapped_lastfm_coverage,
+                                    formatter.number(result.lastFmPlays.toLong()),
+                                    formatter.number(result.lastFmAmbiguousPlays.toLong()),
+                                )
+                            }
 
-                    else -> {
-                        WrappedReport(
-                            result,
-                            range,
-                            playbackController,
-                            onExport,
-                            exportLabel,
-                            desktopLayout,
-                            bottomContentPadding,
-                            onBack,
-                            { refreshKey++ },
-                            syncFailed,
-                            when {
-                                lastFmLoading || (lastFmLoaded && appliedLastFm !== lastFm) -> {
-                                    stringResource(Res.string.wrapped_lastfm_loading)
-                                }
-
-                                lastFmFailed -> {
-                                    stringResource(Res.string.wrapped_lastfm_failed)
-                                }
-
-                                lastFmLoaded -> {
-                                    stringResource(
-                                        Res.string.wrapped_lastfm_coverage,
-                                        formatter.number(result.lastFmPlays.toLong()),
-                                        formatter.number(result.lastFmAmbiguousPlays.toLong()),
-                                    )
-                                }
-
-                                else -> {
-                                    null
-                                }
-                            },
-                            lastFmLoaded && appliedLastFm === lastFm,
-                        )
-                    }
-                }
+                            else -> {
+                                null
+                            }
+                        },
+                    )
+                WrappedReport(
+                    result,
+                    range,
+                    playbackController,
+                    onExport,
+                    exportLabel,
+                    desktopLayout,
+                    bottomContentPadding,
+                    onBack,
+                    showBackButton,
+                    notes,
+                    lastFmLoaded && appliedLastFm === lastFm,
+                )
             }
         }
     }
 }
 
-@Composable
-private fun WrappedToolbar(
-    title: String,
-    onBack: () -> Unit,
-    onRefresh: () -> Unit,
-) {
-    Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-        IconButton(onClick = onBack) {
-            Icon(MetrolistIcons.AutoMirrored.Filled.ArrowBack, stringResource(Res.string.back))
-        }
-        Text(title, Modifier.weight(1f), style = MaterialTheme.typography.titleLarge)
-        IconButton(onClick = onRefresh) {
-            Icon(MetrolistIcons.Filled.Refresh, stringResource(Res.string.refresh))
-        }
-    }
-}
+private const val WRAPPED_CHAPTER_MILLIS = 10_000
 
-@Composable
-private fun WrappedSyncFailure() {
-    Text(
-        stringResource(Res.string.wrapped_sync_failed),
-        Modifier.padding(horizontal = 24.dp),
-        style = MaterialTheme.typography.bodySmall,
-    )
-}
+/** Height available to each chapter's artwork stage, sized so the headline and stats stay on screen. */
+private val LocalWrappedStage = staticCompositionLocalOf { 340.dp }
 
 @Composable
 private fun WrappedMessage(message: String) {
@@ -385,9 +367,8 @@ private fun WrappedReport(
     desktopLayout: Boolean,
     bottomContentPadding: Dp,
     onBack: () -> Unit,
-    onRefresh: () -> Unit,
-    syncFailed: Boolean,
-    lastFmStatus: String?,
+    showBackButton: Boolean,
+    notes: List<String>,
     lastFmLoaded: Boolean,
 ) {
     val formatter = rememberStatisticsFormatter()
@@ -425,11 +406,20 @@ private fun WrappedReport(
             if (state.totalTimeMs > 0) add(WrappedChapter.TIME)
             if (state.tracks.isNotEmpty()) add(WrappedChapter.TRACKS)
             if (state.artists.isNotEmpty()) add(WrappedChapter.ARTISTS)
+            if (state.artists.size >= 4) add(WrappedChapter.MIX)
             if (state.albums.isNotEmpty()) add(WrappedChapter.ALBUMS)
             add(WrappedChapter.SUMMARY)
         }
     val pager = rememberPagerState { chapters.size }
     val soundtrack = rememberWrappedSoundtrack(playbackController, snapshot.songItems.take(10), pager.settledPage, desktopLayout)
+    var soundtrackStarted by rememberSaveable { mutableStateOf(false) }
+    // The soundtrack starts by itself once, as soon as playback allows it; turning it off is respected.
+    LaunchedEffect(soundtrack.available) {
+        if (!soundtrackStarted && soundtrack.available) {
+            soundtrackStarted = true
+            soundtrack.toggle()
+        }
+    }
     val motionEnabled = wrappedMotionEnabled()
     var sharing by rememberSaveable { mutableStateOf(false) }
     val title = stringResource(Res.string.wrapped_year, range.start.year.toString())
@@ -466,253 +456,206 @@ private fun WrappedReport(
             if (motionEnabled) pager.animateScrollToPage(target, animationSpec = spatialSpec) else pager.scrollToPage(target)
         }
     }
-    val foreground =
-        if (desktopLayout) {
-            MaterialTheme.colorScheme.onSurface
-        } else {
-            wrappedPalette(chapters[pager.currentPage.coerceIn(0, chapters.lastIndex)]).ink
-        }
-    val toolbarBackground =
-        if (desktopLayout) {
-            MaterialTheme.colorScheme.surface
-        } else {
-            wrappedPalette(chapters[pager.currentPage.coerceIn(0, chapters.lastIndex)]).background
-        }
-    val iconColors = IconButtonDefaults.iconButtonColors(contentColor = foreground, disabledContentColor = foreground.copy(alpha = 0.38f))
-    CompositionLocalProvider(LocalContentColor provides foreground) {
-        Box(Modifier.fillMaxSize()) {
-            if (!desktopLayout) {
-                WrappedBackdrop(
-                    chapters,
-                    { pager.currentPage + pager.currentPageOffsetFraction },
-                    motionEnabled,
-                    Modifier.matchParentSize(),
-                )
-            }
-            Column(Modifier.fillMaxSize()) {
+    val current = chapters[pager.currentPage.coerceIn(0, chapters.lastIndex)]
+    val palette = wrappedPalette(current)
+    val foreground = if (desktopLayout) MaterialTheme.colorScheme.onSurface else palette.ink
+    if (desktopLayout) {
+        CompositionLocalProvider(LocalContentColor provides foreground) {
+            Column(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.statusBars)) {
                 Row(
                     Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp),
-                    horizontalArrangement = Arrangement.spacedBy(if (desktopLayout) 12.dp else 4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    IconButton(onClick = onBack, colors = iconColors) {
+                    IconButton(onClick = onBack) {
                         Icon(MetrolistIcons.AutoMirrored.Filled.ArrowBack, stringResource(Res.string.back))
                     }
-                    if (desktopLayout) {
-                        Text(
-                            stringResource(Res.string.wrapped),
-                            Modifier.weight(1f),
-                            style = MaterialTheme.typography.titleLarge,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                    }
-                    ToggleButton(
-                        modifier = if (desktopLayout) Modifier else Modifier.weight(1f),
-                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
-                        checked = soundtrack.enabled,
-                        colors =
-                            ToggleButtonDefaults.colors(
-                                containerColor = foreground.copy(alpha = 0.14f),
-                                contentColor = foreground,
-                                checkedContainerColor = foreground,
-                                checkedContentColor = toolbarBackground,
-                            ),
-                        onCheckedChange = { soundtrack.toggle() },
-                        enabled = soundtrack.enabled || (soundtrack.available && !soundtrack.loading),
-                    ) {
-                        if (LocalDensity.current.fontScale < 1.5f) {
-                            Icon(MetrolistIcons.Outlined.MusicNote, null, Modifier.size(18.dp))
-                            Spacer(Modifier.width(8.dp))
-                        }
-                        Text(
-                            stringResource(
-                                if (soundtrack.loading) Res.string.wrapped_soundtrack_loading else Res.string.wrapped_soundtrack,
-                            ),
-                            maxLines = 2,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                    }
-                    IconButton(onClick = onRefresh, colors = iconColors) {
-                        Icon(MetrolistIcons.Filled.Refresh, stringResource(Res.string.refresh))
-                    }
-                    if (desktopLayout) {
-                        FilledTonalButton(onClick = { sharing = true }, shapes = ButtonDefaults.shapes()) {
-                            Icon(MetrolistIcons.Outlined.Share, null, Modifier.size(18.dp))
-                            Spacer(Modifier.width(8.dp))
-                            Text(stringResource(Res.string.wrapped_share_summary))
-                        }
-                    }
-                }
-                if (syncFailed) WrappedSyncFailure()
-                if (lastFmStatus !=
-                    null
-                ) {
                     Text(
-                        lastFmStatus,
-                        Modifier.padding(horizontal = 24.dp, vertical = 4.dp),
-                        style = MaterialTheme.typography.bodySmall,
-                    )
-                }
-                if (soundtrack.enabled) {
-                    val song = soundtrack.playingSong
-                    Text(
-                        if (soundtrack.preparing) {
-                            stringResource(
-                                Res.string.wrapped_soundtrack_preparing,
-                                formatter.number(soundtrack.preparedCount.toLong()),
-                                formatter.number(soundtrack.songCount.toLong()),
-                            )
-                        } else if (song != null) {
-                            stringResource(
-                                Res.string.wrapped_soundtrack_playing,
-                                song.title,
-                                song.artists.joinToString(", ") { it.name },
-                            )
-                        } else {
-                            stringResource(Res.string.wrapped_soundtrack_loading)
-                        },
-                        Modifier.padding(horizontal = 24.dp, vertical = 4.dp),
-                        style = MaterialTheme.typography.bodySmall,
-                        maxLines = 2,
+                        stringResource(Res.string.wrapped),
+                        Modifier.weight(1f),
+                        style = MaterialTheme.typography.titleLarge,
+                        maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
+                    WrappedSoundtrackButton(soundtrack, foreground, MaterialTheme.colorScheme.surface)
+                    FilledTonalButton(onClick = { sharing = true }, shapes = ButtonDefaults.shapes()) {
+                        Icon(MetrolistIcons.Outlined.Share, null, Modifier.size(18.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text(stringResource(Res.string.wrapped_share_summary))
+                    }
                 }
-                if (soundtrack.failed || !soundtrack.available) {
-                    Text(
-                        stringResource(
-                            when {
-                                soundtrack.failed && soundtrack.enabled -> Res.string.wrapped_soundtrack_partial
-                                soundtrack.failed -> Res.string.wrapped_soundtrack_failed
-                                else -> Res.string.wrapped_soundtrack_unavailable
-                            },
-                        ),
-                        Modifier.padding(horizontal = 24.dp, vertical = 4.dp),
-                        style = MaterialTheme.typography.bodySmall,
-                    )
-                }
-                if (desktopLayout) {
-                    val grid = rememberLazyGridState()
-                    DragScrollableGrid(
-                        columns = GridCells.Adaptive(400.dp),
-                        state = grid,
-                        modifier =
-                            Modifier
-                                .widthIn(max = 1200.dp)
-                                .fillMaxSize()
-                                .align(Alignment.CenterHorizontally)
-                                .desktopArrowScroll(grid),
-                        contentPadding = PaddingValues(start = 24.dp, top = 12.dp, end = 24.dp, bottom = bottomContentPadding + 24.dp),
-                        horizontalArrangement = Arrangement.spacedBy(20.dp),
-                        verticalArrangement = Arrangement.spacedBy(20.dp),
-                    ) {
-                        items(chapters, key = { it.name }, span = {
-                            GridItemSpan(if (it == WrappedChapter.COVER || it == WrappedChapter.SUMMARY) maxLineSpan else 1)
-                        }) { chapter ->
-                            Surface(shape = RoundedCornerShape(32.dp), color = Color.Transparent) {
-                                Box {
-                                    WrappedBackdrop(listOf(chapter), { 0f }, false, Modifier.matchParentSize())
-                                    WrappedChapterContent(
-                                        chapter,
-                                        state,
-                                        snapshot,
-                                        title,
-                                        dateLabel,
-                                        measuredPlays,
-                                        true,
-                                        motionEnabled,
-                                        Modifier.padding(28.dp),
-                                    ) {
-                                        sharing = true
-                                    }
-                                }
+                val grid = rememberLazyGridState()
+                DragScrollableGrid(
+                    columns = GridCells.Adaptive(400.dp),
+                    state = grid,
+                    modifier =
+                        Modifier
+                            .widthIn(max = 1200.dp)
+                            .fillMaxSize()
+                            .align(Alignment.CenterHorizontally)
+                            .desktopArrowScroll(grid),
+                    contentPadding = PaddingValues(start = 24.dp, top = 12.dp, end = 24.dp, bottom = bottomContentPadding + 24.dp),
+                    horizontalArrangement = Arrangement.spacedBy(20.dp),
+                    verticalArrangement = Arrangement.spacedBy(20.dp),
+                ) {
+                    items(chapters, key = { it.name }, span = {
+                        GridItemSpan(if (it == WrappedChapter.COVER || it == WrappedChapter.SUMMARY) maxLineSpan else 1)
+                    }) { chapter ->
+                        Surface(shape = RoundedCornerShape(32.dp), color = Color.Transparent) {
+                            Box {
+                                WrappedBackdrop(listOf(chapter), { 0f }, false, Modifier.matchParentSize())
+                                WrappedChapterContent(
+                                    chapter,
+                                    state,
+                                    snapshot,
+                                    title,
+                                    measuredPlays,
+                                    notes,
+                                    true,
+                                    motionEnabled,
+                                    Modifier.padding(28.dp),
+                                ) { sharing = true }
                             }
                         }
                     }
-                } else {
-                    WrappedChapterRail(chapters.size, pager.currentPage, motionEnabled) { moveTo(it) }
-                    HorizontalPager(
-                        state = pager,
-                        key = { chapters[it].name },
-                        flingBehavior = PagerDefaults.flingBehavior(pager, snapAnimationSpec = if (motionEnabled) spatialSpec else snap()),
-                        modifier = Modifier.weight(1f),
-                        verticalAlignment = Alignment.Top,
-                    ) { page ->
-                        val scroll = rememberScrollState()
-                        val direction = LocalLayoutDirection.current
-                        BoxWithConstraints(
-                            Modifier.fillMaxSize().pointerInput(chapters.size, direction, scroll, pager, motionEnabled) {
-                                awaitEachGesture {
-                                    val down = awaitFirstDown(requireUnconsumed = false)
-                                    val scrollingAtDown = scroll.isScrollInProgress || pager.isScrollInProgress
-                                    if (down.isConsumed) return@awaitEachGesture
-                                    val up = waitForUpOrCancellation() ?: return@awaitEachGesture
-                                    if (scrollingAtDown || scroll.isScrollInProgress || pager.isScrollInProgress) return@awaitEachGesture
-                                    if (up.id != down.id ||
-                                        up.uptimeMillis - down.uptimeMillis >= viewConfiguration.longPressTimeoutMillis
-                                    ) {
-                                        return@awaitEachGesture
-                                    }
-                                    if ((up.position - down.position).getDistance() > viewConfiguration.touchSlop) return@awaitEachGesture
-                                    val left = down.position.x < size.width * 0.24f
-                                    val right = down.position.x > size.width * 0.76f
-                                    if (!left && !right) return@awaitEachGesture
-                                    val delta = if (right == (direction == LayoutDirection.Ltr)) 1 else -1
-                                    val target = (pager.currentPage + delta).coerceIn(0, chapters.lastIndex)
-                                    if (target != pager.currentPage) {
-                                        up.consume()
-                                        moveTo(target)
-                                    }
+                }
+            }
+        }
+        return
+    }
+    WrappedStatusBarAppearance(palette.background.luminance() > 0.5f)
+    var held by remember { mutableStateOf(false) }
+    val progress = remember { Animatable(0f) }
+    var progressPage by remember { mutableIntStateOf(-1) }
+    LaunchedEffect(pager.settledPage, held, pager.isScrollInProgress, motionEnabled) {
+        if (progressPage != pager.settledPage) {
+            progressPage = pager.settledPage
+            progress.snapTo(0f)
+        }
+        // Chapters advance on their own like stories; touching the screen holds the current one.
+        if (!motionEnabled || held || pager.isScrollInProgress) return@LaunchedEffect
+        val remaining = ((1f - progress.value) * WRAPPED_CHAPTER_MILLIS).toInt()
+        progress.animateTo(1f, tween(remaining, easing = LinearEasing))
+        if (pager.settledPage < chapters.lastIndex) moveTo(pager.settledPage + 1)
+    }
+    val density = LocalDensity.current
+    val topInset = with(density) { WindowInsets.statusBars.getTop(this).toDp() }
+    val bottomInset = with(density) { WindowInsets.navigationBars.getBottom(this).toDp() } + bottomContentPadding
+    CompositionLocalProvider(LocalContentColor provides foreground) {
+        Box(Modifier.fillMaxSize()) {
+            WrappedBackdrop(
+                chapters,
+                { pager.currentPage + pager.currentPageOffsetFraction },
+                motionEnabled,
+                Modifier.matchParentSize(),
+            )
+            HorizontalPager(
+                state = pager,
+                key = { chapters[it].name },
+                flingBehavior = PagerDefaults.flingBehavior(pager, snapAnimationSpec = if (motionEnabled) spatialSpec else snap()),
+                modifier = Modifier.fillMaxSize(),
+                verticalAlignment = Alignment.Top,
+            ) { page ->
+                val scroll = rememberScrollState()
+                val direction = LocalLayoutDirection.current
+                BoxWithConstraints(
+                    Modifier.fillMaxSize().pointerInput(chapters.size, direction, scroll, pager) {
+                        awaitEachGesture {
+                            val down = awaitFirstDown(requireUnconsumed = false)
+                            held = true
+                            try {
+                                val scrollingAtDown = scroll.isScrollInProgress || pager.isScrollInProgress
+                                if (down.isConsumed) return@awaitEachGesture
+                                val up = waitForUpOrCancellation() ?: return@awaitEachGesture
+                                if (scrollingAtDown || scroll.isScrollInProgress || pager.isScrollInProgress) return@awaitEachGesture
+                                if (up.id != down.id ||
+                                    up.uptimeMillis - down.uptimeMillis >= viewConfiguration.longPressTimeoutMillis
+                                ) {
+                                    return@awaitEachGesture
                                 }
-                            },
-                        ) {
-                            val visible = abs(pager.currentPage + pager.currentPageOffsetFraction - page) < 1f
-                            WrappedChapterContent(
-                                chapters[page],
-                                state,
-                                snapshot,
-                                title,
-                                dateLabel,
-                                measuredPlays,
-                                visible,
-                                motionEnabled,
-                                Modifier
-                                    .fillMaxWidth()
-                                    .verticalScroll(scroll)
-                                    .heightIn(min = maxHeight)
-                                    .padding(24.dp),
-                                { page - pager.currentPage - pager.currentPageOffsetFraction },
-                            ) { sharing = true }
+                                if ((up.position - down.position).getDistance() > viewConfiguration.touchSlop) return@awaitEachGesture
+                                val start = down.position.x < size.width * 0.3f
+                                val forward = if (direction == LayoutDirection.Ltr) !start else start
+                                val target = (pager.currentPage + if (forward) 1 else -1).coerceIn(0, chapters.lastIndex)
+                                if (target != pager.currentPage) {
+                                    up.consume()
+                                    moveTo(target)
+                                }
+                            } finally {
+                                held = false
+                            }
                         }
-                    }
-                    Row(
-                        Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, bottom = bottomContentPadding + 8.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        IconButton(onClick = { moveTo(pager.targetPage - 1) }, enabled = pager.currentPage > 0, colors = iconColors) {
-                            Icon(MetrolistIcons.AutoMirrored.Filled.ArrowBack, stringResource(Res.string.previous))
-                        }
-                        Spacer(Modifier.weight(1f))
-                        Text(
-                            stringResource(
-                                Res.string.wrapped_chapter,
-                                formatter.number((pager.currentPage + 1).toLong()),
-                                formatter.number(chapters.size.toLong()),
-                            ),
-                            style = MaterialTheme.typography.labelLarge,
-                            modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
-                        )
-                        Spacer(Modifier.weight(1f))
-                        IconButton(
-                            onClick = { moveTo(pager.targetPage + 1) },
-                            enabled = pager.currentPage < chapters.lastIndex,
-                            colors = iconColors,
-                        ) {
-                            Icon(MetrolistIcons.AutoMirrored.Filled.ArrowForward, stringResource(Res.string.next))
-                        }
+                    },
+                ) {
+                    val stage = (maxHeight - topInset - bottomInset - 360.dp).coerceIn(220.dp, 440.dp)
+                    val visible = abs(pager.currentPage + pager.currentPageOffsetFraction - page) < 1f
+                    CompositionLocalProvider(LocalWrappedStage provides stage) {
+                        WrappedChapterContent(
+                            chapters[page],
+                            state,
+                            snapshot,
+                            title,
+                            measuredPlays,
+                            notes,
+                            visible,
+                            motionEnabled,
+                            Modifier
+                                .fillMaxWidth()
+                                .verticalScroll(scroll)
+                                .heightIn(min = maxHeight)
+                                .padding(start = 24.dp, top = topInset + 72.dp, end = 24.dp, bottom = bottomInset + 32.dp),
+                            { page - pager.currentPage - pager.currentPageOffsetFraction },
+                        ) { sharing = true }
                     }
                 }
             }
+            Row(
+                Modifier.fillMaxWidth().padding(start = if (showBackButton) 4.dp else 24.dp, top = topInset + 8.dp, end = 12.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                if (showBackButton) {
+                    IconButton(onClick = onBack) {
+                        Icon(MetrolistIcons.AutoMirrored.Filled.ArrowBack, stringResource(Res.string.back))
+                    }
+                }
+                WrappedChapterRail(chapters.size, pager.currentPage, { progress.value }, Modifier.weight(1f)) { moveTo(it) }
+                WrappedSoundtrackButton(soundtrack, foreground, palette.background)
+            }
+        }
+    }
+}
+
+@Composable
+private fun WrappedSoundtrackButton(
+    soundtrack: WrappedSoundtrack,
+    foreground: Color,
+    background: Color,
+) {
+    val label = stringResource(Res.string.wrapped_soundtrack)
+    FilledIconToggleButton(
+        checked = soundtrack.enabled,
+        onCheckedChange = { soundtrack.toggle() },
+        enabled = soundtrack.enabled || (soundtrack.available && !soundtrack.loading),
+        shapes = IconButtonDefaults.toggleableShapes(),
+        colors =
+            IconButtonDefaults.filledIconToggleButtonColors(
+                containerColor = foreground.copy(alpha = 0.14f),
+                contentColor = foreground,
+                checkedContainerColor = foreground,
+                checkedContentColor = background,
+                disabledContainerColor = foreground.copy(alpha = 0.08f),
+                disabledContentColor = foreground.copy(alpha = 0.38f),
+            ),
+        modifier = Modifier.semantics { contentDescription = label },
+    ) {
+        if (soundtrack.enabled && soundtrack.loading) {
+            LoadingIndicator(Modifier.size(28.dp), color = background)
+        } else {
+            Icon(
+                if (soundtrack.enabled) MetrolistIcons.AutoMirrored.Filled.VolumeUp else MetrolistIcons.AutoMirrored.Filled.VolumeOff,
+                null,
+            )
         }
     }
 }
@@ -721,38 +664,38 @@ private fun WrappedReport(
 private fun WrappedChapterRail(
     count: Int,
     current: Int,
-    motionEnabled: Boolean,
+    progress: () -> Float,
+    modifier: Modifier = Modifier,
     onSelect: (Int) -> Unit,
 ) {
     val formatter = rememberStatisticsFormatter()
-    Row(Modifier.fillMaxWidth().padding(horizontal = 24.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+    val ink = LocalContentColor.current
+    Row(modifier, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
         repeat(count) { index ->
-            val selected by animateFloatAsState(
-                if (index ==
-                    current
-                ) {
-                    1.65f
-                } else {
-                    1f
-                },
-                if (motionEnabled) MaterialTheme.motionScheme.fastSpatialSpec() else snap(),
-            )
             val label = stringResource(Res.string.wrapped_chapter, formatter.number((index + 1).toLong()), formatter.number(count.toLong()))
             Box(
-                Modifier.weight(selected).heightIn(min = 48.dp).clickable(onClickLabel = label) { onSelect(index) }.semantics {
-                    contentDescription = label
-                    this.selected = index == current
-                },
-                contentAlignment = Alignment.Center,
-            ) {
-                Box(
-                    Modifier
-                        .fillMaxWidth()
-                        .height(if (index <= current) 5.dp else 2.dp)
-                        .clip(CircleShape)
-                        .background(LocalContentColor.current),
-                )
-            }
+                Modifier
+                    .weight(1f)
+                    .heightIn(min = 48.dp)
+                    .clickable(onClickLabel = label) { onSelect(index) }
+                    .semantics {
+                        contentDescription = label
+                        selected = index == current
+                    }.drawBehind {
+                        val height = 5.dp.toPx()
+                        val top = (size.height - height) / 2f
+                        val radius = CornerRadius(height / 2f)
+                        drawRoundRect(ink.copy(alpha = 0.28f), Offset(0f, top), Size(size.width, height), radius)
+                        val fill =
+                            when {
+                                index < current -> 1f
+                                index == current -> progress().coerceIn(0f, 1f)
+                                else -> 0f
+                            }
+                        val start = if (layoutDirection == LayoutDirection.Rtl) size.width * (1f - fill) else 0f
+                        if (fill > 0f) drawRoundRect(ink, Offset(start, top), Size(size.width * fill, height), radius)
+                    },
+            )
         }
     }
 }
@@ -763,8 +706,8 @@ private fun WrappedChapterContent(
     state: StatisticsUiState,
     snapshot: HistoryStatisticsSnapshot,
     title: String,
-    dateLabel: String,
     measuredPlays: Int,
+    notes: List<String>,
     visible: Boolean,
     motionEnabled: Boolean,
     modifier: Modifier = Modifier,
@@ -775,27 +718,29 @@ private fun WrappedChapterContent(
     CompositionLocalProvider(LocalContentColor provides palette.ink) {
         Column(modifier, verticalArrangement = Arrangement.spacedBy(20.dp)) {
             when (chapter) {
-                WrappedChapter.COVER -> WrappedCover(state, palette, dateLabel, visible, motionEnabled, spin)
+                WrappedChapter.COVER -> WrappedCover(state, palette, visible, motionEnabled, spin)
                 WrappedChapter.TIME -> WrappedTime(state, palette, measuredPlays, visible, motionEnabled, spin)
-                WrappedChapter.SUMMARY -> WrappedSummary(state, palette, title, visible, motionEnabled, spin, onShare)
+                WrappedChapter.MIX -> WrappedMix(state, snapshot, palette, visible, motionEnabled, spin)
+                WrappedChapter.SUMMARY -> WrappedSummary(state, palette, title, notes, visible, motionEnabled, spin, onShare)
                 else -> WrappedLeaders(chapter, state, snapshot, palette, visible, motionEnabled, spin)
             }
         }
     }
 }
 
-/** The square stage that holds a chapter's artwork over its animated pattern. */
+/** The stage that holds a chapter's artwork over its animated pattern; content receives the stage height. */
 @Composable
 private fun WrappedStage(
     pattern: WrappedPattern,
     palette: WrappedPalette,
     motionEnabled: Boolean,
     spin: () -> Float,
-    bottomBleed: Dp = 64.dp,
+    bottomBleed: Dp = 56.dp,
     content: @Composable BoxScope.(side: Dp) -> Unit,
 ) {
+    val stage = LocalWrappedStage.current
     BoxWithConstraints(Modifier.fillMaxWidth()) {
-        val side = minOf(maxWidth * 0.86f, 340.dp)
+        val side = minOf(maxWidth, stage)
         Box(
             Modifier.fillMaxWidth().height(side).wrappedPattern(pattern, palette, motionEnabled, spin, bottomBleed = bottomBleed),
             contentAlignment = Alignment.Center,
@@ -807,7 +752,6 @@ private fun WrappedStage(
 private fun WrappedCover(
     state: StatisticsUiState,
     palette: WrappedPalette,
-    dateLabel: String,
     visible: Boolean,
     motionEnabled: Boolean,
     spin: () -> Float,
@@ -820,7 +764,7 @@ private fun WrappedCover(
                 MaterialShapes.Clover4Leaf,
                 visible,
                 motionEnabled,
-                Modifier.size(side * 0.34f).align(Alignment.TopStart),
+                Modifier.size(side * 0.32f).align(Alignment.TopStart),
                 delayMillis = 140,
                 turnMillis = 18_000,
                 tilt = -10f,
@@ -832,14 +776,14 @@ private fun WrappedCover(
                 MaterialShapes.Cookie6Sided,
                 visible,
                 motionEnabled,
-                Modifier.size(side * 0.3f).align(Alignment.BottomEnd),
+                Modifier.size(side * 0.28f).align(Alignment.BottomEnd),
                 delayMillis = 220,
                 turnMillis = 22_000,
                 tilt = 8f,
             )
         }
         items.firstOrNull()?.let {
-            WrappedShapedArtwork(it, MaterialShapes.Sunny, visible, motionEnabled, Modifier.size(side * 0.56f), turnMillis = 30_000)
+            WrappedShapedArtwork(it, MaterialShapes.Sunny, visible, motionEnabled, Modifier.size(side * 0.6f), turnMillis = 30_000)
         }
     }
     WrappedSticker(stringResource(Res.string.wrapped_cover_heading), palette, visible, motionEnabled)
@@ -853,7 +797,6 @@ private fun WrappedCover(
     )
     WrappedPills(
         listOf(
-            dateLabel,
             pluralStringResource(Res.plurals.statistics_plays, state.totalPlays, state.totalPlays),
             pluralStringResource(Res.plurals.n_artist, state.artistCount, state.artistCount),
             pluralStringResource(Res.plurals.n_album, state.albumCount, state.albumCount),
@@ -862,7 +805,6 @@ private fun WrappedCover(
         visible,
         motionEnabled,
     )
-    Text(stringResource(Res.string.wrapped_history_scope), style = MaterialTheme.typography.bodySmall)
 }
 
 @Composable
@@ -876,22 +818,27 @@ private fun WrappedTime(
 ) {
     val formatter = rememberStatisticsFormatter()
     WrappedStage(WrappedPattern.DIAL, palette, motionEnabled, spin, bottomBleed = 0.dp) { side ->
-        WrappedHeadline(
-            statisticsDuration(state.totalTimeMs),
-            palette,
-            Modifier.width(side * 0.56f).wrappedEntrance(visible, motionEnabled),
-            maxFontSize = 76.sp,
-            minFontSize = 24.sp,
-            maxLines = 3,
-            textAlign = TextAlign.Center,
-        )
+        Column(Modifier.width(side * 0.6f), horizontalAlignment = Alignment.CenterHorizontally) {
+            WrappedFigure(
+                state.totalTimeMs / 60_000,
+                formatter::number,
+                palette,
+                visible,
+                motionEnabled,
+                Modifier.fillMaxWidth(),
+                maxFontSize = 88.sp,
+                textAlign = TextAlign.Center,
+            )
+            Text(
+                stringResource(Res.string.wrapped_minutes_listened),
+                style = wrappedLabelStyle(),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
     }
     WrappedSticker(stringResource(Res.string.wrapped_time_heading), palette, visible, motionEnabled)
-    Text(
-        stringResource(Res.string.wrapped_measured_time),
-        Modifier.semantics { heading() },
-        style = MaterialTheme.typography.headlineSmallEmphasized.copy(fontWeight = FontWeight.Black),
-    )
+    WrappedPills(listOf(statisticsDuration(state.totalTimeMs)), palette, visible, motionEnabled)
     val coverage = (measuredPlays.toFloat() / state.totalPlays.coerceAtLeast(1)).coerceIn(0f, 1f)
     val fill = rememberWrappedReveal(visible, motionEnabled, 500, Spring.StiffnessVeryLow, 0.9f)
     val stroke = Stroke(with(LocalDensity.current) { 8.dp.toPx() }, cap = StrokeCap.Round)
@@ -909,7 +856,7 @@ private fun WrappedTime(
             formatter.number(measuredPlays.toLong()),
             formatter.number(state.totalPlays.toLong()),
         ),
-        style = MaterialTheme.typography.bodyLarge,
+        style = MaterialTheme.typography.bodyMedium,
     )
 }
 
@@ -937,6 +884,22 @@ private fun WrappedLeaders(
             WrappedChapter.ARTISTS -> snapshot.artists.first().let { Triple("", it.playCount, it.playTimeMs) }
             else -> snapshot.albums.first().let { Triple(it.artists, it.playCount, it.playTimeMs) }
         }
+    val sticker =
+        stringResource(
+            when (chapter) {
+                WrappedChapter.TRACKS -> Res.string.wrapped_top_song
+                WrappedChapter.ARTISTS -> Res.string.wrapped_top_artist
+                else -> Res.string.wrapped_top_album
+            },
+        )
+    val headline = @Composable {
+        WrappedHeadline(lead.title, palette, Modifier.fillMaxWidth().wrappedEntrance(visible, motionEnabled, 2))
+    }
+    // The artist chapter leads with its name; the others lead with their artwork.
+    if (chapter == WrappedChapter.ARTISTS) {
+        WrappedSticker(sticker, palette, visible, motionEnabled, Modifier.semantics { heading() }, tilt = 3f, delayMillis = 80)
+        headline()
+    }
     WrappedStage(
         when (chapter) {
             WrappedChapter.TRACKS -> WrappedPattern.GROOVES
@@ -946,7 +909,7 @@ private fun WrappedLeaders(
         palette,
         motionEnabled,
         spin,
-        bottomBleed = if (chapter == WrappedChapter.TRACKS) 0.dp else 64.dp,
+        bottomBleed = if (chapter == WrappedChapter.TRACKS) 0.dp else 56.dp,
     ) { side ->
         when (chapter) {
             WrappedChapter.TRACKS -> {
@@ -966,53 +929,21 @@ private fun WrappedLeaders(
                     MaterialShapes.Cookie9Sided,
                     visible,
                     motionEnabled,
-                    Modifier.size(side * 0.64f),
+                    Modifier.size(side * 0.66f),
                     turnMillis = 24_000,
                 )
             }
 
             else -> {
-                items.getOrNull(2)?.let {
-                    WrappedShapedArtwork(
-                        it,
-                        MaterialShapes.Square,
-                        visible,
-                        motionEnabled,
-                        Modifier.size(side * 0.4f).align(Alignment.CenterStart),
-                        delayMillis = 160,
-                        tilt = -14f,
-                    )
-                }
-                items.getOrNull(1)?.let {
-                    WrappedShapedArtwork(
-                        it,
-                        MaterialShapes.Square,
-                        visible,
-                        motionEnabled,
-                        Modifier.size(side * 0.44f).align(Alignment.CenterEnd),
-                        delayMillis = 80,
-                        tilt = 12f,
-                    )
-                }
-                WrappedShapedArtwork(lead, MaterialShapes.Square, visible, motionEnabled, Modifier.size(side * 0.6f), tilt = -3f)
+                WrappedRecordSleeve(lead, palette, visible, motionEnabled, side)
             }
         }
-        WrappedRankBadge(formatter.number(1), palette, visible, motionEnabled, Modifier.size(side * 0.24f).align(Alignment.TopEnd))
+        WrappedRankBadge(formatter.number(1), palette, visible, motionEnabled, Modifier.size(side * 0.22f).align(Alignment.TopEnd))
     }
-    WrappedSticker(
-        stringResource(
-            when (chapter) {
-                WrappedChapter.TRACKS -> Res.string.wrapped_top_song
-                WrappedChapter.ARTISTS -> Res.string.wrapped_top_artist
-                else -> Res.string.wrapped_top_album
-            },
-        ),
-        palette,
-        visible,
-        motionEnabled,
-        Modifier.semantics { heading() },
-    )
-    WrappedHeadline(lead.title, palette, Modifier.fillMaxWidth().wrappedEntrance(visible, motionEnabled, 2), maxLines = 3)
+    if (chapter != WrappedChapter.ARTISTS) {
+        WrappedSticker(sticker, palette, visible, motionEnabled, Modifier.semantics { heading() })
+        headline()
+    }
     WrappedPills(
         listOfNotNull(
             byline.takeIf { it.isNotBlank() },
@@ -1024,6 +955,137 @@ private fun WrappedLeaders(
         motionEnabled,
     )
     WrappedRankings(items.drop(1).take(4), 2, palette, visible, motionEnabled)
+}
+
+/** An album sleeve with its record sliding out to the end side, kept inside the stage. */
+@Composable
+private fun BoxScope.WrappedRecordSleeve(
+    item: StatisticsItem,
+    palette: WrappedPalette,
+    visible: Boolean,
+    motionEnabled: Boolean,
+    side: Dp,
+) {
+    BoxWithConstraints(Modifier.matchParentSize()) {
+        val sleeve = minOf(side * 0.84f, maxWidth * 0.6f)
+        val travel = sleeve * 0.4f
+        val start = (maxWidth - sleeve - travel) / 2
+        val reveal = rememberWrappedReveal(visible, motionEnabled, 120, Spring.StiffnessLow, 0.6f)
+        val slide = rememberWrappedReveal(visible, motionEnabled, 520, Spring.StiffnessVeryLow, 0.7f)
+        val turn: State<Float>? =
+            if (motionEnabled) {
+                rememberInfiniteTransition().animateFloat(0f, 360f, infiniteRepeatable(tween(4_000, easing = LinearEasing)))
+            } else {
+                null
+            }
+        val disc = sleeve * 0.94f
+        Box(
+            Modifier
+                .align(Alignment.CenterStart)
+                .offset { IntOffset(((start + (sleeve - disc) / 2 + travel * slide.value).toPx()).roundToInt(), 0) }
+                .size(disc)
+                .graphicsLayer {
+                    rotationZ = turn?.value ?: 0f
+                    alpha = slide.value.coerceIn(0f, 1f)
+                }.drawBehind {
+                    drawCircle(palette.vinyl)
+                    var r = size.minDimension * 0.22f
+                    while (r < size.minDimension / 2f - 3.dp.toPx()) {
+                        drawCircle(palette.background.copy(alpha = 0.18f), r, style = Stroke(1.dp.toPx()))
+                        r += 4.dp.toPx()
+                    }
+                },
+            contentAlignment = Alignment.Center,
+        ) {
+            WrappedArtwork(item, Modifier.size(disc * 0.36f), CircleShape)
+        }
+        WrappedArtwork(
+            item,
+            Modifier
+                .align(Alignment.CenterStart)
+                .offset { IntOffset(start.roundToPx(), 0) }
+                .size(sleeve)
+                .graphicsLayer {
+                    val v = reveal.value
+                    scaleX = 0.4f + 0.6f * v
+                    scaleY = scaleX
+                    rotationZ = -3f - 20f * (1f - v)
+                    alpha = (v * 3f).coerceIn(0f, 1f)
+                },
+            RoundedCornerShape(6.dp),
+        )
+    }
+}
+
+private val WrappedMixShapes =
+    listOf(
+        MaterialShapes.Cookie9Sided,
+        MaterialShapes.Sunny,
+        MaterialShapes.Clover4Leaf,
+        MaterialShapes.Cookie6Sided,
+        MaterialShapes.Puffy,
+        MaterialShapes.Cookie4Sided,
+        MaterialShapes.Clover8Leaf,
+        MaterialShapes.Cookie12Sided,
+        MaterialShapes.Bun,
+        MaterialShapes.Cookie7Sided,
+        MaterialShapes.SoftBurst,
+        MaterialShapes.Circle,
+    )
+
+/** How wide the year's listening was: a collage of top artists, each in its own shape. */
+@Composable
+private fun WrappedMix(
+    state: StatisticsUiState,
+    snapshot: HistoryStatisticsSnapshot,
+    palette: WrappedPalette,
+    visible: Boolean,
+    motionEnabled: Boolean,
+    spin: () -> Float,
+) {
+    val artists = state.artists.take(12)
+    val columns = 4
+    val rows = (artists.size + columns - 1) / columns
+    WrappedStage(WrappedPattern.CHEVRONS, palette, motionEnabled, spin) { side ->
+        BoxWithConstraints(Modifier.fillMaxSize()) {
+            val cell = minOf(maxWidth / columns, side / rows)
+            Column(Modifier.align(Alignment.Center)) {
+                artists.chunked(columns).forEachIndexed { row, line ->
+                    Row {
+                        line.forEachIndexed { column, artist ->
+                            val index = row * columns + column
+                            WrappedShapedArtwork(
+                                artist,
+                                WrappedMixShapes[index % WrappedMixShapes.size],
+                                visible,
+                                motionEnabled,
+                                Modifier.size(cell).padding(4.dp),
+                                delayMillis = index * 55L,
+                                turnMillis = 12_000 + (index % 5) * 3_000,
+                                tilt = ((index % 3) - 1) * 9f,
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+    WrappedSticker(stringResource(Res.string.wrapped_artist_mix), palette, visible, motionEnabled, Modifier.semantics { heading() })
+    WrappedHeadline(
+        pluralStringResource(Res.plurals.n_artist, state.artistCount, state.artistCount),
+        palette,
+        Modifier.fillMaxWidth().wrappedEntrance(visible, motionEnabled, 1),
+        maxLines = 1,
+    )
+    WrappedPills(
+        listOf(
+            pluralStringResource(Res.plurals.n_song, snapshot.songs.size, snapshot.songs.size),
+            pluralStringResource(Res.plurals.n_album, state.albumCount, state.albumCount),
+        ),
+        palette,
+        visible,
+        motionEnabled,
+    )
 }
 
 @Composable
@@ -1044,22 +1106,22 @@ private fun WrappedRankings(
             ) {
                 Text(
                     formatter.number((startRank + index).toLong()),
-                    Modifier.widthIn(min = 36.dp),
-                    style = MaterialTheme.typography.headlineMediumEmphasized.copy(fontWeight = FontWeight.Black),
+                    Modifier.widthIn(min = 32.dp),
+                    style = wrappedNumberStyle().copy(fontSize = 28.sp),
                 )
                 WrappedArtwork(
                     item,
-                    Modifier.size(56.dp),
-                    if (item.circularArtwork) statisticsArtworkShape(item, startRank + index - 1) else RoundedCornerShape(12.dp),
+                    Modifier.size(52.dp),
+                    if (item.circularArtwork) statisticsArtworkShape(item, startRank + index - 1) else RoundedCornerShape(10.dp),
                 )
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                     Text(
                         item.title,
                         style = MaterialTheme.typography.titleMediumEmphasized.copy(fontWeight = FontWeight.ExtraBold),
-                        maxLines = 2,
+                        maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
-                    Text(item.subtitle, style = MaterialTheme.typography.bodyMedium)
+                    Text(item.subtitle, style = MaterialTheme.typography.bodyMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
             }
             if (index < items.lastIndex) HorizontalDivider(thickness = 2.dp, color = palette.ink.copy(alpha = 0.18f))
@@ -1072,6 +1134,7 @@ private fun WrappedSummary(
     state: StatisticsUiState,
     palette: WrappedPalette,
     title: String,
+    notes: List<String>,
     visible: Boolean,
     motionEnabled: Boolean,
     spin: () -> Float,
@@ -1082,47 +1145,56 @@ private fun WrappedSummary(
         listOfNotNull(
             state.artists.firstOrNull()?.to(MaterialShapes.Cookie9Sided),
             state.tracks.firstOrNull()?.to(MaterialShapes.Sunny),
-            state.albums.firstOrNull()?.to(MaterialShapes.Square),
+            state.albums.firstOrNull()?.to(MaterialShapes.Cookie4Sided),
         )
     WrappedStage(WrappedPattern.WAVES, palette, motionEnabled, spin, bottomBleed = 0.dp) { side ->
-        Row(
-            Modifier.fillMaxWidth().height(side * 0.5f),
-            horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterHorizontally),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            trio.forEachIndexed { index, (item, shape) ->
-                WrappedShapedArtwork(
-                    item,
-                    shape,
-                    visible,
-                    motionEnabled,
-                    Modifier.weight(1f, fill = false).size(side * 0.3f),
-                    delayMillis = index * 90L,
-                    turnMillis = 20_000 + index * 4_000,
-                    tilt = (index - 1) * 8f,
-                )
+        BoxWithConstraints(Modifier.fillMaxSize()) {
+            val art = minOf((maxWidth - 24.dp) / 3, side * 0.62f)
+            Row(
+                Modifier.align(Alignment.Center),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                trio.forEachIndexed { index, (item, shape) ->
+                    WrappedShapedArtwork(
+                        item,
+                        shape,
+                        visible,
+                        motionEnabled,
+                        Modifier.size(art),
+                        delayMillis = index * 90L,
+                        turnMillis = 20_000 + index * 4_000,
+                        tilt = (index - 1) * 8f,
+                    )
+                }
             }
         }
     }
     WrappedSticker(stringResource(Res.string.wrapped_summary), palette, visible, motionEnabled, Modifier.semantics { heading() })
     WrappedHeadline(title, palette, Modifier.fillMaxWidth().wrappedEntrance(visible, motionEnabled, 1), maxFontSize = 72.sp)
-    WrappedPills(trio.map { it.first.title }, palette, visible, motionEnabled)
-    Column {
-        WrappedFigure(state.totalPlays.toLong(), formatter::number, palette, visible, motionEnabled, Modifier.fillMaxWidth())
+    Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        WrappedFigure(
+            state.totalPlays.toLong(),
+            formatter::number,
+            palette,
+            visible,
+            motionEnabled,
+            Modifier.weight(1f, fill = false),
+            maxFontSize = 72.sp,
+        )
         Text(
             stringResource(Res.string.statistics_plays_label),
-            style = MaterialTheme.typography.titleLargeEmphasized.copy(fontWeight = FontWeight.Black),
+            Modifier.padding(bottom = 10.dp),
+            style = wrappedLabelStyle(),
+            maxLines = 1,
         )
     }
-    if (state.totalTimeMs > 0) {
-        Column {
-            Text(
-                statisticsDuration(state.totalTimeMs),
-                style = MaterialTheme.typography.headlineLargeEmphasized.copy(fontWeight = FontWeight.Black),
-            )
-            Text(stringResource(Res.string.wrapped_measured_time), style = MaterialTheme.typography.labelLarge)
-        }
-    }
+    WrappedPills(
+        listOfNotNull(statisticsDuration(state.totalTimeMs).takeIf { state.totalTimeMs > 0 }) + trio.map { it.first.title },
+        palette,
+        visible,
+        motionEnabled,
+    )
     Button(
         onClick = onShare,
         modifier = Modifier.fillMaxWidth().heightIn(min = 64.dp),
@@ -1131,11 +1203,9 @@ private fun WrappedSummary(
     ) {
         Icon(MetrolistIcons.Outlined.Share, null)
         Spacer(Modifier.width(10.dp))
-        Text(
-            stringResource(Res.string.wrapped_share_summary),
-            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.ExtraBold),
-        )
+        Text(stringResource(Res.string.wrapped_share_summary), style = wrappedLabelStyle(), maxLines = 1)
     }
-    Text(stringResource(Res.string.wrapped_history_scope), style = MaterialTheme.typography.bodyMedium)
-    Text(stringResource(Res.string.wrapped_merge_note), style = MaterialTheme.typography.bodySmall)
+    (notes + stringResource(Res.string.wrapped_history_scope) + stringResource(Res.string.wrapped_merge_note)).forEach {
+        Text(it, style = MaterialTheme.typography.bodySmall)
+    }
 }

@@ -77,6 +77,7 @@ internal fun MobileStatisticsScreen(
             onExport = onExport,
             exportLabel = stringResource(Res.string.share),
             bottomContentPadding = bottomContentPadding,
+            showBackButton = true,
         )
         return
     }

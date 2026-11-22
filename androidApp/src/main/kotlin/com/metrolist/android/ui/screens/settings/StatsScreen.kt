@@ -3,6 +3,7 @@ package com.metrolist.android.ui.screens.settings
 import android.widget.Toast
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -14,6 +15,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import com.metrolist.android.LocalMiniPlayerBottomInset
 import com.metrolist.android.playback.LocalPlayerConnection
+import com.metrolist.android.ui.LocalImmersiveContent
 import com.metrolist.android.ui.menu.AlbumMenu
 import com.metrolist.android.ui.menu.ArtistMenu
 import com.metrolist.android.ui.menu.SongMenu
@@ -65,13 +67,18 @@ fun StatsScreen(
     val shareLabel = stringResource(Res.string.share)
     var showWrapped by rememberSaveable { mutableStateOf(false) }
     if (showWrapped) {
+        // Wrapped runs edge to edge, so the mini player moves behind it.
+        val immersiveContent = LocalImmersiveContent.current
+        DisposableEffect(immersiveContent) {
+            immersiveContent.value = true
+            onDispose { immersiveContent.value = false }
+        }
         WrappedScreen(
             database = koinInject<MusicDatabase>(),
             playbackController = LocalPlaybackController.current,
             onBack = { showWrapped = false },
             onExport = { shareImage(context, it, shareLabel) },
             exportLabel = shareLabel,
-            bottomContentPadding = LocalMiniPlayerBottomInset.current,
         )
         return
     }

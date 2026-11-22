@@ -102,11 +102,6 @@ class WrappedSoundtrack internal constructor(
     private var incomingGain = 0f
     var playingSong by mutableStateOf<SongItem?>(null)
         private set
-    var preparedCount by mutableStateOf(0)
-        private set
-    var preparing by mutableStateOf(false)
-        private set
-    val songCount: Int get() = sessionSongs.size
     private var sessionSongs: List<SongItem> = emptyList()
     private var songIndex = 0
     private var sessionId = 0L
@@ -138,7 +133,11 @@ class WrappedSoundtrack internal constructor(
     ) {
         chapter = value
         this.cycleExcerpts = cycleExcerpts
-        if (enabled && prepared.isNotEmpty() && !cycleExcerpts) changeSong(value % sessionSongs.size)
+        if (enabled && prepared.isNotEmpty() && !cycleExcerpts) {
+            val index = value % sessionSongs.size
+            // Keep the current song until the chapter's own song has downloaded, so music never stops for a swipe.
+            if (prepared[index].isCompleted && !prepared[index].isCancelled) changeSong(index)
+        }
     }
 
     fun toggle() {
@@ -152,43 +151,48 @@ class WrappedSoundtrack internal constructor(
         sessionSongs = songs().distinctBy { it.id }.take(10)
         enabled = true
         loading = true
-        preparing = true
-        normalPlayback = controller.state.value
-        normalGeneration = controller.playbackReplacementGeneration
         songIndex = if (cycleExcerpts) 0 else chapter % sessionSongs.size
-        preparedCount = 0
         job =
             scope.launch {
                 try {
-                    if (normalPlayback?.isPlaying == true) {
-                        controller.togglePlayPause()
-                    }
-                    normalCommandGeneration = controller.playbackCommandGeneration
-                    if (normalPlayback?.isPlaying == true) {
-                        check(withTimeoutOrNull(3_000) { controller.state.first { !it.isPlaying } } != null)
-                    }
-                    if (!enabled || session != sessionId) return@launch
-                    pausedPositionMs = controller.currentPositionMs()
-                    if (!ownsPausedPlayback()) {
-                        stop(resume = false)
-                        return@launch
-                    }
                     val files =
                         createWrappedAudioLibrary {
                             scope.launch { if (session == sessionId) stop(resume = false) }
                         }
                     library = files
                     supervisorScope {
+                        // Normal playback keeps going while the opening song downloads alone, so the switch is immediate.
+                        val first = async { files.prepare(sessionSongs[songIndex]) }
+                        first.join()
+                        if (!enabled || session != sessionId) return@supervisorScope
+                        if (first.isCancelled) {
+                            fail()
+                            return@supervisorScope
+                        }
+                        normalPlayback = controller.state.value
+                        normalGeneration = controller.playbackReplacementGeneration
+                        if (normalPlayback?.isPlaying == true) {
+                            controller.togglePlayPause()
+                        }
+                        normalCommandGeneration = controller.playbackCommandGeneration
+                        if (normalPlayback?.isPlaying == true) {
+                            check(withTimeoutOrNull(3_000) { controller.state.first { !it.isPlaying } } != null)
+                        }
+                        if (!enabled || session != sessionId) return@supervisorScope
+                        pausedPositionMs = controller.currentPositionMs()
+                        if (!ownsPausedPlayback()) {
+                            stop(resume = false)
+                            return@supervisorScope
+                        }
                         val slots = Semaphore(2)
-                        val tasks =
-                            sessionSongs.indices.sortedBy { if (it == songIndex) 0 else 1 }.associateWith { index ->
-                                async {
-                                    slots.withPermit {
-                                        files.prepare(sessionSongs[index]).also { if (session == sessionId) preparedCount++ }
-                                    }
+                        prepared =
+                            sessionSongs.indices.map { index ->
+                                if (index == songIndex) {
+                                    first
+                                } else {
+                                    async { slots.withPermit { files.prepare(sessionSongs[index]) } }
                                 }
                             }
-                        prepared = sessionSongs.indices.map { tasks.getValue(it) }
                         changeSong(songIndex)
                         prepared.forEach { pending ->
                             try {
@@ -204,8 +208,6 @@ class WrappedSoundtrack internal constructor(
                     throw error
                 } catch (_: Exception) {
                     if (session == sessionId) fail()
-                } finally {
-                    if (session == sessionId) preparing = false
                 }
             }
     }
@@ -345,7 +347,6 @@ class WrappedSoundtrack internal constructor(
         sessionId++
         enabled = false
         loading = false
-        preparing = false
         job?.cancel()
         job = null
         transitionJob?.cancel()
@@ -364,7 +365,6 @@ class WrappedSoundtrack internal constructor(
         activeVoice = 0L
         pendingVoice = 0L
         playingSong = null
-        preparedCount = 0
         sessionSongs = emptyList()
         normalPlayback = null
         normalCommandGeneration = null

@@ -5600,18 +5600,14 @@
     <string name="wrapped_share_caption">Saved Metrolist and YouTube history. Older YouTube plays may be missing. Daily overlap uses the larger count. Time includes recorded durations only.</string>
     <string name="wrapped_share_summary">Share your summary</string>
     <string name="wrapped_soundtrack">Soundtrack</string>
-    <string name="wrapped_soundtrack_loading">Loading soundtrack</string>
-    <string name="wrapped_soundtrack_unavailable">The soundtrack is unavailable during shared playback, casting, or an active sleep timer.</string>
-    <string name="wrapped_soundtrack_partial">Some soundtrack songs could not preload. Turn the soundtrack off and on to retry.</string>
-    <string name="wrapped_soundtrack_failed">The soundtrack could not play. Your previous playback has been preserved. You can try again.</string>
     <string name="wrapped_lastfm_loading">Loading this year of Last.fm history…</string>
     <string name="wrapped_lastfm_failed">Last.fm could not refresh. This recap uses the last complete result from this visit, if available.</string>
     <string name="wrapped_lastfm_coverage">%1$s Last.fm scrobbles included; %2$s ambiguous scrobbles excluded. Metadata differences can leave some overlap undetected.</string>
     <string name="wrapped_share_lastfm_caption">Saved Metrolist and YouTube history, combined with Last.fm. Older YouTube plays may be missing. Matched songs use the largest daily count; unmatched Last.fm songs add plays. Time includes recorded durations only.</string>
-    <string name="wrapped_soundtrack_preparing">Preparing soundtrack: %1$s of %2$s songs</string>
-    <string name="wrapped_soundtrack_playing">Playing %1$s · %2$s</string>
     <string name="wrapped_sync_failed">YouTube history could not refresh. This recap uses history already saved on this device.</string>
     <string name="wrapped_top_song">Your top song</string>
     <string name="wrapped_top_artist">Your top artist</string>
     <string name="wrapped_top_album">Your top album</string>
+    <string name="wrapped_artist_mix">Your artist mix</string>
+    <string name="wrapped_minutes_listened">minutes listened</string>
 </resources>
