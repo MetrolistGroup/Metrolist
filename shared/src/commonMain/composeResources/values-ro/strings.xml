@@ -1854,8 +1854,8 @@
     <string name="widget_recognizer_notification_text">Se înregistrează audio pentru identificarea melodiei…</string>
     <string name="history_playlist_weekly">Melodii săptămânale de top</string>
     <string name="history_playlist_monthly">Melodii lunare de top</string>
-    <string name="settings_history_playlists">Playlist-uri din istoricul de ascultare</string>
-    <string name="settings_history_playlists_desc">Creează playlist-uri săptămânale și lunare din istoricul tău de ascultare. Se actualizează automat și apar în biblioteca ta.</string>
+    <string name="settings_history_playlists">Playlisturi din istoricul de ascultare</string>
+    <string name="settings_history_playlists_desc">Creează playlisturi săptămânale și lunare din istoricul tău de ascultare. Se actualizează automat și apar în biblioteca ta.</string>
     <string name="connected_devices">Dispozitive conectate</string>
     <string name="available_devices">Dispozitive disponibile</string>
     <string name="no_device_connected">Niciun dispozitiv conectat</string>
@@ -2190,7 +2190,7 @@
     <string name="settings_reset_to_default">Resetează la valorile prestabilite</string>
     <string name="remove_all_downloads">Elimină toate descărcările</string>
     <string name="disable_animated_artwork_on_mobile_data">Dezactivează copertele animate atunci când ești pe date mobile</string>
-    <string name="disable_animated_artwork_on_mobile_data_desc">Afișează coperți statice pe date mobile chiar și când acestea sunt în cache</string>
+    <string name="disable_animated_artwork_on_mobile_data_desc">Afișează coperte statice pe date mobile chiar și când acestea sunt în cache</string>
     <string name="hide_recent_searches">Ascunde „Din căutări recente”</string>
     <string name="credits_multiplatform_developer">Dezvoltator multiplatformă</string>
     <string name="credits_collaborators_section">Colaboratori</string>
