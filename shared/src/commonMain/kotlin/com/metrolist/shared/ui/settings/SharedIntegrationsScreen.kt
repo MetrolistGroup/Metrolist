@@ -394,6 +394,8 @@ private fun buildIntegrationsRegistry(
                 description = stringResource(Res.string.settings_discord_advanced_summary),
             ) {
                 settings.discordAdvancedMode = it
+                // Edit mode edits templates, which only apply while advanced mode is on.
+                if (!it) discordEditMode = false
                 notifyDiscordChanged()
             }
             if (settings.discordAdvancedMode || showAllDiscordSettings) {

@@ -935,10 +935,11 @@ private fun SettingsPullToRefreshPageList(
         },
         state = pullToRefreshState,
         indicator = {
+            // Keep the indicator below the top bar, which overlays the box on compact screens.
             RefreshIndicator(
                 state = pullToRefreshState,
                 isRefreshing = refreshing,
-                modifier = Modifier.align(Alignment.TopCenter),
+                modifier = Modifier.align(Alignment.TopCenter).padding(top = contentPadding.calculateTopPadding()),
             )
         },
         modifier = Modifier.fillMaxSize(),
