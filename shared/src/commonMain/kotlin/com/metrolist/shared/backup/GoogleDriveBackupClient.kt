@@ -27,6 +27,7 @@ import kotlinx.io.RawSource
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import kotlin.time.Clock
 
 class GoogleDriveBackupClient(
     brokerUrl: String,
@@ -44,31 +45,33 @@ class GoogleDriveBackupClient(
     ): DriveBackupFile {
         require(filename.isNotBlank() && filename.none { it == '/' || it == '\\' })
         require(archiveSize > 0)
-        val accessToken = broker.accessToken(sessionToken).accessToken
-        val folderIds = getOrCreateBackupFolders(accessToken)
+        val tokens = DriveAccessTokenProvider(broker, sessionToken)
+        val folderIds = getOrCreateBackupFolders(tokens)
         val metadata =
             DriveCreateMetadata(
                 name = filename,
                 mimeType = "application/zip",
-                parents = listOf(folderIds.first()),
+                parents = folderIds,
                 appProperties = mapOf(APP_PROPERTY_KEY to "true"),
             )
         val uploadUrl =
-            httpClient
-                .post(DRIVE_UPLOAD_URL) {
-                    header(HttpHeaders.Authorization, "Bearer $accessToken")
-                    header(UPLOAD_CONTENT_TYPE_HEADER, ContentType.Application.Zip.toString())
-                    header(UPLOAD_CONTENT_LENGTH_HEADER, archiveSize.toString())
-                    parameter("uploadType", "resumable")
-                    parameter("fields", "id,name,modifiedTime")
-                    contentType(ContentType.Application.Json)
-                    setBody(Json.encodeToString(metadata))
-                }.requireDriveApiSuccess()
+            authenticatedRequest(tokens) { token ->
+                httpClient
+                    .post(DRIVE_UPLOAD_URL) {
+                        header(HttpHeaders.Authorization, "Bearer $token")
+                        header(UPLOAD_CONTENT_TYPE_HEADER, ContentType.Application.Zip.toString())
+                        header(UPLOAD_CONTENT_LENGTH_HEADER, archiveSize.toString())
+                        parameter("uploadType", "resumable")
+                        parameter("fields", "id,name,modifiedTime")
+                        contentType(ContentType.Application.Json)
+                        setBody(Json.encodeToString(metadata))
+                    }
+            }.requireDriveApiSuccess()
                 .headers[HttpHeaders.Location]
                 ?.also(::requireSafeUploadUrl)
                 ?: error("Drive did not provide a resumable upload URL")
-        val uploaded = uploadArchive(accessToken, uploadUrl, archiveSize, archiveSource)
-        val cleanupError = runCatching { pruneOldBackups(accessToken, folderIds) }.exceptionOrNull()
+        val uploaded = uploadArchive(tokens, uploadUrl, archiveSize, archiveSource)
+        val cleanupError = runCatching { pruneOldBackups(tokens, folderIds) }.exceptionOrNull()
         if (cleanupError != null) {
             if (cleanupError is CancellationException) throw cleanupError
             Logger.w("GoogleDriveBackup", "Could not prune expired Drive backups", cleanupError)
@@ -78,14 +81,14 @@ class GoogleDriveBackupClient(
     }
 
     suspend fun cleanupBackups(sessionToken: String) {
-        val accessToken = broker.accessToken(sessionToken).accessToken
-        val folderIds = findBackupFolders(accessToken)
+        val tokens = DriveAccessTokenProvider(broker, sessionToken)
+        val folderIds = findBackupFolders(tokens)
         if (folderIds.isEmpty()) return
-        pruneOldBackups(accessToken, folderIds)
+        pruneOldBackups(tokens, folderIds)
     }
 
     private suspend fun uploadArchive(
-        accessToken: String,
+        tokens: DriveAccessTokenProvider,
         uploadUrl: String,
         archiveSize: Long,
         archiveSource: () -> RawSource,
@@ -95,18 +98,20 @@ class GoogleDriveBackupClient(
         while (offset < archiveSize) {
             val response =
                 try {
-                    httpClient.put(uploadUrl) {
-                        header(HttpHeaders.Authorization, "Bearer $accessToken")
-                        header(HttpHeaders.ContentRange, "bytes $offset-${archiveSize - 1}/$archiveSize")
-                        contentType(ContentType.Application.Zip)
-                        timeout { requestTimeoutMillis = UPLOAD_TIMEOUT_MILLIS }
-                        setBody(ArchiveChunkContent(archiveSize - offset, archiveSource, offset))
+                    authenticatedRequest(tokens) { token ->
+                        httpClient.put(uploadUrl) {
+                            header(HttpHeaders.Authorization, "Bearer $token")
+                            header(HttpHeaders.ContentRange, "bytes $offset-${archiveSize - 1}/$archiveSize")
+                            contentType(ContentType.Application.Zip)
+                            timeout { requestTimeoutMillis = UPLOAD_TIMEOUT_MILLIS }
+                            setBody(ArchiveChunkContent(archiveSize - offset, archiveSource, offset))
+                        }
                     }
                 } catch (cancelled: CancellationException) {
                     throw cancelled
                 } catch (error: Exception) {
                     if (retries++ >= MAX_UPLOAD_RETRIES) throw error
-                    val progress = queryUploadOffset(accessToken, uploadUrl, archiveSize)
+                    val progress = queryUploadOffset(tokens, uploadUrl, archiveSize)
                     progress.completed?.let { return it }
                     if (progress.offset > offset) retries = 0
                     offset = progress.offset
@@ -123,21 +128,37 @@ class GoogleDriveBackupClient(
     }
 
     private suspend fun queryUploadOffset(
-        accessToken: String,
+        tokens: DriveAccessTokenProvider,
         uploadUrl: String,
         archiveSize: Long,
     ): UploadProgress {
         val response =
-            httpClient.put(uploadUrl) {
-                header(HttpHeaders.Authorization, "Bearer $accessToken")
-                header(HttpHeaders.ContentRange, "bytes */$archiveSize")
-                setBody(ByteArray(0))
+            authenticatedRequest(tokens) { token ->
+                httpClient.put(uploadUrl) {
+                    header(HttpHeaders.Authorization, "Bearer $token")
+                    header(HttpHeaders.ContentRange, "bytes */$archiveSize")
+                    setBody(ByteArray(0))
+                }
             }
         if (response.status == HttpStatusCode.OK || response.status == HttpStatusCode.Created) {
             return UploadProgress(archiveSize, response.body())
         }
         if (response.status != HttpStatusCode.PermanentRedirect) throw DriveBrokerException(response.status.value)
         return UploadProgress(acknowledgedOffset(response.headers[HttpHeaders.Range], archiveSize), null)
+    }
+
+    private suspend fun authenticatedRequest(
+        tokens: DriveAccessTokenProvider,
+        request: suspend (String) -> HttpResponse,
+    ): HttpResponse {
+        val firstToken = tokens.current()
+        val firstResponse = request(firstToken)
+        if (firstResponse.status != HttpStatusCode.Unauthorized) return firstResponse
+        val refreshed = tokens.refresh()
+        // The broker maps confirmed credential loss to a reauthorization error; an unchanged
+        // token means the 401 was not an expiry, so let the caller handle the original response.
+        if (refreshed == firstToken) return firstResponse
+        return request(refreshed)
     }
 
     private fun acknowledgedOffset(
@@ -148,48 +169,52 @@ class GoogleDriveBackupClient(
         return (lastByte + 1).coerceAtMost(archiveSize)
     }
 
-    private suspend fun findBackupFolders(accessToken: String): List<String> {
+    private suspend fun findBackupFolders(tokens: DriveAccessTokenProvider): List<String> {
         val folderIds = mutableListOf<String>()
         var pageToken: String? = null
         do {
             val page =
-                httpClient
-                    .get("https://www.googleapis.com/drive/v3/files") {
-                        header(HttpHeaders.Authorization, "Bearer $accessToken")
-                        parameter(
-                            "q",
-                            "name = '$BACKUP_FOLDER_NAME' and mimeType = '$FOLDER_MIME_TYPE' and trashed = false",
-                        )
-                        parameter("fields", "nextPageToken,files(id)")
-                        parameter("pageSize", "100")
-                        pageToken?.let { parameter("pageToken", it) }
-                    }.requireDriveApiSuccess()
+                authenticatedRequest(tokens) { token ->
+                    httpClient
+                        .get("https://www.googleapis.com/drive/v3/files") {
+                            header(HttpHeaders.Authorization, "Bearer $token")
+                            parameter(
+                                "q",
+                                "name = '$BACKUP_FOLDER_NAME' and mimeType = '$FOLDER_MIME_TYPE' and trashed = false",
+                            )
+                            parameter("fields", "nextPageToken,files(id)")
+                            parameter("pageSize", "100")
+                            pageToken?.let { parameter("pageToken", it) }
+                        }
+                }.requireDriveApiSuccess()
                     .body<DriveFileList>()
             folderIds += page.files.map { it.id }
             pageToken = page.nextPageToken
         } while (pageToken != null)
-        return folderIds
+        return folderIds.distinct()
     }
 
-    private suspend fun getOrCreateBackupFolders(accessToken: String): List<String> {
-        val existing = findBackupFolders(accessToken)
+    private suspend fun getOrCreateBackupFolders(tokens: DriveAccessTokenProvider): List<String> {
+        val existing = findBackupFolders(tokens)
         if (existing.isNotEmpty()) return existing
         val created =
-            httpClient
-                .post("https://www.googleapis.com/drive/v3/files") {
-                    header(HttpHeaders.Authorization, "Bearer $accessToken")
-                    contentType(ContentType.Application.Json)
-                    parameter("fields", "id")
-                    setBody(DriveCreateMetadata(BACKUP_FOLDER_NAME, FOLDER_MIME_TYPE))
-                }.requireDriveApiSuccess()
+            authenticatedRequest(tokens) { token ->
+                httpClient
+                    .post("https://www.googleapis.com/drive/v3/files") {
+                        header(HttpHeaders.Authorization, "Bearer $token")
+                        contentType(ContentType.Application.Json)
+                        parameter("fields", "id")
+                        setBody(DriveCreateMetadata(BACKUP_FOLDER_NAME, FOLDER_MIME_TYPE))
+                    }
+            }.requireDriveApiSuccess()
                 .body<DriveBackupFile>()
                 .id
-        // Another device can create the same folder between the search and this request.
-        return findBackupFolders(accessToken).ifEmpty { listOf(created) }
+        // Concurrent first backups can create several folders; keep every match as a parent and prune across all of them.
+        return (existing + created + findBackupFolders(tokens)).distinct()
     }
 
     private suspend fun pruneOldBackups(
-        accessToken: String,
+        tokens: DriveAccessTokenProvider,
         folderIds: List<String>,
     ) {
         val parentQuery = folderIds.joinToString(" or ") { "'$it' in parents" }
@@ -197,36 +222,43 @@ class GoogleDriveBackupClient(
         var pageToken: String? = null
         do {
             val page =
-                httpClient
-                    .get("https://www.googleapis.com/drive/v3/files") {
-                        header(HttpHeaders.Authorization, "Bearer $accessToken")
-                        parameter(
-                            "q",
-                            "($parentQuery) and appProperties has { key='$APP_PROPERTY_KEY' and value='true' } and trashed = false",
-                        )
-                        parameter("orderBy", "modifiedTime desc")
-                        parameter("fields", "nextPageToken,files(id,name,modifiedTime)")
-                        parameter("pageSize", "100")
-                        pageToken?.let { parameter("pageToken", it) }
-                    }.requireDriveApiSuccess()
+                authenticatedRequest(tokens) { token ->
+                    httpClient
+                        .get("https://www.googleapis.com/drive/v3/files") {
+                            header(HttpHeaders.Authorization, "Bearer $token")
+                            parameter(
+                                "q",
+                                "($parentQuery) and appProperties has { key='$APP_PROPERTY_KEY' and value='true' } and trashed = false",
+                            )
+                            parameter("orderBy", "modifiedTime desc")
+                            parameter("fields", "nextPageToken,files(id,name,modifiedTime)")
+                            parameter("pageSize", "100")
+                            pageToken?.let { parameter("pageToken", it) }
+                        }
+                }.requireDriveApiSuccess()
                     .body<DriveFileList>()
             files += page.files
             pageToken = page.nextPageToken
         } while (pageToken != null)
         val failures = mutableListOf<Throwable>()
-        files.drop(MAX_RETAINED_BACKUPS).forEach { file ->
-            try {
-                httpClient
-                    .delete("https://www.googleapis.com/drive/v3/files/${file.id}") {
-                        header(HttpHeaders.Authorization, "Bearer $accessToken")
+        files
+            .distinctBy { it.id }
+            .drop(MAX_RETAINED_BACKUPS)
+            .forEach { file ->
+                try {
+                    authenticatedRequest(tokens) { token ->
+                        httpClient
+                            .delete("https://www.googleapis.com/drive/v3/files/${file.id}") {
+                                header(HttpHeaders.Authorization, "Bearer $token")
+                            }
                     }.requireDriveApiSuccess()
-            } catch (cancelled: CancellationException) {
-                throw cancelled
-            } catch (error: Exception) {
-                Logger.w("GoogleDriveBackup", "Could not delete expired backup ${file.id}", error)
-                failures += error
+                } catch (cancelled: CancellationException) {
+                    throw cancelled
+                } catch (error: Exception) {
+                    Logger.w("GoogleDriveBackup", "Could not delete expired backup ${file.id}", error)
+                    failures += error
+                }
             }
-        }
         if (failures.isNotEmpty()) throw DriveCleanupException(failures)
     }
 
@@ -240,6 +272,30 @@ class GoogleDriveBackupClient(
         const val FOLDER_MIME_TYPE = "application/vnd.google-apps.folder"
         const val APP_PROPERTY_KEY = "metrolistBackup"
         const val MAX_RETAINED_BACKUPS = 10
+    }
+}
+
+/** Keeps a resumable upload on the same session even when the broker token expires mid-transfer. */
+private class DriveAccessTokenProvider(
+    private val broker: DriveTokenBrokerClient,
+    private val sessionToken: String,
+) {
+    private var accessToken: String? = null
+    private var expiresAtMillis = 0L
+
+    suspend fun current(): String = accessToken?.takeIf { expiresAtMillis > Clock.System.now().toEpochMilliseconds() } ?: refresh()
+
+    suspend fun refresh(): String {
+        val token = broker.accessToken(sessionToken)
+        accessToken = token.accessToken
+        expiresAtMillis =
+            Clock.System.now().toEpochMilliseconds() +
+            (token.expiresIn - TOKEN_REFRESH_MARGIN_SECONDS).coerceAtLeast(0) * 1000
+        return token.accessToken
+    }
+
+    private companion object {
+        const val TOKEN_REFRESH_MARGIN_SECONDS = 60L
     }
 }
 
