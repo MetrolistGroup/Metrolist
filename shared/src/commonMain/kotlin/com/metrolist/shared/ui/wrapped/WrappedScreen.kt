@@ -795,7 +795,7 @@ private fun WrappedStage(
     content: @Composable BoxScope.(side: Dp) -> Unit,
 ) {
     BoxWithConstraints(Modifier.fillMaxWidth()) {
-        val side = minOf(maxWidth, 420.dp)
+        val side = minOf(maxWidth * 0.86f, 340.dp)
         Box(
             Modifier.fillMaxWidth().height(side).wrappedPattern(pattern, palette, motionEnabled, spin, bottomBleed = bottomBleed),
             contentAlignment = Alignment.Center,

@@ -16,6 +16,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -56,7 +57,7 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.drawscope.clipRect
+import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.lerp
@@ -65,6 +66,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Density
@@ -223,7 +225,24 @@ internal fun Modifier.wrappedPattern(
         }
     return drawBehind {
         val edge = bleed.toPx()
-        clipRect(-edge, -edge, size.width + edge, size.height + bottomBleed.toPx()) {
+        val bottom = size.height + bottomBleed.toPx()
+        val amplitude = 7.dp.toPx()
+        val wavelength = 44.dp.toPx()
+        val shift = (phase?.value ?: 0f) * 2f * PI.toFloat()
+        // A wavy lower edge keeps the pattern from ending in a flat cut behind the headline.
+        val clip =
+            Path().apply {
+                moveTo(-edge, -edge)
+                lineTo(size.width + edge, -edge)
+                var x = size.width + edge
+                lineTo(x, bottom)
+                while (x > -edge) {
+                    x -= 4.dp.toPx()
+                    lineTo(x, bottom - amplitude + sin(x / wavelength * 2f * PI.toFloat() + shift) * amplitude)
+                }
+                close()
+            }
+        clipPath(clip) {
             val swipe = if (motionEnabled) spin() else 0f
             drawWrappedPattern(pattern, palette, phase?.value ?: 0f, swipe, edge, bottomBleed.toPx())
         }
@@ -403,9 +422,23 @@ internal fun WrappedHeadline(
             fontFeatureSettings = "tnum",
             textAlign = textAlign,
         )
-    val autoSize = TextAutoSize.StepBased(minFontSize = minFontSize, maxFontSize = maxFontSize)
     val outline = Stroke(outlineWidth, join = StrokeJoin.Round)
-    Box(modifier) {
+    val measurer = rememberTextMeasurer()
+    BoxWithConstraints(modifier) {
+        // Cap the size so the widest word fits on one line; auto-size alone happily splits words.
+        val room = constraints.maxWidth - with(LocalDensity.current) { (depth + 6.dp).roundToPx() }
+        val widest =
+            remember(text, style, maxFontSize, room) {
+                text.split(' ').filter { it.isNotEmpty() }.maxOfOrNull {
+                    measurer.measure(it, style.copy(fontSize = maxFontSize), softWrap = false, maxLines = 1).size.width
+                } ?: 0
+            }
+        val fitted = if (widest > room && room > 0) maxFontSize * (room.toFloat() / widest) else maxFontSize
+        val autoSize =
+            TextAutoSize.StepBased(
+                minFontSize = minFontSize,
+                maxFontSize = if (fitted.value < minFontSize.value) minFontSize else fitted,
+            )
         val layer = Modifier.fillMaxWidth().clearAndSetSemantics {}
         Text(
             text,
