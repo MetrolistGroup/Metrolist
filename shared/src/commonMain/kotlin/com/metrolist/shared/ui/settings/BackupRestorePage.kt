@@ -115,6 +115,21 @@ fun BackupRestorePage(
     var showRestoreWarning by remember { mutableStateOf(false) }
     var warningSeconds by remember { mutableIntStateOf(5) }
     val driveDestinationAvailable = driveAvailable && driveConnected
+    val selectedDestination =
+        if (driveDestinationAvailable) {
+            AutoBackupDestination.fromSetting(settings.autoBackupDestination)
+        } else {
+            AutoBackupDestination.LOCAL
+        }
+
+    LaunchedEffect(driveAvailable) {
+        if (!driveAvailable &&
+            AutoBackupDestination.fromSetting(settings.autoBackupDestination) == AutoBackupDestination.GOOGLE_DRIVE
+        ) {
+            settings.autoBackupDestination = AutoBackupDestination.LOCAL.name
+            onAutoBackupSettingsChanged()
+        }
+    }
 
     LaunchedEffect(showBackupWarning) {
         if (showBackupWarning) {
@@ -179,43 +194,38 @@ fun BackupRestorePage(
                 }
             }
         }
-        if (driveAvailable) {
-            Text(stringResource(Res.string.automatic_backup_destination), style = MaterialTheme.typography.titleSmall)
-            listOf(AutoBackupDestination.LOCAL, AutoBackupDestination.GOOGLE_DRIVE).forEach { destination ->
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    RadioButton(
-                        selected =
-                            if (!driveDestinationAvailable) {
-                                destination == AutoBackupDestination.LOCAL
-                            } else {
-                                AutoBackupDestination.fromSetting(settings.autoBackupDestination) == destination
-                            },
-                        onClick = {
-                            if (destination == AutoBackupDestination.GOOGLE_DRIVE) {
-                                pendingDriveDestination = destination
-                                showBackupWarning = true
-                            } else {
-                                settings.autoBackupDestination = destination.name
-                                onAutoBackupSettingsChanged()
-                            }
+        Text(stringResource(Res.string.automatic_backup_destination), style = MaterialTheme.typography.titleSmall)
+        listOf(AutoBackupDestination.LOCAL, AutoBackupDestination.GOOGLE_DRIVE).forEach { destination ->
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                RadioButton(
+                    selected = selectedDestination == destination,
+                    onClick = {
+                        if (destination == AutoBackupDestination.GOOGLE_DRIVE) {
+                            pendingDriveDestination = destination
+                            showBackupWarning = true
+                        } else {
+                            settings.autoBackupDestination = destination.name
+                            onAutoBackupSettingsChanged()
+                        }
+                    },
+                    enabled = settings.autoBackupEnabled && (destination == AutoBackupDestination.LOCAL || driveDestinationAvailable),
+                )
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    stringResource(
+                        if (destination == AutoBackupDestination.LOCAL) {
+                            Res.string.automatic_backup_local
+                        } else {
+                            Res.string.automatic_backup_google_drive
                         },
-                        enabled = settings.autoBackupEnabled && (destination == AutoBackupDestination.LOCAL || driveDestinationAvailable),
-                    )
-                    Spacer(Modifier.width(8.dp))
-                    Text(
-                        stringResource(
-                            if (destination == AutoBackupDestination.LOCAL) {
-                                Res.string.automatic_backup_local
-                            } else {
-                                Res.string.automatic_backup_google_drive
-                            },
-                        ),
-                    )
-                }
+                    ),
+                )
             }
+        }
+        if (driveAvailable) {
             Button(
                 onClick = {
                     DriveAccountConnectionState.clearSignInFailure()
