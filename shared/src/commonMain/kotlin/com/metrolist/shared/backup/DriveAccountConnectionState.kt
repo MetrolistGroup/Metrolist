@@ -1,6 +1,7 @@
 package com.metrolist.shared.backup
 
 import com.metrolist.shared.settings.Settings
+import com.metrolist.shared.utils.Logger
 import kotlinx.coroutines.flow.MutableStateFlow
 
 object DriveAccountConnectionState {
@@ -45,13 +46,15 @@ object DriveAccountConnectionState {
     fun recordCleanupFailure() {
         val settings = Settings.shared
         settings.driveCleanupPending = true
-        settings.flush()
+        runCatching { settings.flush() }
+            .onFailure { error -> Logger.w("DriveBackup", "Could not persist cleanup warning", error) }
     }
 
     fun clearCleanupFailure() {
         val settings = Settings.shared
         settings.driveCleanupPending = false
-        settings.flush()
+        runCatching { settings.flush() }
+            .onFailure { error -> Logger.w("DriveBackup", "Could not clear cleanup warning", error) }
     }
 
     private fun clearConnectedAccount() {
