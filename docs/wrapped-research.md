@@ -47,7 +47,7 @@ All three platforms can calculate a recap without a new Metrolist server. This m
 
 1. Use Metrolist's stored history as the default source. This reuses existing retention, exclusions and unknown-duration handling. It needs no new login. Android and desktop Statistics rank by play count, while the mobile iOS statistics loader ranks by measured time. Wrapped must use its own consistent rule across platforms.
 2. Keep discovered YouTube recap playlists as playable playlist links. Do not make the local recap depend on their availability. The public [YouTube Data API](https://developers.google.com/youtube/data/reference/rest/v3/playlistItems/list) does not offer a supported watch-history retrieval path. Existing InnerTube history is a separate integration with its current precision limits.
-3. Add Last.fm as an explicit alternative report source if requested. The shared client already supports scrobbling, recent tracks and top tracks. [user.getTopTracks](https://www.last.fm/api/show/user.getTopTracks) offers relative periods, including 12 months. An exact calendar year needs dated scrobbles or weekly chart aggregation, rather than treating a rolling 12-month chart as a calendar year. Scrobble counts do not establish exact listening minutes.
+3. Last.fm is now an approved merged report source when already signed in. The shared client already supports scrobbling, recent tracks and top tracks. [user.getTopTracks](https://www.last.fm/api/show/user.getTopTracks) offers relative periods, including 12 months. An exact calendar year needs dated scrobbles or weekly chart aggregation, rather than treating a rolling 12-month chart as a calendar year. Scrobble counts do not establish exact listening minutes.
 4. Add ListenBrainz as another explicit source if requested. Its documented year-in-music endpoint can provide a prepared annual report, while activity and ranking endpoints support other ranges. The current Metrolist client submits listens and validates tokens; reading reports is new work. Reports can be missing or not yet calculated, and their fields retain the service's definitions.
 5. Treat Google Takeout or other history-file imports as separate import work. Parse recorded fixtures, preserve provenance and unknown duration, and deduplicate against existing events before including them in statistics. A file export is not automatically a complete history.
 
@@ -69,13 +69,13 @@ The smaller option is a dedicated recap summary and poster inside Statistics. St
 
 - Chapters on Android and iOS, with a scrollable desktop report.
 - The current calendar year through today, available from Statistics throughout the year.
-- Merged saved YouTube and Metrolist history, using the larger source count for each song and local date group. Preserve recorded time and stored history.
+- Merge saved YouTube and Metrolist history with signed-in Last.fm scrobbles. Uniquely matched artist/title pairs use the largest local-day count across the sources. Preserve live, remix and version labels. Unmatched Last.fm tracks add plays; ambiguous matches are excluded and reported. Preserve recorded time and stored history.
 - Rank songs, artists and albums by play count, and show measured listening time separately.
 - Material 3 Expressive, following the official [motion physics guidance](https://m3.material.io/styles/motion/overview/how-it-works) and existing app typography, shapes and color roles.
-- An opt-in top-song soundtrack that preserves regular playback and restores it on exit while the temporary session still owns it.
+- An opt-in top-song soundtrack. Prepare all selected songs when enabled, change with settled mobile chapters, cycle short desktop excerpts and crossfade between songs. Restore regular playback on exit while the temporary session still owns it.
 - One locally generated summary PNG.
 
-New history providers, a mobile Home shortcut, streaks, video export, playlist creation and comparisons are outside the selected first scope.
+A mobile Home shortcut, streaks, video export, playlist creation and comparisons remain outside the selected scope.
 
 The manual Android build workflow accepts a release variant and requires release signing. Build the APK from the reviewed PR revision and install it as an update to preserve existing app data. An in-place update requires the same application ID, a version code at least as high as the installed app, and a matching signing certificate or valid proof of signing-key rotation. If Android rejects the update, do not uninstall the existing app to bypass the rejection.
 
@@ -113,3 +113,16 @@ The observed official recap described a seasonal period, not the selected curren
 [Google's history guidance](https://support.google.com/youtubemusic/answer/6364666) directs Music users to Manage watch history and confirms that watch-history settings are shared with YouTube. Google My Activity is a possible source of retained activity, but the existing YouTube cookie bundle produced its signed-out page in the desktop probe. An HTTP 200, bootstrap script or activity callback name does not establish an authenticated response. The application's embedded desktop WebView was also opened with its existing profile and reported the signed-out My Activity bundle, without activity cards. A full-year Music retrieval path remains unverified. Wrapped and its PNG therefore identify saved history and warn that older YouTube plays can be missing.
 
 The desktop test session was not proven to be the same account as the phone session. Their records and totals must not be combined or used for an account-matched comparison.
+
+
+## Soundtrack and Last.fm follow-up
+
+The soundtrack prepares validated temporary audio for up to ten selected songs, with two downloads at once and at most two active decoders. It uses the existing direct-range and SABR download validation. Each file is limited to 32 MiB. Preparation starts with the selected mobile chapter. Android owns audio focus once for the whole session, so crossfading voices cannot interrupt one another. The shared coordinator uses an equal-power 800 ms fade. Desktop changes excerpts every 15 seconds. Volume, playback-command ownership, interruption handling and cancellation still apply. Temporary files never become library downloads or scrobbles and are deleted when the session closes.
+
+[Last.fm dated history](https://www.last.fm/api/show/user.getRecentTracks) accepts UTC `from` and `to` bounds, pages of up to 200 records and a page count. Wrapped freezes the end bound during pagination, ignores now-playing entries and requires all reported scrobbles before replacing its in-memory result. It uses the approved overlap rule and keeps measured Metrolist time separate. Matching folds case and whitespace only. It does not strip version labels or guess YouTube IDs for unmatched tracks.
+
+Further desktop probes on November 22 again found recent Music shelves without a continuation. General YouTube history returned a message-only page in that desktop test account. The native recap selector and numeric variants returned message-only responses through the web Music client. Those results do not identify a working annual selector. The desktop test account has not been established as the phone account, so their histories cannot be compared.
+
+Google explicitly says [Recap uses music listening across YouTube platforms](https://support.google.com/youtubemusic/answer/11418178), and its annual eligibility window ends on November 15. A native annual total would therefore still differ from this current-year-through-today report. Classifying general-history videos through Music queue metadata does not establish per-play timestamps or multiplicity. A full-year YouTube event ledger through the current cookie login remains unverified. Further runtime testing is restricted to desktop; the phone is for installation only.
+
+The local desktop build had no Last.fm API key, so live pagination for the signed-in account remains unverified. A disposable SQLite database verified daily maxima, historical metadata matching, version separation, ambiguous matches, exclusions, artist totals and unchanged stored events. Desktop runtime checks prepared all ten selected songs, observed multiple excerpt changes and removed session audio after rapid cancellation. Playback used muted output. Native iOS runtime checks remain outstanding.

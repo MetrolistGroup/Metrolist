@@ -2,26 +2,13 @@
 
 package com.metrolist.shared.ui.wrapped
 
-import com.metrolist.shared.model.SongItem
 import com.metrolist.shared.playback.IosKeyValueObservation
-import com.metrolist.shared.playback.iosPlaybackAudioQuality
-import com.metrolist.shared.playback.requiresIosAudioCapture
-import com.metrolist.shared.playback.resolveIosAudioResource
-import com.metrolist.shared.playback.withIosAudioCapabilities
-import com.metrolist.shared.settings.Settings
-import com.metrolist.shared.state.GlobalYouTube
-import com.metrolist.shared.state.GlobalYouTubeRepository
-import com.metrolist.shared.storage.IosPlaybackCache
-import com.metrolist.shared.storage.IosPlaybackCapture
-import com.metrolist.shared.youtube.extraction.models.toContentHints
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
-import kotlinx.coroutines.currentCoroutineContext
-import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withTimeoutOrNull
 import platform.AVFAudio.AVAudioSession
 import platform.AVFAudio.AVAudioSessionCategoryPlayback
@@ -66,8 +53,6 @@ private class IosWrappedAudioPlayer(
 ) : WrappedAudioPlayer {
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
     private val player = AVPlayer().apply { volume = initialVolume }
-    private val cache = IosPlaybackCache(GlobalYouTube.client, scope, directoryName = "wrapped-soundtrack")
-    private var capture: IosPlaybackCapture? = null
     private var observation: IosKeyValueObservation? = null
     private val itemObservers = mutableListOf<NSObjectProtocol>()
     private val sessionObservers = mutableListOf<NSObjectProtocol>()
@@ -91,24 +76,10 @@ private class IosWrappedAudioPlayer(
             }
     }
 
-    override suspend fun play(song: SongItem) {
+    override suspend fun prepare(path: String) {
         check(!closed)
         clearItem()
-        val resolver = checkNotNull(GlobalYouTubeRepository.streamResolver)
-        val resource =
-            resolveIosAudioResource(iosPlaybackAudioQuality(Settings.shared.audioQuality)) { quality, refresh, allowHls ->
-                val hints = song.toContentHints(wantVideo = false).withIosAudioCapabilities(allowHls)
-                if (refresh) resolver.refresh(song.id, hints, quality, song) else resolver.resolve(song.id, hints, quality, song)
-            }
-        currentCoroutineContext().ensureActive()
-        check(!closed)
-        capture = cache.acquire(resource)?.also { it.mayPublish = false }
-        check(!resource.requiresIosAudioCapture || capture != null)
-        val asset =
-            capture?.asset ?: AVURLAsset(
-                uRL = checkNotNull(NSURL.URLWithString(resource.url)),
-                options = resource.headers.takeIf { it.isNotEmpty() }?.let { mapOf("AVURLAssetHTTPHeaderFieldsKey" to it) },
-            )
+        val asset = AVURLAsset(uRL = NSURL.fileURLWithPath(path), options = null)
         val item = AVPlayerItem(asset = asset)
         val ready = CompletableDeferred<Unit>()
 
@@ -141,7 +112,6 @@ private class IosWrappedAudioPlayer(
         val session = AVAudioSession.sharedInstance()
         if (session.category != AVAudioSessionCategoryPlayback) check(session.setCategory(AVAudioSessionCategoryPlayback, error = null))
         check(session.setActive(true, error = null))
-        player.play()
         sample()
         check(
             withTimeoutOrNull(120_000) {
@@ -149,6 +119,11 @@ private class IosWrappedAudioPlayer(
                 true
             } == true,
         )
+    }
+
+    override fun play() {
+        check(!closed)
+        player.play()
     }
 
     private fun clearItem() {
@@ -159,8 +134,6 @@ private class IosWrappedAudioPlayer(
         itemObservers.forEach { center.removeObserver(it) }
         itemObservers.clear()
         player.replaceCurrentItemWithPlayerItem(null)
-        cache.release(capture)
-        capture = null
     }
 
     override fun close() {
@@ -169,7 +142,6 @@ private class IosWrappedAudioPlayer(
         val center = NSNotificationCenter.defaultCenter
         sessionObservers.forEach { center.removeObserver(it) }
         sessionObservers.clear()
-        cache.close()
         scope.cancel()
     }
 }

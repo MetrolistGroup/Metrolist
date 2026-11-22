@@ -89,6 +89,8 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
+import com.metrolist.shared.api.lastfm.LastFM
+import com.metrolist.shared.api.lastfm.LastFmListen
 import com.metrolist.shared.db.HistoryStatisticsSnapshot
 import com.metrolist.shared.db.HistorySyncOutcome
 import com.metrolist.shared.db.MusicDatabase
@@ -110,19 +112,28 @@ import com.metrolist.shared.generated.resources.wrapped_chapter
 import com.metrolist.shared.generated.resources.wrapped_cover_heading
 import com.metrolist.shared.generated.resources.wrapped_empty
 import com.metrolist.shared.generated.resources.wrapped_history_scope
+import com.metrolist.shared.generated.resources.wrapped_lastfm_coverage
+import com.metrolist.shared.generated.resources.wrapped_lastfm_failed
+import com.metrolist.shared.generated.resources.wrapped_lastfm_loading
 import com.metrolist.shared.generated.resources.wrapped_measured_time
 import com.metrolist.shared.generated.resources.wrapped_merge_note
 import com.metrolist.shared.generated.resources.wrapped_share_caption
+import com.metrolist.shared.generated.resources.wrapped_share_lastfm_caption
 import com.metrolist.shared.generated.resources.wrapped_share_summary
 import com.metrolist.shared.generated.resources.wrapped_soundtrack
 import com.metrolist.shared.generated.resources.wrapped_soundtrack_failed
 import com.metrolist.shared.generated.resources.wrapped_soundtrack_loading
+import com.metrolist.shared.generated.resources.wrapped_soundtrack_partial
+import com.metrolist.shared.generated.resources.wrapped_soundtrack_playing
+import com.metrolist.shared.generated.resources.wrapped_soundtrack_preparing
 import com.metrolist.shared.generated.resources.wrapped_soundtrack_unavailable
 import com.metrolist.shared.generated.resources.wrapped_summary
 import com.metrolist.shared.generated.resources.wrapped_sync_failed
 import com.metrolist.shared.generated.resources.wrapped_time_coverage
 import com.metrolist.shared.generated.resources.wrapped_time_heading
 import com.metrolist.shared.generated.resources.wrapped_year
+import com.metrolist.shared.settings.Settings
+import com.metrolist.shared.state.GlobalYouTube
 import com.metrolist.shared.ui.components.ContainedLoadingIndicator
 import com.metrolist.shared.ui.icons.MetrolistIcons
 import com.metrolist.shared.ui.navigation.NavigationBackHandler
@@ -172,19 +183,58 @@ fun WrappedScreen(
     desktopLayout: Boolean = false,
     bottomContentPadding: Dp = 0.dp,
 ) {
+    val formatter = rememberStatisticsFormatter()
     val today = Clock.System.todayIn(TimeZone.currentSystemDefault())
     val range = remember(today) { StatisticsDateRange(LocalDate(today.year, 1, 1), today) }
     var refreshKey by remember { mutableIntStateOf(0) }
-    var snapshot by remember(database, range) { mutableStateOf<HistoryStatisticsSnapshot?>(null) }
-    var loadFailed by remember(database, range) { mutableStateOf(false) }
+    val lastFmUser =
+        Settings.shared.lastFmUsername.takeIf {
+            it.isNotBlank() && Settings.shared.lastFmSession.isNotBlank() &&
+                !Settings.shared.lastFmSessionExpired
+        }
+    var snapshot by remember(database, range, lastFmUser) { mutableStateOf<HistoryStatisticsSnapshot?>(null) }
+    var loadFailed by remember(database, range, lastFmUser) { mutableStateOf(false) }
     var syncFailed by remember(database, range) { mutableStateOf(false) }
-    var loading by remember(database, range) { mutableStateOf(true) }
-    LaunchedEffect(database, range, refreshKey) {
+    var loading by remember(database, range, lastFmUser) { mutableStateOf(true) }
+    var lastFm by remember(range, lastFmUser) { mutableStateOf<List<LastFmListen>>(emptyList()) }
+    var appliedLastFm by remember(database, range, lastFmUser) { mutableStateOf<List<LastFmListen>?>(null) }
+    var lastFmLoading by remember(range, lastFmUser) { mutableStateOf(lastFmUser != null) }
+    var lastFmFailed by remember(range, lastFmUser) { mutableStateOf(false) }
+    var lastFmLoaded by remember(range, lastFmUser) { mutableStateOf(false) }
+    LaunchedEffect(range, refreshKey, lastFmUser) {
+        if (lastFmUser.isNullOrBlank()) return@LaunchedEffect
+        lastFmLoading = true
+        lastFmFailed = false
+        try {
+            val (since, _) = range.epochRange()
+            lastFm =
+                withTimeout(300_000) {
+                    LastFM
+                        .getListeningHistory(
+                            GlobalYouTube.client,
+                            lastFmUser,
+                            since,
+                            Clock.System.now().toEpochMilliseconds(),
+                        ).getOrThrow()
+                }
+            lastFmLoaded = true
+        } catch (_: TimeoutCancellationException) {
+            lastFmFailed = true
+        } catch (error: CancellationException) {
+            throw error
+        } catch (_: Exception) {
+            lastFmFailed = true
+        } finally {
+            lastFmLoading = false
+        }
+    }
+    LaunchedEffect(database, range, refreshKey, lastFm) {
         database.historyChanges().collectLatest {
             try {
                 loadFailed = false
                 val (since, _) = range.epochRange()
-                snapshot = database.wrappedStatisticsSnapshot(since, Clock.System.now().toEpochMilliseconds())
+                snapshot = database.wrappedStatisticsSnapshot(since, Clock.System.now().toEpochMilliseconds(), lastFm)
+                appliedLastFm = lastFm
             } catch (error: CancellationException) {
                 throw error
             } catch (_: Exception) {
@@ -216,6 +266,15 @@ fun WrappedScreen(
                 if (!hasReport) {
                     WrappedToolbar(title, onBack, { refreshKey++ })
                     if (syncFailed) WrappedSyncFailure()
+                    if (lastFmLoading ||
+                        lastFmFailed
+                    ) {
+                        Text(
+                            stringResource(if (lastFmFailed) Res.string.wrapped_lastfm_failed else Res.string.wrapped_lastfm_loading),
+                            Modifier.padding(horizontal = 24.dp),
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                    }
                 }
                 when {
                     loading && result == null -> {
@@ -245,6 +304,28 @@ fun WrappedScreen(
                             onBack,
                             { refreshKey++ },
                             syncFailed,
+                            when {
+                                lastFmLoading || (lastFmLoaded && appliedLastFm !== lastFm) -> {
+                                    stringResource(Res.string.wrapped_lastfm_loading)
+                                }
+
+                                lastFmFailed -> {
+                                    stringResource(Res.string.wrapped_lastfm_failed)
+                                }
+
+                                lastFmLoaded -> {
+                                    stringResource(
+                                        Res.string.wrapped_lastfm_coverage,
+                                        formatter.number(result.lastFmPlays.toLong()),
+                                        formatter.number(result.lastFmAmbiguousPlays.toLong()),
+                                    )
+                                }
+
+                                else -> {
+                                    null
+                                }
+                            },
+                            lastFmLoaded && appliedLastFm === lastFm,
                         )
                     }
                 }
@@ -298,6 +379,8 @@ private fun WrappedReport(
     onBack: () -> Unit,
     onRefresh: () -> Unit,
     syncFailed: Boolean,
+    lastFmStatus: String?,
+    lastFmLoaded: Boolean,
 ) {
     val formatter = rememberStatisticsFormatter()
     val state =
@@ -337,7 +420,8 @@ private fun WrappedReport(
             if (state.albums.isNotEmpty()) add(WrappedChapter.ALBUMS)
             add(WrappedChapter.SUMMARY)
         }
-    val soundtrack = rememberWrappedSoundtrack(playbackController, snapshot.songItems.take(10))
+    val pager = rememberPagerState { chapters.size }
+    val soundtrack = rememberWrappedSoundtrack(playbackController, snapshot.songItems.take(10), pager.settledPage, desktopLayout)
     val motionEnabled = wrappedMotionEnabled()
     var sharing by rememberSaveable { mutableStateOf(false) }
     val title = stringResource(Res.string.wrapped_year, range.start.year.toString())
@@ -347,7 +431,17 @@ private fun WrappedReport(
         StatisticsShareDialog(
             state = state,
             period = dateLabel,
-            summary = stringResource(Res.string.wrapped_share_caption),
+            summary =
+                if (lastFmLoaded) {
+                    stringResource(Res.string.wrapped_share_lastfm_caption) + " " +
+                        stringResource(
+                            Res.string.wrapped_lastfm_coverage,
+                            formatter.number(snapshot.lastFmPlays.toLong()),
+                            formatter.number(snapshot.lastFmAmbiguousPlays.toLong()),
+                        )
+                } else {
+                    stringResource(Res.string.wrapped_share_caption)
+                },
             exportLabel = exportLabel,
             onExport = onExport,
             onDismiss = { sharing = false },
@@ -355,7 +449,6 @@ private fun WrappedReport(
             timeLabel = stringResource(Res.string.wrapped_measured_time),
         )
     }
-    val pager = rememberPagerState { chapters.size }
     val scope = rememberCoroutineScope()
     val spatialSpec = MaterialTheme.motionScheme.defaultSpatialSpec<Float>()
 
@@ -433,10 +526,47 @@ private fun WrappedReport(
                     }
                 }
                 if (syncFailed) WrappedSyncFailure()
+                if (lastFmStatus !=
+                    null
+                ) {
+                    Text(
+                        lastFmStatus,
+                        Modifier.padding(horizontal = 24.dp, vertical = 4.dp),
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
+                if (soundtrack.enabled) {
+                    val song = soundtrack.playingSong
+                    Text(
+                        if (song == null ||
+                            soundtrack.preparedCount < soundtrack.songCount
+                        ) {
+                            stringResource(
+                                Res.string.wrapped_soundtrack_preparing,
+                                formatter.number(soundtrack.preparedCount.toLong()),
+                                formatter.number(soundtrack.songCount.toLong()),
+                            )
+                        } else {
+                            stringResource(
+                                Res.string.wrapped_soundtrack_playing,
+                                song.title,
+                                song.artists.joinToString(", ") { it.name },
+                            )
+                        },
+                        Modifier.padding(horizontal = 24.dp, vertical = 4.dp),
+                        style = MaterialTheme.typography.bodySmall,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
                 if (soundtrack.failed || !soundtrack.available) {
                     Text(
                         stringResource(
-                            if (soundtrack.failed) Res.string.wrapped_soundtrack_failed else Res.string.wrapped_soundtrack_unavailable,
+                            when {
+                                soundtrack.failed && soundtrack.enabled -> Res.string.wrapped_soundtrack_partial
+                                soundtrack.failed -> Res.string.wrapped_soundtrack_failed
+                                else -> Res.string.wrapped_soundtrack_unavailable
+                            },
                         ),
                         Modifier.padding(horizontal = 24.dp, vertical = 4.dp),
                         style = MaterialTheme.typography.bodySmall,

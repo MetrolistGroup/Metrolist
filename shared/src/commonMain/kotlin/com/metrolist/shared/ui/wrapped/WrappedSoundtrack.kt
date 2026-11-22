@@ -16,17 +16,29 @@ import com.metrolist.shared.ui.playback.PlaybackController
 import com.metrolist.shared.ui.playback.PlaybackUiState
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.supervisorScope
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withTimeoutOrNull
+import kotlin.math.PI
 import kotlin.math.abs
+import kotlin.math.cos
+import kotlin.math.sin
+import kotlin.time.TimeSource
 
 @Composable
 fun rememberWrappedSoundtrack(
     controller: PlaybackController,
     songs: List<SongItem>,
+    chapter: Int,
+    cycleExcerpts: Boolean,
 ): WrappedSoundtrack {
     val scope = rememberCoroutineScope()
     val currentSongs by rememberUpdatedState(songs)
@@ -43,6 +55,7 @@ fun rememberWrappedSoundtrack(
     LaunchedEffect(soundtrack, controller) {
         controller.playbackVolume?.collect { soundtrack.updateVolume() }
     }
+    LaunchedEffect(soundtrack, chapter, cycleExcerpts) { soundtrack.selectChapter(chapter, cycleExcerpts) }
     LifecycleEventEffect(Lifecycle.Event.ON_STOP) { soundtrack.stop() }
     DisposableEffect(soundtrack) { onDispose { soundtrack.stop() } }
     return soundtrack
@@ -73,6 +86,25 @@ class WrappedSoundtrack internal constructor(
     private var pausedPositionMs: Long? = null
     private var job: Job? = null
     private var player: WrappedAudioPlayer? = null
+    private var incoming: WrappedAudioPlayer? = null
+    private var library: WrappedAudioLibrary? = null
+    private var prepared: List<Deferred<String>> = emptyList()
+    private var transitionJob: Job? = null
+    private var excerptJob: Job? = null
+    private var chapter = 0
+    private var cycleExcerpts = false
+    private var activeIndex = -1
+    private var selectionId = 0L
+    private var voiceId = 0L
+    private var activeVoice = 0L
+    private var pendingVoice = 0L
+    private var outgoingGain = 1f
+    private var incomingGain = 0f
+    var playingSong by mutableStateOf<SongItem?>(null)
+        private set
+    var preparedCount by mutableStateOf(0)
+        private set
+    val songCount: Int get() = sessionSongs.size
     private var sessionSongs: List<SongItem> = emptyList()
     private var songIndex = 0
     private var sessionId = 0L
@@ -92,7 +124,19 @@ class WrappedSoundtrack internal constructor(
     }
 
     internal fun updateVolume() {
-        controller.playbackVolume?.value?.let { player?.setVolume(it) }
+        controller.playbackVolume?.value?.let {
+            player?.setVolume(it * outgoingGain)
+            incoming?.setVolume(it * incomingGain)
+        }
+    }
+
+    internal fun selectChapter(
+        value: Int,
+        cycleExcerpts: Boolean,
+    ) {
+        chapter = value
+        this.cycleExcerpts = cycleExcerpts
+        if (enabled && prepared.isNotEmpty() && !cycleExcerpts) changeSong(value % sessionSongs.size)
     }
 
     fun toggle() {
@@ -103,12 +147,13 @@ class WrappedSoundtrack internal constructor(
         if (!available) return
         failed = false
         val session = ++sessionId
-        sessionSongs = songs().toList()
+        sessionSongs = songs().distinctBy { it.id }.take(10)
         enabled = true
         loading = true
         normalPlayback = controller.state.value
         normalGeneration = controller.playbackReplacementGeneration
-        songIndex = 0
+        songIndex = if (cycleExcerpts) 0 else chapter % sessionSongs.size
+        preparedCount = 0
         job =
             scope.launch {
                 try {
@@ -125,14 +170,33 @@ class WrappedSoundtrack internal constructor(
                         stop(resume = false)
                         return@launch
                     }
-                    player =
-                        createWrappedAudioPlayer(
-                            onEnded = { scope.launch { if (enabled && session == sessionId) playNext() } },
-                            onFailure = { scope.launch { if (session == sessionId) fail() } },
-                            onInterrupted = { scope.launch { if (session == sessionId) stop(resume = false) } },
-                            volume = checkNotNull(controller.playbackVolume).value,
-                        )
-                    playCurrent(session)
+                    val files =
+                        createWrappedAudioLibrary {
+                            scope.launch { if (session == sessionId) stop(resume = false) }
+                        }
+                    library = files
+                    supervisorScope {
+                        val slots = Semaphore(2)
+                        val tasks =
+                            sessionSongs.indices.sortedBy { if (it == songIndex) 0 else 1 }.associateWith { index ->
+                                async {
+                                    slots.withPermit {
+                                        files.prepare(sessionSongs[index]).also { if (session == sessionId) preparedCount++ }
+                                    }
+                                }
+                            }
+                        prepared = sessionSongs.indices.map { tasks.getValue(it) }
+                        changeSong(songIndex)
+                        prepared.forEach { pending ->
+                            try {
+                                pending.await()
+                            } catch (error: CancellationException) {
+                                throw error
+                            } catch (_: Exception) {
+                                if (session == sessionId) failed = true
+                            }
+                        }
+                    }
                 } catch (error: CancellationException) {
                     throw error
                 } catch (_: Exception) {
@@ -141,28 +205,117 @@ class WrappedSoundtrack internal constructor(
             }
     }
 
-    private suspend fun playCurrent(session: Long) {
-        if (!enabled || session != sessionId) return
-        loading = true
-        val current = checkNotNull(player)
-        current.play(sessionSongs[songIndex])
-        if (enabled && session == sessionId && player === current) loading = false
+    private fun changeSong(
+        index: Int,
+        restart: Boolean = false,
+    ) {
+        if (!enabled || prepared.isEmpty() || (!restart && index == activeIndex && transitionJob?.isActive != true)) return
+        val session = sessionId
+        val selection = ++selectionId
+        songIndex = index
+        pendingVoice = 0L
+        incoming?.close()
+        incoming = null
+        transitionJob?.cancel()
+        outgoingGain = 1f
+        updateVolume()
+        excerptJob?.cancel()
+        transitionJob =
+            scope.launch {
+                var next: WrappedAudioPlayer? = null
+                try {
+                    loading = true
+                    val path = prepared[index].await()
+                    if (!enabled || session != sessionId || selection != selectionId) return@launch
+                    val voice = ++voiceId
+                    pendingVoice = voice
+                    val current =
+                        createWrappedAudioPlayer(
+                            onEnded = {
+                                scope.launch {
+                                    if (session == sessionId && activeVoice == voice && songIndex == index &&
+                                        incoming == null && transitionJob?.isActive != true
+                                    ) {
+                                        playNext()
+                                    }
+                                }
+                            },
+                            onFailure = {
+                                scope.launch {
+                                    if (session == sessionId &&
+                                        (activeVoice == voice || pendingVoice == voice)
+                                    ) {
+                                        fail()
+                                    }
+                                }
+                            },
+                            onInterrupted = {
+                                scope.launch {
+                                    if (session == sessionId &&
+                                        (activeVoice == voice || pendingVoice == voice)
+                                    ) {
+                                        stop(resume = false)
+                                    }
+                                }
+                            },
+                            volume = 0f,
+                        )
+                    next = current
+                    incoming = current
+                    incomingGain = 0f
+                    outgoingGain = 1f
+                    updateVolume()
+                    current.prepare(path)
+                    current.play()
+                    playingSong = sessionSongs[index]
+                    loading = false
+                    val previous = player
+                    if (previous != null) {
+                        val start = TimeSource.Monotonic.markNow()
+                        do {
+                            val progress = (start.elapsedNow().inWholeMilliseconds / 800f).coerceIn(0f, 1f)
+                            outgoingGain = cos(progress * PI.toFloat() / 2f)
+                            incomingGain = sin(progress * PI.toFloat() / 2f)
+                            updateVolume()
+                            if (progress == 1f) break
+                            delay(20)
+                        } while (true)
+                        previous.close()
+                    }
+                    player = current
+                    incoming = null
+                    next = null
+                    activeIndex = index
+                    activeVoice = voice
+                    pendingVoice = 0L
+                    outgoingGain = 1f
+                    incomingGain = 0f
+                    updateVolume()
+                    if (cycleExcerpts) {
+                        excerptJob =
+                            scope.launch {
+                                delay(15_000)
+                                if (session == sessionId) playNext()
+                            }
+                    }
+                } catch (error: CancellationException) {
+                    throw error
+                } catch (_: Exception) {
+                    if (session == sessionId) fail()
+                } finally {
+                    next?.close()
+                    if (session == sessionId && selection == selectionId) {
+                        if (incoming === next) incoming = null
+                        pendingVoice = 0L
+                        outgoingGain = 1f
+                        updateVolume()
+                    }
+                }
+            }
     }
 
     private fun playNext() {
-        val session = sessionId
-        job?.cancel()
-        songIndex = (songIndex + 1) % sessionSongs.size
-        job =
-            scope.launch {
-                try {
-                    playCurrent(session)
-                } catch (error: CancellationException) {
-                    throw error
-                } catch (_: Exception) {
-                    if (session == sessionId) fail()
-                }
-            }
+        if (sessionSongs.isNotEmpty()) changeSong((songIndex + 1) % sessionSongs.size, restart = true)
     }
 
     private fun fail() {
@@ -189,8 +342,23 @@ class WrappedSoundtrack internal constructor(
         loading = false
         job?.cancel()
         job = null
+        transitionJob?.cancel()
+        transitionJob = null
+        excerptJob?.cancel()
+        excerptJob = null
+        prepared.forEach { it.cancel() }
+        prepared = emptyList()
+        incoming?.close()
+        incoming = null
         runCatching { player?.close() }.onFailure { failed = true }
         player = null
+        library?.close()
+        library = null
+        activeIndex = -1
+        activeVoice = 0L
+        pendingVoice = 0L
+        playingSong = null
+        preparedCount = 0
         sessionSongs = emptyList()
         normalPlayback = null
         normalCommandGeneration = null
@@ -201,7 +369,9 @@ class WrappedSoundtrack internal constructor(
 }
 
 internal interface WrappedAudioPlayer {
-    suspend fun play(song: SongItem)
+    suspend fun prepare(path: String)
+
+    fun play()
 
     fun setVolume(volume: Float)
 

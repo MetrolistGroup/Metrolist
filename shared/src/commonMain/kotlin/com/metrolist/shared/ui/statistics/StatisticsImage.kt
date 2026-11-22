@@ -81,7 +81,7 @@ internal fun renderStatisticsImage(
     val branding = measure(appName, typography.labelLarge, colors.primary)
     val heading = measure(title, typography.headlineLargeEmphasized, lines = 2)
     val range = measure(period, typography.titleMedium, colors.primary, lines = 2)
-    val description = measure(summary, typography.bodyMedium, colors.onSurfaceVariant, lines = 3)
+    val description = measure(summary, typography.bodyMedium, colors.onSurfaceVariant, lines = Int.MAX_VALUE)
     val metricWidth = (contentWidth - inset * 3).toInt() / 2
     val metrics =
         listOf(

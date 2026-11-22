@@ -20,6 +20,7 @@ import io.ktor.http.Parameters
 import io.ktor.http.decodeURLQueryComponent
 import io.ktor.http.encodeURLParameter
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.delay
 import kotlinx.io.IOException
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -121,6 +122,14 @@ data class LastFmTrackDate(
     val uts: String = "",
 )
 
+data class LastFmListen(
+    val title: String,
+    val artist: String,
+    val album: String?,
+    val timestampMs: Long,
+    val thumbnail: String?,
+)
+
 @Serializable
 data class LastFmNowPlayingAttr(
     val nowplaying: String = "",
@@ -128,7 +137,7 @@ data class LastFmNowPlayingAttr(
 
 fun LastFmRecentTrack.artistName(): String? =
     when (val artistJson = artist) {
-        is JsonObject -> artistJson["#text"]?.jsonPrimitive?.contentOrNull
+        is JsonObject -> (artistJson["#text"] ?: artistJson["name"])?.jsonPrimitive?.contentOrNull
         is JsonPrimitive -> artistJson.contentOrNull
         else -> null
     }
@@ -429,6 +438,75 @@ object LastFM {
             val body = response.bodyAsText()
             json.parseToJsonElement(body).jsonObject["recenttracks"]?.jsonObject
                 ?: throw Exception("No recent tracks found")
+        }
+
+    suspend fun getListeningHistory(
+        httpClient: HttpClient,
+        user: String,
+        sinceMs: Long,
+        untilMs: Long,
+    ): Result<List<LastFmListen>> =
+        catchingApi {
+            check(apiKeyConfigured() && user.isNotBlank() && sinceMs <= untilMs)
+            val listens = mutableListOf<LastFmListen>()
+            var page = 1
+            var expectedTotal: Int? = null
+            var pages: Int
+            do {
+                val response =
+                    httpClient.prepareGet("https://ws.audioscrobbler.com/2.0/") {
+                        parameter("method", "user.getRecentTracks")
+                        parameter("user", user)
+                        parameter("api_key", apiKey)
+                        parameter("format", "json")
+                        parameter("limit", 200)
+                        parameter("page", page)
+                        parameter("from", sinceMs / 1000 - 1)
+                        parameter("to", untilMs / 1000 + 1)
+                    }
+                val limited = response.readTextLimited(MAX_SCRAPED_HTML_BYTES)
+                val payload = validateResponse(limited.status.value, checkNotNull(limited.body), limited.headers[HttpHeaders.RetryAfter])
+                val recent = checkNotNull(payload.jsonObject["recenttracks"] as? JsonObject)
+                val attr = checkNotNull(recent["@attr"] as? JsonObject)
+                check(attr["page"]?.jsonPrimitive?.intOrNull == page)
+                val total = checkNotNull(attr["total"]?.jsonPrimitive?.intOrNull).also { check(it >= 0) }
+                pages = checkNotNull(attr["totalPages"]?.jsonPrimitive?.intOrNull).also { check(it >= 0) }
+                check(expectedTotal == null || expectedTotal == total) { "Last.fm history changed during pagination" }
+                expectedTotal = total
+                val tracks =
+                    when (val tracks = recent["track"]) {
+                        is JsonArray -> {
+                            tracks.toList()
+                        }
+
+                        is JsonObject -> {
+                            listOf(tracks)
+                        }
+
+                        else -> {
+                            check(total == 0)
+                            emptyList()
+                        }
+                    }
+                for (element in tracks) {
+                    val track = json.decodeFromJsonElement<LastFmRecentTrack>(element)
+                    if (track.attr?.nowplaying == "true") continue
+                    val seconds = checkNotNull(track.date?.uts?.toLongOrNull())
+                    check(seconds in 0..Long.MAX_VALUE / 1000)
+                    val timestamp = seconds * 1000
+                    val artist = checkNotNull(track.artistName()).trim()
+                    check(track.name.isNotBlank() && artist.isNotEmpty())
+                    val album =
+                        (track.album as? JsonObject)?.get("#text")?.jsonPrimitive?.contentOrNull
+                            ?: (track.album as? JsonPrimitive)?.contentOrNull
+                    listens += LastFmListen(track.name, artist, album?.takeIf(String::isNotBlank), timestamp, track.image.largest())
+                }
+                check(total == 0 || tracks.isNotEmpty()) { "Last.fm history page is empty" }
+                page++
+                if (page <= pages) delay(250)
+            } while (page <= pages)
+            check(listens.size == expectedTotal) { "Last.fm history is incomplete" }
+            listens.filter { it.timestampMs in sinceMs..untilMs }
         }
 
     suspend fun getRecentTrack(
