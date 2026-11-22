@@ -1,5 +1,6 @@
 package com.metrolist.shared
 
+import com.metrolist.shared.api.artwork.AnimatedArtworkService
 import com.metrolist.shared.api.lastfm.LastFM
 import com.metrolist.shared.auth.AuthManager
 import com.metrolist.shared.backup.IosBackupRestoreManager
@@ -39,7 +40,8 @@ object MetrolistPlatform {
                 module {
                     single<MusicDatabase> { getDatabaseBuilder(null).build() }
                     single<DatabaseDao> { get<MusicDatabase>().dao() }
-                    single { MusicPlayer() }
+                    single { AnimatedArtworkService(GlobalYouTube.client) }
+                    single { MusicPlayer(animatedArtworkService = get()) }
                 },
             )
         }
@@ -69,7 +71,7 @@ object MetrolistPlatform {
         val database = getDatabaseBuilder(null).build()
         koin.declare(database)
         koin.declare(database.dao())
-        koin.declare(MusicPlayer())
+        koin.declare(MusicPlayer(animatedArtworkService = koin.get()))
         koin.declare(
             LyricsRepository(
                 lyricsClient = koin.get(),

@@ -44,6 +44,7 @@ import com.metrolist.shared.generated.resources.max_song_cache_size
 import com.metrolist.shared.generated.resources.ok
 import com.metrolist.shared.generated.resources.song_cache
 import com.metrolist.shared.generated.resources.unlimited
+import com.metrolist.shared.playback.IosNowPlayingAnimatedArtworkCache
 import com.metrolist.shared.settings.Settings
 import com.metrolist.shared.storage.IosAudioDownloadManager
 import com.metrolist.shared.storage.ResizableImageDiskCache
@@ -250,6 +251,7 @@ fun IosStorageSettingsPage(
                                 withContext(Dispatchers.IO) {
                                     imageCache.clear()
                                     imageLoader.memoryCache?.clear()
+                                    IosNowPlayingAnimatedArtworkCache.clearInactive()
                                 }
                             }
                     }

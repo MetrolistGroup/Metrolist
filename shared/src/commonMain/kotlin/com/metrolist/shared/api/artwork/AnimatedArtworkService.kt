@@ -251,11 +251,16 @@ class AnimatedArtworkService internal constructor(
                     continue
                 }
                 val url = entry.url
-                if (url != null && !isTrustedArtworkUrl(url)) {
+                if (url != null && !isTrustedAnimatedArtworkUrl(url)) {
                     droppedUntrusted++
                     continue
                 }
-                cache[key] = entry.copy(tallUrl = entry.tallUrl?.takeIf { isTrustedArtworkUrl(it) })
+                cache[key] =
+                    entry.copy(
+                        tallUrl = entry.tallUrl?.takeIf(::isTrustedAnimatedArtworkUrl),
+                        previewImageUrl = entry.previewImageUrl?.takeIf(::isTrustedAnimatedArtworkUrl),
+                        tallPreviewImageUrl = entry.tallPreviewImageUrl?.takeIf(::isTrustedAnimatedArtworkUrl),
+                    )
             }
             while (cache.size > MAX_COVER_CACHE_ENTRIES) {
                 cache.minByOrNull { it.value.cachedAt }?.key?.let(cache::remove)
@@ -314,7 +319,17 @@ class AnimatedArtworkService internal constructor(
         val cachedAt = (obj["cachedAt"] as? JsonPrimitive)?.content?.toLongOrNull() ?: 0L
         if (cachedAt <= 0L) return null
         val tallUrl = (obj["tallUrl"] as? JsonPrimitive)?.takeUnless { it is JsonNull }?.content?.ifBlank { null }
-        return CacheEntry(url = url, cachedAt = cachedAt, tallUrl = tallUrl)
+        val previewImageUrl = (obj["previewImageUrl"] as? JsonPrimitive)?.takeUnless { it is JsonNull }?.content?.ifBlank { null }
+        val tallPreviewImageUrl = (obj["tallPreviewImageUrl"] as? JsonPrimitive)?.takeUnless { it is JsonNull }?.content?.ifBlank { null }
+        val squareIsTallFallback = (obj["squareIsTallFallback"] as? JsonPrimitive)?.content?.toBooleanStrictOrNull() ?: false
+        return CacheEntry(
+            url = url,
+            cachedAt = cachedAt,
+            tallUrl = tallUrl,
+            previewImageUrl = previewImageUrl,
+            tallPreviewImageUrl = tallPreviewImageUrl,
+            squareIsTallFallback = squareIsTallFallback,
+        )
     }
 
     private suspend fun saveCacheToDisk() {
@@ -323,11 +338,14 @@ class AnimatedArtworkService internal constructor(
             val map =
                 snapshot.mapValues { (_, entry) ->
                     JsonObject(
-                        mapOf(
-                            "url" to (entry.url?.let { JsonPrimitive(it) } ?: JsonNull),
-                            "tallUrl" to (entry.tallUrl?.let { JsonPrimitive(it) } ?: JsonNull),
-                            "cachedAt" to JsonPrimitive(entry.cachedAt),
-                        ),
+                        buildMap {
+                            put("url", entry.url?.let { JsonPrimitive(it) } ?: JsonNull)
+                            put("tallUrl", entry.tallUrl?.let { JsonPrimitive(it) } ?: JsonNull)
+                            put("cachedAt", JsonPrimitive(entry.cachedAt))
+                            entry.previewImageUrl?.let { put("previewImageUrl", JsonPrimitive(it)) }
+                            entry.tallPreviewImageUrl?.let { put("tallPreviewImageUrl", JsonPrimitive(it)) }
+                            if (entry.squareIsTallFallback) put("squareIsTallFallback", JsonPrimitive(true))
+                        },
                     )
                 }
             val encoded = json.encodeToString(JsonObject(map))
@@ -459,7 +477,13 @@ class AnimatedArtworkService internal constructor(
                         val url = entry.url
                         if (url != null && isTrustedArtworkUrl(url)) {
                             YtLogger.d(TAG, "Animated artwork cache hit")
-                            return AnimatedCoverResult(url = url, tallUrl = entry.tallUrl)
+                            return AnimatedCoverResult(
+                                url = url,
+                                tallUrl = entry.tallUrl,
+                                previewImageUrl = entry.previewImageUrl,
+                                tallPreviewImageUrl = entry.tallPreviewImageUrl,
+                                squareIsTallFallback = entry.squareIsTallFallback,
+                            )
                         }
                         if (url != null) {
                             YtLogger.w(TAG, "Refusing to serve untrusted cached animated artwork URL")
@@ -473,7 +497,10 @@ class AnimatedArtworkService internal constructor(
         suspend fun cacheResult(
             value: String?,
             tallValue: String? = null,
-        ) = cacheAndSave(cacheKey, value, tallValue, generation)
+            previewImageUrl: String? = null,
+            tallPreviewImageUrl: String? = null,
+            squareIsTallFallback: Boolean = false,
+        ) = cacheAndSave(cacheKey, value, tallValue, previewImageUrl, tallPreviewImageUrl, squareIsTallFallback, generation)
 
         try {
             YtLogger.d(TAG, "Fetching animated artwork")
@@ -510,8 +537,22 @@ class AnimatedArtworkService internal constructor(
                     val tall =
                         if (motionVideo.tallUrl == motionVideo.url) Result.success(mp4Url) else resolveTallVariant(motionVideo.tallUrl)
                     val tallUrl = tall.getOrNull()
-                    if (tall.isSuccess) cacheResult(mp4Url, tallUrl)
-                    return AnimatedCoverResult(url = mp4Url, tallUrl = tallUrl)
+                    if (tall.isSuccess) {
+                        cacheResult(
+                            mp4Url,
+                            tallUrl,
+                            motionVideo.previewImageUrl,
+                            motionVideo.tallPreviewImageUrl,
+                            motionVideo.squareIsTallFallback,
+                        )
+                    }
+                    return AnimatedCoverResult(
+                        url = mp4Url,
+                        tallUrl = tallUrl,
+                        previewImageUrl = motionVideo.previewImageUrl,
+                        tallPreviewImageUrl = motionVideo.tallPreviewImageUrl,
+                        squareIsTallFallback = motionVideo.squareIsTallFallback,
+                    )
                 }
             }
 
@@ -532,6 +573,9 @@ class AnimatedArtworkService internal constructor(
         key: String,
         value: String?,
         tallValue: String?,
+        previewImageUrl: String?,
+        tallPreviewImageUrl: String?,
+        squareIsTallFallback: Boolean,
         generation: Long,
     ) {
         if (value != null && !isTrustedArtworkUrl(value)) {
@@ -541,7 +585,15 @@ class AnimatedArtworkService internal constructor(
         val saved =
             cacheMutex.withLock {
                 if (cacheGeneration != generation) return@withLock false
-                cache[key] = CacheEntry(value, currentTimeSeconds(), tallValue?.takeIf { isTrustedArtworkUrl(it) })
+                cache[key] =
+                    CacheEntry(
+                        url = value,
+                        cachedAt = currentTimeSeconds(),
+                        tallUrl = tallValue?.takeIf(::isTrustedArtworkUrl),
+                        previewImageUrl = previewImageUrl?.takeIf(::isTrustedArtworkUrl),
+                        tallPreviewImageUrl = tallPreviewImageUrl?.takeIf(::isTrustedArtworkUrl),
+                        squareIsTallFallback = squareIsTallFallback,
+                    )
                 while (cache.size > MAX_COVER_CACHE_ENTRIES) {
                     cache.minByOrNull { it.value.cachedAt }?.key?.let(cache::remove)
                 }
@@ -570,22 +622,7 @@ class AnimatedArtworkService internal constructor(
         YtLogger.d(TAG, "Animated artwork URL caches cleared")
     }
 
-    private fun isTrustedArtworkUrl(url: String): Boolean {
-        val parsed =
-            try {
-                URLBuilder().takeFrom(url)
-            } catch (_: Exception) {
-                return false
-            }
-        if (parsed.protocol.name != "https") return false
-        if (!parsed.user.isNullOrEmpty() || !parsed.password.isNullOrEmpty()) return false
-        if (parsed.port != 0 && parsed.port != 443) return false
-        val host = parsed.host.lowercase()
-        return host == "itunes.apple.com" ||
-            host.endsWith(".apple.com") ||
-            host.endsWith(".mzstatic.com") ||
-            host.endsWith(".akamaized.net")
-    }
+    private fun isTrustedArtworkUrl(url: String): Boolean = isTrustedAnimatedArtworkUrl(url)
 
     private fun buildCacheKey(
         title: String,
@@ -1191,21 +1228,53 @@ class AnimatedArtworkService internal constructor(
 
             YtLogger.d(TAG, "editorialVideo keys: ${ev.keys}")
 
-            fun videoUrl(key: String): String? =
-                (ev[key] as? JsonObject)
-                    ?.get("video")
-                    ?.jsonPrimitive
-                    ?.content
-                    ?.takeIf { it.isNotBlank() }
+            fun videoEntry(key: String): JsonObject? =
+                (ev[key] as? JsonObject)?.takeIf {
+                    (it["video"] as? JsonPrimitive)?.content?.isNotBlank() == true
+                }
 
-            val tall = listOf("motionTallVideo3x4", "motionDetailTall").firstNotNullOfOrNull { videoUrl(it) }
-            val square =
-                listOf("motionSquareVideo1x1", "motionDetailSquare").firstNotNullOfOrNull { videoUrl(it) }
-                    ?: tall
-                    ?: ev.keys.firstNotNullOfOrNull { videoUrl(it) }
+            fun videoUrl(entry: JsonObject?): String? = (entry?.get("video") as? JsonPrimitive)?.content?.takeIf { it.isNotBlank() }
+
+            fun previewUrl(
+                entry: JsonObject?,
+                targetWidth: Int,
+                targetHeight: Int,
+            ): String? {
+                val preview = entry?.get("previewFrame") as? JsonObject ?: return null
+                val template = (preview["url"] as? JsonPrimitive)?.content?.takeIf { it.isNotBlank() } ?: return null
+                val sourceWidth = (preview["width"] as? JsonPrimitive)?.content?.toIntOrNull()?.takeIf { it > 0 }
+                val sourceHeight = (preview["height"] as? JsonPrimitive)?.content?.toIntOrNull()?.takeIf { it > 0 }
+                val scale =
+                    if (sourceWidth != null && sourceHeight != null) {
+                        minOf(sourceWidth.toDouble() / targetWidth, sourceHeight.toDouble() / targetHeight).coerceAtMost(1.0)
+                    } else {
+                        1.0
+                    }
+                val resolvedWidth = (targetWidth * scale).toInt().coerceAtLeast(1)
+                val resolvedHeight = (targetHeight * scale).toInt().coerceAtLeast(1)
+                val resolved =
+                    template
+                        .replace("{w}", resolvedWidth.toString())
+                        .replace("{h}", resolvedHeight.toString())
+                        .replace("{c}", "bb")
+                        .replace("{f}", "jpg")
+                return resolved.takeIf(::isTrustedArtworkUrl)
+            }
+
+            val tallEntry = listOf("motionTallVideo3x4", "motionDetailTall").firstNotNullOfOrNull(::videoEntry)
+            val directSquareEntry = listOf("motionSquareVideo1x1", "motionDetailSquare").firstNotNullOfOrNull(::videoEntry)
+            val squareEntry =
+                directSquareEntry
+                    ?: tallEntry
+                    ?: ev.keys.firstNotNullOfOrNull(::videoEntry)
+            val square = videoUrl(squareEntry)
+            val tall = videoUrl(tallEntry)
             if (square != null) {
+                val squareIsTallFallback = directSquareEntry == null && tallEntry != null && squareEntry === tallEntry
+                val squarePreview = if (squareIsTallFallback) null else previewUrl(squareEntry, 768, 768)
+                val tallPreview = previewUrl(tallEntry, 768, 1024)
                 YtLogger.d(TAG, "Found motion video (tall variant: ${tall != null})")
-                return MotionVideos(square, tall)
+                return MotionVideos(square, tall, squarePreview, tallPreview, squareIsTallFallback)
             }
 
             YtLogger.d(TAG, "No video URLs in editorialVideo")
@@ -1322,18 +1391,7 @@ class AnimatedArtworkService internal constructor(
     private fun resolvePlaylistUrl(
         masterUrl: String,
         variant: String,
-    ): String? {
-        if (variant.startsWith("https://")) return variant
-        val match = Regex("^(https://[^/]+)(/.*)?$").find(masterUrl) ?: return null
-        val origin = match.groupValues[1]
-        if (variant.startsWith("/")) return origin + variant
-        val path =
-            match.groupValues
-                .getOrNull(2)
-                .orEmpty()
-                .substringBeforeLast('/', "")
-        return "$origin/$path/$variant".replace(Regex("(?<!:)//+"), "/")
-    }
+    ): String? = resolveAnimatedArtworkPlaylistUrl(masterUrl, variant)
 
     private fun maxDimensionForSetting(resolution: AnimatedCoverResolution): Int =
         when (resolution) {
@@ -1346,14 +1404,53 @@ class AnimatedArtworkService internal constructor(
     private fun currentTimeSeconds(): Long = (Clock.System.now().toEpochMilliseconds() / 1000)
 }
 
+internal fun isTrustedAnimatedArtworkUrl(url: String): Boolean {
+    val parsed =
+        try {
+            URLBuilder().takeFrom(url)
+        } catch (_: Exception) {
+            return false
+        }
+    if (parsed.protocol.name != "https") return false
+    if (!parsed.user.isNullOrEmpty() || !parsed.password.isNullOrEmpty()) return false
+    if (parsed.port != 0 && parsed.port != 443) return false
+    val host = parsed.host.lowercase()
+    return host == "itunes.apple.com" ||
+        host.endsWith(".apple.com") ||
+        host.endsWith(".mzstatic.com") ||
+        host.endsWith(".akamaized.net")
+}
+
+internal fun resolveAnimatedArtworkPlaylistUrl(
+    masterUrl: String,
+    variant: String,
+): String? {
+    if (variant.startsWith("https://")) return variant
+    val match = Regex("^(https://[^/]+)(/.*)?$").find(masterUrl) ?: return null
+    val origin = match.groupValues[1]
+    if (variant.startsWith("/")) return origin + variant
+    val path =
+        match.groupValues
+            .getOrNull(2)
+            .orEmpty()
+            .substringBeforeLast('/', "")
+    return "$origin/$path/$variant".replace(Regex("(?<!:)//+"), "/")
+}
+
 data class AnimatedCoverResult(
     val url: String,
     val tallUrl: String? = null,
+    val previewImageUrl: String? = null,
+    val tallPreviewImageUrl: String? = null,
+    val squareIsTallFallback: Boolean = false,
 )
 
 private class MotionVideos(
     val url: String,
     val tallUrl: String?,
+    val previewImageUrl: String?,
+    val tallPreviewImageUrl: String?,
+    val squareIsTallFallback: Boolean,
 )
 
 data class ArtistArtworkResult(
@@ -1396,6 +1493,9 @@ private data class CacheEntry(
     val url: String? = null,
     val cachedAt: Long = 0L,
     val tallUrl: String? = null,
+    val previewImageUrl: String? = null,
+    val tallPreviewImageUrl: String? = null,
+    val squareIsTallFallback: Boolean = false,
 )
 
 @Serializable
