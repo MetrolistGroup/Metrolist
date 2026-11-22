@@ -1,6 +1,8 @@
 package com.metrolist.shared.utils
 
 import com.metrolist.shared.model.SongItem
+import com.metrolist.shared.playlistimport.M3U_ARTIST_LENGTH_COMMENT_PREFIX
+import com.metrolist.shared.playlistimport.M3U_ARTIST_TITLE_SEPARATOR
 import com.metrolist.shared.playlistimport.M3U_LITERAL_TITLE_COMMENT
 import com.metrolist.shared.playlistimport.UniversalPlaylistParser
 
@@ -39,11 +41,17 @@ enum class CollectionExportFormat(
                                 .map { it.name }
                                 .filter(String::isNotBlank)
                                 .joinToString(", ")
-                        val label = (if (artists.isEmpty()) song.title else "$artists - ${song.title}").replace(m3uLineBreaks, " ")
+                        val separator = M3U_ARTIST_TITLE_SEPARATOR
+                        val label = (if (artists.isEmpty()) song.title else "$artists$separator${song.title}").replace(m3uLineBreaks, " ")
                         val trimmedLabel = label.trim()
                         if (artists.isEmpty() && UniversalPlaylistParser.splitM3uDisplayLabel(trimmedLabel) != ("" to trimmedLabel)) {
                             // Keep the ordinary display label for other players; our importer can skip guessing.
                             appendLine(M3U_LITERAL_TITLE_COMMENT)
+                        } else if (song.title.isNotBlank()) {
+                            val artistLength = artists.replace(m3uLineBreaks, " ").trimStart().length
+                            if (trimmedLabel.startsWith(separator, artistLength) && trimmedLabel.indexOf(separator) != artistLength) {
+                                appendLine("$M3U_ARTIST_LENGTH_COMMENT_PREFIX$artistLength")
+                            }
                         }
                         appendLine("#EXTINF:${song.duration ?: -1},$label")
                         appendLine(song.exportUri)
