@@ -251,7 +251,19 @@ class WrappedSoundtrack internal constructor(
                 var next: WrappedAudioPlayer? = null
                 try {
                     loading = true
-                    val path = prepared[index].await()
+                    val path =
+                        try {
+                            prepared[index].await()
+                        } catch (error: CancellationException) {
+                            throw error
+                        } catch (_: Exception) {
+                            // A song that failed to download is skipped; the current one plays on meanwhile.
+                            if (enabled && session == sessionId && selection == selectionId) {
+                                failed = true
+                                playNext()
+                            }
+                            return@launch
+                        }
                     if (!enabled || session != sessionId || selection != selectionId) return@launch
                     val voice = ++voiceId
                     pendingVoice = voice
