@@ -140,52 +140,56 @@ internal data class WrappedPalette(
 internal fun wrappedPalette(chapter: WrappedChapter): WrappedPalette {
     val c = MaterialTheme.colorScheme
     val pureBlack = c.surface == Color.Black && c.surfaceContainer == Color.Black
+    val darkTheme = c.surface.luminance() < 0.5f
     val light: Color
     val deep: Color
+    val container: Color
+    val onContainer: Color
     val accent: Color
     val inverted: Boolean
     // Posters alternate light and dark and rotate through the three accent hues.
     when (chapter) {
-        WrappedChapter.COVER, WrappedChapter.SUMMARY -> {
+        WrappedChapter.COVER, WrappedChapter.SUMMARY, WrappedChapter.ARTISTS -> {
             light = c.primaryFixed
             deep = c.onPrimaryFixed
+            container = c.primaryContainer
+            onContainer = c.onPrimaryContainer
             accent = c.tertiaryFixedDim
-            inverted = false
+            inverted = chapter == WrappedChapter.ARTISTS
         }
 
         WrappedChapter.TIME, WrappedChapter.MIX -> {
             light = c.tertiaryFixed
             deep = c.onTertiaryFixed
+            container = c.tertiaryContainer
+            onContainer = c.onTertiaryContainer
             accent = c.primaryFixedDim
             inverted = chapter == WrappedChapter.TIME
         }
 
-        WrappedChapter.TRACKS -> {
+        WrappedChapter.TRACKS, WrappedChapter.ALBUMS -> {
             light = c.secondaryFixed
             deep = c.onSecondaryFixed
-            accent = c.primaryFixedDim
-            inverted = false
-        }
-
-        WrappedChapter.ARTISTS -> {
-            light = c.primaryFixed
-            deep = c.onPrimaryFixed
-            accent = c.tertiaryFixedDim
-            inverted = true
-        }
-
-        WrappedChapter.ALBUMS -> {
-            light = c.secondaryFixed
-            deep = c.onSecondaryFixed
-            accent = c.tertiaryFixedDim
-            inverted = true
+            container = c.secondaryContainer
+            onContainer = c.onSecondaryContainer
+            accent = if (chapter == WrappedChapter.TRACKS) c.primaryFixedDim else c.tertiaryFixedDim
+            inverted = chapter == WrappedChapter.ALBUMS
         }
     }
-    return if (!inverted && !pureBlack) {
-        WrappedPalette(light, deep, deep, deep, accent, deep, light, deep, accent)
-    } else {
-        val background = if (pureBlack) Color.Black else deep
-        WrappedPalette(background, light, accent, accent, deep, light, deep, accent, accent)
+    return when {
+        pureBlack || inverted -> {
+            val background = if (pureBlack) Color.Black else deep
+            WrappedPalette(background, light, accent, accent, deep, light, deep, accent, accent)
+        }
+
+        // In dark theme the light posters move to the theme's dark containers instead of glowing pastel grounds.
+        darkTheme -> {
+            WrappedPalette(container, onContainer, accent, accent, deep, onContainer, container, deep, accent)
+        }
+
+        else -> {
+            WrappedPalette(light, deep, deep, deep, accent, deep, light, deep, accent)
+        }
     }
 }
 
@@ -551,6 +555,11 @@ internal fun wrappedTypography(): Typography {
         )
     }
 }
+
+/** Wide, heavy Google Sans Flex for short titles outside the posters. */
+@Composable
+internal fun wrappedTitleStyle(): TextStyle =
+    TextStyle(fontFamily = FontFamily(flexFont(900, width = 104f, round = 40f)), fontSize = 24.sp, lineHeight = 28.sp)
 
 /** Condensed, heavy Google Sans Flex for stickers and short labels. */
 @Composable

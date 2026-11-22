@@ -57,6 +57,25 @@ import org.jetbrains.compose.resources.stringResource
 import org.koin.androidx.compose.koinViewModel
 import org.koin.compose.koinInject
 
+/** Metrolist Wrapped on Android, shown edge to edge with the mini player moved behind it. */
+@Composable
+fun AndroidWrappedScreen(onBack: () -> Unit) {
+    val context = LocalContext.current
+    val shareLabel = stringResource(Res.string.share)
+    val immersiveContent = LocalImmersiveContent.current
+    DisposableEffect(immersiveContent) {
+        immersiveContent.value = true
+        onDispose { immersiveContent.value = false }
+    }
+    WrappedScreen(
+        database = koinInject<MusicDatabase>(),
+        playbackController = LocalPlaybackController.current,
+        onBack = onBack,
+        onExport = { shareImage(context, it, shareLabel) },
+        exportLabel = shareLabel,
+    )
+}
+
 @Composable
 fun StatsScreen(
     onNavigateBack: () -> Unit,
@@ -67,19 +86,7 @@ fun StatsScreen(
     val shareLabel = stringResource(Res.string.share)
     var showWrapped by rememberSaveable { mutableStateOf(false) }
     if (showWrapped) {
-        // Wrapped runs edge to edge, so the mini player moves behind it.
-        val immersiveContent = LocalImmersiveContent.current
-        DisposableEffect(immersiveContent) {
-            immersiveContent.value = true
-            onDispose { immersiveContent.value = false }
-        }
-        WrappedScreen(
-            database = koinInject<MusicDatabase>(),
-            playbackController = LocalPlaybackController.current,
-            onBack = { showWrapped = false },
-            onExport = { shareImage(context, it, shareLabel) },
-            exportLabel = shareLabel,
-        )
+        AndroidWrappedScreen(onBack = { showWrapped = false })
         return
     }
     val uiState by viewModel.uiState.collectAsState()

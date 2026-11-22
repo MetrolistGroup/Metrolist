@@ -5608,4 +5608,6 @@
     <string name="wrapped_top_album">Your top album</string>
     <string name="wrapped_artist_mix">Your artist mix</string>
     <string name="wrapped_minutes_listened">minutes listened</string>
+    <string name="wrapped_home_title">Your %1$s Wrapped is here</string>
+    <string name="wrapped_home_body">See your year in music and share it.</string>
 </resources>

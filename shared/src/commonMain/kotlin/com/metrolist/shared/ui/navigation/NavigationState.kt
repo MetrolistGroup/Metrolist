@@ -54,6 +54,7 @@ internal val navigationSavedStateConfiguration =
                     subclass(Screen.Settings::class, Screen.Settings.serializer())
                     subclass(Screen.SettingsPage::class, Screen.SettingsPage.serializer())
                     subclass(Screen.Statistics::class, Screen.Statistics.serializer())
+                    subclass(Screen.Wrapped::class, Screen.Wrapped.serializer())
                     subclass(Screen.StatisticsDetail::class, Screen.StatisticsDetail.serializer())
                     subclass(Screen.Recognition::class, Screen.Recognition.serializer())
                     subclass(Screen.RecognitionHistory::class, Screen.RecognitionHistory.serializer())

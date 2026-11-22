@@ -160,6 +160,7 @@ import com.metrolist.shared.generated.resources.search
 import com.metrolist.shared.generated.resources.search_history_removal_failed
 import com.metrolist.shared.generated.resources.settings_diagnostic_logging_description
 import com.metrolist.shared.generated.resources.settings_storage_summary
+import com.metrolist.shared.generated.resources.share
 import com.metrolist.shared.generated.resources.shuffle
 import com.metrolist.shared.generated.resources.subscribed_to_artist
 import com.metrolist.shared.generated.resources.youtube_session_expired_message
@@ -272,6 +273,8 @@ import com.metrolist.shared.ui.theme.rememberArtworkSeedColor
 import com.metrolist.shared.ui.theme.resolveThemeSeedColor
 import com.metrolist.shared.ui.utils.rememberFileSizeFormatter
 import com.metrolist.shared.ui.utils.setText
+import com.metrolist.shared.ui.wrapped.WrappedHomeCard
+import com.metrolist.shared.ui.wrapped.WrappedScreen
 import com.metrolist.shared.utils.BlockScreenshots
 import com.metrolist.shared.utils.openUrl
 import com.metrolist.shared.utils.parseYouTubeUrl
@@ -1121,6 +1124,9 @@ fun MobileApp(
                                                             )
                                                         }
                                                     }
+                                                    item(key = "wrapped_card") {
+                                                        WrappedHomeCard(onClick = { open(MobileRoute.Wrapped) })
+                                                    }
                                                 },
                                             )
                                         }
@@ -1282,6 +1288,18 @@ fun MobileApp(
                                     formatMonth = formatHistoryMonth,
                                     onSongMenu = { menuItem = it to null },
                                     modifier = Modifier.fillMaxSize().padding(routePadding),
+                                )
+                            }
+
+                            MobileRoute.Wrapped -> {
+                                WrappedScreen(
+                                    database = database,
+                                    playbackController = playbackController,
+                                    onBack = ::back,
+                                    onExport = onExportStatistics,
+                                    exportLabel = stringResource(Res.string.share),
+                                    bottomContentPadding = playerContentPadding,
+                                    showBackButton = true,
                                 )
                             }
 
