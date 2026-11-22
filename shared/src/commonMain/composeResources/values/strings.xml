@@ -5574,4 +5574,13 @@
     <string name="discord_presence_competing_in">Competing in</string>
     <string name="discord_preview_edit_hint">Tap a line on the preview to edit it</string>
     <string name="discord_time_left">%1$s left</string>
+    <string name="discord_position_duration">%1$s / %2$s</string>
+    <!-- Raw template tokens are not translated: the same text is inserted into the template. -->
+    <string name="discord_token_song_name" translatable="false">{song.name}</string>
+    <string name="discord_token_artist_name" translatable="false">{artist.name}</string>
+    <string name="discord_token_album_name" translatable="false">{album.name}</string>
+    <string name="discord_token_video_id" translatable="false">{video.id}</string>
+    <string name="discord_token_song_url" translatable="false">{song.url}</string>
+    <string name="discord_token_artist_url" translatable="false">{artist.url}</string>
+    <string name="discord_token_album_url" translatable="false">{album.url}</string>
 </resources>

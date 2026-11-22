@@ -75,12 +75,20 @@ import com.metrolist.shared.generated.resources.discord_button2_label
 import com.metrolist.shared.generated.resources.discord_button2_url
 import com.metrolist.shared.generated.resources.discord_listen_to_metrolist
 import com.metrolist.shared.generated.resources.discord_logout
+import com.metrolist.shared.generated.resources.discord_position_duration
 import com.metrolist.shared.generated.resources.discord_presence_competing_in
 import com.metrolist.shared.generated.resources.discord_presence_listening_to
 import com.metrolist.shared.generated.resources.discord_preview_buttons_adjusted
 import com.metrolist.shared.generated.resources.discord_preview_edit_hint
 import com.metrolist.shared.generated.resources.discord_state
 import com.metrolist.shared.generated.resources.discord_time_left
+import com.metrolist.shared.generated.resources.discord_token_album_name
+import com.metrolist.shared.generated.resources.discord_token_album_url
+import com.metrolist.shared.generated.resources.discord_token_artist_name
+import com.metrolist.shared.generated.resources.discord_token_artist_url
+import com.metrolist.shared.generated.resources.discord_token_song_name
+import com.metrolist.shared.generated.resources.discord_token_song_url
+import com.metrolist.shared.generated.resources.discord_token_video_id
 import com.metrolist.shared.generated.resources.done
 import com.metrolist.shared.generated.resources.edit
 import com.metrolist.shared.generated.resources.preview
@@ -214,8 +222,22 @@ private fun highlightDiscordTemplate(
     }
 }
 
-private val NAME_TOKENS = listOf("{song.name}", "{artist.name}", "{album.name}", "{video.id}")
-private val URL_TOKENS = listOf("{song.url}", "{artist.url}", "{album.url}")
+@Composable
+private fun nameTokens(): List<String> =
+    listOf(
+        stringResource(Res.string.discord_token_song_name),
+        stringResource(Res.string.discord_token_artist_name),
+        stringResource(Res.string.discord_token_album_name),
+        stringResource(Res.string.discord_token_video_id),
+    )
+
+@Composable
+private fun urlTokens(): List<String> =
+    listOf(
+        stringResource(Res.string.discord_token_song_url),
+        stringResource(Res.string.discord_token_artist_url),
+        stringResource(Res.string.discord_token_album_url),
+    )
 
 private fun TextFieldValue.insert(token: String): TextFieldValue {
     val start = selection.min.coerceIn(0, text.length)
@@ -443,7 +465,11 @@ internal fun DiscordPresenceCard(
                         }
 
                         playback.durationMs > 0 -> {
-                            "${formatDuration(playback.positionMs)} /\u00a0${formatDuration(playback.durationMs)}"
+                            stringResource(
+                                Res.string.discord_position_duration,
+                                formatDuration(playback.positionMs),
+                                formatDuration(playback.durationMs),
+                            )
                         }
 
                         else -> {
@@ -659,7 +685,7 @@ internal fun DiscordTemplateEditorDialog(
                     value = if (target == DiscordEditTarget.BUTTON1) label1Draft else label2Draft,
                     placeholder = null,
                 ) { if (target == DiscordEditTarget.BUTTON1) label1Draft = it else label2Draft = it }
-                DiscordTemplateChips(NAME_TOKENS) { token ->
+                DiscordTemplateChips(nameTokens()) { token ->
                     if (target == DiscordEditTarget.BUTTON1) {
                         label1Draft = label1Draft.insert(token)
                     } else {
@@ -680,7 +706,7 @@ internal fun DiscordTemplateEditorDialog(
                     placeholder = DiscordDefaults.BUTTON1_URL_TEMPLATE,
                     keyboardUrl = true,
                 ) { if (target == DiscordEditTarget.BUTTON1) url1Draft = it else url2Draft = it }
-                DiscordTemplateChips(URL_TOKENS) { token ->
+                DiscordTemplateChips(urlTokens()) { token ->
                     if (target == DiscordEditTarget.BUTTON1) url1Draft = url1Draft.insert(token) else url2Draft = url2Draft.insert(token)
                 }
                 DiscordTemplatePreview(
@@ -719,7 +745,7 @@ internal fun DiscordTemplateEditorDialog(
                         else -> detailsDraft = it
                     }
                 }
-                DiscordTemplateChips(NAME_TOKENS) { token ->
+                DiscordTemplateChips(nameTokens()) { token ->
                     when (target) {
                         DiscordEditTarget.ACTIVITY_NAME -> nameDraft = nameDraft.insert(token)
                         DiscordEditTarget.STATE -> stateDraft = stateDraft.insert(token)
