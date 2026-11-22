@@ -11,11 +11,11 @@ Funkce:
 - Streamování na zařízení **Google Cast**, F-Cast, SONOS a přes DLNA
 - Import záloh/playlistů z více než 29 jiných klientů a 6 různých služeb
 - Rozpoznávání hudby přes **Shazam**
-- Rychlý poskytovatel textů písní na míru, překlady textů a podpora romanizace
-- Překlady do více než 15 jazyků
+- Rychlý poskytovatel textů skladeb na míru, překlady textů a podpora převodu do latinky
+- Překlad do více než 15 jazyků
 - Podpora **přehrávání videí**
 - Rozsáhlé filtrování obsahu
 - **Canvas z Apple Music**, Spotify a YouTube Music
-- Výběr z několika typů přehrávačů, miniatur, minipřehrávačů a pozadí
+- Výběr z několika typů přehrávačů, miniatur, mini přehrávačů a pozadí
 - Podpora vlastního písma a ikony aplikace
 - … a mnohem více!
