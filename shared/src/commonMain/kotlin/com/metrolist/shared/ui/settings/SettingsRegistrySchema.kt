@@ -132,6 +132,9 @@ data class SharedSettingsHost(
     val onSwitchYouTubeChannel: (() -> Unit)? = null,
     val customPageIcons: Map<SettingsPageId, @Composable (Color) -> Unit> = emptyMap(),
     val pageContent: @Composable (SettingsPageId, onBack: () -> Unit, onNavigate: (SettingsPageId) -> Unit) -> Unit = { _, _, _ -> },
+    // Pages that support a pull-to-refresh gesture; the callback runs that page's refresh action.
+    val refreshablePages: Set<SettingsPageId> = emptySet(),
+    val onPageRefresh: (SettingsPageId) -> Unit = {},
     val rememberMetroEqProfilePicker: (@Composable (onPicked: (fileName: String, content: String) -> Unit) -> () -> Unit)? = null,
 )
 

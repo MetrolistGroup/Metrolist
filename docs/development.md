@@ -419,6 +419,8 @@ Desktop song selection, skips, receiver EOF and Radio use one transition owner. 
 
 Discord initializes only once the integration is enabled or its settings open; Android OAuth callbacks also initialize it. Clearing presence starts a 30-second idle grace period, after which the gateway closes but credentials stay. Playback reconnects. Known offline state suspends retries until the network monitor reports connectivity. Handshakes time out after 15 seconds and retry with capped backoff.
 
+The Discord settings page shows a live preview of the rendered activity. Its edit mode maps each preview line to a template editor with placeholder highlighting and a rendered preview of the playing song; editing a template while edit mode is on enables advanced mode. A pull-to-refresh gesture on touch platforms resends the current presence, with the same result message as the manual Refresh RPC action.
+
 ### SponsorBlock
 
 Android and desktop offer an opt-in **SponsorBlock (podcasts)** switch. Only items typed as podcast episodes request segments. It skips `sponsor`, `selfpromo` and `interaction` segments, but not during casting or remote guest playback. iOS has no integration. The observer uses the [hash-prefix API](https://wiki.sponsor.ajay.app/w/API_Docs#GET_/api/skipSegments/:sha256HashPrefix), sending four SHA-256 characters and matching the full ID locally. Results are cached in memory for an hour, or five minutes for empty results and failures. Invalid ranges are dropped, overlaps merged and ranges past the duration ignored. Uses [SponsorBlock data](https://sponsor.ajay.app/) under [CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/).

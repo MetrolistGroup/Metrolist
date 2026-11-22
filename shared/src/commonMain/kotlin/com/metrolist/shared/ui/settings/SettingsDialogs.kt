@@ -54,7 +54,7 @@ import org.jetbrains.compose.resources.stringResource
 import kotlin.math.roundToInt
 
 @Composable
-private fun SettingsDialogSurface(
+internal fun SettingsDialogSurface(
     onDismiss: () -> Unit,
     content: @Composable () -> Unit,
 ) {
