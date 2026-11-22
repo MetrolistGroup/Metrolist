@@ -130,11 +130,11 @@ class ParametricEqualizer(
         outputGainDb: Double = 0.0,
     ) {
         val outputGain = 10.0.pow(outputGainDb.coerceIn(MIN_AUDIO_PREAMP_DB, MAX_AUDIO_BOOST_DB) / 20.0)
-        val identityPcm = activeFilters.isEmpty() && preampGain == 1.0 && outputGain == 1.0
+        val identityConfig = activeFilters.isEmpty() && preampGain == 1.0 && outputGain == 1.0
         if (processingBuffer.size < count) processingBuffer = DoubleArray(count)
         for (i in 0 until count) processingBuffer[i] = samples[i] / 32768.0
         filterBuffer(count)
-        limitFrames(count, outputGain, identityPcm)
+        limitFrames(count, outputGain, identityConfig)
         for (i in 0 until count) {
             val y = processingBuffer[i] * 32768.0
             samples[i] = y.coerceIn(-32768.0, 32767.0).roundToInt().toShort()
@@ -147,19 +147,11 @@ class ParametricEqualizer(
         outputGainDb: Double = 0.0,
     ) {
         val outputGain = 10.0.pow(outputGainDb.coerceIn(MIN_AUDIO_PREAMP_DB, MAX_AUDIO_BOOST_DB) / 20.0)
-        // Out-of-range float frames still need per-frame protection; only in-range identity PCM can bypass.
-        var inRange = true
-        for (i in 0 until count) {
-            if (abs(samples[i]) > 1.0f) {
-                inRange = false
-                break
-            }
-        }
-        val identityPcm = inRange && activeFilters.isEmpty() && preampGain == 1.0 && outputGain == 1.0
+        val identityConfig = activeFilters.isEmpty() && preampGain == 1.0 && outputGain == 1.0
         if (processingBuffer.size < count) processingBuffer = DoubleArray(count)
         for (i in 0 until count) processingBuffer[i] = samples[i].toDouble()
         filterBuffer(count)
-        limitFrames(count, outputGain, identityPcm)
+        limitFrames(count, outputGain, identityConfig)
         for (i in 0 until count) {
             val y = processingBuffer[i]
             samples[i] = y.coerceIn(-1.0, 1.0).toFloat()
@@ -204,7 +196,7 @@ class ParametricEqualizer(
     private fun limitFrames(
         count: Int,
         outputGain: Double,
-        identityPcm: Boolean,
+        identityConfig: Boolean,
     ) {
         var frameStart = 0
         var lastGain = 1.0
@@ -218,6 +210,8 @@ class ParametricEqualizer(
                 rawPeak = maxOf(rawPeak, abs(x))
                 saturatedPeak = maxOf(saturatedPeak, abs(softClip(x)))
             }
+            // Decide per frame so a buffer boundary cannot change protection for nearby valid peaks.
+            val identityPcm = identityConfig && rawPeak <= 1.0
             // A rolling overload fraction spans waveform cycles, so periodic peaks drive limiting without counting isolated transients.
             val overloadTarget = if (!identityPcm && rawPeak > LIMITER_CEILING) 1.0 else 0.0
             sustainedOverloadRatio += (overloadTarget - sustainedOverloadRatio) * sustainedOverloadAlpha
