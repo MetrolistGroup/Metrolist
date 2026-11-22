@@ -93,7 +93,7 @@ The leading and trailing quarter of a mobile chapter navigate backward and forwa
 
 ## Edge-to-edge revision
 
-Later on November 22 the maintainer asked for an edge-to-edge, gesture-driven recap. The mobile chrome is reduced to the chapter rail and a soundtrack button, with a back button only on iOS. Chapters advance automatically and pause while held, so the Previous/Next buttons and refresh action were removed. The soundtrack starts automatically, plays each chapter's own song and no longer shows status text. Headlines prefer one line and use bundled Google Sans Flex; figures use Google Sans Code. An artist-mix chapter shows the top twelve artists, and the album chapter shows its record sliding out of the sleeve. These choices supersede the manual navigation and opt-in soundtrack in the selected scope above.
+Later on November 22 the maintainer asked for an edge-to-edge, gesture-driven recap. The mobile chrome is reduced to the chapter rail and a soundtrack button, with a back button only on iOS. Chapters advance automatically and pause while held, so the Previous/Next buttons and refresh action were removed. The soundtrack starts automatically, plays each chapter's own song and no longer shows status text. Headlines prefer one line. After community feedback that the outlined, shadowed headlines looked cartoonish, all Wrapped text moved to bundled Google Sans Flex, and headlines animate its weight and width axes instead. An artist-mix chapter shows the top twelve artists, and the album chapter shows its record sliding out of the sleeve. These choices supersede the manual navigation and opt-in soundtrack in the selected scope above.
 
 ## Full-year data investigation
 

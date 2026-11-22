@@ -33,6 +33,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialShapes
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.Typography
 import androidx.compose.material3.toPath
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
@@ -85,8 +86,7 @@ import androidx.compose.ui.unit.sp
 import androidx.graphics.shapes.Morph
 import androidx.graphics.shapes.RoundedPolygon
 import com.metrolist.shared.generated.resources.Res
-import com.metrolist.shared.generated.resources.wrapped_display
-import com.metrolist.shared.generated.resources.wrapped_mono
+import com.metrolist.shared.generated.resources.wrapped_flex
 import com.metrolist.shared.settings.Settings
 import com.metrolist.shared.ui.components.images.AsyncImage
 import com.metrolist.shared.ui.haptics.HapticEvent
@@ -122,8 +122,6 @@ internal data class WrappedPalette(
     val background: Color,
     val ink: Color,
     val fill: Color,
-    val shadow: Color,
-    val outline: Color,
     val sticker: Color,
     val onSticker: Color,
     val pill: Color,
@@ -177,10 +175,10 @@ internal fun wrappedPalette(chapter: WrappedChapter): WrappedPalette {
         }
     }
     return if (!inverted && !pureBlack) {
-        WrappedPalette(light, deep, accent, deep, deep, deep, accent, deep, light, deep)
+        WrappedPalette(light, deep, deep, deep, accent, deep, light, deep)
     } else {
         val background = if (pureBlack) Color.Black else deep
-        WrappedPalette(background, light, light, accent, background, accent, deep, light, deep, accent)
+        WrappedPalette(background, light, accent, accent, deep, light, deep, accent)
     }
 }
 
@@ -433,58 +431,77 @@ internal fun Modifier.wrappedEntrance(
     }
 }
 
-/** Google Sans Flex at its widest, heaviest and roundest: the poster headline face. */
+/** One Google Sans Flex instance; [opticalSize] tunes spacing and contrast for the size it is set at. */
 @Composable
-private fun wrappedDisplayFamily(): FontFamily {
-    val font =
-        Font(
-            Res.font.wrapped_display,
-            FontWeight(950),
-            variationSettings =
-                FontVariation.Settings(
-                    FontVariation.weight(950),
-                    FontVariation.width(112f),
-                    FontVariation.Setting("ROND", 100f),
-                ),
+private fun flexFont(
+    weight: Int,
+    width: Float = 100f,
+    round: Float = 0f,
+    opticalSize: Float = 18f,
+): Font =
+    Font(
+        Res.font.wrapped_flex,
+        FontWeight(weight),
+        variationSettings =
+            FontVariation.Settings(
+                FontVariation.weight(weight),
+                FontVariation.width(width),
+                FontVariation.Setting("ROND", round),
+                FontVariation.Setting("opsz", opticalSize),
+            ),
+    )
+
+private val WrappedWeights = listOf(400, 500, 600, 700, 800, 900)
+
+/** Google Sans Flex for every text role inside Wrapped, in place of the app's system font. */
+@Composable
+internal fun wrappedTypography(): Typography {
+    val text = FontFamily(WrappedWeights.map { flexFont(it) })
+    val display = FontFamily(WrappedWeights.map { flexFont(it, width = 104f, round = 40f, opticalSize = 72f) })
+    val base = MaterialTheme.typography
+    return remember(base, text, display) {
+        base.copy(
+            displayLarge = base.displayLarge.copy(fontFamily = display),
+            displayMedium = base.displayMedium.copy(fontFamily = display),
+            displaySmall = base.displaySmall.copy(fontFamily = display),
+            headlineLarge = base.headlineLarge.copy(fontFamily = display),
+            headlineMedium = base.headlineMedium.copy(fontFamily = display),
+            headlineSmall = base.headlineSmall.copy(fontFamily = display),
+            titleLarge = base.titleLarge.copy(fontFamily = text),
+            titleMedium = base.titleMedium.copy(fontFamily = text),
+            titleSmall = base.titleSmall.copy(fontFamily = text),
+            bodyLarge = base.bodyLarge.copy(fontFamily = text),
+            bodyMedium = base.bodyMedium.copy(fontFamily = text),
+            bodySmall = base.bodySmall.copy(fontFamily = text),
+            labelLarge = base.labelLarge.copy(fontFamily = text),
+            labelMedium = base.labelMedium.copy(fontFamily = text),
+            labelSmall = base.labelSmall.copy(fontFamily = text),
         )
-    return remember(font) { FontFamily(font) }
+    }
 }
 
-/** Google Sans Flex condensed and slanted, for stickers and labels. */
+/** Condensed, heavy Google Sans Flex for stickers and short labels. */
 @Composable
-private fun wrappedLabelFamily(): FontFamily {
-    val font =
-        Font(
-            Res.font.wrapped_display,
-            FontWeight(850),
-            variationSettings =
-                FontVariation.Settings(
-                    FontVariation.weight(850),
-                    FontVariation.width(78f),
-                    FontVariation.slant(-10f),
-                    FontVariation.Setting("ROND", 40f),
-                ),
-        )
-    return remember(font) { FontFamily(font) }
-}
+internal fun wrappedLabelStyle(): TextStyle =
+    TextStyle(fontFamily = FontFamily(flexFont(800, width = 88f, opticalSize = 24f)), fontSize = 22.sp, lineHeight = 26.sp)
 
-/** Google Sans Code, for counts and ranks. */
+/** Tabular Google Sans Flex for counts, ranks and stat pills. */
 @Composable
-private fun wrappedNumberFamily(): FontFamily {
-    val font = Font(Res.font.wrapped_mono, FontWeight.Bold, variationSettings = FontVariation.Settings(FontVariation.weight(760)))
-    return remember(font) { FontFamily(font) }
-}
-
-@Composable
-internal fun wrappedLabelStyle(): TextStyle = TextStyle(fontFamily = wrappedLabelFamily(), fontSize = 24.sp, lineHeight = 28.sp)
-
-@Composable
-internal fun wrappedNumberStyle(): TextStyle = TextStyle(fontFamily = wrappedNumberFamily(), fontSize = 16.sp, lineHeight = 20.sp)
+internal fun wrappedNumberStyle(): TextStyle =
+    TextStyle(
+        fontFamily = FontFamily(flexFont(700, opticalSize = 18f)),
+        fontSize = 16.sp,
+        lineHeight = 20.sp,
+        fontFeatureSettings = "tnum",
+    )
 
 @Composable
 internal expect fun WrappedStatusBarAppearance(lightBackground: Boolean)
 
-/** Display text with a hard offset shadow and outline, like a screen-printed poster headline. */
+/**
+ * Poster headline in Google Sans Flex. As it enters, its weight and width spring from regular past their
+ * final values and settle, so the letters visibly flex into place.
+ */
 @Composable
 internal fun WrappedHeadline(
     text: String,
@@ -493,26 +510,30 @@ internal fun WrappedHeadline(
     maxFontSize: TextUnit = 96.sp,
     minFontSize: TextUnit = 28.sp,
     maxLines: Int = 2,
-    depth: Dp = 5.dp,
     textAlign: TextAlign = TextAlign.Start,
+    visible: Boolean = true,
+    motionEnabled: Boolean = false,
 ) {
-    val outlineWidth = with(LocalDensity.current) { 6.dp.toPx() }
-    val style =
+    val flex = rememberWrappedReveal(visible, motionEnabled, 60, Spring.StiffnessLow, 0.32f)
+    // Font variations are cached per instance, so step the axes instead of building a face every frame.
+    val weight = (400 + 520 * flex.value).coerceIn(400f, 1000f).let { (it / 40f).roundToInt() * 40 }
+    val width = (84f + 24f * flex.value).coerceIn(75f, 125f).let { (it / 4f).roundToInt() * 4f }
+    val finalStyle =
         TextStyle(
-            fontFamily = wrappedDisplayFamily(),
+            fontFamily = FontFamily(flexFont(920, width = 108f, round = 40f, opticalSize = 144f)),
             lineHeight = 1.0.em,
-            letterSpacing = (-0.01).em,
+            letterSpacing = (-0.02).em,
             fontFeatureSettings = "tnum",
             textAlign = textAlign,
         )
-    val outline = Stroke(outlineWidth, join = StrokeJoin.Round)
+    val style = finalStyle.copy(fontFamily = FontFamily(flexFont(weight, width = width, round = 40f, opticalSize = 144f)))
     val measurer = rememberTextMeasurer()
     BoxWithConstraints(modifier) {
-        val room = constraints.maxWidth - with(LocalDensity.current) { (depth + 6.dp).roundToPx() }
-        val (lines, cap) =
-            remember(text, style, maxFontSize, minFontSize, room, maxLines) {
+        val room = constraints.maxWidth
+        val (lines, size) =
+            remember(text, finalStyle, maxFontSize, minFontSize, room, maxLines) {
                 fun width(value: String) =
-                    measurer.measure(value, style.copy(fontSize = maxFontSize), softWrap = false, maxLines = 1).size.width
+                    measurer.measure(value, finalStyle.copy(fontSize = maxFontSize), softWrap = false, maxLines = 1).size.width
 
                 fun fit(width: Int) = if (width > room && room > 0) maxFontSize.value * room / width else maxFontSize.value
                 val single = fit(width(text))
@@ -520,45 +541,16 @@ internal fun WrappedHeadline(
                 if (maxLines == 1 || single >= maxOf(minFontSize.value, maxFontSize.value * 0.4f)) {
                     1 to single
                 } else {
-                    // Auto-size alone happily splits words, so cap the size at the widest word.
+                    // Never split a word: the widest word sets the ceiling.
                     maxLines to fit(text.split(' ').filter { it.isNotEmpty() }.maxOfOrNull { width(it) } ?: 0)
                 }
             }
-        val autoSize = TextAutoSize.StepBased(minFontSize = minFontSize, maxFontSize = maxOf(cap, minFontSize.value).sp)
-        val layer = Modifier.fillMaxWidth().clearAndSetSemantics {}
-        Text(
-            text,
-            layer.offset(depth * 0.8f, depth),
-            color = palette.shadow,
-            style = style,
-            autoSize = autoSize,
-            maxLines = lines,
-            overflow = TextOverflow.Ellipsis,
-        )
-        Text(
-            text,
-            layer.offset(depth * 0.8f, depth),
-            color = palette.shadow,
-            style = style.copy(drawStyle = outline),
-            autoSize = autoSize,
-            maxLines = lines,
-            overflow = TextOverflow.Ellipsis,
-        )
-        Text(
-            text,
-            layer,
-            color = palette.outline,
-            style = style.copy(drawStyle = outline),
-            autoSize = autoSize,
-            maxLines = lines,
-            overflow = TextOverflow.Ellipsis,
-        )
+        // Sizes are measured at the heaviest, widest setting, so the lighter frames of the entrance always fit.
         Text(
             text,
             Modifier.fillMaxWidth(),
             color = palette.fill,
-            style = style,
-            autoSize = autoSize,
+            style = style.copy(fontSize = maxOf(size, minFontSize.value).sp),
             maxLines = lines,
             overflow = TextOverflow.Ellipsis,
         )
@@ -595,10 +587,12 @@ internal fun WrappedFigure(
         maxFontSize = maxFontSize,
         maxLines = 1,
         textAlign = textAlign,
+        visible = visible,
+        motionEnabled = motionEnabled,
     )
 }
 
-/** A tilted label that slaps onto the poster with a bounce and a haptic tick. */
+/** A slightly tilted label that lands on the poster with a short bounce and a haptic tick. */
 @Composable
 internal fun WrappedSticker(
     text: String,
@@ -606,12 +600,12 @@ internal fun WrappedSticker(
     visible: Boolean,
     motionEnabled: Boolean,
     modifier: Modifier = Modifier,
-    tilt: Float = -4f,
+    tilt: Float = -2f,
     delayMillis: Long = 260,
 ) {
     val haptics = rememberMetrolistHaptics()
     val reveal =
-        rememberWrappedReveal(visible, motionEnabled, delayMillis, Spring.StiffnessMedium, 0.45f) {
+        rememberWrappedReveal(visible, motionEnabled, delayMillis, Spring.StiffnessMedium, 0.6f) {
             haptics.perform(HapticEvent.SEGMENT_TICK)
         }
     Text(
@@ -619,11 +613,11 @@ internal fun WrappedSticker(
         modifier
             .graphicsLayer {
                 val v = reveal.value
-                scaleX = 1.7f - 0.7f * v
+                scaleX = 1.25f - 0.25f * v
                 scaleY = scaleX
-                rotationZ = tilt - 16f * (1f - v)
+                rotationZ = tilt - 6f * (1f - v)
                 alpha = (v * 4f).coerceIn(0f, 1f)
-            }.background(palette.sticker, RoundedCornerShape(6.dp))
+            }.background(palette.sticker, RoundedCornerShape(8.dp))
             .padding(horizontal = 14.dp, vertical = 6.dp),
         color = palette.onSticker,
         style = wrappedLabelStyle(),
@@ -802,7 +796,7 @@ internal fun WrappedRankBadge(
         Text(
             rank,
             color = palette.onSticker,
-            style = TextStyle(fontFamily = wrappedDisplayFamily(), fontSize = 34.sp),
+            style = TextStyle(fontFamily = FontFamily(flexFont(900, width = 104f, opticalSize = 48f)), fontSize = 34.sp),
             maxLines = 1,
         )
     }

@@ -278,7 +278,7 @@ fun WrappedScreen(
         }
     }
     NavigationBackHandler(onBack = onBack)
-    MaterialTheme(motionScheme = MotionScheme.expressive()) {
+    MaterialTheme(motionScheme = MotionScheme.expressive(), typography = wrappedTypography()) {
         val title = stringResource(Res.string.wrapped)
         Surface(Modifier.fillMaxSize().semantics { paneTitle = title }) {
             val result = snapshot
@@ -830,7 +830,8 @@ private fun WrappedCover(
         Modifier.fillMaxWidth().wrappedEntrance(visible, motionEnabled, 1),
         maxFontSize = 168.sp,
         maxLines = 1,
-        depth = 8.dp,
+        visible = visible,
+        motionEnabled = motionEnabled,
     )
     WrappedPills(
         listOf(
@@ -930,7 +931,13 @@ private fun WrappedLeaders(
             },
         )
     val headline = @Composable {
-        WrappedHeadline(lead.title, palette, Modifier.fillMaxWidth().wrappedEntrance(visible, motionEnabled, 2))
+        WrappedHeadline(
+            lead.title,
+            palette,
+            Modifier.fillMaxWidth().wrappedEntrance(visible, motionEnabled, 2),
+            visible = visible,
+            motionEnabled = motionEnabled,
+        )
     }
     // The artist chapter leads with its name; the others lead with their artwork.
     if (chapter == WrappedChapter.ARTISTS) {
@@ -1113,6 +1120,8 @@ private fun WrappedMix(
         palette,
         Modifier.fillMaxWidth().wrappedEntrance(visible, motionEnabled, 1),
         maxLines = 1,
+        visible = visible,
+        motionEnabled = motionEnabled,
     )
     WrappedPills(
         listOf(
@@ -1154,7 +1163,7 @@ private fun WrappedRankings(
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                     Text(
                         item.title,
-                        style = MaterialTheme.typography.titleMediumEmphasized.copy(fontWeight = FontWeight.ExtraBold),
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.ExtraBold),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
@@ -1208,7 +1217,14 @@ private fun WrappedSummary(
         }
     }
     WrappedSticker(stringResource(Res.string.wrapped_summary), palette, visible, motionEnabled, Modifier.semantics { heading() })
-    WrappedHeadline(title, palette, Modifier.fillMaxWidth().wrappedEntrance(visible, motionEnabled, 1), maxFontSize = 72.sp)
+    WrappedHeadline(
+        title,
+        palette,
+        Modifier.fillMaxWidth().wrappedEntrance(visible, motionEnabled, 1),
+        maxFontSize = 72.sp,
+        visible = visible,
+        motionEnabled = motionEnabled,
+    )
     Column {
         WrappedFigure(state.totalPlays.toLong(), formatter::number, palette, visible, motionEnabled, maxFontSize = 72.sp)
         Text(stringResource(Res.string.statistics_plays_label), style = wrappedLabelStyle(), maxLines = 1)
