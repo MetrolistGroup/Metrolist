@@ -77,6 +77,13 @@ internal class DesktopPlaybackLibrary(
             repository().playlistSongIds(playlistId)
         }
     },
+    private val playlistContainsSong: suspend (String, String) -> Boolean = { playlistId, songId ->
+        if (playlistId.startsWith("LP")) {
+            database().dao().checkInPlaylist(playlistId, songId) > 0
+        } else {
+            repository().playlistContainsSong(playlistId, songId)
+        }
+    },
     private val addLocalBatch: (suspend (String, List<SongItem>) -> PlaylistAddBatchResult)? = { playlistId, songs ->
         addSongsToLocalPlaylist(database(), playlistId, songs)
     },
@@ -171,7 +178,15 @@ internal class DesktopPlaybackLibrary(
                                 async {
                                     val contains =
                                         try {
-                                            permits.withPermit { playlistSongIds(playlist.id).containsAll(selectedIds) }
+                                            permits.withPermit {
+                                                // A single song needs no full membership list; remote lookups stop at the first match.
+                                                val single = selectedIds.singleOrNull()
+                                                if (single != null) {
+                                                    playlistContainsSong(playlist.id, single)
+                                                } else {
+                                                    playlistSongIds(playlist.id).containsAll(selectedIds)
+                                                }
+                                            }
                                         } catch (e: CancellationException) {
                                             throw e
                                         } catch (_: Exception) {

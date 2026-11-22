@@ -18,6 +18,7 @@ from PIL import Image
 from Xlib import X, display, protocol
 
 from audio import private_audio
+import process_tree
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -42,7 +43,9 @@ def sample(pid):
     group = Path(f"/proc/{pid}/cgroup").read_text().strip().split(":", 2)[2]
     cgroup = Path("/sys/fs/cgroup") / group.lstrip("/")
     memory["scope_swap_bytes"] = int((cgroup / "memory.swap.current").read_text())
-    return {"time": time.monotonic(), "cpu_seconds": (int(stat[11]) + int(stat[12])) / os.sysconf("SC_CLK_TCK"), **memory}
+    # The tree adds WebKit and other helper processes, which the app PID alone does not count.
+    return {"time": time.monotonic(), "cpu_seconds": (int(stat[11]) + int(stat[12])) / os.sysconf("SC_CLK_TCK"), **memory,
+            "tree": process_tree.sample(pid)}
 
 
 def environment(profile):
@@ -59,8 +62,10 @@ def environment(profile):
     if not config.exists():
         config.write_text("desktopOnboardingComplete=true\ndesktopOnboardingInitialized=true\n"
                           "sentryEnabled=false\nenableLogging=true\nenableDiscordIntegration=false\n")
+    # Match the shipped Linux launcher; only the renderer differs because the private display is headless.
     env.update(HOME=str(profile), DBUS_SESSION_BUS_ADDRESS="unix:path=/nonexistent-r6-bus",
-               MALLOC_ARENA_MAX="2", METROLIST_STARTUP_TRACE="1", SKIKO_RENDER_API="SOFTWARE_COMPAT",
+               MALLOC_ARENA_MAX="4", MALLOC_MMAP_THRESHOLD_="131072",
+               WEBKIT_DISABLE_DMABUF_RENDERER="1", WEBKIT_DISABLE_COMPOSITING_MODE="1", METROLIST_STARTUP_TRACE="1", SKIKO_RENDER_API="SOFTWARE_COMPAT",
                LIBGL_ALWAYS_SOFTWARE="1", METROLIST_CURSOR_CONFIGURED="1")
     temporary = profile / "tmp"
     temporary.mkdir(exist_ok=True)
@@ -213,6 +218,8 @@ def run(args):
     work = args.work / args.name
     work.mkdir(parents=True)
     env = environment(profile)
+    if args.mode == "native":
+        env["MALLOC_ARENA_MAX"] = "2"  # The native package's linux-launcher.sh default; the JVM launcher uses 4.
     result = {"mode": args.mode, "profile": args.profile, "samples": [], "first_paint_seconds": None}
     with private_display(work, env) as (env, connection), \
             (private_audio(work, env) if args.media else contextlib.nullcontext(env)) as env, \
@@ -237,7 +244,7 @@ def run(args):
                             result["first_paint_seconds"] = time.monotonic() - start
                             image.save(work / "first-paint.png")
                 sample_start = 40 if args.media else 15
-                if elapsed >= sample_start and (not result["samples"] or time.monotonic() - result["samples"][-1]["time"] >= 5):
+                if elapsed >= sample_start and (not result["samples"] or time.monotonic() - result["samples"][-1]["time"] >= 1):
                     result["samples"].append(sample(process.pid))
                 time.sleep(0.05 if result["first_paint_seconds"] is None else 0.2)
             window, image = window_image(connection)
@@ -268,6 +275,7 @@ def run(args):
             samples = result["samples"]
             if len(samples) > 1:
                 result["cpu_percent_one_core"] = 100 * (samples[-1]["cpu_seconds"] - samples[0]["cpu_seconds"]) / (samples[-1]["time"] - samples[0]["time"])
+                result["tree_summary"] = process_tree.summarize([entry["tree"] for entry in samples])
             result["phase"] = "playing" if args.media else "idle"
             if args.media:
                 log.flush()
