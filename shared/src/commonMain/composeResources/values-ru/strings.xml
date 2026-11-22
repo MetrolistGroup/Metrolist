@@ -384,9 +384,9 @@
     <string name="appearance_slim_bottom_nav">Тонкая нижняя панель навигации</string>
     <string name="appearance_slim_bottom_nav_description">Убрать текст из панели навигации</string>
     <string name="appearance_swipe_song_gesture">Свайп по треку</string>
-    <string name="appearance_swipe_song_gesture_description">Проведите по песне влево, чтобы добавить в очередь, или вправо, чтобы воспроизвести следующей</string>
-    <string name="appearance_swipe_song_gesture_playlists">Жесты свайпа песни в плейлистах</string>
-    <string name="appearance_swipe_song_gesture_playlists_description">Свайпните по песне, чтобы убрать её из плейлиста</string>
+    <string name="appearance_swipe_song_gesture_description">Проведите по треку влево, чтобы добавить его в очередь, или вправо, чтобы воспроизвести следующим</string>
+    <string name="appearance_swipe_song_gesture_playlists">Свайп по треку в плейлистах</string>
+    <string name="appearance_swipe_song_gesture_playlists_description">Проведите по треку, чтобы удалить его из плейлиста</string>
     <string name="appearance_enable_haptic_feedback">Тактильная обратная связь</string>
     <string name="appearance_enable_haptic_feedback_description">Вибрирует при нажатии кнопок и взаимодействиях</string>
     <string name="appearance_auto_playlists">Автоматические плейлисты</string>
@@ -2079,7 +2079,7 @@
     <string name="settings_initial_tab_summary">Выберите вкладку, которая открывается при запуске приложения</string>
     <string name="settings_bottom_navigation_summary">Оставлять навигацию внизу на широких экранах</string>
     <string name="settings_app_layout_summary">Выберите, как содержимое и плеер делят окно</string>
-    <string name="settings_swipe_sensitivity_summary">Настройте, насколько легко жест смахивания переключает песню</string>
+    <string name="settings_swipe_sensitivity_summary">Настройте, насколько легко переключать треки свайпом</string>
     <string name="settings_player_control_summary">Показывать этот элемент управления в развёрнутом плеере</string>
     <string name="settings_mini_player_control_summary">Показывать этот элемент управления в мини-плеере</string>
     <string name="settings_mini_player_progress_summary">Показывать ход воспроизведения вокруг обложки мини-плеера</string>
@@ -2294,7 +2294,7 @@
     <string name="tempo_pitch_input_range">Введите число от %1$s до %2$s.</string>
     <string name="settings_more_options">Дополнительные настройки</string>
     <string name="settings_navigation_gestures">Навигация и жесты</string>
-    <string name="settings_navigation_gestures_description">Стартовая страница, вкладки навигации и действия свайпов</string>
+    <string name="settings_navigation_gestures_description">Стартовая страница, вкладки навигации и действия при свайпе</string>
     <string name="settings_queue_description">Восстановление очереди, перемешивание и автоматическая загрузка</string>
     <string name="settings_home_library">Главная и библиотека</string>
     <string name="settings_home_library_description">Разделы главной страницы и ярлыки автоматических плейлистов</string>
@@ -2730,4 +2730,7 @@
     <string name="widget_time_pair">%1$s / %2$s</string>
     <string name="widget_track_description">%1$s, %2$s</string>
     <string name="widget_play_item">Играть %1$s</string>
+    <string name="discord_presence_listening_to">Слушает</string>
+    <string name="discord_presence_competing_in">Соревнуется в</string>
+    <string name="discord_preview_edit_hint">Нажмите на строку в предпросмотре, чтобы изменить её</string>
 </resources>
