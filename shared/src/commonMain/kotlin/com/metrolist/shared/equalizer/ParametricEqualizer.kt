@@ -130,27 +130,6 @@ class ParametricEqualizer(
         outputGainDb: Double = 0.0,
     ) {
         val outputGain = 10.0.pow(outputGainDb.coerceIn(MIN_AUDIO_PREAMP_DB, MAX_AUDIO_BOOST_DB) / 20.0)
-        if (activeFilters.isEmpty() && preampGain == 1.0 && outputGain == 1.0) {
-            if (peakEnvelope <= LIMITER_CEILING) {
-                sustainedOverloadRatio = 0.0
-                gainReductionDb = 0.0
-                return
-            }
-            var frameStart = 0
-            var lastGain = 1.0
-            while (frameStart < count) {
-                val frameEnd = minOf(frameStart + channelCount, count)
-                val gain = releaseStep()
-                lastGain = gain
-                if (gain != 1.0) {
-                    for (i in frameStart until frameEnd) samples[i] = (samples[i] * gain).roundToInt().toShort()
-                }
-                frameStart = frameEnd
-            }
-            sustainedOverloadRatio = 0.0
-            gainReductionDb = -20.0 * log10(lastGain)
-            return
-        }
         if (processingBuffer.size < count) processingBuffer = DoubleArray(count)
         for (i in 0 until count) processingBuffer[i] = samples[i] / 32768.0
         filterBuffer(count)
@@ -167,32 +146,6 @@ class ParametricEqualizer(
         outputGainDb: Double = 0.0,
     ) {
         val outputGain = 10.0.pow(outputGainDb.coerceIn(MIN_AUDIO_PREAMP_DB, MAX_AUDIO_BOOST_DB) / 20.0)
-        if (activeFilters.isEmpty() && preampGain == 1.0 && outputGain == 1.0) {
-            var peak = 0.0
-            for (i in 0 until count) peak = maxOf(peak, abs(samples[i].toDouble()))
-            // Identity means unity input as well: normalized float PCM above full scale still needs peak protection.
-            if (peak <= 1.0) {
-                if (peakEnvelope <= LIMITER_CEILING) {
-                    sustainedOverloadRatio = 0.0
-                    gainReductionDb = 0.0
-                    return
-                }
-                var frameStart = 0
-                var lastGain = 1.0
-                while (frameStart < count) {
-                    val frameEnd = minOf(frameStart + channelCount, count)
-                    val gain = releaseStep()
-                    lastGain = gain
-                    if (gain != 1.0) {
-                        for (i in frameStart until frameEnd) samples[i] = (samples[i] * gain).toFloat()
-                    }
-                    frameStart = frameEnd
-                }
-                sustainedOverloadRatio = 0.0
-                gainReductionDb = -20.0 * log10(lastGain)
-                return
-            }
-        }
         if (processingBuffer.size < count) processingBuffer = DoubleArray(count)
         for (i in 0 until count) processingBuffer[i] = samples[i].toDouble()
         filterBuffer(count)
@@ -260,7 +213,10 @@ class ParametricEqualizer(
             val peak = if (sustainedOverloadRatio >= SUSTAINED_OVERLOAD_RATIO) rawPeak else saturatedPeak
             val gain = limiterGain(peak)
             lastGain = gain
-            for (i in frameStart until frameEnd) processingBuffer[i] = softClip(processingBuffer[i] * gain)
+            // Saturate only frames that actually need protection; valid peaks in other frames stay untouched.
+            if (gain != 1.0 || rawPeak > 1.0) {
+                for (i in frameStart until frameEnd) processingBuffer[i] = softClip(processingBuffer[i] * gain)
+            }
             frameStart = frameEnd
         }
         gainReductionDb = -20.0 * log10(lastGain)
@@ -275,11 +231,8 @@ class ParametricEqualizer(
         return if (sample < 0.0) -compressed else compressed
     }
 
-    private fun limiterGain(
-        peak: Double,
-        allowAttack: Boolean = true,
-    ): Double {
-        if (allowAttack && peak >= peakEnvelope) {
+    private fun limiterGain(peak: Double): Double {
+        if (peak >= peakEnvelope) {
             peakEnvelope = peak
             peakHoldFrames = peakHoldDuration
         } else if (peakHoldFrames > 0) {
@@ -289,12 +242,6 @@ class ParametricEqualizer(
         }
         // Hold the detected peak across waveform cycles instead of reshaping each sample.
         return if (peakEnvelope > LIMITER_CEILING) LIMITER_CEILING / peakEnvelope else 1.0
-    }
-
-    private fun releaseStep(): Double {
-        sustainedOverloadRatio = 0.0
-        if (peakEnvelope <= LIMITER_CEILING) return 1.0
-        return limiterGain(0.0, allowAttack = false)
     }
 
     fun reset() {
