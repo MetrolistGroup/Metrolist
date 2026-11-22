@@ -90,6 +90,88 @@ class GoogleDriveBackupClientTest {
             client.close()
         }
 
+    @Test
+    fun `resumes a resumable upload after a retryable server error`() =
+        runTest {
+            val contentRanges = mutableListOf<String?>()
+            val client =
+                HttpClient(
+                    MockEngine { request ->
+                        when {
+                            request.url.encodedPath == "/v1/auth/access-token" -> {
+                                jsonResponse("""{"accessToken":"drive-token","expiresIn":3600}""")
+                            }
+
+                            request.url.encodedPath == "/drive/v3/files" && request.url.parameters["q"]?.contains("name =") == true -> {
+                                jsonResponse("""{"files":[]}""")
+                            }
+
+                            request.url.encodedPath == "/drive/v3/files" && request.url.parameters["q"]?.contains("in parents") == true -> {
+                                jsonResponse("""{"files":[]}""")
+                            }
+
+                            request.url.encodedPath == "/drive/v3/files" && request.method.value == "POST" -> {
+                                jsonResponse("""{"id":"folder-id"}""")
+                            }
+
+                            request.url.encodedPath == "/upload/drive/v3/files" && request.method.value == "POST" -> {
+                                respond(
+                                    "{}",
+                                    HttpStatusCode.OK,
+                                    headersOf(
+                                        HttpHeaders.Location,
+                                        "https://www.googleapis.com/upload/drive/v3/files?upload_id=upload-session",
+                                    ),
+                                )
+                            }
+
+                            request.url.encodedPath == "/upload/drive/v3/files" && request.method.value == "PUT" -> {
+                                val range = request.headers[HttpHeaders.ContentRange]
+                                contentRanges += range
+                                when (range) {
+                                    "bytes 0-2/3" -> {
+                                        respond("", HttpStatusCode.ServiceUnavailable)
+                                    }
+
+                                    "bytes */3" -> {
+                                        respond(
+                                            "",
+                                            HttpStatusCode.PermanentRedirect,
+                                            headersOf(HttpHeaders.Range, "bytes 0-0/3"),
+                                        )
+                                    }
+
+                                    "bytes 1-2/3" -> {
+                                        jsonResponse("""{"id":"resumed-backup","name":"backup.zip"}""")
+                                    }
+
+                                    else -> {
+                                        error("Unexpected upload range: $range")
+                                    }
+                                }
+                            }
+
+                            else -> {
+                                error("Unexpected Drive request: ${request.method.value} ${request.url.encodedPath}")
+                            }
+                        }
+                    },
+                ) {
+                    install(ContentNegotiation) { json(Json { ignoreUnknownKeys = true }) }
+                }
+
+            val backup = byteArrayOf(1, 2, 3)
+            val result =
+                GoogleDriveBackupClient("https://broker.example", client)
+                    .uploadBackup("opaque-session", "backup.zip", backup.size.toLong()) {
+                        Buffer().apply { write(backup, 0, backup.size) }
+                    }
+
+            assertEquals("resumed-backup", result.id)
+            assertEquals(listOf("bytes 0-2/3", "bytes */3", "bytes 1-2/3"), contentRanges)
+            client.close()
+        }
+
     private fun MockRequestHandleScope.jsonResponse(body: String) =
         respond(
             body,

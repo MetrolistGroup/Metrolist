@@ -53,6 +53,9 @@ object DesktopAutomaticBackupScheduler {
                         delay(CREDENTIAL_RECOVERY_POLL_MILLIS)
                         continue
                     }
+                    if (DriveAccountConnectionState.normalizeAutoBackupDestination()) {
+                        destination = AutoBackupDestination.LOCAL
+                    }
                     if (AutoBackupDestination.fromSetting(settings.autoBackupDestination) != destination) return@launch
                     if (destination == AutoBackupDestination.GOOGLE_DRIVE && !DriveAccountConnectionState.connected.value) return@launch
                     if (pruningPending) {

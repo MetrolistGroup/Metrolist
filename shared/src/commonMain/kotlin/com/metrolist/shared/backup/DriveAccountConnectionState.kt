@@ -14,6 +14,23 @@ object DriveAccountConnectionState {
         connected.value = Settings.shared.driveBrokerSession.isNotBlank()
     }
 
+    /**
+     * Drive secrets live in a separate store from the public destination setting, so a lost or
+     * reset secret store can leave GOOGLE_DRIVE selected without a session. Reconcile them before
+     * a backup runs; otherwise every platform silently stops backing up until the user intervenes.
+     */
+    fun normalizeAutoBackupDestination(): Boolean {
+        val settings = Settings.shared
+        if (settings.credentialsPending) return false
+        if (AutoBackupDestination.fromSetting(settings.autoBackupDestination) != AutoBackupDestination.GOOGLE_DRIVE) return false
+        if (settings.driveBrokerSession.isNotBlank()) return false
+        connected.value = false
+        settings.autoBackupDestination = AutoBackupDestination.LOCAL.name
+        runCatching { settings.flush() }
+            .onFailure { error -> Logger.w("DriveBackup", "Could not persist automatic backup destination", error) }
+        return true
+    }
+
     fun update(sessionToken: String) {
         connected.value = sessionToken.isNotBlank()
         if (sessionToken.isNotBlank()) {

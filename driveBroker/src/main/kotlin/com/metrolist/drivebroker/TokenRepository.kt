@@ -308,7 +308,7 @@ class TokenRepository(
                 .prepareStatement(
                     """INSERT INTO google_drive_revocations (google_subject, started_at, finished_at) VALUES (?, clock_timestamp(), NULL)
                        ON CONFLICT (google_subject) DO UPDATE SET started_at = clock_timestamp(), finished_at = NULL
-                       WHERE google_drive_revocations.finished_at IS NULL""",
+                       WHERE google_drive_revocations.finished_at IS NOT NULL""",
                 ).use { statement ->
                     statement.setString(1, subject)
                     statement.executeUpdate()

@@ -54,6 +54,7 @@ class AutomaticBackupWorker(
         }
         val settings = Settings.shared
         if (!settings.autoBackupEnabled) return Result.success()
+        DriveAccountConnectionState.normalizeAutoBackupDestination()
 
         val brokerUrl = BuildConfig.DRIVE_BROKER_URL.takeIf(String::isNotBlank)
         var backupDestination = AutoBackupDestination.fromSetting(settings.autoBackupDestination)

@@ -95,6 +95,15 @@ class GoogleDriveBackupClient(
     ): DriveBackupFile {
         var offset = 0L
         var retries = 0
+
+        suspend fun recoverUpload(failure: Throwable): UploadProgress {
+            if (retries++ >= MAX_UPLOAD_RETRIES) throw failure
+            val progress = queryUploadOffset(tokens, uploadUrl, archiveSize)
+            if (progress.offset > offset) retries = 0
+            offset = progress.offset
+            return progress
+        }
+
         while (offset < archiveSize) {
             val response =
                 try {
@@ -110,19 +119,24 @@ class GoogleDriveBackupClient(
                 } catch (cancelled: CancellationException) {
                     throw cancelled
                 } catch (error: Exception) {
-                    if (retries++ >= MAX_UPLOAD_RETRIES) throw error
-                    val progress = queryUploadOffset(tokens, uploadUrl, archiveSize)
+                    val progress = recoverUpload(error)
                     progress.completed?.let { return it }
-                    if (progress.offset > offset) retries = 0
-                    offset = progress.offset
                     continue
                 }
             if (response.status in setOf(HttpStatusCode.OK, HttpStatusCode.Created)) return response.body()
-            if (response.status != HttpStatusCode.PermanentRedirect) throw DriveBrokerException(response.status.value)
-            val acknowledged = acknowledgedOffset(response.headers[HttpHeaders.Range], archiveSize)
-            if (acknowledged <= offset && retries++ >= MAX_UPLOAD_RETRIES) throw DriveBrokerException(response.status.value)
-            if (acknowledged > offset) retries = 0
-            offset = acknowledged
+            if (response.status == HttpStatusCode.PermanentRedirect) {
+                val acknowledged = acknowledgedOffset(response.headers[HttpHeaders.Range], archiveSize)
+                if (acknowledged <= offset && retries++ >= MAX_UPLOAD_RETRIES) throw DriveBrokerException(response.status.value)
+                if (acknowledged > offset) retries = 0
+                offset = acknowledged
+                continue
+            }
+            if (response.status.value in 500..599) {
+                val progress = recoverUpload(DriveBrokerException(response.status.value))
+                progress.completed?.let { return it }
+                continue
+            }
+            throw DriveBrokerException(response.status.value)
         }
         error("Drive upload ended without a completion response")
     }
