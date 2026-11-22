@@ -36,12 +36,12 @@ import kotlin.time.TimeSource
 @Composable
 fun rememberWrappedSoundtrack(
     controller: PlaybackController,
-    songs: List<SongItem>,
+    chapterSongs: List<SongItem>,
     chapter: Int,
     cycleExcerpts: Boolean,
 ): WrappedSoundtrack {
     val scope = rememberCoroutineScope()
-    val currentSongs by rememberUpdatedState(songs)
+    val currentSongs by rememberUpdatedState(chapterSongs)
     val soundtrack = remember(controller) { WrappedSoundtrack(controller, { currentSongs }, scope) }
     LaunchedEffect(soundtrack, controller) {
         controller.wrappedSoundtrackAllowed.collect { soundtrack.setAllowed(it) }
@@ -61,6 +61,7 @@ fun rememberWrappedSoundtrack(
     return soundtrack
 }
 
+/** Plays one song per chapter: [songs] holds each chapter's song, in chapter order. */
 class WrappedSoundtrack internal constructor(
     private val controller: PlaybackController,
     private val songs: () -> List<SongItem>,
@@ -103,6 +104,7 @@ class WrappedSoundtrack internal constructor(
     var playingSong by mutableStateOf<SongItem?>(null)
         private set
     private var sessionSongs: List<SongItem> = emptyList()
+    private var chapterSongs: List<SongItem> = emptyList()
     private var songIndex = 0
     private var sessionId = 0L
 
@@ -134,7 +136,7 @@ class WrappedSoundtrack internal constructor(
         chapter = value
         this.cycleExcerpts = cycleExcerpts
         if (enabled && prepared.isNotEmpty() && !cycleExcerpts) {
-            val index = value % sessionSongs.size
+            val index = songIndexFor(value)
             // Keep the current song until the chapter's own song has downloaded, so music never stops for a swipe.
             if (prepared[index].isCompleted && !prepared[index].isCancelled) changeSong(index)
         }
@@ -148,10 +150,11 @@ class WrappedSoundtrack internal constructor(
         if (!available) return
         failed = false
         val session = ++sessionId
-        sessionSongs = songs().distinctBy { it.id }.take(10)
+        chapterSongs = songs()
+        sessionSongs = chapterSongs.distinctBy { it.id }.take(10)
         enabled = true
         loading = true
-        songIndex = if (cycleExcerpts) 0 else chapter % sessionSongs.size
+        songIndex = if (cycleExcerpts) 0 else songIndexFor(chapter)
         job =
             scope.launch {
                 try {
@@ -321,6 +324,11 @@ class WrappedSoundtrack internal constructor(
             }
     }
 
+    private fun songIndexFor(chapter: Int): Int {
+        val id = chapterSongs.getOrNull(chapter)?.id
+        return sessionSongs.indexOfFirst { it.id == id }.takeIf { it >= 0 } ?: (chapter % sessionSongs.size)
+    }
+
     private fun playNext() {
         if (sessionSongs.isNotEmpty()) changeSong((songIndex + 1) % sessionSongs.size, restart = true)
     }
@@ -366,6 +374,7 @@ class WrappedSoundtrack internal constructor(
         pendingVoice = 0L
         playingSong = null
         sessionSongs = emptyList()
+        chapterSongs = emptyList()
         normalPlayback = null
         normalCommandGeneration = null
         pausedPositionMs = null

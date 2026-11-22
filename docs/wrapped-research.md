@@ -91,6 +91,10 @@ The cover combines a year, sleeve collage and play count. The time chapter separ
 
 The leading and trailing quarter of a mobile chapter navigate backward and forward, respecting layout direction. The gesture waits for an unconsumed tap and ignores scrolling, dragging and long presses. The chapter rail and labeled Previous/Next buttons remain available for accessibility. Summary sharing still uses the existing PNG renderer.
 
+## Edge-to-edge revision
+
+Later on November 22 the maintainer asked for an edge-to-edge, gesture-driven recap. The mobile chrome is reduced to the chapter rail and a soundtrack button, with a back button only on iOS. Chapters advance automatically and pause while held, so the Previous/Next buttons and refresh action were removed. The soundtrack starts automatically, plays each chapter's own song and no longer shows status text. Headlines prefer one line and use bundled Google Sans Flex; figures use Google Sans Code. An artist-mix chapter shows the top twelve artists, and the album chapter shows its record sliding out of the sleeve. These choices supersede the manual navigation and opt-in soundtrack in the selected scope above.
+
 ## Full-year data investigation
 
 Authenticated probes used the application's existing InnerTube integration and an existing test session. No new OAuth client, YouTube Data API integration or account export was added. Response metadata and counts stayed in local scratch files; credentials and personal listening records do not belong in this document.

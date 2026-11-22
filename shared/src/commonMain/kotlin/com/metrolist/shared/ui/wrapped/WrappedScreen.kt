@@ -107,6 +107,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.metrolist.shared.api.lastfm.LastFM
 import com.metrolist.shared.api.lastfm.LastFmListen
+import com.metrolist.shared.db.HistoryArtistStatistic
 import com.metrolist.shared.db.HistoryStatisticsSnapshot
 import com.metrolist.shared.db.HistorySyncOutcome
 import com.metrolist.shared.db.MusicDatabase
@@ -146,6 +147,7 @@ import com.metrolist.shared.generated.resources.wrapped_top_album
 import com.metrolist.shared.generated.resources.wrapped_top_artist
 import com.metrolist.shared.generated.resources.wrapped_top_song
 import com.metrolist.shared.generated.resources.wrapped_year
+import com.metrolist.shared.model.SongItem
 import com.metrolist.shared.settings.Settings
 import com.metrolist.shared.state.GlobalYouTube
 import com.metrolist.shared.ui.components.ContainedLoadingIndicator
@@ -411,7 +413,8 @@ private fun WrappedReport(
             add(WrappedChapter.SUMMARY)
         }
     val pager = rememberPagerState { chapters.size }
-    val soundtrack = rememberWrappedSoundtrack(playbackController, snapshot.songItems.take(10), pager.settledPage, desktopLayout)
+    val chapterSongs = remember(snapshot, chapters) { wrappedChapterSongs(snapshot, chapters) }
+    val soundtrack = rememberWrappedSoundtrack(playbackController, chapterSongs, pager.settledPage, desktopLayout)
     var soundtrackStarted by rememberSaveable { mutableStateOf(false) }
     // The soundtrack starts by itself once, as soon as playback allows it; turning it off is respected.
     LaunchedEffect(soundtrack.available) {
@@ -623,6 +626,39 @@ private fun WrappedReport(
                 WrappedSoundtrackButton(soundtrack, foreground, palette.background)
             }
         }
+    }
+}
+
+/** Picks the song that belongs to each chapter, so the soundtrack plays what the chapter is about. */
+private fun wrappedChapterSongs(
+    snapshot: HistoryStatisticsSnapshot,
+    chapters: List<WrappedChapter>,
+): List<SongItem> {
+    val songs = snapshot.songItems
+    val top = snapshot.songs.firstNotNullOfOrNull { group -> songs.firstOrNull { it.id == group.songId } } ?: songs.firstOrNull()
+
+    fun byArtist(artist: HistoryArtistStatistic?) =
+        artist?.let { wanted ->
+            songs.firstOrNull { song ->
+                song.artists.any { (wanted.id != null && it.id == wanted.id) || it.name.equals(wanted.name, ignoreCase = true) }
+            }
+        }
+    val album =
+        snapshot.albums.firstOrNull()?.let { wanted ->
+            songs.firstOrNull { song ->
+                song.album?.let { (wanted.id != null && it.id == wanted.id) || it.name.equals(wanted.name, ignoreCase = true) } == true
+            }
+        }
+    val others = songs.filter { it.id != top?.id }
+    return chapters.mapNotNull { chapter ->
+        when (chapter) {
+            WrappedChapter.COVER -> others.getOrNull(0)
+            WrappedChapter.TIME -> others.getOrNull(1)
+            WrappedChapter.TRACKS, WrappedChapter.SUMMARY -> top
+            WrappedChapter.ARTISTS -> byArtist(snapshot.artists.firstOrNull())
+            WrappedChapter.MIX -> byArtist(snapshot.artists.getOrNull(1))
+            WrappedChapter.ALBUMS -> album
+        } ?: top
     }
 }
 
