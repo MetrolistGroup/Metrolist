@@ -1477,6 +1477,7 @@ class YouTubeRepository(
                 } else {
                     getPlaylistPlaybackPage(albumItem.playlistId ?: return loadLocal()).copy(album = albumItem)
                 }
+            if (playlistTracks.isOffline) return loadLocal()
             // An album's playlist comes back empty when the account cannot play most of it; the browse shelf still lists every track.
             val shelfSongs =
                 if (playlistTracks.songs.isEmpty() && !playlistTracks.hasMore) secondaryContents.albumShelfSongs() else emptyList()

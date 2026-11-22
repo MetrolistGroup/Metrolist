@@ -188,6 +188,21 @@ internal fun MobileAlbumScreen(
                     album = page.album,
                     songs = page.songs,
                     text = albumContentText(),
+                    paginationContent =
+                        if (loader.failed) {
+                            {
+                                Box(Modifier.padding(16.dp), contentAlignment = Alignment.Center) {
+                                    Button(
+                                        onClick = { loader.load(forceRefresh = true) },
+                                        shapes = ButtonDefaults.shapes(),
+                                    ) {
+                                        Text(stringResource(Res.string.retry))
+                                    }
+                                }
+                            }
+                        } else {
+                            null
+                        },
                     onPlayAll = { queue ->
                         playbackController.playQueue(queue)
                     },

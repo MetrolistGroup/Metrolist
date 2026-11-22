@@ -346,7 +346,16 @@ fun AlbumScreen(
                                         if (isLoadingMore) {
                                             ContainedLoadingIndicator()
                                         } else if (error != null) {
-                                            TextButton(onClick = { viewModel.loadMore(Int.MAX_VALUE) }, shapes = ButtonDefaults.shapes()) {
+                                            TextButton(
+                                                onClick = {
+                                                    if (albumPage?.playlistPage != null) {
+                                                        viewModel.loadMore(Int.MAX_VALUE)
+                                                    } else {
+                                                        viewModel.refresh()
+                                                    }
+                                                },
+                                                shapes = ButtonDefaults.shapes(),
+                                            ) {
                                                 Text(stringResource(Res.string.retry))
                                             }
                                         }

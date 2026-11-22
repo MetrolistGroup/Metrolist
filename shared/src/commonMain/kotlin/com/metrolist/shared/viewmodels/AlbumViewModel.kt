@@ -46,6 +46,7 @@ class AlbumViewModel(
     private val _isLoadingMore = mutableStateOf(false)
     val isLoadingMore: State<Boolean> = _isLoadingMore
     private var loadGeneration = 0L
+    private var incompleteCache = false
 
     init {
         scope.launch {
@@ -64,7 +65,10 @@ class AlbumViewModel(
         val generation = ++loadGeneration
         val switchingAlbum = _selectedAlbumId.value != albumId
         val retainedPage = unfilteredAlbumPage.takeIf { !switchingAlbum }
-        if (switchingAlbum) setAlbumPage(null)
+        if (switchingAlbum) {
+            incompleteCache = false
+            setAlbumPage(null)
+        }
         _selectedAlbumId.value = albumId
         loadJob?.cancel()
         pageJob?.cancel()
@@ -81,6 +85,7 @@ class AlbumViewModel(
                     }
                 if (generation != loadGeneration) return@launch
                 if (cached != null) {
+                    incompleteCache = !cached.isComplete
                     setAlbumPage(cached.page)
                     if (cached.canReuseWithoutRefresh) {
                         _isLoading.value = false
@@ -88,6 +93,7 @@ class AlbumViewModel(
                     }
                 }
                 val hasDisplayedPage = cached != null || retainedPage != null
+                val reportFailure = !hasDisplayedPage || incompleteCache
                 _isLoading.value = cached == null || !(cached.isComplete && cached.isOfflineReady)
                 try {
                     val albumPage =
@@ -102,16 +108,17 @@ class AlbumViewModel(
                         }
                     if (generation == loadGeneration) {
                         if (albumPage != null) {
+                            incompleteCache = false
                             setAlbumPage(albumPage)
-                        } else if (!hasDisplayedPage) {
-                            setAlbumPage(null)
+                        } else if (reportFailure) {
+                            if (!hasDisplayedPage) setAlbumPage(null)
                             _errorMessage.value = ""
                         }
                     }
                 } catch (e: CancellationException) {
                     throw e
                 } catch (t: Throwable) {
-                    if (generation == loadGeneration && !hasDisplayedPage) {
+                    if (generation == loadGeneration && reportFailure) {
                         _errorMessage.value = t.message.orEmpty()
                     }
                 } finally {
@@ -151,10 +158,33 @@ class AlbumViewModel(
 
     suspend fun allSongs(): List<SongItem> {
         val initial = unfilteredAlbumPage ?: return emptyList()
-        val cursor = initial.playlistPage ?: return BlockedContent.filterSongs(initial.songs)
-        return withContext(Dispatchers.Default) {
-            BlockedContent.filterSongs(repository.completePlaylistPage(cursor, applyContentFilters = false).songs)
+        val cursor = initial.playlistPage
+        if (cursor != null) {
+            return withContext(Dispatchers.Default) {
+                BlockedContent.filterSongs(repository.completePlaylistPage(cursor, applyContentFilters = false).songs)
+            }
         }
+        if (incompleteCache) {
+            val albumId = _selectedAlbumId.value ?: return BlockedContent.filterSongs(initial.songs)
+            val generation = loadGeneration
+            val refreshed =
+                withContext(Dispatchers.Default) {
+                    repository.getAlbum(
+                        albumId,
+                        loadAllPages = true,
+                        applyContentFilters = false,
+                        forceRefresh = true,
+                        allowOfflineFallback = false,
+                    )
+                } ?: error("Album load failed")
+            if (generation == loadGeneration && _selectedAlbumId.value == albumId) {
+                incompleteCache = false
+                _errorMessage.value = null
+                setAlbumPage(refreshed)
+            }
+            return BlockedContent.filterSongs(refreshed.songs)
+        }
+        return BlockedContent.filterSongs(initial.songs)
     }
 
     fun refresh() {

@@ -83,6 +83,7 @@ internal class MobileDetailState(
                         page = cached.page,
                         needsRefresh = !cached.canReuseWithoutRefresh,
                         showRefreshIndicator = !(cached.isComplete && cached.isOfflineReady),
+                        isComplete = cached.isComplete,
                     )
                 }
             },
@@ -141,6 +142,7 @@ internal data class CachedDetail<T>(
     val page: T,
     val needsRefresh: Boolean,
     val showRefreshIndicator: Boolean = needsRefresh,
+    val isComplete: Boolean = true,
 )
 
 internal class MobileDetailLoader<T>(
@@ -170,11 +172,13 @@ internal class MobileDetailLoader<T>(
         job =
             scope.launch {
                 var hasCached = false
+                var cachedComplete = false
                 if (!forceRefresh && loadCached != null) {
                     val cached = withContext(Dispatchers.Default) { loadCached() }
                     if (generation != requestGeneration) return@launch
                     if (cached != null) {
                         hasCached = true
+                        cachedComplete = cached.isComplete
                         page = cached.page
                         if (!cached.needsRefresh) {
                             isLoading = false
@@ -186,13 +190,14 @@ internal class MobileDetailLoader<T>(
                     }
                 }
                 val hasDisplayedPage = hasCached || retainedPage != null
+                val suppressFailure = hasCached && cachedComplete && !forceRefresh
                 try {
                     val loaded = fetch(hasDisplayedPage)
                     if (generation == requestGeneration) page = loaded
                 } catch (error: CancellationException) {
                     throw error
                 } catch (_: Exception) {
-                    if (generation == requestGeneration && !hasDisplayedPage) failed = true
+                    if (generation == requestGeneration && !suppressFailure) failed = true
                 } finally {
                     if (generation == requestGeneration) isLoading = false
                 }

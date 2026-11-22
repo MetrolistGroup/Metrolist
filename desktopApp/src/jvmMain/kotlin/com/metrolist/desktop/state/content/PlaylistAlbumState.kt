@@ -486,7 +486,7 @@ object PlaylistAlbumState {
                         }
                     if (selectedAlbumId != id || GlobalYouTube.innerTube.sessionSnapshot() != session) return@launch
                     if (result == null) {
-                        if (!hasDisplayedPage || forceRefresh) albumLoadFailed = true
+                        if (!hasDisplayedPage || forceRefresh || cached?.isComplete == false) albumLoadFailed = true
                         return@launch
                     }
                     albumLoadFailed = false
@@ -523,7 +523,9 @@ object PlaylistAlbumState {
                             } else {
                                 firstPage ?: retainedPage ?: cached?.page
                             }
-                        albumLoadFailed = fallback == null || (!preserveCompleteCache && (firstPage != null || forceRefresh))
+                        albumLoadFailed =
+                            fallback == null ||
+                            (!preserveCompleteCache && (firstPage != null || forceRefresh || cached?.isComplete == false))
                         unfilteredAlbumPageData = fallback
                         albumSession = session
                         albumPageData = fallback?.let(BlockedContent::filterAlbumPage)
