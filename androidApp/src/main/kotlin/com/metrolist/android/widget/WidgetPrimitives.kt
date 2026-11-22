@@ -211,6 +211,7 @@ internal data class WidgetProgressIds(
     val bar: Int,
     val track: Int,
     val fill: Int,
+    val stop: Int,
 )
 
 internal val musicWidgetProgressIds =
@@ -218,6 +219,7 @@ internal val musicWidgetProgressIds =
         bar = R.id.widget_progress,
         track = R.id.widget_progress_track,
         fill = R.id.widget_progress_fill,
+        stop = R.id.widget_progress_stop,
     )
 
 internal val playlistWidgetProgressIds =
@@ -225,6 +227,7 @@ internal val playlistWidgetProgressIds =
         bar = R.id.widget_playlist_progress,
         track = R.id.widget_playlist_progress_track,
         fill = R.id.widget_playlist_progress_fill,
+        stop = R.id.widget_playlist_progress_stop,
     )
 
 internal fun RemoteViews.setWidgetProgress(
@@ -237,12 +240,14 @@ internal fun RemoteViews.setWidgetProgress(
         setViewVisibility(ids.bar, View.VISIBLE)
         setViewVisibility(ids.track, View.GONE)
         setViewVisibility(ids.fill, View.GONE)
+        setViewVisibility(ids.stop, View.GONE)
         setProgressBar(ids.bar, WIDGET_PROGRESS_MAX, (fraction * WIDGET_PROGRESS_MAX).toInt(), false)
     } else {
         // RemoteViews cannot tint ProgressBar below API 31; clip ImageViews keep setColorFilter.
         setViewVisibility(ids.bar, View.GONE)
         setViewVisibility(ids.track, View.VISIBLE)
         setViewVisibility(ids.fill, View.VISIBLE)
+        setViewVisibility(ids.stop, View.VISIBLE)
         setInt(ids.fill, "setImageLevel", (fraction * WIDGET_PROGRESS_LEVEL_MAX).toInt())
     }
 }

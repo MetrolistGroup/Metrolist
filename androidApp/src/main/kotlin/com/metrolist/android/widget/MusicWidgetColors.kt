@@ -181,8 +181,10 @@ internal fun RemoteViews.setWidgetProgressTint(
             setColorStateList(ids.bar, "setProgressBackgroundTintList", light, dark)
         }
     } else {
+        // Stop is a separate view so the track color filter does not wash out the end dot.
         setWidgetTint(context, ids.track, schemes) { it.secondaryContainer }
         setWidgetTint(context, ids.fill, schemes) { it.primary }
+        setWidgetTint(context, ids.stop, schemes) { it.primary }
     }
 }
 

@@ -164,6 +164,15 @@
                         android:src="@drawable/widget_progress_clip"
                         android:visibility="gone" />
 
+                    <ImageView
+                        android:id="@+id/widget_progress_stop"
+                        android:layout_width="4dp"
+                        android:layout_height="4dp"
+                        android:layout_gravity="end|center_vertical"
+                        android:contentDescription="@null"
+                        android:src="@drawable/widget_progress_stop"
+                        android:visibility="gone" />
+
                     <ProgressBar
                         android:id="@+id/widget_progress"
                         style="@android:style/Widget.Material.ProgressBar.Horizontal"
