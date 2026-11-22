@@ -1730,9 +1730,9 @@
     <string name="add_romanization_below_lyrics">Přidat přepis do latinky pod text skladby</string>
     <string name="allow_song_to_be_liked_again">Povolit opětovné označení skladby jako oblíbené</string>
     <string name="display_gaps_between_sections">Zobrazit mezery mezi částmi textu skladby</string>
-    <string name="follow_agent_positioning_hints">Řiďte se agentovými pokyny k umístění</string>
+    <string name="follow_agent_positioning_hints">Řídit se pokyny pro umístění zpěváků</string>
     <string name="lyrics_menu">Menu textu písně</string>
-    <string name="manual_translate_this_track">Manuálně: přelož tuto skladbu</string>
+    <string name="manual_translate_this_track">Ručně: přeložit tuto skladbu</string>
     <string name="make_available_offline">Umožnit přehrávání v offline režimu</string>
     <string name="media_details">Podrobnosti o médiu</string>
     <string name="no_provider_results_found">Nebyly nalezeny žádné výsledky poskytovatele</string>
