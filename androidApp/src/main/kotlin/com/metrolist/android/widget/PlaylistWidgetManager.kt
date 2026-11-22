@@ -164,17 +164,13 @@ class PlaylistWidgetManager(
             lastWidgetState = lastWidgetState.copy(duration = duration, currentPosition = position)
         }
         val bucket = position.coerceAtLeast(0L) / 1000L
-        var layers: WidgetProgressLayers? = null
         ids.forEach { id ->
             if (progressBuckets[id] == null || progressBuckets[id] == bucket) return@forEach
             val options = manager.getAppWidgetOptions(id)
             if (options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH) < PLAYLIST_WIDGET_COMPACT_MAX_WIDTH_DP) return@forEach
-            val resolvedLayers =
-                layers ?: renderLinearSliderLayers(progressFraction(duration, position)).also { layers = it }
             val views =
                 RemoteViews(context.packageName, R.layout.widget_playlist).apply {
-                    setImageViewBitmap(R.id.widget_playlist_progress_track, resolvedLayers.track)
-                    setImageViewBitmap(R.id.widget_playlist_progress_fill, resolvedLayers.active)
+                    setWidgetProgress(R.id.widget_playlist_progress, duration, position)
                 }
             manager.partiallyUpdateAppWidget(id, views)
             progressBuckets[id] = bucket
@@ -236,12 +232,6 @@ class PlaylistWidgetManager(
                 }
             val schemes = resolveWidgetColorSchemes(context, seed, config)
             val quickPicks = buildQuickPicks()
-            val progressLayers =
-                if (state.duration > 0) {
-                    renderLinearSliderLayers(progressFraction(state.duration, state.currentPosition))
-                } else {
-                    null
-                }
             widgetIds.forEach { widgetId ->
                 val views =
                     createRemoteViews(
@@ -252,7 +242,7 @@ class PlaylistWidgetManager(
                         controls = controls,
                         isLiked = state.isLiked,
                         duration = state.duration,
-                        progressLayers = progressLayers,
+                        currentPosition = state.currentPosition,
                         quickPicks = quickPicks,
                         schemes = schemes,
                     )
@@ -277,7 +267,7 @@ class PlaylistWidgetManager(
         controls: WidgetControls,
         isLiked: Boolean,
         duration: Long,
-        progressLayers: WidgetProgressLayers?,
+        currentPosition: Long,
         quickPicks: List<QuickPick>,
         schemes: WidgetColorSchemes,
     ): RemoteViews {
@@ -303,10 +293,9 @@ class PlaylistWidgetManager(
             R.id.widget_playlist_like_button,
             if (isLiked) R.drawable.ic_widget_heart_nav else R.drawable.ic_widget_heart_outline_nav,
         )
-        if (duration > 0 && progressLayers != null) {
+        if (duration > 0) {
             views.setViewVisibility(R.id.widget_playlist_progress_container, View.VISIBLE)
-            views.setImageViewBitmap(R.id.widget_playlist_progress_track, progressLayers.track)
-            views.setImageViewBitmap(R.id.widget_playlist_progress_fill, progressLayers.active)
+            views.setWidgetProgress(R.id.widget_playlist_progress, duration, currentPosition)
         } else {
             views.setViewVisibility(R.id.widget_playlist_progress_container, View.INVISIBLE)
         }
@@ -326,8 +315,7 @@ class PlaylistWidgetManager(
         views.setWidgetTint(context, R.id.widget_playlist_like_button, schemes) {
             if (isLiked) it.onTertiary else it.onTertiaryContainer
         }
-        views.setWidgetTint(context, R.id.widget_playlist_progress_track, schemes) { it.secondaryContainer }
-        views.setWidgetTint(context, R.id.widget_playlist_progress_fill, schemes) { it.primary }
+        views.setWidgetProgressTint(R.id.widget_playlist_progress, schemes)
 
         views.setOnClickPendingIntent(android.R.id.background, getOpenAppIntent())
         views.setOnClickPendingIntent(R.id.widget_playlist_album_art, getOpenAppIntent())

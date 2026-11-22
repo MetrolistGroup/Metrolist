@@ -168,4 +168,17 @@ internal fun RemoteViews.setWidgetIndeterminateTint(
     }
 }
 
+internal fun RemoteViews.setWidgetProgressTint(
+    viewId: Int,
+    schemes: WidgetColorSchemes,
+) {
+    // RemoteViews.setColorStateList requires API 31; older versions keep the progress drawable's theme colors.
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+        fun tint(role: (ColorScheme) -> Color) =
+            ColorStateList.valueOf(role(schemes.light).toArgb()) to ColorStateList.valueOf(role(schemes.dark).toArgb())
+        tint { it.primary }.let { (light, dark) -> setColorStateList(viewId, "setProgressTintList", light, dark) }
+        tint { it.secondaryContainer }.let { (light, dark) -> setColorStateList(viewId, "setProgressBackgroundTintList", light, dark) }
+    }
+}
+
 internal fun widgetSurfaceRole(scheme: ColorScheme): Color = if (scheme.surface == Color.Black) Color.Black else scheme.surfaceContainer
