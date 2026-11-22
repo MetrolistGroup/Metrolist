@@ -632,20 +632,25 @@ class MusicService :
                 .distinctUntilChanged()
                 .collect { foreground ->
                     // On TV, users expect audio to stop when they leave the app; phones keep background playback.
-                    if (
-                        !foreground &&
-                        Settings.shared.stopMusicOnTaskClear &&
-                        !castManager.state.value.isConnected &&
-                        !AndroidListenTogetherManager.playbackRequired.value &&
-                        AndroidDeviceConnect.manager.state.value.peers.none {
-                            it.state == DeviceConnectManager.PeerState.CONNECTED
-                        }
-                    ) {
+                    if (!foreground && shouldPauseLocalPlaybackInBackground()) {
                         player.pause()
                     }
                 }
         }
     }
+
+    private fun shouldPauseLocalPlaybackInBackground(): Boolean =
+        isAndroidTv() &&
+            Settings.shared.stopMusicOnTaskClear &&
+            !ProcessLifecycleOwner
+                .get()
+                .lifecycle.currentState
+                .isAtLeast(Lifecycle.State.STARTED) &&
+            !castManager.state.value.isConnected &&
+            !AndroidListenTogetherManager.playbackRequired.value &&
+            AndroidDeviceConnect.manager.state.value.peers.none {
+                it.state == DeviceConnectManager.PeerState.CONNECTED
+            }
 
     private fun observeListenTogetherForegroundDemand() {
         serviceScope.launch {
@@ -866,7 +871,10 @@ class MusicService :
                         )
                     }
                 }
-            if (!connected && isCurrentHandoff()) restoreLocalPlaybackAfterCast(position, playing)
+            if (!connected && isCurrentHandoff()) {
+                // A failed handoff must not undo the TV pause-on-background rule; phones restore normally.
+                if (shouldPauseLocalPlaybackInBackground()) player.pause() else restoreLocalPlaybackAfterCast(position, playing)
+            }
         }
     }
 
