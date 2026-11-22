@@ -155,6 +155,7 @@ internal class PlaybackStatePersistence(
         positionMs: Long,
         repeatMode: RepeatMode,
         finite: Boolean = false,
+        explicitRadioQueue: Boolean = false,
         recommendationsLocked: Boolean = false,
         force: Boolean = false,
     ) {
@@ -170,6 +171,7 @@ internal class PlaybackStatePersistence(
         if (state == null ||
             !state.queue.hasSameStructure(snapshot) ||
             state.finite != finite ||
+            state.explicitRadioQueue != explicitRadioQueue ||
             state.recommendationsLocked != recommendationsLocked
         ) {
             state =
@@ -179,6 +181,7 @@ internal class PlaybackStatePersistence(
                     repeatMode,
                     UUID.randomUUID().toString(),
                     finite,
+                    explicitRadioQueue,
                     recommendationsLocked,
                 )
             store.persistentPlaybackState = json.encodeToString(PersistedPlaybackState.serializer(), state)

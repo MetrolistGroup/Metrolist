@@ -138,6 +138,12 @@ internal class AndroidQueueCoordinator(
         }
     }
 
+    fun releaseRadioSeedLock() {
+        synchronized(queueSessionLock) {
+            radioSeedLockedSessionId = null
+        }
+    }
+
     fun saveShuffleMode() {
         val queue = player.queueSnapshots.value
         if (queue.displayedItems.isNotEmpty()) Settings.shared.shuffleEnabled = queue.isShuffled

@@ -520,6 +520,7 @@ object PlayerState {
                 positionMs = write.positionMs,
                 repeatMode = write.repeatMode,
                 finite = syncSession.finite,
+                explicitRadioQueue = syncSession.explicitRadioQueue,
                 recommendationsLocked = syncSession.recommendationsLocked,
                 force = write.force,
             )
@@ -2268,7 +2269,7 @@ object PlayerState {
         queue.restore(restoreQueue)
         shuffleEnabled = restoreQueue.isShuffled
         localRepeatMode = state.repeatMode
-        syncSession.setPersistedQueueFlags(state.finite, state.recommendationsLocked)
+        syncSession.setPersistedQueueFlags(state.finite, state.explicitRadioQueue, state.recommendationsLocked)
         radio.syncQueue()
         updateCurrentTrack(queue.currentItem(), startArtworkFetch = true)
 

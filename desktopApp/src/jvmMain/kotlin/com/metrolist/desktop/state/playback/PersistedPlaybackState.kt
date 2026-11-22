@@ -13,5 +13,6 @@ data class PersistedPlaybackState(
     val repeatMode: RepeatMode = RepeatMode.OFF,
     val revision: String? = null,
     val finite: Boolean = false,
+    val explicitRadioQueue: Boolean = false,
     val recommendationsLocked: Boolean = false,
 )

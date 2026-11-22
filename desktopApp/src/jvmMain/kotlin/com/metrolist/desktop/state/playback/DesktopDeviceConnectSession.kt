@@ -136,9 +136,11 @@ internal class DesktopDeviceConnectSession(
 
     fun setPersistedQueueFlags(
         finite: Boolean,
+        explicitRadioQueue: Boolean,
         recommendationsLocked: Boolean,
     ) {
         this.finite = finite
+        this.explicitRadioQueue = explicitRadioQueue
         this.recommendationsLocked = recommendationsLocked
     }
 
