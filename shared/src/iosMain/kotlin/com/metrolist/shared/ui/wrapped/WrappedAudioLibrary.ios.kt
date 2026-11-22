@@ -25,11 +25,19 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
+import platform.AVFAudio.AVAudioSessionInterruptionNotification
+import platform.AVFAudio.AVAudioSessionInterruptionTypeBegan
+import platform.AVFAudio.AVAudioSessionInterruptionTypeKey
+import platform.AVFAudio.AVAudioSessionRouteChangeNotification
+import platform.AVFAudio.AVAudioSessionRouteChangeReasonKey
+import platform.AVFAudio.AVAudioSessionRouteChangeReasonOldDeviceUnavailable
 import platform.Foundation.NSData
 import platform.Foundation.NSFileHandle
 import platform.Foundation.NSFileManager
 import platform.Foundation.NSFileSystemFreeSize
+import platform.Foundation.NSNotificationCenter
 import platform.Foundation.NSNumber
+import platform.Foundation.NSOperationQueue
 import platform.Foundation.NSTemporaryDirectory
 import platform.Foundation.NSURL
 import platform.Foundation.NSUUID
@@ -40,12 +48,29 @@ import platform.Foundation.fileHandleForUpdatingAtPath
 import platform.Foundation.seekToFileOffset
 import platform.Foundation.truncateFileAtOffset
 
-internal actual fun createWrappedAudioLibrary(onInterrupted: () -> Unit): WrappedAudioLibrary = IosWrappedAudioLibrary()
+internal actual fun createWrappedAudioLibrary(onInterrupted: () -> Unit): WrappedAudioLibrary = IosWrappedAudioLibrary(onInterrupted)
 
-private class IosWrappedAudioLibrary : WrappedAudioLibrary {
+private class IosWrappedAudioLibrary(
+    onInterrupted: () -> Unit,
+) : WrappedAudioLibrary {
     private val files = NSFileManager.defaultManager
     private val directory = "${NSTemporaryDirectory()}wrapped-${NSUUID.UUID().UUIDString}"
     private val closed = atomic(false)
+
+    // The session watches interruptions and lost headphones from the start, so a download cannot later start on the speaker.
+    private val sessionObservers =
+        NSNotificationCenter.defaultCenter.let { center ->
+            listOf(
+                center.addObserverForName(AVAudioSessionInterruptionNotification, null, NSOperationQueue.mainQueue) { notification ->
+                    val type = notification?.userInfo?.get(AVAudioSessionInterruptionTypeKey) as? NSNumber
+                    if (!closed.value && type?.unsignedLongValue == AVAudioSessionInterruptionTypeBegan) onInterrupted()
+                },
+                center.addObserverForName(AVAudioSessionRouteChangeNotification, null, NSOperationQueue.mainQueue) { notification ->
+                    val reason = notification?.userInfo?.get(AVAudioSessionRouteChangeReasonKey) as? NSNumber
+                    if (!closed.value && reason?.unsignedLongValue == AVAudioSessionRouteChangeReasonOldDeviceUnavailable) onInterrupted()
+                },
+            )
+        }
 
     init {
         check(files.createDirectoryAtPath(directory, true, null, null))
@@ -133,6 +158,7 @@ private class IosWrappedAudioLibrary : WrappedAudioLibrary {
 
     override fun close() {
         closed.value = true
+        sessionObservers.forEach { NSNotificationCenter.defaultCenter.removeObserver(it) }
         files.removeItemAtPath(directory, null)
     }
 }

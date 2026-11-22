@@ -56,6 +56,7 @@ internal fun MobileStatisticsScreen(
     onArtistClick: (String, String) -> Unit = { id, name -> onBrowse(MobileBrowseDestination(id, null, name)) },
     modifier: Modifier = Modifier,
     bottomContentPadding: Dp = 0.dp,
+    onWrappedCardRetired: (message: String) -> Unit = {},
 ) {
     val loadFailedMessage = stringResource(Res.string.statistics_load_failed)
     val scope = rememberCoroutineScope()
@@ -78,6 +79,7 @@ internal fun MobileStatisticsScreen(
             exportLabel = stringResource(Res.string.share),
             bottomContentPadding = bottomContentPadding,
             showBackButton = true,
+            onHomeCardRetired = onWrappedCardRetired,
         )
         return
     }

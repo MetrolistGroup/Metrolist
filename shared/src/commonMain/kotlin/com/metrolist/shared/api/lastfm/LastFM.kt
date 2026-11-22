@@ -440,6 +440,9 @@ object LastFM {
                 ?: throw Exception("No recent tracks found")
         }
 
+    private const val HISTORY_PAGE_SIZE = 200
+    private const val MAX_HISTORY_SCROBBLES = 250_000
+
     suspend fun getListeningHistory(
         httpClient: HttpClient,
         user: String,
@@ -459,7 +462,7 @@ object LastFM {
                         parameter("user", user)
                         parameter("api_key", apiKey)
                         parameter("format", "json")
-                        parameter("limit", 200)
+                        parameter("limit", HISTORY_PAGE_SIZE)
                         parameter("page", page)
                         parameter("from", sinceMs / 1000 - 1)
                         parameter("to", untilMs / 1000 + 1)
@@ -469,8 +472,12 @@ object LastFM {
                 val recent = checkNotNull(payload.jsonObject["recenttracks"] as? JsonObject)
                 val attr = checkNotNull(recent["@attr"] as? JsonObject)
                 check(attr["page"]?.jsonPrimitive?.intOrNull == page)
-                val total = checkNotNull(attr["total"]?.jsonPrimitive?.intOrNull).also { check(it >= 0) }
-                pages = checkNotNull(attr["totalPages"]?.jsonPrimitive?.intOrNull).also { check(it >= 0) }
+                // Bound what the service can make us download and keep: a year of very heavy listening fits well inside.
+                val total = checkNotNull(attr["total"]?.jsonPrimitive?.intOrNull).also { check(it in 0..MAX_HISTORY_SCROBBLES) }
+                pages =
+                    checkNotNull(attr["totalPages"]?.jsonPrimitive?.intOrNull).also {
+                        check(it in 0..(total + HISTORY_PAGE_SIZE - 1) / HISTORY_PAGE_SIZE)
+                    }
                 check(expectedTotal == null || expectedTotal == total) { "Last.fm history changed during pagination" }
                 expectedTotal = total
                 val tracks =
@@ -488,6 +495,8 @@ object LastFM {
                             emptyList()
                         }
                     }
+                // One extra entry is allowed for the now-playing track that Last.fm prepends to the first page.
+                check(tracks.size <= HISTORY_PAGE_SIZE + 1)
                 for (element in tracks) {
                     val track = json.decodeFromJsonElement<LastFmRecentTrack>(element)
                     if (track.attr?.nowplaying == "true") continue
@@ -500,6 +509,7 @@ object LastFM {
                         (track.album as? JsonObject)?.get("#text")?.jsonPrimitive?.contentOrNull
                             ?: (track.album as? JsonPrimitive)?.contentOrNull
                     listens += LastFmListen(track.name, artist, album?.takeIf(String::isNotBlank), timestamp, track.image.largest())
+                    check(listens.size <= total)
                 }
                 check(total == 0 || tracks.isNotEmpty()) { "Last.fm history page is empty" }
                 page++

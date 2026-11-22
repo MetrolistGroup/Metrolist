@@ -104,7 +104,7 @@ class WrappedSoundtrack internal constructor(
     var playingSong by mutableStateOf<SongItem?>(null)
         private set
     private var sessionSongs: List<SongItem> = emptyList()
-    private var chapterSongs: List<SongItem> = emptyList()
+    private var pendingSelection: Job? = null
     private var songIndex = 0
     private var sessionId = 0L
 
@@ -135,10 +135,22 @@ class WrappedSoundtrack internal constructor(
     ) {
         chapter = value
         this.cycleExcerpts = cycleExcerpts
+        pendingSelection?.cancel()
         if (enabled && prepared.isNotEmpty() && !cycleExcerpts) {
-            val index = songIndexFor(value)
-            // Keep the current song until the chapter's own song has downloaded, so music never stops for a swipe.
-            if (prepared[index].isCompleted && !prepared[index].isCancelled) changeSong(index)
+            val index = songIndexFor(value) ?: return
+            if (index == songIndex) return
+            val pending = prepared[index]
+            if (pending.isCompleted) {
+                if (!pending.isCancelled) changeSong(index)
+                return
+            }
+            // Keep the current song while the chapter's own song downloads, then switch if the chapter is still showing.
+            val session = sessionId
+            pendingSelection =
+                scope.launch {
+                    val ready = runCatching { pending.await() }.isSuccess
+                    if (ready && enabled && session == sessionId && chapter == value) changeSong(index)
+                }
         }
     }
 
@@ -150,11 +162,12 @@ class WrappedSoundtrack internal constructor(
         if (!available) return
         failed = false
         val session = ++sessionId
-        chapterSongs = songs()
-        sessionSongs = chapterSongs.distinctBy { it.id }.take(10)
+        sessionSongs = songs().distinctBy { it.id }.take(10)
         enabled = true
         loading = true
-        songIndex = if (cycleExcerpts) 0 else songIndexFor(chapter)
+        songIndex = if (cycleExcerpts) 0 else songIndexFor(chapter) ?: 0
+        // Commands on regular playback cancel the soundtrack from now on, including during the opening download.
+        normalCommandGeneration = controller.playbackCommandGeneration
         job =
             scope.launch {
                 try {
@@ -187,6 +200,7 @@ class WrappedSoundtrack internal constructor(
                             stop(resume = false)
                             return@supervisorScope
                         }
+                        files.activate()
                         val slots = Semaphore(2)
                         prepared =
                             sessionSongs.indices.map { index ->
@@ -197,6 +211,8 @@ class WrappedSoundtrack internal constructor(
                                 }
                             }
                         changeSong(songIndex)
+                        // The reader may have moved on while the opening song downloaded.
+                        if (!cycleExcerpts) selectChapter(chapter, false)
                         prepared.forEach { pending ->
                             try {
                                 pending.await()
@@ -324,13 +340,21 @@ class WrappedSoundtrack internal constructor(
             }
     }
 
-    private fun songIndexFor(chapter: Int): Int {
-        val id = chapterSongs.getOrNull(chapter)?.id
-        return sessionSongs.indexOfFirst { it.id == id }.takeIf { it >= 0 } ?: (chapter % sessionSongs.size)
+    // Read the report's current chapter songs, so chapters added by a later refresh map to their own song.
+    private fun songIndexFor(chapter: Int): Int? {
+        val id = songs().getOrNull(chapter)?.id ?: return null
+        return sessionSongs.indexOfFirst { it.id == id }.takeIf { it >= 0 }
     }
 
     private fun playNext() {
-        if (sessionSongs.isNotEmpty()) changeSong((songIndex + 1) % sessionSongs.size, restart = true)
+        if (sessionSongs.isEmpty()) return
+        // Skip songs whose download failed; one pass at most.
+        val next =
+            (1..sessionSongs.size)
+                .map { (songIndex + it) % sessionSongs.size }
+                .firstOrNull { index -> prepared.getOrNull(index)?.let { !(it.isCompleted && it.isCancelled) } ?: true }
+                ?: return fail()
+        changeSong(next, restart = true)
     }
 
     private fun fail() {
@@ -374,7 +398,8 @@ class WrappedSoundtrack internal constructor(
         pendingVoice = 0L
         playingSong = null
         sessionSongs = emptyList()
-        chapterSongs = emptyList()
+        pendingSelection?.cancel()
+        pendingSelection = null
         normalPlayback = null
         normalCommandGeneration = null
         pausedPositionMs = null

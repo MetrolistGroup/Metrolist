@@ -48,6 +48,7 @@ private class AndroidWrappedAudioLibrary(
 ) : JvmWrappedAudioLibrary(directory) {
     private val audio = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
     private var closed = false
+    private var focused = false
     private val handler = Handler(Looper.getMainLooper())
     private val listener =
         AudioManager.OnAudioFocusChangeListener { change ->
@@ -79,6 +80,18 @@ private class AndroidWrappedAudioLibrary(
         }
 
     init {
+        // Unplugged headphones cancel the session even while the opening song downloads.
+        ContextCompat.registerReceiver(
+            context,
+            noisy,
+            IntentFilter(AudioManager.ACTION_AUDIO_BECOMING_NOISY),
+            ContextCompat.RECEIVER_NOT_EXPORTED,
+        )
+    }
+
+    // Focus waits until regular playback is saved and paused; taking it earlier would pause that playback unrecorded.
+    override fun activate() {
+        if (closed || focused) return
         val granted =
             if (Build.VERSION.SDK_INT >= 26) {
                 audio.requestAudioFocus(checkNotNull(request))
@@ -86,12 +99,7 @@ private class AndroidWrappedAudioLibrary(
                 audio.requestAudioFocus(listener, AudioManager.STREAM_MUSIC, AudioManager.AUDIOFOCUS_GAIN)
             }
         check(granted == AudioManager.AUDIOFOCUS_REQUEST_GRANTED)
-        ContextCompat.registerReceiver(
-            context,
-            noisy,
-            IntentFilter(AudioManager.ACTION_AUDIO_BECOMING_NOISY),
-            ContextCompat.RECEIVER_NOT_EXPORTED,
-        )
+        focused = true
     }
 
     override fun openLocalAudio(url: String): InputStream {
@@ -103,7 +111,9 @@ private class AndroidWrappedAudioLibrary(
         if (closed) return
         closed = true
         context.unregisterReceiver(noisy)
-        if (Build.VERSION.SDK_INT >= 26) audio.abandonAudioFocusRequest(checkNotNull(request)) else audio.abandonAudioFocus(listener)
+        if (focused) {
+            if (Build.VERSION.SDK_INT >= 26) audio.abandonAudioFocusRequest(checkNotNull(request)) else audio.abandonAudioFocus(listener)
+        }
         super.close()
     }
 }

@@ -18,7 +18,7 @@ import java.io.RandomAccessFile
 import java.net.URI
 
 internal open class JvmWrappedAudioLibrary(
-    private val directory: File,
+    protected val directory: File,
 ) : WrappedAudioLibrary {
     @Volatile
     private var closed = false

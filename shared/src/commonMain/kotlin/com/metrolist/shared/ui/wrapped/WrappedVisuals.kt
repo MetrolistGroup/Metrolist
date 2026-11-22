@@ -80,6 +80,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
@@ -623,8 +624,20 @@ internal fun WrappedHeadline(
                 if (maxLines == 1 || single >= maxOf(minFontSize.value, maxFontSize.value * 0.4f)) {
                     1 to single
                 } else {
-                    // Never split a word: the widest word sets the ceiling.
-                    maxLines to fit(text.split(' ').filter { it.isNotEmpty() }.maxOfOrNull { width(it) } ?: 0)
+                    // Never split a word: the widest word sets the ceiling. Then shrink until the whole title fits the lines.
+                    var size = fit(text.split(' ').filter { it.isNotEmpty() }.maxOfOrNull { width(it) } ?: 0)
+                    while (size > minFontSize.value &&
+                        measurer
+                            .measure(
+                                text,
+                                finalStyle.copy(fontSize = size.sp),
+                                maxLines = maxLines,
+                                constraints = Constraints(maxWidth = room.coerceAtLeast(1)),
+                            ).hasVisualOverflow
+                    ) {
+                        size -= 2f
+                    }
+                    maxLines to size
                 }
             }
         // Sizes are measured at the heaviest, widest setting, so the lighter frames of the entrance always fit.
@@ -813,19 +826,28 @@ internal fun WrappedShapedArtwork(
     val haptics = rememberMetrolistHaptics()
     Box(
         modifier
-            .pointerInput(motionEnabled) {
-                detectTapGestures(
-                    onPress = {
-                        if (!motionEnabled) return@detectTapGestures
-                        haptics.perform(HapticEvent.PRESS)
-                        scope.launch { squish.animateTo(0.86f, spring(0.6f, Spring.StiffnessHigh)) }
-                        tryAwaitRelease()
-                        haptics.perform(HapticEvent.CONFIRM)
-                        scope.launch { squish.animateTo(1f, spring(0.3f, Spring.StiffnessMedium)) }
-                        scope.launch { poke.animateTo(poke.targetValue + 120f, spring(0.55f, Spring.StiffnessLow)) }
-                    },
-                )
-            }.graphicsLayer {
+            // Without motion the artwork takes no taps, so they reach chapter navigation.
+            .then(
+                if (motionEnabled) {
+                    Modifier.pointerInput(Unit) {
+                        detectTapGestures(
+                            onPress = {
+                                haptics.perform(HapticEvent.PRESS)
+                                scope.launch { squish.animateTo(0.86f, spring(0.6f, Spring.StiffnessHigh)) }
+                                val released = tryAwaitRelease()
+                                scope.launch { squish.animateTo(1f, spring(0.3f, Spring.StiffnessMedium)) }
+                                // A press that turned into a scroll or swipe only springs back.
+                                if (released) {
+                                    haptics.perform(HapticEvent.CONFIRM)
+                                    scope.launch { poke.animateTo(poke.targetValue + 120f, spring(0.55f, Spring.StiffnessLow)) }
+                                }
+                            },
+                        )
+                    }
+                } else {
+                    Modifier
+                },
+            ).graphicsLayer {
                 val v = reveal.value
                 val scale = (0.35f + 0.65f * v) * squish.value
                 scaleX = scale

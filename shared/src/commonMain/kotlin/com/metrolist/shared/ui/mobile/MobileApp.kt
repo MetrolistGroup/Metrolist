@@ -1320,6 +1320,7 @@ fun MobileApp(
                                     onAlbumClick = { id, title -> open(MobileRoute.Album(id, title)) },
                                     onArtistClick = { id, name -> open(MobileRoute.Artist(id, name)) },
                                     modifier = Modifier.fillMaxSize().padding(routePadding),
+                                    onWrappedCardRetired = { scope.launch { snackbarHostState.showSnackbar(it) } },
                                 )
                             }
 

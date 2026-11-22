@@ -6,10 +6,29 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
+import java.io.File
 import java.nio.file.Files
+import kotlin.concurrent.thread
 
 internal actual fun createWrappedAudioLibrary(onInterrupted: () -> Unit): WrappedAudioLibrary =
-    JvmWrappedAudioLibrary(Files.createTempDirectory("metrolist-wrapped-").toFile())
+    DesktopWrappedAudioLibrary(Files.createTempDirectory("metrolist-wrapped-").toFile())
+
+private class DesktopWrappedAudioLibrary(
+    directory: File,
+) : JvmWrappedAudioLibrary(directory) {
+    override fun close() {
+        super.close()
+        if (!directory.exists()) return
+        // Decoders release their files asynchronously, and Windows cannot delete a file that is still open.
+        thread(isDaemon = true, name = "wrapped-audio-cleanup") {
+            repeat(20) {
+                Thread.sleep(500)
+                if (directory.deleteRecursively()) return@thread
+            }
+            directory.walkTopDown().forEach { it.deleteOnExit() }
+        }
+    }
+}
 
 internal actual fun createWrappedAudioPlayer(
     onEnded: () -> Unit,

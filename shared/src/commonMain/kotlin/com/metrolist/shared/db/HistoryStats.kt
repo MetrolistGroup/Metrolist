@@ -467,7 +467,9 @@ private suspend fun MusicDatabase.statisticsSnapshot(
             val visibleGroups = if (lastFm.isEmpty()) stored else statGroups(sinceMs, untilMs, catalogArtistIds)
             val blockedSongs = if (lastFm.isEmpty()) emptyList() else dao().getSongsByIds(BlockedContent.songIds().toList())
             val excludedNames = blockedSongs.flatMap { song -> song.artists.map { song.title to it.name } }.toSet()
-            val merged = mergeLastFmHistory(stored, lastFm, storedMetadata, allGroups, visibleGroups, excludedNames)
+            // Excluded songs need their own artist credits so a scrobble naming one guest artist still matches them.
+            val allMetadata = if (lastFm.isEmpty()) storedMetadata else artistMetadata(allGroups)
+            val merged = mergeLastFmHistory(stored, lastFm, storedMetadata, allMetadata, allGroups, visibleGroups, excludedNames)
             val groups = merged.groups
             val knownArtists = storedMetadata.groupBy { it.name.trim().lowercase() }
             val metadata =
@@ -520,6 +522,7 @@ private fun mergeLastFmHistory(
     stored: List<HistoryStatGroup>,
     listens: List<LastFmListen>,
     metadata: List<HistoryArtistCredit>,
+    unfilteredMetadata: List<HistoryArtistCredit>,
     unfiltered: List<HistoryStatGroup>,
     visibleGroups: List<HistoryStatGroup>,
     excludedNames: Set<Pair<String, String>>,
@@ -533,19 +536,26 @@ private fun mergeLastFmHistory(
         artist: String,
     ) = normalize(title) to normalize(artist)
     val names = metadata.groupBy({ it.songId }, { it.name })
+    val unfilteredNames = unfilteredMetadata.groupBy({ it.songId }, { it.name })
     val albums =
         visibleGroups
             .filter { it.albumId != null && !it.album.isNullOrBlank() }
-            .flatMap { group -> group.names(names).map { key(checkNotNull(group.album), it) to group.albumId } }
+            .flatMap { group -> (group.names(names) + group.artists).map { key(checkNotNull(group.album), it) to group.albumId } }
             .groupBy({ it.first }, { it.second })
             .mapValues { (_, ids) -> ids.distinct().singleOrNull() }
 
-    fun keys(group: HistoryStatGroup) = (group.names(names) + group.artists).map { key(group.title, it) }
+    fun keys(
+        group: HistoryStatGroup,
+        credits: Map<String, List<String>> = names,
+    ) = (group.names(credits) + group.artists).map { key(group.title, it) }
     val candidates = visibleGroups.flatMap { group -> keys(group).map { it to group } }.groupBy({ it.first }, { it.second })
     val visible = visibleGroups.map { listOf(it.songId, it.title, it.artists, it.artistNamesJson) }.toSet()
     val excluded =
         excludedNames.map { key(it.first, it.second) }.toSet() +
-            unfiltered.filter { listOf(it.songId, it.title, it.artists, it.artistNamesJson) !in visible }.flatMap(::keys).toSet()
+            unfiltered
+                .filter { listOf(it.songId, it.title, it.artists, it.artistNamesJson) !in visible }
+                .flatMap { keys(it, unfilteredNames) }
+                .toSet()
     val blockedArtists = BlockedContent.artists().map { normalize(it.name) }.toSet()
     val zone = TimeZone.currentSystemDefault()
 

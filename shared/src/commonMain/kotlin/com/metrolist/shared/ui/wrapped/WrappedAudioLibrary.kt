@@ -6,6 +6,9 @@ import com.metrolist.shared.model.SongItem
 internal interface WrappedAudioLibrary {
     suspend fun prepare(song: SongItem): String
 
+    /** Claims audio output once regular playback is saved and paused; downloads run before this. */
+    fun activate() {}
+
     fun close()
 }
 

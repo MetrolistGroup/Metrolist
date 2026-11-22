@@ -293,7 +293,8 @@ fun WrappedScreen(
                         }
                     }
                     when {
-                        loading && result == null -> {
+                        // Last.fm may still supply this year's plays, so an empty local history is not final yet.
+                        (loading && result == null) || (!loadFailed && lastFmLoading) -> {
                             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { ContainedLoadingIndicator() }
                         }
 
@@ -302,7 +303,12 @@ fun WrappedScreen(
                         }
 
                         else -> {
-                            WrappedMessage(stringResource(Res.string.wrapped_empty))
+                            WrappedMessage(
+                                listOfNotNull(
+                                    stringResource(Res.string.wrapped_empty),
+                                    stringResource(Res.string.wrapped_lastfm_failed).takeIf { lastFmFailed },
+                                ).joinToString("\n\n"),
+                            )
                         }
                     }
                 }
@@ -576,8 +582,10 @@ private fun WrappedReport(
                             held = true
                             try {
                                 val scrollingAtDown = scroll.isScrollInProgress || pager.isScrollInProgress
-                                if (down.isConsumed) return@awaitEachGesture
+                                // A press on artwork still holds the chapter until release; it just does not navigate.
+                                val consumedAtDown = down.isConsumed
                                 val up = waitForUpOrCancellation() ?: return@awaitEachGesture
+                                if (consumedAtDown) return@awaitEachGesture
                                 if (scrollingAtDown || scroll.isScrollInProgress || pager.isScrollInProgress) return@awaitEachGesture
                                 if (up.id != down.id ||
                                     up.uptimeMillis - down.uptimeMillis >= viewConfiguration.longPressTimeoutMillis
@@ -585,8 +593,14 @@ private fun WrappedReport(
                                     return@awaitEachGesture
                                 }
                                 if ((up.position - down.position).getDistance() > viewConfiguration.touchSlop) return@awaitEachGesture
-                                val start = down.position.x < size.width * 0.3f
-                                val forward = if (direction == LayoutDirection.Ltr) !start else start
+                                // The leading 30% goes back: the left edge in LTR, the right edge in RTL.
+                                val leading =
+                                    if (direction == LayoutDirection.Ltr) {
+                                        down.position.x < size.width * 0.3f
+                                    } else {
+                                        down.position.x > size.width * 0.7f
+                                    }
+                                val forward = !leading
                                 val target = (pager.currentPage + if (forward) 1 else -1).coerceIn(0, chapters.lastIndex)
                                 if (target != pager.currentPage) {
                                     up.consume()
@@ -654,7 +668,14 @@ private fun wrappedChapterSongs(
     val album =
         snapshot.albums.firstOrNull()?.let { wanted ->
             songs.firstOrNull { song ->
-                song.album?.let { (wanted.id != null && it.id == wanted.id) || it.name.equals(wanted.name, ignoreCase = true) } == true
+                val album = song.album ?: return@firstOrNull false
+                // An ID decides alone; a name only counts together with one of the album's artists.
+                if (wanted.id != null) {
+                    album.id == wanted.id
+                } else {
+                    album.name.equals(wanted.name, ignoreCase = true) &&
+                        song.artists.any { wanted.artists.contains(it.name, ignoreCase = true) }
+                }
             }
         }
     val others = songs.filter { it.id != top?.id }
