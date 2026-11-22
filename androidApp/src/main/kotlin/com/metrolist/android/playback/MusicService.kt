@@ -872,8 +872,7 @@ class MusicService :
                     }
                 }
             if (!connected && isCurrentHandoff()) {
-                // A failed handoff must not undo the TV pause-on-background rule; phones restore normally.
-                restoreLocalPlaybackAfterCast(position, playing && !shouldPauseLocalPlaybackInBackground())
+                restoreLocalPlaybackAfterCast(position, playing)
             }
         }
     }
@@ -918,9 +917,11 @@ class MusicService :
         positionMs: Long,
         resumePlayback: Boolean,
     ) {
-        if (player.retryPendingQueuePlayback(positionMs, resumePlayback)) return
+        // Returning from Cast while the TV app is in the background must not undo its pause-on-background rule.
+        val resume = resumePlayback && !shouldPauseLocalPlaybackInBackground()
+        if (player.retryPendingQueuePlayback(positionMs, resume)) return
         player.seekTo(positionMs, PlaybackSeekSource("queue_restore", mapOf("reason" to "cast_disconnect")))
-        if (resumePlayback) player.resume() else player.pause()
+        if (resume) player.resume() else player.pause()
     }
 
     fun toggleCastPlayback() = setCastPlayback(!castManager.state.value.isPlaying)
