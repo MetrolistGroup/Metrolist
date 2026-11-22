@@ -2733,4 +2733,6 @@
     <string name="discord_presence_listening_to">Слушает</string>
     <string name="discord_presence_competing_in">Соревнуется в</string>
     <string name="discord_preview_edit_hint">Нажмите на строку в предпросмотре, чтобы изменить её</string>
+    <string name="discord_time_left">Осталось %1$s</string>
+    <string name="discord_position_duration">%1$s / %2$s</string>
 </resources>
