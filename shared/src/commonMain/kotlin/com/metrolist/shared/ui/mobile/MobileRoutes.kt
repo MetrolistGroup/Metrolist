@@ -212,8 +212,7 @@ internal fun resolveMobileDeepLink(callback: String): MobileDeepLink? {
         }
 
         "party" -> {
-            val code = uri?.parameters?.get("r") ?: uri?.parameters?.get("code") ?: path.removePrefix("party/").substringBefore('/')
-            partyInvitation(code)
+            partyInvitation(uri?.parameters?.get("r") ?: uri?.parameters?.get("code"))
         }
 
         "home" -> {
