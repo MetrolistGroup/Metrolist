@@ -35,7 +35,7 @@ cask "metrolist" do
   end
 
   # An absolute XDG_DATA_HOME replaces ~/.local/share for the WebView profile.
-  xdg_data_home = ENV["XDG_DATA_HOME"]
+  xdg_data_home = ENV.fetch("XDG_DATA_HOME", nil)
   linux_webview = xdg_data_home&.start_with?("/") ? "#{xdg_data_home}/Metrolist" : "~/.local/share/Metrolist"
 
   zap trash: [
