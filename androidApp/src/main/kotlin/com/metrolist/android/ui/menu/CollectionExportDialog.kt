@@ -2,6 +2,8 @@
 
 package com.metrolist.android.ui.menu
 
+import android.icu.lang.UCharacter
+import android.icu.lang.UProperty
 import android.net.Uri
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -134,8 +136,9 @@ fun CollectionExportDialog(
                         modifier =
                             Modifier
                                 .fillMaxWidth()
-                                .clickable { saveLaunchers.getValue(format).launch("${title.toSafeFilename()}.${format.extension}") }
-                                .padding(vertical = 12.dp),
+                                .clickable {
+                                    saveLaunchers.getValue(format).launch("${title.toSafeFilename(format.extension)}.${format.extension}")
+                                }.padding(vertical = 12.dp),
                     )
                 }
             }
@@ -150,4 +153,36 @@ fun CollectionExportDialog(
     )
 }
 
-private fun String.toSafeFilename(): String = replace(Regex("[^A-Za-z0-9._ -]"), "_").trim().ifBlank { "playlist" }
+private fun String.toSafeFilename(extension: String): String {
+    val sanitized =
+        buildString {
+            var offset = 0
+            var hasBase = false
+            while (offset < this@toSafeFilename.length) {
+                val codePoint = this@toSafeFilename.codePointAt(offset)
+                offset += Character.charCount(codePoint)
+                val type = Character.getType(codePoint)
+                val isCombiningMark =
+                    type == Character.NON_SPACING_MARK.toInt() || type == Character.COMBINING_SPACING_MARK.toInt() ||
+                        type == Character.ENCLOSING_MARK.toInt()
+                val keepText =
+                    (Character.isLetterOrDigit(codePoint) || (hasBase && isCombiningMark)) &&
+                        !UCharacter.hasBinaryProperty(codePoint, UProperty.DEFAULT_IGNORABLE_CODE_POINT)
+                val keepSeparator = codePoint == '.'.code || codePoint == '_'.code || codePoint == ' '.code || codePoint == '-'.code
+                appendCodePoint(if (keepText || keepSeparator) codePoint else '_'.code)
+                hasBase = keepText
+            }
+        }.trim().ifBlank { "playlist" }
+
+    // Retain the previous suggestion policy when the sanitized name is entirely ASCII.
+    if (sanitized.all { it.code <= 0x7F }) return sanitized
+    val stemBudget = MAX_FILENAME_UTF8_BYTES - 1 - extension.encodeToByteArray().size
+    val encoded = sanitized.encodeToByteArray()
+    if (encoded.size <= stemBudget) return sanitized
+    var end = stemBudget
+    // The byte at the cut must be the start of the next code point, not a UTF-8 continuation byte.
+    while ((encoded[end].toInt() and 0xC0) == 0x80) end--
+    return encoded.decodeToString(endIndex = end).trimEnd()
+}
+
+private const val MAX_FILENAME_UTF8_BYTES = 255
