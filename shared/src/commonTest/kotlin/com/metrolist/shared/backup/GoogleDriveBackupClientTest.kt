@@ -137,7 +137,7 @@ class GoogleDriveBackupClientTest {
                                         respond(
                                             "",
                                             HttpStatusCode.PermanentRedirect,
-                                            headersOf(HttpHeaders.Range, "bytes 0-0/3"),
+                                            headersOf(HttpHeaders.Range, "bytes=0-0"),
                                         )
                                     }
 
