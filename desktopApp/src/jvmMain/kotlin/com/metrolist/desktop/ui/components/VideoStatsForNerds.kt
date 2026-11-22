@@ -94,7 +94,7 @@ fun VideoStatsForNerdsOverlay(
 
     val totalFrames = stats.renderedFrames + stats.droppedFrames
     val totalFramesCount = totalFrames.coerceAtLeast(stats.decodedFrames)
-    val dropPercent = if (totalFrames > 0) (stats.droppedFrames.toDouble() / totalFrames) * 100.0 else 0.0
+    val dropPercent = if (totalFramesCount > 0) (stats.droppedFrames.toDouble() / totalFramesCount) * 100.0 else 0.0
     val totalDurationMs = PlayerState.player.duration.value
     val syncOffset = stats.avSyncOffsetMs
     val sign = if (syncOffset >= 0) "+" else ""
