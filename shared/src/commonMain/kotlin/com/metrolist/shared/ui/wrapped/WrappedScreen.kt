@@ -512,7 +512,7 @@ private fun WrappedReport(
                         contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
                         checked = soundtrack.enabled,
                         colors =
-                            ToggleButtonDefaults.toggleButtonColors(
+                            ToggleButtonDefaults.colors(
                                 containerColor = foreground.copy(alpha = 0.14f),
                                 contentColor = foreground,
                                 checkedContainerColor = foreground,
