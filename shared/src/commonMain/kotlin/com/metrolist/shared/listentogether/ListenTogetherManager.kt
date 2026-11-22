@@ -2098,7 +2098,11 @@ class ListenTogetherManager(
             }
         val localById = localUpcoming.groupBy { it.id }.mapValues { (_, songs) -> ArrayDeque(songs) }
         val merged = target.map { track -> track.mergeInto(localById[track.id]?.removeFirstOrNull()) }
-        if (merged != localUpcoming) playback.replaceUpcomingQueueFromRemote(merged)
+        // An idle room with no playable tracks is an explicit clear even when the live queue is already empty;
+        // a queue saved from an earlier session must not survive it.
+        if (merged != localUpcoming || (merged.isEmpty() && currentId == null)) {
+            playback.replaceUpcomingQueueFromRemote(merged)
+        }
         if (_role.value == ListenTogetherRoomRole.GUEST) playback.setQueueTitleFromRemote(_roomState.value?.queueTitle)
         if (_role.value == ListenTogetherRoomRole.HOST) {
             lastQueueSnapshot = canonical
