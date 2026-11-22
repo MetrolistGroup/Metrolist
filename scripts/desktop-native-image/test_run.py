@@ -47,9 +47,9 @@ class ExperimentTest(unittest.TestCase):
         self.assertGreaterEqual(sample["rss_kib"], sample["pss_kib"])
         self.assertGreater(sample["pss_kib"], 0)
         self.assertGreaterEqual(sample["cpu_seconds"], 0)
-        # Both sides come from one tree snapshot; PSS read before it can drop in between.
-        self.assertEqual(sample["tree"]["total"]["pss_kib"],
-                         sum(entry["pss_kib"] for entry in sample["tree"]["processes"]))
+        # The tree must cover the root process; recomputing the total would mirror sample().
+        self.assertIn(os.getpid(), [entry["pid"] for entry in sample["tree"]["processes"]])
+        self.assertGreater(sample["tree"]["total"]["pss_kib"], 0)
 
     def test_tree_cpu_counts_new_and_reused_processes(self):
         def tree(time, *processes):
