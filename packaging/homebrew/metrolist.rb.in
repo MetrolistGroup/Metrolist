@@ -34,13 +34,17 @@ cask "metrolist" do
     strategy :github_latest
   end
 
+  # An absolute XDG_DATA_HOME replaces ~/.local/share for the WebView profile.
+  xdg_data_home = ENV["XDG_DATA_HOME"]
+  linux_webview = xdg_data_home&.start_with?("/") ? "#{xdg_data_home}/Metrolist" : "~/.local/share/Metrolist"
+
   zap trash: [
     "~/.cache/metrolist",
     "~/.config/metrolist",
-    "~/.local/share/Metrolist",
     "~/.local/share/metrolist",
     "~/.local/state/metrolist",
     "~/Library/Application Support/Metrolist",
     "~/Library/Saved Application State/com.metrolist.desktop.savedState",
+    linux_webview,
   ]
 end
