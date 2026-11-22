@@ -419,7 +419,7 @@ Desktop song selection, skips, receiver EOF and Radio use one transition owner. 
 
 Discord initializes only once the integration is enabled or its settings open; Android OAuth callbacks also initialize it. Clearing presence starts a 30-second idle grace period, after which the gateway closes but credentials stay. Playback reconnects. Known offline state suspends retries until the network monitor reports connectivity. Handshakes time out after 15 seconds and retry with capped backoff.
 
-The Discord settings page shows a live preview of the rendered activity. Its edit mode maps each preview line to a template editor with placeholder highlighting and a rendered preview of the playing song; editing a template while edit mode is on enables advanced mode. A pull-to-refresh gesture on touch platforms resends the current presence, with the same result message as the manual Refresh RPC action.
+The Discord settings page shows a live preview of the rendered activity. Its edit mode maps each preview line to a template editor with placeholder highlighting and a rendered preview of the playing song. Saving a template enables advanced mode; opening or canceling an editor leaves the settings unchanged. A pull-to-refresh gesture on touch platforms resends the current presence, with the same result message as the manual Refresh RPC action.
 
 ### SponsorBlock
 

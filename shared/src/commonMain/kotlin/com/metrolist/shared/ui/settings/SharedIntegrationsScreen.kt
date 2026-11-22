@@ -364,14 +364,7 @@ private fun buildIntegrationsRegistry(
                         playback = previewPlayback,
                         enabled = discordSettingsEnabled,
                         editMode = discordEditMode,
-                        onToggleEditMode = { on ->
-                            discordEditMode = on
-                            // Templates only render in advanced mode; editing one turns it on.
-                            if (on && !settings.discordAdvancedMode) {
-                                settings.discordAdvancedMode = true
-                                notifyDiscordChanged()
-                            }
-                        },
+                        onToggleEditMode = { discordEditMode = it },
                         onOpenUrl = host.onOpenUrl,
                         onEditField = { target -> discordEditTarget = target },
                     )
@@ -510,7 +503,10 @@ private fun buildIntegrationsRegistry(
                 button1Default = presenceStrings.button1Default,
                 button2Default = presenceStrings.button2Default,
                 onDismiss = { discordEditTarget = null },
-                onSaved = { notifyDiscordChanged() },
+                onSaved = {
+                    settings.discordAdvancedMode = true
+                    notifyDiscordChanged()
+                },
             )
         }
         if (confirmDiscordLogout && discordLoggedIn) {
