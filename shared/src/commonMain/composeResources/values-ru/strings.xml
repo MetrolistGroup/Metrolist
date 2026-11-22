@@ -1618,7 +1618,7 @@
     <string name="liked_songs_title">Понравившиеся треки</string>
     <string name="liked_songs_subtitle">Ваши любимые треки</string>
     <string name="liked_songs_empty">Нет понравившихся треков</string>
-    <string name="liked_songs_empty_hint">Здесь появятся треки, которым вы поставили отметку Нравится.\nНажмите на значок сердечка у любого трека, чтобы добавить её в понравившиеся.</string>
+    <string name="liked_songs_empty_hint">Здесь появятся треки, которым вы поставили отметку Нравится.\nНажмите на значок сердечка у любого трека, чтобы добавить его в понравившиеся.</string>
     <string name="top_playlist_title">Мой топ-100</string>
     <string name="top_playlist_subtitle">Основано на вашей истории воспроизведения</string>
     <string name="top_playlist_empty">Нет песен</string>
