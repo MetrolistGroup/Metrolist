@@ -34,6 +34,7 @@ import androidx.media3.session.SessionResult
 import com.metrolist.android.deviceconnect.toDeviceConnectRepeatMode
 import com.metrolist.android.listentogether.AndroidListenTogetherManager
 import com.metrolist.shared.cast.CastState
+import com.metrolist.shared.cast.castVolumePercent
 import com.metrolist.shared.deviceconnect.DcPlaybackAction
 import com.metrolist.shared.deviceconnect.DcPlaybackCommand
 import com.metrolist.shared.model.SongItem
@@ -798,7 +799,7 @@ class MediaSessionPlayer(
             DeviceInfo.UNKNOWN
         }
 
-    override fun getDeviceVolume(): Int = ((remotePlaybackState?.value?.volume ?: 0f) * 100).toInt().coerceIn(0, 100)
+    override fun getDeviceVolume(): Int = castVolumePercent(remotePlaybackState?.value?.volume ?: 0f)
 
     override fun isDeviceMuted(): Boolean = remotePlaybackState?.value?.isConnected == true && getDeviceVolume() == 0
 
@@ -816,7 +817,7 @@ class MediaSessionPlayer(
         muted: Boolean,
         flags: Int,
     ) {
-        setDeviceVolume((remoteVolumeTracker.volumeForMutedState(muted) * 100).toInt(), flags)
+        setDeviceVolume(castVolumePercent(remoteVolumeTracker.volumeForMutedState(muted)), flags)
     }
 
     override fun getAudioAttributes(): AudioAttributes = AudioAttributes.DEFAULT
