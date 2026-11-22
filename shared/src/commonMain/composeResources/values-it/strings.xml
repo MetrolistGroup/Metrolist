@@ -923,9 +923,9 @@
     <string name="library_sort_updated">Aggiornati</string>
     <string name="playlist_direction_descending">Ordine: decrescente</string>
     <plurals name="hours">
-        <item quantity="one">%1$d ora</item>
-        <item quantity="many">%1$d ore</item>
-        <item quantity="other">%1$d ore</item>
+        <item quantity="one">%1$d ora</item>
+        <item quantity="many">%1$d ore</item>
+        <item quantity="other">%1$d ore</item>
     </plurals>
     <plurals name="added_songs_to_playlist">
         <item quantity="one">Aggiunto %1$d brano a %2$s</item>
@@ -1034,7 +1034,7 @@
     <string name="solid_black">Nero tinta unita</string>
     <string name="profile">Profilo</string>
     <string name="account_login_with_token_hint">Tocca per vedere o modificare i token</string>
-    <string name="stored_clear_cache_title">Cancellare tutti i brani in cache?</string>
+    <string name="stored_clear_cache_title">Eliminare tutti i brani nella cache?</string>
     <string name="menu_account">Account</string>
     <string name="onboarding_finish_description">Configurazione completata. Comincia ad ascoltare, oppure trasferisci prima il tuo account e i tuoi dati.</string>
     <string name="account_user_icon">Utente</string>
