@@ -411,25 +411,40 @@ private fun buildIntegrationsRegistry(
                 custom("discordActivityNameEditor", stringResource(Res.string.discord_activity_name)) {
                     DiscordTemplateEditorRow(
                         title = stringResource(Res.string.discord_activity_name),
-                        template = settings.discordActivityName,
-                        context = discordTemplateContext,
-                        enabled = true,
+                        rendered =
+                            discordTemplateContext.renderDiscordTemplate(
+                                DiscordEditTarget.ACTIVITY_NAME,
+                                settings.discordActivityName,
+                                presenceStrings.button1Default,
+                                presenceStrings.button2Default,
+                            ),
+                        enabled = discordSettingsEnabled,
                     ) { discordEditTarget = DiscordEditTarget.ACTIVITY_NAME }
                 }
                 custom("discordStateEditor", stringResource(Res.string.discord_state)) {
                     DiscordTemplateEditorRow(
                         title = stringResource(Res.string.discord_state),
-                        template = settings.discordStateTemplate,
-                        context = discordTemplateContext,
-                        enabled = true,
+                        rendered =
+                            discordTemplateContext.renderDiscordTemplate(
+                                DiscordEditTarget.STATE,
+                                settings.discordStateTemplate,
+                                presenceStrings.button1Default,
+                                presenceStrings.button2Default,
+                            ),
+                        enabled = discordSettingsEnabled,
                     ) { discordEditTarget = DiscordEditTarget.STATE }
                 }
                 custom("discordDetailsEditor", stringResource(Res.string.details)) {
                     DiscordTemplateEditorRow(
                         title = stringResource(Res.string.details),
-                        template = settings.discordDetailsTemplate,
-                        context = discordTemplateContext,
-                        enabled = true,
+                        rendered =
+                            discordTemplateContext.renderDiscordTemplate(
+                                DiscordEditTarget.DETAILS,
+                                settings.discordDetailsTemplate,
+                                presenceStrings.button1Default,
+                                presenceStrings.button2Default,
+                            ),
+                        enabled = discordSettingsEnabled,
                     ) { discordEditTarget = DiscordEditTarget.DETAILS }
                 }
                 switch(
@@ -445,15 +460,15 @@ private fun buildIntegrationsRegistry(
                     custom("discordButton1Editor", stringResource(Res.string.discord_button_1)) {
                         DiscordTemplateEditorRow(
                             title = stringResource(Res.string.discord_button_1),
-                            // Match the label the presence actually sends for a cleared custom label.
-                            template =
-                                resolveDiscordButtonLabel(
+                            // The helper resolves a cleared custom label to the localized default.
+                            rendered =
+                                discordTemplateContext.renderDiscordTemplate(
+                                    DiscordEditTarget.BUTTON1,
                                     settings.discordButton1Text,
-                                    DiscordDefaults.BUTTON1_LABEL,
                                     presenceStrings.button1Default,
+                                    presenceStrings.button2Default,
                                 ),
-                            context = discordTemplateContext,
-                            enabled = true,
+                            enabled = discordSettingsEnabled,
                         ) { discordEditTarget = DiscordEditTarget.BUTTON1 }
                     }
                 }
@@ -471,15 +486,15 @@ private fun buildIntegrationsRegistry(
                     custom("discordButton2Editor", stringResource(Res.string.discord_button_2)) {
                         DiscordTemplateEditorRow(
                             title = stringResource(Res.string.discord_button_2),
-                            // Match the label the presence actually sends for a cleared custom label.
-                            template =
-                                resolveDiscordButtonLabel(
+                            // The helper resolves a cleared custom label to the localized default.
+                            rendered =
+                                discordTemplateContext.renderDiscordTemplate(
+                                    DiscordEditTarget.BUTTON2,
                                     settings.discordButton2Text,
-                                    DiscordDefaults.BUTTON2_LABEL,
+                                    presenceStrings.button1Default,
                                     presenceStrings.button2Default,
                                 ),
-                            context = discordTemplateContext,
-                            enabled = true,
+                            enabled = discordSettingsEnabled,
                         ) { discordEditTarget = DiscordEditTarget.BUTTON2 }
                     }
                 }
@@ -490,6 +505,8 @@ private fun buildIntegrationsRegistry(
                 target = target,
                 settings = settings,
                 context = discordTemplateContext,
+                button1Default = presenceStrings.button1Default,
+                button2Default = presenceStrings.button2Default,
                 onDismiss = { discordEditTarget = null },
                 onSaved = { notifyDiscordChanged() },
             )

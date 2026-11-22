@@ -61,6 +61,7 @@ import com.metrolist.shared.discord.DiscordActivity
 import com.metrolist.shared.discord.DiscordDefaults
 import com.metrolist.shared.discord.DiscordPresence
 import com.metrolist.shared.discord.DiscordTemplateRenderer
+import com.metrolist.shared.discord.resolveDiscordButtonLabel
 import com.metrolist.shared.generated.resources.Res
 import com.metrolist.shared.generated.resources.cancel
 import com.metrolist.shared.generated.resources.details
@@ -110,7 +111,8 @@ private const val ACTIVITY_TYPE_COMPETING = 5
 internal data class DiscordTemplateContext(
     val title: String = "",
     val artist: String = "",
-    val album: String = "",
+    // Kept nullable so {album.name} renders the unknown-album text like the builder does.
+    val album: String? = null,
     val songId: String = "",
     val artistId: String = "",
     val albumId: String = "",
@@ -132,7 +134,7 @@ internal fun DiscordTemplateContext(
                 ?.joinToString { it.name }
                 ?.takeIf { it.isNotBlank() }
                 ?: unknownArtist,
-        album = song?.album?.name.orEmpty(),
+        album = song?.album?.name,
         songId = song?.id.orEmpty(),
         artistId =
             song
@@ -148,6 +150,32 @@ internal fun DiscordTemplateContext(
 
 private fun DiscordTemplateContext.render(template: String): String =
     DiscordTemplateRenderer.render(template, title, artist, album, songId, artistId, albumId, unknownAlbum)
+
+/** Renders a template the way the presence builder resolves it, including its defaults. */
+internal fun DiscordTemplateContext.renderDiscordTemplate(
+    target: DiscordEditTarget,
+    template: String,
+    button1Default: String,
+    button2Default: String,
+): String =
+    when (target) {
+        DiscordEditTarget.ACTIVITY_NAME -> template.ifEmpty { title }
+        DiscordEditTarget.STATE -> template.ifEmpty { DiscordDefaults.STATE_TEMPLATE }
+        DiscordEditTarget.DETAILS -> template.ifEmpty { DiscordDefaults.DETAILS_TEMPLATE }
+        DiscordEditTarget.BUTTON1 -> resolveDiscordButtonLabel(template, DiscordDefaults.BUTTON1_LABEL, button1Default)
+        DiscordEditTarget.BUTTON2 -> resolveDiscordButtonLabel(template, DiscordDefaults.BUTTON2_LABEL, button2Default)
+    }.let(::render)
+
+/** Renders a button URL the way the presence builder resolves it. */
+internal fun DiscordTemplateContext.renderDiscordButtonUrl(
+    target: DiscordEditTarget,
+    url: String,
+): String =
+    render(
+        url.ifEmpty {
+            if (target == DiscordEditTarget.BUTTON1) DiscordDefaults.BUTTON1_URL_TEMPLATE else DiscordDefaults.BUTTON2_URL
+        },
+    )
 
 private val TEMPLATE_TOKEN_REGEX = Regex("\\{[^{}]*\\}")
 private val TEMPLATE_OPEN_TOKEN_REGEX = Regex("\\{[^{}]*$")
@@ -511,16 +539,14 @@ private fun DiscordEditableLine(
     }
 }
 
-/** Settings row whose description renders the current template against the playing song. */
+/** Settings row whose description shows what the template currently renders to. */
 @Composable
 internal fun DiscordTemplateEditorRow(
     title: String,
-    template: String,
-    context: DiscordTemplateContext,
+    rendered: String,
     enabled: Boolean,
     onClick: () -> Unit,
 ) {
-    val rendered = remember(template, context) { context.render(template) }
     val interactionSource = remember { MutableInteractionSource() }
     Row(
         modifier =
@@ -573,6 +599,8 @@ internal fun DiscordTemplateEditorDialog(
     target: DiscordEditTarget,
     settings: Settings,
     context: DiscordTemplateContext,
+    button1Default: String,
+    button2Default: String,
     onDismiss: () -> Unit,
     onSaved: () -> Unit,
 ) {
@@ -622,7 +650,14 @@ internal fun DiscordTemplateEditorDialog(
                         label2Draft = label2Draft.insert(token)
                     }
                 }
-                DiscordTemplatePreview(context.render((if (target == DiscordEditTarget.BUTTON1) label1Draft else label2Draft).text))
+                DiscordTemplatePreview(
+                    context.renderDiscordTemplate(
+                        target,
+                        (if (target == DiscordEditTarget.BUTTON1) label1Draft else label2Draft).text,
+                        button1Default,
+                        button2Default,
+                    ),
+                )
                 Text(buttonUrlTitle, style = MaterialTheme.typography.titleSmall)
                 DiscordTemplateTextField(
                     value = if (target == DiscordEditTarget.BUTTON1) url1Draft else url2Draft,
@@ -632,7 +667,20 @@ internal fun DiscordTemplateEditorDialog(
                 DiscordTemplateChips(URL_TOKENS) { token ->
                     if (target == DiscordEditTarget.BUTTON1) url1Draft = url1Draft.insert(token) else url2Draft = url2Draft.insert(token)
                 }
-                DiscordTemplatePreview(context.render((if (target == DiscordEditTarget.BUTTON1) url1Draft else url2Draft).text))
+                DiscordTemplatePreview(
+                    context.renderDiscordButtonUrl(
+                        target,
+                        (
+                            if (target ==
+                                DiscordEditTarget.BUTTON1
+                            ) {
+                                url1Draft
+                            } else {
+                                url2Draft
+                            }
+                        ).text,
+                    ),
+                )
             } else {
                 val placeholder =
                     when (target) {
@@ -663,11 +711,16 @@ internal fun DiscordTemplateEditorDialog(
                     }
                 }
                 DiscordTemplatePreview(
-                    when (target) {
-                        DiscordEditTarget.ACTIVITY_NAME -> context.render(nameDraft.text)
-                        DiscordEditTarget.STATE -> context.render(stateDraft.text)
-                        else -> context.render(detailsDraft.text)
-                    },
+                    context.renderDiscordTemplate(
+                        target,
+                        when (target) {
+                            DiscordEditTarget.ACTIVITY_NAME -> nameDraft.text
+                            DiscordEditTarget.STATE -> stateDraft.text
+                            else -> detailsDraft.text
+                        },
+                        button1Default,
+                        button2Default,
+                    ),
                 )
             }
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
