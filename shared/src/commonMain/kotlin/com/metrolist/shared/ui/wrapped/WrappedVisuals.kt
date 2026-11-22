@@ -514,13 +514,12 @@ internal fun Modifier.wrappedEntrance(
     }
 }
 
-/** One Google Sans Flex instance; [opticalSize] tunes spacing and contrast for the size it is set at. */
+/** One Google Sans Flex instance; the bundled file fixes optical size, so only these axes vary. */
 @Composable
 private fun flexFont(
     weight: Int,
     width: Float = 100f,
     round: Float = 0f,
-    opticalSize: Float = 18f,
 ) = Font(
     Res.font.wrapped_flex,
     FontWeight(weight),
@@ -529,7 +528,6 @@ private fun flexFont(
             FontVariation.weight(weight),
             FontVariation.width(width),
             FontVariation.Setting("ROND", round),
-            FontVariation.Setting("opsz", opticalSize),
         ),
 )
 
@@ -539,7 +537,7 @@ private val WrappedWeights = listOf(400, 500, 600, 700, 800, 900)
 @Composable
 internal fun wrappedTypography(): Typography {
     val text = FontFamily(WrappedWeights.map { flexFont(it) })
-    val display = FontFamily(WrappedWeights.map { flexFont(it, width = 104f, round = 40f, opticalSize = 72f) })
+    val display = FontFamily(WrappedWeights.map { flexFont(it, width = 104f, round = 40f) })
     val base = MaterialTheme.typography
     return remember(base, text, display) {
         base.copy(
@@ -565,13 +563,13 @@ internal fun wrappedTypography(): Typography {
 /** Condensed, heavy Google Sans Flex for stickers and short labels. */
 @Composable
 internal fun wrappedLabelStyle(): TextStyle =
-    TextStyle(fontFamily = FontFamily(flexFont(800, width = 88f, opticalSize = 24f)), fontSize = 22.sp, lineHeight = 26.sp)
+    TextStyle(fontFamily = FontFamily(flexFont(800, width = 88f)), fontSize = 22.sp, lineHeight = 26.sp)
 
 /** Tabular Google Sans Flex for counts, ranks and stat pills. */
 @Composable
 internal fun wrappedNumberStyle(): TextStyle =
     TextStyle(
-        fontFamily = FontFamily(flexFont(700, opticalSize = 18f)),
+        fontFamily = FontFamily(flexFont(700)),
         fontSize = 16.sp,
         lineHeight = 20.sp,
         fontFeatureSettings = "tnum",
@@ -602,16 +600,17 @@ internal fun WrappedHeadline(
     val width = (84f + 24f * flex.value).coerceIn(75f, 125f).let { (it / 4f).roundToInt() * 4f }
     val finalStyle =
         TextStyle(
-            fontFamily = FontFamily(flexFont(920, width = 108f, round = 40f, opticalSize = 144f)),
+            fontFamily = FontFamily(flexFont(920, width = 108f, round = 40f)),
             lineHeight = 1.0.em,
             letterSpacing = (-0.02).em,
             fontFeatureSettings = "tnum",
             textAlign = textAlign,
         )
-    val style = finalStyle.copy(fontFamily = FontFamily(flexFont(weight, width = width, round = 40f, opticalSize = 144f)))
+    val style = finalStyle.copy(fontFamily = FontFamily(flexFont(weight, width = width, round = 40f)))
     val measurer = rememberTextMeasurer()
     BoxWithConstraints(modifier) {
-        val room = constraints.maxWidth
+        // A small margin keeps rounding in the text layout from tipping an exact fit into an ellipsis.
+        val room = (constraints.maxWidth * 0.96f).toInt()
         val (lines, size) =
             remember(text, finalStyle, maxFontSize, minFontSize, room, maxLines) {
                 fun width(value: String) =
@@ -878,7 +877,7 @@ internal fun WrappedRankBadge(
         Text(
             rank,
             color = palette.onSticker,
-            style = TextStyle(fontFamily = FontFamily(flexFont(900, width = 104f, opticalSize = 48f)), fontSize = 34.sp),
+            style = TextStyle(fontFamily = FontFamily(flexFont(900, width = 104f)), fontSize = 34.sp),
             maxLines = 1,
         )
     }
