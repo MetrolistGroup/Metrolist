@@ -465,6 +465,13 @@ internal fun handleShortcut(
             keyCodeMatches(keyCode, Key.DirectionDown, AwtKeyEvent.VK_DOWN)
     if (isVolumeArrow && !isPlaybackBackgroundFocused) return false
 
+    fun seekToTenth(tenth: Int) {
+        if (PlayerState.currentTrack == null) return
+        val durationMs = PlayerState.playbackDuration.value
+        if (durationMs <= 0L) return
+        PlayerState.seekToPosition(durationMs / 10L * tenth)
+    }
+
     return when {
         !ctrl && !meta && !shift && keyCodeMatches(keyCode, Key.D, AwtKeyEvent.VK_D) -> {
             UiState.toggleDeviceConnectPanel()
@@ -595,98 +602,47 @@ internal fun handleShortcut(
         }
 
         keyCodeMatches(keyCode, Key.One, AwtKeyEvent.VK_1) -> {
-            PlayerState.seekToPosition(
-                PlayerState.player.duration.value
-                    .div(10L),
-            )
+            seekToTenth(1)
             true
         }
 
         keyCodeMatches(keyCode, Key.Two, AwtKeyEvent.VK_2) -> {
-            if (PlayerState.currentTrack != null) {
-                PlayerState.seekToPosition(
-                    PlayerState.player.duration.value
-                        .div(10L)
-                        .times(2),
-                )
-            }
+            seekToTenth(2)
             true
         }
 
         keyCodeMatches(keyCode, Key.Three, AwtKeyEvent.VK_3) -> {
-            if (PlayerState.currentTrack != null) {
-                PlayerState.seekToPosition(
-                    PlayerState.player.duration.value
-                        .div(10L)
-                        .times(3),
-                )
-            }
+            seekToTenth(3)
             true
         }
 
         keyCodeMatches(keyCode, Key.Four, AwtKeyEvent.VK_4) -> {
-            if (PlayerState.currentTrack != null) {
-                PlayerState.seekToPosition(
-                    PlayerState.player.duration.value
-                        .div(10L)
-                        .times(4),
-                )
-            }
+            seekToTenth(4)
             true
         }
 
         keyCodeMatches(keyCode, Key.Five, AwtKeyEvent.VK_5) -> {
-            if (PlayerState.currentTrack != null) {
-                PlayerState.seekToPosition(
-                    PlayerState.player.duration.value
-                        .div(10L)
-                        .times(5),
-                )
-            }
+            seekToTenth(5)
             true
         }
 
         keyCodeMatches(keyCode, Key.Six, AwtKeyEvent.VK_6) -> {
-            if (PlayerState.currentTrack != null) {
-                PlayerState.seekToPosition(
-                    PlayerState.player.duration.value
-                        .div(10L)
-                        .times(6),
-                )
-            }
+            seekToTenth(6)
             true
         }
 
         keyCodeMatches(keyCode, Key.Seven, AwtKeyEvent.VK_7) -> {
-            if (PlayerState.currentTrack != null) {
-                PlayerState.seekToPosition(
-                    PlayerState.player.duration.value
-                        .div(10L)
-                        .times(7),
-                )
-            }
+            seekToTenth(7)
             true
         }
 
         keyCodeMatches(keyCode, Key.Eight, AwtKeyEvent.VK_8) -> {
-            if (PlayerState.currentTrack != null) {
-                PlayerState.seekToPosition(
-                    PlayerState.player.duration.value
-                        .div(10L)
-                        .times(8),
-                )
-            }
+            seekToTenth(8)
             true
         }
 
         keyCodeMatches(keyCode, Key.Nine, AwtKeyEvent.VK_9) -> {
-            if (PlayerState.currentTrack != null) {
-                PlayerState.seekToPosition(
-                    PlayerState.player.duration.value
-                        .div(10L)
-                        .times(9),
-                )
-            }
+            seekToTenth(9)
             true
         }
 
@@ -698,98 +654,47 @@ internal fun handleShortcut(
         }
 
         keyCodeMatches(keyCode, Key.NumPad1, AwtKeyEvent.VK_NUMPAD1) -> {
-            PlayerState.seekToPosition(
-                PlayerState.player.duration.value
-                    .div(10L),
-            )
+            seekToTenth(1)
             true
         }
 
         keyCodeMatches(keyCode, Key.NumPad2, AwtKeyEvent.VK_NUMPAD2) -> {
-            if (PlayerState.currentTrack != null) {
-                PlayerState.seekToPosition(
-                    PlayerState.player.duration.value
-                        .div(10L)
-                        .times(2),
-                )
-            }
+            seekToTenth(2)
             true
         }
 
         keyCodeMatches(keyCode, Key.NumPad3, AwtKeyEvent.VK_NUMPAD3) -> {
-            if (PlayerState.currentTrack != null) {
-                PlayerState.seekToPosition(
-                    PlayerState.player.duration.value
-                        .div(10L)
-                        .times(3),
-                )
-            }
+            seekToTenth(3)
             true
         }
 
         keyCodeMatches(keyCode, Key.NumPad4, AwtKeyEvent.VK_NUMPAD4) -> {
-            if (PlayerState.currentTrack != null) {
-                PlayerState.seekToPosition(
-                    PlayerState.player.duration.value
-                        .div(10L)
-                        .times(4),
-                )
-            }
+            seekToTenth(4)
             true
         }
 
         keyCodeMatches(keyCode, Key.NumPad5, AwtKeyEvent.VK_NUMPAD5) -> {
-            if (PlayerState.currentTrack != null) {
-                PlayerState.seekToPosition(
-                    PlayerState.player.duration.value
-                        .div(10L)
-                        .times(5),
-                )
-            }
+            seekToTenth(5)
             true
         }
 
         keyCodeMatches(keyCode, Key.NumPad6, AwtKeyEvent.VK_NUMPAD6) -> {
-            if (PlayerState.currentTrack != null) {
-                PlayerState.seekToPosition(
-                    PlayerState.player.duration.value
-                        .div(10L)
-                        .times(6),
-                )
-            }
+            seekToTenth(6)
             true
         }
 
         keyCodeMatches(keyCode, Key.NumPad7, AwtKeyEvent.VK_NUMPAD7) -> {
-            if (PlayerState.currentTrack != null) {
-                PlayerState.seekToPosition(
-                    PlayerState.player.duration.value
-                        .div(10L)
-                        .times(7),
-                )
-            }
+            seekToTenth(7)
             true
         }
 
         keyCodeMatches(keyCode, Key.NumPad8, AwtKeyEvent.VK_NUMPAD8) -> {
-            if (PlayerState.currentTrack != null) {
-                PlayerState.seekToPosition(
-                    PlayerState.player.duration.value
-                        .div(10L)
-                        .times(8),
-                )
-            }
+            seekToTenth(8)
             true
         }
 
         keyCodeMatches(keyCode, Key.NumPad9, AwtKeyEvent.VK_NUMPAD9) -> {
-            if (PlayerState.currentTrack != null) {
-                PlayerState.seekToPosition(
-                    PlayerState.player.duration.value
-                        .div(10L)
-                        .times(9),
-                )
-            }
+            seekToTenth(9)
             true
         }
 
