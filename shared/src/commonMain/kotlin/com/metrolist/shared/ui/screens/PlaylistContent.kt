@@ -27,6 +27,9 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -50,6 +53,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.metrolist.shared.generated.resources.Res
 import com.metrolist.shared.generated.resources.add_a_song
+import com.metrolist.shared.generated.resources.add_to_playlist
 import com.metrolist.shared.generated.resources.n_hidden_song
 import com.metrolist.shared.generated.resources.partial_song_count
 import com.metrolist.shared.generated.resources.search_no_results
@@ -80,6 +84,7 @@ import com.metrolist.shared.ui.components.rememberScrollingFabState
 import com.metrolist.shared.ui.components.totalDurationText
 import com.metrolist.shared.ui.haptics.HapticEvent
 import com.metrolist.shared.ui.haptics.rememberMetrolistHaptics
+import com.metrolist.shared.ui.icons.MetrolistIcons
 import com.metrolist.shared.ui.menu.artworkMenuActions
 import com.metrolist.shared.ui.menu.onSecondaryClick
 import com.metrolist.shared.ui.navigation.NavigationBackHandler
@@ -149,6 +154,9 @@ fun PlaylistContent(
     currentSongOccurrenceKey: String? = null,
     isPlaying: Boolean = false,
     suggestions: List<SongItem> = emptyList(),
+    onAddSuggestion: ((SongItem) -> Unit)? = null,
+    isAddingSuggestion: Boolean = false,
+    suggestionFooter: (@Composable () -> Unit)? = null,
     downloadedSongIds: Set<String> = emptySet(),
     onArtistClick: ((String) -> Unit)? = null,
     header: @Composable (() -> Unit)? = null,
@@ -518,7 +526,9 @@ fun PlaylistContent(
                                             if (paginationContent != null) {
                                                 item(key = "pagination") { paginationContent() }
                                             }
-                                            if (effectiveSuggestions.isNotEmpty()) {
+                                            if (effectiveSuggestions.isNotEmpty() ||
+                                                (suggestionFooter != null && effectiveQuery.isBlank())
+                                            ) {
                                                 item(key = "suggestions_title") {
                                                     Text(
                                                         text = text.suggestions,
@@ -534,6 +544,8 @@ fun PlaylistContent(
                                                 ) { index, song ->
                                                     PlaylistSuggestionItemRow(
                                                         song = song,
+                                                        onAddSuggestion = onAddSuggestion,
+                                                        isAddingSuggestion = isAddingSuggestion,
                                                         index = index,
                                                         count = effectiveSuggestions.size,
                                                         offset = displayedSongs.size,
@@ -547,6 +559,11 @@ fun PlaylistContent(
                                                         onArtistClick = onArtistClick,
                                                         trackContainer = trackContainer,
                                                     )
+                                                }
+                                            }
+                                            suggestionFooter?.takeIf { effectiveQuery.isBlank() }?.let { footer ->
+                                                item(key = "suggestions_footer") {
+                                                    Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) { footer() }
                                                 }
                                             }
                                         }
@@ -711,7 +728,7 @@ fun PlaylistContent(
                             if (paginationContent != null) {
                                 item(key = "pagination") { paginationContent() }
                             }
-                            if (effectiveSuggestions.isNotEmpty()) {
+                            if (effectiveSuggestions.isNotEmpty() || (suggestionFooter != null && effectiveQuery.isBlank())) {
                                 item(key = "suggestions_title") {
                                     Box(itemModifier) {
                                         Text(
@@ -729,6 +746,8 @@ fun PlaylistContent(
                                 ) { index, song ->
                                     PlaylistSuggestionItemRow(
                                         song = song,
+                                        onAddSuggestion = onAddSuggestion,
+                                        isAddingSuggestion = isAddingSuggestion,
                                         index = index,
                                         count = effectiveSuggestions.size,
                                         offset = displayedSongs.size,
@@ -743,6 +762,11 @@ fun PlaylistContent(
                                         onArtistClick = onArtistClick,
                                         trackContainer = trackContainer,
                                     )
+                                }
+                            }
+                            suggestionFooter?.takeIf { effectiveQuery.isBlank() }?.let { footer ->
+                                item(key = "suggestions_footer") {
+                                    Box(itemModifier.fillMaxWidth(), contentAlignment = Alignment.Center) { footer() }
                                 }
                             }
 
@@ -964,6 +988,8 @@ private fun LazyItemScope.PlaylistSongItemRow(
 @Composable
 private fun PlaylistSuggestionItemRow(
     song: SongItem,
+    onAddSuggestion: ((SongItem) -> Unit)?,
+    isAddingSuggestion: Boolean,
     index: Int,
     count: Int,
     offset: Int,
@@ -988,10 +1014,28 @@ private fun PlaylistSuggestionItemRow(
                 isPlaying = playback.isPlaying,
                 isDownloaded = isDownloaded,
                 onClick = { onTrackClick(song, offset + index) },
-                onShowMenu = { onTrackMenuClick(song, offset + index) },
+                // Suggestion rows are not playlist members, so their menu cannot remove them.
+                onShowMenu = if (onAddSuggestion != null) ({}) else ({ onTrackMenuClick(song, offset + index) }),
+                longClickEnabled = onAddSuggestion == null,
                 onArtistClick = onArtistClick,
                 showThumbnail = true,
                 clickableMetadata = isDesktop,
+                trailingContent =
+                    onAddSuggestion?.let { add ->
+                        {
+                            IconButton(
+                                onClick = { add(song) },
+                                enabled = !isAddingSuggestion && !song.isUnavailable,
+                                shapes = IconButtonDefaults.shapes(),
+                            ) {
+                                Icon(
+                                    MetrolistIcons.Default.Add,
+                                    contentDescription = stringResource(Res.string.add_to_playlist),
+                                    modifier = Modifier.size(20.dp),
+                                )
+                            }
+                        }
+                    },
             )
         }
     }

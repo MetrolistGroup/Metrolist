@@ -28,6 +28,7 @@ import com.metrolist.shared.api.YouTubeResponseParser.parseIntegerCount
 import com.metrolist.shared.api.YouTubeResponseParser.parseItem
 import com.metrolist.shared.api.YouTubeResponseParser.parseUploadedSongItems
 import com.metrolist.shared.api.YouTubeResponseParser.parseUploadedSongRenderer
+import com.metrolist.shared.api.YouTubeResponseParser.playlistSuggestionReloadToken
 import com.metrolist.shared.api.YouTubeResponseParser.primitiveText
 import com.metrolist.shared.api.YouTubeResponseParser.runText
 import com.metrolist.shared.api.YouTubeResponseParser.sectionListRenderer
@@ -272,6 +273,21 @@ fun Map<String, List<YTItem>>.playlistSuggestions(): List<SongItem> {
         .flatMap { (_, items) -> items.asSequence().filterIsInstance<SongItem>() }
         .filterNot { it.id in playlistSongIds }
         .distinctBy { it.id }
+        .toList()
+}
+
+private const val PLAYLIST_RECOMMENDATION_BATCH_SIZE = 6
+
+fun playlistRecommendationBatch(
+    candidates: List<SongItem>,
+    playlistSongs: List<SongItem>,
+    shownIds: Set<String> = emptySet(),
+): List<SongItem> {
+    val excluded = playlistSongs.mapTo(shownIds.toMutableSet()) { it.id }
+    return candidates
+        .asSequence()
+        .filter { !it.isUnavailable && excluded.add(it.id) }
+        .take(PLAYLIST_RECOMMENDATION_BATCH_SIZE)
         .toList()
 }
 
@@ -918,7 +934,7 @@ class YouTubeRepository(
             }
             check(httpResponse.status.isSuccess()) { "Playlist browse failed with HTTP ${httpResponse.status.value}" }
             val response = httpResponse.browseResponseWithVotes(innerTube, requestSession, voteRevision)
-            val parsed = parseBrowseResponse(response)
+            val parsed = parseBrowseResponse(response, classifyPlaylistSuggestions = true)
             val sections = YouTubePlaylistParser.parsePlaylistSections(response, parsed, playlistId)
 
             requireCurrentSession(requestSession)
@@ -951,6 +967,71 @@ class YouTubeRepository(
                 isOffline = true,
             )
         }
+    }
+
+    class PlaylistSuggestions internal constructor(
+        val songs: List<SongItem>,
+        internal val reloadToken: String?,
+        internal val session: InnerTube.SessionSnapshot,
+        internal val browseId: String,
+    ) {
+        val canReload: Boolean get() = reloadToken != null
+    }
+
+    suspend fun getPlaylistSuggestions(
+        playlistId: String,
+        previous: PlaylistSuggestions? = null,
+    ): PlaylistSuggestions? {
+        val session = previous?.session ?: innerTube.sessionSnapshot()
+        val browseId = playlistId.toPlaylistBrowseId()
+        requireCurrentSession(session)
+        if (previous != null && previous.browseId != browseId) return null
+
+        suspend fun browse(token: String? = null) =
+            readAccountBrowse(session, browseId, continuation = token != null) {
+                innerTube.browse(YouTubeClient.WEB_REMIX, browseId = browseId, continuation = token, setLogin = true)
+            }
+
+        fun JsonObject.isSuggestionShelf(): Boolean =
+            playlistSuggestionReloadToken() != null || this["title"].asObject().runText()?.contains("suggest", ignoreCase = true) == true
+
+        fun BrowseResponse.suggestionShelf(knownBranch: Boolean): JsonObject? {
+            val continuation = continuationContents ?: return null
+            val shelves =
+                listOfNotNull(continuation.musicShelfContinuation) +
+                    continuation.sectionListContinuation.findAllObjects("musicShelfRenderer")
+            return shelves.firstOrNull { it.isSuggestionShelf() }
+                ?: shelves.singleOrNull()?.takeIf { knownBranch && it["title"].asObject().runText().isNullOrBlank() }
+        }
+
+        val shelf =
+            if (previous == null) {
+                val initial = browse()
+                val secondary =
+                    initial.contents
+                        ?.twoColumnBrowseResultsRenderer
+                        ?.get("secondaryContents")
+                        .asObject()
+                        ?.get("sectionListRenderer")
+                        .asObject()
+                val branch =
+                    parseBrowseResponse(initial, classifyPlaylistSuggestions = true).continuationBranches.firstOrNull {
+                        it.sectionTitle?.contains("suggest", ignoreCase = true) == true
+                    }
+                val sectionList = secondary ?: initial.sectionListRenderer()
+                val token = branch?.token ?: sectionList?.get("continuations").findContinuationToken()
+                val inlineShelf =
+                    sectionList
+                        .findAllObjects("musicShelfRenderer")
+                        .firstOrNull { it.isSuggestionShelf() && !(it["contents"] ?: it["items"]).asArray().isNullOrEmpty() }
+                inlineShelf ?: token?.let { browse(it).suggestionShelf(knownBranch = branch != null) }
+            } else {
+                browse(previous.reloadToken ?: return null).suggestionShelf(knownBranch = true)
+            } ?: return null
+        val songs = (shelf["contents"] ?: shelf["items"]).asArray().orEmpty().mapNotNull { parseItem(it.asObject()) as? SongItem }
+        val reloadToken = shelf.playlistSuggestionReloadToken()
+        requireCurrentSession(session)
+        return PlaylistSuggestions(BlockedContent.filterSongs(songs), reloadToken, session, browseId)
     }
 
     suspend fun completePlaylistPage(
@@ -1053,7 +1134,11 @@ class YouTubeRepository(
         requireCurrentSession(page.session)
         if (!response.status.isSuccess()) Logger.w(TAG, "Playlist continuation failed HTTP ${response.status.value}")
         check(response.status.isSuccess()) { "Playlist continuation failed with HTTP ${response.status.value}" }
-        val parsed = parseBrowseResponse(response.browseResponseWithVotes(innerTube, page.session, voteRevision))
+        val parsed =
+            parseBrowseResponse(
+                response.browseResponseWithVotes(innerTube, page.session, voteRevision),
+                classifyPlaylistSuggestions = true,
+            )
         val sections = linkedMapOf<String, MutableList<YTItem>>()
         parsed.sections.forEach { (title, items) ->
             val inheritedTitle = if (title == "Continuation") branch.sectionTitle ?: title else title
