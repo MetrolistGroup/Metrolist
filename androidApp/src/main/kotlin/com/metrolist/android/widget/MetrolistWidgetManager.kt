@@ -573,7 +573,7 @@ class MetrolistWidgetManager(
                 views.setWidgetTint(context, R.id.widget_next, schemes) { it.onSecondaryContainer }
                 views.setWidgetTint(context, R.id.widget_play_background, schemes) { it.primary }
                 views.setWidgetTint(context, R.id.widget_play_pause, schemes) { it.onPrimary }
-                views.setWidgetProgressTint(R.id.widget_progress, schemes)
+                views.setWidgetProgressTint(context, musicWidgetProgressIds, schemes)
             }
 
             MusicWidgetLayout.WIDE -> {
@@ -597,7 +597,7 @@ class MetrolistWidgetManager(
                 views.setWidgetTint(context, R.id.widget_play_pause, schemes) {
                     if (isPlaying) it.onPrimary else it.onPrimaryContainer
                 }
-                views.setWidgetProgressTint(R.id.widget_progress, schemes)
+                views.setWidgetProgressTint(context, musicWidgetProgressIds, schemes)
                 views.setWidgetTextColor(context, R.id.widget_square_time, schemes) { it.onSurfaceVariant }
                 views.setWidgetTextColor(context, R.id.widget_square_song_title, schemes) { it.onSurface }
                 views.setWidgetTextColor(context, R.id.widget_square_artist_name, schemes) { it.onSurfaceVariant }
@@ -619,7 +619,7 @@ class MetrolistWidgetManager(
                 views.setWidgetTint(context, R.id.widget_like_button, schemes) {
                     if (isLiked) it.onTertiary else it.onSecondaryContainer
                 }
-                views.setWidgetProgressTint(R.id.widget_progress, schemes)
+                views.setWidgetProgressTint(context, musicWidgetProgressIds, schemes)
                 views.setWidgetTextColor(context, R.id.widget_time_current, schemes) { it.onSurfaceVariant }
                 views.setWidgetTextColor(context, R.id.widget_time_duration, schemes) { it.onSurfaceVariant }
             }
@@ -639,7 +639,7 @@ class MetrolistWidgetManager(
         views.setImageViewBitmap(R.id.widget_album_art, getCachedCookie9Art(albumArt) ?: cookie9DefaultIcon)
         if (duration > 0) {
             views.setViewVisibility(R.id.widget_progress_container, View.VISIBLE)
-            views.setWidgetProgress(R.id.widget_progress, duration, currentPosition)
+            views.setWidgetProgress(musicWidgetProgressIds, duration, currentPosition)
             views.setTextViewText(R.id.widget_time_current, formatWidgetDuration(context, currentPosition))
             views.setTextViewText(R.id.widget_time_duration, formatWidgetDuration(context, duration))
         } else {
@@ -669,7 +669,7 @@ class MetrolistWidgetManager(
         if (duration > 0) {
             views.setViewVisibility(R.id.widget_progress_container, View.VISIBLE)
             views.setViewVisibility(R.id.widget_square_idle_section, View.GONE)
-            views.setWidgetProgress(R.id.widget_progress, duration, currentPosition)
+            views.setWidgetProgress(musicWidgetProgressIds, duration, currentPosition)
             views.setTextViewText(R.id.widget_square_time, formatWidgetTimePair(context, currentPosition, duration))
         } else {
             views.setViewVisibility(R.id.widget_progress_container, View.GONE)
@@ -698,7 +698,7 @@ class MetrolistWidgetManager(
         views.setImageViewBitmap(R.id.widget_wide_album_art, getCachedCookie12Art(albumArt) ?: cookie12DefaultIcon)
         if (duration > 0) {
             views.setViewVisibility(R.id.widget_progress_container, View.VISIBLE)
-            views.setWidgetProgress(R.id.widget_progress, duration, currentPosition)
+            views.setWidgetProgress(musicWidgetProgressIds, duration, currentPosition)
         } else {
             views.setViewVisibility(R.id.widget_progress_container, View.GONE)
         }

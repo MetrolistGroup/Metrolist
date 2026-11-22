@@ -87,6 +87,24 @@
                     android:layout_marginTop="4dp"
                     android:importantForAccessibility="noHideDescendants">
 
+                    <ImageView
+                        android:id="@+id/widget_progress_track"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:contentDescription="@null"
+                        android:scaleType="fitXY"
+                        android:src="@drawable/widget_progress_track"
+                        android:visibility="gone" />
+
+                    <ImageView
+                        android:id="@+id/widget_progress_fill"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:contentDescription="@null"
+                        android:scaleType="fitXY"
+                        android:src="@drawable/widget_progress_clip"
+                        android:visibility="gone" />
+
                     <ProgressBar
                         android:id="@+id/widget_progress"
                         style="@android:style/Widget.Material.ProgressBar.Horizontal"

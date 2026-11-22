@@ -170,7 +170,7 @@ class PlaylistWidgetManager(
             if (options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH) < PLAYLIST_WIDGET_COMPACT_MAX_WIDTH_DP) return@forEach
             val views =
                 RemoteViews(context.packageName, R.layout.widget_playlist).apply {
-                    setWidgetProgress(R.id.widget_playlist_progress, duration, position)
+                    setWidgetProgress(playlistWidgetProgressIds, duration, position)
                 }
             manager.partiallyUpdateAppWidget(id, views)
             progressBuckets[id] = bucket
@@ -295,7 +295,7 @@ class PlaylistWidgetManager(
         )
         if (duration > 0) {
             views.setViewVisibility(R.id.widget_playlist_progress_container, View.VISIBLE)
-            views.setWidgetProgress(R.id.widget_playlist_progress, duration, currentPosition)
+            views.setWidgetProgress(playlistWidgetProgressIds, duration, currentPosition)
         } else {
             views.setViewVisibility(R.id.widget_playlist_progress_container, View.INVISIBLE)
         }
@@ -315,7 +315,7 @@ class PlaylistWidgetManager(
         views.setWidgetTint(context, R.id.widget_playlist_like_button, schemes) {
             if (isLiked) it.onTertiary else it.onTertiaryContainer
         }
-        views.setWidgetProgressTint(R.id.widget_playlist_progress, schemes)
+        views.setWidgetProgressTint(context, playlistWidgetProgressIds, schemes)
 
         views.setOnClickPendingIntent(android.R.id.background, getOpenAppIntent())
         views.setOnClickPendingIntent(R.id.widget_playlist_album_art, getOpenAppIntent())

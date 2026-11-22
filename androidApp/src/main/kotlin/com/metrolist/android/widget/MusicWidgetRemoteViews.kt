@@ -28,18 +28,18 @@ internal class MusicWidgetRemoteViews(
                     if (duration != null && currentPosition != null && duration > 0) {
                         when (layoutId) {
                             R.layout.widget_music_player -> {
-                                setWidgetProgress(R.id.widget_progress, duration, currentPosition)
+                                setWidgetProgress(musicWidgetProgressIds, duration, currentPosition)
                                 setTextViewText(R.id.widget_time_current, formatWidgetDuration(context, currentPosition))
                                 setTextViewText(R.id.widget_time_duration, formatWidgetDuration(context, duration))
                             }
 
                             R.layout.widget_compact_square -> {
-                                setWidgetProgress(R.id.widget_progress, duration, currentPosition)
+                                setWidgetProgress(musicWidgetProgressIds, duration, currentPosition)
                                 setTextViewText(R.id.widget_square_time, formatWidgetTimePair(context, currentPosition, duration))
                             }
 
                             R.layout.widget_compact -> {
-                                setWidgetProgress(R.id.widget_progress, duration, currentPosition)
+                                setWidgetProgress(musicWidgetProgressIds, duration, currentPosition)
                             }
                         }
                     }

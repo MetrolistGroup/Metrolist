@@ -17,6 +17,8 @@ import android.graphics.Paint
 import android.graphics.Path
 import android.graphics.RectF
 import android.graphics.Shader
+import android.os.Build
+import android.view.View
 import android.widget.RemoteViews
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.MaterialShapes
@@ -203,14 +205,46 @@ private fun widgetArtworkShader(
 }
 
 private const val WIDGET_PROGRESS_MAX = 1000
+private const val WIDGET_PROGRESS_LEVEL_MAX = 10000
+
+internal data class WidgetProgressIds(
+    val bar: Int,
+    val track: Int,
+    val fill: Int,
+)
+
+internal val musicWidgetProgressIds =
+    WidgetProgressIds(
+        bar = R.id.widget_progress,
+        track = R.id.widget_progress_track,
+        fill = R.id.widget_progress_fill,
+    )
+
+internal val playlistWidgetProgressIds =
+    WidgetProgressIds(
+        bar = R.id.widget_playlist_progress,
+        track = R.id.widget_playlist_progress_track,
+        fill = R.id.widget_playlist_progress_fill,
+    )
 
 internal fun RemoteViews.setWidgetProgress(
-    viewId: Int,
+    ids: WidgetProgressIds,
     duration: Long,
     currentPosition: Long,
 ) {
     val fraction = if (duration > 0) (currentPosition.toFloat() / duration.toFloat()).coerceIn(0f, 1f) else 0f
-    setProgressBar(viewId, WIDGET_PROGRESS_MAX, (fraction * WIDGET_PROGRESS_MAX).toInt(), false)
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+        setViewVisibility(ids.bar, View.VISIBLE)
+        setViewVisibility(ids.track, View.GONE)
+        setViewVisibility(ids.fill, View.GONE)
+        setProgressBar(ids.bar, WIDGET_PROGRESS_MAX, (fraction * WIDGET_PROGRESS_MAX).toInt(), false)
+    } else {
+        // RemoteViews cannot tint ProgressBar below API 31; clip ImageViews keep setColorFilter.
+        setViewVisibility(ids.bar, View.GONE)
+        setViewVisibility(ids.track, View.VISIBLE)
+        setViewVisibility(ids.fill, View.VISIBLE)
+        setInt(ids.fill, "setImageLevel", (fraction * WIDGET_PROGRESS_LEVEL_MAX).toInt())
+    }
 }
 
 internal fun formatWidgetDuration(
