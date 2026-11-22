@@ -700,7 +700,7 @@
     <string name="downloading">Download in corso</string>
     <string name="remove_from_playlist">Rimuovi da playlist</string>
     <string name="radio">Radio</string>
-    <string name="downloaded_songs_empty_hint">Clicca sul pulsante di download su qualsiasi brano per salvarlo per l'ascolto offline.</string>
+    <string name="downloaded_songs_empty_hint">Seleziona il pulsante di download su qualsiasi brano per salvarlo per l'ascolto offline.</string>
     <string name="imported_playlist">Playlist importata</string>
     <string name="import_error_unsupported_link">Questo link non è riconosciuto o supportato.</string>
     <string name="bitrate_value">%1$d kbps</string>
@@ -2198,8 +2198,8 @@
     <string name="metroeq_switch_profile_confirm">Salvare le modifiche prima di cambiare profilo?</string>
     <string name="metroeq_discard_changes">Scarta</string>
     <string name="listen_together_suggestion_submitted">Suggerimento inviato all'host</string>
-    <string name="listen_together_suggestion_approved">Il tuo suggerimento del brano è stato approvato</string>
-    <string name="listen_together_suggestion_rejected">Il tuo suggerimento del brano è stato rifiutato</string>
+    <string name="listen_together_suggestion_approved">Il brano che hai suggerito è stato approvato</string>
+    <string name="listen_together_suggestion_rejected">Il brano che hai suggerito è stato rifiutato</string>
     <string name="listen_together_queue_too_large">La coda della stanza è troppo lunga. Rimuovi alcuni brani e riprova.</string>
     <string name="listen_together_track_load_failed">Impossibile caricare il brano della stanza</string>
     <string name="listen_together_became_host">Ora sei l'host e controlli la riproduzione della stanza</string>
@@ -2286,7 +2286,7 @@
         <item quantity="other">%1$d nascosti</item>
     </plurals>
     <string name="settings_cast_title">Trasmetti</string>
-    <string name="about_play_favorite_song">Vuoi riprodurre la loro canzone preferita?</string>
+    <string name="about_play_favorite_song">Vuoi riprodurre il suo brano preferito?</string>
     <string name="lyrics_offset_earlier">%1$d ms in anticipo</string>
     <string name="lyrics_offset_later">%1$d ms in ritardo</string>
     <string name="lyrics_offset_in_sync">In sincrono</string>
@@ -2549,7 +2549,7 @@
     <string name="ai_setup_browser_failed">Impossibile aprire il browser. Riprova.</string>
     <string name="ai_setup_sign_in">Accedi a OpenRouter</string>
     <string name="ai_setup_configure">Scegli il tuo modello e la lingua</string>
-    <string name="ai_setup_model_description">Questo modello traduce gratuitamente i testi delle tue canzoni entro i limiti di OpenRouter. Una canzone può richiedere più di una traduzione. Puoi scegliere modelli a pagamento e altri provider nelle impostazioni avanzate.</string>
+    <string name="ai_setup_model_description">Questo modello traduce gratuitamente i testi dei brani entro i limiti di OpenRouter. Un singolo brano può richiedere più richieste. Puoi scegliere modelli a pagamento e altri provider nelle impostazioni avanzate.</string>
     <string name="devtools_render_backend">Motore di rendering</string>
     <string name="devtools_render_backend_description">Le modifiche avranno effetto dopo il riavvio. Le sostituzioni dell'API di rendering tramite variabili d'ambiente e JVM hanno la priorità. Skiko potrebbe passare a un'alternativa se il backend selezionato non riesce a inizializzarsi.</string>
     <string name="devtools_render_backend_auto">Automatico</string>
