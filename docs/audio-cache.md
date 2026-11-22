@@ -22,6 +22,12 @@ Android and desktop downloaded collections can filter by a library playlist befo
 
 Remote playlist download refreshes store every page of unfiltered membership. Offline playlist pages read those stored entries. Failed and offline refreshes keep the previous membership.
 
+## Album pages
+
+Android, desktop and iOS display stored album tracks before requesting remote metadata. Album descriptions and links to other editions are stored with the tracks. Complete downloaded albums with cached header metadata open locally without a refresh. Older cached albums show their tracks while missing metadata loads in the background.
+
+Refreshes retain displayed tracks on failure. A complete album stays visible until all refreshed pages arrive. Cache-read failures and failed refreshes of incomplete albums expose Retry instead of leaving an empty page or a permanent loading indicator.
+
 ## Android v13 recovery
 
 v13.7.0 stored downloads in `files/download` with no eviction and streamed audio in `files/exoplayer` with the configured LRU limit. Both caches used `StandaloneDatabaseProvider` and `databases/exoplayer_internal.db`. `MediaItemExt` and `DownloadUtil` used the song ID as the custom cache key. The download index can also map a custom key back to its request ID. Recovery uses that mapping rather than guessing IDs from suffixes or URLs.

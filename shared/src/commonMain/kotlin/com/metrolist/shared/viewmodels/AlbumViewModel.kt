@@ -65,6 +65,7 @@ class AlbumViewModel(
         val generation = ++loadGeneration
         val switchingAlbum = _selectedAlbumId.value != albumId
         val retainedPage = unfilteredAlbumPage.takeIf { !switchingAlbum }
+        val retainedComplete = retainedPage != null && retainedPage.playlistPage?.hasMore != true && !incompleteCache
         if (switchingAlbum) {
             incompleteCache = false
             setAlbumPage(null)
@@ -72,35 +73,34 @@ class AlbumViewModel(
         _selectedAlbumId.value = albumId
         loadJob?.cancel()
         pageJob?.cancel()
+        _isLoading.value = retainedPage == null || forceRefresh
         loadJob =
             scope.launch {
                 _errorMessage.value = null
-                val cached =
-                    if (forceRefresh) {
-                        null
-                    } else {
-                        withContext(Dispatchers.Default) {
-                            repository.getCachedAlbum(albumId, applyContentFilters = false)
-                        }
-                    }
-                if (generation != loadGeneration) return@launch
-                if (cached != null) {
-                    incompleteCache = !cached.isComplete
-                    setAlbumPage(cached.page)
-                    if (cached.canReuseWithoutRefresh) {
-                        _isLoading.value = false
-                        return@launch
-                    }
-                }
-                val hasDisplayedPage = cached != null || retainedPage != null
-                val reportFailure = !hasDisplayedPage || incompleteCache
-                _isLoading.value = cached == null || !(cached.isComplete && cached.isOfflineReady)
+                var reportFailure = retainedPage == null || incompleteCache || forceRefresh
                 try {
+                    val cached =
+                        if (forceRefresh) {
+                            null
+                        } else {
+                            withContext(Dispatchers.Default) {
+                                repository.getCachedAlbum(albumId, applyContentFilters = false)
+                            }
+                        }
+                    if (generation != loadGeneration) return@launch
+                    if (cached != null) {
+                        incompleteCache = !cached.isComplete
+                        setAlbumPage(cached.page)
+                        if (cached.canReuseWithoutRefresh) return@launch
+                    }
+                    val hasDisplayedPage = cached != null || retainedPage != null
+                    reportFailure = !hasDisplayedPage || incompleteCache || forceRefresh
+                    _isLoading.value = cached == null || !(cached.isComplete && cached.isOfflineReady)
                     val albumPage =
                         withContext(Dispatchers.Default) {
                             repository.getAlbum(
                                 albumId,
-                                loadAllPages = cached?.isComplete == true,
+                                loadAllPages = cached?.isComplete == true || retainedComplete,
                                 applyContentFilters = false,
                                 forceRefresh = true,
                                 allowOfflineFallback = !hasDisplayedPage,
@@ -157,6 +157,11 @@ class AlbumViewModel(
     }
 
     suspend fun allSongs(): List<SongItem> {
+        val generation = loadGeneration
+        if (incompleteCache) {
+            loadJob?.join()
+            if (generation != loadGeneration) return emptyList()
+        }
         val initial = unfilteredAlbumPage ?: return emptyList()
         val cursor = initial.playlistPage
         if (cursor != null) {
@@ -166,7 +171,6 @@ class AlbumViewModel(
         }
         if (incompleteCache) {
             val albumId = _selectedAlbumId.value ?: return BlockedContent.filterSongs(initial.songs)
-            val generation = loadGeneration
             val refreshed =
                 withContext(Dispatchers.Default) {
                     repository.getAlbum(

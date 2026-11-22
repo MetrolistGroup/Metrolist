@@ -521,7 +521,7 @@ object PlaylistAlbumState {
                             if (preserveCompleteCache) {
                                 cached.page
                             } else {
-                                firstPage ?: retainedPage ?: cached?.page
+                                retainedPage ?: firstPage ?: cached?.page
                             }
                         albumLoadFailed =
                             fallback == null ||

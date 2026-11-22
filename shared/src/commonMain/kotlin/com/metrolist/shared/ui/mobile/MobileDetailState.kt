@@ -171,27 +171,25 @@ internal class MobileDetailLoader<T>(
         failed = false
         job =
             scope.launch {
-                var hasCached = false
-                var cachedComplete = false
-                if (!forceRefresh && loadCached != null) {
-                    val cached = withContext(Dispatchers.Default) { loadCached() }
-                    if (generation != requestGeneration) return@launch
-                    if (cached != null) {
-                        hasCached = true
-                        cachedComplete = cached.isComplete
-                        page = cached.page
-                        if (!cached.needsRefresh) {
-                            isLoading = false
-                            return@launch
-                        }
-                        isLoading = cached.showRefreshIndicator
-                    } else {
-                        isLoading = true
-                    }
-                }
-                val hasDisplayedPage = hasCached || retainedPage != null
-                val suppressFailure = hasCached && cachedComplete && !forceRefresh
+                var suppressFailure = false
                 try {
+                    var hasCached = false
+                    var cachedComplete = false
+                    if (!forceRefresh && loadCached != null) {
+                        val cached = withContext(Dispatchers.Default) { loadCached() }
+                        if (generation != requestGeneration) return@launch
+                        if (cached != null) {
+                            hasCached = true
+                            cachedComplete = cached.isComplete
+                            page = cached.page
+                            if (!cached.needsRefresh) return@launch
+                            isLoading = cached.showRefreshIndicator
+                        } else {
+                            isLoading = true
+                        }
+                    }
+                    val hasDisplayedPage = hasCached || retainedPage != null
+                    suppressFailure = hasCached && cachedComplete && !forceRefresh
                     val loaded = fetch(hasDisplayedPage)
                     if (generation == requestGeneration) page = loaded
                 } catch (error: CancellationException) {
