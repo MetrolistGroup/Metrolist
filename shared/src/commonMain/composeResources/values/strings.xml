@@ -5611,4 +5611,7 @@
     <string name="wrapped_soundtrack_preparing">Preparing soundtrack: %1$s of %2$s songs</string>
     <string name="wrapped_soundtrack_playing">Playing %1$s · %2$s</string>
     <string name="wrapped_sync_failed">YouTube history could not refresh. This recap uses history already saved on this device.</string>
+    <string name="wrapped_top_song">Your top song</string>
+    <string name="wrapped_top_artist">Your top artist</string>
+    <string name="wrapped_top_album">Your top album</string>
 </resources>
