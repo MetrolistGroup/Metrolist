@@ -33,4 +33,5 @@ data class AlbumEntity(
     val isLocal: Boolean = false,
     @ColumnInfo(name = "isUploaded", defaultValue = "0")
     val isUploaded: Boolean = false,
+    val description: String? = null,
 )

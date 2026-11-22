@@ -154,18 +154,22 @@ internal fun MobileAlbumScreen(
     val loadError = errorText.takeIf { loader.failed }
 
     when {
-        isLoading -> {
+        isLoading && albumPage == null -> {
             LoadingScreen(modifier.fillMaxSize())
         }
 
-        loadError != null || albumPage == null -> {
+        albumPage == null -> {
             Column(
                 modifier = modifier.fillMaxSize().padding(24.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center,
             ) {
                 Text(loadError ?: errorText)
-                Button(onClick = loader::load, modifier = Modifier.padding(top = 12.dp), shapes = ButtonDefaults.shapes()) {
+                Button(
+                    onClick = { loader.load(forceRefresh = true) },
+                    modifier = Modifier.padding(top = 12.dp),
+                    shapes = ButtonDefaults.shapes(),
+                ) {
                     Text(stringResource(Res.string.retry))
                 }
             }
@@ -177,81 +181,86 @@ internal fun MobileAlbumScreen(
                 remember(loaded, blockedVersion, downloadedSongIds) {
                     BlockedContent.filterAlbumPage(loaded).let { it.copy(songs = it.songs.withDownloadsPlayable(downloadedSongIds)) }
                 }
-            AlbumContent(
-                isTrackSelected = { selection.isSelected(it.id) },
-                trackContainer = { song, content -> SongSwipeActions(song, onSwipeFeedback, content = content) },
-                album = page.album,
-                songs = page.songs,
-                text = albumContentText(),
-                onPlayAll = { queue ->
-                    playbackController.playQueue(queue)
-                },
-                onShuffle = { queue ->
-                    playbackController.shuffleQueue(queue)
-                },
-                onMoreOptions = { onMoreOptions(page.album) },
-                isFavorite = isFavorite,
-                onFavorite = {
-                    AlbumLikeState.toggleAlbumLike(page.album, page.songs) { result ->
-                        if (result.exceptionOrNull() !is AlbumLikeToggleAlreadyInProgressException && result.isFailure) {
-                            onSwipeFeedback(favoriteErrorText)
-                        }
-                    }
-                },
-                onArtistClick = onArtistClick,
-                onAlbumClick = onAlbumClick,
-                onTrackClick = { song, queue, index ->
-                    if (selection.active) {
-                        selection.toggle(song.id)
-                    } else {
-                        playbackController.playQueue(queue, index)
-                    }
-                },
-                onTrackLongClick = { song -> selection.begin(song.id) },
-                selectionActive = selection.active,
-                selectionControls = {
-                    val selectedSongs = page.songs.filter { selection.isSelected(it.id) }
-                    val allIds = page.songs.mapTo(mutableSetOf()) { it.id }
-                    SongSelectionControls(
-                        selectedCount = selectedSongs.size,
-                        selectedSongs = selectedSongs,
-                        onPlay = { playbackController.playQueue(selectedSongs) },
-                        onShuffle = {
-                            playbackController.shuffleQueue(selectedSongs)
-                        },
-                        allSelected = selection.allSelected(allIds),
-                        onDone = selection::exit,
-                        onSelectAll = { selection.toggleAll(allIds) },
-                        onPlayNext = { playbackController.playNext(selectedSongs) },
-                        onAddToQueue = { playbackController.addToQueue(selectedSongs) },
-                        onDownload = { onDownload(selectedSongs) },
-                        onAddToPlaylist = { onAddToPlaylist(selectedSongs) },
-                    )
-                },
-                trackTrailingContent = { song, _ ->
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        if (selection.active) {
-                            Checkbox(checked = selection.isSelected(song.id), onCheckedChange = { selection.toggle(song.id) })
-                        } else {
-                            IconButton(
-                                modifier = Modifier.navigationPopupSource(),
-                                onClick = { onSongMenu(song) },
-                                shapes = IconButtonDefaults.shapes(),
-                            ) {
-                                Icon(MetrolistIcons.Default.MoreVert, stringResource(Res.string.more_options))
+            Box(modifier.fillMaxSize()) {
+                AlbumContent(
+                    isTrackSelected = { selection.isSelected(it.id) },
+                    trackContainer = { song, content -> SongSwipeActions(song, onSwipeFeedback, content = content) },
+                    album = page.album,
+                    songs = page.songs,
+                    text = albumContentText(),
+                    onPlayAll = { queue ->
+                        playbackController.playQueue(queue)
+                    },
+                    onShuffle = { queue ->
+                        playbackController.shuffleQueue(queue)
+                    },
+                    onMoreOptions = { onMoreOptions(page.album) },
+                    isFavorite = isFavorite,
+                    onFavorite = {
+                        AlbumLikeState.toggleAlbumLike(page.album, page.songs) { result ->
+                            if (result.exceptionOrNull() !is AlbumLikeToggleAlreadyInProgressException && result.isFailure) {
+                                onSwipeFeedback(favoriteErrorText)
                             }
                         }
-                    }
-                },
-                onTrackMenuClick = onSongMenu,
-                onBackClick = onBack,
-                currentSongId = playbackState.currentSongId,
-                isPlaying = playbackState.isPlaying,
-                description = page.description,
-                otherVersions = page.otherVersions,
-                contentPadding = PaddingValues(bottom = 88.dp + bottomContentPadding),
-                modifier = modifier.fillMaxSize(),
-            )
+                    },
+                    onArtistClick = onArtistClick,
+                    onAlbumClick = onAlbumClick,
+                    onTrackClick = { song, queue, index ->
+                        if (selection.active) {
+                            selection.toggle(song.id)
+                        } else {
+                            playbackController.playQueue(queue, index)
+                        }
+                    },
+                    onTrackLongClick = { song -> selection.begin(song.id) },
+                    selectionActive = selection.active,
+                    selectionControls = {
+                        val selectedSongs = page.songs.filter { selection.isSelected(it.id) }
+                        val allIds = page.songs.mapTo(mutableSetOf()) { it.id }
+                        SongSelectionControls(
+                            selectedCount = selectedSongs.size,
+                            selectedSongs = selectedSongs,
+                            onPlay = { playbackController.playQueue(selectedSongs) },
+                            onShuffle = {
+                                playbackController.shuffleQueue(selectedSongs)
+                            },
+                            allSelected = selection.allSelected(allIds),
+                            onDone = selection::exit,
+                            onSelectAll = { selection.toggleAll(allIds) },
+                            onPlayNext = { playbackController.playNext(selectedSongs) },
+                            onAddToQueue = { playbackController.addToQueue(selectedSongs) },
+                            onDownload = { onDownload(selectedSongs) },
+                            onAddToPlaylist = { onAddToPlaylist(selectedSongs) },
+                        )
+                    },
+                    trackTrailingContent = { song, _ ->
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            if (selection.active) {
+                                Checkbox(checked = selection.isSelected(song.id), onCheckedChange = { selection.toggle(song.id) })
+                            } else {
+                                IconButton(
+                                    modifier = Modifier.navigationPopupSource(),
+                                    onClick = { onSongMenu(song) },
+                                    shapes = IconButtonDefaults.shapes(),
+                                ) {
+                                    Icon(MetrolistIcons.Default.MoreVert, stringResource(Res.string.more_options))
+                                }
+                            }
+                        }
+                    },
+                    onTrackMenuClick = onSongMenu,
+                    onBackClick = onBack,
+                    currentSongId = playbackState.currentSongId,
+                    isPlaying = playbackState.isPlaying,
+                    description = page.description,
+                    otherVersions = page.otherVersions,
+                    contentPadding = PaddingValues(bottom = 88.dp + bottomContentPadding),
+                    modifier = Modifier.fillMaxSize(),
+                )
+                if (isLoading) {
+                    ContainedLoadingIndicator(Modifier.align(Alignment.TopCenter))
+                }
+            }
         }
     }
 }

@@ -15,10 +15,12 @@ import com.metrolist.shared.viewmodels.ArtistSubscriptionState
 import com.metrolist.shared.viewmodels.BrowseViewModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 internal class MobileRouteEntry(
     route: MobileRoute,
@@ -73,15 +75,33 @@ internal class MobileDetailState(
     private var browseLoader: BrowseViewModel? = null
 
     fun album(id: String): MobileDetailLoader<AlbumPage> =
-        albumLoader ?: MobileDetailLoader(scope) {
-            checkNotNull(repository.getAlbum(id))
+        albumLoader ?: MobileDetailLoader(
+            scope = scope,
+            loadCached = {
+                repository.getCachedAlbum(id, applyContentFilters = false)?.let { cached ->
+                    CachedDetail(
+                        page = cached.page,
+                        needsRefresh = !cached.canReuseWithoutRefresh,
+                        showRefreshIndicator = !(cached.isComplete && cached.isOfflineReady),
+                    )
+                }
+            },
+        ) { hasCached ->
+            checkNotNull(
+                repository.getAlbum(
+                    id,
+                    applyContentFilters = false,
+                    forceRefresh = true,
+                    allowOfflineFallback = !hasCached,
+                ),
+            )
         }.also { albumLoader = it }
 
     fun artist(
         id: String,
         database: MusicDatabase,
     ): MobileDetailLoader<ArtistPageResult> =
-        artistLoader ?: MobileDetailLoader(scope) {
+        artistLoader ?: MobileDetailLoader(scope) { _ ->
             val revision = subscription.revision
             repository.getArtist(id).also { page ->
                 check(page.sections.isNotEmpty()) { "Artist load failed" }
@@ -117,9 +137,16 @@ internal class MobileDetailState(
     fun close() = scope.cancel()
 }
 
+internal data class CachedDetail<T>(
+    val page: T,
+    val needsRefresh: Boolean,
+    val showRefreshIndicator: Boolean = needsRefresh,
+)
+
 internal class MobileDetailLoader<T>(
     private val scope: CoroutineScope,
-    private val fetch: suspend () -> T,
+    private val loadCached: (suspend () -> CachedDetail<T>?)? = null,
+    private val fetch: suspend (hasCached: Boolean) -> T,
 ) {
     var page by mutableStateOf<T?>(null)
         private set
@@ -134,20 +161,37 @@ internal class MobileDetailLoader<T>(
         load()
     }
 
-    fun load() {
+    fun load(forceRefresh: Boolean = false) {
         val requestGeneration = ++generation
         job?.cancel()
-        isLoading = true
         failed = false
         job =
             scope.launch {
+                var hasCached = false
+                if (!forceRefresh && loadCached != null) {
+                    val cached = withContext(Dispatchers.Default) { loadCached() }
+                    if (generation != requestGeneration) return@launch
+                    if (cached != null) {
+                        hasCached = true
+                        page = cached.page
+                        if (!cached.needsRefresh) {
+                            isLoading = false
+                            return@launch
+                        }
+                        isLoading = cached.showRefreshIndicator
+                    } else {
+                        isLoading = true
+                    }
+                } else {
+                    isLoading = true
+                }
                 try {
-                    val loaded = fetch()
+                    val loaded = fetch(hasCached)
                     if (generation == requestGeneration) page = loaded
                 } catch (error: CancellationException) {
                     throw error
                 } catch (_: Exception) {
-                    if (generation == requestGeneration) failed = true
+                    if (generation == requestGeneration && !hasCached) failed = true
                 } finally {
                     if (generation == requestGeneration) isLoading = false
                 }

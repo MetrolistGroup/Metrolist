@@ -237,6 +237,7 @@ class LegacyInstallMigration(
                 "1ca196e130ae9567d8c4105c5b58c64f",
                 "01a9a23385f209554c46514a55c55431",
                 "db8acd8f706295c39f72cd7a8a33f86d",
+                "3843cdc0843772d4d5e2bb6e6bca8ea3",
             )
 
         internal fun isKmpIdentity(identity: String?): Boolean = identity in KMP_IDENTITY_HASHES

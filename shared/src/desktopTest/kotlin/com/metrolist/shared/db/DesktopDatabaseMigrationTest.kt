@@ -2,6 +2,10 @@ package com.metrolist.shared.db
 
 import androidx.sqlite.SQLiteConnection
 import androidx.sqlite.execSQL
+import com.metrolist.shared.model.AlbumItem
+import com.metrolist.shared.model.AlbumPage
+import com.metrolist.shared.model.ArtistTiny
+import com.metrolist.shared.model.SongItem
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import java.io.File
@@ -236,6 +240,78 @@ class DesktopDatabaseMigrationTest {
                 while (statement.step()) {
                     add(List(statement.getColumnCount()) { if (statement.isNull(it)) null else statement.getText(it) })
                 }
+            }
+        }
+
+    @Test
+    fun albumDescriptionMigrationAndCachingPreservesDownloadedAlbums() =
+        runBlocking<Unit> {
+            val directory = createTempDirectory("album-description-migration").toFile()
+            val file = File(directory, "library.db")
+            try {
+                createHistoricalLibrary(file.absolutePath, 67, JdbcSQLiteDriver())
+                JdbcSQLiteDriver().open(file.absolutePath).use { connection ->
+                    connection.execSQL(
+                        "INSERT INTO album (id, playlistId, title, songCount, duration, lastUpdateTime) " +
+                            "VALUES ('MPREb_test', 'OLAK5uy_test', 'Saved Album', 1, 240, 1000)",
+                    )
+                    connection.execSQL(
+                        "UPDATE song SET albumId = 'MPREb_test', albumName = 'Saved Album', isDownloaded = 1 WHERE id = 'song'",
+                    )
+                    connection.execSQL("INSERT INTO song_album_map (songId, albumId, `index`) VALUES ('song', 'MPREb_test', 0)")
+                }
+                val database = getDesktopDatabaseBuilder(file).build()
+                try {
+                    val upgraded = requireNotNull(database.loadCachedAlbum("MPREb_test"))
+                    assertEquals("Saved Album", upgraded.page.album.title)
+                    assertEquals(listOf("song"), upgraded.page.songs.map(SongItem::id))
+                    assertNull(upgraded.page.description)
+                    assertTrue(upgraded.isComplete)
+                    assertTrue(upgraded.isOfflineReady)
+                    assertFalse(upgraded.hasCachedDescription)
+                    assertFalse(upgraded.canReuseWithoutRefresh)
+
+                    val song = SongItem("song", "Keep my music", null, listOf(ArtistTiny("artist", "Artist")), null, 240L)
+                    val album =
+                        AlbumItem(
+                            id = "MPREb_test",
+                            title = "Saved Album",
+                            thumbnail = null,
+                            artists = listOf(ArtistTiny("artist", "Artist")),
+                            playlistId = "OLAK5uy_test",
+                            songCount = 1,
+                            duration = 240L,
+                        )
+                    database.storeAlbumPage(
+                        AlbumPage(album = album, songs = listOf(song), description = "Cached liner notes"),
+                        updateDescription = true,
+                    )
+                    // Continuation saves omit header description and must keep the cached one.
+                    database.storeAlbumPage(
+                        AlbumPage(album = album, songs = listOf(song), description = null),
+                        updateDescription = false,
+                    )
+
+                    val cached = requireNotNull(database.loadCachedAlbum("MPREb_test"))
+                    assertEquals("Cached liner notes", cached.page.description)
+                    assertTrue(cached.hasCachedDescription)
+                    assertTrue(cached.canReuseWithoutRefresh)
+                    assertEquals("Cached liner notes", database.loadOfflineAlbum("MPREb_test")?.description)
+
+                    // An album whose remote header has no description is still marked cached.
+                    database.storeAlbumPage(
+                        AlbumPage(album = album, songs = listOf(song), description = null),
+                        updateDescription = true,
+                    )
+                    val emptyDescription = requireNotNull(database.loadCachedAlbum("MPREb_test"))
+                    assertNull(emptyDescription.page.description)
+                    assertTrue(emptyDescription.hasCachedDescription)
+                    assertTrue(emptyDescription.canReuseWithoutRefresh)
+                } finally {
+                    database.close()
+                }
+            } finally {
+                directory.deleteRecursively()
             }
         }
 

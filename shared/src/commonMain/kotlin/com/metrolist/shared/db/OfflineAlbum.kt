@@ -24,6 +24,7 @@ suspend fun MusicDatabase.loadOfflineAlbum(
     return AlbumPage(
         album = album,
         songs = songs.map { it.toSongItem() },
+        description = stored?.album?.description?.takeIf(String::isNotBlank),
     )
 }
 

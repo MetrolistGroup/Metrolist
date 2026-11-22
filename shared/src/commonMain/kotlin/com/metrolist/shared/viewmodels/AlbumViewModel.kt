@@ -56,29 +56,59 @@ class AlbumViewModel(
         loadAlbum()
     }
 
-    fun loadAlbum(albumId: String? = _selectedAlbumId.value) {
+    fun loadAlbum(
+        albumId: String? = _selectedAlbumId.value,
+        forceRefresh: Boolean = false,
+    ) {
         if (albumId == null) return
         val generation = ++loadGeneration
+        if (_selectedAlbumId.value != albumId) setAlbumPage(null)
         _selectedAlbumId.value = albumId
         loadJob?.cancel()
         pageJob?.cancel()
         loadJob =
             scope.launch {
-                _isLoading.value = true
                 _errorMessage.value = null
+                val cached =
+                    if (forceRefresh) {
+                        null
+                    } else {
+                        withContext(Dispatchers.Default) {
+                            repository.getCachedAlbum(albumId, applyContentFilters = false)
+                        }
+                    }
+                if (generation != loadGeneration) return@launch
+                if (cached != null) {
+                    setAlbumPage(cached.page)
+                    if (cached.canReuseWithoutRefresh) {
+                        _isLoading.value = false
+                        return@launch
+                    }
+                }
+                _isLoading.value = cached == null || !(cached.isComplete && cached.isOfflineReady)
                 try {
                     val albumPage =
                         withContext(Dispatchers.Default) {
-                            repository.getAlbum(albumId, loadAllPages = false, applyContentFilters = false)
+                            repository.getAlbum(
+                                albumId,
+                                loadAllPages = false,
+                                applyContentFilters = false,
+                                forceRefresh = true,
+                                allowOfflineFallback = cached == null,
+                            )
                         }
                     if (generation == loadGeneration) {
-                        setAlbumPage(albumPage)
-                        if (albumPage == null) _errorMessage.value = ""
+                        if (albumPage != null) {
+                            setAlbumPage(albumPage)
+                        } else if (cached == null) {
+                            setAlbumPage(null)
+                            _errorMessage.value = ""
+                        }
                     }
                 } catch (e: CancellationException) {
                     throw e
                 } catch (t: Throwable) {
-                    if (generation == loadGeneration) {
+                    if (generation == loadGeneration && cached == null) {
                         _errorMessage.value = t.message.orEmpty()
                     }
                 } finally {
@@ -125,7 +155,7 @@ class AlbumViewModel(
     }
 
     fun refresh() {
-        loadAlbum()
+        loadAlbum(forceRefresh = true)
     }
 
     private fun setAlbumPage(albumPage: AlbumPage?) {

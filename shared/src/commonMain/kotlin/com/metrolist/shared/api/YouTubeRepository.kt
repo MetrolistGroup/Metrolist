@@ -40,10 +40,12 @@ import com.metrolist.shared.auth.YouTubeSyncState
 import com.metrolist.shared.auth.invalidateYouTubeSession
 import com.metrolist.shared.auth.invalidateYouTubeSessionIfCurrent
 import com.metrolist.shared.auth.isExpiredYouTubeSessionResponse
+import com.metrolist.shared.db.CachedAlbum
 import com.metrolist.shared.db.MusicDatabase
 import com.metrolist.shared.db.OfflineSongAvailability
 import com.metrolist.shared.db.entities.toSongItem
 import com.metrolist.shared.db.isAvailableOffline
+import com.metrolist.shared.db.loadCachedAlbum
 import com.metrolist.shared.db.loadOfflineAlbum
 import com.metrolist.shared.db.loadOfflineArtist
 import com.metrolist.shared.db.loadOfflinePlaylist
@@ -1386,18 +1388,54 @@ class YouTubeRepository(
             emptyList()
         }
 
+    suspend fun getCachedAlbum(
+        albumId: String,
+        applyContentFilters: Boolean = true,
+    ): CachedAlbum? {
+        val database = databaseProvider() ?: return null
+        val availableSongIds = offlineSongAvailabilityProvider()?.songIds()
+        val cached =
+            if (!PlaybackNetworkStateStore.current.connected) {
+                database.loadOfflineAlbum(albumId, availableSongIds)?.let {
+                    CachedAlbum(
+                        page = it,
+                        isComplete = true,
+                        hasCachedDescription = true,
+                        isOfflineReady = true,
+                    )
+                }
+            } else {
+                database.loadCachedAlbum(albumId, availableSongIds)
+            }
+        return cached?.let {
+            if (applyContentFilters) it.copy(page = BlockedContent.filterAlbumPage(it.page)) else it
+        }
+    }
+
     suspend fun getAlbum(
         albumId: String,
         loadAllPages: Boolean = true,
         applyContentFilters: Boolean = true,
+        forceRefresh: Boolean = false,
+        allowOfflineFallback: Boolean = true,
     ): AlbumPage? {
         val database = databaseProvider()
 
         suspend fun loadLocal(): AlbumPage? =
-            database
-                ?.loadOfflineAlbum(albumId, offlineSongAvailabilityProvider()?.songIds())
-                ?.let { if (applyContentFilters) BlockedContent.filterAlbumPage(it) else it }
+            if (!allowOfflineFallback) {
+                null
+            } else {
+                database
+                    ?.loadOfflineAlbum(albumId, offlineSongAvailabilityProvider()?.songIds())
+                    ?.let { if (applyContentFilters) BlockedContent.filterAlbumPage(it) else it }
+            }
         if (!PlaybackNetworkStateStore.current.connected) return loadLocal()
+        if (!forceRefresh) {
+            val cached = database?.loadCachedAlbum(albumId, offlineSongAvailabilityProvider()?.songIds())
+            if (cached?.canReuseWithoutRefresh == true) {
+                return if (applyContentFilters) BlockedContent.filterAlbumPage(cached.page) else cached.page
+            }
+        }
         var stage = "browse"
         return try {
             val requestSession = innerTube.sessionSnapshot()
@@ -1470,7 +1508,7 @@ class YouTubeRepository(
                     artistAlbums = artistAlbums,
                     description = albumHeader.description,
                 )
-            database?.storeAlbumPage(page)
+            database?.storeAlbumPage(page, updateDescription = true)
             if (applyContentFilters) BlockedContent.filterAlbumPage(page) else page
         } catch (e: CancellationException) {
             throw e
