@@ -56,6 +56,7 @@ import com.metrolist.android.models.PersistPlayerState
 import com.metrolist.android.models.PlaybackPersistenceWriter
 import com.metrolist.android.models.decodePersistPlayerState
 import com.metrolist.android.models.playbackPersistenceJson
+import com.metrolist.android.utils.isAndroidTv
 import com.metrolist.android.widget.EXTRA_WIDGET_COMMAND_TOKEN
 import com.metrolist.android.widget.MetrolistWidgetManager
 import com.metrolist.android.widget.MusicWidgetReceiver
@@ -621,6 +622,28 @@ class MusicService :
                 running.value = false
                 pauseAllPlayersAndStopSelf()
             }
+        }
+        serviceScope.launch {
+            if (!isAndroidTv()) return@launch
+            ProcessLifecycleOwner
+                .get()
+                .lifecycle.currentStateFlow
+                .map { it.isAtLeast(Lifecycle.State.STARTED) }
+                .distinctUntilChanged()
+                .collect { foreground ->
+                    // On TV, users expect audio to stop when they leave the app; phones keep background playback.
+                    if (
+                        !foreground &&
+                        Settings.shared.stopMusicOnTaskClear &&
+                        !castManager.state.value.isConnected &&
+                        !AndroidListenTogetherManager.playbackRequired.value &&
+                        AndroidDeviceConnect.manager.state.value.peers.none {
+                            it.state == DeviceConnectManager.PeerState.CONNECTED
+                        }
+                    ) {
+                        player.pause()
+                    }
+                }
         }
     }
 
