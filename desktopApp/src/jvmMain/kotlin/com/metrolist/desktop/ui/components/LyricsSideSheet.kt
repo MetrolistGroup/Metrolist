@@ -38,6 +38,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -67,6 +68,7 @@ import com.metrolist.shared.ui.navigation.navigationPopupSource
 import com.metrolist.shared.ui.player.PlayerGradientBackground
 import com.metrolist.shared.ui.theme.getGradientColors
 import com.metrolist.shared.ui.utils.ArtworkBlurStyle
+import kotlinx.coroutines.delay
 import org.jetbrains.compose.resources.stringResource
 
 @Composable
@@ -290,6 +292,11 @@ internal fun DesktopLyricsContent(
             }
         }
 
+        // Keep the background moving until a covering player or video has finished its entry transition.
+        val backgroundActive by produceState(isVisible, isVisible) {
+            if (!isVisible) delay(COVER_TRANSITION_SETTLE_MS)
+            value = isVisible
+        }
         Box(modifier = Modifier.fillMaxSize()) {
             when (Settings.shared.playerBackgroundStyle) {
                 PlayerBackgroundStyle.GRADIENT -> {
@@ -302,7 +309,7 @@ internal fun DesktopLyricsContent(
                     PlayerGradientBackground(
                         getGradientColors(activeSeedColor),
                         animate = true,
-                        active = PlayerState.isPlaying,
+                        active = PlayerState.isPlaying && backgroundActive,
                     ) {
                         drawerContent()
                     }
@@ -332,7 +339,7 @@ internal fun DesktopLyricsContent(
                     LiquidBackground(
                         artworkUrl = PlayerState.currentArtworkUrl,
                         isPlaying = PlayerState.isPlaying,
-                        visible = true,
+                        visible = backgroundActive,
                     )
                     drawerContent()
                 }
@@ -346,3 +353,5 @@ internal fun DesktopLyricsContent(
         }
     }
 }
+
+private const val COVER_TRANSITION_SETTLE_MS = 500L

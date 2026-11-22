@@ -124,18 +124,15 @@ internal fun DesktopQueueContent(
         thumbnailAspectRatio = previewAspectRatio,
     )
 
+    val queueSongs = queueState.entries.map { SongMetadataState.apply(it.song) }
     val tracks =
         queueState.entries.mapIndexed { index, entry ->
-            SongMetadataState
-                .apply(
-                    entry.song,
-                ).toQueueTrack(entry.key, index, isSuggested = false)
+            queueSongs[index].toQueueTrack(entry.key, index, isSuggested = false)
         }
     val suggestedTracks =
         keyedSuggestions.map { (key, song) ->
             SongMetadataState.apply(song).toQueueTrack(key, -1, isSuggested = true)
         }
-    val queueSongs = queueState.entries.map { SongMetadataState.apply(it.song) }
     val totalDuration = queueSongs.sumOf { it.duration ?: 0L }.takeIf { queueSongs.all { song -> song.duration != null } }
 
     fun songFor(entryKey: Long): SongItem? =

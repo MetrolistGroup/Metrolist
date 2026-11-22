@@ -10,6 +10,7 @@ import com.metrolist.shared.model.SongItem
 import kotlinx.atomicfu.locks.SynchronizedObject
 import kotlinx.atomicfu.locks.synchronized
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -61,11 +62,13 @@ object SongMetadataState {
                 ++bindingGeneration
             }
         collectionJob =
-            scope.launch {
+            // Desktop's application scope runs on Main; building these maps for a large library must not.
+            scope.launch(Dispatchers.Default) {
                 launch {
                     database
                         .dao()
                         .songPlayTimes()
+                        .distinctUntilChanged()
                         .map { rows -> rows.associate { it.id to it.totalPlayTime } }
                         .distinctUntilChanged()
                         .collect { times ->
@@ -87,6 +90,7 @@ object SongMetadataState {
                     database
                         .dao()
                         .songLibraryMemberships()
+                        .distinctUntilChanged()
                         .map { rows -> rows.associate { it.id to it.inLibrary } }
                         .distinctUntilChanged(),
                 ) { metadata, durations, libraryMemberships ->
