@@ -167,7 +167,11 @@ internal class PlaybackStatePersistence(
             return
         }
         var state = lastState
-        if (state == null || !state.queue.hasSameStructure(snapshot)) {
+        if (state == null ||
+            !state.queue.hasSameStructure(snapshot) ||
+            state.finite != finite ||
+            state.recommendationsLocked != recommendationsLocked
+        ) {
             state =
                 PersistedPlaybackState(
                     snapshot,

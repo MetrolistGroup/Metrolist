@@ -715,6 +715,8 @@ class MusicService :
                 ) {
                     automotivePlaybackRequestGate.cancelPendingRequests()
                     pendingRadioJob?.cancel()
+                    pendingRadioJob = null
+                    queueCoordinator.recommendationLockedSessionId = null
                     pauseOnMute.cancelResume()
                     // Pause even after focus loss so its delayed recovery cannot restart on the phone speaker.
                     player.pause()
@@ -3520,6 +3522,8 @@ class MusicService :
             serviceScope.future {
                 (application as App).startup.await()
                 pendingRadioJob?.cancel()
+                pendingRadioJob = null
+                queueCoordinator.recommendationLockedSessionId = null
                 if (!canResolveMediaSessionItems(
                         canBrowse = canBrowseLibrary(session, controller),
                         isAssistant = isAssistantController(controller),
