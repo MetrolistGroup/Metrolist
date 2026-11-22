@@ -126,12 +126,18 @@ fun Application.driveBrokerModule(
                 )
             }
             post("/auth/exchange") {
+                // Read unauthenticated input before taking the lock shared with disconnect.
+                val request = safeOperation { call.receive<ExchangeRequest>() }
+                val platform = request?.platform?.let(ClientPlatform::parse)
+                if (request == null || platform == null) {
+                    call.respond(HttpStatusCode.BadRequest, ErrorResponse("invalid_request"))
+                    return@post
+                }
                 driveAuthorizationMutex.withLock {
-                    val request = safeOperation { call.receive<ExchangeRequest>() }
-                    val platform = request?.platform?.let(ClientPlatform::parse)
-                    if (request == null || platform == null) {
-                        call.respond(HttpStatusCode.BadRequest, ErrorResponse("invalid_request"))
-                        return@post
+                    val initialIssuedAt = safeOperation { repository.currentDatabaseTime() }
+                    if (initialIssuedAt == null) {
+                        call.respond(HttpStatusCode.InternalServerError, ErrorResponse("session_creation_failed"))
+                        return@withLock
                     }
                     val account =
                         safeOperation {
@@ -139,14 +145,22 @@ fun Application.driveBrokerModule(
                         }
                     if (account == null) {
                         call.respond(HttpStatusCode.Unauthorized, ErrorResponse("authorization_failed"))
-                        return@post
+                        return@withLock
                     }
-                    val token = safeOperation { repository.createSession(account, platform) }
-                    if (token == null) {
-                        call.respond(HttpStatusCode.InternalServerError, ErrorResponse("session_creation_failed"))
-                        return@post
+                    when (val creation = safeOperation { repository.createSession(account, platform, initialIssuedAt) }) {
+                        is SessionCreationResult.Created -> {
+                            call.respond(SessionResponse(creation.token, account.email))
+                        }
+
+                        // A revocation overlapped the code exchange; the client must obtain a new code.
+                        SessionCreationResult.StaleCredentials -> {
+                            call.respond(HttpStatusCode.Conflict, ErrorResponse("authorization_failed"))
+                        }
+
+                        null -> {
+                            call.respond(HttpStatusCode.InternalServerError, ErrorResponse("session_creation_failed"))
+                        }
                     }
-                    call.respond(SessionResponse(token, account.email))
                 }
             }
             post("/auth/access-token") {
@@ -184,41 +198,21 @@ fun Application.driveBrokerModule(
                 }
             }
             delete("/auth/session") {
+                val token = bearerToken(call.request.headers["Authorization"])
+                if (token == null) {
+                    call.respond(HttpStatusCode.Unauthorized, ErrorResponse("unauthorized"))
+                    return@delete
+                }
                 driveAuthorizationMutex.withLock {
-                    val token = bearerToken(call.request.headers["Authorization"])
-                    if (token == null) {
-                        call.respond(HttpStatusCode.Unauthorized, ErrorResponse("unauthorized"))
-                        return@delete
-                    }
-                    val revocation =
-                        try {
-                            repository.prepareSessionRevocation(token)
-                        } catch (cancelled: CancellationException) {
-                            throw cancelled
-                        } catch (_: Exception) {
-                            call.respond(HttpStatusCode.InternalServerError, ErrorResponse("revocation_failed"))
-                            return@delete
+                    try {
+                        repository.revokeSession(token) { account ->
+                            if (account != null) googleOAuth.revoke(account.refreshToken)
                         }
-                    if (revocation != null && revocation.accountToRevoke != null) {
-                        try {
-                            googleOAuth.revoke(revocation.accountToRevoke.refreshToken)
-                        } catch (cancelled: CancellationException) {
-                            throw cancelled
-                        } catch (_: Exception) {
-                            runCatching { repository.cancelSessionRevocation(token) }
-                            call.respond(HttpStatusCode.InternalServerError, ErrorResponse("revocation_failed"))
-                            return@delete
-                        }
-                    }
-                    if (revocation != null) {
-                        try {
-                            repository.completeSessionRevocation(token)
-                        } catch (cancelled: CancellationException) {
-                            throw cancelled
-                        } catch (_: Exception) {
-                            call.respond(HttpStatusCode.InternalServerError, ErrorResponse("revocation_failed"))
-                            return@delete
-                        }
+                    } catch (cancelled: CancellationException) {
+                        throw cancelled
+                    } catch (_: Exception) {
+                        call.respond(HttpStatusCode.InternalServerError, ErrorResponse("revocation_failed"))
+                        return@withLock
                     }
                     call.respond(HttpStatusCode.NoContent)
                 }

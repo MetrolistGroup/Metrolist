@@ -8,10 +8,12 @@ import io.ktor.client.request.parameter
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 import io.ktor.http.ContentType
+import io.ktor.http.HttpStatusCode
 import io.ktor.http.Parameters
 import io.ktor.http.contentType
 import io.ktor.http.formUrlEncode
 import io.ktor.http.isSuccess
+import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import java.net.URI
@@ -137,7 +139,22 @@ class GoogleOAuth(
                 contentType(ContentType.Application.FormUrlEncoded)
                 setBody(Parameters.build { append("token", refreshToken) }.formUrlEncode())
             }
-        check(response.status.isSuccess()) { "Google revocation failed with HTTP ${response.status.value}" }
+        if (response.status.isSuccess()) return
+        val error =
+            try {
+                response.body<GoogleTokenResponse>().error
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (_: Exception) {
+                null
+            }
+        // A retry after a successful remote revocation and a failed local commit must still complete.
+        if (response.status == HttpStatusCode.BadRequest &&
+            (error == INVALID_GRANT || error == "invalid_token")
+        ) {
+            return
+        }
+        error("Google revocation failed with HTTP ${response.status.value}")
     }
 
     private companion object {
