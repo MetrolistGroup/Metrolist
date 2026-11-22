@@ -62,7 +62,7 @@
         <item quantity="few">Descărcate %1$d din %2$d melodii, %3$d eșuate</item>
         <item quantity="other">Descărcate %1$d din %2$d de melodii, %3$d eșuate</item>
     </plurals>
-    <string name="download_pause_all">Pune totul pe pauză</string>
+    <string name="download_pause_all">Întrerupe-le pe toate</string>
     <string name="download_resume_all">Reia-le pe toate</string>
     <string name="download_cancel_all">Anulează-le pe toate</string>
     <string name="remove_download">Elimină descărcarea</string>
@@ -2218,7 +2218,7 @@
     <string name="playback_unable_to_play_queued_track">Nu s-a putut reda această piesă din coadă.</string>
     <string name="token_login_sensitive_warning_generic">NU partaja tokenul.</string>
     <string name="legacy_shuffle">Amestecare moștenită</string>
-    <string name="legacy_shuffle_desc">Amestecă toate melodiile, inclusiv pe cele deja redate, păstrând melodia curentă pe prima poziție. Dezactivează această setare pentru a folosi amestecarea KMP, care păstrează melodiile deja redate pe pozițiile lor și amestecă doar melodiile următoare.</string>
+    <string name="legacy_shuffle_desc">Amestecarea moștenită pune melodia curentă pe prima poziție și amestecă, de asemenea, și melodiile deja redate. Deazactiveaz-o pentru a amesteca doar melodiile care urmează. Intrările marcate ca auto-mix sau recomandări își păstrează ordinea în ambele moduri.</string>
     <string name="artist_subscriber_count">%1$s (de) abonați</string>
     <string name="lyrics_text_color">Culoarea textului versurilor</string>
     <string name="lyrics_color_follow_theme">Urmează tema</string>
@@ -2434,7 +2434,7 @@
     <string name="settings_canvas_playback_summary">Redă fragmente scurte sau întregul videoclip muzical în spatele playerului</string>
     <string name="settings_normalization_summary">Echilibrează volumul între melodii pentru a evita diferențele mari</string>
     <string name="settings_loudness_target_summary">Setează nivelul de zgomot țintă atunci când normalizarea audio este activată</string>
-    <string name="settings_stop_on_close_summary">Oprește redarea atunci când aplicația Metrolist este eliminată din aplicațiile recente</string>
+    <string name="settings_stop_on_close_summary">Oprește redarea atunci când aplicația Metrolist este eliminată din aplicațiile recente. Pe Android TV, redarea este, de asemenea, întreruptă atunci când părăsești aplicația.</string>
     <string name="settings_screen_awake_summary">Alege dacă playerul sau versurile mențin ecranul pornit</string>
     <string name="settings_translation_mode_summary">Tradu cuvintele sau transcrie pronunția în sistemul de scriere țintă</string>
     <string name="settings_translation_provider_summary">Alege serviciul care traduce versurile</string>
@@ -2619,4 +2619,16 @@
     <string name="density_huge">Imensă (175%)</string>
     <string name="density_extra_large">Foarte mare (150%)</string>
     <string name="add_to_library">Adaugă în bibliotecă</string>
+    <plurals name="days">
+        <item quantity="one">O zi</item>
+        <item quantity="few">%1$d zile</item>
+        <item quantity="other">%1$d de zile</item>
+    </plurals>
+    <string name="widget_expressive_player">Player expresiv</string>
+    <string name="widget_expressive_description">Copertă de album în formă de pastilă cu comenzi de redare cu margini festonate</string>
+    <string name="widget_duration_hours">%1$s:%2$s:%3$s</string>
+    <string name="widget_duration_minutes">%1$s:%2$s</string>
+    <string name="widget_time_pair">%1$s / %2$s</string>
+    <string name="widget_track_description">%1$s, %2$s</string>
+    <string name="widget_play_item">Redă %1$s</string>
 </resources>
