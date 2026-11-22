@@ -360,23 +360,23 @@ internal fun buildLyricsListItems(
     val timeline = buildLyricsTimelineItems(lines, lyrics)
     return buildList {
         var lastEndTime: Long? = null
-        val firstVisibleTime = lines.firstOrNull()?.entry?.time ?: 0L
+        val firstVisibleTime = timeline.firstOrNull()?.startTimeMs ?: 0L
         if (firstVisibleTime >= LYRICS_GAP_MIN_MS) {
             add(LyricsListItem.Indicator(0L, firstVisibleTime - LYRICS_GAP_END_LEAD_MS, -1))
         }
         for ((linePosition, line) in lines.withIndex()) {
+            val item = timeline[linePosition]
             val previousEnd = lastEndTime
-            if (previousEnd != null && line.entry.time - previousEnd >= LYRICS_GAP_MIN_MS) {
+            if (previousEnd != null && item.startTimeMs - previousEnd >= LYRICS_GAP_MIN_MS) {
                 add(
                     LyricsListItem.Indicator(
                         previousEnd + LYRICS_GAP_START_LAG_MS,
-                        line.entry.time - LYRICS_GAP_END_LEAD_MS,
+                        item.startTimeMs - LYRICS_GAP_END_LEAD_MS,
                         line.index - 1,
                     ),
                 )
             }
             add(line)
-            val item = timeline[linePosition]
             val endTimeMs = if (activeByRealTiming) item.sourceEndTimeMs else item.endTimeMs
             lastEndTime = maxOf(previousEnd ?: 0L, endTimeMs)
         }
