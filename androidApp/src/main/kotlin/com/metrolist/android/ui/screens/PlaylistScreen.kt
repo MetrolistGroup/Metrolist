@@ -228,8 +228,10 @@ fun PlaylistScreen(
     var showAddSongSheet by remember { mutableStateOf(false) }
     var showRenameDialog by remember { mutableStateOf(false) }
     var showDeleteDialog by remember { mutableStateOf(false) }
-    var editName by remember(playlistInfo?.title) { mutableStateOf(playlistInfo?.title.orEmpty()) }
-    var editDescription by remember(playlistInfo?.description) { mutableStateOf(playlistInfo?.description.orEmpty()) }
+    var draftName by remember(playlistId) { mutableStateOf<String?>(null) }
+    var draftDescription by remember(playlistId) { mutableStateOf<String?>(null) }
+    fun editName() = draftName ?: playlistInfo?.title.orEmpty()
+    fun editDescription() = draftDescription ?: playlistInfo?.description.orEmpty()
     var searchQuery by remember(playlistInfo?.id) { mutableStateOf("") }
     val sorting =
         Settings.shared.playlistSongSorting(
@@ -385,8 +387,8 @@ fun PlaylistScreen(
     }
 
     fun openFullEdit() {
-        editName = playlistInfo?.title.orEmpty()
-        editDescription = playlistInfo?.description.orEmpty()
+        draftName = null
+        draftDescription = null
         clearStagedCover()
         showRenameDialog = true
     }
@@ -394,8 +396,9 @@ fun PlaylistScreen(
     fun saveFullEdit() {
         if (coverReadJob != null) return
         applyStagedCover()
-        if (isEditablePlaylist && editName.isNotBlank()) {
-            viewModel.updatePlaylist(editName, editDescription) { result ->
+        val name = editName()
+        if (isEditablePlaylist && name.isNotBlank()) {
+            viewModel.updatePlaylist(name, editDescription()) { result ->
                 result.onFailure {
                     Toast
                         .makeText(
@@ -1014,14 +1017,14 @@ fun PlaylistScreen(
                         }
                         if (isEditablePlaylist) {
                             OutlinedTextField(
-                                value = editName,
-                                onValueChange = { editName = it },
+                                value = editName(),
+                                onValueChange = { draftName = it },
                                 label = { Text(stringResource(Res.string.playlist_name)) },
                                 singleLine = true,
                             )
                             OutlinedTextField(
-                                value = editDescription,
-                                onValueChange = { editDescription = it },
+                                value = editDescription(),
+                                onValueChange = { draftDescription = it },
                                 label = { Text(stringResource(Res.string.description)) },
                                 minLines = 3,
                                 maxLines = 6,
@@ -1032,7 +1035,7 @@ fun PlaylistScreen(
                 confirmButton = {
                     if (isEditablePlaylist) {
                         TextButton(
-                            enabled = editName.isNotBlank() && coverReadJob == null,
+                            enabled = editName().isNotBlank() && coverReadJob == null,
                             onClick = { saveFullEdit() },
                             shapes = ButtonDefaults.shapes(),
                         ) { Text(stringResource(Res.string.save)) }
