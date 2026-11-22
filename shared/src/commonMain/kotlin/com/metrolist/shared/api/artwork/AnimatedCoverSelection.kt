@@ -59,11 +59,15 @@ fun youtubeCanvasPlaybackClips(
     mode: YouTubeCanvasMode,
     resource: PlaybackResource,
     randomStart: (Long) -> Long = Random::nextLong,
-): List<YouTubeCanvasClip> =
-    when (mode) {
+): List<YouTubeCanvasClip> {
+    // SABR accepts pending attestation at t=0 when media arrives, but mid-video seeks often
+    // return protectionStatus=2 with 0 media bytes and fail as ATTESTATION_REQUIRED.
+    if (resource.hasSabrVideo) return emptyList()
+    return when (mode) {
         YouTubeCanvasMode.SHORT_CLIPS -> youtubeCanvasClips(resource.durationSeconds?.times(1000L), randomStart)
         YouTubeCanvasMode.FULL_VIDEO -> emptyList()
     }
+}
 
 fun youtubeCanvasClips(
     durationMs: Long?,
