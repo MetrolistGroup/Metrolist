@@ -93,6 +93,9 @@ import androidx.graphics.shapes.RoundedPolygon
 import com.metrolist.shared.generated.resources.Res
 import com.metrolist.shared.generated.resources.wrapped_flex
 import com.metrolist.shared.generated.resources.wrapped_probe
+import com.metrolist.shared.generated.resources.wrapped_probe_e
+import com.metrolist.shared.generated.resources.wrapped_probe_f
+import com.metrolist.shared.generated.resources.wrapped_probe_g
 import com.metrolist.shared.settings.Settings
 import com.metrolist.shared.ui.components.images.AsyncImage
 import com.metrolist.shared.ui.haptics.HapticEvent
@@ -490,9 +493,12 @@ internal fun WrappedFontProbe() {
     val b = FontFamily(Font(Res.font.wrapped_flex, FontWeight(900), variationSettings = FontVariation.Settings(FontVariation.weight(900))))
     val c = FontFamily(flexFont(900, width = 108f, round = 40f))
     val d = FontFamily(Font(Res.font.wrapped_probe, FontWeight(900)))
+    val e = FontFamily(Font(Res.font.wrapped_probe_e, FontWeight(900)))
+    val f = FontFamily(Font(Res.font.wrapped_probe_f, FontWeight(900)))
+    val g = FontFamily(Font(Res.font.wrapped_probe_g, FontWeight(900)))
     Column {
-        listOf("A" to a, "B" to b, "C" to c, "D" to d).forEach { (k, f) ->
-            Text("$k Neverender 2026", style = TextStyle(fontFamily = f, fontSize = 30.sp))
+        listOf("A" to a, "B" to b, "C" to c, "D" to d, "E" to e, "F" to f, "G" to g).forEach { (k, family) ->
+            Text("$k Neverender 2026", style = TextStyle(fontFamily = family, fontSize = 30.sp))
         }
     }
 }
