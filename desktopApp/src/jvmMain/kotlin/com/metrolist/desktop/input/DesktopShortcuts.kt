@@ -178,7 +178,13 @@ private fun installGlobalShortcutDispatcher(
                     return
                 }
                 if (event is MouseEvent &&
-                    handleForwardMouseEvent(event, keyboardFocusManager.focusOwner, forwardButton, onForward)
+                    handleForwardMouseEvent(
+                        event,
+                        keyboardFocusManager.focusOwner,
+                        forwardButton,
+                        isModalActive = { keyboardFocusManager.activeWindow is Dialog || isComposeModalActive() },
+                        onForward = onForward,
+                    )
                 ) {
                     return
                 }
@@ -215,12 +221,13 @@ internal fun handleForwardMouseEvent(
     event: MouseEvent,
     focusOwner: Component?,
     forwardButton: Int,
+    isModalActive: () -> Boolean,
     onForward: () -> Unit,
 ): Boolean {
     if (event.isConsumed || event.button != forwardButton || focusOwner == null) return false
     if (event.id !in listOf(MouseEvent.MOUSE_PRESSED, MouseEvent.MOUSE_RELEASED, MouseEvent.MOUSE_CLICKED)) return false
     event.consume()
-    if (event.id == MouseEvent.MOUSE_PRESSED) onForward()
+    if (event.id == MouseEvent.MOUSE_PRESSED && !isModalActive()) onForward()
     return true
 }
 
