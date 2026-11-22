@@ -566,7 +566,8 @@ internal fun WrappedPills(
                     .padding(horizontal = 18.dp, vertical = 10.dp),
                 color = palette.onPill,
                 style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.ExtraBold),
-                maxLines = 1,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
             )
         }
     }
