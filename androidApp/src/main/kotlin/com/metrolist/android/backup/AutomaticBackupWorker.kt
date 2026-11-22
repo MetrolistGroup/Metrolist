@@ -25,11 +25,13 @@ import com.metrolist.shared.backup.GoogleDriveBackupClient
 import com.metrolist.shared.backup.defaultBackupFilename
 import com.metrolist.shared.db.MusicDatabase
 import com.metrolist.shared.generated.resources.Res
+import com.metrolist.shared.generated.resources.automatic_backup
 import com.metrolist.shared.generated.resources.automatic_backup_notification
 import com.metrolist.shared.generated.resources.automatic_backup_notification_channel
 import com.metrolist.shared.settings.Settings
 import com.metrolist.shared.utils.Logger
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.guava.await
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.io.files.Path
@@ -53,13 +55,14 @@ class AutomaticBackupWorker(
         val settings = Settings.shared
         if (!settings.autoBackupEnabled) return Result.success()
 
-        val backupDestination = AutoBackupDestination.fromSetting(settings.autoBackupDestination)
         val brokerUrl = BuildConfig.DRIVE_BROKER_URL.takeIf(String::isNotBlank)
-        val session = settings.driveBrokerSession
-        if (backupDestination == AutoBackupDestination.GOOGLE_DRIVE) {
-            check(brokerUrl != null) { "Google Drive broker is not configured" }
-            check(session.isNotBlank()) { "Google Drive account is not connected" }
+        var backupDestination = AutoBackupDestination.fromSetting(settings.autoBackupDestination)
+        if (backupDestination == AutoBackupDestination.GOOGLE_DRIVE && brokerUrl == null) {
+            settings.autoBackupDestination = AutoBackupDestination.LOCAL.name
+            runCatching { settings.flush() }
+            backupDestination = AutoBackupDestination.LOCAL
         }
+        val session = settings.driveBrokerSession
         val directory =
             when (backupDestination) {
                 AutoBackupDestination.LOCAL -> File(applicationContext.filesDir, BACKUP_DIRECTORY)
@@ -68,8 +71,11 @@ class AutomaticBackupWorker(
         val destination = File(directory, "${defaultBackupFilename(BACKUP_FILENAME_PREFIX)}.zip")
         var archiveCreated = false
         return try {
-            // WorkManager stops ordinary workers after ten minutes, which can strand a large resumable upload.
-            if (backupDestination == AutoBackupDestination.GOOGLE_DRIVE) setForegroundAsync(createForegroundInfo())
+            if (backupDestination == AutoBackupDestination.GOOGLE_DRIVE) {
+                check(session.isNotBlank()) { "Google Drive account is not connected" }
+                // WorkManager stops ordinary workers after ten minutes, which can strand a large resumable upload.
+                setForegroundAsync(createForegroundInfo()).await()
+            }
             check(directory.isDirectory || directory.mkdirs()) { "Could not create automatic backup directory" }
             if (backupDestination == AutoBackupDestination.GOOGLE_DRIVE) clearStagedArchives(directory)
             archiveCreated = true

@@ -55,9 +55,9 @@ object DesktopAutomaticBackupScheduler {
                     }
                     if (AutoBackupDestination.fromSetting(settings.autoBackupDestination) != destination) return@launch
                     if (destination == AutoBackupDestination.GOOGLE_DRIVE && !DriveAccountConnectionState.connected.value) return@launch
-                    if (pruningPending && destination == AutoBackupDestination.LOCAL) {
-                        val directory = File(XdgUtils.getXdgDataHome(), "metrolist/automatic-backups")
-                        val pruneResult = withContext(Dispatchers.IO) { runCatching { pruneBackups(directory) } }
+                    if (pruningPending) {
+                        val localDirectory = File(XdgUtils.getXdgDataHome(), "metrolist/automatic-backups")
+                        val pruneResult = withContext(Dispatchers.IO) { runCatching { pruneBackups(localDirectory) } }
                         pruningPending = pruneResult.isFailure
                         if (pruneResult.isFailure) {
                             AppLogger.warning(

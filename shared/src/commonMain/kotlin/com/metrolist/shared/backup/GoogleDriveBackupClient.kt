@@ -51,7 +51,7 @@ class GoogleDriveBackupClient(
             DriveCreateMetadata(
                 name = filename,
                 mimeType = "application/zip",
-                parents = folderIds,
+                parents = listOf(folderIds.first()),
                 appProperties = mapOf(APP_PROPERTY_KEY to "true"),
             )
         val uploadUrl =
@@ -209,7 +209,8 @@ class GoogleDriveBackupClient(
             }.requireDriveApiSuccess()
                 .body<DriveBackupFile>()
                 .id
-        // Concurrent first backups can create several folders; keep every match as a parent and prune across all of them.
+        // Concurrent first backups can create several folders. Drive allows one parent per file, but
+        // retention cleanup searches every matching folder.
         return (existing + created + findBackupFolders(tokens)).distinct()
     }
 
