@@ -502,6 +502,19 @@
         </receiver>
 
         <receiver
+            android:name="com.metrolist.android.widget.ExpressiveWidgetReceiver"
+            android:exported="true"
+            android:label="@string/widget_expressive_player">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/expressive_widget_info" />
+        </receiver>
+
+        <receiver
             android:name="com.metrolist.android.widget.PlaylistWidgetReceiver"
             android:exported="true"
             android:label="@string/playlists">

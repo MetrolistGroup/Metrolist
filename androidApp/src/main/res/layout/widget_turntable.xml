@@ -1,54 +1,83 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- The manager insets this frame so artwork and controls share a centered square. -->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
     android:id="@android:id/background"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:padding="4dp"
-    android:theme="@style/Theme.Widget.Metrolist">
+    android:theme="@style/Theme.Widget.Metrolist"
+    tools:ignore="UseAppTint">
 
-    <!-- Album Art - circular bitmap set programmatically -->
+    <!-- Album Art - MaterialShapes.Cookie12Sided bitmap set programmatically -->
     <ImageView
         android:id="@+id/widget_turntable_album_art"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:layout_gravity="center"
+        android:contentDescription="@string/album_art"
         android:scaleType="fitCenter"
-        android:src="@drawable/widget_turntable_default_art"
-        android:contentDescription="@string/album_art" />
+        android:src="@drawable/widget_turntable_default_art" />
 
     <!-- Navigation Buttons Container - Top Right (Previous & Next) -->
-    <LinearLayout
-        android:layout_width="wrap_content"
-        android:layout_height="48dp"
+    <FrameLayout
+        android:layout_width="96dp"
+        android:layout_height="44dp"
         android:layout_gravity="top|end"
-        android:orientation="horizontal"
-        android:background="@drawable/widget_transport_button_bg"
-        android:gravity="center_vertical">
+        android:layoutDirection="ltr">
 
-        <!-- Previous Button -->
-        <ImageButton
-            android:id="@+id/widget_turntable_prev_button"
-            android:layout_width="48dp"
+        <ImageView
+            android:id="@+id/widget_turntable_transport_bg"
+            android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:padding="8dp"
-            android:scaleType="fitCenter"
-            android:background="@android:color/transparent"
-            android:src="@drawable/ic_widget_skip_previous"
-            android:contentDescription="@string/previous" />
+            android:importantForAccessibility="no"
+            android:scaleType="fitXY"
+            android:src="@drawable/widget_pill_background"
+            android:tint="@color/widget_secondary_container" />
 
-        <!-- Next Button -->
-        <ImageButton
-            android:id="@+id/widget_turntable_next_button"
-            android:layout_width="48dp"
+        <LinearLayout
+            android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:padding="8dp"
-            android:scaleType="fitCenter"
-            android:background="@android:color/transparent"
-            android:src="@drawable/ic_widget_skip_next"
-            android:contentDescription="@string/next" />
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
 
-    </LinearLayout>
+            <FrameLayout
+                android:id="@+id/widget_turntable_prev_button"
+                android:layout_width="48dp"
+                android:layout_height="match_parent"
+                android:clickable="true"
+                android:contentDescription="@string/previous"
+                android:focusable="true">
+
+                <ImageView
+                    android:id="@+id/widget_turntable_prev_icon"
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:layout_gravity="center"
+                    android:importantForAccessibility="no"
+                    android:src="@drawable/ic_widget_skip_previous"
+                    android:tint="@color/widget_on_secondary_container" />
+            </FrameLayout>
+
+            <FrameLayout
+                android:id="@+id/widget_turntable_next_button"
+                android:layout_width="48dp"
+                android:layout_height="match_parent"
+                android:clickable="true"
+                android:contentDescription="@string/next"
+                android:focusable="true">
+
+                <ImageView
+                    android:id="@+id/widget_turntable_next_icon"
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:layout_gravity="center"
+                    android:importantForAccessibility="no"
+                    android:src="@drawable/ic_widget_skip_next"
+                    android:tint="@color/widget_on_secondary_container" />
+            </FrameLayout>
+        </LinearLayout>
+    </FrameLayout>
 
     <!-- Play Button - Bottom Left -->
     <FrameLayout
@@ -56,31 +85,55 @@
         android:layout_width="48dp"
         android:layout_height="48dp"
         android:layout_gravity="bottom|start"
-        android:background="@drawable/widget_play_pill_bg">
+        android:clickable="true"
+        android:contentDescription="@string/play_pause"
+        android:focusable="true">
+
+        <ImageView
+            android:id="@+id/widget_turntable_play_bg"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:importantForAccessibility="no"
+            android:scaleType="fitCenter"
+            android:src="@drawable/widget_circle_bg"
+            android:tint="@color/widget_primary" />
 
         <ImageView
             android:id="@+id/widget_turntable_play_pause"
             android:layout_width="24dp"
             android:layout_height="24dp"
             android:layout_gravity="center"
+            android:importantForAccessibility="no"
             android:src="@drawable/ic_widget_play"
-            android:contentDescription="@string/play_pause" />
+            android:tint="@color/widget_on_primary" />
     </FrameLayout>
 
+    <!-- Like Button - Bottom Right -->
     <FrameLayout
         android:id="@+id/widget_turntable_like_button"
         android:layout_width="48dp"
         android:layout_height="48dp"
         android:layout_gravity="bottom|end"
-        android:background="@drawable/widget_like_button_bg">
+        android:clickable="true"
+        android:contentDescription="@string/action_like"
+        android:focusable="true">
+
+        <ImageView
+            android:id="@+id/widget_turntable_like_bg"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:importantForAccessibility="no"
+            android:scaleType="fitCenter"
+            android:src="@drawable/widget_circle_bg"
+            android:tint="@color/widget_tertiary_container" />
 
         <ImageView
             android:id="@+id/widget_turntable_like_icon"
-            android:layout_width="24dp"
-            android:layout_height="24dp"
+            android:layout_width="22dp"
+            android:layout_height="22dp"
             android:layout_gravity="center"
-            android:contentDescription="@string/action_like"
-            android:src="@drawable/ic_widget_heart_outline_nav" />
+            android:importantForAccessibility="no"
+            android:src="@drawable/ic_widget_heart_outline_nav"
+            android:tint="@color/widget_on_tertiary_container" />
     </FrameLayout>
-
 </FrameLayout>

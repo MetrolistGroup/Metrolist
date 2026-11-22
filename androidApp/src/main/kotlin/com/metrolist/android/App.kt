@@ -6,16 +6,22 @@
 package com.metrolist.android
 
 import android.app.Application
+import android.app.UiModeManager
+import android.app.WallpaperManager
 import android.appwidget.AppWidgetManager
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.content.res.Configuration
 import android.os.Build
+import android.os.Handler
+import android.os.Looper
 import android.os.SystemClock
 import android.service.quicksettings.TileService
 import android.util.Log
 import android.webkit.WebView
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.snapshots.Snapshot
 import androidx.core.app.NotificationChannelCompat
 import androidx.core.app.NotificationManagerCompat
@@ -44,11 +50,14 @@ import com.metrolist.android.utils.IconUtils
 import com.metrolist.android.utils.SentryManager
 import com.metrolist.android.utils.createAppImageLoader
 import com.metrolist.android.utils.isAndroidTv
+import com.metrolist.android.widget.ExpressiveWidgetReceiver
+import com.metrolist.android.widget.MetrolistWidgetManager
 import com.metrolist.android.widget.MusicWidgetReceiver
 import com.metrolist.android.widget.PlaylistWidgetReceiver
 import com.metrolist.android.widget.RecognizerWidgetReceiver
 import com.metrolist.android.widget.RecognizerWidgets
 import com.metrolist.android.widget.TurntableWidgetReceiver
+import com.metrolist.android.widget.WidgetThemeConfig
 import com.metrolist.shared.api.lastfm.LastFM
 import com.metrolist.shared.api.lastfm.LastFmGalleryBrowser
 import com.metrolist.shared.auth.AuthManager
@@ -71,6 +80,7 @@ import com.metrolist.shared.youtube.playback.AndroidContextProvider
 import com.metrolist.shared.youtube.playback.PlaybackEventLevel
 import com.metrolist.shared.youtube.playback.PlaybackEventLog
 import com.metrolist.shared.youtube.playback.PlaybackNetworkStateStore
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
@@ -205,10 +215,14 @@ class App :
         }
     }
 
+    private var wallpaperColorsListener: WallpaperManager.OnColorsChangedListener? = null
+    private var widgetThemeObservationStarted = false
+
     private fun refreshWidgetsAfterRestore() {
         val manager = AppWidgetManager.getInstance(this)
         listOf(
             MusicWidgetReceiver::class.java,
+            ExpressiveWidgetReceiver::class.java,
             PlaylistWidgetReceiver::class.java,
             TurntableWidgetReceiver::class.java,
             RecognizerWidgetReceiver::class.java,
@@ -223,6 +237,52 @@ class App :
                 )
             }
         }
+    }
+
+    private fun observeWidgetThemeChanges() {
+        if (widgetThemeObservationStarted) return
+        widgetThemeObservationStarted = true
+        get<CoroutineScope>().launch {
+            snapshotFlow { WidgetThemeConfig.fromSettings() }
+                .distinctUntilChanged()
+                .collectLatest {
+                    refreshInstalledWidgetsTheme()
+                }
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            getSystemService(UiModeManager::class.java)?.addContrastChangeListener(mainExecutor) {
+                get<CoroutineScope>().launch { refreshInstalledWidgetsTheme() }
+            }
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1 && wallpaperColorsListener == null) {
+            runCatching {
+                val listener =
+                    WallpaperManager.OnColorsChangedListener { _, _ ->
+                        if (Settings.shared.materialYouEnabled) {
+                            get<CoroutineScope>().launch { refreshInstalledWidgetsTheme() }
+                        }
+                    }
+                WallpaperManager.getInstance(this).addOnColorsChangedListener(listener, Handler(Looper.getMainLooper()))
+                wallpaperColorsListener = listener
+            }.onFailure { error ->
+                Timber.tag(TAG).w(error, "Could not observe wallpaper color changes for widgets")
+            }
+        }
+    }
+
+    private suspend fun refreshInstalledWidgetsTheme() {
+        runCatching {
+            get<MetrolistWidgetManager>().refreshWidgetsTheme()
+        }.onFailure { error ->
+            if (error is CancellationException) throw error
+            Timber.tag(TAG).w(error, "Failed to refresh widgets after theme change")
+        }
+    }
+
+    override fun onConfigurationChanged(newConfig: Configuration) {
+        super.onConfigurationChanged(newConfig)
+        if (!infrastructureReady) return
+        get<CoroutineScope>().launch { refreshInstalledWidgetsTheme() }
     }
 
     private fun initializeApp(appStart: Long) {
@@ -384,6 +444,7 @@ class App :
                 RecognizerWidgets.update(this@App)
             }
         }
+        observeWidgetThemeChanges()
         SongMetadataState.bind(get<MusicDatabase>(), get<CoroutineScope>())
         get<SongDownloadManager>().observeTrackedPlaylists(get<CoroutineScope>())
         get<CoroutineScope>().launch {

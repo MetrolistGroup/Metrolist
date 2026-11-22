@@ -63,9 +63,15 @@ class WidgetActionReceiver : BroadcastReceiver() {
                         val widgets = AppWidgetManager.getInstance(context)
                         val manager = GlobalContext.get().get<MetrolistWidgetManager>()
                         manager.updateIdleMusicWidgets(widgets.getAppWidgetIds(ComponentName(context, MusicWidgetReceiver::class.java)))
+                        manager.updateIdleExpressiveWidgets(
+                            widgets.getAppWidgetIds(ComponentName(context, ExpressiveWidgetReceiver::class.java)),
+                        )
                         manager.updateIdleTurntableWidgets(
                             widgets.getAppWidgetIds(ComponentName(context, TurntableWidgetReceiver::class.java)),
                         )
+                        if (MusicService.isRunning) {
+                            context.startService(Intent(context, MusicService::class.java).setAction(serviceAction))
+                        }
                     }
                     return@launchAsync
                 }

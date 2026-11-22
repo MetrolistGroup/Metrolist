@@ -1,13 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
-    tools:targetApi="s"
     android:id="@android:id/background"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@drawable/widget_background"
+    android:background="@drawable/widget_pill_background"
     android:clipToOutline="true"
-    android:theme="@style/Theme.Widget.Metrolist">
+    android:theme="@style/Theme.Widget.Metrolist"
+    tools:ignore="UseAppTint"
+    tools:targetApi="s">
+
+    <ImageView
+        android:id="@+id/widget_recognizer_surface_background"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:importantForAccessibility="no"
+        android:scaleType="fitXY"
+        android:src="@drawable/widget_pill_background" />
 
     <include layout="@layout/widget_recognizer_mic" />
 </FrameLayout>
