@@ -146,6 +146,7 @@ import com.metrolist.desktop.utils.SystemMediaManager
 import com.metrolist.desktop.utils.ThemeUtils
 import com.metrolist.desktop.utils.WaylandScale
 import com.metrolist.desktop.utils.WindowsAppIdentity
+import com.metrolist.desktop.utils.allowMainQueueInAwtRunLoop
 import com.metrolist.desktop.utils.configureDesktopJvmErrorFile
 import com.metrolist.desktop.utils.configureLinuxWebKitRenderer
 import com.metrolist.desktop.utils.desktopRenderApiOverride
@@ -890,6 +891,7 @@ private fun runDesktopApp(args: Array<String>) {
     )?.let { System.setProperty("skiko.renderApi", it) }
     if (OsUtil.isMac) {
         System.setProperty("apple.awt.enableTemplateImages", "true")
+        allowMainQueueInAwtRunLoop()
         // Without this AppKit keeps the Aqua (light) title bar even in Dark Mode.
         System.setProperty("apple.awt.application.appearance", "system")
         if (System.getProperty("skiko.renderApi") == null && System.getenv("SKIKO_RENDER_API") == null) {
