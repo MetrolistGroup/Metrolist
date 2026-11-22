@@ -213,6 +213,26 @@
           "com.sun.jna.platform.unix.LibC"
         ]
       }
+    },
+    {
+      "type": "sun.awt.AWTAccessor",
+      "methods": [
+        {
+          "name": "getAWTEventAccessor",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "sun.awt.AWTAccessor$AWTEventAccessor",
+      "methods": [
+        {
+          "name": "getBData",
+          "parameterTypes": [
+            "java.awt.AWTEvent"
+          ]
+        }
+      ]
     }
   ]
 }
