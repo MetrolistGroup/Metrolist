@@ -30,7 +30,7 @@ After each stable release, the `winget` job in `release.yml` runs [winget-releas
 
 ## Homebrew
 
-[MetrolistGroup/homebrew-tap](https://github.com/MetrolistGroup/homebrew-tap) publishes the `metrolist` cask for macOS and a Linux formula that unpacks the release AppImage. Its scheduled workflow points both at the latest stable release using the release's `SHA256SUMS`, then runs `brew style`, `brew audit` and an install on macOS and Linux, so no release token is needed. Asset names and `SHA256SUMS` entries for the DMGs and AppImages must stay stable for it. `packaging/homebrew/metrolist.rb.in` remains the generator's cask template; keep it in step with the tap. Preserve Gatekeeper and user data.
+[MetrolistGroup/homebrew-tap](https://github.com/MetrolistGroup/homebrew-tap) publishes the `metrolist` cask and formula for macOS and Linux. The cask installs the DMG on macOS and the AppImage on Linux. The formula adds a `metrolist` command. On Linux it unpacks the release AppImage, and on macOS it installs the app from the DMG. Its scheduled workflow points both at the latest stable release using the release's `SHA256SUMS`, then runs `brew style`, `brew audit` and an install of each on macOS and Linux, so no release token is needed. Asset names and `SHA256SUMS` entries for the DMGs and AppImages must stay stable for it. `packaging/homebrew/metrolist.rb.in` remains the generator's cask template; keep it in step with the tap. Preserve Gatekeeper and user data.
 
 The `homebrew` job in `release.yml` sends a `metrolist-release` repository dispatch to the tap so it updates right after publication instead of at the next poll. It needs the `HOMEBREW_TAP_TOKEN` secret, a fine-grained token with Contents write access to the tap, and skips without it.
 
