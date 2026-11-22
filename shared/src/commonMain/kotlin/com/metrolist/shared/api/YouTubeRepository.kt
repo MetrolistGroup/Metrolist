@@ -1400,7 +1400,7 @@ class YouTubeRepository(
                     CachedAlbum(
                         page = it,
                         isComplete = true,
-                        hasCachedDescription = true,
+                        hasCachedHeaderMetadata = true,
                         isOfflineReady = true,
                     )
                 }
@@ -1483,6 +1483,7 @@ class YouTubeRepository(
             val initialTracks =
                 if (shelfSongs.isEmpty()) playlistTracks else playlistTracks.copy(sections = mapOf("songs" to shelfSongs))
             if (initialTracks.songs.isEmpty() && !initialTracks.hasMore) {
+                if (!allowOfflineFallback) return null
                 loadLocal()?.let { return it }
             }
             val tracks =
@@ -1508,7 +1509,7 @@ class YouTubeRepository(
                     artistAlbums = artistAlbums,
                     description = albumHeader.description,
                 )
-            database?.storeAlbumPage(page, updateDescription = true)
+            database?.storeAlbumPage(page, updateHeaderMetadata = true)
             if (applyContentFilters) BlockedContent.filterAlbumPage(page) else page
         } catch (e: CancellationException) {
             throw e

@@ -436,6 +436,7 @@ object PlaylistAlbumState {
         if (addToHistory) DesktopNavigation.navigate(Screen.Album(id, artworkSource = artworkSource))
         PlayerState.exitExpanded()
         val session = GlobalYouTube.innerTube.sessionSnapshot()
+        val retainedPage = unfilteredAlbumPageData.takeIf { selectedAlbumId == id }
         if (selectedAlbumId != id) {
             albumSession = null
             albumPageData = null
@@ -472,6 +473,7 @@ object PlaylistAlbumState {
                             }
                         }
                     }
+                    val hasDisplayedPage = cached != null || retainedPage != null
                     val result =
                         withContext(Dispatchers.IO) {
                             GlobalYouTubeRepository.instance.getAlbum(
@@ -479,12 +481,12 @@ object PlaylistAlbumState {
                                 loadAllPages = false,
                                 applyContentFilters = false,
                                 forceRefresh = true,
-                                allowOfflineFallback = cached == null,
+                                allowOfflineFallback = !hasDisplayedPage,
                             )
                         }
                     if (selectedAlbumId != id || GlobalYouTube.innerTube.sessionSnapshot() != session) return@launch
                     if (result == null) {
-                        if (cached == null) albumLoadFailed = true
+                        if (!hasDisplayedPage || forceRefresh) albumLoadFailed = true
                         return@launch
                     }
                     albumLoadFailed = false
@@ -514,12 +516,18 @@ object PlaylistAlbumState {
                             "status=${(error as? InnerTubeHttpException)?.status?.value} type=${error::class.simpleName}",
                     )
                     if (selectedAlbumId == id && GlobalYouTube.innerTube.sessionSnapshot() == session) {
-                        val fallback = firstPage ?: cached?.page
-                        albumLoadFailed = fallback == null || firstPage != null
+                        val preserveCompleteCache = cached?.isComplete == true
+                        val fallback =
+                            if (preserveCompleteCache) {
+                                cached.page
+                            } else {
+                                firstPage ?: retainedPage ?: cached?.page
+                            }
+                        albumLoadFailed = fallback == null || (!preserveCompleteCache && (firstPage != null || forceRefresh))
                         unfilteredAlbumPageData = fallback
                         albumSession = session
                         albumPageData = fallback?.let(BlockedContent::filterAlbumPage)
-                        if (firstPage != null) {
+                        if (firstPage != null && !preserveCompleteCache) {
                             AppState.snackbarHostState.showSnackbar(getString(Res.string.error_occurred))
                         }
                     }

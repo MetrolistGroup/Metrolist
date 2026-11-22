@@ -46,7 +46,10 @@ import com.metrolist.shared.scrobble.PendingScrobble
 const val DATABASE_VERSION = 68
 
 internal val MIGRATION_67_68_SQL =
-    listOf("ALTER TABLE album ADD COLUMN description TEXT")
+    listOf(
+        "ALTER TABLE album ADD COLUMN description TEXT",
+        "ALTER TABLE album ADD COLUMN otherVersions TEXT",
+    )
 
 internal val MIGRATION_66_67_SQL =
     listOf("ALTER TABLE playlist ADD COLUMN remoteHeader TEXT")

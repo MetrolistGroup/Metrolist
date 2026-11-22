@@ -14,16 +14,16 @@ suspend fun MusicDatabase.loadOfflineAlbum(
     albumId: String,
     availableSongIds: Set<String>? = null,
 ): AlbumPage? {
-    val dao = dao()
-    val stored = dao.album(albumId).first()
+    val (stored, storedSongs) = dao().storedAlbumSnapshot(albumId)
     val songs =
-        dao.storedAlbumSongs(albumId).first().filter {
+        storedSongs.filter {
             it.isAvailableOffline(availableSongIds)
         }
     val album = offlineAlbumHeader(albumId, stored, songs) ?: return null
     return AlbumPage(
         album = album,
         songs = songs.map { it.toSongItem() },
+        otherVersions = stored?.album?.otherVersions.orEmpty(),
         description = stored?.album?.description?.takeIf(String::isNotBlank),
     )
 }

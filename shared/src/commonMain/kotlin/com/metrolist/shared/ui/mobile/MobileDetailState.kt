@@ -163,7 +163,9 @@ internal class MobileDetailLoader<T>(
 
     fun load(forceRefresh: Boolean = false) {
         val requestGeneration = ++generation
+        val retainedPage = page
         job?.cancel()
+        isLoading = retainedPage == null || forceRefresh
         failed = false
         job =
             scope.launch {
@@ -182,16 +184,15 @@ internal class MobileDetailLoader<T>(
                     } else {
                         isLoading = true
                     }
-                } else {
-                    isLoading = true
                 }
+                val hasDisplayedPage = hasCached || retainedPage != null
                 try {
-                    val loaded = fetch(hasCached)
+                    val loaded = fetch(hasDisplayedPage)
                     if (generation == requestGeneration) page = loaded
                 } catch (error: CancellationException) {
                     throw error
                 } catch (_: Exception) {
-                    if (generation == requestGeneration && !hasCached) failed = true
+                    if (generation == requestGeneration && !hasDisplayedPage) failed = true
                 } finally {
                     if (generation == requestGeneration) isLoading = false
                 }

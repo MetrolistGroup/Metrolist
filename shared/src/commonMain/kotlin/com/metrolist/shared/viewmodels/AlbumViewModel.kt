@@ -62,7 +62,9 @@ class AlbumViewModel(
     ) {
         if (albumId == null) return
         val generation = ++loadGeneration
-        if (_selectedAlbumId.value != albumId) setAlbumPage(null)
+        val switchingAlbum = _selectedAlbumId.value != albumId
+        val retainedPage = unfilteredAlbumPage.takeIf { !switchingAlbum }
+        if (switchingAlbum) setAlbumPage(null)
         _selectedAlbumId.value = albumId
         loadJob?.cancel()
         pageJob?.cancel()
@@ -85,22 +87,23 @@ class AlbumViewModel(
                         return@launch
                     }
                 }
+                val hasDisplayedPage = cached != null || retainedPage != null
                 _isLoading.value = cached == null || !(cached.isComplete && cached.isOfflineReady)
                 try {
                     val albumPage =
                         withContext(Dispatchers.Default) {
                             repository.getAlbum(
                                 albumId,
-                                loadAllPages = false,
+                                loadAllPages = cached?.isComplete == true,
                                 applyContentFilters = false,
                                 forceRefresh = true,
-                                allowOfflineFallback = cached == null,
+                                allowOfflineFallback = !hasDisplayedPage,
                             )
                         }
                     if (generation == loadGeneration) {
                         if (albumPage != null) {
                             setAlbumPage(albumPage)
-                        } else if (cached == null) {
+                        } else if (!hasDisplayedPage) {
                             setAlbumPage(null)
                             _errorMessage.value = ""
                         }
@@ -108,7 +111,7 @@ class AlbumViewModel(
                 } catch (e: CancellationException) {
                     throw e
                 } catch (t: Throwable) {
-                    if (generation == loadGeneration && cached == null) {
+                    if (generation == loadGeneration && !hasDisplayedPage) {
                         _errorMessage.value = t.message.orEmpty()
                     }
                 } finally {

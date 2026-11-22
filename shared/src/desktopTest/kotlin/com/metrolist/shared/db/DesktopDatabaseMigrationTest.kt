@@ -266,9 +266,10 @@ class DesktopDatabaseMigrationTest {
                     assertEquals("Saved Album", upgraded.page.album.title)
                     assertEquals(listOf("song"), upgraded.page.songs.map(SongItem::id))
                     assertNull(upgraded.page.description)
+                    assertTrue(upgraded.page.otherVersions.isEmpty())
                     assertTrue(upgraded.isComplete)
                     assertTrue(upgraded.isOfflineReady)
-                    assertFalse(upgraded.hasCachedDescription)
+                    assertFalse(upgraded.hasCachedHeaderMetadata)
                     assertFalse(upgraded.canReuseWithoutRefresh)
 
                     val song = SongItem("song", "Keep my music", null, listOf(ArtistTiny("artist", "Artist")), null, 240L)
@@ -282,31 +283,48 @@ class DesktopDatabaseMigrationTest {
                             songCount = 1,
                             duration = 240L,
                         )
+                    val deluxe =
+                        AlbumItem(
+                            id = "MPREb_deluxe",
+                            title = "Saved Album (Deluxe)",
+                            thumbnail = null,
+                            artists = listOf(ArtistTiny("artist", "Artist")),
+                            year = "2026",
+                        )
                     database.storeAlbumPage(
-                        AlbumPage(album = album, songs = listOf(song), description = "Cached liner notes"),
-                        updateDescription = true,
+                        AlbumPage(
+                            album = album,
+                            songs = listOf(song),
+                            otherVersions = listOf(deluxe),
+                            description = "Cached liner notes",
+                        ),
+                        updateHeaderMetadata = true,
                     )
-                    // Continuation saves omit header description and must keep the cached one.
+                    // Continuation saves omit header metadata and must keep cached values.
                     database.storeAlbumPage(
                         AlbumPage(album = album, songs = listOf(song), description = null),
-                        updateDescription = false,
+                        updateHeaderMetadata = false,
                     )
 
                     val cached = requireNotNull(database.loadCachedAlbum("MPREb_test"))
                     assertEquals("Cached liner notes", cached.page.description)
-                    assertTrue(cached.hasCachedDescription)
+                    assertEquals(listOf(deluxe), cached.page.otherVersions)
+                    assertTrue(cached.hasCachedHeaderMetadata)
                     assertTrue(cached.canReuseWithoutRefresh)
-                    assertEquals("Cached liner notes", database.loadOfflineAlbum("MPREb_test")?.description)
+                    val offline = requireNotNull(database.loadOfflineAlbum("MPREb_test"))
+                    assertEquals("Cached liner notes", offline.description)
+                    assertEquals(listOf(deluxe), offline.otherVersions)
 
-                    // An album whose remote header has no description is still marked cached.
+                    // An album whose remote header has no description or other versions is still marked cached.
                     database.storeAlbumPage(
-                        AlbumPage(album = album, songs = listOf(song), description = null),
-                        updateDescription = true,
+                        AlbumPage(album = album, songs = listOf(song), otherVersions = emptyList(), description = null),
+                        updateHeaderMetadata = true,
                     )
-                    val emptyDescription = requireNotNull(database.loadCachedAlbum("MPREb_test"))
-                    assertNull(emptyDescription.page.description)
-                    assertTrue(emptyDescription.hasCachedDescription)
-                    assertTrue(emptyDescription.canReuseWithoutRefresh)
+                    val emptyMetadata = requireNotNull(database.loadCachedAlbum("MPREb_test"))
+                    assertNull(emptyMetadata.page.description)
+                    assertTrue(emptyMetadata.page.otherVersions.isEmpty())
+                    assertTrue(emptyMetadata.hasCachedHeaderMetadata)
+                    assertTrue(emptyMetadata.canReuseWithoutRefresh)
                 } finally {
                     database.close()
                 }
