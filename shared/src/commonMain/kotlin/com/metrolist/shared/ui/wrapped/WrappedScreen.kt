@@ -10,6 +10,7 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.awaitEachGesture
@@ -43,7 +44,6 @@ import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerDefaults
 import androidx.compose.foundation.pager.rememberPagerState
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -69,6 +69,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -448,6 +449,7 @@ private fun WrappedReport(
             onDismiss = { sharing = false },
             title = title,
             timeLabel = stringResource(Res.string.wrapped_measured_time),
+            imageColors = wrappedShareColors(),
         )
     }
     val scope = rememberCoroutineScope()
@@ -528,16 +530,20 @@ private fun WrappedReport(
     }
     WrappedStatusBarAppearance(palette.background.luminance() > 0.5f)
     var held by remember { mutableStateOf(false) }
+    val scrolls = remember(chapters.size) { List(chapters.size) { ScrollState(0) } }
+    val pageScroll = scrolls[pager.settledPage.coerceIn(0, chapters.lastIndex)]
+    val scrolling by remember(pageScroll) { derivedStateOf { pageScroll.isScrollInProgress } }
+    val reading by remember(pageScroll) { derivedStateOf { pageScroll.isScrollInProgress || pageScroll.value > 0 } }
     val progress = remember { Animatable(0f) }
     var progressPage by remember { mutableIntStateOf(-1) }
-    LaunchedEffect(pager.settledPage, held, pager.isScrollInProgress, motionEnabled) {
+    LaunchedEffect(pager.settledPage, held && !scrolling, reading, pager.isScrollInProgress, motionEnabled) {
         if (progressPage != pager.settledPage) {
             progressPage = pager.settledPage
             progress.snapTo(0f)
         }
-        // Chapters advance on their own like stories; touching the screen holds the current one.
-        if (!motionEnabled || held || pager.isScrollInProgress) return@LaunchedEffect
-        val remaining = ((1f - progress.value) * WRAPPED_CHAPTER_MILLIS).toInt()
+        // Chapters advance on their own like stories. Holding still pauses one; scrolling through it runs 4x slower.
+        if (!motionEnabled || (held && !scrolling) || pager.isScrollInProgress) return@LaunchedEffect
+        val remaining = ((1f - progress.value) * WRAPPED_CHAPTER_MILLIS * if (reading) 4 else 1).toInt()
         progress.animateTo(1f, tween(remaining, easing = LinearEasing))
         if (pager.settledPage < chapters.lastIndex) moveTo(pager.settledPage + 1)
     }
@@ -559,7 +565,7 @@ private fun WrappedReport(
                 modifier = Modifier.fillMaxSize(),
                 verticalAlignment = Alignment.Top,
             ) { page ->
-                val scroll = rememberScrollState()
+                val scroll = scrolls[page]
                 val direction = LocalLayoutDirection.current
                 BoxWithConstraints(
                     Modifier.fillMaxSize().pointerInput(chapters.size, direction, scroll, pager) {
@@ -1092,25 +1098,31 @@ private fun WrappedMix(
     val rows = (artists.size + columns - 1) / columns
     WrappedStage(WrappedPattern.CHEVRONS, palette, motionEnabled, spin) { side ->
         BoxWithConstraints(Modifier.fillMaxSize()) {
-            val cell = minOf(maxWidth / columns, side / rows)
-            Column(Modifier.align(Alignment.Center)) {
-                artists.chunked(columns).forEachIndexed { row, line ->
-                    Row {
-                        line.forEachIndexed { column, artist ->
-                            val index = row * columns + column
-                            WrappedShapedArtwork(
-                                artist,
-                                WrappedMixShapes[index % WrappedMixShapes.size],
-                                visible,
-                                motionEnabled,
-                                Modifier.size(cell).padding(4.dp),
-                                delayMillis = index * 55L,
-                                turnMillis = 12_000 + (index % 5) * 3_000,
-                                tilt = ((index % 3) - 1) * 9f,
-                            )
-                        }
-                    }
-                }
+            // Alternate columns drop by half a cell, and higher-ranked artists are larger.
+            val drop = if (artists.size > 1) 0.5f else 0f
+            val cell = minOf(maxWidth / columns, side / (rows + drop))
+            val left = (maxWidth - cell * columns) / 2
+            val top = (side - cell * (rows + drop)) / 2
+            artists.forEachIndexed { index, artist ->
+                val column = index % columns
+                val row = index / columns
+                val scale = 1f - 0.22f * index / artists.size
+                val size = cell * scale
+                WrappedShapedArtwork(
+                    artist,
+                    WrappedMixShapes[index % WrappedMixShapes.size],
+                    visible,
+                    motionEnabled,
+                    Modifier
+                        .offset(
+                            x = left + cell * column + (cell - size) / 2,
+                            y = top + cell * (row + if (column % 2 == 1) drop else 0f) + (cell - size) / 2,
+                        ).size(size)
+                        .padding(3.dp),
+                    delayMillis = index * 55L,
+                    turnMillis = 12_000 + (index % 5) * 3_000,
+                    tilt = ((index % 3) - 1) * 9f,
+                )
             }
         }
     }

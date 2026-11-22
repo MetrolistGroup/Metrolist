@@ -70,6 +70,7 @@ internal fun StatisticsShareDialog(
     onDismiss: () -> Unit,
     title: String? = null,
     timeLabel: String? = null,
+    imageColors: StatisticsImageColors? = null,
 ) {
     val scope = rememberCoroutineScope()
     val measurer = rememberTextMeasurer(cacheSize = 0)
@@ -88,7 +89,7 @@ internal fun StatisticsShareDialog(
                 items.take(3).mapIndexed { index, item -> item.id to statisticsArtworkShape(item, index) }
             }.toMap()
     val context = LocalPlatformContext.current
-    val colors = MaterialTheme.colorScheme
+    val colors = imageColors ?: MaterialTheme.colorScheme.statisticsImageColors()
     val typography = MaterialTheme.typography
     val heroShape = MaterialTheme.shapes.extraLarge
     val sectionShapes = sections.indices.map { segmentedGroupShape(it == 0, it == sections.lastIndex, false) }

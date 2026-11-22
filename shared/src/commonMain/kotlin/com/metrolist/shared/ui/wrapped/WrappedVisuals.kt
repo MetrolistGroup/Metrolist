@@ -97,6 +97,8 @@ import com.metrolist.shared.ui.haptics.HapticEvent
 import com.metrolist.shared.ui.haptics.rememberMetrolistHaptics
 import com.metrolist.shared.ui.icons.MetrolistIcons
 import com.metrolist.shared.ui.screens.StatisticsItem
+import com.metrolist.shared.ui.statistics.StatisticsImageColors
+import com.metrolist.shared.ui.statistics.StatisticsImageSection
 import com.metrolist.shared.ui.theme.rememberReducedMotion
 import com.metrolist.shared.ui.utils.settled
 import kotlinx.coroutines.delay
@@ -185,6 +187,28 @@ internal fun wrappedPalette(chapter: WrappedChapter): WrappedPalette {
         val background = if (pureBlack) Color.Black else deep
         WrappedPalette(background, light, accent, accent, deep, light, deep, accent, accent)
     }
+}
+
+/** Poster colors for the shared summary image: a lit background, a dark hero card and one color per ranking. */
+@Composable
+internal fun wrappedShareColors(): StatisticsImageColors {
+    val c = MaterialTheme.colorScheme
+    return StatisticsImageColors(
+        background = c.primaryFixed,
+        glow = c.tertiaryFixedDim,
+        content = c.onPrimaryFixed,
+        muted = c.onPrimaryFixedVariant,
+        accent = c.onTertiaryFixedVariant,
+        heroContainer = c.onPrimaryFixed,
+        heroContent = c.primaryFixed,
+        sections =
+            listOf(
+                StatisticsImageSection(c.tertiaryFixedDim, c.onTertiaryFixed, c.onTertiaryFixed, c.onTertiaryFixedVariant),
+                StatisticsImageSection(c.onSecondaryFixed, c.secondaryFixed, c.tertiaryFixedDim, c.secondaryFixedDim),
+                StatisticsImageSection(c.primaryFixedDim, c.onPrimaryFixed, c.onPrimaryFixed, c.onPrimaryFixedVariant),
+            ),
+        artworkPlaceholder = c.secondaryFixedDim,
+    )
 }
 
 /** The poster ground: the chapter color, lit by soft pools of the accent color that drift like light on water. */
@@ -351,7 +375,8 @@ private fun DrawScope.drawWrappedPattern(
         WrappedPattern.RINGS -> {
             val width = 16.dp.toPx()
             val period = width * 2f
-            var r = side * 0.3f + ((phase + swipe) % 1f + 1f) % 1f * period
+            // Rings are born at the center, under the artwork, so none appears out of nowhere.
+            var r = ((phase + swipe) % 1f + 1f) % 1f * period
             while (r < reach + width) {
                 drawCircle(ink, r, center, style = Stroke(width))
                 r += period
