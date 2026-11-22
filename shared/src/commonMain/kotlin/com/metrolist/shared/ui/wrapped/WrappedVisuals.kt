@@ -672,13 +672,36 @@ private class WrappedMorphShape(
         layoutDirection: LayoutDirection,
         density: Density,
     ): Outline {
-        val path = morph.toPath(progress.coerceIn(0f, 1f), Path())
+        val p = progress.coerceIn(0f, 1f)
+        // Rotated corners of a unit-square shape reach past the box and get cut flat by the image edge,
+        // so shrink the shape until its farthest point fits the box's inscribed circle at any angle.
+        val points =
+            morph.asCubics(p).flatMap { cubic ->
+                (0..8).map { step ->
+                    val t = step / 8f
+                    val u = 1f - t
+                    val a = u * u * u
+                    val b = 3f * u * u * t
+                    val c = 3f * u * t * t
+                    val d = t * t * t
+                    Offset(
+                        a * cubic.anchor0X + b * cubic.control0X + c * cubic.control1X + d * cubic.anchor1X,
+                        a * cubic.anchor0Y + b * cubic.control0Y + c * cubic.control1Y + d * cubic.anchor1Y,
+                    )
+                }
+            }
+        val centerX = (points.minOf { it.x } + points.maxOf { it.x }) / 2f
+        val centerY = (points.minOf { it.y } + points.maxOf { it.y }) / 2f
+        val reach = points.maxOf { hypot(it.x - centerX, it.y - centerY) }
+        val fit = if (reach > 0.5f) 0.5f / reach else 1f
+        val path = morph.toPath(p, Path())
         path.transform(
             Matrix().apply {
                 scale(size.width, size.height)
                 translate(0.5f, 0.5f)
                 rotateZ(rotation)
-                translate(-0.5f, -0.5f)
+                scale(fit, fit)
+                translate(-centerX, -centerY)
             },
         )
         return Outline.Generic(path.settled())
