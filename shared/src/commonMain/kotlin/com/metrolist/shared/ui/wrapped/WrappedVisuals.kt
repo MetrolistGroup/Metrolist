@@ -438,18 +438,17 @@ private fun flexFont(
     width: Float = 100f,
     round: Float = 0f,
     opticalSize: Float = 18f,
-): Font =
-    Font(
-        Res.font.wrapped_flex,
-        FontWeight(weight),
-        variationSettings =
-            FontVariation.Settings(
-                FontVariation.weight(weight),
-                FontVariation.width(width),
-                FontVariation.Setting("ROND", round),
-                FontVariation.Setting("opsz", opticalSize),
-            ),
-    )
+) = Font(
+    Res.font.wrapped_flex,
+    FontWeight(weight),
+    variationSettings =
+        FontVariation.Settings(
+            FontVariation.weight(weight),
+            FontVariation.width(width),
+            FontVariation.Setting("ROND", round),
+            FontVariation.Setting("opsz", opticalSize),
+        ),
+)
 
 private val WrappedWeights = listOf(400, 500, 600, 700, 800, 900)
 
