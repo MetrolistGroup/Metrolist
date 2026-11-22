@@ -823,6 +823,7 @@ private fun WrappedCover(
             WrappedShapedArtwork(it, MaterialShapes.Sunny, visible, motionEnabled, Modifier.size(side * 0.6f), turnMillis = 30_000)
         }
     }
+    WrappedFontProbe()
     WrappedSticker(stringResource(Res.string.wrapped_cover_heading), palette, visible, motionEnabled)
     WrappedHeadline(
         checkNotNull(state.dateRange).start.year.toString(),

@@ -17,6 +17,7 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -91,6 +92,7 @@ import androidx.graphics.shapes.Morph
 import androidx.graphics.shapes.RoundedPolygon
 import com.metrolist.shared.generated.resources.Res
 import com.metrolist.shared.generated.resources.wrapped_flex
+import com.metrolist.shared.generated.resources.wrapped_probe
 import com.metrolist.shared.settings.Settings
 import com.metrolist.shared.ui.components.images.AsyncImage
 import com.metrolist.shared.ui.haptics.HapticEvent
@@ -480,6 +482,20 @@ private fun flexFont(
 )
 
 private val WrappedWeights = listOf(400, 500, 600, 700, 800, 900)
+
+// TEMP font probe
+@Composable
+internal fun WrappedFontProbe() {
+    val a = FontFamily(Font(Res.font.wrapped_flex, FontWeight.Normal))
+    val b = FontFamily(Font(Res.font.wrapped_flex, FontWeight(900), variationSettings = FontVariation.Settings(FontVariation.weight(900))))
+    val c = FontFamily(flexFont(900, width = 108f, round = 40f))
+    val d = FontFamily(Font(Res.font.wrapped_probe, FontWeight(900)))
+    Column {
+        listOf("A" to a, "B" to b, "C" to c, "D" to d).forEach { (k, f) ->
+            Text("$k Neverender 2026", style = TextStyle(fontFamily = f, fontSize = 30.sp))
+        }
+    }
+}
 
 /** Google Sans Flex for every text role inside Wrapped, in place of the app's system font. */
 @Composable
