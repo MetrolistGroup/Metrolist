@@ -56,6 +56,7 @@ import com.metrolist.android.models.PersistPlayerState
 import com.metrolist.android.models.PlaybackPersistenceWriter
 import com.metrolist.android.models.decodePersistPlayerState
 import com.metrolist.android.models.playbackPersistenceJson
+import com.metrolist.android.utils.isAndroidTv
 import com.metrolist.android.widget.EXTRA_WIDGET_COMMAND_TOKEN
 import com.metrolist.android.widget.MetrolistWidgetManager
 import com.metrolist.android.widget.MusicWidgetReceiver
@@ -622,7 +623,34 @@ class MusicService :
                 pauseAllPlayersAndStopSelf()
             }
         }
+        serviceScope.launch {
+            if (!isAndroidTv()) return@launch
+            ProcessLifecycleOwner
+                .get()
+                .lifecycle.currentStateFlow
+                .map { it.isAtLeast(Lifecycle.State.STARTED) }
+                .distinctUntilChanged()
+                .collect { foreground ->
+                    // On TV, users expect audio to stop when they leave the app; phones keep background playback.
+                    if (!foreground && shouldPauseLocalPlaybackInBackground()) {
+                        player.pause()
+                    }
+                }
+        }
     }
+
+    private fun shouldPauseLocalPlaybackInBackground(): Boolean =
+        isAndroidTv() &&
+            Settings.shared.stopMusicOnTaskClear &&
+            !ProcessLifecycleOwner
+                .get()
+                .lifecycle.currentState
+                .isAtLeast(Lifecycle.State.STARTED) &&
+            !castManager.state.value.isConnected &&
+            !AndroidListenTogetherManager.playbackRequired.value &&
+            AndroidDeviceConnect.manager.state.value.peers.none {
+                it.state == DeviceConnectManager.PeerState.CONNECTED
+            }
 
     private fun observeListenTogetherForegroundDemand() {
         serviceScope.launch {
@@ -843,7 +871,9 @@ class MusicService :
                         )
                     }
                 }
-            if (!connected && isCurrentHandoff()) restoreLocalPlaybackAfterCast(position, playing)
+            if (!connected && isCurrentHandoff()) {
+                restoreLocalPlaybackAfterCast(position, playing)
+            }
         }
     }
 
@@ -887,9 +917,11 @@ class MusicService :
         positionMs: Long,
         resumePlayback: Boolean,
     ) {
-        if (player.retryPendingQueuePlayback(positionMs, resumePlayback)) return
+        // Returning from Cast while the TV app is in the background must not undo its pause-on-background rule.
+        val resume = resumePlayback && !shouldPauseLocalPlaybackInBackground()
+        if (player.retryPendingQueuePlayback(positionMs, resume)) return
         player.seekTo(positionMs, PlaybackSeekSource("queue_restore", mapOf("reason" to "cast_disconnect")))
-        if (resumePlayback) player.resume() else player.pause()
+        if (resume) player.resume() else player.pause()
     }
 
     fun toggleCastPlayback() = setCastPlayback(!castManager.state.value.isPlaying)

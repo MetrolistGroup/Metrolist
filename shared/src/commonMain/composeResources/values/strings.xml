@@ -5502,7 +5502,7 @@
     <string name="settings_canvas_playback_summary">Play short clips or the full music video behind the player</string>
     <string name="settings_normalization_summary">Balance volume between songs to avoid large changes</string>
     <string name="settings_loudness_target_summary">Set the target loudness when audio normalization is on</string>
-    <string name="settings_stop_on_close_summary">Stop playback when Metrolist is swiped out of recent apps</string>
+    <string name="settings_stop_on_close_summary">Stop playback when Metrolist is swiped out of recent apps. On Android TV, playback also pauses when you leave the app.</string>
     <string name="settings_screen_awake_summary">Choose whether the player or lyrics keep the display awake</string>
     <string name="settings_translation_mode_summary">Translate words or transcribe pronunciation into the target script</string>
     <string name="settings_translation_provider_summary">Choose the service that translates lyrics</string>
