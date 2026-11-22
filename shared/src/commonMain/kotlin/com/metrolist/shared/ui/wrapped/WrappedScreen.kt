@@ -716,7 +716,8 @@ private fun WrappedChapterContent(
 ) {
     val palette = wrappedPalette(chapter)
     CompositionLocalProvider(LocalContentColor provides palette.ink) {
-        Column(modifier, verticalArrangement = Arrangement.spacedBy(20.dp)) {
+        // Short chapters sit in the middle of the screen like a poster; long ones scroll from the top.
+        Column(modifier, verticalArrangement = Arrangement.spacedBy(20.dp, Alignment.CenterVertically)) {
             when (chapter) {
                 WrappedChapter.COVER -> WrappedCover(state, palette, visible, motionEnabled, spin)
                 WrappedChapter.TIME -> WrappedTime(state, palette, measuredPlays, visible, motionEnabled, spin)
@@ -1172,22 +1173,9 @@ private fun WrappedSummary(
     }
     WrappedSticker(stringResource(Res.string.wrapped_summary), palette, visible, motionEnabled, Modifier.semantics { heading() })
     WrappedHeadline(title, palette, Modifier.fillMaxWidth().wrappedEntrance(visible, motionEnabled, 1), maxFontSize = 72.sp)
-    Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        WrappedFigure(
-            state.totalPlays.toLong(),
-            formatter::number,
-            palette,
-            visible,
-            motionEnabled,
-            Modifier.weight(1f, fill = false),
-            maxFontSize = 72.sp,
-        )
-        Text(
-            stringResource(Res.string.statistics_plays_label),
-            Modifier.padding(bottom = 10.dp),
-            style = wrappedLabelStyle(),
-            maxLines = 1,
-        )
+    Column {
+        WrappedFigure(state.totalPlays.toLong(), formatter::number, palette, visible, motionEnabled, maxFontSize = 72.sp)
+        Text(stringResource(Res.string.statistics_plays_label), style = wrappedLabelStyle(), maxLines = 1)
     }
     WrappedPills(
         listOfNotNull(statisticsDuration(state.totalTimeMs).takeIf { state.totalTimeMs > 0 }) + trio.map { it.first.title },

@@ -180,7 +180,7 @@ internal fun wrappedPalette(chapter: WrappedChapter): WrappedPalette {
         WrappedPalette(light, deep, accent, deep, deep, deep, accent, deep, light, deep)
     } else {
         val background = if (pureBlack) Color.Black else deep
-        WrappedPalette(background, light, light, accent, background, accent, deep, light, deep, deep)
+        WrappedPalette(background, light, light, accent, background, accent, deep, light, deep, accent)
     }
 }
 
