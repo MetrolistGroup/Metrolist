@@ -81,6 +81,7 @@ import com.metrolist.shared.generated.resources.subscribers
 import com.metrolist.shared.generated.resources.title
 import com.metrolist.shared.generated.resources.total_listening
 import com.metrolist.shared.generated.resources.total_time_listening
+import com.metrolist.shared.generated.resources.upload_date
 import com.metrolist.shared.generated.resources.video_stats_resolution
 import com.metrolist.shared.generated.resources.video_stats_video_codec
 import com.metrolist.shared.generated.resources.views
@@ -283,6 +284,7 @@ fun SongDetailsContent(
                     playerInformationLoading || watchInformationLoading,
                 )
                 addValue(stringResource(Res.string.likes), watchInformation?.likeCount?.let(numbers::number), watchInformationLoading)
+                addValue(stringResource(Res.string.upload_date), watchInformation?.uploadDate, watchInformationLoading)
                 addValue(
                     stringResource(Res.string.artist),
                     watchInformation?.artist ?: playerInformation?.artist ?: artistText.takeIf { it.isNotBlank() },
