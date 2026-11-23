@@ -6,7 +6,6 @@ import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
 import rikka.shizuku.Shizuku
 import java.io.File
-import java.util.concurrent.TimeUnit
 import kotlin.coroutines.resume
 
 enum class UpdateInstallMethod { SYSTEM, ROOT, SHIZUKU }
@@ -16,7 +15,6 @@ enum class PrivilegedAccess { GRANTED, UNAVAILABLE, DENIED }
 /** Installs updates through a root or Shizuku shell, so no installer prompt appears. */
 internal object PrivilegedInstaller {
     private const val SHIZUKU_PERMISSION_REQUEST = 1401
-    private const val TIMEOUT_MINUTES = 5L
 
     fun shizukuRunning(): Boolean = runCatching { Shizuku.pingBinder() && !Shizuku.isPreV11() }.getOrDefault(false)
 
@@ -87,8 +85,7 @@ internal object PrivilegedInstaller {
             try {
                 process.outputStream.use { stdin -> input?.inputStream()?.use { it.copyTo(stdin) } }
                 val output = process.inputStream.bufferedReader().readText()
-                check(process.waitFor(TIMEOUT_MINUTES, TimeUnit.MINUTES)) { "$command timed out" }
-                output.takeIf { process.exitValue() == 0 }
+                output.takeIf { process.waitFor() == 0 }
             } finally {
                 process.destroy()
             }
