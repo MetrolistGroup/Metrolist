@@ -145,9 +145,10 @@ object AppUpdateManager {
 
     @Volatile private var autoInstallFailed = false
 
-    /** The release an automatic update downloaded. Screens must not install it on their own; only the Install button may. */
-    @Volatile var backgroundUpdateKey: String? = null
-        private set
+    @Volatile private var backgroundUpdateKey: String? = null
+
+    /** True for a release an automatic update downloaded. Screens must not install it on their own; only the Install button may. */
+    fun isBackgroundUpdate(release: GitHubRelease): Boolean = autoInstallRunning.get() || release.updateKey == backgroundUpdateKey
 
     val state: StateFlow<AppUpdateState> = mutableState.asStateFlow()
     val releases: StateFlow<List<GitHubRelease>> = mutableReleases.asStateFlow()
@@ -453,6 +454,8 @@ object AppUpdateManager {
         try {
             backgroundUpdateKey = release.updateKey
             download(context, release)
+            // A rebuilt nightly replaces the requested release during download.
+            (mutableState.value as? AppUpdateState.Downloaded)?.let { backgroundUpdateKey = it.release.updateKey }
             playbackActive.first { !it }
             val downloaded = mutableState.value as? AppUpdateState.Downloaded ?: return
             if (downloaded.installing || playbackActive.first()) return
