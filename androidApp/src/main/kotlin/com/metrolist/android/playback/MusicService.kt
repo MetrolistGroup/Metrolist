@@ -406,7 +406,7 @@ class MusicService :
                 fun canResume() =
                     !isDestroying && isRunning && Settings.shared.resumeOnBluetoothConnect &&
                         playbackRestoreJob.isCompleted && player.playbackState == Player.STATE_READY && !player.wantsPlayback &&
-                        player.currentSong.value != null && !castManager.state.value.isConnected &&
+                        player.currentSong.value != null && castManager.state.value.status == CastConnectionStatus.DISCONNECTED &&
                         !AndroidDeviceConnect.manager.remote.willStartRemotePlayback && !AndroidListenTogetherManager.isGuestPlaybackLocked
 
                 if (newOutputs.isEmpty() || !canResume()) return
