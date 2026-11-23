@@ -4,9 +4,11 @@ package com.metrolist.shared.ui.menu
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.input.TextFieldLineLimits
 import androidx.compose.foundation.text.input.TextFieldState
@@ -41,12 +43,15 @@ import androidx.compose.ui.unit.dp
 import com.metrolist.shared.generated.resources.Res
 import com.metrolist.shared.generated.resources.cancel
 import com.metrolist.shared.generated.resources.clear
+import com.metrolist.shared.generated.resources.lyrics_search_online_query
 import com.metrolist.shared.generated.resources.lyrics_song_artist
 import com.metrolist.shared.generated.resources.search
 import com.metrolist.shared.generated.resources.search_lyrics
+import com.metrolist.shared.generated.resources.search_online
 import com.metrolist.shared.generated.resources.song_title
 import com.metrolist.shared.ui.LocalIsTv
 import com.metrolist.shared.ui.components.AlertDialog
+import com.metrolist.shared.ui.components.focusOutline
 import com.metrolist.shared.ui.icons.MetrolistIcons
 import com.metrolist.shared.ui.tv.tvFocusHighlight
 import com.metrolist.shared.ui.utils.verticalScrollWithDrag
@@ -58,6 +63,7 @@ fun LyricsSearchDialog(
     initialArtist: String,
     onDismiss: () -> Unit,
     onSearch: (title: String, artist: String) -> Unit,
+    onSearchOnline: ((query: String) -> Unit)? = null,
 ) {
     val title = remember(initialTitle) { TextFieldState(initialTitle) }
     val artist = remember(initialArtist) { TextFieldState(initialArtist) }
@@ -71,8 +77,18 @@ fun LyricsSearchDialog(
             )
         }
     }
+    val onlineQuery =
+        onSearchOnline?.let {
+            stringResource(
+                Res.string.lyrics_search_online_query,
+                artist.text.toString().trim(),
+                title.text.toString().trim(),
+            ).trim()
+        }
     AlertDialog(
         onDismissRequest = onDismiss,
+        // Each button draws its own focus outline because the dismiss slot can hold two buttons.
+        outlineActions = false,
         icon = { Icon(MetrolistIcons.Default.Search, contentDescription = null) },
         title = { Text(stringResource(Res.string.search_lyrics)) },
         text = {
@@ -97,13 +113,30 @@ fun LyricsSearchDialog(
                 onClick = submitSearch,
                 enabled = title.text.isNotBlank(),
                 shapes = ButtonDefaults.shapes(),
-                modifier = Modifier.tvFocusHighlight(),
+                modifier = Modifier.focusOutline(CircleShape).tvFocusHighlight(),
             ) {
                 Text(stringResource(Res.string.search))
             }
         },
         dismissButton = {
-            OutlinedButton(onClick = onDismiss, shapes = ButtonDefaults.shapes()) { Text(stringResource(Res.string.cancel)) }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedButton(
+                    onClick = onDismiss,
+                    shapes = ButtonDefaults.shapes(),
+                    modifier = Modifier.focusOutline(CircleShape),
+                ) { Text(stringResource(Res.string.cancel)) }
+                if (onSearchOnline != null && onlineQuery != null) {
+                    OutlinedButton(
+                        onClick = {
+                            keyboardController?.hide()
+                            onSearchOnline(onlineQuery)
+                        },
+                        enabled = title.text.isNotBlank(),
+                        shapes = ButtonDefaults.shapes(),
+                        modifier = Modifier.focusOutline(CircleShape),
+                    ) { Text(stringResource(Res.string.search_online)) }
+                }
+            }
         },
     )
 }

@@ -7,6 +7,9 @@
 
 package com.metrolist.android.ui.menu
 
+import android.app.SearchManager
+import android.content.ActivityNotFoundException
+import android.content.Intent
 import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
@@ -125,6 +128,14 @@ fun LyricsMenu(
                 showSearchDialog = false
                 providerDialogFromRefetch = false
                 showProviderDialog = true
+            },
+            onSearchOnline = { query ->
+                try {
+                    context.startActivity(Intent(Intent.ACTION_WEB_SEARCH).putExtra(SearchManager.QUERY, query))
+                } catch (_: ActivityNotFoundException) {
+                }
+                showSearchDialog = false
+                onDismiss()
             },
         )
     }

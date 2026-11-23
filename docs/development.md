@@ -355,7 +355,7 @@ Activation uses scroll lookahead and per-line overlap handling unless "Highlight
 
 ### Manual search and editing
 
-Manual search opens a title and artist dialog, then a provider picker. All providers search in parallel, including disabled ones and the fixed User and YouTube sources; completed groups with results appear in settings order. Dismissing, selecting or changing tracks cancels pending requests. Custom queries omit the track's video ID, album and duration.
+Manual search opens a title and artist dialog, then a provider picker. On Android, the dialog's Search online button sends the artist and title as a localized lyrics query to the system web search app. Desktop and iOS have no system web search, so the button is hidden there. All providers search in parallel, including disabled ones and the fixed User and YouTube sources; completed groups with results appear in settings order. Dismissing, selecting or changing tracks cancels pending requests. Custom queries omit the track's video ID, album and duration.
 
 The shared full-screen editor opens the active lyrics as MLX v2 JSON behind a timestamped text field: `[mm:ss.cc] text`, or three fractional digits for millisecond sources. Word-synced lines use inline tags such as `[00:08.20] <00:08.20>word <00:08.51>tags`. `\n`, `\r`, `\\`, `\<` and `\>` are escapes. Timing buttons shift selected lines by half a second.
 
