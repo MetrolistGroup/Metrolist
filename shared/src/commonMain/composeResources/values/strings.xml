@@ -3038,6 +3038,8 @@
     <string name="pause_music_when_media_is_muted">Pause when media is muted</string>
     <!-- Translators: Supporting text beneath the pause when media is muted option in the settings. -->
     <string name="pause_music_when_media_is_muted_desc">Pause playback when the device media volume is muted. The app resumes playback when the volume is restored.</string>
+    <string name="resume_on_bluetooth_connect">Resume on Bluetooth connect</string>
+    <string name="resume_on_bluetooth_connect_desc">Resume paused playback when a Bluetooth audio device connects while the playback service is running.</string>
     <!-- Translators: Option or section label for keep screen on when player is expanded in the settings. -->
     <string name="keep_screen_on">Keep screen on</string>
     <string name="keep_screen_on_both">%1$s + %2$s</string>

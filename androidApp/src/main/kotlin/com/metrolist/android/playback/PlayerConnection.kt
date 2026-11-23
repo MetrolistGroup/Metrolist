@@ -999,7 +999,7 @@ class PlayerConnection(
                     service.player.playbackStateFlow.value != Player.STATE_IDLE
             runWidgetPlaybackCommand(
                 needsPromotion = needsPromotion,
-                promote = service::promoteWidgetPlayback,
+                promote = service::promotePlaybackToForeground,
                 isCurrent = {
                     musicService === service && service.player.latestQueuePlaybackRequestId == requestId &&
                         service.playbackCommandGeneration == commandGeneration &&
