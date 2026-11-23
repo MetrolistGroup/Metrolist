@@ -91,6 +91,7 @@ import com.metrolist.desktop.backup.DesktopBackupRestoreManager
 import com.metrolist.desktop.crash.DesktopCrashRecovery
 import com.metrolist.desktop.deviceconnect.DesktopDeviceConnect
 import com.metrolist.desktop.di.composeStateModule
+import com.metrolist.desktop.history.HistoryRepository
 import com.metrolist.desktop.input.DesktopShortcutLayer
 import com.metrolist.desktop.input.desktopScrollConfig
 import com.metrolist.desktop.state.DesktopLocaleManager
@@ -999,6 +1000,10 @@ private fun runDesktopApp(args: Array<String>) {
             runBlocking { SongLikeState.recoverDatabaseLikes(database) }
             DesktopAutomaticBackupScheduler.start(applicationScope)
             SongMetadataState.bind(database, applicationScope)
+            applicationScope.launch(Dispatchers.IO) {
+                runCatching { HistoryRepository.clearQueuedScrobbles() }
+                    .onFailure { AppLogger.warning("Main", "Failed to clear legacy queued scrobbles", it) }
+            }
 
             LastFM.initialize(
                 apiKey = BuildConfig.LASTFM_API_KEY,
