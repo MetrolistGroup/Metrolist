@@ -24,7 +24,12 @@ class LegacyBackupConversionTest {
                 val legacy = directory.resolve("legacy.db")
                 val current = directory.resolve("current.db")
                 createHistoricalLibrary(legacy.path, 38, JdbcSQLiteDriver())
-                getDatabaseBuilder(current).build().close()
+                val database = getDatabaseBuilder(current).build()
+                try {
+                    database.dao().eventCount().first()
+                } finally {
+                    database.close()
+                }
                 JdbcSQLiteDriver().open(legacy.path).use { connection ->
                     listOf(
                         "INSERT INTO song (id, title, duration, liked, totalPlayTime) VALUES ('remote', 'Untouched', 200, 0, 0)",
