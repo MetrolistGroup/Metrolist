@@ -2736,4 +2736,6 @@
     <string name="updates_shizuku_denied">Autorizzazione di Shizuku negata</string>
     <string name="updates_auto_install">Installa gli aggiornamenti automaticamente</string>
     <string name="updates_auto_install_desc">Scarica e installa gli aggiornamenti mentre non è in corso alcuna riproduzione. Richiede root, Shizuku o Android 12 e versioni successive con l'autorizzazione per installare app.</string>
+    <string name="resume_on_bluetooth_connect">Riprendi alla connessione Bluetooth</string>
+    <string name="resume_on_bluetooth_connect_desc">Riprendi la riproduzione in pausa quando si connette un dispositivo audio Bluetooth mentre il servizio di riproduzione è attivo.</string>
 </resources>
