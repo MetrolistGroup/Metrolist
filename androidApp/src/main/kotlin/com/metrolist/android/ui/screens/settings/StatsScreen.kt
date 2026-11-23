@@ -3,16 +3,19 @@ package com.metrolist.android.ui.screens.settings
 import android.widget.Toast
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import com.metrolist.android.LocalMiniPlayerBottomInset
 import com.metrolist.android.playback.LocalPlayerConnection
+import com.metrolist.android.ui.LocalImmersiveContent
 import com.metrolist.android.ui.menu.AlbumMenu
 import com.metrolist.android.ui.menu.ArtistMenu
 import com.metrolist.android.ui.menu.SongMenu
@@ -23,6 +26,7 @@ import com.metrolist.android.viewmodels.StatsViewModel
 import com.metrolist.shared.db.HistoryAlbumStatistic
 import com.metrolist.shared.db.HistoryArtistStatistic
 import com.metrolist.shared.db.HistoryStatGroup
+import com.metrolist.shared.db.MusicDatabase
 import com.metrolist.shared.generated.resources.Res
 import com.metrolist.shared.generated.resources.share
 import com.metrolist.shared.generated.resources.statistics_load_failed
@@ -45,11 +49,33 @@ import com.metrolist.shared.ui.screens.statisticsPlayCountDuration
 import com.metrolist.shared.ui.statistics.StatisticsDateRange
 import com.metrolist.shared.ui.statistics.StatisticsPeriodMode
 import com.metrolist.shared.ui.statistics.statisticsMediaItem
+import com.metrolist.shared.ui.wrapped.WrappedScreen
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
 import org.koin.androidx.compose.koinViewModel
+import org.koin.compose.koinInject
+
+/** Metrolist Wrapped on Android, shown edge to edge with the mini player moved behind it. */
+@Composable
+fun AndroidWrappedScreen(onBack: () -> Unit) {
+    val context = LocalContext.current
+    val shareLabel = stringResource(Res.string.share)
+    val immersiveContent = LocalImmersiveContent.current
+    DisposableEffect(immersiveContent) {
+        immersiveContent.value = true
+        onDispose { immersiveContent.value = false }
+    }
+    WrappedScreen(
+        database = koinInject<MusicDatabase>(),
+        playbackController = LocalPlaybackController.current,
+        onBack = onBack,
+        onExport = { shareImage(context, it, shareLabel) },
+        exportLabel = shareLabel,
+        onHomeCardRetired = { Toast.makeText(context, it, Toast.LENGTH_LONG).show() },
+    )
+}
 
 @Composable
 fun StatsScreen(
@@ -59,6 +85,11 @@ fun StatsScreen(
 ) {
     val context = LocalContext.current
     val shareLabel = stringResource(Res.string.share)
+    var showWrapped by rememberSaveable { mutableStateOf(false) }
+    if (showWrapped) {
+        AndroidWrappedScreen(onBack = { showWrapped = false })
+        return
+    }
     val uiState by viewModel.uiState.collectAsState()
     val playItem = rememberStatisticsPlaybackAction()
     val openItemMenu = rememberStatisticsItemMenu(uiState, viewModel)
@@ -96,6 +127,7 @@ fun StatsScreen(
         onItemMenu = openItemMenu,
         onNavigateBack = onNavigateBack,
         bottomContentPadding = LocalMiniPlayerBottomInset.current,
+        onOpenWrapped = { showWrapped = true },
     )
 }
 

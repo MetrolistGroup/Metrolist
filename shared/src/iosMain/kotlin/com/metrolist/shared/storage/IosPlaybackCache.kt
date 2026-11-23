@@ -58,6 +58,7 @@ internal class IosPlaybackCache(
     private val client: HttpClient,
     private val scope: CoroutineScope,
     private val onFilesChanged: () -> Unit = {},
+    private val directoryName: String = "playback",
     private val availableSpace: (String) -> Long = { path ->
         (NSFileManager.defaultManager.attributesOfFileSystemForPath(path, null)?.get(NSFileSystemFreeSize) as? NSNumber)
             ?.longLongValue ?: 0L
@@ -67,7 +68,7 @@ internal class IosPlaybackCache(
     private val files = NSFileManager.defaultManager
     val directory: String by lazy {
         val caches = NSSearchPathForDirectoriesInDomains(NSCachesDirectory, NSUserDomainMask, true).first() as String
-        "$caches/metrolist/playback"
+        "$caches/metrolist/$directoryName"
     }
     private val initializedDirectory: String by lazy {
         directory.also { path ->

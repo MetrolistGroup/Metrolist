@@ -62,6 +62,7 @@ import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -112,12 +113,17 @@ internal class IosPlaybackController(
 ) : PlaybackController {
     override val supportsVideoPlayback = true
     override val supportsCasting = false
+    override val playbackVolume = player.volume
     override val canSkipNext: Boolean
         get() = !guestLocked && state.value.canSkipNext(allowSuggestions = !isFiniteQueue || canAutoLoadMore)
     override val canSkipPrevious: Boolean
         get() = !guestLocked && state.value.canSkipPrevious
 
     private var listenTogether: ListenTogetherManager? = null
+    private val wrappedSharedPlayback = MutableStateFlow(false)
+    override val wrappedSoundtrackAllowed = wrappedSharedPlayback.map { !it }
+    override val playbackCommandGeneration: Long get() = player.playbackCommands.value
+    override val playbackCommands = player.playbackCommands
     private val guestLocked: Boolean get() = listenTogether?.isGuestPlaybackLocked == true
     private val inListenTogether: Boolean get() = listenTogether?.isInRoom?.value == true
 
@@ -125,6 +131,11 @@ internal class IosPlaybackController(
         listenTogether = manager
         player.isListenTogetherGuest = { manager.isGuestPlaybackLocked }
         player.isListenTogetherActive = { manager.isInRoom.value }
+        scope.launch {
+            combine(manager.isInRoom, manager.roomRequestPending, manager.persistedRoomSession) { active, pending, persisted ->
+                active || pending || persisted
+            }.collect { wrappedSharedPlayback.value = it }
+        }
         scope.launch {
             combine(manager.role, manager.isInRoom) { _, active -> active }.collect { active ->
                 if (active) {

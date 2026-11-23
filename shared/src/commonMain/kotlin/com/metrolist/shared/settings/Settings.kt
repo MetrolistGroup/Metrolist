@@ -197,6 +197,7 @@ import com.metrolist.shared.constants.UseLegacyShuffleKey
 import com.metrolist.shared.constants.VarispeedKey
 import com.metrolist.shared.constants.VideoViewerVisibleKey
 import com.metrolist.shared.constants.VoiceSearchEnabledKey
+import com.metrolist.shared.constants.WrappedCardDismissedYearKey
 import com.metrolist.shared.constants.YouTubeCanvasModeKey
 import com.metrolist.shared.constants.YouTubeCanvasQualityKey
 import com.metrolist.shared.model.CollectionSort
@@ -836,6 +837,9 @@ class Settings(
         runCatching { Json.decodeFromString<Map<String, Boolean>>(libraryViewsByFilterJson) }.getOrDefault(emptyMap())
 
     var gridItemSize by preference(GridItemSizeKey, GridItemSize.BIG)
+
+    /** The year whose Wrapped Home card was dismissed or finished; the card returns next December. */
+    var wrappedCardDismissedYear by preference(WrappedCardDismissedYearKey, 0)
     private var storedLibraryGridColumns by preference(LibraryGridColumnsKey, 3)
     var libraryGridColumns: Int
         get() = storedLibraryGridColumns.coerceIn(LibraryGridColumnsRange)

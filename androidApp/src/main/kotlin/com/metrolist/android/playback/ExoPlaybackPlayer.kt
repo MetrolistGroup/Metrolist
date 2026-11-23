@@ -1168,6 +1168,7 @@ class ExoPlaybackPlayer(
         source: PlaybackSeekSource,
     ) {
         if (currentSong.value?.isLive == true) return
+        onPlaybackCommand()
         if (nextStarted) cancelNextInternal()
         val target = position.coerceAtLeast(0L)
         recordSeek(exo, target, source)

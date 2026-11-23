@@ -47,8 +47,10 @@ import com.metrolist.shared.youtube.playback.PlaybackResource
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -58,6 +60,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.dropWhile
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
@@ -189,6 +193,10 @@ class PlayerConnection(
     }
 
     private var musicService: MusicService? = null
+    val playbackCommandGeneration: Long get() = musicService?.playbackCommandGeneration ?: 0L
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val playbackCommands: Flow<Long> get() = _isConnected.flatMapLatest { musicService?.playbackCommands ?: flowOf(0L) }
 
     private var queueUndo: QueueUndo? = null
     private var playlistRequestGeneration = 0L

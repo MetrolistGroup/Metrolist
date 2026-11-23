@@ -5586,4 +5586,34 @@
     <string name="discord_example_song_title" translatable="false">Never Gonna Give You Up</string>
     <string name="discord_example_artist_name" translatable="false">Rick Astley</string>
     <string name="discord_example_album_name" translatable="false">Whenever You Need Somebody</string>
+    <string name="wrapped">Metrolist Wrapped</string>
+    <string name="wrapped_cover_heading">You pressed play.</string>
+    <string name="wrapped_time_heading">Time well spent</string>
+    <string name="wrapped_history_scope">Saved Metrolist and YouTube history, plus Last.fm when connected and loaded. The recent YouTube feed may omit older plays.</string>
+    <string name="wrapped_year">Your %1$s Wrapped</string>
+    <string name="wrapped_chapter">%1$s of %2$s</string>
+    <string name="wrapped_summary">Your year in music</string>
+    <string name="wrapped_empty">There are no saved plays for this year yet. Listen to music or sync your YouTube history to build your Wrapped.</string>
+    <string name="wrapped_measured_time">Measured listening time</string>
+    <string name="wrapped_time_coverage">Based on %1$s plays with recorded durations, out of %2$s combined plays. Imported durations may be incomplete.</string>
+    <string name="wrapped_merge_note">Includes saved Metrolist and YouTube history, plus Last.fm when connected and loaded. Uniquely matched artist and title pairs use the largest daily count. Unmatched Last.fm songs add plays; ambiguous matches are excluded. This can undercount separate plays. Listening time includes recorded durations only.</string>
+    <string name="wrapped_share_summary">Share your summary</string>
+    <string name="wrapped_soundtrack">Soundtrack</string>
+    <string name="wrapped_lastfm_loading">Loading this year of Last.fm history…</string>
+    <string name="wrapped_share_history_note">Saved history; older YouTube plays may be missing. Daily overlap may undercount.</string>
+    <string name="wrapped_share_sync_failed">YouTube refresh failed.</string>
+    <string name="wrapped_share_lastfm_loading">Last.fm history is still loading.</string>
+    <string name="wrapped_share_lastfm_failed">Last.fm refresh failed; saved results may be used.</string>
+    <string name="wrapped_share_lastfm_included">Last.fm included; ambiguous matches are excluded.</string>
+    <string name="wrapped_lastfm_failed">Last.fm could not refresh. This recap uses the last complete result from this visit, if available.</string>
+    <string name="wrapped_lastfm_coverage">%1$s Last.fm scrobbles included; %2$s ambiguous scrobbles excluded. Metadata differences can leave some overlap undetected.</string>
+    <string name="wrapped_sync_failed">YouTube history could not refresh. This recap uses history already saved on this device.</string>
+    <string name="wrapped_top_song">Your top song</string>
+    <string name="wrapped_top_artist">Your top artist</string>
+    <string name="wrapped_top_album">Your top album</string>
+    <string name="wrapped_artist_mix">Your artist mix</string>
+    <string name="wrapped_minutes_listened">minutes listened</string>
+    <string name="wrapped_home_title">Your %1$s Wrapped is here</string>
+    <string name="wrapped_home_body">See your year in music and share it.</string>
+    <string name="wrapped_home_card_dismissed">You can find your %1$s Wrapped in Statistics until December 31.</string>
 </resources>

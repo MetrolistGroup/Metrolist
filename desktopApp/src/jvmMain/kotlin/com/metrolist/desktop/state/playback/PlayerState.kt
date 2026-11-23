@@ -138,6 +138,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -145,6 +146,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.updateAndGet
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -427,20 +429,21 @@ internal fun MusicPlayer.setPlaying(playing: Boolean) {
 }
 
 object PlayerState {
-    private val _explicitPlaybackGeneration = AtomicLong(0L)
+    private val _explicitPlaybackGeneration = MutableStateFlow(0L)
+    val playbackCommands = _explicitPlaybackGeneration.asStateFlow()
     val explicitPlaybackGeneration: Long
-        get() = _explicitPlaybackGeneration.get()
+        get() = _explicitPlaybackGeneration.value
     private val _playbackReplacementGeneration = AtomicLong(0L)
     val playbackReplacementGeneration: Long
         get() = _playbackReplacementGeneration.get()
 
     fun reserveExplicitPlaybackGeneration(): Long {
         _playbackReplacementGeneration.incrementAndGet()
-        return _explicitPlaybackGeneration.incrementAndGet()
+        return _explicitPlaybackGeneration.updateAndGet { it + 1 }
     }
 
     fun reserveQueueAdditionGeneration(): Long {
-        _explicitPlaybackGeneration.incrementAndGet()
+        _explicitPlaybackGeneration.updateAndGet { it + 1 }
         return _playbackReplacementGeneration.get()
     }
 
@@ -1300,7 +1303,7 @@ object PlayerState {
                     Settings.shared.sponsorBlockEnabled && !castManager.state.value.isConnected &&
                         !isListenTogetherGuest() && !deviceConnect.isFollowing
                 },
-                seekTo = ::seekToPosition,
+                seekTo = { seekToPosition(it, userAction = false) },
                 onSkipped = {
                     scope.launch { AppState.snackbarHostState.showSnackbar(getString(Res.string.sponsorblock_skipped)) }
                 },
@@ -2553,7 +2556,7 @@ object PlayerState {
     var miniplayerFocusMode by Settings.shared::miniplayerFocusMode
 
     fun toggleShuffle() {
-        if (!isListenTogetherGuest()) _explicitPlaybackGeneration.incrementAndGet()
+        if (!isListenTogetherGuest()) _explicitPlaybackGeneration.updateAndGet { it + 1 }
         if (deviceConnect.intercept(DcPlaybackCommand(DcPlaybackAction.SHUFFLE, enabled = !shuffleEnabled))) return
         if (isListenTogetherGuest()) return
         invalidatePersistedRestore()
@@ -2789,7 +2792,7 @@ object PlayerState {
         }
         if (advanceGeneration) {
             _playbackReplacementGeneration.incrementAndGet()
-            _explicitPlaybackGeneration.incrementAndGet()
+            _explicitPlaybackGeneration.updateAndGet { it + 1 }
         }
         val songs = list?.takeIf { it.isNotEmpty() } ?: listOf(track)
         val index = songs.indexOfPlaylistOccurrence(track).coerceAtLeast(0)
@@ -3388,7 +3391,7 @@ object PlayerState {
     ) {
         if (!fromEOF && !fromFailure && !fromListenTogether) {
             _playbackReplacementGeneration.incrementAndGet()
-            _explicitPlaybackGeneration.incrementAndGet()
+            _explicitPlaybackGeneration.updateAndGet { it + 1 }
         }
         if ((fromEOF || fromFailure) && deviceConnect.isActive) {
             deviceConnect.playbackEnded()
@@ -3575,7 +3578,7 @@ object PlayerState {
             queue.state.value.let { desktopPreviousQueueIndex(it.currentIndex, it.entries.lastIndex, repeatMode, isLive) }
         if (!fromListenTogether) {
             if ((isLive || currentPos <= 3_000L) && previousIndex != null) _playbackReplacementGeneration.incrementAndGet()
-            _explicitPlaybackGeneration.incrementAndGet()
+            _explicitPlaybackGeneration.updateAndGet { it + 1 }
         }
         if (!fromListenTogether && deviceConnect.intercept(DcPlaybackCommand(DcPlaybackAction.PREVIOUS))) return
         if (!fromListenTogether && isListenTogetherGuest()) return
@@ -3636,7 +3639,7 @@ object PlayerState {
         }
         val filteredSongs = BlockedContent.filterPlayableSongs(songs)
         if (advanceGeneration && !isListenTogetherGuest() && filteredSongs.isNotEmpty()) {
-            _explicitPlaybackGeneration.incrementAndGet()
+            _explicitPlaybackGeneration.updateAndGet { it + 1 }
         }
         if (deviceConnect.intercept(DcPlaybackCommand(DcPlaybackAction.ADD, songs = filteredSongs))) return
         if (isListenTogetherGuest() || filteredSongs.isEmpty()) return
@@ -3705,7 +3708,7 @@ object PlayerState {
                     startSleepTimer(0L, stopAfterCurrentSong = true, fadeOut = fadeOut)
                 } else {
                     if (castManager.state.value.isConnected) {
-                        _explicitPlaybackGeneration.incrementAndGet()
+                        _explicitPlaybackGeneration.updateAndGet { it + 1 }
                         playbackTransitions.setPlaying(false)
                         castManager.pause()
                     } else {
@@ -3758,7 +3761,7 @@ object PlayerState {
         }
         val filteredSongs = BlockedContent.filterPlayableSongs(songs)
         if (advanceGeneration && !isListenTogetherGuest() && filteredSongs.isNotEmpty()) {
-            _explicitPlaybackGeneration.incrementAndGet()
+            _explicitPlaybackGeneration.updateAndGet { it + 1 }
         }
         if (deviceConnect.intercept(DcPlaybackCommand(DcPlaybackAction.PLAY_NEXT, songs = filteredSongs))) return
         if (isListenTogetherGuest() || filteredSongs.isEmpty()) return
@@ -3816,7 +3819,7 @@ object PlayerState {
         isUserAction: Boolean = true,
     ): QueueRemoval? {
         if (isListenTogetherGuest()) return null
-        if (isUserAction) _explicitPlaybackGeneration.incrementAndGet()
+        if (isUserAction) _explicitPlaybackGeneration.updateAndGet { it + 1 }
         val state = queue.state.value
         val targetCurrentIndex =
             if (deviceConnect.isActive) {
@@ -3917,7 +3920,7 @@ object PlayerState {
         if (isListenTogetherGuest() || Settings.shared.isQueueLocked) return false
         val expectedQueue = queue.snapshots.value
         if (order.size != expectedQueue.displayedItems.size || order.toSet() != expectedQueue.displayedItems.indices.toSet()) return false
-        _explicitPlaybackGeneration.incrementAndGet()
+        _explicitPlaybackGeneration.updateAndGet { it + 1 }
         if (deviceConnect.intercept(
                 DcPlaybackCommand(DcPlaybackAction.REORDER, order = order),
                 expectedQueue = expectedQueue,
@@ -3932,7 +3935,7 @@ object PlayerState {
 
     fun restoreQueueItems(removal: QueueRemoval) {
         if (isListenTogetherGuest()) return
-        _explicitPlaybackGeneration.incrementAndGet()
+        _explicitPlaybackGeneration.updateAndGet { it + 1 }
         if (syncSession.restore(removal)) return
         val previousSize = queue.state.value.entries.size
         queue.restore(removal)
@@ -3973,7 +3976,7 @@ object PlayerState {
         to: Int,
         expectedQueue: MusicQueueSnapshot = queue.snapshots.value,
     ) {
-        if (!isListenTogetherGuest()) _explicitPlaybackGeneration.incrementAndGet()
+        if (!isListenTogetherGuest()) _explicitPlaybackGeneration.updateAndGet { it + 1 }
         if (deviceConnect.intercept(
                 DcPlaybackCommand(DcPlaybackAction.MOVE, index = from, toIndex = to),
                 expectedQueue = expectedQueue,
@@ -4035,7 +4038,7 @@ object PlayerState {
     fun startRadio(song: SongItem) {
         if (!isListenTogetherGuest() && !isSongBlocked(song)) {
             _playbackReplacementGeneration.incrementAndGet()
-            _explicitPlaybackGeneration.incrementAndGet()
+            _explicitPlaybackGeneration.updateAndGet { it + 1 }
         }
         if (deviceConnect.intercept(
                 DcPlaybackCommand(
@@ -4237,7 +4240,7 @@ object PlayerState {
     fun pause() = setPlaybackPlaying(false)
 
     fun setPlaybackPlaying(playing: Boolean) {
-        if (!isListenTogetherGuest()) _explicitPlaybackGeneration.incrementAndGet()
+        if (!isListenTogetherGuest()) _explicitPlaybackGeneration.updateAndGet { it + 1 }
         if (deviceConnect.intercept(
                 DcPlaybackCommand(if (playing) DcPlaybackAction.PLAY else DcPlaybackAction.PAUSE),
                 expectedQueue = queue.snapshots.value,
@@ -4254,7 +4257,7 @@ object PlayerState {
     fun stop() {
         if (!isListenTogetherGuest()) {
             _playbackReplacementGeneration.incrementAndGet()
-            _explicitPlaybackGeneration.incrementAndGet()
+            _explicitPlaybackGeneration.updateAndGet { it + 1 }
         }
         if (deviceConnect.intercept(DcPlaybackCommand(DcPlaybackAction.PAUSE))) return
         if (isListenTogetherGuest()) return
@@ -4361,10 +4364,16 @@ object PlayerState {
         seekToPosition(positionMs)
     }
 
-    fun seekToPosition(positionMs: Long) {
+    fun seekToPosition(positionMs: Long) = seekToPosition(positionMs, userAction = true)
+
+    private fun seekToPosition(
+        positionMs: Long,
+        userAction: Boolean,
+    ) {
         if (isLiveStream) return
         if (deviceConnect.intercept(DcPlaybackCommand(DcPlaybackAction.SEEK, positionMs = positionMs))) return
         if (isListenTogetherGuest()) return
+        if (userAction) _explicitPlaybackGeneration.updateAndGet { it + 1 }
         val dur = playbackDuration.value
         val targetMs = if (dur > 0) positionMs.coerceIn(0, dur) else positionMs.coerceAtLeast(0)
         ListenTogetherState.listenTogetherManager.sendSeek(targetMs)
@@ -4412,6 +4421,7 @@ object PlayerState {
             return
         }
         if (isListenTogetherGuest()) return
+        _explicitPlaybackGeneration.updateAndGet { it + 1 }
 
         if (castManager.state.value.isConnected) {
             val targetMs = (fraction.coerceIn(0f, 1f) * playbackDuration.value).toLong()

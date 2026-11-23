@@ -21,6 +21,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.dp
@@ -68,12 +69,17 @@ internal fun StatisticsShareDialog(
     exportLabel: String,
     onExport: suspend (ImageBitmap) -> Boolean,
     onDismiss: () -> Unit,
+    title: String? = null,
+    timeLabel: String? = null,
+    imageColors: StatisticsImageColors? = null,
+    logo: Painter? = null,
+    footer: String = "",
 ) {
     val scope = rememberCoroutineScope()
     val measurer = rememberTextMeasurer(cacheSize = 0)
     val direction = LocalLayoutDirection.current
     val appName = stringResource(Res.string.app_name)
-    val title = stringResource(Res.string.statistics)
+    val imageTitle = title ?: stringResource(Res.string.statistics)
     val sections =
         listOf(
             stringResource(Res.string.statistics_top_tracks) to state.tracks,
@@ -82,11 +88,11 @@ internal fun StatisticsShareDialog(
         ).filter { it.second.isNotEmpty() }
     val artworkShapes =
         sections
-            .flatMap { (_, items) ->
-                items.take(3).mapIndexed { index, item -> item.id to statisticsArtworkShape(item, index) }
-            }.toMap()
+            .map { (_, items) ->
+                items.take(3).mapIndexed { index, item -> statisticsArtworkShape(item, index) }
+            }
     val context = LocalPlatformContext.current
-    val colors = MaterialTheme.colorScheme
+    val colors = imageColors ?: MaterialTheme.colorScheme.statisticsImageColors()
     val typography = MaterialTheme.typography
     val heroShape = MaterialTheme.shapes.extraLarge
     val sectionShapes = sections.indices.map { segmentedGroupShape(it == 0, it == sections.lastIndex, false) }
@@ -97,7 +103,7 @@ internal fun StatisticsShareDialog(
             stringResource(Res.string.statistics_no_data)
         }
     val playsLabel = stringResource(Res.string.statistics_plays_label)
-    val timeLabel = stringResource(Res.string.statistics_time)
+    val imageTimeLabel = timeLabel ?: stringResource(Res.string.statistics_time)
     var bitmap by remember { mutableStateOf<ImageBitmap?>(null) }
     var busy by remember { mutableStateOf(false) }
     var failed by remember { mutableStateOf(false) }
@@ -105,8 +111,9 @@ internal fun StatisticsShareDialog(
         state,
         period,
         summary,
+        footer,
         appName,
-        title,
+        imageTitle,
         sections,
         direction,
         colors,
@@ -114,7 +121,8 @@ internal fun StatisticsShareDialog(
         heroShape,
         duration,
         playsLabel,
-        timeLabel,
+        imageTimeLabel,
+        logo,
     ) {
         bitmap = null
         failed = false
@@ -157,13 +165,13 @@ internal fun StatisticsShareDialog(
                 withContext(Dispatchers.Default) {
                     renderStatisticsImage(
                         appName,
-                        title,
+                        imageTitle,
                         period,
                         summary,
                         state.totalPlays.toString(),
                         duration,
                         playsLabel,
-                        timeLabel,
+                        imageTimeLabel,
                         sections,
                         artwork,
                         artworkShapes,
@@ -173,6 +181,8 @@ internal fun StatisticsShareDialog(
                         sectionShapes,
                         measurer,
                         direction,
+                        logo,
+                        footer,
                     )
                 }
         } catch (error: CancellationException) {

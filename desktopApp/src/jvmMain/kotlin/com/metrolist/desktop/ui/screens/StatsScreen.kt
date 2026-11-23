@@ -13,6 +13,7 @@ import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import com.metrolist.desktop.history.HistoryRepository
@@ -27,6 +28,7 @@ import com.metrolist.desktop.utils.saveImage
 import com.metrolist.shared.db.HistoryAlbumStatistic
 import com.metrolist.shared.db.HistoryArtistStatistic
 import com.metrolist.shared.db.HistoryStatGroup
+import com.metrolist.shared.db.MusicDatabase
 import com.metrolist.shared.generated.resources.Res
 import com.metrolist.shared.generated.resources.statistics_load_failed
 import com.metrolist.shared.generated.resources.statistics_save_image
@@ -38,6 +40,7 @@ import com.metrolist.shared.model.YTItem
 import com.metrolist.shared.state.GlobalYouTubeRepository
 import com.metrolist.shared.ui.menu.cursorContextMenu
 import com.metrolist.shared.ui.menu.rememberCursorContextMenuState
+import com.metrolist.shared.ui.playback.LocalPlaybackController
 import com.metrolist.shared.ui.screens.StatisticsItem
 import com.metrolist.shared.ui.screens.StatisticsPeriod
 import com.metrolist.shared.ui.screens.StatisticsScreen
@@ -48,12 +51,14 @@ import com.metrolist.shared.ui.statistics.StatisticsPeriodMode
 import com.metrolist.shared.ui.statistics.epochRange
 import com.metrolist.shared.ui.statistics.matchingStatisticsAlbum
 import com.metrolist.shared.ui.statistics.statisticsMediaItem
+import com.metrolist.shared.ui.wrapped.WrappedScreen
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.jetbrains.compose.resources.stringResource
+import org.koin.compose.koinInject
 
 @Composable
 fun StatsScreen() {
@@ -85,6 +90,18 @@ fun StatsScreen() {
     val artistThumbnails = remember { mutableStateMapOf<String, String?>() }
     val artistIds = remember { mutableStateMapOf<String, String>() }
     var artistFallbacks by remember { mutableStateOf<Map<String, String?>>(emptyMap()) }
+    var showWrapped by rememberSaveable { mutableStateOf(false) }
+    if (showWrapped) {
+        WrappedScreen(
+            database = koinInject<MusicDatabase>(),
+            playbackController = LocalPlaybackController.current,
+            onBack = { showWrapped = false },
+            onExport = { saveImage(it, exportLabel, "metrolist-wrapped.png") },
+            exportLabel = exportLabel,
+            desktopLayout = true,
+        )
+        return
+    }
 
     LaunchedEffect(period, mode, dateRange, refreshKey) {
         isLoading = true
@@ -154,6 +171,7 @@ fun StatsScreen() {
         }
     }
     StatisticsScreen(
+        onOpenWrapped = { showWrapped = true },
         exportLabel = exportLabel,
         onExport = { saveImage(it, exportLabel, "metrolist-statistics.png") },
         modifier = Modifier.cursorContextMenu(songMenu, openOnSecondaryClick = false),

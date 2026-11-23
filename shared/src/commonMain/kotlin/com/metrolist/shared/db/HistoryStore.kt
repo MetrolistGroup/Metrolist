@@ -235,23 +235,39 @@ internal expect fun parseYouTubeHistoryDate(
     language: String,
 ): RemoteHistoryDate?
 
+enum class HistorySyncOutcome {
+    SKIPPED,
+    UNCHANGED,
+    UPDATED,
+    FAILED,
+}
+
 suspend fun MusicDatabase.syncYouTubeHistory(
     parseDate: (String, Long, String) -> RemoteHistoryDate? = ::parseYouTubeHistoryDate,
 ): Boolean = syncYouTubeHistory(GlobalYouTubeRepository.instance, parseDate)
 
+suspend fun MusicDatabase.refreshYouTubeHistory(
+    parseDate: (String, Long, String) -> RemoteHistoryDate? = ::parseYouTubeHistoryDate,
+): HistorySyncOutcome = refreshYouTubeHistory(GlobalYouTubeRepository.instance, parseDate)
+
 internal suspend fun MusicDatabase.syncYouTubeHistory(
     repository: YouTubeRepository,
     parseDate: (String, Long, String) -> RemoteHistoryDate? = ::parseYouTubeHistoryDate,
-): Boolean =
+): Boolean = refreshYouTubeHistory(repository, parseDate) == HistorySyncOutcome.UPDATED
+
+private suspend fun MusicDatabase.refreshYouTubeHistory(
+    repository: YouTubeRepository,
+    parseDate: (String, Long, String) -> RemoteHistoryDate?,
+): HistorySyncOutcome =
     historySyncMutex.withLock {
-        if (!repository.isHistorySyncEnabled()) return@withLock false
+        if (!repository.isHistorySyncEnabled()) return@withLock HistorySyncOutcome.SKIPPED
         val session = repository.playbackTrackingSession()
-        val accountKey = repository.playbackReportingAccountKey(session) ?: return@withLock false
+        val accountKey = repository.playbackReportingAccountKey(session) ?: return@withLock HistorySyncOutcome.SKIPPED
         val now = Clock.System.now().toEpochMilliseconds()
         if (lastHistorySyncDatabase === this && lastHistorySyncSession?.snapshot == session.snapshot &&
             now - lastHistorySyncMs < 5 * 60_000L
         ) {
-            return@withLock false
+            return@withLock HistorySyncOutcome.SKIPPED
         }
 
         fun requireCurrentAccount() {
@@ -262,7 +278,7 @@ internal suspend fun MusicDatabase.syncYouTubeHistory(
         val result = repository.getHistoryResult()
         requireCurrentAccount()
         // Unseen occurrences on a failed continuation can still own the tokens or bucket matches.
-        if (!result.complete) return@withLock false
+        if (!result.complete) return@withLock HistorySyncOutcome.FAILED
         val dates = mutableMapOf<String, RemoteHistoryDate?>()
         val entries =
             result.entries.map { entry ->
@@ -284,7 +300,7 @@ internal suspend fun MusicDatabase.syncYouTubeHistory(
             lastHistorySyncSession = session
             lastHistorySyncDatabase = this
         }
-        changed
+        if (changed) HistorySyncOutcome.UPDATED else HistorySyncOutcome.UNCHANGED
     }
 
 internal suspend fun MusicDatabase.applyYouTubeHistoryEntry(
