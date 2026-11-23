@@ -606,7 +606,13 @@ fun MetrolistApp(
                 Settings.shared.updatePromptVersion = ""
                 Settings.shared.launchesSinceUpdatePrompt = 0
             } else if (Settings.shared.autoInstallUpdates && AppUpdateManager.canInstallWithoutPrompt(context)) {
-                updateScope.launch { AppUpdateManager.autoInstall(context, available, playbackViewModel.playerConnection.isPlaying) }
+                updateScope.launch {
+                    AppUpdateManager.autoInstall(
+                        context,
+                        available,
+                        playbackViewModel.playerConnection.wantsPlaybackState,
+                    )
+                }
             } else if (Settings.shared.updatePromptVersion != available.updateKey) {
                 Settings.shared.updatePromptVersion = available.updateKey
                 Settings.shared.launchesSinceUpdatePrompt = 0
@@ -638,7 +644,13 @@ fun MetrolistApp(
                 delay(1.hours)
                 if (!Settings.shared.checkForUpdates) continue
                 AppUpdateManager.checkAtStartup(context, networkEnabled = true)?.let { release ->
-                    updateScope.launch { AppUpdateManager.autoInstall(context, release, playbackViewModel.playerConnection.isPlaying) }
+                    updateScope.launch {
+                        AppUpdateManager.autoInstall(
+                            context,
+                            release,
+                            playbackViewModel.playerConnection.wantsPlaybackState,
+                        )
+                    }
                 }
             }
         }

@@ -142,6 +142,11 @@ object AppUpdateManager {
     @Volatile private var activeDownload: Call? = null
     private val autoInstallRunning = AtomicBoolean(false)
 
+    @Volatile private var autoInstallFailed = false
+
+    /** True while a background update waits for playback to stop, so screens leave the install to it. */
+    val autoInstallPending: Boolean get() = autoInstallRunning.get()
+
     val state: StateFlow<AppUpdateState> = mutableState.asStateFlow()
     val releases: StateFlow<List<GitHubRelease>> = mutableReleases.asStateFlow()
 
@@ -166,6 +171,12 @@ object AppUpdateManager {
         }
 
         val cached = withContext(Dispatchers.IO) { cachedAvailableRelease() }
+        // A background download or one waiting for playback to stop must survive a check that is not due.
+        when (val active = mutableState.value) {
+            is AppUpdateState.Downloading -> if (active.release.updateKey == cached?.updateKey) return cached
+            is AppUpdateState.Downloaded -> if (active.release.updateKey == cached?.updateKey && active.file.isFile) return cached
+            else -> Unit
+        }
         mutableState.value =
             if (cached == null) {
                 AppUpdateState.UpToDate(Settings.shared.lastUpdateCheckTimestamp)
@@ -399,35 +410,51 @@ object AppUpdateManager {
         return access
     }
 
-    /** True when an update can install with no prompt: through root or Shizuku, or on Android 12+ when Metrolist is its own installer. */
+    /** True when an update can install with no prompt: through root or Shizuku, or on Android 12+ when Metrolist may install apps and owns its updates. */
     fun canInstallWithoutPrompt(context: Context): Boolean =
         when (installMethod()) {
-            UpdateInstallMethod.ROOT -> true
-            UpdateInstallMethod.SHIZUKU -> PrivilegedInstaller.shizukuGranted()
-            UpdateInstallMethod.SYSTEM -> Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && isOwnInstaller(context)
+            UpdateInstallMethod.ROOT -> {
+                true
+            }
+
+            UpdateInstallMethod.SHIZUKU -> {
+                PrivilegedInstaller.shizukuGranted()
+            }
+
+            UpdateInstallMethod.SYSTEM -> {
+                Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
+                    context.packageManager.canRequestPackageInstalls() &&
+                    ownsUpdates(context)
+            }
         }
 
+    // Android 12+ skips the prompt when an app updates itself, unless Android 14+ gave update ownership to another store.
     @RequiresApi(Build.VERSION_CODES.S)
-    private fun isOwnInstaller(context: Context): Boolean =
-        runCatching {
-            val source = context.packageManager.getInstallSourceInfo(context.packageName)
-            val updateOwner = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) source.updateOwnerPackageName else null
-            source.installingPackageName == context.packageName && (updateOwner == null || updateOwner == context.packageName)
-        }.getOrDefault(false)
+    private fun ownsUpdates(context: Context): Boolean =
+        Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE ||
+            runCatching {
+                context.packageManager
+                    .getInstallSourceInfo(context.packageName)
+                    .updateOwnerPackageName
+                    .let { it == null || it == context.packageName }
+            }.getOrDefault(false)
 
-    /** Downloads [release] and installs it once nothing is playing. Installing replaces the running app. */
+    /** Downloads [release] and installs it once the user stops playback. Installing replaces the running app. */
     suspend fun autoInstall(
         context: Context,
         release: GitHubRelease,
-        isPlaying: StateFlow<Boolean>,
+        wantsPlayback: StateFlow<Boolean>,
     ) {
-        if (!Settings.shared.autoInstallUpdates || !canInstallWithoutPrompt(context)) return
+        // After a failed install (root revoked, Shizuku stopped) wait for the next launch instead of retrying hourly.
+        if (autoInstallFailed || !Settings.shared.autoInstallUpdates || !canInstallWithoutPrompt(context)) return
         if (!autoInstallRunning.compareAndSet(false, true)) return
         try {
             download(context, release)
-            isPlaying.first { !it }
+            wantsPlayback.first { !it }
             val downloaded = mutableState.value as? AppUpdateState.Downloaded ?: return
-            if (!downloaded.installing && canInstallWithoutPrompt(context)) install(context, downloaded)
+            if (downloaded.installing || wantsPlayback.value) return
+            if (!Settings.shared.autoInstallUpdates || !canInstallWithoutPrompt(context)) return
+            if (!install(context, downloaded)) autoInstallFailed = true
         } finally {
             autoInstallRunning.set(false)
         }

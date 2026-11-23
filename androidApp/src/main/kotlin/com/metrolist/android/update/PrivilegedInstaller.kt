@@ -36,8 +36,12 @@ internal object PrivilegedInstaller {
             UpdateInstallMethod.SHIZUKU -> {
                 when {
                     !shizukuRunning() -> PrivilegedAccess.UNAVAILABLE
+
                     shizukuGranted() -> PrivilegedAccess.GRANTED
-                    Shizuku.shouldShowRequestPermissionRationale() -> PrivilegedAccess.DENIED
+
+                    // Shizuku throws when its binder dies between these calls.
+                    runCatching { Shizuku.shouldShowRequestPermissionRationale() }.getOrDefault(true) -> PrivilegedAccess.DENIED
+
                     else -> if (requestShizukuPermission()) PrivilegedAccess.GRANTED else PrivilegedAccess.DENIED
                 }
             }
@@ -58,7 +62,10 @@ internal object PrivilegedInstaller {
                 }
             Shizuku.addRequestPermissionResultListener(listener)
             continuation.invokeOnCancellation { Shizuku.removeRequestPermissionResultListener(listener) }
-            Shizuku.requestPermission(SHIZUKU_PERMISSION_REQUEST)
+            runCatching { Shizuku.requestPermission(SHIZUKU_PERMISSION_REQUEST) }.onFailure {
+                Shizuku.removeRequestPermissionResultListener(listener)
+                if (continuation.isActive) continuation.resume(false)
+            }
         }
 
     /** Records Metrolist as the installer of its own package, which lets Android 12+ update it without a prompt. */
