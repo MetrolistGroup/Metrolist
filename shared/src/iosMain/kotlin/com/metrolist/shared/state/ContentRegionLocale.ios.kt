@@ -32,6 +32,6 @@ internal fun closestContentCountry(
         .filter { script != null && script in it }
         .ifEmpty { sameLanguage }
         .minOfOrNull { it.last() }
-        // shortcut: no served region uses the language, so gl stays unserved; omit gl (needs InnerTubeX) to let YouTube pick by IP.
-        ?: country
+        // Maintainer decision (#5150): with no served region for the language, send US instead of an unserved gl.
+        ?: "US"
 }
