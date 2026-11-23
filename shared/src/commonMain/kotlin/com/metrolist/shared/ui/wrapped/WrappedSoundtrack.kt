@@ -151,6 +151,7 @@ class WrappedSoundtrack internal constructor(
             updateVolume()
             loading = player == null
             songIndex = activeIndex
+            playingSong = sessionSongs.getOrNull(activeIndex)
             val pending = prepared[index]
             if (pending.isCompleted) {
                 if (!pending.isCancelled) changeSong(index) else onChapterDownloadFailed()
@@ -308,15 +309,19 @@ class WrappedSoundtrack internal constructor(
                         }
                     if (!enabled || session != sessionId || selection != selectionId) return@launch
                     val voice = ++voiceId
+                    val voiceTransition = currentCoroutineContext()[Job]
                     pendingVoice = voice
                     val current =
                         createWrappedAudioPlayer(
                             onEnded = {
                                 scope.launch {
+                                    voiceTransition?.join()
+                                    val currentTransition = transitionJob
+                                    if (currentTransition !== voiceTransition) currentTransition?.join()
                                     if (session == sessionId && activeVoice == voice && songIndex == index &&
-                                        incoming == null && transitionJob?.isActive != true
+                                        incoming == null
                                     ) {
-                                        playNext()
+                                        if (cycleExcerpts) playNext() else changeSong(index, restart = true)
                                     }
                                 }
                             },

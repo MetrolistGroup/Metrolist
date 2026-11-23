@@ -1303,7 +1303,7 @@ object PlayerState {
                     Settings.shared.sponsorBlockEnabled && !castManager.state.value.isConnected &&
                         !isListenTogetherGuest() && !deviceConnect.isFollowing
                 },
-                seekTo = ::seekToPosition,
+                seekTo = { seekToPosition(it, userAction = false) },
                 onSkipped = {
                     scope.launch { AppState.snackbarHostState.showSnackbar(getString(Res.string.sponsorblock_skipped)) }
                 },
@@ -4364,11 +4364,16 @@ object PlayerState {
         seekToPosition(positionMs)
     }
 
-    fun seekToPosition(positionMs: Long) {
+    fun seekToPosition(positionMs: Long) = seekToPosition(positionMs, userAction = true)
+
+    private fun seekToPosition(
+        positionMs: Long,
+        userAction: Boolean,
+    ) {
         if (isLiveStream) return
         if (deviceConnect.intercept(DcPlaybackCommand(DcPlaybackAction.SEEK, positionMs = positionMs))) return
         if (isListenTogetherGuest()) return
-        _explicitPlaybackGeneration.updateAndGet { it + 1 }
+        if (userAction) _explicitPlaybackGeneration.updateAndGet { it + 1 }
         val dur = playbackDuration.value
         val targetMs = if (dur > 0) positionMs.coerceIn(0, dur) else positionMs.coerceAtLeast(0)
         ListenTogetherState.listenTogetherManager.sendSeek(targetMs)

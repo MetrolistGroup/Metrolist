@@ -75,7 +75,7 @@ The smaller option is a dedicated recap summary and poster inside Statistics. St
 - An opt-in top-song soundtrack. Prepare all selected songs when enabled, change with settled mobile chapters, cycle short desktop excerpts and crossfade between songs. Restore regular playback on exit while the temporary session still owns it.
 - One locally generated summary PNG.
 
-A mobile Home shortcut, streaks, video export, playlist creation and comparisons remain outside the selected scope.
+A December mobile Home shortcut opens Wrapped on Android and iOS. Streaks, video export, playlist creation and comparisons remain outside the selected scope.
 
 The manual Android build workflow accepts a release variant and requires release signing. Build the APK from the reviewed PR revision and install it as an update to preserve existing app data. An in-place update requires the same application ID, a version code at least as high as the installed app, and a matching signing certificate or valid proof of signing-key rotation. If Android rejects the update, do not uninstall the existing app to bypass the rejection.
 

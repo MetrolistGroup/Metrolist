@@ -647,6 +647,7 @@ fun MobileApp(
                     }
 
                     MobileDeepLink.Player -> {
+                        if (routeStack.lastOrNull()?.route == MobileRoute.Wrapped) back()
                         setPlayerVisible(true)
                     }
                 }

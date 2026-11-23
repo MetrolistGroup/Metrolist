@@ -72,6 +72,7 @@ data class HistoryAlbumStatistic(
     val playCount: Int,
     val playTimeMs: Long,
     val id: String? = null,
+    val artistNames: List<String> = emptyList(),
 )
 
 private fun historyStatsQuery(
@@ -387,6 +388,7 @@ private fun albumStatistics(
                 plays.sumOf { it.playTimeMs },
                 // Foreign backups can carry release IDs that aren't YouTube browse IDs.
                 id = latest.albumId?.takeIf { it.isAlbumBrowseId() || it.startsWith("FEmusic_library_privately_owned_release") },
+                artistNames = latest.names(credits),
             )
         }.sortedByDescending { it.playCount }
 }
@@ -492,6 +494,7 @@ private suspend fun MusicDatabase.statisticsSnapshot(
                     .values
                     .map { plays ->
                         plays.maxBy { it.lastPlayedAt }.copy(
+                            thumbnailUrl = plays.sortedByDescending { it.lastPlayedAt }.firstNotNullOfOrNull { it.thumbnailUrl },
                             playCount = plays.sumOf { it.playCount },
                             playTimeMs = plays.sumOf { it.playTimeMs },
                             measuredPlayCount = plays.sumOf { it.measuredPlayCount },
@@ -693,6 +696,7 @@ suspend fun MusicDatabase.mobileHistoryStatisticsSnapshot(
                                 plays.sumOf { it.playCount },
                                 plays.sumOf { it.playTimeMs },
                                 latest.albumId,
+                                artistNames = plays.flatMap { it.credits(metadata) }.distinctBy { it.id }.map { it.name },
                             )
                         }
                     }.sortedByDescending { it.playTimeMs }

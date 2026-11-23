@@ -224,6 +224,9 @@ fun WrappedScreen(
     var snapshot by remember(database, range, lastFmUser) { mutableStateOf<HistoryStatisticsSnapshot?>(null) }
     var loadFailed by remember(database, range, lastFmUser) { mutableStateOf(false) }
     var syncFailed by remember(database, range) { mutableStateOf(false) }
+    var syncPending by remember(database, range) { mutableStateOf(true) }
+    var syncRevision by remember(database, range) { mutableIntStateOf(0) }
+    var appliedSyncRevision by remember(database, range, lastFmUser) { mutableIntStateOf(-1) }
     var loading by remember(database, range, lastFmUser) { mutableStateOf(true) }
     var lastFm by remember(range, lastFmUser) { mutableStateOf<List<LastFmListen>>(emptyList()) }
     var appliedLastFm by remember(database, range, lastFmUser) { mutableStateOf<List<LastFmListen>?>(null) }
@@ -257,13 +260,16 @@ fun WrappedScreen(
             lastFmLoading = false
         }
     }
-    LaunchedEffect(database, range, lastFm, lastFmUser) {
+    LaunchedEffect(database, range, lastFm, lastFmUser, syncRevision) {
         database.historyChanges().collectLatest {
             try {
                 loadFailed = false
                 val (since, _) = range.epochRange()
-                snapshot = database.wrappedStatisticsSnapshot(since, Clock.System.now().toEpochMilliseconds(), lastFm)
-                appliedLastFm = lastFm
+                val listens = lastFm
+                val revision = syncRevision
+                snapshot = database.wrappedStatisticsSnapshot(since, Clock.System.now().toEpochMilliseconds(), listens)
+                appliedLastFm = listens
+                appliedSyncRevision = revision
             } catch (error: CancellationException) {
                 throw error
             } catch (_: Exception) {
@@ -276,13 +282,17 @@ fun WrappedScreen(
     LaunchedEffect(database, range) {
         syncFailed = false
         try {
-            syncFailed = withTimeout(30_000) { database.refreshYouTubeHistory() } == HistorySyncOutcome.FAILED
+            val outcome = withTimeout(30_000) { database.refreshYouTubeHistory() }
+            syncFailed = outcome == HistorySyncOutcome.FAILED
+            if (outcome == HistorySyncOutcome.UPDATED) syncRevision++
         } catch (_: TimeoutCancellationException) {
             syncFailed = true
         } catch (error: CancellationException) {
             throw error
         } catch (_: Exception) {
             syncFailed = true
+        } finally {
+            syncPending = false
         }
     }
     NavigationBackHandler(onBack = onBack)
@@ -298,9 +308,14 @@ fun WrappedScreen(
                         }
                     }
                     when {
-                        // Last.fm may still supply this year's plays, so an empty local history is not final yet.
+                        // Either refresh may still supply plays absent from the current snapshot.
                         (loading && result == null) ||
-                            (!loadFailed && (lastFmLoading || (lastFmLoaded && appliedLastFm !== lastFm))) -> {
+                            (
+                                !loadFailed && (
+                                    syncPending || appliedSyncRevision != syncRevision ||
+                                        lastFmLoading || (lastFmLoaded && appliedLastFm !== lastFm)
+                                )
+                            ) -> {
                             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { ContainedLoadingIndicator() }
                         }
 
@@ -312,6 +327,7 @@ fun WrappedScreen(
                             WrappedMessage(
                                 listOfNotNull(
                                     stringResource(Res.string.wrapped_empty),
+                                    stringResource(Res.string.wrapped_sync_failed).takeIf { syncFailed },
                                     stringResource(Res.string.wrapped_lastfm_failed).takeIf { lastFmFailed },
                                 ).joinToString("\n\n"),
                             )
@@ -607,7 +623,7 @@ private fun WrappedReport(
                 val scroll = scrolls[page]
                 val direction = LocalLayoutDirection.current
                 BoxWithConstraints(
-                    Modifier.fillMaxSize().pointerInput(chapters.size, direction, scroll, pager) {
+                    Modifier.fillMaxSize().pointerInput(chapters.size, direction, scroll, pager, motionEnabled) {
                         awaitEachGesture {
                             val down = awaitFirstDown(requireUnconsumed = false)
                             held = true
@@ -705,7 +721,7 @@ private fun wrappedChapterSongs(
                     album.id == wanted.id
                 } else {
                     album.name.equals(wanted.name, ignoreCase = true) &&
-                        song.artists.any { wanted.artists.contains(it.name, ignoreCase = true) }
+                        song.artists.any { artist -> wanted.artistNames.any { it.equals(artist.name, ignoreCase = true) } }
                 }
             }
         }
@@ -916,25 +932,23 @@ private fun WrappedTime(
 ) {
     val formatter = rememberStatisticsFormatter()
     WrappedStage(WrappedPattern.DIAL, palette, motionEnabled, spin, bottomBleed = 0.dp) { side ->
-        Column(Modifier.width(side * 0.6f), horizontalAlignment = Alignment.CenterHorizontally) {
-            WrappedFigure(
-                state.totalTimeMs / 60_000,
-                formatter::number,
-                palette,
-                visible,
-                motionEnabled,
-                Modifier.fillMaxWidth(),
-                maxFontSize = 88.sp,
-                textAlign = TextAlign.Center,
-            )
-            Text(
-                stringResource(Res.string.wrapped_minutes_listened),
-                style = wrappedLabelStyle(),
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-        }
+        WrappedFigure(
+            state.totalTimeMs / 60_000,
+            formatter::number,
+            palette,
+            visible,
+            motionEnabled,
+            Modifier.width(side * 0.6f),
+            maxFontSize = 88.sp,
+            textAlign = TextAlign.Center,
+        )
     }
+    Text(
+        stringResource(Res.string.wrapped_minutes_listened),
+        modifier = Modifier.fillMaxWidth(),
+        style = wrappedLabelStyle(),
+        textAlign = TextAlign.Center,
+    )
     WrappedSticker(stringResource(Res.string.wrapped_time_heading), palette, visible, motionEnabled)
     WrappedPills(listOf(statisticsDuration(state.totalTimeMs)), palette, visible, motionEnabled)
     val coverage = (measuredPlays.toFloat() / state.totalPlays.coerceAtLeast(1)).coerceIn(0f, 1f)
