@@ -40,6 +40,7 @@ import com.metrolist.shared.constants.AudioTrackPlaybackParamsKey
 import com.metrolist.shared.constants.AutoBackupEnabledKey
 import com.metrolist.shared.constants.AutoBackupFrequencyKey
 import com.metrolist.shared.constants.AutoBackupLastSuccessEpochKey
+import com.metrolist.shared.constants.AutoInstallUpdatesKey
 import com.metrolist.shared.constants.AutoPureBlackKey
 import com.metrolist.shared.constants.BlockAiSlopArtistsKey
 import com.metrolist.shared.constants.BlockedArtistsUndoHintShownKey
@@ -195,6 +196,7 @@ import com.metrolist.shared.constants.SwipeToRemoveSongKey
 import com.metrolist.shared.constants.SwipeToSongKey
 import com.metrolist.shared.constants.TempoPitchPresetsJsonKey
 import com.metrolist.shared.constants.TokenLoginWarningDismissedKey
+import com.metrolist.shared.constants.UpdateInstallMethodKey
 import com.metrolist.shared.constants.UseLegacyShuffleKey
 import com.metrolist.shared.constants.VarispeedKey
 import com.metrolist.shared.constants.VideoViewerVisibleKey
@@ -611,6 +613,10 @@ class Settings(
     var checkForUpdates by preference(true)
     var updateNotifications by preference(true)
     var updateChannel by preference("")
+
+    /** Android only: name of the update install method (SYSTEM, ROOT or SHIZUKU). */
+    var updateInstallMethod by preference(UpdateInstallMethodKey, "SYSTEM")
+    var autoInstallUpdates by preference(AutoInstallUpdatesKey, false)
     var installedNightlyDigest by preference("")
     var lastUpdateCheckTimestamp by preference(0L)
     var lastUpdateCheckAttemptTimestamp by preference(0L)
