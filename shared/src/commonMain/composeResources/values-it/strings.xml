@@ -2472,7 +2472,7 @@
     <string name="settings_canvas_playback_summary">Riproduci brevi clip o il video musicale completo dietro il lettore</string>
     <string name="settings_normalization_summary">Bilancia il volume tra i brani per evitare grandi differenze</string>
     <string name="settings_loudness_target_summary">Imposta l'intensità sonora di riferimento quando la normalizzazione audio è attiva</string>
-    <string name="settings_stop_on_close_summary">Interrompi la riproduzione quando Metrolist viene rimosso dalle app recenti</string>
+    <string name="settings_stop_on_close_summary">Interrompe la riproduzione quando Metrolist viene chiusa dalle app recenti. Su Android TV, la riproduzione viene messa in pausa anche quando esci dall'app.</string>
     <string name="settings_screen_awake_summary">Scegli se il lettore o i testi mantengono lo schermo attivo</string>
     <string name="settings_translation_mode_summary">Traduci le parole o trascrivi la pronuncia nell'alfabeto di destinazione</string>
     <string name="settings_translation_provider_summary">Scegli il servizio che traduce i testi</string>
