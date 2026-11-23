@@ -9,6 +9,7 @@ import com.metrolist.shared.model.AlbumPage
 import com.metrolist.shared.model.SongItem
 import com.metrolist.shared.settings.BlockedContent
 import com.metrolist.shared.state.GlobalYouTubeRepository
+import com.metrolist.shared.youtube.playback.PlaybackNetworkStateStore
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -157,6 +158,16 @@ class AlbumViewModel(
     }
 
     suspend fun allSongs(): List<SongItem> {
+        if (!PlaybackNetworkStateStore.current.connected) {
+            val albumId = _selectedAlbumId.value ?: return emptyList()
+            return withContext(Dispatchers.Default) {
+                repository
+                    .getCachedAlbum(albumId)
+                    ?.page
+                    ?.songs
+                    .orEmpty()
+            }
+        }
         val generation = loadGeneration
         if (incompleteCache) {
             loadJob?.join()

@@ -28,6 +28,8 @@ Android, desktop and iOS display stored album tracks before requesting remote me
 
 Refreshes retain displayed tracks on failure. A complete album stays visible until all refreshed pages arrive. Cache-read failures and failed refreshes of incomplete albums expose Retry instead of leaving an empty page or a permanent loading indicator.
 
+When a desktop retry fails, an incomplete album keeps the partial result with the most tracks. Offline album actions use locally available downloaded tracks without waiting for a refresh.
+
 ## Android v13 recovery
 
 v13.7.0 stored downloads in `files/download` with no eviction and streamed audio in `files/exoplayer` with the configured LRU limit. Both caches used `StandaloneDatabaseProvider` and `databases/exoplayer_internal.db`. `MediaItemExt` and `DownloadUtil` used the song ID as the custom cache key. The download index can also map a custom key back to its request ID. Recovery uses that mapping rather than guessing IDs from suffixes or URLs.

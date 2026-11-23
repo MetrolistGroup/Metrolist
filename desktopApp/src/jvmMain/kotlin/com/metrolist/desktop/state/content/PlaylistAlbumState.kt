@@ -517,11 +517,19 @@ object PlaylistAlbumState {
                     )
                     if (selectedAlbumId == id && GlobalYouTube.innerTube.sessionSnapshot() == session) {
                         val preserveCompleteCache = cached?.isComplete == true
+                        val retainedComplete =
+                            retainedPage?.let { page ->
+                                page.playlistPage?.hasMore == false ||
+                                    (
+                                        page.playlistPage == null &&
+                                            page.album.songCount?.let { it > 0 && page.songs.size >= it } == true
+                                    )
+                            } == true
                         val fallback =
-                            if (preserveCompleteCache) {
-                                cached.page
-                            } else {
-                                retainedPage ?: firstPage ?: cached?.page
+                            when {
+                                preserveCompleteCache -> cached.page
+                                retainedComplete -> retainedPage
+                                else -> listOfNotNull(retainedPage, firstPage, cached?.page).maxByOrNull { it.songs.size }
                             }
                         albumLoadFailed =
                             fallback == null ||
