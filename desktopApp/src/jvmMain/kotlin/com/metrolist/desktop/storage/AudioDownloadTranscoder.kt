@@ -115,7 +115,9 @@ internal object AudioDownloadTranscoder {
             ffmpeg(avcodec_parameters_copy(outputStream.codecpar(), inputStream.codecpar()), "copy the audio stream parameters")
             outputStream.codecpar().codec_tag(0)
             outputStream.time_base(inputStream.time_base())
-            setMetadata(output, metadata(song))
+            setMetadata(metadata(song)) { tags ->
+                if (muxer == "ogg") outputStream.metadata(tags) else output.metadata(tags)
+            }
             val io = AVIOContext(null)
             ffmpeg(avio_open2(io, tempFile.path, AVIO_FLAG_WRITE, null as AVIOInterruptCB?, null as AVDictionary?), "open ${tempFile.name}")
             output.pb(io)
@@ -152,8 +154,8 @@ internal object AudioDownloadTranscoder {
             output.pb(null as AVIOContext?)
             context.ensureActive()
             check(DownloadManager.promoteTempFile(tempFile, target, minimumBytes = 1024)) { "Failed to finalize the $extension download" }
-            destination = null
             onProgress(1f)
+            destination = null
             return CopiedAudio(target, mimeType)
         } finally {
             av_packet_free(packet)
@@ -216,8 +218,8 @@ internal object AudioDownloadTranscoder {
     }
 
     private fun setMetadata(
-        format: AVFormatContext,
         metadata: Map<String, String>,
+        assign: (AVDictionary) -> Unit,
     ) {
         val tags = AVDictionary(null)
         try {
@@ -230,7 +232,7 @@ internal object AudioDownloadTranscoder {
             }
         } finally {
             // Format teardown also owns a partially populated dictionary.
-            format.metadata(tags)
+            assign(tags)
         }
     }
 
@@ -309,7 +311,7 @@ internal object AudioDownloadTranscoder {
                 stream.time_base(codec.time_base())
                 ffmpeg(avcodec_parameters_from_context(stream.codecpar(), codec), "configure the audio stream")
 
-                setMetadata(format, metadata)
+                setMetadata(metadata) { format.metadata(it) }
 
                 val io = AVIOContext(null)
                 ffmpeg(avio_open2(io, file.path, AVIO_FLAG_WRITE, null as AVIOInterruptCB?, null as AVDictionary?), "open ${file.name}")
