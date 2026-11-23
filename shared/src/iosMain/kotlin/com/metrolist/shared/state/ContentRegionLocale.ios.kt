@@ -15,7 +15,7 @@ internal actual val platformContentLanguageCodes: Set<String> by lazy {
 
 internal actual fun canonicalLanguageTag(tag: String): String = NSLocale.canonicalLanguageIdentifierFromString(tag).replace('_', '-')
 
-// shortcut: Foundation has no likely-subtags or region containment API, so this matches language and script only and keeps an unserved region when no locale shares the language.
+// Foundation has no likely-subtags API, so the script comes from the preferred language tag when it has one.
 internal fun closestContentCountry(
     languageTag: String,
     country: String,
@@ -31,5 +31,7 @@ internal fun closestContentCountry(
     return sameLanguage
         .filter { script != null && script in it }
         .ifEmpty { sameLanguage }
-        .minOfOrNull { it.last() } ?: country
+        .minOfOrNull { it.last() }
+        // No served region uses the language; any served region beats a request YouTube rejects.
+        ?: contentCountryCodes.min()
 }
