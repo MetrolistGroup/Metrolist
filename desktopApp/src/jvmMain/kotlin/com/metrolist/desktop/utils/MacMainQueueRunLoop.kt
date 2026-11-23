@@ -1,5 +1,6 @@
 package com.metrolist.desktop.utils
 
+import com.metrolist.shared.utils.Logger
 import com.sun.jna.Library
 import com.sun.jna.Native
 import com.sun.jna.Pointer
@@ -31,7 +32,10 @@ private const val CF_STRING_ENCODING_UTF8 = 0x08000100
 fun allowMainQueueInAwtRunLoop() {
     runCatching {
         val cf = Native.load("CoreFoundation", CoreFoundation::class.java)
-        val mode = cf.CFStringCreateWithCString(null, "AWTRunLoopMode", CF_STRING_ENCODING_UTF8) ?: return
+        val mode =
+            checkNotNull(cf.CFStringCreateWithCString(null, "AWTRunLoopMode", CF_STRING_ENCODING_UTF8)) {
+                "CFStringCreateWithCString returned null"
+            }
         cf.CFRunLoopAddCommonMode(cf.CFRunLoopGetMain(), mode)
-    }
+    }.onFailure { Logger.w("MacMainQueueRunLoop", "Could not add AWTRunLoopMode to common modes", it) }
 }
