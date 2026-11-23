@@ -2676,4 +2676,9 @@
     <string name="widget_time_pair">%1$s / %2$s</string>
     <string name="widget_track_description">%1$s, %2$s</string>
     <string name="widget_play_item">Riproduci %1$s</string>
+    <string name="discord_presence_listening_to">In ascolto di</string>
+    <string name="discord_presence_competing_in">In gara in</string>
+    <string name="discord_preview_edit_hint">Tocca una riga nell'anteprima per modificarla</string>
+    <string name="discord_time_left">%1$s rimasti</string>
+    <string name="discord_position_duration">%1$s / %2$s</string>
 </resources>
