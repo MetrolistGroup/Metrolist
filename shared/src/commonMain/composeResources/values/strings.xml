@@ -1566,6 +1566,10 @@
     <string name="hide_podcasts">Hide podcasts</string>
     <!-- Translators: Supporting text beneath the hide podcasts option in the settings. -->
     <string name="hide_podcasts_desc">Hide podcasts and episodes from browsing, search, and playback</string>
+    <!-- Translators: Imperative action label for hiding playlist recommendations in the settings. -->
+    <string name="hide_playlist_recommendations">Hide playlist recommendations</string>
+    <!-- Translators: Supporting text beneath the hide playlist recommendations option in the settings. -->
+    <string name="hide_playlist_recommendations_desc">Hide recommended songs shown below playlists</string>
     <!-- Translators: Imperative action label for hide short songs in the settings. -->
     <string name="hide_short_songs">Hide short songs</string>
     <!-- Translators: Supporting text beneath the hide short songs option in the settings. -->

@@ -547,7 +547,11 @@ fun PlaylistScreen(
             currentQueueItemId = PlayerState.currentTrack?.originalQueueItemId,
             currentSongOccurrenceKey = PlayerState.currentTrack?.playlistOccurrenceIdentity(),
             isPlaying = PlayerState.isPlaying,
-            suggestions = suggestions.takeIf { searchQuery.isBlank() && !(songs.isEmpty() && isEditable) }.orEmpty(),
+            suggestions =
+                suggestions
+                    .takeIf {
+                        !Settings.shared.hidePlaylistRecommendations && searchQuery.isBlank() && !(songs.isEmpty() && isEditable)
+                    }.orEmpty(),
             onArtistClick = ArtistState::fetchArtistData,
             searchQuery = searchQuery,
             onSearchQueryChange = { searchQuery = it },

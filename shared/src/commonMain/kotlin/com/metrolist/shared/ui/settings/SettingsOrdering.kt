@@ -118,6 +118,7 @@ internal fun List<SettingsGroupRegistration>.prioritized(page: SettingsPageId): 
                         "hideVideoSongs",
                         "hideNonMusicalVideos",
                         "hidePodcasts",
+                        "hidePlaylistRecommendations",
                         "blockAiArtists",
                         "hideShortSongs",
                         "minimumDuration",
