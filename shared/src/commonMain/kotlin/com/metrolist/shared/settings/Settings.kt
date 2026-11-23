@@ -1303,13 +1303,12 @@ class Settings(
     fun shouldShowHomeSection(
         sectionKey: String,
         legacyTitle: String = sectionKey,
+        legacyKey: String? = null,
     ): Boolean {
         val current = getHomeSectionVisibilityMap()
         current[sectionKey]?.let { return it }
-        val legacy = current[legacyTitle] ?: return true
-        if (sectionKey != legacyTitle) {
-            homeSectionVisibility = Json.encodeToString(current + (sectionKey to legacy))
-        }
+        val legacy = legacyKey?.let(current::get) ?: current[legacyTitle] ?: return true
+        homeSectionVisibility = Json.encodeToString(current + (sectionKey to legacy))
         return legacy
     }
 

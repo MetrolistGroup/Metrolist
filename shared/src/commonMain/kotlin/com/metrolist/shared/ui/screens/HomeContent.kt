@@ -155,6 +155,7 @@ data class HomeShelf(
     val thumbnail: String? = null,
     val headerArtistId: String? = null,
     val visibilityKey: String = key,
+    val legacyVisibilityKey: String? = null,
     val compactRows: Boolean = false,
     val continuation: String? = null,
     val isPersonal: Boolean = false,
