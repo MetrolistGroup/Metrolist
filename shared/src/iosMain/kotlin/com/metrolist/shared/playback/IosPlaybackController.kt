@@ -91,12 +91,21 @@ import platform.UIKit.UIApplicationDidEnterBackgroundNotification
 import platform.UIKit.UIApplicationWillTerminateNotification
 import platform.UIKit.UIBackgroundTaskIdentifier
 import platform.UIKit.UIBackgroundTaskInvalid
+import platform.UIKit.UIDevice
 import kotlin.time.Clock
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.TimeMark
 import kotlin.time.TimeSource
 
 private const val RELATED_SONGS_LIMIT = 20
+
+// AVFoundation plays Opus-in-MP4 only from iOS 17; iOS 16 decodes the remuxed asset as silence.
+private val iosOpusRemuxSupported: Boolean =
+    (
+        UIDevice.currentDevice.systemVersion
+            .substringBefore('.')
+            .toIntOrNull() ?: 0
+    ) >= 17
 
 internal class IosPlaybackController(
     private val player: MusicPlayer,
@@ -509,6 +518,7 @@ internal class IosPlaybackController(
                             iosPlaybackAudioQuality(Settings.shared.audioQuality),
                             refresh = true,
                             forceAac = audioRecovery.forceAac(song.id),
+                            allowOpusRemux = iosOpusRemuxSupported,
                         ) { quality, _, allowHls ->
                             resolver.resolveRemote(
                                 song.id,
@@ -2029,6 +2039,7 @@ internal class IosPlaybackController(
             quality,
             refresh = refresh,
             forceAac = audioRecovery.forceAac(song.id),
+            allowOpusRemux = iosOpusRemuxSupported,
         ) { requestedQuality, isRefresh, allowHls ->
             val hints =
                 song.toContentHints(wantVideo = false).withIosAudioCapabilities(allowHls)
