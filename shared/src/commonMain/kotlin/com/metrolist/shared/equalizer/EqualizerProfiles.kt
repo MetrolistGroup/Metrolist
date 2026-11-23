@@ -410,7 +410,7 @@ private val filterTypes =
 fun parseParametricEq(content: String): Pair<Double, List<ParametricEqBand>>? {
     var preamp = 0.0
     val bands = mutableListOf<ParametricEqBand>()
-    for (line in content.lineSequence()) {
+    for (line in content.removePrefix("\uFEFF").lineSequence()) {
         val tokens = line.trim().split(Regex("\\s+"))
 
         fun after(key: String) =
