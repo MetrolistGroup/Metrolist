@@ -959,6 +959,12 @@ class YouTubeRepository(
         applyContentFilters: Boolean = true,
     ): PlaylistPage {
         if (!initial.hasMore) return initial.also { rememberPlaylistMembership(it, applyContentFilters) }
+        // Mix continuations keep generating songs and never end, so the loaded pages are the whole mix.
+        val header = initial.sections["header"]?.filterIsInstance<PlaylistItem>()?.firstOrNull()
+        if (header?.id?.isMixPlaylistId() == true) {
+            requireCurrentSession(initial.session)
+            return initial.copy(pending = emptyList())
+        }
         val sections = linkedMapOf<String, MutableList<YTItem>>()
         var last = initial
         playlistPages(initial, applyContentFilters).collect { page ->
