@@ -2915,5 +2915,6 @@ private fun NavigationContentProvider(
 
 val LocalImmersiveContent = staticCompositionLocalOf<MutableState<Boolean>> { mutableStateOf(false) }
 
-// The local intent stays true while buffering; isPlaying covers a Cast session, which pauses the local player.
-private fun PlayerConnection.playbackActive() = combine(wantsPlaybackState, isPlaying) { wants, playing -> wants || playing }
+// The local intent stays true while buffering, and a Cast session holds the install even while paused because installing ends it.
+private fun PlayerConnection.playbackActive() =
+    combine(wantsPlaybackState, isPlaying, castState) { wants, playing, cast -> wants || playing || cast.isConnected }
