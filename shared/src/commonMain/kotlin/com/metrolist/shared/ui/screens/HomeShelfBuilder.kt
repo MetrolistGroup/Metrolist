@@ -26,7 +26,8 @@ object HomeShelfBuilder {
         fun isVisible(
             key: String,
             title: String,
-        ) = includeHidden || Settings.shared.shouldShowHomeSection(key, title)
+            legacyKey: String? = null,
+        ) = includeHidden || Settings.shared.shouldShowHomeSection(key, title, legacyKey)
         val sourceSections = state.data.orEmpty().ifEmpty { state.sections }
 
         fun sourceFor(shelf: HomeShelf): HomeSection? {
@@ -71,7 +72,7 @@ object HomeShelfBuilder {
                     } else {
                         buildSet {
                             (state.data.orEmpty() + state.sections)
-                                .filter { it.hasTitle && !isVisible(it.visibilityKey, it.title) }
+                                .filter { it.hasTitle && !isVisible(it.visibilityKey, it.title, it.legacyVisibilityKey) }
                                 .forEach { section -> section.items.mapTo(this, ::canonicalHomeItemId) }
                             listOf(
                                 Triple("keep_listening", text.keepListening, state.keepListening),
@@ -328,8 +329,10 @@ object HomeShelfBuilder {
             }
 
             state.sections
-                .filter { it.hasTitle && it.browseId?.startsWith("FEmusic_listen_again") != true && isVisible(it.visibilityKey, it.title) }
-                .forEachIndexed { index, section ->
+                .filter {
+                    it.hasTitle && it.browseId?.startsWith("FEmusic_listen_again") != true &&
+                        isVisible(it.visibilityKey, it.title, it.legacyVisibilityKey)
+                }.forEachIndexed { index, section ->
                     val sectionTitleKey = section.title.trim().lowercase()
                     run {
                         val uniqueItems =
@@ -428,10 +431,10 @@ object HomeShelfBuilder {
                 } ?: sourceSections.size
             }
         }.filterRenderable(pageWidth)
-            .filter { isVisible(it.visibilityKey, it.title) } +
+            .filter { isVisible(it.visibilityKey, it.title, it.legacyVisibilityKey) } +
             state.chipFeeds.flatMapIndexed { feedIndex, feed ->
                 feed.sections
-                    .filter { it.items.isNotEmpty() && isVisible(it.visibilityKey, it.title) }
+                    .filter { it.items.isNotEmpty() && isVisible(it.visibilityKey, it.title, it.legacyVisibilityKey) }
                     .mapIndexed { index, section ->
                         val shelf =
                             section.toHomeShelf(
@@ -498,9 +501,13 @@ class HomeShelfCache {
     }
 }
 
+// Title instead of params: YouTube rotates params between loads, while shelves sharing a browse ID differ by title.
 private val HomeSection.visibilityKey: String
-    // Params are left out: YouTube rotates them for dynamic shelves, which would make hidden sections reappear.
-    get() = "section:${browseId ?: headerBrowseId ?: title}"
+    get() = "section:${browseId ?: headerBrowseId ?: title}:$title"
+
+// Key format before #5195, still read so sections hidden under it stay hidden.
+private val HomeSection.legacyVisibilityKey: String
+    get() = "section:${browseId ?: headerBrowseId ?: title}:${params.orEmpty()}"
 
 private fun HomeSection.toHomeShelf(
     key: String,
@@ -517,6 +524,7 @@ private fun HomeSection.toHomeShelf(
     return HomeShelf(
         key = key,
         visibilityKey = section.visibilityKey,
+        legacyVisibilityKey = section.legacyVisibilityKey,
         title = section.title,
         items = items,
         style =
