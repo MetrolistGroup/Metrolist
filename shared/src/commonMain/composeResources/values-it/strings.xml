@@ -2726,4 +2726,14 @@
     <string name="listenbrainz_invalid_server_url">Inserisci un indirizzo http o https</string>
     <string name="song_share_link">Link brano</string>
     <string name="song_share_link_description">song.link apre una pagina con il brano su altri servizi musicali. I link con un timestamp e gli episodi podcast usano sempre YouTube Music.</string>
+    <string name="updates_install_method">Installa gli aggiornamenti con</string>
+    <string name="updates_install_method_desc">Root e Shizuku installano gli aggiornamenti senza chiedere conferma.</string>
+    <string name="updates_install_method_system">Programma di installazione pacchetti di Android</string>
+    <string name="updates_install_method_root">Root</string>
+    <string name="updates_install_method_shizuku">Shizuku</string>
+    <string name="updates_root_unavailable">Accesso root negato o non disponibile</string>
+    <string name="updates_shizuku_unavailable">Shizuku non è in esecuzione</string>
+    <string name="updates_shizuku_denied">Autorizzazione di Shizuku negata</string>
+    <string name="updates_auto_install">Installa gli aggiornamenti automaticamente</string>
+    <string name="updates_auto_install_desc">Scarica e installa gli aggiornamenti mentre non è in corso alcuna riproduzione. Richiede root, Shizuku o Android 12 e versioni successive con l'autorizzazione per installare app.</string>
 </resources>
