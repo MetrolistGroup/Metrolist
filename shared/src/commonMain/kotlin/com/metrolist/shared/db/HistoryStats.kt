@@ -466,7 +466,11 @@ private suspend fun MusicDatabase.statisticsSnapshot(
             val allGroups = if (lastFm.isEmpty()) stored else statGroups(sinceMs, untilMs, catalogArtistIds, includeExcluded = true)
             val visibleGroups = if (lastFm.isEmpty()) stored else statGroups(sinceMs, untilMs, catalogArtistIds)
             val blockedSongs = if (lastFm.isEmpty()) emptyList() else dao().getSongsByIds(BlockedContent.songIds().toList())
-            val excludedNames = blockedSongs.flatMap { song -> song.artists.map { song.title to it.name } }.toSet()
+            val excludedNames =
+                blockedSongs
+                    .flatMap { song ->
+                        (song.artists.map { it.name } + song.artists.joinToString(", ") { it.name }).map { song.title to it }
+                    }.toSet()
             // Excluded songs need their own artist credits so a scrobble naming one guest artist still matches them.
             val allMetadata = if (lastFm.isEmpty()) storedMetadata else artistMetadata(allGroups)
             val merged = mergeLastFmHistory(stored, lastFm, storedMetadata, allMetadata, allGroups, visibleGroups, excludedNames)

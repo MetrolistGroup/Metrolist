@@ -19,7 +19,9 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -139,19 +141,45 @@ class WrappedSoundtrack internal constructor(
         if (enabled && prepared.isNotEmpty() && !cycleExcerpts) {
             val index = songIndexFor(value) ?: return
             if (index == songIndex) return
+            selectionId++
+            transitionJob?.cancel()
+            transitionJob = null
+            pendingVoice = 0L
+            incoming?.close()
+            incoming = null
+            outgoingGain = 1f
+            updateVolume()
+            loading = player == null
+            songIndex = activeIndex
             val pending = prepared[index]
             if (pending.isCompleted) {
-                if (!pending.isCancelled) changeSong(index)
+                if (!pending.isCancelled) changeSong(index) else onChapterDownloadFailed()
                 return
             }
             // Keep the current song while the chapter's own song downloads, then switch if the chapter is still showing.
             val session = sessionId
             pendingSelection =
                 scope.launch {
-                    val ready = runCatching { pending.await() }.isSuccess
-                    if (ready && enabled && session == sessionId && chapter == value) changeSong(index)
+                    val ready =
+                        try {
+                            pending.await()
+                            true
+                        } catch (error: CancellationException) {
+                            currentCoroutineContext().ensureActive()
+                            false
+                        } catch (_: Exception) {
+                            false
+                        }
+                    if (enabled && session == sessionId && chapter == value) {
+                        if (ready) changeSong(index) else onChapterDownloadFailed()
+                    }
                 }
         }
+    }
+
+    private fun onChapterDownloadFailed() {
+        failed = true
+        if (player == null) fail() else loading = false
     }
 
     fun toggle() {
@@ -178,9 +206,18 @@ class WrappedSoundtrack internal constructor(
                     library = files
                     supervisorScope {
                         // Normal playback keeps going while the opening song downloads alone, so the switch is immediate.
-                        val first = async { files.prepare(sessionSongs[songIndex]) }
+                        var first = async { files.prepare(sessionSongs[songIndex]) }
                         first.join()
                         if (!enabled || session != sessionId) return@supervisorScope
+                        var attempts = 1
+                        while (first.isCancelled && cycleExcerpts && attempts < sessionSongs.size) {
+                            failed = true
+                            songIndex = (songIndex + 1) % sessionSongs.size
+                            first = async { files.prepare(sessionSongs[songIndex]) }
+                            first.join()
+                            if (!enabled || session != sessionId) return@supervisorScope
+                            attempts++
+                        }
                         if (first.isCancelled) {
                             fail()
                             return@supervisorScope
@@ -257,10 +294,15 @@ class WrappedSoundtrack internal constructor(
                         } catch (error: CancellationException) {
                             throw error
                         } catch (_: Exception) {
-                            // A song that failed to download is skipped; the current one plays on meanwhile.
                             if (enabled && session == sessionId && selection == selectionId) {
                                 failed = true
-                                playNext()
+                                if (cycleExcerpts) {
+                                    playNext()
+                                } else if (player == null) {
+                                    fail()
+                                } else {
+                                    loading = false
+                                }
                             }
                             return@launch
                         }

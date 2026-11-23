@@ -248,7 +248,8 @@ internal fun WrappedBackdrop(
             val drift = turn * (pool + 2)
             val center =
                 Offset(
-                    size.width * (0.5f + 0.38f * sin(drift + pool * 2.1f)) - size.width * 0.2f * (progress - index) * (pool + 1),
+                    size.width * (0.5f + 0.38f * sin(drift + pool * 2.1f)) -
+                        size.width * 0.2f * sin(fraction * PI.toFloat()) * (pool + 1),
                     size.height * (0.3f + 0.25f * pool + 0.12f * cos(drift + pool * 1.7f)),
                 )
             val radius = span * (0.42f + 0.08f * pool)

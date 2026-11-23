@@ -44,6 +44,8 @@ private class DesktopWrappedAudioPlayer(
     initialVolume: Float,
 ) : WrappedAudioPlayer {
     @Volatile private var closed = false
+    private val preparationLock = Any()
+    private var preparing = false
     private val player =
         AudioPlayer(
             onPlaybackCompleted = { if (!closed) onEnded() },
@@ -60,7 +62,21 @@ private class DesktopWrappedAudioPlayer(
 
     override suspend fun prepare(path: String) {
         check(!closed)
-        val prepared = withContext(Dispatchers.IO) { player.prepareFile(path, startPaused = true) }
+        val prepared =
+            withContext(Dispatchers.IO) {
+                synchronized(preparationLock) {
+                    check(!closed)
+                    preparing = true
+                }
+                try {
+                    player.prepareFile(path, startPaused = true)
+                } finally {
+                    synchronized(preparationLock) {
+                        preparing = false
+                        if (closed) player.closeAsync()
+                    }
+                }
+            }
         currentCoroutineContext().ensureActive()
         check(!closed && prepared)
     }
@@ -71,9 +87,13 @@ private class DesktopWrappedAudioPlayer(
     }
 
     override fun close() {
-        if (closed) return
-        closed = true
-        player.pause()
-        player.closeAsync()
+        synchronized(preparationLock) {
+            if (closed) return
+            closed = true
+            if (!preparing) {
+                player.pause()
+                player.closeAsync()
+            }
+        }
     }
 }

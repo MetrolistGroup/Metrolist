@@ -957,7 +957,7 @@ fun MobileApp(
                     },
                     bottomBar = {
                         // The floating bar's height sits under the mini player slot; lists scroll behind both.
-                        if (playbackState.currentSong == null) {
+                        if (playbackState.currentSong == null || currentRoute == MobileRoute.Wrapped) {
                             Spacer(Modifier.fillMaxWidth().height(floatingContentInset))
                         } else {
                             val isModernMiniPlayer = Settings.shared.miniPlayerType == MiniPlayerType.MODERN
@@ -1320,7 +1320,7 @@ fun MobileApp(
                                     onAlbumClick = { id, title -> open(MobileRoute.Album(id, title)) },
                                     onArtistClick = { id, name -> open(MobileRoute.Artist(id, name)) },
                                     modifier = Modifier.fillMaxSize().padding(routePadding),
-                                    onWrappedCardRetired = { scope.launch { snackbarHostState.showSnackbar(it) } },
+                                    onOpenWrapped = { open(MobileRoute.Wrapped) },
                                 )
                             }
 
@@ -1999,7 +1999,7 @@ fun MobileApp(
                 )
             }
 
-            if (playbackState.currentSong != null && miniPlayerBounds != null) {
+            if (playbackState.currentSong != null && miniPlayerBounds != null && currentRoute != MobileRoute.Wrapped) {
                 var playerRootOffset by remember { mutableStateOf(Offset.Zero) }
                 BoxWithConstraints(
                     Modifier.fillMaxSize().onGloballyPositioned { playerRootOffset = it.positionInRoot() },

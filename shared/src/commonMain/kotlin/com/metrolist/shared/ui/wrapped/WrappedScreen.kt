@@ -232,7 +232,7 @@ fun WrappedScreen(
         try {
             val (since, _) = range.epochRange()
             lastFm =
-                withTimeout(300_000) {
+                withTimeout(1_800_000) {
                     LastFM
                         .getListeningHistory(
                             GlobalYouTube.client,
@@ -294,7 +294,8 @@ fun WrappedScreen(
                     }
                     when {
                         // Last.fm may still supply this year's plays, so an empty local history is not final yet.
-                        (loading && result == null) || (!loadFailed && lastFmLoading) -> {
+                        (loading && result == null) ||
+                            (!loadFailed && (lastFmLoading || (lastFmLoaded && appliedLastFm !== lastFm))) -> {
                             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { ContainedLoadingIndicator() }
                         }
 
@@ -662,7 +663,7 @@ private fun wrappedChapterSongs(
     fun byArtist(artist: HistoryArtistStatistic?) =
         artist?.let { wanted ->
             songs.firstOrNull { song ->
-                song.artists.any { (wanted.id != null && it.id == wanted.id) || it.name.equals(wanted.name, ignoreCase = true) }
+                song.artists.any { if (wanted.id != null) it.id == wanted.id else it.name.equals(wanted.name, ignoreCase = true) }
             }
         }
     val album =

@@ -9,7 +9,6 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.ImageBitmap
@@ -35,7 +34,6 @@ import com.metrolist.shared.ui.statistics.StatisticsDateRange
 import com.metrolist.shared.ui.statistics.StatisticsPeriodMode
 import com.metrolist.shared.ui.statistics.epochRange
 import com.metrolist.shared.ui.statistics.statisticsMediaItem
-import com.metrolist.shared.ui.wrapped.WrappedScreen
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.collectLatest
@@ -56,7 +54,7 @@ internal fun MobileStatisticsScreen(
     onArtistClick: (String, String) -> Unit = { id, name -> onBrowse(MobileBrowseDestination(id, null, name)) },
     modifier: Modifier = Modifier,
     bottomContentPadding: Dp = 0.dp,
-    onWrappedCardRetired: (message: String) -> Unit = {},
+    onOpenWrapped: () -> Unit,
 ) {
     val loadFailedMessage = stringResource(Res.string.statistics_load_failed)
     val scope = rememberCoroutineScope()
@@ -69,20 +67,6 @@ internal fun MobileStatisticsScreen(
     var snapshot by remember(database) { mutableStateOf<HistoryStatisticsSnapshot?>(null) }
     var isLoading by remember(database) { mutableStateOf(true) }
     var loadFailed by remember(database) { mutableStateOf(false) }
-    var showWrapped by rememberSaveable { mutableStateOf(false) }
-    if (showWrapped) {
-        WrappedScreen(
-            database = database,
-            playbackController = playbackController,
-            onBack = { showWrapped = false },
-            onExport = onExport,
-            exportLabel = stringResource(Res.string.share),
-            bottomContentPadding = bottomContentPadding,
-            showBackButton = true,
-            onHomeCardRetired = onWrappedCardRetired,
-        )
-        return
-    }
     LaunchedEffect(database, period, mode, dateRange, refreshKey) {
         database.historyChanges().collectLatest {
             isLoading = true
@@ -103,7 +87,7 @@ internal fun MobileStatisticsScreen(
     val topAlbums = snapshot?.albums.orEmpty()
 
     StatisticsScreen(
-        onOpenWrapped = { showWrapped = true },
+        onOpenWrapped = onOpenWrapped,
         exportLabel = stringResource(Res.string.share),
         onExport = onExport,
         state =
