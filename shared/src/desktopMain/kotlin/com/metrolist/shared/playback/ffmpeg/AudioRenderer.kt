@@ -268,7 +268,18 @@ class AudioRenderer internal constructor(
                         val currentVol = if (volume == 0f || !hardwareVolumeApplied) volume else 1f
                         val boost = normalizationGain
                         val scaled = currentVol != 1f || boost > 1f
-                        val outputData = if (scaled) applyVolume(mappedData, mappedOffset, writableOutputBytes, currentVol, boost) else mappedData
+                        val outputData =
+                            if (scaled) {
+                                applyVolume(
+                                    mappedData,
+                                    mappedOffset,
+                                    writableOutputBytes,
+                                    currentVol,
+                                    boost,
+                                )
+                            } else {
+                                mappedData
+                            }
                         try {
                             line.write(outputData, if (scaled) 0 else mappedOffset, writableOutputBytes)
                         } catch (error: Exception) {
