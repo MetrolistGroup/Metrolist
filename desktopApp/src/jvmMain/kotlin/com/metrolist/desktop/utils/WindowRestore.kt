@@ -45,14 +45,14 @@ fun WindowScope.WindowDragHandle(
                             continue
                         }
 
-                        val start = MouseInfo.getPointerInfo()?.location ?: continue
+                        val start = runCatching { MouseInfo.getPointerInfo()?.location }.getOrNull() ?: continue
                         var origin = window.location
                         var pointerOrigin = start
                         var dragging = false
                         while (true) {
                             val event = awaitPointerEvent()
                             if (!event.buttons.isPrimaryPressed) break
-                            val pointer = MouseInfo.getPointerInfo()?.location ?: continue
+                            val pointer = runCatching { MouseInfo.getPointerInfo()?.location }.getOrNull() ?: continue
                             if (!dragging) {
                                 val dx = pointer.x - start.x
                                 val dy = pointer.y - start.y

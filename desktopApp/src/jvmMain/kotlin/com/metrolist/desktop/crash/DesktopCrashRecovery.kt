@@ -28,9 +28,11 @@ import com.metrolist.shared.utils.openUrl
 import kotlinx.coroutines.runBlocking
 import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.getString
+import java.awt.AWTError
 import java.awt.BorderLayout
 import java.awt.EventQueue
 import java.awt.GraphicsEnvironment
+import java.awt.HeadlessException
 import java.awt.Toolkit
 import java.awt.datatransfer.StringSelection
 import java.awt.event.WindowAdapter
@@ -78,8 +80,8 @@ object DesktopCrashRecovery {
 
     private fun prompt(report: String): DesktopCrashChoice =
         awaitDesktopCrashChoice(
-            isHeadless = GraphicsEnvironment.isHeadless(),
-            isDispatchThread = EventQueue.isDispatchThread(),
+            isHeadless = runCatching { GraphicsEnvironment.isHeadless() }.getOrDefault(true),
+            isDispatchThread = runCatching { EventQueue.isDispatchThread() }.getOrDefault(false),
             dispatch = EventQueue::invokeLater,
         ) { onVisible ->
             val reload = label(Res.string.crash_menu_reload)
@@ -114,67 +116,83 @@ object DesktopCrashRecovery {
     fun show(id: String) {
         store.acknowledge(id)
         val report = store.list().firstOrNull { it.id == id }?.text ?: label(Res.string.crash_no_log)
-        EventQueue.invokeLater {
-            val frame = JFrame(label(Res.string.crash_title))
-            frame.defaultCloseOperation = WindowConstants.EXIT_ON_CLOSE
-            installCrashScreenshotHint(frame, onCopy = { copy(report) }, onShare = { share(report) })
-            frame.add(
-                JScrollPane(
-                    JTextArea(report).apply {
-                        isEditable = false
-                        caretPosition = 0
-                    },
-                ),
-                BorderLayout.CENTER,
-            )
-            val actions = JPanel()
+        val headless = runCatching { GraphicsEnvironment.isHeadless() }.getOrDefault(true)
+        if (headless) {
+            System.err.println(report)
+            return
+        }
+        runCatching {
+            EventQueue.invokeLater {
+                val frame =
+                    try {
+                        JFrame(label(Res.string.crash_title))
+                    } catch (error: Throwable) {
+                        if (error !is HeadlessException && error !is AWTError && error !is LinkageError) throw error
+                        System.err.println(report)
+                        exitProcess(1)
+                    }
+                frame.defaultCloseOperation = WindowConstants.EXIT_ON_CLOSE
+                installCrashScreenshotHint(frame, onCopy = { copy(report) }, onShare = { share(report) })
+                frame.add(
+                    JScrollPane(
+                        JTextArea(report).apply {
+                            isEditable = false
+                            caretPosition = 0
+                        },
+                    ),
+                    BorderLayout.CENTER,
+                )
+                val actions = JPanel()
 
-            fun action(
-                resource: StringResource,
-                block: () -> Unit,
-            ): JButton =
-                JButton(label(resource)).also {
-                    it.addActionListener { block() }
-                    actions.add(it)
+                fun action(
+                    resource: StringResource,
+                    block: () -> Unit,
+                ): JButton =
+                    JButton(label(resource)).also {
+                        it.addActionListener { block() }
+                        actions.add(it)
+                    }
+                action(Res.string.crash_copy_logs) { copy(report) }
+                action(Res.string.crash_share_logs) { share(report) }
+                action(Res.string.crash_restart) {
+                    ProcessBuilder(desktopRestartCommand()).prepareDesktopRelaunch().inheritIO().start()
+                    exitProcess(0)
                 }
-            action(Res.string.crash_copy_logs) { copy(report) }
-            action(Res.string.crash_share_logs) { share(report) }
-            action(Res.string.crash_restart) {
-                ProcessBuilder(desktopRestartCommand()).prepareDesktopRelaunch().inheritIO().start()
-                exitProcess(0)
-            }
-            action(Res.string.crash_close) { exitProcess(0) }
-            val update = action(Res.string.crash_updates_checking) {}
-            update.isEnabled = false
-            frame.add(actions, BorderLayout.SOUTH)
-            frame.setSize(900, 650)
-            frame.setLocationRelativeTo(null)
-            frame.isVisible = true
-            Thread({
-                val result = runBlocking { DesktopUpdateManager.checkForRecovery() }
-                EventQueue.invokeLater {
-                    val release = result.getOrNull()
-                    update.text =
-                        when {
-                            result.isFailure -> label(Res.string.crash_updates_error)
-                            release == null -> label(Res.string.crash_updates_no_updates)
-                            else -> "${label(Res.string.crash_updates_action)} ·\u00a0${release.version}"
-                        }
-                    update.isEnabled = release != null
-                    if (release != null) {
-                        update.addActionListener {
-                            update.isEnabled = false
-                            Thread({
-                                val installed =
-                                    release.inApp && runBlocking { DesktopUpdateManager.downloadAndLaunch(release.version).isSuccess }
-                                if (installed) exitProcess(0)
-                                openUrl(release.url)
-                                EventQueue.invokeLater { update.isEnabled = true }
-                            }, "CrashUpdate").start()
+                action(Res.string.crash_close) { exitProcess(0) }
+                val update = action(Res.string.crash_updates_checking) {}
+                update.isEnabled = false
+                frame.add(actions, BorderLayout.SOUTH)
+                frame.setSize(900, 650)
+                frame.setLocationRelativeTo(null)
+                frame.isVisible = true
+                Thread({
+                    val result = runBlocking { DesktopUpdateManager.checkForRecovery() }
+                    EventQueue.invokeLater {
+                        val release = result.getOrNull()
+                        update.text =
+                            when {
+                                result.isFailure -> label(Res.string.crash_updates_error)
+                                release == null -> label(Res.string.crash_updates_no_updates)
+                                else -> "${label(Res.string.crash_updates_action)} ·\u00a0${release.version}"
+                            }
+                        update.isEnabled = release != null
+                        if (release != null) {
+                            update.addActionListener {
+                                update.isEnabled = false
+                                Thread({
+                                    val installed =
+                                        release.inApp && runBlocking { DesktopUpdateManager.downloadAndLaunch(release.version).isSuccess }
+                                    if (installed) exitProcess(0)
+                                    openUrl(release.url)
+                                    EventQueue.invokeLater { update.isEnabled = true }
+                                }, "CrashUpdate").start()
+                            }
                         }
                     }
-                }
-            }, "CrashUpdateCheck").start()
+                }, "CrashUpdateCheck").start()
+            }
+        }.onFailure {
+            System.err.println(report)
         }
     }
 

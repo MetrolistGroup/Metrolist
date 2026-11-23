@@ -1,0 +1,14 @@
+{
+  "version": "25.0.5.1-b635.102",
+  "distribution": "JetBrains Runtime",
+  "platforms": {
+    "linux-x64": {
+      "url": "https://cache-redirector.jetbrains.com/intellij-jbr/jbrsdk-25.0.5.1-linux-x64-b635.102.tar.gz",
+      "sha512": "d7e61f7057d4d464a5a8f85c4c830cd7b66e54bbef6080deb0d0b17d817cc0d65b0c8b3cf7c89406ad8d2f1be83738497e1535a92c0eeb6f0d203723604b53f6"
+    },
+    "linux-arm64": {
+      "url": "https://cache-redirector.jetbrains.com/intellij-jbr/jbrsdk-25.0.5.1-linux-aarch64-b635.102.tar.gz",
+      "sha512": "b6feab16b8238e69cf003522472d677fc53382cbe768939aef7add12171cf9ae6310c1e63a980baf31474bbefb469cda034524d4d06c0e99e1b8bc448dec8afa"
+    }
+  }
+}

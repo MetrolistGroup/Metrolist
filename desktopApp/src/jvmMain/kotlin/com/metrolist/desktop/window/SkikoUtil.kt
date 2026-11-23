@@ -1,7 +1,9 @@
 package com.metrolist.desktop.window
 
-import androidx.compose.ui.awt.ComposeWindow
+import org.jetbrains.skiko.ExperimentalSkikoApi
+import org.jetbrains.skiko.GraphicsApi
 import org.jetbrains.skiko.SkiaLayer
+import org.jetbrains.skiko.swing.SkiaSwingLayer
 import java.awt.Container
 import javax.swing.JComponent
 
@@ -22,4 +24,7 @@ internal fun <T : JComponent> findComponent(
 
 internal inline fun <reified T : JComponent> Container.findComponent() = findComponent(this, T::class.java)
 
-internal fun ComposeWindow.findSkiaLayer(): SkiaLayer? = findComponent<SkiaLayer>()
+internal fun Container.findSkiaLayer(): SkiaLayer? = findComponent<SkiaLayer>()
+
+@OptIn(ExperimentalSkikoApi::class)
+internal fun Container.findRenderApi(): GraphicsApi? = findComponent<SkiaLayer>()?.renderApi ?: findComponent<SkiaSwingLayer>()?.renderApi

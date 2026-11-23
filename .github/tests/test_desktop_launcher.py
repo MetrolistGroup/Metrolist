@@ -58,11 +58,18 @@ class DesktopLauncherTest(unittest.TestCase):
         return result.stdout.splitlines()
 
     def test_webview_uses_x11_and_preserves_explicit_backend(self):
-        self.executable(self.bin / "Metrolist.bin", 'printf "%s\n" "$GDK_BACKEND"')
+        self.executable(self.bin / "Metrolist.bin", 'printf "%s\n" "${GDK_BACKEND-unset}"')
         self.environment.update(XCURSOR_THEME="Theme", XCURSOR_SIZE="24")
         self.assertEqual(["x11"], self.launch())
         self.environment["GDK_BACKEND"] = "x11,wayland"
         self.assertEqual(["x11,wayland"], self.launch())
+        del self.environment["GDK_BACKEND"]
+        del self.environment["DISPLAY"]
+        self.environment["WAYLAND_DISPLAY"] = "wayland-0"
+        self.assertEqual(["wayland"], self.launch())
+        self.environment["DISPLAY"] = ":77"
+        self.environment["METROLIST_USE_WAKEFIELD"] = "1"
+        self.assertEqual(["wayland"], self.launch())
 
     def test_missing_display_is_not_guessed_from_global_sockets(self):
         self.executable(self.bin / "Metrolist.bin", 'printf "%s\\n" "${DISPLAY-unset}"')

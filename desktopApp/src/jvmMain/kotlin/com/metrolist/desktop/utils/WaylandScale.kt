@@ -28,6 +28,9 @@ object WaylandScale {
     private val TRUSTED_EXECUTABLE_DIRECTORIES = listOf("/usr/bin", "/bin", "/usr/local/bin")
     private val LOG_FILE: File = File(XdgUtils.getXdgCacheHome(), "metrolist/wayland_scale.log")
     private var applied = false
+
+    @Volatile
+    private var nativeWaylandActive = false
     private val probeBudget = ThreadLocal<ProbeBudget>()
     private val monitorCache = AtomicReference<List<Monitor>>(emptyList())
     private val fallbackScale = AtomicReference<Float?>(null)
@@ -56,6 +59,13 @@ object WaylandScale {
 
     fun detectAndApply() {
         if (applied) return
+
+        if (configureNativeWaylandToolkit()) {
+            applied = true
+            log("Applied native Wayland toolkit (WLToolkit)")
+            return
+        }
+
         if (isWayland() && Settings.shared.disableWaylandScaleFix) {
             log("Wayland scale fix disabled by settings")
             applied = true
@@ -63,15 +73,6 @@ object WaylandScale {
         }
 
         val forceScale = forcedScale()
-
-        if (isWayland() && usesNativeWayland()) {
-            System.setProperty("awt.toolkit.name", "WLToolkit")
-            System.setProperty("jdk.gtk.version", "3")
-            System.setProperty("sun.java2d.uiScale.enabled", "true")
-            if (forceScale != null) System.setProperty("sun.java2d.uiScale", forceScale.toString())
-            applied = true
-            return
-        }
 
         val scale =
             withProbeBudget {
@@ -104,8 +105,65 @@ object WaylandScale {
         properties.setProperty("skiko.uiScale", scale.toString())
     }
 
-    private fun usesNativeWayland(): Boolean =
-        System.getProperty("metrolist.useWakefield") == "true" || System.getenv("METROLIST_USE_WAKEFIELD") == "1"
+    fun isNativeWaylandActive(): Boolean = nativeWaylandActive
+
+    internal fun isWlToolkitAvailable(
+        properties: Properties = System.getProperties(),
+        libraryExists: (File) -> Boolean = File::isFile,
+    ): Boolean {
+        if (!properties.getProperty("org.graalvm.nativeimage.imagecode").isNullOrBlank()) return false
+        val bootPaths =
+            properties
+                .getProperty("sun.boot.library.path")
+                ?.split(File.pathSeparatorChar)
+                ?.filter(String::isNotBlank)
+                ?.map(::File)
+                .orEmpty()
+        val javaHomeLib = properties.getProperty("java.home")?.takeIf(String::isNotBlank)?.let { File(it, "lib") }
+        return (bootPaths + listOfNotNull(javaHomeLib)).any { libraryExists(File(it, "libawt_wlawt.so")) }
+    }
+
+    internal fun hasWaylandDisplay(
+        environment: Map<String, String> = System.getenv(),
+        defaultSocketExists: (File) -> Boolean = File::exists,
+    ): Boolean {
+        if (!environment["WAYLAND_DISPLAY"].isNullOrBlank()) return true
+        val runtimeDir = environment["XDG_RUNTIME_DIR"]?.takeIf(String::isNotBlank) ?: return false
+        return defaultSocketExists(File(runtimeDir, "wayland-0"))
+    }
+
+    internal fun shouldUseNativeWayland(
+        environment: Map<String, String> = System.getenv(),
+        properties: Properties = System.getProperties(),
+        wlToolkitAvailable: Boolean = isWlToolkitAvailable(properties),
+        waylandDisplayAvailable: Boolean = hasWaylandDisplay(environment),
+    ): Boolean {
+        if (properties.getProperty("awt.toolkit.name") == "XToolkit") return false
+        if (properties.getProperty("metrolist.useWakefield") == "false") return false
+        if (environment["METROLIST_USE_WAKEFIELD"] == "0") return false
+        if (!wlToolkitAvailable || !waylandDisplayAvailable) return false
+
+        val explicitlyRequested =
+            properties.getProperty("awt.toolkit.name") == "WLToolkit" ||
+                properties.getProperty("metrolist.useWakefield") == "true" ||
+                environment["METROLIST_USE_WAKEFIELD"] == "1"
+        return explicitlyRequested || environment["DISPLAY"].isNullOrBlank()
+    }
+
+    fun configureNativeWaylandToolkit(): Boolean {
+        if (!shouldUseNativeWayland()) return false
+        System.setProperty("java.awt.headless", "false")
+        System.setProperty("awt.toolkit.name", "WLToolkit")
+        System.setProperty("jdk.gtk.version", "3")
+        System.setProperty("sun.java2d.uiScale.enabled", "true")
+        forcedScale()?.let { System.setProperty("sun.java2d.uiScale", it.toString()) }
+        if (System.getenv("SKIKO_RENDER_API").isNullOrBlank() && System.getProperty("skiko.renderApi").isNullOrBlank()) {
+            // Skiko's Linux OpenGL Swing offscreen path opens an X11 display; start directly on software under WLToolkit.
+            System.setProperty("skiko.renderApi", "SOFTWARE_COMPAT")
+        }
+        nativeWaylandActive = true
+        return true
+    }
 
     private fun forcedScale(): Float? =
         parseScale(System.getProperty("metrolist.forceScale")) ?: parseScale(System.getenv("METROLIST_FORCE_SCALE"))
@@ -119,13 +177,14 @@ object WaylandScale {
     fun ensureDisplay(): Boolean {
         System.setProperty("java.awt.headless", "false")
 
+        if (configureNativeWaylandToolkit()) return true
+
         val currentDisplay = System.getenv("DISPLAY")
         if (!currentDisplay.isNullOrBlank()) {
             System.setProperty("DISPLAY", currentDisplay)
             return true
         }
 
-        if (System.getProperty("metrolist.useWakefield") == "true" || System.getenv("METROLIST_USE_WAKEFIELD") == "1") return true
         val detectedDisplay =
             resolveSessionDisplay(
                 runtimeDirectory = System.getenv("XDG_RUNTIME_DIR")?.takeIf(String::isNotBlank)?.let(::File),
@@ -206,7 +265,7 @@ object WaylandScale {
         windowWidth: Int,
         windowHeight: Int,
     ): Float? {
-        if (isWayland() && (Settings.shared.disableWaylandScaleFix || usesNativeWayland())) return null
+        if (nativeWaylandActive || (isWayland() && (Settings.shared.disableWaylandScaleFix || shouldUseNativeWayland()))) return null
 
         forcedScale()?.let { return it }
 

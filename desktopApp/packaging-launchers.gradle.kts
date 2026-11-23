@@ -171,8 +171,14 @@ tasks.register("patchLinuxLauncher") {
 # Wayland support in Skiko
 export SKIKO_WAYLAND="${SKIKO_WAYLAND:-1}"
 
-# Embedded GTK login windows are X11 children of AWT windows
-export GDK_BACKEND="${GDK_BACKEND:-x11}"
+# Embedded GTK login windows are X11 children of AWT windows; use Wayland when X11 is absent or WLToolkit is requested.
+if [ -z "${GDK_BACKEND:-}" ]; then
+    if [ -n "${DISPLAY:-}" ] && [ "${METROLIST_USE_WAKEFIELD:-0}" != "1" ]; then
+        export GDK_BACKEND=x11
+    elif [ -n "${WAYLAND_DISPLAY:-}" ]; then
+        export GDK_BACKEND=wayland
+    fi
+fi
 
 # Prevent AWT from reparenting (needed for some tiling WMs)
 export _JAVA_AWT_WM_NONREPARENTING="${_JAVA_AWT_WM_NONREPARENTING:-1}"

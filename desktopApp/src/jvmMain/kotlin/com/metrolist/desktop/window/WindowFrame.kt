@@ -4,9 +4,9 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
+import androidx.compose.ui.awt.ComposeWindow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.FrameWindowScope
 import androidx.compose.ui.window.WindowPlacement
 import androidx.compose.ui.window.WindowState
 import com.metrolist.desktop.state.playback.PlayerState
@@ -14,7 +14,7 @@ import com.metrolist.desktop.window.jna.structure.isWindows10OrLater
 import com.metrolist.shared.utils.OsUtil
 
 @Composable
-fun FrameWindowScope.WindowFrame(
+fun DesktopFrameWindowScope.WindowFrame(
     onCloseRequest: () -> Unit,
     darkTheme: Boolean,
     state: WindowState,
@@ -50,12 +50,20 @@ fun FrameWindowScope.WindowFrame(
         PlayerState.isFullscreen = transition.playerFullscreen
         state.size = nextState.size
         state.position = nextState.position
-        setWindowPlacement(state, nextState.placement) { window.placement = it }
+        setWindowPlacement(state, nextState.placement) { placement ->
+            val composeWindow = window as? ComposeWindow
+            if (composeWindow != null) {
+                composeWindow.placement = placement
+            } else {
+                applyFramePlacement(window, placement)
+            }
+        }
     }
 
+    val composeFrameScope = asComposeFrameWindowScope()
     when {
-        OsUtil.isWindows && isWindows10OrLater() -> {
-            WindowsWindowFrame(
+        OsUtil.isWindows && isWindows10OrLater() && composeFrameScope != null -> {
+            composeFrameScope.WindowsWindowFrame(
                 onCloseRequest = onCloseRequest,
                 content = content,
                 state = state,

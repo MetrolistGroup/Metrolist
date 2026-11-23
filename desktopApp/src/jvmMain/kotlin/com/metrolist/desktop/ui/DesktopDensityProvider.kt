@@ -33,7 +33,7 @@ import kotlin.time.Duration.Companion.milliseconds
 fun WindowScope.DesktopDensityProvider(content: @Composable () -> Unit) {
     val userScale = DensityScale.fromValue(Settings.shared.densityScaleFactor).value
     val systemDensity = LocalDensity.current
-    if (!OsUtil.isLinux || !WaylandScale.isWayland() || Settings.shared.disableWaylandScaleFix) {
+    if (!OsUtil.isLinux || !WaylandScale.isWayland() || Settings.shared.disableWaylandScaleFix || WaylandScale.isNativeWaylandActive()) {
         CompositionLocalProvider(LocalDensity provides Density(systemDensity.density * userScale, systemDensity.fontScale)) {
             content()
         }

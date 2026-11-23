@@ -24,12 +24,12 @@ import java.util.zip.ZipEntry
 import java.util.zip.ZipFile
 import java.util.zip.ZipOutputStream
 
-// Adoptium publishes no Windows ARM64 JDK 25; Microsoft's OpenJDK build is the one available there.
-val jdkVendor =
-    if (System.getProperty("os.name").startsWith("Windows") && System.getProperty("os.arch") == "aarch64") {
-        JvmVendorSpec.MICROSOFT
-    } else {
-        JvmVendorSpec.ADOPTIUM
+// Adoptium publishes no Windows ARM64 JDK 25; Linux accepts any JDK 25 so JBR and Temurin both work.
+val jdkVendor: JvmVendorSpec? =
+    when {
+        System.getProperty("os.name").startsWith("Windows") && System.getProperty("os.arch") == "aarch64" -> JvmVendorSpec.MICROSOFT
+        System.getProperty("os.name").contains("Linux") -> null
+        else -> JvmVendorSpec.ADOPTIUM
     }
 
 val currentOperatingSystem =
@@ -258,7 +258,7 @@ val arm64WebViewJar =
 kotlin {
     jvmToolchain {
         languageVersion.set(JavaLanguageVersion.of(25))
-        vendor.set(jdkVendor)
+        jdkVendor?.let(vendor::set)
     }
     jvm {
         compilerOptions.jvmTarget.set(JvmTarget.JVM_21)
@@ -418,7 +418,7 @@ val syncExternalResources =
 val desktopJavaLauncher =
     extensions.getByType<JavaToolchainService>().launcherFor {
         languageVersion.set(JavaLanguageVersion.of(25))
-        vendor.set(jdkVendor)
+        jdkVendor?.let(vendor::set)
     }
 
 tasks.withType<JavaExec>().configureEach {
@@ -464,10 +464,17 @@ tasks.withType<JavaExec>().configureEach {
         }
 
         environment("LC_NUMERIC", "C")
-        environment(
-            "GDK_BACKEND",
-            providers.environmentVariable("GDK_BACKEND").orNull ?: "x11",
-        )
+        val hasDisplay = !providers.environmentVariable("DISPLAY").orNull.isNullOrBlank()
+        val hasWaylandDisplay = !providers.environmentVariable("WAYLAND_DISPLAY").orNull.isNullOrBlank()
+        val wantsWakefield = providers.environmentVariable("METROLIST_USE_WAKEFIELD").orNull == "1"
+        val gdkBackend =
+            providers.environmentVariable("GDK_BACKEND").orNull
+                ?: when {
+                    hasDisplay && !wantsWakefield -> "x11"
+                    hasWaylandDisplay -> "wayland"
+                    else -> "x11"
+                }
+        environment("GDK_BACKEND", gdkBackend)
         environment("_JAVA_AWT_WM_NONREPARENTING", "1")
         environment(
             "SKIKO_WAYLAND",

@@ -3,7 +3,6 @@ package com.metrolist.desktop.window
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.ui.awt.ComposeWindow
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -49,12 +48,13 @@ import java.nio.channels.SocketChannel
 import java.nio.file.Path
 import java.util.concurrent.atomic.AtomicReference
 import javax.swing.JComponent
+import javax.swing.JFrame
 import javax.swing.JLayeredPane
 import javax.swing.SwingUtilities
 
 @Composable
 internal fun ObserveHyprlandRenderVisibility(
-    window: ComposeWindow,
+    window: JFrame,
     onVisibilityChanged: (Boolean) -> Unit,
 ) {
     val instance = System.getenv("HYPRLAND_INSTANCE_SIGNATURE")?.takeIf(String::isNotBlank) ?: return
@@ -149,7 +149,7 @@ internal fun copyHyprlandFrame(bitmap: Bitmap): BufferedImage? {
 }
 
 private class HyprlandRetainedFrame(
-    private val window: ComposeWindow,
+    private val window: JFrame,
     private val layer: SkiaLayer,
     private val image: BufferedImage,
 ) : JComponent(),

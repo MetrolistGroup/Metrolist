@@ -47,12 +47,12 @@ configurations.matching { it.name.startsWith("desktop") }.configureEach {
     exclude(group = "org.jetbrains.kotlin", module = "kotlin-reflect")
 }
 
-// Adoptium publishes no Windows ARM64 JDK 25; Microsoft's OpenJDK build is the one available there.
-val jdkVendor =
-    if (System.getProperty("os.name").startsWith("Windows") && System.getProperty("os.arch") == "aarch64") {
-        JvmVendorSpec.MICROSOFT
-    } else {
-        JvmVendorSpec.ADOPTIUM
+// Adoptium publishes no Windows ARM64 JDK 25; Linux accepts any JDK 25 so JBR and Temurin both work.
+val jdkVendor: JvmVendorSpec? =
+    when {
+        System.getProperty("os.name").startsWith("Windows") && System.getProperty("os.arch") == "aarch64" -> JvmVendorSpec.MICROSOFT
+        System.getProperty("os.name").contains("Linux") -> null
+        else -> JvmVendorSpec.ADOPTIUM
     }
 
 val ffmpegVersion = "8.1.2-1.5.14"
@@ -314,7 +314,7 @@ kotlin {
 
     jvmToolchain {
         languageVersion.set(JavaLanguageVersion.of(25))
-        vendor.set(jdkVendor)
+        jdkVendor?.let(vendor::set)
     }
     applyDefaultHierarchyTemplate()
 

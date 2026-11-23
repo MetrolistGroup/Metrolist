@@ -4,7 +4,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.remember
-import androidx.compose.ui.awt.ComposeWindow
 import com.metrolist.shared.ui.components.LocalVisualWorkActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -12,6 +11,7 @@ import java.awt.Frame
 import java.awt.event.ComponentAdapter
 import java.awt.event.ComponentEvent
 import java.awt.event.WindowStateListener
+import javax.swing.JFrame
 
 internal class WindowVisibilityState {
     private var shown = false
@@ -41,7 +41,7 @@ internal class WindowVisibilityState {
 
 @Composable
 internal fun WindowVisibility(
-    window: ComposeWindow,
+    window: JFrame,
     content: @Composable () -> Unit,
 ) {
     ClearWindowContentOnDispose(window)

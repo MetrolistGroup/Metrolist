@@ -25,7 +25,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.awt.AwtWindow
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.DialogWindow
 import androidx.compose.ui.window.rememberDialogState
 import com.metrolist.desktop.auth.DesktopDiscordLogin
 import com.metrolist.desktop.auth.DiscordLoginNavigation
@@ -38,6 +37,7 @@ import com.metrolist.desktop.utils.prepareDesktopWebViewDataDirectory
 import com.metrolist.desktop.web.DesktopWebView
 import com.metrolist.desktop.web.LinuxWebViewCanvas
 import com.metrolist.desktop.window.ClearWindowContentOnDispose
+import com.metrolist.desktop.window.DesktopDialogWindow
 import com.metrolist.shared.discord.DiscordAuthSession
 import com.metrolist.shared.discord.DiscordRpcManager
 import com.metrolist.shared.generated.resources.Res
@@ -160,7 +160,7 @@ private fun EmbeddedDiscordLoginDialog(
         return
     }
 
-    DialogWindow(
+    DesktopDialogWindow(
         onCloseRequest = onDismissRequest,
         title = stringResource(Res.string.sign_in_discord),
         state = rememberDialogState(width = 600.dp, height = 700.dp),

@@ -37,7 +37,6 @@ import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.DialogWindow
 import androidx.compose.ui.window.rememberDialogState
 import com.metrolist.desktop.auth.readWindowsLoginHelperOutput
 import com.metrolist.desktop.ui.DesktopDensityProvider
@@ -47,6 +46,7 @@ import com.metrolist.desktop.ui.components.rememberLinuxWebKitAvailable
 import com.metrolist.desktop.utils.prepareDesktopWebViewDataDirectory
 import com.metrolist.desktop.web.DesktopWebView
 import com.metrolist.desktop.window.ClearWindowContentOnDispose
+import com.metrolist.desktop.window.DesktopDialogWindow
 import com.metrolist.innertubex.models.response.AccountsListResponse
 import com.metrolist.shared.auth.AccountDiscoveryAction
 import com.metrolist.shared.auth.AuthManager
@@ -169,7 +169,7 @@ fun LoginDialog(
     val colorScheme = MaterialTheme.colorScheme
     val typography = MaterialTheme.typography
     val shapes = MaterialTheme.shapes
-    DialogWindow(
+    DesktopDialogWindow(
         onCloseRequest = requestDismiss,
         title =
             if (isSwitchingChannel) {
@@ -848,7 +848,7 @@ private fun WebViewPromptWindow(
     val colorScheme = MaterialTheme.colorScheme
     val typography = MaterialTheme.typography
     val shapes = MaterialTheme.shapes
-    DialogWindow(
+    DesktopDialogWindow(
         onCloseRequest = onCloseRequest,
         title = title,
         state = rememberDialogState(width = 480.dp, height = height),

@@ -77,7 +77,6 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.WindowPlacement
 import androidx.compose.ui.window.WindowPosition
 import androidx.compose.ui.window.WindowScope
@@ -156,10 +155,13 @@ import com.metrolist.desktop.utils.isDesktopPlatformSupported
 import com.metrolist.desktop.utils.isOmarchy
 import com.metrolist.desktop.utils.openStopOmarchy
 import com.metrolist.desktop.web.DesktopWebViewError
+import com.metrolist.desktop.window.DesktopWindow
 import com.metrolist.desktop.window.IconResources
 import com.metrolist.desktop.window.LinuxWindowFrame
 import com.metrolist.desktop.window.WindowFrame
 import com.metrolist.desktop.window.WindowVisibility
+import com.metrolist.desktop.window.asComposeFrameWindowScope
+import com.metrolist.desktop.window.findRenderApi
 import com.metrolist.desktop.window.findSkiaLayer
 import com.metrolist.desktop.window.restoreWindowPosition
 import com.metrolist.desktop.window.setWindowPlacement
@@ -710,11 +712,12 @@ private fun startupRuntimeAvailable(): Boolean {
 private fun configureLinuxWindowIdentity() {
     if (!OsUtil.isLinux) return
     System.setProperty("awt.app.id", "Metrolist")
+    if (WaylandScale.isNativeWaylandActive()) return
     runCatching {
         // XToolkit's constructor names the X11 class after the creating thread, so create it here and then rename it.
-        Toolkit.getDefaultToolkit()
-        val xToolkit = Class.forName("sun.awt.X11.XToolkit")
-        xToolkit.getDeclaredField("awtAppClassName").apply {
+        val toolkit = Toolkit.getDefaultToolkit()
+        if (toolkit.javaClass.name != "sun.awt.X11.XToolkit") return@runCatching
+        toolkit.javaClass.getDeclaredField("awtAppClassName").apply {
             isAccessible = true
             set(null, "Metrolist")
         }
@@ -807,7 +810,7 @@ fun main() {
 
 fun main(args: Array<String>) {
     // Xlib must enter thread-safe mode before AWT can initialize it on Linux/X11.
-    if (OsUtil.isLinux) initializeLinuxX11Threading()
+    if (OsUtil.isLinux && !WaylandScale.shouldUseNativeWayland()) initializeLinuxX11Threading()
     // The JDK reads this once when its default proxy selector initializes.
     if (OsUtil.isWindows) System.getProperties().putIfAbsent("java.net.useSystemProxies", "true")
     runCatching { System.getProperty("metrolist.cds.cache")?.let { File(it).mkdirs() } }
@@ -815,6 +818,7 @@ fun main(args: Array<String>) {
     val recoveryIndex = args.indexOf(DesktopCrashRecovery.ARGUMENT)
     val pendingReport = if (recoveryIndex < 0) runCatching { DesktopCrashRecovery.store.pendingReportId() }.getOrNull() else null
     if (recoveryIndex >= 0 || pendingReport != null) {
+        if (OsUtil.isLinux) WaylandScale.configureNativeWaylandToolkit()
         DesktopCrashRecovery.show(pendingReport ?: args.getOrElse(recoveryIndex + 1) { "" })
         return
     }
@@ -1319,7 +1323,7 @@ private fun runDesktopApp(args: Array<String>) {
                 val artists = track.artists.joinToString { it.displayName }
                 if (artists.isBlank()) track.title else stringResource(Res.string.window_title_now_playing, track.title, artists)
             } ?: appTitle
-        Window(
+        DesktopWindow(
             onCloseRequest = { minimizeToTrayOrClose() },
             title = windowTitle,
             state = windowState,
@@ -1331,7 +1335,7 @@ private fun runDesktopApp(args: Array<String>) {
                 while (!window.isShowing) delay(16L)
                 startup.windowShown.complete(Unit)
                 startup.firstFrame.await()
-                val renderApi = window.findSkiaLayer()?.renderApi
+                val renderApi = window.findRenderApi()
                 softwareRendering = renderApi == GraphicsApi.SOFTWARE_FAST || renderApi == GraphicsApi.SOFTWARE_COMPAT
                 AppLogger.info(
                     "Main",
@@ -1368,7 +1372,7 @@ private fun runDesktopApp(args: Array<String>) {
                         }
                     }
                 }
-                return@Window
+                return@DesktopWindow
             }
             LaunchedEffect(window) {
                 runCatching {
@@ -1385,29 +1389,31 @@ private fun runDesktopApp(args: Array<String>) {
             }
 
             if (OsUtil.isMac) {
-                DesktopMenuBar(
-                    navigator = navigator,
-                    windowState = windowState,
-                    toggleWindowFullscreen = {
-                        val placement =
-                            if (windowState.placement == WindowPlacement.Fullscreen) {
-                                lastNormalPlacement.value
-                            } else {
-                                WindowPlacement.Fullscreen
+                asComposeFrameWindowScope()?.apply {
+                    DesktopMenuBar(
+                        navigator = navigator,
+                        windowState = windowState,
+                        toggleWindowFullscreen = {
+                            val placement =
+                                if (windowState.placement == WindowPlacement.Fullscreen) {
+                                    lastNormalPlacement.value
+                                } else {
+                                    WindowPlacement.Fullscreen
+                                }
+                            setWindowPlacement(windowState, placement) { window.placement = it }
+                        },
+                        onRefresh = {
+                            UiState.isRefreshingApp = true
+                            LibraryContentState.fetchLibraryData(force = true)
+                            UiState.appRefreshKey++
+                            HomeState.fetchHomeData {
+                                UiState.isRefreshingApp = false
                             }
-                        setWindowPlacement(windowState, placement) { window.placement = it }
-                    },
-                    onRefresh = {
-                        UiState.isRefreshingApp = true
-                        LibraryContentState.fetchLibraryData(force = true)
-                        UiState.appRefreshKey++
-                        HomeState.fetchHomeData {
-                            UiState.isRefreshingApp = false
-                        }
-                    },
-                    onCloseWindow = { minimizeToTrayOrClose() },
-                    onQuit = { shutdownApp { exitProcess(0) } },
-                )
+                        },
+                        onCloseWindow = { minimizeToTrayOrClose() },
+                        onQuit = { shutdownApp { exitProcess(0) } },
+                    )
+                }
             }
 
             LaunchedEffect(Unit) {
