@@ -36,6 +36,8 @@ import com.metrolist.shared.state.GlobalYouTube
 import com.metrolist.shared.utils.systemCountryCode
 import com.metrolist.shared.youtube.playback.PlaybackEventKind
 import com.metrolist.shared.youtube.playback.PlaybackEventLog
+import com.metrolist.shared.youtube.playback.PlaybackNetworkStateStore
+import io.ktor.http.Url
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
@@ -265,6 +267,7 @@ class LyricsRepository(
     private val prepareDictionaries: suspend (String, Set<String>) -> Boolean = ::prepareRomanizationDictionaries,
     private val providerResultsDispatcher: CoroutineDispatcher? = Dispatchers.Default,
     private val aiModelCatalog: AiModelCatalog? = null,
+    private val isOnline: () -> Boolean = { PlaybackNetworkStateStore.current.connected },
 ) {
     private val translationLocksGuard = Mutex()
     private val translationLocks = linkedMapOf<String, Mutex>()
@@ -300,6 +303,7 @@ class LyricsRepository(
             songwritersCache[videoId]?.let { return it }
         }
         val api = youtubeLyricsApi ?: return emptyList()
+        if (!isOnline()) return emptyList()
         return try {
             val browseResponse = api.browse("MPTC$videoId")
             val songwriters = YouTubeLyricsProvider.extractSongwriters(browseResponse)
@@ -444,6 +448,9 @@ class LyricsRepository(
                 }
             }
         }
+
+        // Offline, provider requests only time out; keep what is saved and cache no miss.
+        if (!isOnline()) return finalResult
 
         for ((fetchIndex, provider) in fetchOrder.withIndex()) {
             val index = providers.indexOf(provider).takeIf { it >= 0 } ?: Int.MAX_VALUE
@@ -938,7 +945,8 @@ class LyricsRepository(
         val sourceWordsPerLine = nonEmpty.map { (_, entry) -> translationSourceWords(entry) } + backgroundSources.map { null }
         val sourceHash = translationLines.joinToString("\n").hashCode().toString()
         val skipLanguageDetection = forceAiTranslation || Settings.shared.lyricsAiActivationMode != "Automatic"
-        if (Settings.shared.lyricsAiTranslationEnabled && allowRemoteTranslation && targetLanguage.isNotBlank() &&
+        val remoteTranslationAllowed = allowRemoteTranslation && (isOnline() || isLoopbackAiEndpoint())
+        if (Settings.shared.lyricsAiTranslationEnabled && remoteTranslationAllowed && targetLanguage.isNotBlank() &&
             (forceAiTranslation || Settings.shared.lyricsAiActivationMode != "Manual")
         ) {
             validateSavedAiModels()
@@ -961,7 +969,7 @@ class LyricsRepository(
             val aiResult =
                 if (cachedTranslation != null) {
                     cachedTranslation.result
-                } else if (!allowRemoteTranslation || (activationMode == "Manual" && !forceAiTranslation)) {
+                } else if (!remoteTranslationAllowed || (activationMode == "Manual" && !forceAiTranslation)) {
                     null
                 } else {
                     val lockKey = "$videoId|$targetLanguage|$translationStyle|$sourceHash|$configKey"
@@ -1246,6 +1254,13 @@ class LyricsRepository(
         val result = decodeCachedTranslation(entity.translatedLyrics) ?: return null
         if (sourceLines != null && !isAlignedCachedResult(result, translationStyle, sourceLines, sourceWordsPerLine)) return null
         return CachedLyricsTranslation(result)
+    }
+
+    // A model served on this machine stays reachable without a network.
+    private fun isLoopbackAiEndpoint(): Boolean {
+        val baseUrl = Settings.shared.lyricsAiCredentials(Settings.shared.lyricsAiProvider).second
+        val host = runCatching { Url(baseUrl).host }.getOrNull() ?: return false
+        return host == "localhost" || host == "::1" || host == "[::1]" || host.startsWith("127.")
     }
 
     private suspend fun translateAndCache(

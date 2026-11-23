@@ -329,6 +329,8 @@ Lines that share one start and have no word timing count as unsynced. Lookup kee
 
 Room stores confirmed misses with their lookup identity for seven days. Metadata, enabled providers, provider order, video context and explicit refresh trigger a new lookup. Provider failures are never saved as misses.
 
+While the shared network state reports no connection, lookup returns saved lyrics without asking providers and caches no miss. Songwriter lookups and AI translation are skipped too, except translation through an AI endpoint on localhost. A song played after the connection returns is looked up as usual.
+
 **Clear fetched lyrics** in Lyrics > Sources deletes saved provider results so the next play fetches them again. It keeps User lyrics and drafts, protected 13.x lyrics, sources picked for a song, and per-song offsets.
 
 Shared lyrics HTTP reads retry a 503 twice with 500 ms and 1 s backoff, honoring Retry-After within a five-second budget.
