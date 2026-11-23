@@ -2735,4 +2735,26 @@
     <string name="discord_preview_edit_hint">Нажмите на строку в предпросмотре, чтобы изменить её</string>
     <string name="discord_time_left">Осталось %1$s</string>
     <string name="discord_position_duration">%1$s / %2$s</string>
+    <string name="upload_date">Дата загрузки</string>
+    <string name="dislikes">Отметки «Не нравится» (по оценке Return YouTube Dislike)</string>
+    <string name="wrapped">Metrolist Wrapped</string>
+    <string name="wrapped_cover_heading">Вы включили музыку.</string>
+    <string name="wrapped_time_heading">Время, проведённое с музыкой</string>
+    <string name="wrapped_history_scope">Сохранённая история Metrolist и YouTube, а также Last.fm (если подключён и загружен). В недавней ленте YouTube более старые прослушивания могут отсутствовать.</string>
+    <string name="wrapped_year">Ваш Wrapped %1$s</string>
+    <string name="wrapped_chapter">%1$s из %2$s</string>
+    <string name="wrapped_summary">Ваш год в музыке</string>
+    <string name="wrapped_empty">За этот год пока нет сохранённых прослушиваний. Слушайте музыку или синхронизируйте историю YouTube, чтобы сформировать свой Wrapped.</string>
+    <string name="wrapped_measured_time">Учтённое время прослушивания</string>
+    <string name="wrapped_time_coverage">На основе прослушиваний с зафиксированной длительностью (%1$s из %2$s всего). Импортированные данные о длительности могут быть неполными.</string>
+    <string name="wrapped_merge_note">Включает сохранённую историю Metrolist и YouTube, а также Last.fm (если подключён и загружен). Для однозначно совпавших пар «исполнитель — название» используется наибольшее число прослушиваний за день. Несовпавшие композиции из Last.fm добавляют прослушивания; неоднозначные совпадения исключаются. Из-за этого количество отдельных прослушиваний может быть занижено. Время прослушивания учитывает только зафиксированную длительность.</string>
+    <string name="wrapped_share_summary">Поделиться итогами</string>
+    <string name="wrapped_soundtrack">Саундтрек</string>
+    <string name="wrapped_lastfm_loading">Загрузка истории Last.fm за этот год…</string>
+    <string name="wrapped_share_history_note">Сохранённая история; старые прослушивания на YouTube могут отсутствовать. Пересечения за день могут занижать подсчёт.</string>
+    <string name="wrapped_share_sync_failed">Не удалось обновить историю YouTube.</string>
+    <string name="wrapped_share_lastfm_loading">История Last.fm ещё загружается.</string>
+    <string name="wrapped_share_lastfm_failed">Не удалось обновить данные Last.fm; могут использоваться сохранённые результаты.</string>
+    <string name="wrapped_share_lastfm_included">Данные Last.fm учтены; неоднозначные совпадения исключены.</string>
+    <string name="wrapped_lastfm_failed">Не удалось обновить данные Last.fm. В этих итогах используется последний полный результат за этот сеанс, если он доступен.</string>
 </resources>
