@@ -17,6 +17,7 @@ data class CsvColumnMapping(
 
 class CsvPlaylist(
     val rows: List<List<String>>,
+    internal val delimiter: Char = ',',
 ) {
     val columnCount = rows.maxOfOrNull { it.size } ?: 0
 
@@ -143,7 +144,7 @@ class CsvPlaylist(
             if (cell.isNotEmpty() || row.isNotEmpty() || closedQuote) {
                 endRow()
             }
-            return CsvPlaylist(rows)
+            return CsvPlaylist(rows, delimiter)
         }
 
         private fun detectDelimiter(

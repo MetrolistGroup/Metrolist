@@ -43,6 +43,12 @@ object UniversalPlaylistParser {
     fun parse(
         text: String,
         resolveLocalReference: (String) -> String? = { null },
+    ): List<PlaylistImportManager.CsvTrack> = parseInternal(text, allowDelimited = true, resolveLocalReference)
+
+    private fun parseInternal(
+        text: String,
+        allowDelimited: Boolean,
+        resolveLocalReference: (String) -> String?,
     ): List<PlaylistImportManager.CsvTrack> {
         if (text.length > PlaylistImportManager.MAX_CSV_CHARACTERS) throw ImportException(ImportErrorKey.FileReadFailed)
         val trimmed = text.removePrefix("\uFEFF").trim()
@@ -58,10 +64,12 @@ object UniversalPlaylistParser {
             if (fromM3u.isNotEmpty()) return fromM3u
         }
 
-        val raw = text.removePrefix("\uFEFF")
-        detectDelimitedPlaylist(raw)?.let { csv ->
-            val fromDelimited = csv.tracks(csv.guessMapping(), resolveLocalReference)
-            if (fromDelimited.isNotEmpty()) return fromDelimited
+        if (allowDelimited) {
+            val raw = text.removePrefix("\uFEFF")
+            detectDelimitedPlaylist(raw)?.let { csv ->
+                val fromDelimited = csv.tracks(csv.guessMapping(), resolveLocalReference)
+                if (fromDelimited.isNotEmpty()) return fromDelimited
+            }
         }
 
         return parsePlainTextLines(trimmed, resolveLocalReference)
@@ -97,7 +105,7 @@ object UniversalPlaylistParser {
         return ImportedPlaylistData(
             title = title,
             source = source,
-            tracks = if (needsMapping) emptyList() else parse(text, resolveLocalReference),
+            tracks = if (needsMapping) emptyList() else parseInternal(text, allowDelimited = extension != "txt", resolveLocalReference),
             csv = csv.takeIf { needsMapping },
         )
     }
@@ -263,7 +271,7 @@ object UniversalPlaylistParser {
         if (nonBlankRows.size == 1 && !hasHeader) return null
         if (!nonBlankRows.all { it.size == csv.columnCount }) return null
 
-        if (!hasHeader && looksLikePlainTextTrackLines(input)) return null
+        if (csv.delimiter == ',' && looksLikePlainTextTrackLines(input)) return null
         return csv
     }
 
