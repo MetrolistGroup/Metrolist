@@ -653,7 +653,9 @@ internal class IosPlaybackController(
                 if (enabled) {
                     val song = player.currentSong.value ?: return@collect
                     try {
-                        audioStorage?.getCachedPlaybackResource(song)?.let { player.analyzeSilenceFromCache(song, it) }
+                        audioStorage?.getCachedPlaybackResource(song, allowOpusRemux = iosOpusRemuxSupported)?.let {
+                            player.analyzeSilenceFromCache(song, it)
+                        }
                     } catch (error: CancellationException) {
                         throw error
                     } catch (error: Exception) {
@@ -1994,7 +1996,9 @@ internal class IosPlaybackController(
             val storage = audioStorage ?: return
             storage.cacheSong(song, resource)
             if (Settings.shared.skipSilence) {
-                storage.getCachedPlaybackResource(song)?.let { player.analyzeSilenceFromCache(song, it) }
+                storage.getCachedPlaybackResource(song, allowOpusRemux = iosOpusRemuxSupported)?.let {
+                    player.analyzeSilenceFromCache(song, it)
+                }
             }
         } catch (error: CancellationException) {
             throw error
@@ -2026,7 +2030,7 @@ internal class IosPlaybackController(
         val excludedProfiles = audioRecovery.excludedProfiles(song.id)
         if (!skipCachedAudio && !refresh && excludedProfiles.isEmpty()) {
             try {
-                audioStorage?.getCachedPlaybackResource(song)?.let { return it }
+                audioStorage?.getCachedPlaybackResource(song, allowOpusRemux = iosOpusRemuxSupported)?.let { return it }
             } catch (error: CancellationException) {
                 throw error
             } catch (error: Exception) {

@@ -372,7 +372,10 @@ class IosAudioDownloadManager(
         }
     }
 
-    suspend fun getCachedPlaybackResource(song: SongItem): PlaybackResource? {
+    suspend fun getCachedPlaybackResource(
+        song: SongItem,
+        allowOpusRemux: Boolean = true,
+    ): PlaybackResource? {
         ready.await()
         return withContext(Dispatchers.Default) {
             storageMutex.withLock {
@@ -380,6 +383,10 @@ class IosAudioDownloadManager(
                 if (isQuarantinedDownload(entry)) return@withLock null
                 if (!isValidAudio(entry.filePath, entry.kind)) {
                     removeStoredAudio(entry)
+                    return@withLock null
+                }
+                if (!allowOpusRemux && isOpusMp4(entry.filePath)) {
+                    if (entry.kind == KIND_CACHE) removeStoredAudio(entry)
                     return@withLock null
                 }
                 clearFragmentedMp4Durations(entry.filePath)
@@ -884,6 +891,18 @@ class IosAudioDownloadManager(
                 file.seekToFileOffset(offset.toULong())
                 writeChunk(file, bytes, length)
             }
+        } finally {
+            file.closeFile()
+        }
+    }
+
+    private fun isOpusMp4(path: String): Boolean {
+        val file = NSFileHandle.fileHandleForUpdatingAtPath(path) ?: return false
+        try {
+            val data = file.readDataUpToLength(FRAGMENTED_MP4_HEADER_BYTES.toULong(), error = null) ?: return false
+            val header = data.bytes?.readBytes(data.length.toInt()) ?: return false
+            // The remuxer writes stsd before its potentially large sample tables.
+            return hasOpusMp4SampleEntry(header)
         } finally {
             file.closeFile()
         }
