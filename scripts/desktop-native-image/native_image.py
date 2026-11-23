@@ -34,10 +34,10 @@ def configurations(target, agent, experiment=False):
         packs += ['awt', 'graphics2d']
     if system == 'windows':
         packs += ['jna-win32']
-    paths = [METADATA, METADATA / 'application']
+    paths = [METADATA, METADATA / 'application', METADATA / system]
     paths += [METADATA / 'nucleus' / pack for pack in packs]
     if not experiment:
-        paths += [METADATA / system, METADATA / 'wry']
+        paths += [METADATA / 'wry']
     if agent and (agent / 'reachability-metadata.json').is_file():
         paths.append(agent)
     return paths
@@ -149,6 +149,9 @@ def arguments(graal, work, output, target, experiment=False, agent=None, macos_v
                '--enable-native-access=ALL-UNNAMED', '-Djava.awt.headless=false',
                '-H:+AddAllCharsets', '-H:+IncludeAllLocales',
                '-H:ConfigurationFileDirectories=' + ','.join(str(p.resolve()) for p in [*configurations(target, agent, experiment), work / 'serialization-config', platform_natives(work, target)])]
+    if target.startswith('linux-'):
+        # Module opens are fixed at build time; the JVM's runtime flag does not reach the image.
+        options += ['--add-opens=java.desktop/sun.awt=ALL-UNNAMED', '--add-opens=java.desktop/sun.awt.X11=ALL-UNNAMED']
     if not experiment:
         # Testers fall back like the JVM on a missing registration; CI smoke fails on any reported registration.
         options += ['-R:MaxHeapSize=384m', '-R:MinHeapSize=32m', '-R:MissingRegistrationReportingMode=Warn']
@@ -158,9 +161,6 @@ def arguments(graal, work, output, target, experiment=False, agent=None, macos_v
             # Match Nucleus's GUI launcher while retaining Native Image's main entry point.
             options += ['-H:NativeLinkerOption=/SUBSYSTEM:WINDOWS', '-H:NativeLinkerOption=/ENTRY:mainCRTStartup']
             options += [f'-H:NativeLinkerOption={work / "windows-resources/metrolist.res"}']
-        if target.startswith('linux-'):
-            # Module opens are fixed at build time; the JVM's runtime flag does not reach the image.
-            options += ['--add-opens=java.desktop/sun.awt.X11=ALL-UNNAMED']
         if target == 'macos-arm64':
             options += [f'-H:NativeLinkerOption=-mmacosx-version-min={macos_version or macos_deployment_target(graal)}',
                         f'-H:NativeLinkerOption={work / "macos-awt.o"}',
