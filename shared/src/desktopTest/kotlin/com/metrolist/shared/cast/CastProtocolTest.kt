@@ -684,57 +684,6 @@ class CastProtocolTest {
     }
 
     @Test
-    fun zeroDurationRendererEndsAfterRealPlaybackProgress() {
-        assertTrue(
-            castPlaybackEndedNearDuration(
-                wasPlaying = true,
-                isStopped = true,
-                positionMs = 0L,
-                durationMs = 0L,
-                lastPlayingPositionMs = 76_000L,
-                pollIntervalMs = 1_000L,
-            ),
-        )
-        assertFalse(
-            castPlaybackEndedNearDuration(
-                wasPlaying = true,
-                isStopped = true,
-                positionMs = 0L,
-                durationMs = 0L,
-                lastPlayingPositionMs = 0L,
-            ),
-        )
-        assertFalse(
-            castPlaybackEndedNearDuration(
-                wasPlaying = false,
-                isStopped = true,
-                positionMs = 0L,
-                durationMs = 0L,
-                lastPlayingPositionMs = 76_000L,
-            ),
-        )
-        assertFalse(
-            castPlaybackEndedNearDuration(
-                wasPlaying = true,
-                isStopped = true,
-                positionMs = 0L,
-                durationMs = 0L,
-                lastPlayingPositionMs = 76_000L,
-                transportOk = false,
-            ),
-        )
-        assertFalse(
-            castPlaybackEndedNearDuration(
-                wasPlaying = true,
-                isStopped = true,
-                positionMs = 0L,
-                durationMs = 180_000L,
-                lastPlayingPositionMs = 76_000L,
-            ),
-        )
-    }
-
-    @Test
     fun sonosRequiresAacWhileOtherReceiversKeepTheirStream() {
         val opus =
             PlaybackResource("id", "https://rr1---sn.googlevideo.com/x", emptyMap(), null, null, mimeType = "audio/webm; codecs=\"opus\"")

@@ -322,6 +322,9 @@ internal class DlnaSession(
                 lastPlayingPositionMs = positionMs
                 lastPlayingTrackUri = trackUri
             }
+            val endedWithoutDuration =
+                durationMs <= 0L && wasPlaying && transportState == "STOPPED" &&
+                    (lastPlayingPositionMs ?: 0L) > 0L && transportOk
             _state.value =
                 CastSessionState(
                     connected = true,
@@ -334,14 +337,13 @@ internal class DlnaSession(
                         !stopRequested && (
                             (current.hasEnded && transportState == "STOPPED") ||
                                 castPlaybackEndedNearDuration(
-                                    wasPlaying,
+                                    current.isPlaying,
                                     transportState == "STOPPED",
                                     positionMs,
                                     durationMs,
                                     lastPlayingPositionMs = lastPlayingPositionMs ?: positionMs,
                                     pollIntervalMs = pollIntervalMs,
-                                    transportOk = transportOk,
-                                ) || restarted
+                                ) || endedWithoutDuration || restarted
                         ),
                     mediaGeneration = pollGeneration,
                 )

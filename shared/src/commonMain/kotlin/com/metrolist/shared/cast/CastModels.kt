@@ -74,7 +74,6 @@ fun shouldHandleCastPlaybackEnd(
     handledGeneration: Long?,
 ): Boolean = state.isConnected && state.hasEnded && state.mediaGeneration != handledGeneration
 
-/** Without a reported duration, a stop after real playback progress still counts as the end. */
 internal fun castPlaybackEndedNearDuration(
     wasPlaying: Boolean,
     isStopped: Boolean,
@@ -82,12 +81,9 @@ internal fun castPlaybackEndedNearDuration(
     durationMs: Long,
     lastPlayingPositionMs: Long = positionMs,
     pollIntervalMs: Long = 0L,
-    transportOk: Boolean = true,
-): Boolean {
-    val lastPosition = maxOf(positionMs, lastPlayingPositionMs)
-    return transportOk && wasPlaying && isStopped && lastPosition > 0L &&
-        (durationMs <= 0L || lastPosition >= durationMs - 1_500L - pollIntervalMs.coerceAtLeast(0L))
-}
+): Boolean =
+    wasPlaying && isStopped && durationMs > 0L &&
+        maxOf(positionMs, lastPlayingPositionMs) >= durationMs - 1_500L - pollIntervalMs.coerceAtLeast(0L)
 
 internal fun castPlaybackRestartedNearDuration(
     wasPlaying: Boolean,
