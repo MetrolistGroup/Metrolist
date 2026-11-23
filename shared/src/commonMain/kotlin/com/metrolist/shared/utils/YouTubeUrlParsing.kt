@@ -119,7 +119,7 @@ fun extractListenTogetherRoomCode(value: String?): String? {
             val path = url.encodedPath.trim('/')
             val rParam = url.parameters["r"] ?: url.parameters["code"]
             if (path == "party" || path.startsWith("party/")) {
-                val candidate = rParam ?: path.removePrefix("party/").substringBefore('/')
+                val candidate = rParam ?: if (path == "party") "" else path.removePrefix("party/").substringBefore('/')
                 if (candidate.matches(partyCodePattern)) return candidate.uppercase()
             }
             if (path == "listen" || path.startsWith("listen/") || path.startsWith("listen-together/")) {
@@ -136,7 +136,7 @@ fun extractListenTogetherRoomCode(value: String?): String? {
         val rParam =
             query.split('&').firstOrNull { it.startsWith("r=") || it.startsWith("code=") }?.substringAfter('=')
         if (path.startsWith("party")) {
-            val candidate = rParam ?: path.removePrefix("party/").substringBefore('/')
+            val candidate = rParam ?: if (path == "party") "" else path.removePrefix("party/").substringBefore('/')
             if (candidate.matches(partyCodePattern)) return candidate.uppercase()
         }
         if (path.startsWith("listen-together") || path.startsWith("listen")) {

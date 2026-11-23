@@ -139,11 +139,9 @@ object MlxParser {
         val romanSection = sections["romanlyrics"] ?: sections["roman_lyrics"]
         val romanizedLines =
             if (!romanSection.isNullOrEmpty()) {
-                val romanLines = parseLyricsSection(romanSection, agents)
-                val romanMap = romanLines.groupBy { it.time }.mapValues { (_, lines) -> ArrayDeque(lines) }
+                val matches = matchAuxiliaryLyrics(linesWithSongParts, parseLyricsSection(romanSection, agents))
                 linesWithSongParts.mapIndexed { index, mainEntry ->
-                    val matchingRoman =
-                        romanMap[mainEntry.time]?.removeFirstOrNull() ?: romanLines.getOrNull(index).takeIf { mainEntry.time !in romanMap }
+                    val matchingRoman = matches[index]
                     if (matchingRoman != null) {
                         mainEntry.copy(
                             romanizedText = matchingRoman.text.takeIf { it.isNotBlank() },
@@ -162,12 +160,9 @@ object MlxParser {
         val translatedSection = (sections["translatedlyrics"] ?: sections["translated_lyrics"]).takeIf { translationMatches }
         val finalLines =
             if (!translatedSection.isNullOrEmpty()) {
-                val translatedLines = parseLyricsSection(translatedSection, agents)
-                val translatedMap = translatedLines.groupBy { it.time }.mapValues { (_, lines) -> ArrayDeque(lines) }
+                val matches = matchAuxiliaryLyrics(romanizedLines, parseLyricsSection(translatedSection, agents))
                 romanizedLines.mapIndexed { index, mainEntry ->
-                    val matchingTranslation =
-                        translatedMap[mainEntry.time]?.removeFirstOrNull()
-                            ?: translatedLines.getOrNull(index).takeIf { mainEntry.time !in translatedMap }
+                    val matchingTranslation = matches[index]
                     mainEntry.copy(
                         translatedText = matchingTranslation?.text?.takeIf { it.isNotBlank() },
                         backgroundTranslatedText = matchingTranslation?.backgroundText?.takeIf { it.isNotBlank() },
@@ -199,6 +194,20 @@ object MlxParser {
         ).let { document ->
             if (applyLrcOffset) document.withLrcOffset(lrcOffsetMs(text)) else document
         }.withValidatedRomanization()
+    }
+
+    private fun matchAuxiliaryLyrics(
+        mainLines: List<LyricsEntry>,
+        auxiliaryLines: List<LyricsEntry>,
+    ): List<LyricsEntry?> {
+        val byTime = auxiliaryLines.indices.groupBy { auxiliaryLines[it].time }.mapValues { (_, indices) -> ArrayDeque(indices) }
+        val reserved = BooleanArray(auxiliaryLines.size)
+        // Keep each timestamped match available to its own occurrence before applying the legacy positional fallback.
+        val exact = mainLines.map { byTime[it.time]?.removeFirstOrNull()?.also { index -> reserved[index] = true } }
+        return mainLines.mapIndexed { index, line ->
+            val position = exact[index] ?: index.takeIf { it in auxiliaryLines.indices && !reserved[it] && line.time !in byTime }
+            position?.let(auxiliaryLines::get)
+        }
     }
 
     private fun MlxDocument.withValidatedRomanization(): MlxDocument {

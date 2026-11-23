@@ -152,6 +152,7 @@ class ForeignLibraryImportTest {
                     "INSERT INTO SongArtistMap VALUES ('aaaaaaaaaaa','UCartist0000000000000001')",
                     "INSERT INTO SongAlbumMap VALUES ('aaaaaaaaaaa','MPREb_album1',0)",
                     "INSERT INTO Playlist (name,browseId) VALUES ('Mine',NULL)",
+                    "INSERT INTO Playlist (name,browseId) VALUES ('Imported','VLPLimported')",
                     "INSERT INTO SongPlaylistMap VALUES ('bbbbbbbbbbb',1,1)",
                     "INSERT INTO SongPlaylistMap VALUES ('aaaaaaaaaaa',1,0)",
                     "INSERT INTO Event (songId,timestamp,playTime) VALUES ('aaaaaaaaaaa',1700000100000,1000)",
@@ -168,7 +169,13 @@ class ForeignLibraryImportTest {
         assertFalse(disliked.liked)
         assertEquals(3723, disliked.durationSeconds)
         assertEquals(listOf(ForeignArtist(null, "C")), disliked.artists)
-        assertEquals(listOf(ForeignPlaylist("Mine", null, listOf("aaaaaaaaaaa", "bbbbbbbbbbb"))), library.playlists)
+        assertEquals(
+            listOf(
+                ForeignPlaylist("Mine", null, listOf("aaaaaaaaaaa", "bbbbbbbbbbb"), isEditable = true, localCopy = true),
+                ForeignPlaylist("Imported", "PLimported", emptyList(), isEditable = true, localCopy = true),
+            ),
+            library.playlists,
+        )
         assertEquals(listOf(ForeignPlay("aaaaaaaaaaa", 1700000100000, 1000)), library.plays)
         assertEquals(listOf("UCartist0000000000000001"), library.artists.map(ForeignBookmark::id))
         assertTrue(library.albums.isEmpty())
@@ -242,7 +249,7 @@ class ForeignLibraryImportTest {
             assertEquals(1700000000000, song.likedAt)
             assertEquals(
                 listOf(
-                    ForeignPlaylist("Local", null, listOf("aaaaaaaaaaa"), true),
+                    ForeignPlaylist("Local", null, listOf("aaaaaaaaaaa"), true, localCopy = true),
                     ForeignPlaylist("Saved", "PLsaved", listOf("aaaaaaaaaaa")),
                 ),
                 library.playlists,

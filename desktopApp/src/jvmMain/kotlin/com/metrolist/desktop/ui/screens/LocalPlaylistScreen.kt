@@ -95,6 +95,7 @@ import com.metrolist.shared.model.CollectionSort
 import com.metrolist.shared.model.PlaylistItem
 import com.metrolist.shared.model.SongItem
 import com.metrolist.shared.model.presentCollectionWithPlayCounts
+import com.metrolist.shared.settings.ArtistNameAliases
 import com.metrolist.shared.settings.HiddenLibraryItem
 import com.metrolist.shared.settings.HiddenLibraryItemType
 import com.metrolist.shared.settings.HiddenLibraryItems
@@ -214,8 +215,9 @@ private fun DownloadedPlaylistScreen() {
     val snapshot by produceState(emptyList<SongItem>() to emptyMap<String, CollectionMeta>(), files) {
         value =
             withContext(Dispatchers.IO) {
-                val storedSongs = database.dao().getSongsByIds(files.map { it.songId })
-                downloadedCollectionSnapshot(files, storedSongs)
+                val availableFiles = files.filter { DownloadManager.availableDownloadAudio(it) != null }
+                val storedSongs = database.dao().getSongsByIds(availableFiles.map { it.songId })
+                downloadedCollectionSnapshot(availableFiles, storedSongs)
             }
     }
     LocalPlaylistLayout(
@@ -464,12 +466,14 @@ private fun LocalPlaylistLayout(
             }
         }
     val availableSongs = remember(songs, hasMoreSongs) { songs.takeUnless { hasMoreSongs }.orEmpty() }
+    val artistAliases = if (isCachedCollection && cachedSorting?.sort == CollectionSort.ARTIST) ArtistNameAliases.aliases else emptyMap()
     val menuSongs =
         remember(
             availableSongs,
             isCachedCollection,
             cachedSorting,
             cachedCustomOrder,
+            artistAliases,
             collectionMetadata,
             playCounts,
             playCountsLoaded,
@@ -490,6 +494,7 @@ private fun LocalPlaylistLayout(
                         customOrder = cachedCustomOrder,
                         metadata = collectionMetadata.orEmpty(),
                         playCounts = playCounts,
+                        artistAliases = artistAliases,
                     )
                 }
             }

@@ -1,5 +1,6 @@
 package com.metrolist.android.playback
 
+import com.metrolist.android.utils.PLAYBACK_FAILURE_LOG_PREFIX
 import com.metrolist.innertubex.extraction.StreamDiagnostics
 import com.metrolist.innertubex.extraction.StreamResolveException
 import com.metrolist.shared.model.SongItem
@@ -10,10 +11,14 @@ import com.metrolist.shared.youtube.playback.PlaybackEventLog
 import com.metrolist.shared.youtube.playback.PlaybackResource
 import com.metrolist.shared.youtube.playback.playbackResolveSummary
 import com.metrolist.shared.youtube.playback.shouldReportPlaybackFailure
-import io.sentry.Attachment
 import io.sentry.Breadcrumb
 import io.sentry.Sentry
+import io.sentry.SentryAttribute
+import io.sentry.SentryAttributes
 import io.sentry.SentryLevel
+import io.sentry.SentryLogLevel
+import io.sentry.logger.SentryLogParameters
+import io.sentry.protocol.SentryId
 
 internal object PlaybackErrorReporter {
     private const val PLAYBACK_LOG_EVENTS = 200
@@ -81,39 +86,46 @@ internal object PlaybackErrorReporter {
     ) {
         if (!isCrashReportingAvailable() || !error.shouldReportPlaybackFailure(context)) return
 
-        Sentry.captureException(error) { scope ->
-            scope.level = SentryLevel.ERROR
-            scope.setTag("error.domain", "playback")
-            scope.setTag("playback.stage", context.stage)
-            context.videoId?.let {
-                scope.setTag("playback.video_id", it)
-                scope.setExtra("playback.video_id", it)
+        val eventId =
+            Sentry.captureException(error) { scope ->
+                scope.level = SentryLevel.ERROR
+                scope.setTag("error.domain", "playback")
+                scope.setTag("playback.stage", context.stage)
+                context.videoId?.let {
+                    scope.setTag("playback.video_id", it)
+                    scope.setExtra("playback.video_id", it)
+                }
+                context.clientName?.let { scope.setTag("playback.client", it) }
+                context.profileId?.let { scope.setTag("playback.profile", it) }
+                context.sourceName?.let { scope.setTag("playback.source", it) }
+                context.code?.let { scope.setTag("playback.error_code", it) }
+                context.recovered?.let { scope.setTag("playback.recovered", it.toString()) }
+                context.retryCount?.let { scope.setTag("playback.retry_count", it.toString()) }
+                context.song?.let { song -> setSongExtras(song, scope::setExtra) }
+                if (context.song != null && context.resource == null) {
+                    resourceExtraKeys.forEach(scope::removeExtra)
+                    if (context.clientName == null) scope.removeTag("playback.client")
+                    if (context.profileId == null) scope.removeTag("playback.profile")
+                }
+                context.resource?.let { resource -> setResourceExtras(resource, scope::setExtra) }
+                val diagnostics = error.streamDiagnostics() ?: context.resource?.streamDiagnostics
+                diagnostics?.let { setDiagnosticsExtras(it, scope::setExtra) }
+                playbackResolveSummary(PlaybackEventLog.events.value, context.videoId)?.let { summary ->
+                    summary.tags.forEach(scope::setTag)
+                    summary.extras.forEach { (key, value) -> scope.setExtra(key, redactDiagnosticText(value)) }
+                }
             }
-            context.clientName?.let { scope.setTag("playback.client", it) }
-            context.profileId?.let { scope.setTag("playback.profile", it) }
-            context.sourceName?.let { scope.setTag("playback.source", it) }
-            context.code?.let { scope.setTag("playback.error_code", it) }
-            context.recovered?.let { scope.setTag("playback.recovered", it.toString()) }
-            context.retryCount?.let { scope.setTag("playback.retry_count", it.toString()) }
-            context.song?.let { song -> setSongExtras(song, scope::setExtra) }
-            if (context.song != null && context.resource == null) {
-                resourceExtraKeys.forEach(scope::removeExtra)
-                if (context.clientName == null) scope.removeTag("playback.client")
-                if (context.profileId == null) scope.removeTag("playback.profile")
-            }
-            context.resource?.let { resource -> setResourceExtras(resource, scope::setExtra) }
-            val diagnostics = error.streamDiagnostics() ?: context.resource?.streamDiagnostics
-            diagnostics?.let { setDiagnosticsExtras(it, scope::setExtra) }
-            playbackResolveSummary(PlaybackEventLog.events.value, context.videoId)?.let { summary ->
-                summary.tags.forEach(scope::setTag)
-                summary.extras.forEach { (key, value) -> scope.setExtra(key, redactDiagnosticText(value)) }
-            }
-            scope.addAttachment(
-                Attachment(
-                    redactDiagnosticText(PlaybackEventLog.exportText(PLAYBACK_LOG_EVENTS, PLAYBACK_LOG_CHARS)).encodeToByteArray(),
-                    "playback-log.txt",
-                    "text/plain",
+        if (eventId != SentryId.EMPTY_ID) {
+            Sentry.logger().log(
+                SentryLogLevel.ERROR,
+                SentryLogParameters.create(
+                    SentryAttributes.of(
+                        SentryAttribute.stringAttribute("playback.event_id", eventId.toString()),
+                        SentryAttribute.stringAttribute("playback.stage", context.stage),
+                    ),
                 ),
+                "$PLAYBACK_FAILURE_LOG_PREFIX%s",
+                redactDiagnosticText(PlaybackEventLog.exportText(PLAYBACK_LOG_EVENTS, PLAYBACK_LOG_CHARS)),
             )
         }
     }

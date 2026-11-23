@@ -1,13 +1,32 @@
 cask "metrolist" do
   arch arm: "arm64", intel: "x64"
+  os macos: "macos", linux: "linux"
+  url_end = on_system_conditional macos: "dmg", linux: "AppImage"
 
   version "@VERSION@"
-  sha256 arm:   "@MACOS_ARM64_SHA256@",
-         intel: "@MACOS_X64_SHA256@"
+  sha256 arm:          "@MACOS_ARM64_SHA256@",
+         intel:        "@MACOS_X64_SHA256@",
+         arm64_linux:  "@LINUX_ARM64_SHA256@",
+         x86_64_linux: "@LINUX_X64_SHA256@"
 
-  url "https://github.com/MetrolistGroup/Metrolist/releases/download/v#{version}/metrolist-desktop-macos-#{arch}-#{version}.dmg"
+  on_macos do
+    depends_on macos: :sequoia
+
+    app "Metrolist.app"
+
+    caveats <<~EOS
+      Metrolist is not signed or notarized. If macOS blocks the first launch, verify the
+      download, then use Open Anyway in System Settings > Privacy & Security:
+        https://support.apple.com/en-us/102445
+    EOS
+  end
+  on_linux do
+    app_image "metrolist-desktop-linux-#{arch}-#{version}.AppImage", target: "Metrolist.AppImage"
+  end
+
+  url "https://github.com/MetrolistGroup/Metrolist/releases/download/v#{version}/metrolist-desktop-#{os}-#{arch}-#{version}.#{url_end}"
   name "Metrolist"
-  desc "YouTube Music desktop client"
+  desc "YouTube Music client"
   homepage "https://github.com/MetrolistGroup/Metrolist"
 
   livecheck do
@@ -15,5 +34,17 @@ cask "metrolist" do
     strategy :github_latest
   end
 
-  app "Metrolist.app"
+  # An absolute XDG_DATA_HOME replaces ~/.local/share for the WebView profile.
+  xdg_data_home = ENV.fetch("XDG_DATA_HOME", nil)
+  linux_webview = xdg_data_home&.start_with?("/") ? "#{xdg_data_home}/Metrolist" : "~/.local/share/Metrolist"
+
+  zap trash: [
+    "~/.cache/metrolist",
+    "~/.config/metrolist",
+    "~/.local/share/metrolist",
+    "~/.local/state/metrolist",
+    "~/Library/Application Support/Metrolist",
+    "~/Library/Saved Application State/com.metrolist.desktop.savedState",
+    linux_webview,
+  ]
 end

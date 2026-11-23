@@ -89,6 +89,7 @@ import com.metrolist.shared.playlist.PlaylistChanges
 import com.metrolist.shared.settings.BlockedContent
 import com.metrolist.shared.settings.Settings
 import com.metrolist.shared.state.SongLikeState
+import com.metrolist.shared.state.youTubeLanguage
 import com.metrolist.shared.utils.Logger
 import com.metrolist.shared.viewmodels.LIBRARY_REFRESH_TTL_MILLIS
 import com.metrolist.shared.youtube.logging.YtLogger
@@ -192,6 +193,7 @@ data class SongWatchInformation(
     val subscriberCount: String? = null,
     val likeCount: Long? = null,
     val viewCount: Long? = null,
+    val uploadDate: String? = null,
     val description: String? = null,
 )
 
@@ -638,6 +640,7 @@ class YouTubeRepository(
         params: String? = null,
         requestSession: InnerTube.SessionSnapshot = innerTube.sessionSnapshot(),
         includeRecommendations: Boolean = true,
+        missingContentsIsEmpty: Boolean = false,
     ): PaginationResult<YTItem> {
         val voteRevision = SongLikeState.voteObservationRevision()
         requireCurrentSession(requestSession)
@@ -645,6 +648,7 @@ class YouTubeRepository(
             readAccountBrowse(requestSession, browseId, voteRevision = voteRevision) {
                 innerTube.browse(YouTubeClient.WEB_REMIX, browseId = browseId, params = params, setLogin = true)
             }
+        if (firstResponse.contents == null && missingContentsIsEmpty) return PaginationResult(emptyList(), complete = true)
         check(firstResponse.contents != null) { "Missing library contents: $browseId" }
         val first = parseBrowseResponse(firstResponse, includeRecommendations = includeRecommendations)
         requireCurrentSession(requestSession)
@@ -958,6 +962,12 @@ class YouTubeRepository(
         applyContentFilters: Boolean = true,
     ): PlaylistPage {
         if (!initial.hasMore) return initial.also { rememberPlaylistMembership(it, applyContentFilters) }
+        // Mix continuations keep generating songs and never end, so the loaded pages are the whole mix.
+        val header = initial.sections["header"]?.filterIsInstance<PlaylistItem>()?.firstOrNull()
+        if (header?.id?.isMixPlaylistId() == true) {
+            requireCurrentSession(initial.session)
+            return initial.copy(pending = emptyList())
+        }
         val sections = linkedMapOf<String, MutableList<YTItem>>()
         var last = initial
         playlistPages(initial, applyContentFilters).collect { page ->
@@ -1271,7 +1281,8 @@ class YouTubeRepository(
 
     suspend fun getSavedEpisodesForSync(): List<EpisodeItem> {
         require(innerTube.hasSapCookieAuth()) { "YouTube Music sign-in is required" }
-        val result = getAllBrowseItems("VLSE", includeRecommendations = false)
+        // YouTube omits contents for an empty Episodes for later list.
+        val result = getAllBrowseItems("VLSE", includeRecommendations = false, missingContentsIsEmpty = true)
         check(result.complete) { "Saved episode pagination ended before the final page" }
         return result.items
             .mapNotNull { item ->
@@ -1393,11 +1404,12 @@ class YouTubeRepository(
     ): AlbumPage? {
         val database = databaseProvider()
 
-        suspend fun loadLocal(): AlbumPage? =
+        suspend fun loadLocal(requireComplete: Boolean = false): AlbumPage? =
             database
-                ?.loadOfflineAlbum(albumId, offlineSongAvailabilityProvider()?.songIds())
+                ?.loadOfflineAlbum(albumId, offlineSongAvailabilityProvider()?.songIds(), requireComplete)
                 ?.let { if (applyContentFilters) BlockedContent.filterAlbumPage(it) else it }
         if (!PlaybackNetworkStateStore.current.connected) return loadLocal()
+        loadLocal(requireComplete = true)?.let { return it }
         var stage = "browse"
         return try {
             val requestSession = innerTube.sessionSnapshot()
@@ -1439,6 +1451,8 @@ class YouTubeRepository(
                 } else {
                     getPlaylistPlaybackPage(albumItem.playlistId ?: return loadLocal()).copy(album = albumItem)
                 }
+            // A failed playlist request falls back to downloaded tracks; storing them would replace the full album.
+            if (playlistTracks.isOffline) return loadLocal()
             // An album's playlist comes back empty when the account cannot play most of it; the browse shelf still lists every track.
             val shelfSongs =
                 if (playlistTracks.songs.isEmpty() && !playlistTracks.hasMore) secondaryContents.albumShelfSongs() else emptyList()
@@ -1470,7 +1484,7 @@ class YouTubeRepository(
                     artistAlbums = artistAlbums,
                     description = albumHeader.description,
                 )
-            database?.storeAlbumPage(page)
+            database?.storeAlbumPage(page, hasHeaderMetadata = true)
             if (applyContentFilters) BlockedContent.filterAlbumPage(page) else page
         } catch (e: CancellationException) {
             throw e
@@ -1755,7 +1769,7 @@ class YouTubeRepository(
     ): SongWatchInformation? {
         val session = innerTube.sessionSnapshot()
         val requestTube = innerTube.createIsolatedSession(true)
-        requestTube.locale = requestTube.locale.copy(hl = languageTag)
+        requestTube.locale = requestTube.locale.copy(hl = youTubeLanguage(languageTag))
         return try {
             val response =
                 requestTube.next(YouTubeClient.WEB, videoId = videoId).bodyLimited<JsonObject>(PLAYER_NEXT_RESPONSE_LIMIT)
@@ -1767,6 +1781,15 @@ class YouTubeRepository(
                     ?.get("videoOwnerRenderer")
                     .asObject()
             val likeEntity = response.findFirstObject("likeCountEntity")
+            // WEB now sends an unset likeCountEntity; the exact count is only in the like button's accessibility text.
+            val likeButton =
+                response
+                    .findFirstObject("segmentedLikeDislikeButtonViewModel")
+                    ?.get("likeButtonViewModel")
+                    .asObject()
+                    ?.findFirstObject("defaultButtonViewModel")
+                    ?.get("buttonViewModel")
+                    .asObject()
             val viewEntity = response.findFirstObject("viewCountEntity")
 
             SongWatchInformation(
@@ -1786,10 +1809,17 @@ class YouTubeRepository(
                     likeEntity?.longValue("likeCountIfIndifferentNumber")
                         ?: likeEntity?.longValue("likeCountIfLikedNumber")
                         ?: likeEntity?.get("expandedLikeCountIfIndifferent").textContent().parseIntegerCount()
-                        ?: likeEntity?.get("expandedLikeCountIfLiked").textContent().parseIntegerCount(),
+                        ?: likeEntity?.get("expandedLikeCountIfLiked").textContent().parseIntegerCount()
+                        ?: likeButton?.get("accessibilityText").primitiveText().parseIntegerCount(),
                 viewCount =
                     viewEntity?.longValue("viewCountNumber")
                         ?: viewEntity?.get("unlabeledViewCountValue").textContent().parseIntegerCount(),
+                uploadDate =
+                    response
+                        .findFirstObject("videoPrimaryInfoRenderer")
+                        ?.get("dateText")
+                        .textContent()
+                        ?.takeIf { it.isNotBlank() },
                 description =
                     secondaryInfo
                         ?.get("attributedDescription")
@@ -1805,7 +1835,8 @@ class YouTubeRepository(
             ).also { requireCurrentSession(session) }
         } catch (e: CancellationException) {
             throw e
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            YtLogger.w(TAG, "getSongWatchInformation failed type=${e::class.simpleName ?: "unknown"}")
             null
         } finally {
             requestTube.close()
@@ -2386,8 +2417,8 @@ class YouTubeRepository(
         playlistId: String? = null,
         params: String? = null,
         continuation: String? = null,
+        session: InnerTube.SessionSnapshot = innerTube.sessionSnapshot(),
     ): JsonObject {
-        val session = innerTube.sessionSnapshot()
         val voteRevision = SongLikeState.voteObservationRevision()
         val key = NextRequestKey(session, videoId, playlistId, params, continuation)
         while (true) {
@@ -2430,11 +2461,48 @@ class YouTubeRepository(
         }
     }
 
-    suspend fun startRadio(videoId: String): List<SongItem> = startRadioQueue(videoId).songs
+    suspend fun startRadio(videoId: String): List<SongItem> =
+        startRadioQueue(videoId, playlistId = if (Settings.shared.classicRecommendations) null else "RDAMVM$videoId").songs
 
     suspend fun startRadioQueue(
         videoId: String,
-        playlistId: String? = if (Settings.shared.classicRecommendations) null else "RDAMVM$videoId",
+        classic: Boolean = Settings.shared.classicRecommendations,
+    ): RadioQueuePage {
+        val mixPlaylistId = "RDAMVM$videoId"
+        if (!classic) return startRadioQueue(videoId, playlistId = mixPlaylistId)
+
+        val session = innerTube.sessionSnapshot()
+        val firstPage = parseRadioQueueResponse(nextResponse(videoId, session = session))
+        val page =
+            if (firstPage.continuation == null && firstPage.songs.isNotEmpty() && firstPage.songs.all { it.id == videoId }) {
+                currentCoroutineContext().ensureActive()
+                try {
+                    val fallback = parseRadioQueueResponse(nextResponse(videoId, playlistId = mixPlaylistId, session = session))
+                    when {
+                        fallback.continuation == null && fallback.songs.none { it.id != videoId } -> firstPage
+
+                        fallback.songs.any { it.id == videoId } -> fallback
+
+                        // Playback from a pasted link can fall back to the seed metadata.
+                        else -> fallback.copy(songs = listOf(firstPage.songs.first()) + fallback.songs)
+                    }
+                } catch (cancelled: CancellationException) {
+                    throw cancelled
+                } catch (error: Exception) {
+                    requireCurrentSession(session)
+                    YtLogger.w(TAG, "Classic radio fallback failed type=${error::class.simpleName}")
+                    firstPage
+                }
+            } else {
+                firstPage
+            }
+        requireCurrentSession(session)
+        return page.copy(songs = BlockedContent.filterSongs(page.songs))
+    }
+
+    suspend fun startRadioQueue(
+        videoId: String,
+        playlistId: String?,
         params: String? = null,
     ): RadioQueuePage {
         val page = parseRadioQueueResponse(nextResponse(videoId, playlistId, params))

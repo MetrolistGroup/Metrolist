@@ -24,6 +24,7 @@ import androidx.compose.ui.unit.Dp
 import org.jetbrains.skia.Image
 import org.jetbrains.skia.Paint
 import org.jetbrains.skia.Rect
+import org.jetbrains.skia.SamplingMode
 import org.jetbrains.skia.Surface
 import kotlin.math.ceil
 import org.jetbrains.skia.Canvas as SkiaCanvas
@@ -104,7 +105,16 @@ private class ArtworkBlurNode(
                 }
             }
         snapshot = image
-        drawIntoCanvas { it.skiaCanvas.drawImage(image, 0f, 0f) }
+        drawIntoCanvas {
+            it.skiaCanvas.drawImageRect(
+                image,
+                Rect.makeWH(image.width.toFloat(), image.height.toFloat()),
+                Rect.makeWH(size.width, size.height),
+                SamplingMode.LINEAR,
+                null,
+                true,
+            )
+        }
     }
 
     override fun onDetach() {
@@ -122,11 +132,17 @@ internal fun rasterizeArtworkBlur(
     backgroundColor: Int,
     scrimColor: Int = 0,
     drawArtwork: (SkiaCanvas) -> Unit,
-): Image =
-    Surface.makeRasterN32Premul(ceil(width).toInt(), ceil(height).toInt()).use { surface ->
+): Image {
+    val downscale = artworkBlurDownscale(radiusPx)
+    val rasterWidth = ceil(width / downscale).toInt().coerceAtLeast(1)
+    val rasterHeight = ceil(height / downscale).toInt().coerceAtLeast(1)
+    return Surface.makeRasterN32Premul(rasterWidth, rasterHeight).use { surface ->
         val canvas = surface.canvas
         // Blurring over transparency adds a rounding step when the cached image is composited.
         canvas.clear(backgroundColor)
+        // Map the bounds onto whole raster pixels, so no partly covered edge column reaches the clamped blur.
+        // Skia scales the blur sigma with the canvas, so the result matches a full-size raster.
+        canvas.scale(rasterWidth / width, rasterHeight / height)
         val bounds = Rect.makeWH(width, height)
         canvas.save()
         canvas.translate(width / 2f, height / 2f)
@@ -153,3 +169,10 @@ internal fun rasterizeArtworkBlur(
         }
         surface.makeImageSnapshot()
     }
+}
+
+/**
+ * A large blur removes all detail finer than its radius, so the cached raster can hold one pixel per
+ * several screen pixels. Capped at 4, which cuts a 4K snapshot's pixel memory to one sixteenth.
+ */
+internal fun artworkBlurDownscale(radiusPx: Float): Float = (radiusPx / 16f).coerceIn(1f, 4f)

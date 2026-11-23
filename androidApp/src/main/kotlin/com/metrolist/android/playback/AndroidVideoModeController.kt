@@ -21,7 +21,12 @@ import com.metrolist.shared.model.SongItem
 import com.metrolist.shared.model.isPodcast
 import com.metrolist.shared.model.isVideoSong
 import com.metrolist.shared.model.playlistOccurrenceIdentity
+import com.metrolist.shared.playback.PlaybackFailureCategory
+import com.metrolist.shared.playback.PlaybackRecoveryAction
+import com.metrolist.shared.playback.PlaybackRecoveryBudget
+import com.metrolist.shared.playback.PlaybackRecoveryPolicy
 import com.metrolist.shared.playback.PlaybackSeekSource
+import com.metrolist.shared.playback.findPlaybackHttpStatusCode
 import com.metrolist.shared.settings.MusicVideoQuality
 import com.metrolist.shared.settings.Settings
 import com.metrolist.shared.state.GlobalYouTubeRepository
@@ -30,6 +35,7 @@ import com.metrolist.shared.youtube.playback.PlaybackBandwidthMeter
 import com.metrolist.shared.youtube.playback.PlaybackEventKind
 import com.metrolist.shared.youtube.playback.PlaybackEventLog
 import com.metrolist.shared.youtube.playback.PlaybackResource
+import com.metrolist.shared.youtube.playback.StreamResolver
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -46,12 +52,14 @@ import org.jetbrains.compose.resources.getString
 import timber.log.Timber
 import java.io.IOException
 import kotlin.math.abs
+import kotlin.time.Clock
 
 internal class AndroidVideoModeController(
     private val context: Context,
     private val player: AndroidPlaybackPlayer,
     private val scope: CoroutineScope,
     private val musicVideoResolver: MusicVideoResolver,
+    private val streamResolver: StreamResolver,
     private val withPlaybackLoading: suspend (suspend () -> PlaybackResource?) -> PlaybackResource?,
     private val fetchPlaybackResource: suspend (SongItem, Boolean) -> PlaybackResource?,
     private val onError: (String) -> Unit,
@@ -434,15 +442,14 @@ internal class AndroidVideoModeController(
                         )
                         return@launch
                     }
-                    val resource = result
-                    if (resource == null || (wantVideo && !resource.hasVideo)) {
+                    if (result == null || (wantVideo && !result.hasVideo)) {
                         Timber.tag(MUSIC_VIDEO_TAG).w(
                             "mode resource unusable generation=%d targetVideoId=%s wantVideo=%s resourcePresent=%s hasVideo=%s",
                             generation,
                             playbackSong.id,
                             wantVideo,
-                            resource != null,
-                            resource?.hasVideo,
+                            result != null,
+                            result?.hasVideo,
                         )
                         onError(
                             getString(
@@ -455,6 +462,7 @@ internal class AndroidVideoModeController(
                         )
                         return@launch
                     }
+                    var resource: PlaybackResource = result
                     val transitionPositionMap = positionMap.takeUnless { wantVideo && wasVideoModeActive }
 
                     fun targetPositionFor(sourcePositionMs: Long): Long {
@@ -481,17 +489,68 @@ internal class AndroidVideoModeController(
                         playbackSong.id != sourceSong.id,
                     )
 
-                    val committed =
-                        player.prepareAndPlay(
-                            seekSource = PlaybackSeekSource("replacement", mapOf("reason" to "video_mode")),
-                            song = playbackSong,
-                            resource = resource,
-                            positionMs = targetPositionMs,
-                            resumePlayback = resumePlayback,
-                            shouldCommit = ::canCommit,
-                            replaceCurrentQueueItem = playbackSong.id != sourceSong.id,
-                            positionMsProvider = { targetPositionFor(player.getRealtimePositionMs()) },
-                        )
+                    var committed = false
+                    var budget = PlaybackRecoveryBudget.starting(SystemClock.elapsedRealtime())
+                    while (canCommit()) {
+                        var prepareFailure: Throwable? = null
+                        committed =
+                            player.prepareAndPlay(
+                                seekSource = PlaybackSeekSource("replacement", mapOf("reason" to "video_mode")),
+                                song = playbackSong,
+                                resource = resource,
+                                positionMs = targetPositionFor(player.getRealtimePositionMs()),
+                                resumePlayback = resumePlayback,
+                                shouldCommit = ::canCommit,
+                                onPrepareFailure = { prepareFailure = it },
+                                replaceCurrentQueueItem = playbackSong.id != sourceSong.id,
+                                positionMsProvider = { targetPositionFor(player.getRealtimePositionMs()) },
+                            )
+                        if (committed || !canCommit()) break
+                        val failure = prepareFailure ?: break
+                        val category = failure.media3PlaybackFailureCategory()
+                        val decision =
+                            PlaybackRecoveryPolicy.decide(
+                                category = category,
+                                budget = budget,
+                                nowMs = SystemClock.elapsedRealtime(),
+                                resource = resource,
+                                positionMs = targetPositionFor(player.getRealtimePositionMs()),
+                            )
+                        budget = decision.budget
+                        if (decision.action == PlaybackRecoveryAction.NONE) throw failure
+                        val hints = playbackSong.toAndroidContentHints(wantVideo)
+                        if (decision.action == PlaybackRecoveryAction.RETRY_CLIENT ||
+                            category == PlaybackFailureCategory.CDN_FORBIDDEN ||
+                            category == PlaybackFailureCategory.SABR_PROTOCOL ||
+                            category == PlaybackFailureCategory.SABR_ATTESTATION
+                        ) {
+                            streamResolver.reportPlaybackFailure(
+                                videoId = playbackSong.id,
+                                clientName = resource.clientName,
+                                responseCode = failure.findMedia3HttpStatusCode() ?: failure.findPlaybackHttpStatusCode(),
+                                profileId = resource.profileId,
+                                hints = hints,
+                                category = category,
+                            )
+                        }
+                        val recovery =
+                            recoverPlaybackResource(
+                                streamResolver = streamResolver,
+                                retryNetworkResource = false,
+                                now = Clock.System.now(),
+                                action = decision.action,
+                                currentResource = resource,
+                                videoId = playbackSong.id,
+                                hints = hints,
+                                sourceSong = playbackSong,
+                                budget = budget,
+                                failure = failure,
+                                positionMs = targetPositionFor(player.getRealtimePositionMs()),
+                                category = category,
+                            )
+                        budget = recovery.budget
+                        resource = recovery.resource?.takeIf { !wantVideo || it.hasVideo } ?: throw (recovery.failure ?: failure)
+                    }
                     if (!committed) {
                         Timber.tag(MUSIC_VIDEO_TAG).d(
                             "mode prepare not committed generation=%d targetVideoId=%s",

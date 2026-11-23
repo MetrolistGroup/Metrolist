@@ -192,7 +192,8 @@ fun ModalBottomSheet(
                                                 }.draggable(
                                                     state = sheetState,
                                                     orientation = Orientation.Vertical,
-                                                    startDragImmediately = sheetState.isAnimationRunning,
+                                                    // An immediate drag would steal taps after the sheet is visually ready.
+                                                    startDragImmediately = sheetState.isAnimationRunning && !sheetState.acceptsInput,
                                                     onDragStopped = { velocity ->
                                                         sheetState.settle(velocity)
                                                     },

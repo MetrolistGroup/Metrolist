@@ -31,12 +31,14 @@ import com.metrolist.shared.storage.DownloadedPlaylists
 import com.metrolist.shared.storage.trackedDownloadPlaylistId
 import com.metrolist.shared.youtube.extraction.models.toContentHints
 import com.metrolist.shared.youtube.playback.PlaybackResource
+import io.ktor.client.plugins.HttpRequestTimeoutException
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -811,7 +813,14 @@ internal fun downloadFailureCode(error: Throwable): DownloadFailureCode {
 
         causes.any { it is SecurityException } -> DownloadFailureCode.STORAGE_ACCESS
 
-        causes.any { it is SocketException || it is SocketTimeoutException || it is UnknownHostException } -> DownloadFailureCode.NETWORK
+        causes.any {
+            it is SocketException || it is SocketTimeoutException || it is UnknownHostException ||
+                it is HttpRequestTimeoutException ||
+                (
+                    it is StreamResolveException && it.reason == StreamResolveException.Reason.NETWORK &&
+                        it.cause is TimeoutCancellationException
+                )
+        } -> DownloadFailureCode.NETWORK
 
         causes.any {
             it is IncompleteAudioDownloadException || it is SabrProtocolException ||

@@ -97,8 +97,10 @@ class PaxsenixLyricsProvider(
         query: String,
         allowUnauthorized: Boolean,
     ): List<PaxsenixSearchResult> {
+        val locale = GlobalYouTube.contentLocale
+        val languageTag = if ('-' in locale.hl) locale.hl else "${locale.hl}-${locale.gl}"
         val response =
-            httpClient.prepareGet("$APPLE_MUSIC_API_BASE/${GlobalYouTube.innerTube.locale.gl.lowercase()}/search") {
+            httpClient.prepareGet("$APPLE_MUSIC_API_BASE/${locale.gl.lowercase()}/search") {
                 expectMissingLyrics()
                 if (allowUnauthorized) {
                     val expectedStatusCodes = attributes.getOrNull(ExpectedHttpFailureStatusCodes).orEmpty()
@@ -111,7 +113,7 @@ class PaxsenixLyricsProvider(
                 parameter("term", query)
                 parameter("types", "songs")
                 parameter("limit", 25)
-                parameter("l", "${GlobalYouTube.innerTube.locale.hl}-${GlobalYouTube.innerTube.locale.gl}")
+                parameter("l", languageTag)
                 parameter("platform", "web")
                 parameter("format[resources]", "map")
                 parameter("include[songs]", "artists")

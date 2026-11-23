@@ -336,8 +336,7 @@ class PlayHistoryRepository(
             if (dao.hasRelatedSongs(songId)) return
             val related =
                 GlobalYouTubeRepository.instance
-                    .startRadioQueue(songId)
-                    .songs
+                    .startRadio(songId)
                     .filter { it.id.isNotBlank() && it.id != songId }
                     .distinctBy { it.id }
                     .take(RELATED_SONGS_LIMIT)

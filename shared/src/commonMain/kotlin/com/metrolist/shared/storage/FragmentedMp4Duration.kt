@@ -2,6 +2,18 @@ package com.metrolist.shared.storage
 
 internal const val FRAGMENTED_MP4_HEADER_BYTES = 64 * 1024
 
+internal fun hasOpusMp4SampleEntry(header: ByteArray): Boolean {
+    var boxes = mp4Children(header, 0, header.size, allowTruncated = true)
+    for (type in listOf("moov", "trak", "mdia", "minf", "stbl", "stsd")) {
+        boxes =
+            boxes.filter { it.type == type }.flatMap { box ->
+                val start = box.body + if (type == "stsd") 8 else 0
+                mp4Children(header, start, box.end, allowTruncated = true)
+            }
+    }
+    return boxes.any { it.type == "Opus" && it.end - it.body >= 28 }
+}
+
 internal fun clearFragmentedMp4MovieDurations(header: ByteArray): Boolean {
     val moov = mp4Children(header, 0, header.size).firstOrNull { it.type == "moov" } ?: return false
     val moovChildren = mp4Children(header, moov.body, moov.end)
@@ -44,6 +56,7 @@ private fun mp4Children(
     data: ByteArray,
     start: Int,
     end: Int,
+    allowTruncated: Boolean = false,
 ): List<Mp4Box> {
     val boxes = mutableListOf<Mp4Box>()
     var offset = start
@@ -57,10 +70,11 @@ private fun mp4Children(
         } else if (size == 0L) {
             size = (end - offset).toLong()
         }
-        if (size < headerSize || size > end - offset) break
+        if (size < headerSize || (size > end - offset && !allowTruncated)) break
         val type = (4 until 8).map { data[offset + it].toInt().toChar() }.joinToString("")
-        boxes += Mp4Box(type, offset + headerSize, offset + size.toInt())
-        offset += size.toInt()
+        val boxEnd = offset + minOf(size, (end - offset).toLong()).toInt()
+        boxes += Mp4Box(type, offset + headerSize, boxEnd)
+        offset = boxEnd
     }
     return boxes
 }

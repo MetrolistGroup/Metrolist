@@ -1867,6 +1867,7 @@ class ListenTogetherManager(
         } else if (track != null) {
             startRemotePlayback(track, state.queue, state.position, state.isPlaying, state.lastUpdate, barrier)
         } else {
+            if (_role.value == ListenTogetherRoomRole.GUEST) applyCanonicalQueue(state.queue)
             playback.setPlayingFromRemote(false)
         }
         applyHostVolume(state.volume)
@@ -2078,6 +2079,9 @@ class ListenTogetherManager(
 
     private suspend fun applyCanonicalQueue(queue: List<TrackInfo>) {
         val canonical = canonicalUpcomingQueue(queue)
+        // An idle room has no loaded track, so the guest loading guard would defer the clear forever
+        // and leave a queue from an earlier session saved on disk. Handle that confirmed clear first.
+        if (clearIdleGuestQueue(canonical)) return
         if (loadingTrackId != null || (_role.value == ListenTogetherRoomRole.GUEST && !hasLoadedRoomTrack)) {
             pendingCanonicalQueue = canonical.takeIf { it != loadingQueue }
             return
@@ -2098,11 +2102,25 @@ class ListenTogetherManager(
             }
         val localById = localUpcoming.groupBy { it.id }.mapValues { (_, songs) -> ArrayDeque(songs) }
         val merged = target.map { track -> track.mergeInto(localById[track.id]?.removeFirstOrNull()) }
-        if (merged != localUpcoming) playback.replaceUpcomingQueueFromRemote(merged)
+        // An idle room with no playable tracks is an explicit clear even when the live queue is already empty;
+        // a queue saved from an earlier session must not survive it.
+        if (merged != localUpcoming || (merged.isEmpty() && currentId == null)) {
+            playback.replaceUpcomingQueueFromRemote(merged)
+        }
         if (_role.value == ListenTogetherRoomRole.GUEST) playback.setQueueTitleFromRemote(_roomState.value?.queueTitle)
         if (_role.value == ListenTogetherRoomRole.HOST) {
             lastQueueSnapshot = canonical
         }
+    }
+
+    private suspend fun clearIdleGuestQueue(queue: List<TrackInfo>): Boolean {
+        if (_role.value != ListenTogetherRoomRole.GUEST || queue.isNotEmpty()) return false
+        if (loadingTrackId != null || _roomState.value?.currentTrack != null) return false
+        // Always issue the clear: the platform call also removes persisted state when nothing is loaded,
+        // so a queue saved by an earlier session cannot come back after a restart.
+        playback.replaceUpcomingQueueFromRemote(emptyList())
+        playback.setQueueTitleFromRemote(_roomState.value?.queueTitle)
+        return true
     }
 
     private suspend fun applyPendingCanonicalQueue() {

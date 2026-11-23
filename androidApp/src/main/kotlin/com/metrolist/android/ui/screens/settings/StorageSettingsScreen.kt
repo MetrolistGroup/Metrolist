@@ -32,6 +32,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -112,6 +113,7 @@ import com.metrolist.shared.settings.Settings
 import com.metrolist.shared.storage.ResizableImageDiskCache
 import com.metrolist.shared.storage.SongCacheLimitsMb
 import com.metrolist.shared.storage.cacheAllocationBytes
+import com.metrolist.shared.storage.imageCacheLimitOptions
 import com.metrolist.shared.storage.songCacheLimitIndex
 import com.metrolist.shared.ui.components.AlertDialog
 import com.metrolist.shared.ui.components.PopupVisibility
@@ -278,7 +280,7 @@ fun StorageSettingsScreen(
     val imageCacheProgress by animateFloatAsState(
         targetValue =
             if (maxImageCacheSize > 0 && imageCacheSize > 0) {
-                (imageCacheSize.toFloat() / (maxImageCacheSize * 1024 * 1024L)).coerceIn(0f, 1f)
+                (imageCacheSize.toFloat() / (maxImageCacheSize * 1024L * 1024L)).coerceIn(0f, 1f)
             } else {
                 0f
             },
@@ -355,7 +357,7 @@ fun StorageSettingsScreen(
                     if (newValue == -1) {
                         Long.MAX_VALUE
                     } else {
-                        newValue * 1024 * 1024L
+                        newValue * 1024L * 1024L
                     }
                 if (newValue != -1 && newLimitInBytes < actualSize) {
                     cacheWarningUsage = actualSize
@@ -919,46 +921,48 @@ fun StorageSettingsScreen(
             SettingsSubScreenGroup(
                 title = stringResource(Res.string.image_cache),
             ) {
-                val imageCacheValues = remember { listOf(0, 128, 256, 512, 1024, 2048, 4096, 8192) }
+                val imageCacheValues = remember(maxImageCacheSize) { imageCacheLimitOptions(maxImageCacheSize) }
 
                 Column(
                     verticalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
-                    CacheSliderCard(
-                        revision = cacheSliderRevision,
-                        title = stringResource(Res.string.max_image_cache_size),
-                        subtitle =
-                            when (maxImageCacheSize) {
-                                0 -> "$imageCacheSizeText/${stringResource(Res.string.disable)}"
-                                else -> "$imageCacheSizeText/${formatFileSize(maxImageCacheSize * 1024 * 1024L)}"
-                            },
-                        value =
-                            imageCacheValues
-                                .indexOf(maxImageCacheSize)
-                                .toFloat()
-                                .coerceIn(0f, (imageCacheValues.size - 1).toFloat()),
-                        onValueChangeFinished = {
-                            val newValue = imageCacheValues[it.roundToInt()]
-                            requestCacheLimit(
-                                newValue = newValue,
-                                cacheType = imageCacheTypeString,
-                                readSize = ::readImageCacheSize,
-                                updateSize = { it -> imageCacheSize = it },
-                                applyLimit = {
-                                    withContext(Dispatchers.IO) {
-                                        (imageDiskCache as ResizableImageDiskCache).resize(newValue * 1024L * 1024L)
-                                        Settings.shared.maxImageCacheSize = newValue
-                                    }
-                                    maxImageCacheSize = newValue
-                                    imageCacheSize = readImageCacheSize()
+                    key(imageCacheValues) {
+                        CacheSliderCard(
+                            revision = cacheSliderRevision,
+                            title = stringResource(Res.string.max_image_cache_size),
+                            subtitle =
+                                when (maxImageCacheSize) {
+                                    0 -> "$imageCacheSizeText/${stringResource(Res.string.disable)}"
+                                    else -> "$imageCacheSizeText/${formatFileSize(maxImageCacheSize * 1024L * 1024L)}"
                                 },
-                            )
-                        },
-                        steps = imageCacheValues.size - 1,
-                        enabled = !isCalculatingSizes,
-                        isFirst = true,
-                        isLast = true,
-                    )
+                            value =
+                                imageCacheValues
+                                    .indexOf(maxImageCacheSize)
+                                    .toFloat()
+                                    .coerceIn(0f, (imageCacheValues.size - 1).toFloat()),
+                            onValueChangeFinished = {
+                                val newValue = imageCacheValues[it.roundToInt()]
+                                requestCacheLimit(
+                                    newValue = newValue,
+                                    cacheType = imageCacheTypeString,
+                                    readSize = ::readImageCacheSize,
+                                    updateSize = { it -> imageCacheSize = it },
+                                    applyLimit = {
+                                        withContext(Dispatchers.IO) {
+                                            (imageDiskCache as ResizableImageDiskCache).resize(newValue * 1024L * 1024L)
+                                            Settings.shared.maxImageCacheSize = newValue
+                                        }
+                                        maxImageCacheSize = newValue
+                                        imageCacheSize = readImageCacheSize()
+                                    },
+                                )
+                            },
+                            steps = imageCacheValues.size - 1,
+                            enabled = !isCalculatingSizes,
+                            isFirst = true,
+                            isLast = true,
+                        )
+                    }
                 }
             }
 

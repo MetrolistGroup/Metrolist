@@ -3,7 +3,7 @@ package com.metrolist.shared.state
 import com.metrolist.shared.settings.Settings
 import java.util.Locale
 
-actual val contentCountryCodes: Set<String> by lazy { Locale.getISOCountries().toSet() }
+internal actual val platformCountryCodes: Set<String> by lazy { Locale.getISOCountries().toSet() }
 
 internal actual val platformContentLanguageCodes: Set<String> by lazy {
     Locale.getISOLanguages().toSet() + Locale.getAvailableLocales().map(Locale::toLanguageTag)
@@ -20,18 +20,11 @@ fun GlobalYouTube.applyContentRegion(
     applyContentRegion(
         contentCountry = contentCountry,
         contentLanguage = contentLanguage,
-        systemCountry =
-            systemLocale.country.takeIf { it in contentCountryCodes }
-                ?: likelyContentCountry(
-                    Locale
-                        .Builder()
-                        .setLocale(systemLocale)
-                        .setRegion("")
-                        .build(),
-                ),
-        systemLanguage = systemLocale.language,
+        systemCountry = closestContentCountry(systemLocale),
+        systemLanguage = systemLocale.toLanguageTag(),
         settings = settings,
     )
 }
 
-internal expect fun likelyContentCountry(locale: Locale): String
+// The system region when YouTube Music serves it, otherwise the nearest served region using the same language.
+internal expect fun closestContentCountry(locale: Locale): String

@@ -36,10 +36,31 @@ internal fun shouldPersistPlaybackState(
     previous: PersistPlayerState?,
     current: PersistPlayerState?,
 ): Boolean {
-    if (previous == null || current == null) return previous != current
+    // An empty live queue is not a clear: it may be a transient state during restoration or teardown.
+    if (current == null) return false
+    if (previous == null) return true
     return (!current.playWhenReady && current.currentPosition != previous.currentPosition) ||
         abs(current.currentPosition - previous.currentPosition) >= 5_000 ||
         current.copy(currentPosition = previous.currentPosition) != previous
+}
+
+internal data class PlaybackCheckpointDecision(
+    val request: PlaybackPersistenceWriter.Request?,
+    val state: PersistPlayerState?,
+)
+
+internal fun decidePlaybackCheckpoint(
+    writer: PlaybackPersistenceWriter,
+    lifecycle: PlaybackPersistenceLifecycle,
+    persistentQueue: Boolean,
+    previous: PersistPlayerState?,
+    state: () -> PersistPlayerState?,
+): PlaybackCheckpointDecision {
+    if (!lifecycle.canSave(persistentQueue)) return PlaybackCheckpointDecision(null, previous)
+    if (!persistentQueue) return PlaybackCheckpointDecision(writer.requestClear(), null)
+    val next = state() ?: return PlaybackCheckpointDecision(null, previous)
+    if (!shouldPersistPlaybackState(previous, next)) return PlaybackCheckpointDecision(null, previous)
+    return PlaybackCheckpointDecision(writer.request(next), next)
 }
 
 internal class PlaybackPersistenceLifecycle {

@@ -489,7 +489,10 @@ class LibraryViewModel(
                 YtLogger.w(
                     "LibrarySync",
                     "Refresh complete=$completeRefresh music=${musicResult.items.size} " +
-                        "musicComplete=${musicResult.complete} podcastsOk=${podcastsResult.isSuccess} episodesOk=${episodesResult.isSuccess}",
+                        "musicComplete=${musicResult.complete} podcastsOk=${podcastsResult.isSuccess} " +
+                        "episodesOk=${episodesResult.isSuccess}" +
+                        listOfNotNull(podcastsResult.exceptionOrNull(), episodesResult.exceptionOrNull())
+                            .joinToString("") { " error=${it::class.simpleName}: ${it.message}" },
                 )
                 if (completeRefresh) {
                     _uiState.update { it.copy(isLoading = false, isRefreshing = false, error = false) }
@@ -999,5 +1002,6 @@ internal suspend fun contentMatchedSongs(
     withContext(Dispatchers.Default) {
         val term = query.trim()
         if (term.length < 2) return@withContext emptyList()
-        database.dao().contentMatchedSongs(term, LIBRARY_SEARCH_PAGE_SIZE, offset, descending).map { it.toSongItem() }
+        val escapedTerm = term.replace("!", "!!").replace("%", "!%").replace("_", "!_")
+        database.dao().contentMatchedSongs(escapedTerm, LIBRARY_SEARCH_PAGE_SIZE, offset, descending).map { it.toSongItem() }
     }

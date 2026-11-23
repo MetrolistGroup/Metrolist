@@ -54,6 +54,8 @@ import com.metrolist.android.listentogether.AndroidListenTogetherManager
 import com.metrolist.android.models.PersistPlayerState
 import com.metrolist.android.models.PlaybackPersistenceWriter
 import com.metrolist.android.models.decodePersistPlayerState
+import com.metrolist.android.models.playbackPersistenceJson
+import com.metrolist.android.utils.isAndroidTv
 import com.metrolist.android.widget.EXTRA_WIDGET_COMMAND_TOKEN
 import com.metrolist.android.widget.MetrolistWidgetManager
 import com.metrolist.android.widget.MusicWidgetReceiver
@@ -163,6 +165,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.guava.await
 import kotlinx.coroutines.guava.future
 import kotlinx.coroutines.isActive
@@ -292,8 +295,9 @@ class MusicService :
     var media3Player: Player? = null
         private set
     private var mediaSession: MediaLibrarySession? = null
-    internal var playbackCommandGeneration = 0L
-        private set
+    private val playbackCommandEvents = MutableStateFlow(0L)
+    internal val playbackCommands = playbackCommandEvents.asStateFlow()
+    internal val playbackCommandGeneration: Long get() = playbackCommandEvents.value
     private lateinit var playbackRestoreJob: Job
     private lateinit var automotiveLibrary: AutomotiveMediaLibrary
     private val automotiveRootChildrenLimit = ConcurrentHashMap<MediaSession.ControllerInfo, Int>()
@@ -406,6 +410,9 @@ class MusicService :
     private val healthyQueueRequestIds = linkedSetOf<Long>()
 
     private var lastPersistenceState: PersistPlayerState? = null
+
+    // The service-owned channel can be cancelled before its clear write runs; keep the request for the final checkpoint.
+    @Volatile private var pendingPlaybackClear: PlaybackPersistenceWriter.Request? = null
     private val playbackPersistenceRequests = Channel<PlaybackPersistenceWriter.Request>(Channel.CONFLATED)
 
     private val playbackPersistenceLifecycle = PlaybackPersistenceLifecycle()
@@ -532,6 +539,7 @@ class MusicService :
                 player = player,
                 scope = serviceScope,
                 musicVideoResolver = musicVideoResolver,
+                streamResolver = streamResolver,
                 withPlaybackLoading = { block -> withQueueLoading(isPlaybackLoading = true, block = block) },
                 fetchPlaybackResource = { song, wantVideo -> fetchPlaybackResource(song, wantVideo).resource },
                 onError = ::showPlaybackErrorToast,
@@ -543,6 +551,7 @@ class MusicService :
             MediaSessionPlayer(
                 artworkUri = { mediaArtworkUri(this, it) },
                 currentArtworkUri = { mediaArtworkUri(this, it, isCurrent = true) },
+                currentArtworkAuthority = "$packageName.media-artwork",
                 musicPlayer = player,
                 repeatMode = _repeatMode,
                 shuffleModeEnabled = _shuffleModeEnabled,
@@ -552,6 +561,7 @@ class MusicService :
                 onRemoteSeek = ::seekCastTo,
                 onRemoteVolumeChange = ::setCastVolume,
                 onQueueChanged = ::synchronizeMediaSessionQueue,
+                onQueueCleared = ::clearPersistedPlaybackState,
                 extendPlaylistBeforeSkip = ::extendPlaylistBeforeSkip,
                 mediaItemResolver = automotiveLibrary::resolveCachedSong,
                 automotivePlaybackRequestGate = automotivePlaybackRequestGate,
@@ -576,6 +586,7 @@ class MusicService :
                 fetchPlaybackResource = { song, wantVideo -> fetchPlaybackResource(song, wantVideo).resource },
                 isCasting = { castManager.state.value.status != CastConnectionStatus.DISCONNECTED },
                 onSave = ::savePlaybackState,
+                onQueueCleared = ::clearPersistedPlaybackState,
                 onDiscordUpdate = ::syncDiscordState,
             )
         sleepTimerController =
@@ -655,7 +666,34 @@ class MusicService :
                 pauseAllPlayersAndStopSelf()
             }
         }
+        serviceScope.launch {
+            if (!isAndroidTv()) return@launch
+            ProcessLifecycleOwner
+                .get()
+                .lifecycle.currentStateFlow
+                .map { it.isAtLeast(Lifecycle.State.STARTED) }
+                .distinctUntilChanged()
+                .collect { foreground ->
+                    // On TV, users expect audio to stop when they leave the app; phones keep background playback.
+                    if (!foreground && shouldPauseLocalPlaybackInBackground()) {
+                        player.pause()
+                    }
+                }
+        }
     }
+
+    private fun shouldPauseLocalPlaybackInBackground(): Boolean =
+        isAndroidTv() &&
+            Settings.shared.stopMusicOnTaskClear &&
+            !ProcessLifecycleOwner
+                .get()
+                .lifecycle.currentState
+                .isAtLeast(Lifecycle.State.STARTED) &&
+            !castManager.state.value.isConnected &&
+            !AndroidListenTogetherManager.playbackRequired.value &&
+            AndroidDeviceConnect.manager.state.value.peers.none {
+                it.state == DeviceConnectManager.PeerState.CONNECTED
+            }
 
     private fun observeListenTogetherForegroundDemand() {
         serviceScope.launch {
@@ -734,7 +772,7 @@ class MusicService :
     }
 
     internal fun onPlaybackCommand() {
-        playbackCommandGeneration++
+        playbackCommandEvents.update { it + 1 }
         playbackBenchmark.cancel()
         pauseOnMute.cancelResume()
     }
@@ -879,7 +917,9 @@ class MusicService :
                         )
                     }
                 }
-            if (!connected && isCurrentHandoff()) restoreLocalPlaybackAfterCast(position, playing)
+            if (!connected && isCurrentHandoff()) {
+                restoreLocalPlaybackAfterCast(position, playing)
+            }
         }
     }
 
@@ -923,9 +963,11 @@ class MusicService :
         positionMs: Long,
         resumePlayback: Boolean,
     ) {
-        if (player.retryPendingQueuePlayback(positionMs, resumePlayback)) return
+        // Returning from Cast while the TV app is in the background must not undo its pause-on-background rule.
+        val resume = resumePlayback && !shouldPauseLocalPlaybackInBackground()
+        if (player.retryPendingQueuePlayback(positionMs, resume)) return
         player.seekTo(positionMs, PlaybackSeekSource("queue_restore", mapOf("reason" to "cast_disconnect")))
-        if (resumePlayback) player.resume() else player.pause()
+        if (resume) player.resume() else player.pause()
     }
 
     fun toggleCastPlayback() = setCastPlayback(!castManager.state.value.isPlaying)
@@ -1405,8 +1447,8 @@ class MusicService :
             streamRecoveryBudget = PlaybackRecoveryBudget.starting(SystemClock.elapsedRealtime())
         }
 
-        val hints = song.toAndroidContentHints(wantVideo = Settings.shared.videoViewerVisible)
         var failedResource = player.currentPlaybackResource.value
+        var hints = song.toAndroidContentHints(wantVideo = failedResource?.hasVideo ?: Settings.shared.videoViewerVisible)
         var lastFailure = failure.cause ?: IllegalStateException(failure.message)
         var lastHttpStatusCode = failure.httpStatusCode ?: lastFailure.findMedia3HttpStatusCode()
         var failureCategory =
@@ -1547,6 +1589,7 @@ class MusicService :
             }
 
             failedResource = freshResource
+            hints = song.toAndroidContentHints(wantVideo = freshResource.hasVideo)
             lastFailure = prepareFailure ?: IllegalStateException("Refreshed stream could not be prepared")
             lastHttpStatusCode = lastFailure.findMedia3HttpStatusCode() ?: lastFailure.findPlaybackHttpStatusCode()
             failureCategory =
@@ -1588,25 +1631,31 @@ class MusicService :
                                     excludedProfiles = excluded,
                                 )
                             }
-                        player.prepareAndPlay(
-                            song = song,
-                            resource = fresh,
-                            positionMs = player.getRealtimePositionMs(),
-                            resumePlayback = player.wantsPlayback,
-                            positionMsProvider = player::getRealtimePositionMs,
-                            playWhenReadyProvider = { player.wantsPlayback },
-                            shouldCommit = {
-                                recoveryContext.isActive && player.currentPlaybackInstanceId == failedPlaybackInstanceId &&
-                                    player.latestQueuePlaybackRequestId == queueRequestId && player.currentSong.value?.id == videoId
-                            },
-                            onPrepareFailure = { it?.let { error -> lastFailure = error } },
-                            recoveryPlaybackInstanceId = failedPlaybackInstanceId,
-                            seekSource =
-                                PlaybackSeekSource(
-                                    "recovery",
-                                    mapOf("reason" to failure.stage, "category" to failure.category.name),
-                                ),
-                        )
+                        val committed =
+                            player.prepareAndPlay(
+                                song = song,
+                                resource = fresh,
+                                positionMs = player.getRealtimePositionMs(),
+                                resumePlayback = player.wantsPlayback,
+                                positionMsProvider = player::getRealtimePositionMs,
+                                playWhenReadyProvider = { player.wantsPlayback },
+                                shouldCommit = {
+                                    recoveryContext.isActive && player.currentPlaybackInstanceId == failedPlaybackInstanceId &&
+                                        player.latestQueuePlaybackRequestId == queueRequestId && player.currentSong.value?.id == videoId
+                                },
+                                onPrepareFailure = { error ->
+                                    error?.let { lastFailure = it }
+                                    hints = song.toAndroidContentHints(wantVideo = fresh.hasVideo)
+                                },
+                                recoveryPlaybackInstanceId = failedPlaybackInstanceId,
+                                seekSource =
+                                    PlaybackSeekSource(
+                                        "recovery",
+                                        mapOf("reason" to failure.stage, "category" to failure.category.name),
+                                    ),
+                            )
+                        if (committed) videoMode.onQueuePlaybackStarted(song, fresh.hasVideo, fresh)
+                        committed
                     } catch (cancelled: CancellationException) {
                         throw cancelled
                     } catch (error: Exception) {
@@ -2659,17 +2708,54 @@ class MusicService :
 
     private fun savePlaybackState() {
         if (!playbackPersistenceLifecycle.restoring) queueCoordinator.saveShuffleMode()
-        if (!playbackPersistenceLifecycle.canSave(Settings.shared.persistentQueue)) return
-        val state = buildPersistPlayerState()
-        if (!shouldPersistPlaybackState(lastPersistenceState, state)) return
-        lastPersistenceState = state
-        playbackPersistenceRequests.trySend(playbackPersistenceWriter.request(state))
+        val decision =
+            decidePlaybackCheckpoint(
+                writer = playbackPersistenceWriter,
+                lifecycle = playbackPersistenceLifecycle,
+                persistentQueue = Settings.shared.persistentQueue,
+                previous = lastPersistenceState,
+                state = ::buildPersistPlayerState,
+            )
+        val request = decision.request ?: return
+        pendingPlaybackClear = request.takeIf { it.clear }
+        lastPersistenceState = decision.state
+        playbackPersistenceRequests.trySend(request)
     }
 
     private fun saveFinalPlaybackState(): Job? {
         if (!playbackPersistenceLifecycle.restoring) queueCoordinator.saveShuffleMode()
         if (!playbackPersistenceLifecycle.canSave(Settings.shared.persistentQueue)) return finalPlaybackPersistence
-        val request = playbackPersistenceWriter.request(buildPersistPlayerState())
+        if (!Settings.shared.persistentQueue) return clearFinalPersistedPlaybackState()
+        val state = buildPersistPlayerState()
+        if (state == null) {
+            val clear = pendingPlaybackClear
+            if (clear != null) {
+                pendingPlaybackClear = null
+                return launchFinalPersistence(clear)
+            }
+            // A transient empty queue can still have a queued non-empty checkpoint; flush it before the scope is cancelled.
+            val pendingState = lastPersistenceState ?: return finalPlaybackPersistence
+            return launchFinalPersistence(playbackPersistenceWriter.request(pendingState))
+        }
+        pendingPlaybackClear = null
+        lastPersistenceState = state
+        return launchFinalPersistence(playbackPersistenceWriter.request(state))
+    }
+
+    internal fun clearPersistedPlaybackState() {
+        lastPersistenceState = null
+        val clear = playbackPersistenceWriter.requestClear()
+        pendingPlaybackClear = clear
+        playbackPersistenceRequests.trySend(clear)
+    }
+
+    private fun clearFinalPersistedPlaybackState(): Job? {
+        lastPersistenceState = null
+        pendingPlaybackClear = null
+        return launchFinalPersistence(playbackPersistenceWriter.requestClear())
+    }
+
+    private fun launchFinalPersistence(request: PlaybackPersistenceWriter.Request): Job? {
         finalPlaybackPersistence =
             CoroutineScope(Dispatchers.IO).launch {
                 runCatching { playbackPersistenceWriter.write(request) }
@@ -2704,6 +2790,7 @@ class MusicService :
             val restoredSongs = restoredQueue.displayedItems
             if (restoredSongs.isEmpty()) {
                 Settings.shared.pendingContinuePlayback = false
+                clearPersistedPlaybackState()
                 return
             }
             val restored = queueCoordinator.restorePersistedQueue(state, restoredQueue, expectedQueueSessionId, restoreModes)
@@ -2716,6 +2803,7 @@ class MusicService :
         } catch (e: Exception) {
             Timber.e(e, "Failed to restore playback")
             Settings.shared.pendingContinuePlayback = false
+            clearPersistedPlaybackState()
         }
     }
 
@@ -2867,7 +2955,9 @@ class MusicService :
     ): PlaybackFetchResult =
         withContext(Dispatchers.IO) {
             val connected = PlaybackNetworkStateStore.current.connected
-            cachedAudioResource(wantVideo && connected) { audioCacheManager.getCachedPlaybackResource(song) }
+            // Video mode stays on across songs, but a plain song has no video of its own, so its saved file wins.
+            val skipSavedAudio = wantVideo && connected && (song.isVideoSong || song.isPodcast)
+            cachedAudioResource(skipSavedAudio) { audioCacheManager.getCachedPlaybackResource(song) }
                 ?.let { return@withContext PlaybackFetchResult(resource = it) }
             if (!connected && !song.isLocal && !song.id.startsWith("local_")) return@withContext PlaybackFetchResult()
             val hints = song.toAndroidContentHints(wantVideo = wantVideo)
@@ -3673,6 +3763,7 @@ class MusicService :
                 activityName = settings.discordActivityName,
                 stateTemplate = settings.discordStateTemplate,
                 detailsTemplate = settings.discordDetailsTemplate,
+                albumTemplate = settings.discordAlbumTemplate,
                 btn1Enabled = settings.discordButton1Enabled,
                 btn1Label =
                     resolveDiscordButtonLabel(

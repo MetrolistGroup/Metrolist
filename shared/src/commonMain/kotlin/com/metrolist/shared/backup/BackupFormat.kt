@@ -137,10 +137,31 @@ fun requireSupportedBackupDatabaseTables(
     }
 }
 
+// v13's Edit song replaced a YouTube song's artists with new local artists. Keep that edit as the custom artist,
+// since library sync maps the YouTube artists back onto the song.
+private val LEGACY_EDITED_ARTISTS_SQL =
+    """
+    UPDATE song SET customArtist = (
+        SELECT group_concat(name, ', ') FROM (
+            SELECT artist.name FROM song_artist_map JOIN artist ON artist.id = song_artist_map.artistId
+            WHERE song_artist_map.songId = song.id ORDER BY song_artist_map.position
+        )
+    )
+    WHERE customArtist IS NULL AND isLocal NOT IN (1, 'true')
+        AND EXISTS (SELECT 1 FROM song_artist_map WHERE song_artist_map.songId = song.id)
+        AND NOT EXISTS (
+            SELECT 1 FROM song_artist_map JOIN artist ON artist.id = song_artist_map.artistId
+            WHERE song_artist_map.songId = song.id AND NOT (artist.isLocal IN (1, 'true') AND artist.id LIKE 'LA%')
+        )
+    """.trimIndent()
+
 fun legacyBackupDataMigrations(version: Int): List<String> {
     requireSupportedBackupDatabaseVersion(version, DATABASE_VERSION)
     return buildList {
-        if (version < 45) addAll(MIGRATION_44_45_DATA_SQL)
+        if (version < 45) {
+            addAll(MIGRATION_44_45_DATA_SQL)
+            add(LEGACY_EDITED_ARTISTS_SQL)
+        }
         if (version < 46) addAll(MIGRATION_45_46_SQL)
         if (version < 51) {
             add("UPDATE event SET playTimeKnown = 0 WHERE source = 'YOUTUBE'")

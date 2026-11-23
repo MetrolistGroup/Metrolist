@@ -17,6 +17,7 @@ import com.metrolist.shared.model.presentCollection
 import com.metrolist.shared.model.sortedForLikedPlaylist
 import com.metrolist.shared.model.sortedForPlaylist
 import com.metrolist.shared.model.sortedForTopPlaylist
+import com.metrolist.shared.settings.ArtistNameAliases
 import com.metrolist.shared.settings.SavedPlaylistCollectionSorting
 import com.metrolist.shared.settings.Settings
 import com.metrolist.shared.viewmodels.DownloadPlaylistFilterState
@@ -42,6 +43,12 @@ internal data class AutoPlaylistPresentationInput(
     val listeningTimes: Map<String, Long> = emptyMap(),
     val downloadFilter: DownloadPlaylistFilterState = DownloadPlaylistFilterState(),
     val cachedCustomOrder: List<String> = emptyList(),
+    val artistAliases: Map<String, String> =
+        if ((type == "cached" || type == "downloaded") && collectionSort == CollectionSort.ARTIST) {
+            ArtistNameAliases.aliases
+        } else {
+            emptyMap()
+        },
 )
 
 internal fun AutoPlaylistPresentationInput.withSongSorting(
@@ -79,6 +86,7 @@ internal suspend fun prepareAutoPlaylistSongs(
                         effectiveSort,
                         collectionDirection,
                         customOrder = if (type == "cached") cachedCustomOrder else emptyList(),
+                        artistAliases = artistAliases,
                     ) { song ->
                         entries[song.id]?.let { entry ->
                             CollectionMeta(
@@ -127,6 +135,7 @@ internal suspend fun prepareCachedCollectionSongs(
     playCounts: Map<String, Int>,
     sorting: SavedPlaylistCollectionSorting,
     customOrder: List<String>,
+    artistAliases: Map<String, String> = if (sorting.sort == CollectionSort.ARTIST) ArtistNameAliases.aliases else emptyMap(),
     dispatcher: CoroutineDispatcher = Dispatchers.Default,
 ): List<SongItem> {
     if (entries.isEmpty()) return emptyList()
@@ -148,6 +157,7 @@ internal suspend fun prepareCachedCollectionSongs(
             playlistDirection = SortDirection.ASCENDING,
             topDirection = SortDirection.DESCENDING,
             cachedCustomOrder = customOrder,
+            artistAliases = artistAliases,
         ),
         dispatcher = dispatcher,
     )
@@ -184,6 +194,7 @@ internal suspend fun loadOrderedCachedSongs(
         playCounts = playCounts,
         sorting = sorting,
         customOrder = customOrder,
+        artistAliases = if (sorting.sort == CollectionSort.ARTIST) settings.artistNameAliases else emptyMap(),
         dispatcher = dispatcher,
     )
 }

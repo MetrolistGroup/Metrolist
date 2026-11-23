@@ -5,6 +5,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -43,11 +44,13 @@ import com.metrolist.shared.generated.resources.max_song_cache_size
 import com.metrolist.shared.generated.resources.ok
 import com.metrolist.shared.generated.resources.song_cache
 import com.metrolist.shared.generated.resources.unlimited
+import com.metrolist.shared.playback.IosNowPlayingAnimatedArtworkCache
 import com.metrolist.shared.settings.Settings
 import com.metrolist.shared.storage.IosAudioDownloadManager
 import com.metrolist.shared.storage.ResizableImageDiskCache
 import com.metrolist.shared.storage.SongCacheLimitsMb
 import com.metrolist.shared.storage.cacheAllocationBytes
+import com.metrolist.shared.storage.imageCacheLimitOptions
 import com.metrolist.shared.storage.songCacheLimitIndex
 import com.metrolist.shared.storage.storageUsageFraction
 import com.metrolist.shared.ui.icons.MetrolistIcons
@@ -97,7 +100,7 @@ fun IosStorageSettingsPage(
     var failed by remember { mutableStateOf(false) }
     var sliderRevision by remember { mutableIntStateOf(0) }
     val cacheLimits = SongCacheLimitsMb
-    val imageLimits = remember { listOf(0, 128, 256, 512, 1024, 2048, 4096, 8192) }
+    val imageLimits = remember(maxImageMb) { imageCacheLimitOptions(maxImageMb) }
 
     suspend fun refreshImageUsage() {
         val (images, diskCapacity) =
@@ -248,6 +251,7 @@ fun IosStorageSettingsPage(
                                 withContext(Dispatchers.IO) {
                                     imageCache.clear()
                                     imageLoader.memoryCache?.clear()
+                                    IosNowPlayingAnimatedArtworkCache.clearInactive()
                                 }
                             }
                     }
@@ -302,16 +306,18 @@ fun IosStorageSettingsPage(
             )
         }
         StorageSection(imageTitle) {
-            StorageSliderRow(
-                stringResource(Res.string.max_image_cache_size),
-                "${sizeLabel(imageBytes)}/${limitLabel(maxImageMb)}",
-                imageLimits.indexOf(maxImageMb).coerceAtLeast(0).toFloat(),
-                { requestLimit(imageLimits[it.roundToInt()], image = true) },
-                imageLimits.lastIndex,
-                revision = sliderRevision,
-                enabled = !busy && usage != null,
-                isLast = true,
-            )
+            key(imageLimits) {
+                StorageSliderRow(
+                    stringResource(Res.string.max_image_cache_size),
+                    "${sizeLabel(imageBytes)}/${limitLabel(maxImageMb)}",
+                    imageLimits.indexOf(maxImageMb).coerceAtLeast(0).toFloat(),
+                    { requestLimit(imageLimits[it.roundToInt()], image = true) },
+                    imageLimits.lastIndex,
+                    revision = sliderRevision,
+                    enabled = !busy && usage != null,
+                    isLast = true,
+                )
+            }
         }
     }
     confirmation?.let { prompt ->

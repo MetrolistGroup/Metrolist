@@ -47,7 +47,8 @@ object CollectionPreviews {
 
     fun record(page: AlbumPage) {
         record(page.album)
-        items[previewKey(page.album.id)] = Preview(page.album, page.otherVersions.take(CAPACITY))
+        val key = previewKey(page.album.id)
+        items[key] = items.getValue(key).copy(otherVersions = page.otherVersions.take(CAPACITY))
     }
 
     fun record(artist: ArtistTiny) {

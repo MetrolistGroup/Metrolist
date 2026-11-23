@@ -1,6 +1,7 @@
 package com.metrolist.android.playback
 
 import com.metrolist.shared.model.SongItem
+import java.text.Normalizer
 
 internal object VoiceSearchMatcher {
     const val STRONG_MATCH_THRESHOLD = 0.60
@@ -27,10 +28,10 @@ internal object VoiceSearchMatcher {
         title: String,
         artists: List<String> = emptyList(),
     ): Double {
-        val queryLower = query.lowercase().trim()
+        val queryLower = normalizedLowercase(query).trim()
         val queryWords = tokenize(queryLower)
         if (queryWords.isEmpty()) return 0.0
-        val titleWords = tokenize(title)
+        val titleWords = tokenize(normalizedLowercase(title))
         if (titleWords == queryWords) return 1.0
 
         val queryTokens = queryWords.toSet()
@@ -53,7 +54,7 @@ internal object VoiceSearchMatcher {
     ): Set<String> {
         val remaining = queryTokens.toMutableSet()
         artists.forEach { artist ->
-            val artistTokens = tokenize(artist)
+            val artistTokens = tokenize(normalizedLowercase(artist))
             remaining.removeAll { queryToken ->
                 if (queryToken.length < 4) {
                     artistTokens.contains(queryToken)
@@ -91,9 +92,12 @@ internal object VoiceSearchMatcher {
         }
     }
 
+    // Keep decomposed accents from being split off as punctuation.
+    private fun normalizedLowercase(text: String): String = Normalizer.normalize(text, Normalizer.Form.NFC).lowercase()
+
     private fun tokenize(text: String): List<String> =
         PUNCTUATION_REGEX
-            .replace(text.lowercase(), " ")
+            .replace(text, " ")
             .split(Regex("\\s+"))
             .filter { it.isNotBlank() }
 

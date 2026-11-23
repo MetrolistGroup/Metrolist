@@ -20,6 +20,9 @@ import android.util.LruCache
 import android.view.View
 import android.widget.RemoteViews
 import androidx.appcompat.content.res.AppCompatResources
+import androidx.compose.material3.ColorScheme
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.core.graphics.createBitmap
 import coil3.ImageLoader
 import coil3.request.ImageRequest
@@ -29,6 +32,7 @@ import coil3.toBitmap
 import com.metrolist.android.MainActivity
 import com.metrolist.android.R
 import com.metrolist.android.playback.mediaArtworkUri
+import com.metrolist.android.ui.theme.extractThemeColor
 import com.metrolist.shared.db.MusicDatabase
 import com.metrolist.shared.model.BuiltinPlaylist
 import com.metrolist.shared.ui.components.libraryArtwork
@@ -63,12 +67,14 @@ class PlaylistWidgetManager(
 
     @Volatile private var cachedAlbumArt: Bitmap? = null
 
-    @Volatile private var cachedRoundedAlbumArt: Bitmap? = null
+    @Volatile private var cachedCookieAlbumArt: Bitmap? = null
 
-    @Volatile private var cachedRoundedSource: Bitmap? = null
+    @Volatile private var cachedCookieSource: Bitmap? = null
+
+    @Volatile private var cachedArtworkSeed: Color? = null
     private val fallbackArtworkCache = LruCache<FallbackArtworkKey, Bitmap>(8)
 
-    @Volatile private var roundedAppIcon: Bitmap? = null
+    @Volatile private var cookieAppIcon: Bitmap? = null
 
     @Volatile
     private var lastWidgetState =
@@ -82,8 +88,10 @@ class PlaylistWidgetManager(
             currentPosition = 0,
         )
 
+    private var lastControls = WidgetControls()
+
     private val updateMutex = Mutex()
-    private val progressLevels = mutableMapOf<Int, Int>()
+    private val progressBuckets = mutableMapOf<Int, Long>()
 
     private var observation: Job? = null
     private val quickPickCapacity = MutableStateFlow(0)
@@ -128,7 +136,7 @@ class PlaylistWidgetManager(
         )
     }
 
-    suspend fun updateWidgets(
+    internal suspend fun updateWidgets(
         title: String,
         artist: String,
         artworkUri: String?,
@@ -136,9 +144,11 @@ class PlaylistWidgetManager(
         isLiked: Boolean,
         duration: Long = 0,
         currentPosition: Long = 0,
+        controls: WidgetControls = WidgetControls(playbackRequested = isPlaying),
     ) {
         synchronized(this) {
             lastWidgetState = WidgetState(title, artist, artworkUri, isPlaying, isLiked, duration, currentPosition)
+            lastControls = controls
         }
         refreshWidgetsFromLastState()
     }
@@ -149,21 +159,21 @@ class PlaylistWidgetManager(
     ) = updateMutex.withLock {
         val manager = AppWidgetManager.getInstance(context)
         val ids = manager.getAppWidgetIds(ComponentName(context, PlaylistWidgetReceiver::class.java))
-        progressLevels.keys.retainAll(ids.toSet())
+        progressBuckets.keys.retainAll(ids.toSet())
         synchronized(this) {
             lastWidgetState = lastWidgetState.copy(duration = duration, currentPosition = position)
         }
-        val level = progressLevel(duration, position)
+        val bucket = position.coerceAtLeast(0L) / 1000L
         ids.forEach { id ->
-            if (progressLevels[id] == null || progressLevels[id] == level) return@forEach
+            if (progressBuckets[id] == null || progressBuckets[id] == bucket) return@forEach
             val options = manager.getAppWidgetOptions(id)
             if (options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH) < PLAYLIST_WIDGET_COMPACT_MAX_WIDTH_DP) return@forEach
             val views =
                 RemoteViews(context.packageName, R.layout.widget_playlist).apply {
-                    setInt(R.id.widget_playlist_progress_fill, "setImageLevel", level)
+                    setWidgetProgress(playlistWidgetProgressIds, duration, position)
                 }
             manager.partiallyUpdateAppWidget(id, views)
-            progressLevels[id] = level
+            progressBuckets[id] = bucket
         }
     }
 
@@ -210,9 +220,17 @@ class PlaylistWidgetManager(
             val widgetIds = appWidgetManager.getAppWidgetIds(ComponentName(context, PlaylistWidgetReceiver::class.java))
             updateObservation()
             if (widgetIds.isEmpty()) return@withLock
-            val state = lastWidgetState
+            val (state, controls) = synchronized(this) { lastWidgetState to lastControls }
             val picks = quickPickSnapshot
             val albumArt = getCachedAlbumArt(state.artworkUri)
+            val config = WidgetThemeConfig.fromSettings()
+            val seed =
+                if (config.materialYouEnabled && config.dynamicTheme) {
+                    cachedArtworkSeed ?: albumArt?.extractThemeColor()?.also { cachedArtworkSeed = it }
+                } else {
+                    null
+                }
+            val schemes = resolveWidgetColorSchemes(context, seed, config)
             val quickPicks = buildQuickPicks()
             widgetIds.forEach { widgetId ->
                 val views =
@@ -221,16 +239,21 @@ class PlaylistWidgetManager(
                         title = state.title,
                         artist = state.artist,
                         albumArt = albumArt,
-                        isPlaying = state.isPlaying,
+                        controls = controls,
                         isLiked = state.isLiked,
                         duration = state.duration,
                         currentPosition = state.currentPosition,
                         quickPicks = quickPicks,
+                        schemes = schemes,
                     )
                 synchronized(this) {
                     if (lastWidgetState === state && quickPickSnapshot === picks) {
                         appWidgetManager.updateAppWidget(widgetId, views)
-                        progressLevels[widgetId] = progressLevel(state.duration, state.currentPosition)
+                        if (state.duration > 0) {
+                            progressBuckets[widgetId] = state.currentPosition.coerceAtLeast(0L) / 1000L
+                        } else {
+                            progressBuckets.remove(widgetId)
+                        }
                     }
                 }
             }
@@ -241,32 +264,59 @@ class PlaylistWidgetManager(
         title: String,
         artist: String,
         albumArt: Bitmap?,
-        isPlaying: Boolean,
+        controls: WidgetControls,
         isLiked: Boolean,
         duration: Long,
         currentPosition: Long,
         quickPicks: List<QuickPick>,
+        schemes: WidgetColorSchemes,
     ): RemoteViews {
         if (options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH) < PLAYLIST_WIDGET_COMPACT_MAX_WIDTH_DP) {
-            return createCompactRemoteViews(title, artist, albumArt, isPlaying, quickPicks.firstOrNull())
+            return createCompactRemoteViews(title, artist, albumArt, controls, quickPicks.firstOrNull(), schemes)
         }
 
         val views = RemoteViews(context.packageName, R.layout.widget_playlist)
         views.setTextViewText(R.id.widget_playlist_song_title, title)
         views.setTextViewText(R.id.widget_playlist_artist_name, artist)
-        views.setImageViewBitmap(R.id.widget_playlist_album_art, albumArt?.let { getRoundedAlbumArt(it) } ?: getRoundedAppIcon())
+        views.setImageViewBitmap(R.id.widget_playlist_album_art, albumArt?.let { getCookieAlbumArt(it) } ?: getCookieAppIcon())
+        views.setImageViewBitmap(R.id.widget_playlist_play_bg, cookie12MaskBitmap())
+        if (isLiked) {
+            views.setImageViewBitmap(R.id.widget_playlist_like_bg, cookie9MaskBitmap())
+        } else {
+            views.setImageViewResource(R.id.widget_playlist_like_bg, R.drawable.widget_circle_bg)
+        }
         views.setImageViewResource(
             R.id.widget_playlist_play_pause,
-            if (isPlaying) R.drawable.ic_widget_pause else R.drawable.ic_widget_play,
+            if (controls.playbackRequested) R.drawable.ic_widget_pause else R.drawable.ic_widget_play,
         )
-        views.setInt(R.id.widget_playlist_play_pause_container, "setBackgroundResource", playButtonBackground(isPlaying, inGroup = true))
-        views.setInt(R.id.widget_playlist_like_container, "setBackgroundResource", likeButtonBackground(isLiked))
         views.setImageViewResource(
             R.id.widget_playlist_like_button,
             if (isLiked) R.drawable.ic_widget_heart_nav else R.drawable.ic_widget_heart_outline_nav,
         )
-        views.setInt(R.id.widget_playlist_progress_fill, "setImageLevel", progressLevel(duration, currentPosition))
-        views.setViewVisibility(R.id.widget_playlist_progress_container, if (duration > 0) View.VISIBLE else View.INVISIBLE)
+        if (duration > 0) {
+            views.setViewVisibility(R.id.widget_playlist_progress_container, View.VISIBLE)
+            views.setWidgetProgress(playlistWidgetProgressIds, duration, currentPosition)
+        } else {
+            views.setViewVisibility(R.id.widget_playlist_progress_container, View.INVISIBLE)
+        }
+
+        views.setWidgetTint(context, R.id.widget_playlist_surface_background, schemes, ::widgetSurfaceRole)
+        views.setWidgetTextColor(context, R.id.widget_playlist_song_title, schemes) { it.onSurface }
+        views.setWidgetTextColor(context, R.id.widget_playlist_artist_name, schemes) { it.onSurfaceVariant }
+        views.setWidgetTint(context, R.id.widget_playlist_prev_bg, schemes) { it.secondaryContainer }
+        views.setWidgetTint(context, R.id.widget_playlist_next_bg, schemes) { it.secondaryContainer }
+        views.setWidgetTint(context, R.id.widget_playlist_prev_icon, schemes) { it.onSecondaryContainer }
+        views.setWidgetTint(context, R.id.widget_playlist_next_icon, schemes) { it.onSecondaryContainer }
+        views.setWidgetTint(context, R.id.widget_playlist_play_bg, schemes) { it.primary }
+        views.setWidgetTint(context, R.id.widget_playlist_play_pause, schemes) { it.onPrimary }
+        views.setWidgetTint(context, R.id.widget_playlist_like_bg, schemes) {
+            if (isLiked) it.tertiary else it.tertiaryContainer
+        }
+        views.setWidgetTint(context, R.id.widget_playlist_like_button, schemes) {
+            if (isLiked) it.onTertiary else it.onTertiaryContainer
+        }
+        views.setWidgetProgressTint(context, playlistWidgetProgressIds, schemes)
+
         views.setOnClickPendingIntent(android.R.id.background, getOpenAppIntent())
         views.setOnClickPendingIntent(R.id.widget_playlist_album_art, getOpenAppIntent())
         views.setOnClickPendingIntent(R.id.widget_playlist_prev_container, getMusicWidgetIntent(MusicWidgetReceiver.ACTION_PREVIOUS, 501))
@@ -275,8 +325,24 @@ class PlaylistWidgetManager(
             getMusicWidgetIntent(MusicWidgetReceiver.ACTION_PLAY_PAUSE, 502),
         )
         views.setOnClickPendingIntent(R.id.widget_playlist_next_container, getMusicWidgetIntent(MusicWidgetReceiver.ACTION_NEXT, 503))
-        views.setOnClickPendingIntent(R.id.widget_playlist_like_button, getMusicWidgetIntent(MusicWidgetReceiver.ACTION_LIKE, 504))
-        bindQuickPicks(views, options, quickPicks)
+        views.setOnClickPendingIntent(R.id.widget_playlist_like_container, getMusicWidgetIntent(MusicWidgetReceiver.ACTION_LIKE, 504))
+        views.setContentDescription(
+            R.id.widget_playlist_play_pause_container,
+            context.getString(if (controls.playbackRequested) R.string.pause else R.string.play),
+        )
+        views.setContentDescription(
+            R.id.widget_playlist_like_container,
+            context.getString(if (isLiked) R.string.unlike else R.string.action_like),
+        )
+        views.setBoolean(R.id.widget_playlist_play_pause_container, "setEnabled", controls.canPlayPause)
+        views.setBoolean(R.id.widget_playlist_prev_container, "setEnabled", controls.canPrevious)
+        views.setBoolean(R.id.widget_playlist_next_container, "setEnabled", controls.canNext)
+        views.setBoolean(R.id.widget_playlist_like_container, "setEnabled", controls.canLike)
+        views.setInt(R.id.widget_playlist_play_pause, "setImageAlpha", if (controls.canPlayPause) 255 else 97)
+        views.setInt(R.id.widget_playlist_prev_icon, "setImageAlpha", if (controls.canPrevious) 255 else 97)
+        views.setInt(R.id.widget_playlist_next_icon, "setImageAlpha", if (controls.canNext) 255 else 97)
+        views.setInt(R.id.widget_playlist_like_button, "setImageAlpha", if (controls.canLike) 255 else 97)
+        bindQuickPicks(views, options, quickPicks, schemes)
         return views
     }
 
@@ -284,21 +350,29 @@ class PlaylistWidgetManager(
         title: String,
         artist: String,
         albumArt: Bitmap?,
-        isPlaying: Boolean,
+        controls: WidgetControls,
         quickPick: QuickPick?,
+        schemes: WidgetColorSchemes,
     ): RemoteViews {
         val views = RemoteViews(context.packageName, R.layout.widget_playlist_compact)
         views.setTextViewText(R.id.widget_playlist_compact_song_title, title)
         views.setTextViewText(R.id.widget_playlist_compact_artist_name, artist)
         views.setImageViewBitmap(
             R.id.widget_playlist_compact_album_art,
-            albumArt?.let { getRoundedAlbumArt(it) } ?: getRoundedAppIcon(),
+            albumArt?.let { getCookieAlbumArt(it) } ?: getCookieAppIcon(),
         )
+        views.setImageViewBitmap(R.id.widget_playlist_compact_play_bg, cookie12MaskBitmap())
         views.setImageViewResource(
             R.id.widget_playlist_compact_play_pause,
-            if (isPlaying) R.drawable.ic_widget_pause else R.drawable.ic_widget_play,
+            if (controls.playbackRequested) R.drawable.ic_widget_pause else R.drawable.ic_widget_play,
         )
-        views.setInt(R.id.widget_playlist_compact_play_container, "setBackgroundResource", playButtonBackground(isPlaying, inGroup = false))
+
+        views.setWidgetTint(context, R.id.widget_playlist_surface_background, schemes, ::widgetSurfaceRole)
+        views.setWidgetTextColor(context, R.id.widget_playlist_compact_song_title, schemes) { it.onSurface }
+        views.setWidgetTextColor(context, R.id.widget_playlist_compact_artist_name, schemes) { it.onSurfaceVariant }
+        views.setWidgetTint(context, R.id.widget_playlist_compact_play_bg, schemes) { it.primary }
+        views.setWidgetTint(context, R.id.widget_playlist_compact_play_pause, schemes) { it.onPrimary }
+
         views.setOnClickPendingIntent(android.R.id.background, getOpenAppIntent())
         views.setOnClickPendingIntent(R.id.widget_playlist_compact_album_art, getOpenAppIntent())
         views.setOnClickPendingIntent(
@@ -306,17 +380,31 @@ class PlaylistWidgetManager(
             getMusicWidgetIntent(MusicWidgetReceiver.ACTION_PLAY_PAUSE, 505),
         )
 
+        views.setContentDescription(
+            R.id.widget_playlist_compact_play_container,
+            context.getString(if (controls.playbackRequested) R.string.pause else R.string.play),
+        )
+        views.setBoolean(R.id.widget_playlist_compact_play_container, "setEnabled", controls.canPlayPause)
+        views.setInt(R.id.widget_playlist_compact_play_pause, "setImageAlpha", if (controls.canPlayPause) 255 else 97)
+
         if (quickPick == null) {
             views.setViewVisibility(R.id.widget_playlist_compact_quick_pick, View.GONE)
         } else {
             views.setViewVisibility(R.id.widget_playlist_compact_quick_pick, View.VISIBLE)
             views.setTextViewText(R.id.widget_playlist_compact_quick_pick_title, quickPick.title)
+            views.setWidgetTextColor(context, R.id.widget_playlist_compact_quick_pick_title, schemes) { it.onSurface }
+            views.setWidgetTint(context, R.id.widget_playlist_compact_quick_pick_play_bg, schemes) { it.primaryContainer }
+            views.setWidgetTint(context, R.id.widget_playlist_compact_quick_pick_play, schemes) { it.onPrimaryContainer }
             views.setImageViewBitmap(
                 R.id.widget_playlist_compact_quick_pick_art,
                 quickPick.thumbnailUrl
                     ?.let { loadBitmap(it, 180) }
                     ?.let { getRoundedCornerBitmap(it) }
-                    ?: getFallbackArtwork(quickPick),
+                    ?: getFallbackArtwork(quickPick, schemes.current(context)),
+            )
+            views.setContentDescription(
+                R.id.widget_playlist_compact_quick_pick_play_container,
+                context.getString(R.string.widget_play_item, quickPick.title),
             )
             views.setOnClickPendingIntent(R.id.widget_playlist_compact_quick_pick, getOpenTargetIntent(quickPick))
             views.setOnClickPendingIntent(
@@ -331,6 +419,7 @@ class PlaylistWidgetManager(
         views: RemoteViews,
         options: Bundle,
         quickPicks: List<QuickPick>,
+        schemes: WidgetColorSchemes,
     ) {
         val displayCount =
             playlistWidgetDisplayCount(
@@ -357,18 +446,23 @@ class PlaylistWidgetManager(
             views.setViewVisibility(slot.containerId, visibility)
         }
 
+        val currentScheme = schemes.current(context)
         visiblePicks.forEachIndexed { index, item ->
             val slot = cardSlots[index]
             views.setTextViewText(slot.titleId, item.title)
+            views.setWidgetTextColor(context, slot.titleId, schemes) { it.onSurface }
             views.setImageViewResource(slot.playIconId, R.drawable.ic_widget_play_low)
+            views.setWidgetTint(context, slot.playBgId, schemes) { it.primaryContainer }
+            views.setWidgetTint(context, slot.playIconId, schemes) { it.onPrimaryContainer }
             views.setImageViewBitmap(
                 slot.artworkId,
                 item.thumbnailUrl
                     ?.let { loadBitmap(it, 180) }
                     ?.let { getRoundedCornerBitmap(it) }
-                    ?: getFallbackArtwork(item),
+                    ?: getFallbackArtwork(item, currentScheme),
             )
             views.setOnClickPendingIntent(slot.containerId, getOpenTargetIntent(item))
+            views.setContentDescription(slot.playContainerId, context.getString(R.string.widget_play_item, item.title))
             views.setOnClickPendingIntent(slot.playContainerId, getPlayTargetIntent(item))
         }
     }
@@ -506,26 +600,28 @@ class PlaylistWidgetManager(
         if (artworkUri == null) {
             cachedArtworkUri = null
             cachedAlbumArt = null
-            cachedRoundedAlbumArt = null
-            cachedRoundedSource = null
+            cachedCookieAlbumArt = null
+            cachedCookieSource = null
+            cachedArtworkSeed = null
             return null
         }
         if (artworkUri != cachedArtworkUri) {
             val loaded = loadBitmap(artworkUri, 240)
             cachedAlbumArt = loaded
-            cachedRoundedAlbumArt = null
-            cachedRoundedSource = null
+            cachedCookieAlbumArt = null
+            cachedCookieSource = null
+            cachedArtworkSeed = null
             cachedArtworkUri = artworkUri.takeIf { loaded != null }
         }
         return cachedAlbumArt
     }
 
-    private fun getRoundedAlbumArt(albumArt: Bitmap): Bitmap {
-        val cached = cachedRoundedAlbumArt
-        if (cached != null && cachedRoundedSource === albumArt) return cached
-        return getRoundedCornerBitmap(albumArt).also {
-            cachedRoundedSource = albumArt
-            cachedRoundedAlbumArt = it
+    private fun getCookieAlbumArt(albumArt: Bitmap): Bitmap {
+        val cached = cachedCookieAlbumArt
+        if (cached != null && cachedCookieSource === albumArt) return cached
+        return getCookie9Bitmap(albumArt).also {
+            cachedCookieSource = albumArt
+            cachedCookieAlbumArt = it
         }
     }
 
@@ -551,30 +647,32 @@ class PlaylistWidgetManager(
             }
         }
 
-    private fun getFallbackArtwork(item: QuickPick): Bitmap {
+    private fun getFallbackArtwork(
+        item: QuickPick,
+        scheme: ColorScheme,
+    ): Bitmap {
         val (containerColor, contentColor) =
             when (item.targetType) {
-                PlaylistWidgetReceiver.TARGET_TYPE_LIKED -> R.color.widget_tertiary_container to R.color.widget_on_tertiary_container
-                PlaylistWidgetReceiver.TARGET_TYPE_DOWNLOADED -> R.color.widget_secondary_container to R.color.widget_on_secondary_container
-                PlaylistWidgetReceiver.TARGET_TYPE_TOP -> R.color.widget_primary_container to R.color.widget_on_primary_container
-                else -> R.color.widget_surface_highest to R.color.widget_on_surface_variant
-            }.let { (container, content) -> context.getColor(container) to context.getColor(content) }
+                PlaylistWidgetReceiver.TARGET_TYPE_LIKED -> scheme.tertiaryContainer.toArgb() to scheme.onTertiaryContainer.toArgb()
+                PlaylistWidgetReceiver.TARGET_TYPE_DOWNLOADED -> scheme.secondaryContainer.toArgb() to scheme.onSecondaryContainer.toArgb()
+                PlaylistWidgetReceiver.TARGET_TYPE_TOP -> scheme.primaryContainer.toArgb() to scheme.onPrimaryContainer.toArgb()
+                else -> scheme.surfaceContainerHighest.toArgb() to scheme.onSurfaceVariant.toArgb()
+            }
         val cacheKey = FallbackArtworkKey(item.fallbackIconRes, containerColor, contentColor)
         fallbackArtworkCache[cacheKey]?.let { return it }
 
-        val size = 300
+        val size = 240
         val bitmap = createBitmap(size, size)
         val canvas = Canvas(bitmap)
         val background =
-            Paint().apply {
-                isAntiAlias = true
+            Paint(Paint.ANTI_ALIAS_FLAG).apply {
                 color = containerColor
             }
         val cornerRadius = artworkCornerRadius(size)
         canvas.drawRoundRect(RectF(0f, 0f, size.toFloat(), size.toFloat()), cornerRadius, cornerRadius, background)
         AppCompatResources.getDrawable(context, item.fallbackIconRes)?.mutate()?.let { icon ->
             icon.setTint(contentColor)
-            val iconSize = 128
+            val iconSize = 104
             val iconOffset = (size - iconSize) / 2
             icon.setBounds(iconOffset, iconOffset, iconOffset + iconSize, iconOffset + iconSize)
             icon.draw(canvas)
@@ -583,14 +681,14 @@ class PlaylistWidgetManager(
         return bitmap
     }
 
-    private fun getRoundedAppIcon(): Bitmap {
-        roundedAppIcon?.let { return it }
+    private fun getCookieAppIcon(): Bitmap {
+        cookieAppIcon?.let { return it }
         val drawable = context.packageManager.getApplicationIcon(context.packageName)
-        val bitmap = createBitmap(300, 300)
+        val bitmap = createBitmap(240, 240)
         val canvas = Canvas(bitmap)
-        drawable.setBounds(0, 0, 300, 300)
+        drawable.setBounds(0, 0, 240, 240)
         drawable.draw(canvas)
-        return getRoundedCornerBitmap(bitmap).also { roundedAppIcon = it }
+        return getCookie9Bitmap(bitmap).also { cookieAppIcon = it }
     }
 
     private fun getOpenAppIntent(): PendingIntent = openAppPendingIntent(context, 500)
@@ -678,6 +776,7 @@ class PlaylistWidgetManager(
         val containerId: Int,
         val artworkId: Int,
         val playContainerId: Int,
+        val playBgId: Int,
         val playIconId: Int,
         val titleId: Int,
     )
@@ -694,6 +793,7 @@ class PlaylistWidgetManager(
                 R.id.widget_playlist_card_1,
                 R.id.widget_playlist_card_1_art,
                 R.id.widget_playlist_card_1_play_container,
+                R.id.widget_playlist_card_1_play_bg,
                 R.id.widget_playlist_card_1_play,
                 R.id.widget_playlist_card_1_title,
             ),
@@ -701,6 +801,7 @@ class PlaylistWidgetManager(
                 R.id.widget_playlist_card_2,
                 R.id.widget_playlist_card_2_art,
                 R.id.widget_playlist_card_2_play_container,
+                R.id.widget_playlist_card_2_play_bg,
                 R.id.widget_playlist_card_2_play,
                 R.id.widget_playlist_card_2_title,
             ),
@@ -708,6 +809,7 @@ class PlaylistWidgetManager(
                 R.id.widget_playlist_card_3,
                 R.id.widget_playlist_card_3_art,
                 R.id.widget_playlist_card_3_play_container,
+                R.id.widget_playlist_card_3_play_bg,
                 R.id.widget_playlist_card_3_play,
                 R.id.widget_playlist_card_3_title,
             ),
@@ -715,6 +817,7 @@ class PlaylistWidgetManager(
                 R.id.widget_playlist_card_4,
                 R.id.widget_playlist_card_4_art,
                 R.id.widget_playlist_card_4_play_container,
+                R.id.widget_playlist_card_4_play_bg,
                 R.id.widget_playlist_card_4_play,
                 R.id.widget_playlist_card_4_title,
             ),
@@ -722,6 +825,7 @@ class PlaylistWidgetManager(
                 R.id.widget_playlist_card_5,
                 R.id.widget_playlist_card_5_art,
                 R.id.widget_playlist_card_5_play_container,
+                R.id.widget_playlist_card_5_play_bg,
                 R.id.widget_playlist_card_5_play,
                 R.id.widget_playlist_card_5_title,
             ),
@@ -729,6 +833,7 @@ class PlaylistWidgetManager(
                 R.id.widget_playlist_card_6,
                 R.id.widget_playlist_card_6_art,
                 R.id.widget_playlist_card_6_play_container,
+                R.id.widget_playlist_card_6_play_bg,
                 R.id.widget_playlist_card_6_play,
                 R.id.widget_playlist_card_6_title,
             ),
@@ -736,6 +841,7 @@ class PlaylistWidgetManager(
                 R.id.widget_playlist_card_7,
                 R.id.widget_playlist_card_7_art,
                 R.id.widget_playlist_card_7_play_container,
+                R.id.widget_playlist_card_7_play_bg,
                 R.id.widget_playlist_card_7_play,
                 R.id.widget_playlist_card_7_title,
             ),
@@ -743,6 +849,7 @@ class PlaylistWidgetManager(
                 R.id.widget_playlist_card_8,
                 R.id.widget_playlist_card_8_art,
                 R.id.widget_playlist_card_8_play_container,
+                R.id.widget_playlist_card_8_play_bg,
                 R.id.widget_playlist_card_8_play,
                 R.id.widget_playlist_card_8_title,
             ),

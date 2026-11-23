@@ -3,6 +3,7 @@ package com.metrolist.shared.db
 import androidx.room3.RoomRawQuery
 import androidx.room3.useWriterConnection
 import com.metrolist.shared.api.isAlbumBrowseId
+import com.metrolist.shared.api.lastfm.LastFmListen
 import com.metrolist.shared.db.entities.HistoryStatExclusion
 import com.metrolist.shared.db.entities.toSongItem
 import com.metrolist.shared.model.HistorySortMode
@@ -11,6 +12,7 @@ import com.metrolist.shared.model.SortDirection
 import com.metrolist.shared.model.filterAndSortHistory
 import com.metrolist.shared.settings.BlockedContent
 import com.metrolist.shared.state.GlobalYouTubeRepository
+import com.metrolist.shared.utils.md5Hex
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
@@ -20,8 +22,11 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import kotlin.time.Instant
 
 data class HistoryStatGroup(
     val songId: String,
@@ -37,6 +42,7 @@ data class HistoryStatGroup(
     val lastPlayedAt: Long,
     val lastEventId: Long,
     val duration: Long?,
+    val measuredPlayCount: Int = 0,
 )
 
 data class HistoryArtistCredit(
@@ -66,6 +72,7 @@ data class HistoryAlbumStatistic(
     val playCount: Int,
     val playTimeMs: Long,
     val id: String? = null,
+    val artistNames: List<String> = emptyList(),
 )
 
 private fun historyStatsQuery(
@@ -76,21 +83,25 @@ private fun historyStatsQuery(
     suffix: String = "",
     songIds: List<String>? = null,
     suffixArgs: List<String> = emptyList(),
+    mergeSourcesByDay: Boolean = false,
+    includeExcluded: Boolean = false,
 ): RoomRawQuery {
     val args = mutableListOf<Any>(sinceMs, untilMs)
     val filters = mutableListOf("e.timestamp BETWEEN ? AND ?")
-    filters += "NOT EXISTS (SELECT 1 FROM history_stat_exclusion b WHERE b.kind = 'song' AND b.value = e.songId)"
-    filters +=
-        "NOT EXISTS (SELECT 1 FROM history_stat_exclusion b WHERE b.kind = 'snapshot-name:' || e.songId AND b.value = COALESCE(h.artistNamesJson, h.artists))"
-    if (catalogArtistIds) {
+    if (!includeExcluded) {
+        filters += "NOT EXISTS (SELECT 1 FROM history_stat_exclusion b WHERE b.kind = 'song' AND b.value = e.songId)"
         filters +=
-            "NOT EXISTS (SELECT 1 FROM history_stat_exclusion b WHERE b.kind = 'snapshot-id:' || e.songId AND b.value = COALESCE(h.artistNamesJson, h.artists))"
-        filters += """NOT (h.eventId IS NULL AND EXISTS (
+            "NOT EXISTS (SELECT 1 FROM history_stat_exclusion b WHERE b.kind = 'snapshot-name:' || e.songId AND b.value = COALESCE(h.artistNamesJson, h.artists))"
+        if (catalogArtistIds) {
+            filters +=
+                "NOT EXISTS (SELECT 1 FROM history_stat_exclusion b WHERE b.kind = 'snapshot-id:' || e.songId AND b.value = COALESCE(h.artistNamesJson, h.artists))"
+            filters += """NOT (h.eventId IS NULL AND EXISTS (
             SELECT 1 FROM song_artist_map m JOIN history_stat_exclusion b ON b.kind = 'artist' AND b.value = m.artistId
             WHERE m.songId = e.songId))"""
-    } else {
-        filters +=
-            "NOT (h.eventId IS NULL AND EXISTS (SELECT 1 FROM history_stat_exclusion b WHERE b.kind = 'catalog-name' AND b.value = e.songId))"
+        } else {
+            filters +=
+                "NOT (h.eventId IS NULL AND EXISTS (SELECT 1 FROM history_stat_exclusion b WHERE b.kind = 'catalog-name' AND b.value = e.songId))"
+        }
     }
     if (songIds != null) {
         filters += "e.songId IN (${songIds.joinToString { "?" }})"
@@ -98,9 +109,24 @@ private fun historyStatsQuery(
     }
     args.addAll(suffixArgs)
     val where = filters.joinToString(" AND ")
+    val tables = "JOIN song s ON s.id = e.songId LEFT JOIN history_snapshot h ON h.eventId = e.id"
     val sql =
-        "$select FROM event e JOIN song s ON s.id = e.songId " +
-            "LEFT JOIN history_snapshot h ON h.eventId = e.id WHERE $where $suffix"
+        if (mergeSourcesByDay) {
+            // YouTube's date groups cannot identify individual local plays. Keep the larger count without deleting either source.
+            val day = "strftime('%Y-%m-%d', e.timestamp / 1000, 'unixepoch', 'localtime')"
+            // Android's system SQLite on API 24 does not support window functions.
+            "WITH eligible AS (SELECT e.*, $day AS localDay FROM event e $tables WHERE $where), " +
+                "local_counts AS (SELECT songId, localDay, COUNT(*) AS playCount FROM eligible " +
+                "WHERE source != 'YOUTUBE' GROUP BY songId, localDay), " +
+                "merged AS (SELECT e.* FROM eligible e LEFT JOIN local_counts l ON l.songId = e.songId AND l.localDay = e.localDay " +
+                "WHERE e.source != 'YOUTUBE' OR l.playCount IS NULL OR " +
+                "(SELECT COUNT(*) FROM eligible r WHERE r.songId = e.songId AND r.localDay = e.localDay AND r.source = 'YOUTUBE' AND " +
+                "(r.timestamp > e.timestamp OR (r.timestamp = e.timestamp AND " +
+                "(r.remoteOrder > e.remoteOrder OR (r.remoteOrder = e.remoteOrder AND r.id >= e.id))))) > l.playCount) " +
+                "$select FROM merged e $tables $suffix"
+        } else {
+            "$select FROM event e $tables WHERE $where $suffix"
+        }
     return RoomRawQuery(sql) { statement ->
         args.forEachIndexed { index, value ->
             when (value) {
@@ -210,6 +236,9 @@ private suspend fun MusicDatabase.statGroups(
     untilMs: Long,
     catalogArtistIds: Boolean,
     songsOnly: Boolean = false,
+    mergeSourcesByDay: Boolean = false,
+    groupByDay: Boolean = false,
+    includeExcluded: Boolean = false,
 ): List<HistoryStatGroup> =
     run {
         dao().historyStatGroups(
@@ -221,15 +250,22 @@ private suspend fun MusicDatabase.statGroups(
                 CASE WHEN h.eventId IS NOT NULL THEN h.albumId ELSE s.albumId END AS albumId,
                 CASE WHEN h.eventId IS NOT NULL THEN h.thumbnailUrl ELSE s.thumbnailUrl END AS thumbnailUrl,
                 CASE WHEN h.eventId IS NOT NULL THEN h.duration ELSE s.duration END AS duration,
-                COUNT(*) AS playCount, SUM(CASE WHEN e.playTimeKnown THEN e.playTime ELSE 0 END) AS playTimeMs, MAX(e.id) AS lastEventId, MAX(e.timestamp) AS lastPlayedAt""",
+                COUNT(*) AS playCount, SUM(CASE WHEN e.playTimeKnown THEN e.playTime ELSE 0 END) AS playTimeMs,
+                SUM(CASE WHEN e.playTimeKnown AND e.playTime > 0 THEN 1 ELSE 0 END) AS measuredPlayCount,
+                MAX(e.id) AS lastEventId, MAX(e.timestamp) AS lastPlayedAt""",
                 sinceMs,
                 untilMs,
                 catalogArtistIds,
                 if (songsOnly) {
                     "GROUP BY e.songId ORDER BY playCount DESC, lastPlayedAt DESC"
                 } else {
-                    "GROUP BY e.songId, h.title, h.artists, h.artistNamesJson, h.album, h.albumId, h.thumbnailUrl, h.duration, (h.eventId IS NOT NULL) ORDER BY lastPlayedAt DESC"
+                    "GROUP BY e.songId, h.title, h.artists, h.artistNamesJson, h.album, h.albumId, h.thumbnailUrl, h.duration, " +
+                        "(h.eventId IS NOT NULL)" +
+                        (if (groupByDay) ", strftime('%Y-%m-%d', e.timestamp / 1000, 'unixepoch', 'localtime')" else "") +
+                        " ORDER BY lastPlayedAt DESC"
                 },
+                mergeSourcesByDay = mergeSourcesByDay,
+                includeExcluded = includeExcluded,
             ),
         )
     }
@@ -352,6 +388,7 @@ private fun albumStatistics(
                 plays.sumOf { it.playTimeMs },
                 // Foreign backups can carry release IDs that aren't YouTube browse IDs.
                 id = latest.albumId?.takeIf { it.isAlbumBrowseId() || it.startsWith("FEmusic_library_privately_owned_release") },
+                artistNames = latest.names(credits),
             )
         }.sortedByDescending { it.playCount }
 }
@@ -397,6 +434,8 @@ data class HistoryStatisticsSnapshot(
     val daily: List<HistoryBucket>,
     val hourly: List<HistoryBucket>,
     val songItems: List<SongItem> = emptyList(),
+    val lastFmPlays: Int = 0,
+    val lastFmAmbiguousPlays: Int = 0,
 )
 
 suspend fun MusicDatabase.historyStatisticsSnapshot(
@@ -404,26 +443,73 @@ suspend fun MusicDatabase.historyStatisticsSnapshot(
     untilMs: Long,
     catalogArtistIds: Boolean = false,
     localTime: Boolean = true,
+): HistoryStatisticsSnapshot = statisticsSnapshot(sinceMs, untilMs, catalogArtistIds, localTime, mergeSourcesByDay = false)
+
+suspend fun MusicDatabase.wrappedStatisticsSnapshot(
+    sinceMs: Long,
+    untilMs: Long,
+    lastFm: List<LastFmListen> = emptyList(),
+): HistoryStatisticsSnapshot =
+    statisticsSnapshot(sinceMs, untilMs, catalogArtistIds = true, localTime = true, mergeSourcesByDay = true, lastFm = lastFm)
+
+private suspend fun MusicDatabase.statisticsSnapshot(
+    sinceMs: Long,
+    untilMs: Long,
+    catalogArtistIds: Boolean,
+    localTime: Boolean,
+    mergeSourcesByDay: Boolean,
+    lastFm: List<LastFmListen> = emptyList(),
 ): HistoryStatisticsSnapshot =
     withContext(Dispatchers.Default) {
         withHistoryStatExclusions(sinceMs, untilMs) {
-            val groups = statGroups(sinceMs, untilMs, catalogArtistIds)
-            val metadata = artistMetadata(groups)
+            val stored =
+                statGroups(sinceMs, untilMs, catalogArtistIds, mergeSourcesByDay = mergeSourcesByDay, groupByDay = lastFm.isNotEmpty())
+            val storedMetadata = artistMetadata(stored)
+            val allGroups = if (lastFm.isEmpty()) stored else statGroups(sinceMs, untilMs, catalogArtistIds, includeExcluded = true)
+            val visibleGroups = if (lastFm.isEmpty()) stored else statGroups(sinceMs, untilMs, catalogArtistIds)
+            val blockedSongs = if (lastFm.isEmpty()) emptyList() else dao().getSongsByIds(BlockedContent.songIds().toList())
+            val excludedNames =
+                blockedSongs
+                    .flatMap { song ->
+                        (song.artists.map { it.name } + song.artists.joinToString(", ") { it.name }).map { song.title to it }
+                    }.toSet()
+            // Excluded songs need their own artist credits so a scrobble naming one guest artist still matches them.
+            val allMetadata = if (lastFm.isEmpty()) storedMetadata else artistMetadata(allGroups)
+            val merged = mergeLastFmHistory(stored, lastFm, storedMetadata, allMetadata, allGroups, visibleGroups, excludedNames)
+            val groups = merged.groups
+            val knownArtists = storedMetadata.groupBy { it.name.trim().lowercase() }
+            val metadata =
+                storedMetadata +
+                    groups.filter { it.songId.startsWith("lastfm:") }.distinctBy { it.songId }.flatMap { group ->
+                        knownArtists[group.artists.trim().lowercase()]
+                            .orEmpty()
+                            .distinctBy { it.id }
+                            .singleOrNull()
+                            ?.let { listOf(it.copy(songId = group.songId, name = group.artists)) }
+                            .orEmpty()
+                    }
             val songs =
                 groups
                     .groupBy { it.songId }
                     .values
                     .map { plays ->
-                        plays.first().copy(playCount = plays.sumOf { it.playCount }, playTimeMs = plays.sumOf { it.playTimeMs })
+                        plays.maxBy { it.lastPlayedAt }.copy(
+                            thumbnailUrl = plays.sortedByDescending { it.lastPlayedAt }.firstNotNullOfOrNull { it.thumbnailUrl },
+                            playCount = plays.sumOf { it.playCount },
+                            playTimeMs = plays.sumOf { it.playTimeMs },
+                            measuredPlayCount = plays.sumOf { it.measuredPlayCount },
+                        )
                     }.sortedWith(compareByDescending<HistoryStatGroup> { it.playCount }.thenByDescending { it.lastPlayedAt })
             HistoryStatisticsSnapshot(
                 songs,
                 artistStatistics(groups, metadata),
                 albumStatistics(groups, metadata.groupBy({ it.songId }, { it.name }), catalogArtistIds),
                 HistoryTotals(groups.sumOf { it.playCount }, groups.sumOf { it.playTimeMs }),
-                timeBuckets(sinceMs, untilMs, false, localTime, catalogArtistIds),
-                timeBuckets(sinceMs, untilMs, true, localTime, catalogArtistIds),
-                songItems = statisticsSongs(songs.take(500)),
+                if (mergeSourcesByDay) emptyList() else timeBuckets(sinceMs, untilMs, false, localTime, catalogArtistIds),
+                if (mergeSourcesByDay) emptyList() else timeBuckets(sinceMs, untilMs, true, localTime, catalogArtistIds),
+                songItems = statisticsSongs(songs.filterNot { it.songId.startsWith("lastfm:") }.take(500)).distinctBy { it.id },
+                lastFmPlays = merged.included,
+                lastFmAmbiguousPlays = merged.ambiguous,
             )
         }
     }
@@ -432,6 +518,112 @@ data class HistorySongCount(
     val songId: String,
     val playCount: Int,
 )
+
+private data class LastFmMerge(
+    val groups: List<HistoryStatGroup>,
+    val included: Int,
+    val ambiguous: Int,
+)
+
+private fun mergeLastFmHistory(
+    stored: List<HistoryStatGroup>,
+    listens: List<LastFmListen>,
+    metadata: List<HistoryArtistCredit>,
+    unfilteredMetadata: List<HistoryArtistCredit>,
+    unfiltered: List<HistoryStatGroup>,
+    visibleGroups: List<HistoryStatGroup>,
+    excludedNames: Set<Pair<String, String>>,
+): LastFmMerge {
+    if (listens.isEmpty()) return LastFmMerge(stored, 0, 0)
+
+    fun normalize(value: String) = value.trim().lowercase().replace(Regex("\\s+"), " ")
+
+    fun key(
+        title: String,
+        artist: String,
+    ) = normalize(title) to normalize(artist)
+    val names = metadata.groupBy({ it.songId }, { it.name })
+    val unfilteredNames = unfilteredMetadata.groupBy({ it.songId }, { it.name })
+    val albums =
+        visibleGroups
+            .filter { it.albumId != null && !it.album.isNullOrBlank() }
+            .flatMap { group -> (group.names(names) + group.artists).map { key(checkNotNull(group.album), it) to group.albumId } }
+            .groupBy({ it.first }, { it.second })
+            .mapValues { (_, ids) -> ids.distinct().singleOrNull() }
+
+    fun keys(
+        group: HistoryStatGroup,
+        credits: Map<String, List<String>> = names,
+    ) = (group.names(credits) + group.artists).map { key(group.title, it) }
+    val candidates = visibleGroups.flatMap { group -> keys(group).map { it to group } }.groupBy({ it.first }, { it.second })
+    val visible = visibleGroups.map { listOf(it.songId, it.title, it.artists, it.artistNamesJson) }.toSet()
+    val excluded =
+        excludedNames.map { key(it.first, it.second) }.toSet() +
+            unfiltered
+                .filter { listOf(it.songId, it.title, it.artists, it.artistNamesJson) !in visible }
+                .flatMap { keys(it, unfilteredNames) }
+                .toSet()
+    val blockedArtists = BlockedContent.artists().map { normalize(it.name) }.toSet()
+    val zone = TimeZone.currentSystemDefault()
+
+    fun day(timestamp: Long) = Instant.fromEpochMilliseconds(timestamp).toLocalDateTime(zone).date
+    val result = stored.toMutableList()
+    val resolved = mutableMapOf<String, Pair<HistoryStatGroup, MutableList<LastFmListen>>>()
+    val dailyCounts = stored.groupBy { it.songId to day(it.lastPlayedAt) }.mapValues { (_, groups) -> groups.sumOf { it.playCount } }
+    var included = 0
+    var ambiguous = 0
+    for ((identity, tracks) in listens.groupBy { key(it.title, it.artist) }) {
+        if (identity in excluded || identity.second in blockedArtists) continue
+        val matches = candidates[identity].orEmpty().distinctBy { it.songId }
+        if (matches.size > 1) {
+            ambiguous += tracks.size
+            continue
+        }
+        included += tracks.size
+        val latest = tracks.maxBy { it.timestampMs }
+        val template =
+            matches.singleOrNull() ?: HistoryStatGroup(
+                songId = "lastfm:${md5Hex(Json.encodeToString(listOf(identity.first, identity.second)))}",
+                title = latest.title,
+                artists = latest.artist,
+                artistNamesJson = Json.encodeToString(listOf(latest.artist)),
+                album = latest.album,
+                albumId = latest.album?.let { albums[key(it, latest.artist)] },
+                thumbnailUrl = latest.thumbnail,
+                hasSnapshot = true,
+                playCount = 0,
+                playTimeMs = 0,
+                lastPlayedAt = latest.timestampMs,
+                lastEventId = -1,
+                duration = null,
+            )
+        resolved.getOrPut(template.songId) { template to mutableListOf() }.second.addAll(tracks)
+    }
+    for ((template, tracks) in resolved.values) {
+        for ((date, plays) in tracks.groupBy { day(it.timestampMs) }) {
+            val extra = (plays.size - (dailyCounts[template.songId to date] ?: 0)).coerceAtLeast(0)
+            if (extra > 0) {
+                for ((album, albumPlays) in plays.sortedByDescending { it.timestampMs }.take(extra).groupBy { it.album }) {
+                    val latest = albumPlays.maxBy { it.timestampMs }
+                    result +=
+                        template.copy(
+                            album = album,
+                            albumId = album?.let { albums[key(it, latest.artist)] },
+                            thumbnailUrl =
+                                latest.thumbnail ?: template.thumbnailUrl.takeIf {
+                                    album?.let(::normalize) == template.album?.let(::normalize)
+                                },
+                            playCount = albumPlays.size,
+                            playTimeMs = 0,
+                            measuredPlayCount = 0,
+                            lastPlayedAt = latest.timestampMs,
+                        )
+                }
+            }
+        }
+    }
+    return LastFmMerge(result.sortedByDescending { it.lastPlayedAt }, included, ambiguous)
+}
 
 fun MusicDatabase.historyChanges(includeSongMetadata: Boolean = true): Flow<Unit> =
     combine(
@@ -504,6 +696,7 @@ suspend fun MusicDatabase.mobileHistoryStatisticsSnapshot(
                                 plays.sumOf { it.playCount },
                                 plays.sumOf { it.playTimeMs },
                                 latest.albumId,
+                                artistNames = plays.flatMap { it.credits(metadata) }.distinctBy { it.id }.map { it.name },
                             )
                         }
                     }.sortedByDescending { it.playTimeMs }

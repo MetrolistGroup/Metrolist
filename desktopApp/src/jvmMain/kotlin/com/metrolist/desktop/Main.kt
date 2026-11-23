@@ -91,8 +91,10 @@ import com.metrolist.desktop.backup.DesktopBackupRestoreManager
 import com.metrolist.desktop.crash.DesktopCrashRecovery
 import com.metrolist.desktop.deviceconnect.DesktopDeviceConnect
 import com.metrolist.desktop.di.composeStateModule
+import com.metrolist.desktop.history.HistoryRepository
 import com.metrolist.desktop.input.DesktopShortcutLayer
 import com.metrolist.desktop.input.desktopScrollConfig
+import com.metrolist.desktop.input.initializeLinuxX11Threading
 import com.metrolist.desktop.state.DesktopLocaleManager
 import com.metrolist.desktop.state.app.AppState
 import com.metrolist.desktop.state.app.DesktopNavigation
@@ -146,6 +148,7 @@ import com.metrolist.desktop.utils.SystemMediaManager
 import com.metrolist.desktop.utils.ThemeUtils
 import com.metrolist.desktop.utils.WaylandScale
 import com.metrolist.desktop.utils.WindowsAppIdentity
+import com.metrolist.desktop.utils.allowMainQueueInAwtRunLoop
 import com.metrolist.desktop.utils.configureDesktopJvmErrorFile
 import com.metrolist.desktop.utils.configureLinuxWebKitRenderer
 import com.metrolist.desktop.utils.desktopRenderApiOverride
@@ -803,6 +806,8 @@ fun main() {
 }
 
 fun main(args: Array<String>) {
+    // Xlib must enter thread-safe mode before AWT can initialize it on Linux/X11.
+    if (OsUtil.isLinux) initializeLinuxX11Threading()
     // The JDK reads this once when its default proxy selector initializes.
     if (OsUtil.isWindows) System.getProperties().putIfAbsent("java.net.useSystemProxies", "true")
     runCatching { System.getProperty("metrolist.cds.cache")?.let { File(it).mkdirs() } }
@@ -922,6 +927,7 @@ private fun runDesktopApp(args: Array<String>) {
     // Initialize logging only after settings migration to avoid java.util.prefs/JUL class-init deadlocks.
     AppLogger.initialize(applicationScope)
     AppLogger.setEnabled(settings.enableLogging)
+    if (OsUtil.isMac) allowMainQueueInAwtRunLoop()
     flushDesktopCredentialWarnings()
     startup.trace("settings")
 
@@ -999,6 +1005,10 @@ private fun runDesktopApp(args: Array<String>) {
             runBlocking { SongLikeState.recoverDatabaseLikes(database) }
             DesktopAutomaticBackupScheduler.start(applicationScope)
             SongMetadataState.bind(database, applicationScope)
+            applicationScope.launch(Dispatchers.IO) {
+                runCatching { HistoryRepository.clearQueuedScrobbles() }
+                    .onFailure { AppLogger.warning("Main", "Failed to clear legacy queued scrobbles", it) }
+            }
 
             LastFM.initialize(
                 apiKey = BuildConfig.LASTFM_API_KEY,
@@ -1508,7 +1518,7 @@ private fun runDesktopApp(args: Array<String>) {
                                             java.awt.Toolkit
                                                 .getDefaultToolkit()
                                                 .getScreenInsets(config)
-                                        val minTopY = insets.top
+                                        val minTopY = config.bounds.y + insets.top
                                         if (window.y < minTopY) {
                                             window.setLocation(window.x, minTopY)
                                         }

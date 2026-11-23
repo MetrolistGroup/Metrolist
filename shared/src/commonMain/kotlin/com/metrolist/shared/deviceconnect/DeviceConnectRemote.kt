@@ -438,7 +438,10 @@ class DeviceConnectRemote(
         startingDefaultPlayback = false
         port?.setExternalReportingEnabled(enabled = false, session = null)
         port?.setAudioOutputEnabled(false)
-        port?.setControllerPlayback((snapshot?.playback ?: DcLocalPlaybackState()).copy(positionMs = snapshot?.playback?.positionMs ?: 0L))
+        port?.setControllerPlayback(
+            (snapshot?.playback ?: DcLocalPlaybackState()).copy(positionMs = snapshot?.playback?.positionMs ?: 0L),
+            provisional = true,
+        )
         startPendingTimeout(deviceId)
     }
 

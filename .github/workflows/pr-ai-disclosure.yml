@@ -1,0 +1,44 @@
+name: PR AI disclosure
+
+on:
+  pull_request_target:
+    types: [opened, edited, reopened, synchronize, ready_for_review]
+
+permissions:
+  pull-requests: write
+
+concurrency:
+  group: pr-ai-disclosure-${{ github.event.pull_request.number }}
+  cancel-in-progress: false
+
+jobs:
+  disclosure:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const issue_number = context.payload.pull_request.number;
+            const { data: pull } = await github.rest.pulls.get({ owner, repo, pull_number: issue_number });
+            if (pull.state !== 'open') return;
+            const text = (pull.body || '')
+              .replace(/<!--[\s\S]*?(?:-->|$)/g, '')
+              .replace(/```[\s\S]*?(?:```|$)|~~~[\s\S]*?(?:~~~|$)/g, '');
+            const declaration = text.match(/^AI usage:[ \t]*(\S[^\r\n]*)$/im)?.[1].trim();
+            const placeholder = /^(?:<.*>|\[.*\]|TODO|TBD|unknown|yes|AI|Codex|Cursor|Copilot|ChatGPT|Claude|\.{3})\.?$/i;
+            const disclosed = Boolean(declaration && !placeholder.test(declaration));
+            const marker = '<!-- metrolist-ai-disclosure -->';
+            const comments = await github.paginate(github.rest.issues.listComments, { owner, repo, issue_number, per_page: 100 });
+            const existing = comments.find(comment =>
+              comment.user?.login === 'github-actions[bot]' && comment.body?.startsWith(marker));
+            if (disclosed && !existing) return;
+            const body = `${marker}\n\n` + (disclosed
+              ? 'An AI usage declaration is now present in the PR body. Reviewers should check that it names every model used to author the changes, or explicitly states that no AI was used.'
+              : 'Please add a visible `AI usage:` line to the PR body naming every AI model used to author or modify these changes, including model versions when known. Tool names alone are insufficient. If no AI authored any changes, write `AI usage: No AI was used.` This disclosure is required before approval or merge.');
+            if (!existing) {
+              await github.rest.issues.createComment({ owner, repo, issue_number, body });
+            } else if (existing.body !== body) {
+              await github.rest.issues.updateComment({ owner, repo, comment_id: existing.id, body });
+            }

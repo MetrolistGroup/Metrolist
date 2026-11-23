@@ -149,6 +149,25 @@ class BackupRestoreManager(
             } ?: error("Could not open backup destination")
         }
 
+    /** Writes a v13 recovery database as a backup archive that Restore converts like any v13 backup. */
+    suspend fun exportRecoveryCopy(
+        database: File,
+        uri: Uri,
+    ): Result<Unit> =
+        withContext(Dispatchers.IO) {
+            runCatching {
+                context.contentResolver.openOutputStream(uri, "wt")?.use { output ->
+                    ZipOutputStream(output.buffered()).use { zip ->
+                        listOf(database, File("${database.path}-wal")).filter(File::isFile).forEach { file ->
+                            zip.putNextEntry(ZipEntry(file.name))
+                            file.inputStream().buffered().use { it.copyTo(zip) }
+                            zip.closeEntry()
+                        }
+                    }
+                } ?: error("Could not open backup destination")
+            }
+        }
+
     suspend fun backup(destination: File): Result<Unit> =
         backup { archive ->
             val liveDatabase = context.getDatabasePath(BACKUP_DATABASE_ENTRY)

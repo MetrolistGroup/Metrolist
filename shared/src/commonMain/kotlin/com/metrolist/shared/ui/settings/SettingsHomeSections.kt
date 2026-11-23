@@ -29,6 +29,6 @@ fun settingsHomeSections(state: HomeUiState): List<SettingsHomeSection> =
                 } else {
                     stringResource(Res.string.settings_home_section_dynamic)
                 },
-            visible = Settings.shared.shouldShowHomeSection(section.visibilityKey, section.title),
+            visible = Settings.shared.shouldShowHomeSection(section.visibilityKey, section.title, section.legacyVisibilityKey),
         )
     }

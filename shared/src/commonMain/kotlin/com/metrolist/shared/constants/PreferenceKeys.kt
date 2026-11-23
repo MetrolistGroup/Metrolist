@@ -13,6 +13,7 @@ val SupportPromptLaunchesKey = "supportPromptLaunches"
 val SupportPromptLaunchThresholdKey = "supportPromptLaunchThreshold"
 
 val DiscordPendingAuthSessionKey = "discordPendingAuthSession"
+val DiscordAlbumTemplateKey = "discordAlbumTemplate"
 val DesktopWindowPositionKey = "desktopWindowPosition"
 val DesktopWindowPlacementKey = "desktopWindowPlacement"
 
@@ -211,6 +212,7 @@ enum class PlaylistSortType {
 }
 
 val LibraryGridColumnsKey = "library_grid_columns"
+val WrappedCardDismissedYearKey = "wrapped_card_dismissed_year"
 val LibraryPinchColumnsKey = "library_pinch_columns"
 val LikedSongSortKey = "likedSongSort"
 val LikedSongSortDirectionKey = "likedSongSortDirection"

@@ -16,6 +16,7 @@ import javax.xml.parsers.DocumentBuilderFactory
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFails
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 abstract class DlnaXmlContract {
@@ -42,6 +43,12 @@ abstract class DlnaXmlContract {
 
     @Test
     fun utf16SoapResponsesAllowSeekAndAutoplay() = verifyLoad(Charsets.UTF_16)
+
+    @Test
+    fun knownDurationIsSentInDidlLite() = verifyLoad(Charsets.UTF_8, durationMs = 180_000L)
+
+    @Test
+    fun unknownDurationOmitsDidlLiteDurationAttribute() = verifyLoad(Charsets.UTF_8, durationMs = 0L)
 
     @Test
     fun utf8InternalDoctypeIsRejected() = verifyDoctypeRejected(Charsets.UTF_8, external = false)
@@ -97,48 +104,56 @@ abstract class DlnaXmlContract {
         }
     }
 
-    private fun verifyLoad(charset: Charset) =
-        runBlocking {
-            Receiver(charset).use { receiver ->
-                val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
-                val session = DlnaSession(scope, receiver.location)
-                val media =
-                    CastMedia(
-                        "Canção & música",
+    private fun verifyLoad(
+        charset: Charset,
+        durationMs: Long = 180_000L,
+    ) = runBlocking {
+        Receiver(charset, trackDuration = if (durationMs > 0L) "00:03:00" else "00:00:00").use { receiver ->
+            val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+            val session = DlnaSession(scope, receiver.location)
+            val media =
+                CastMedia(
+                    "Canção & música",
+                    null,
+                    PlaybackResource(
+                        "song",
+                        "https://r1.googlevideo.com/videoplayback",
+                        emptyMap(),
                         null,
-                        PlaybackResource(
-                            "song",
-                            "https://r1.googlevideo.com/videoplayback",
-                            emptyMap(),
-                            null,
-                            null,
-                            contentLengthBytes = 1024L,
-                            mimeType = "audio/mp4",
-                        ),
-                        180_000L,
-                    )
-                try {
-                    session.load("${receiver.baseUrl}/audio?a=1&b=2", media, 42_000L, true, 0.9f, 7L)
-                    assertEquals(listOf("SetAVTransportURI", "Seek", "Play", "GetVolume"), receiver.actions.take(4))
-                    assertTrue(
-                        receiver.requests
-                            .single { it.first == "Seek" }
-                            .second
-                            .contains("<Target>00:00:42</Target>"),
-                    )
-                    val state = session.state.value
-                    assertTrue(state.connected)
-                    assertTrue(state.isPlaying)
-                    assertEquals(42_000L, state.positionMs)
-                    assertEquals(180_000L, state.durationMs)
-                    assertEquals(0.25f, state.volume)
-                    assertEquals(7L, state.mediaGeneration)
-                } finally {
-                    session.close()
-                    scope.cancel()
+                        null,
+                        contentLengthBytes = 1024L,
+                        mimeType = "audio/mp4",
+                    ),
+                    durationMs,
+                )
+            try {
+                session.load("${receiver.baseUrl}/audio?a=1&b=2", media, 42_000L, true, 0.9f, 7L)
+                assertEquals(listOf("SetAVTransportURI", "Seek", "Play", "GetVolume"), receiver.actions.take(4))
+                assertTrue(
+                    receiver.requests
+                        .single { it.first == "Seek" }
+                        .second
+                        .contains("<Target>00:00:42</Target>"),
+                )
+                val state = session.state.value
+                assertTrue(state.connected)
+                assertTrue(state.isPlaying)
+                assertEquals(42_000L, state.positionMs)
+                assertEquals(durationMs, state.durationMs)
+                val didl = receiver.requests.single { it.first == "SetAVTransportURI" }.second
+                if (durationMs > 0L) {
+                    assertTrue(didl.contains("duration=&quot;00:03:00&quot;"))
+                } else {
+                    assertFalse(didl.contains("duration"))
                 }
+                assertEquals(0.25f, state.volume)
+                assertEquals(7L, state.mediaGeneration)
+            } finally {
+                session.close()
+                scope.cancel()
             }
         }
+    }
 
     private fun verifyDoctypeRejected(
         charset: Charset,
@@ -184,6 +199,7 @@ abstract class DlnaXmlContract {
         private val charset: Charset = Charsets.UTF_8,
         namespaced: Boolean = true,
         sonos: Boolean = false,
+        private val trackDuration: String = "00:03:00",
     ) : AutoCloseable {
         private val server = HttpServer.create(InetSocketAddress("127.0.0.1", 0), 0)
         val baseUrl = "http://127.0.0.1:${server.address.port}"
@@ -223,7 +239,7 @@ abstract class DlnaXmlContract {
                             val fields =
                                 when (action) {
                                     "GetVolume" -> "<CurrentVolume>25</CurrentVolume>"
-                                    "GetPositionInfo" -> "<RelTime>00:00:42</RelTime><TrackDuration>00:03:00</TrackDuration>"
+                                    "GetPositionInfo" -> "<RelTime>00:00:42</RelTime><TrackDuration>$trackDuration</TrackDuration>"
                                     "GetTransportInfo" -> "<CurrentTransportState>PLAYING</CurrentTransportState>"
                                     else -> ""
                                 }

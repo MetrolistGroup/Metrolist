@@ -290,7 +290,7 @@ class CanvasCache(
             source: String,
             quality: String = "",
         ): String {
-            val revision = if (source == CanvasContentSource.APPLE_MUSIC.name) "hls-safe" else ""
+            val revision = if (source == CanvasContentSource.APPLE_MUSIC.name) "hls-safe-album-match" else ""
             return "canvas-cache:///" + hash("$songId\n$source\n$quality$revision")
         }
 

@@ -40,8 +40,10 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.metrolist.shared.api.ReturnYouTubeDislike
 import com.metrolist.shared.api.SongPlayerInformation
 import com.metrolist.shared.api.SongWatchInformation
+import com.metrolist.shared.api.VideoVotes
 import com.metrolist.shared.db.MusicDatabase
 import com.metrolist.shared.generated.resources.Res
 import com.metrolist.shared.generated.resources.about
@@ -58,6 +60,7 @@ import com.metrolist.shared.generated.resources.detail_available
 import com.metrolist.shared.generated.resources.detail_in_library
 import com.metrolist.shared.generated.resources.detail_remove_token
 import com.metrolist.shared.generated.resources.details
+import com.metrolist.shared.generated.resources.dislikes
 import com.metrolist.shared.generated.resources.duration
 import com.metrolist.shared.generated.resources.explicit
 import com.metrolist.shared.generated.resources.file_size
@@ -81,6 +84,7 @@ import com.metrolist.shared.generated.resources.subscribers
 import com.metrolist.shared.generated.resources.title
 import com.metrolist.shared.generated.resources.total_listening
 import com.metrolist.shared.generated.resources.total_time_listening
+import com.metrolist.shared.generated.resources.upload_date
 import com.metrolist.shared.generated.resources.video_stats_resolution
 import com.metrolist.shared.generated.resources.video_stats_video_codec
 import com.metrolist.shared.generated.resources.views
@@ -134,12 +138,23 @@ fun SongDetailsContent(
         var watchInformation by remember { mutableStateOf<SongWatchInformation?>(null) }
         var playerInformationLoading by remember { mutableStateOf(!song.isLocal) }
         var watchInformationLoading by remember { mutableStateOf(!song.isLocal) }
+        var votes by remember { mutableStateOf<VideoVotes?>(null) }
+        var votesLoading by remember { mutableStateOf(!song.isLocal) }
         LaunchedEffect(song.id) {
             if (!song.isLocal) {
                 try {
                     playerInformation = GlobalYouTubeRepository.instance.getSongPlayerInformation(song.id)
                 } finally {
                     playerInformationLoading = false
+                }
+            }
+        }
+        LaunchedEffect(song.id) {
+            if (!song.isLocal) {
+                try {
+                    votes = ReturnYouTubeDislike.votes(song.id)
+                } finally {
+                    votesLoading = false
                 }
             }
         }
@@ -282,7 +297,13 @@ fun SongDetailsContent(
                     (watchInformation?.viewCount ?: playerInformation?.viewCount)?.let(numbers::number),
                     playerInformationLoading || watchInformationLoading,
                 )
-                addValue(stringResource(Res.string.likes), watchInformation?.likeCount?.let(numbers::number), watchInformationLoading)
+                addValue(
+                    stringResource(Res.string.likes),
+                    (watchInformation?.likeCount ?: votes?.likes)?.let(numbers::number),
+                    watchInformationLoading || votesLoading,
+                )
+                addValue(stringResource(Res.string.dislikes), votes?.dislikes?.let(numbers::number), votesLoading)
+                addValue(stringResource(Res.string.upload_date), watchInformation?.uploadDate, watchInformationLoading)
                 addValue(
                     stringResource(Res.string.artist),
                     watchInformation?.artist ?: playerInformation?.artist ?: artistText.takeIf { it.isNotBlank() },

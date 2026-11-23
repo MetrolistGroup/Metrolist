@@ -54,6 +54,7 @@ internal fun MobileStatisticsScreen(
     onArtistClick: (String, String) -> Unit = { id, name -> onBrowse(MobileBrowseDestination(id, null, name)) },
     modifier: Modifier = Modifier,
     bottomContentPadding: Dp = 0.dp,
+    onOpenWrapped: () -> Unit,
 ) {
     val loadFailedMessage = stringResource(Res.string.statistics_load_failed)
     val scope = rememberCoroutineScope()
@@ -86,6 +87,7 @@ internal fun MobileStatisticsScreen(
     val topAlbums = snapshot?.albums.orEmpty()
 
     StatisticsScreen(
+        onOpenWrapped = onOpenWrapped,
         exportLabel = stringResource(Res.string.share),
         onExport = onExport,
         state =

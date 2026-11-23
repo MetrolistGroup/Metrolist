@@ -211,6 +211,34 @@ class PlaylistMembershipRepairTest {
             assertEquals(1, database.dao().localPlaylistSongCount(item.id))
         }
 
+    @Test
+    fun mixFromPreviousAccountCannotReplaceStoredMembership() =
+        runBlocking {
+            val id = "RDTMAKtest"
+            val item = PlaylistItem(id, "Mix", null)
+            val storedSong = song().copy(id = "stored")
+            database.cacheRemotePlaylist(id, item, listOf(storedSong))
+            val original = database.dao().findPlaylistEntity(id)
+            val tube = InnerTube(client, retryDelay = {})
+            val mixRepository = YouTubeRepository(tube, databaseProvider = { database })
+
+            assertFailsWith<CancellationException> {
+                database.loadAndCachePlaylistPage(mixRepository, id) {
+                    tube.cookie = "SAPISID=other-account"
+                }
+            }
+
+            assertEquals(original, database.dao().findPlaylistEntity(id))
+            assertEquals(
+                listOf(storedSong.id),
+                database
+                    .dao()
+                    .playlistSongs(id)
+                    .first()
+                    .map { it.song.id },
+            )
+        }
+
     private fun song() = SongItem("song", "Song", null, emptyList(), null, playlistSetVideoId = "first")
 
     private fun row(occurrence: String) =

@@ -86,9 +86,12 @@ import com.metrolist.shared.generated.resources.search_music
 import com.metrolist.shared.model.AlbumItem
 import com.metrolist.shared.model.ArtistItem
 import com.metrolist.shared.model.BrowseItem
+import com.metrolist.shared.model.EpisodeItem
 import com.metrolist.shared.model.PlaylistItem
 import com.metrolist.shared.model.PodcastItem
 import com.metrolist.shared.model.SongItem
+import com.metrolist.shared.model.toSongItem
+import com.metrolist.shared.settings.BlockedContent
 import com.metrolist.shared.ui.icons.MetrolistIcons
 import com.metrolist.shared.ui.navigation.blockInput
 import com.metrolist.shared.ui.navigation.rememberNavigationMotion
@@ -196,6 +199,13 @@ fun FloatingSearchOverlay(
         }
     }
 
+    fun playEpisodeSuggestion(item: EpisodeItem) {
+        val song = item.toSongItem()
+        if (!song.isUnavailable && !BlockedContent.isBlocked(song)) {
+            PlayerState.playTrack(song)
+        }
+    }
+
     val performSubmitSearch = {
         if (selectedIndex in querySuggestions.indices) {
             val (finalQuery, _) = querySuggestions[selectedIndex]
@@ -209,6 +219,10 @@ fun FloatingSearchOverlay(
             when (val item = recommendedItems[itemIndex]) {
                 is SongItem -> {
                     PlayerState.playTrack(item, listOf(item))
+                }
+
+                is EpisodeItem -> {
+                    playEpisodeSuggestion(item)
                 }
 
                 is BrowseItem -> {
@@ -235,8 +249,6 @@ fun FloatingSearchOverlay(
                     if (PlayerState.isExpanded) PlayerState.exitExpanded()
                     PlaylistAlbumState.fetchAlbumData(item.id)
                 }
-
-                else -> {}
             }
             animateDismiss()
         } else {
@@ -499,6 +511,10 @@ fun FloatingSearchOverlay(
                                                     PlayerState.playTrack(item, listOf(item))
                                                 }
 
+                                                is EpisodeItem -> {
+                                                    playEpisodeSuggestion(item)
+                                                }
+
                                                 is BrowseItem -> {
                                                     if (PlayerState.isExpanded) PlayerState.exitExpanded()
                                                     BrowseState.fetchBrowseData(item.id, item.params, item.title)
@@ -523,8 +539,6 @@ fun FloatingSearchOverlay(
                                                     if (PlayerState.isExpanded) PlayerState.exitExpanded()
                                                     PlaylistAlbumState.fetchAlbumData(item.id)
                                                 }
-
-                                                else -> {}
                                             }
                                             animateDismiss()
                                         }

@@ -687,7 +687,13 @@ fun PlaylistContextMenu(
                 TextButton(
                     onClick = {
                         showExportDialog = false
-                        exportCollection(playlist.title, format) { loadMediaSongs(playlist, actionSongs) }
+                        exportCollection(playlist.title, format) {
+                            if (playlist.id == "auto:liked" && actionSongs.isEmpty()) {
+                                checkNotNull(SongLikeState.awaitCompleteLikes()) { "Could not load complete liked songs" }
+                            } else {
+                                loadMediaSongs(playlist, actionSongs)
+                            }
+                        }
                     },
                     shapes = ButtonDefaults.shapes(),
                 ) { Text(stringResource(Res.string.save)) }

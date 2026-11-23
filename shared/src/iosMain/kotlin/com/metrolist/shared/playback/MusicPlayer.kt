@@ -9,9 +9,14 @@ import coil3.request.SuccessResult
 import coil3.request.maxBitmapSize
 import coil3.size.Precision
 import coil3.size.Size
+import com.metrolist.shared.api.artwork.AnimatedArtworkService
+import com.metrolist.shared.api.artwork.CanvasContentSource
+import com.metrolist.shared.api.artwork.isEnabled
 import com.metrolist.shared.listentogether.PlaybackReadiness
 import com.metrolist.shared.model.SongItem
+import com.metrolist.shared.model.artworkExplicitness
 import com.metrolist.shared.settings.Settings
+import com.metrolist.shared.state.GlobalYouTube
 import com.metrolist.shared.state.GlobalYouTubeRepository
 import com.metrolist.shared.storage.IosPlaybackCache
 import com.metrolist.shared.storage.IosPlaybackCapture
@@ -20,6 +25,7 @@ import com.metrolist.shared.utils.Logger
 import com.metrolist.shared.utils.normalizePlaybackTempo
 import com.metrolist.shared.youtube.playback.PlaybackEventKind
 import com.metrolist.shared.youtube.playback.PlaybackEventLog
+import com.metrolist.shared.youtube.playback.PlaybackNetworkStateStore
 import com.metrolist.shared.youtube.playback.PlaybackResource
 import com.metrolist.shared.youtube.playback.withFreshClientPlaybackNonce
 import kotlinx.cinterop.BetaInteropApi
@@ -28,15 +34,19 @@ import kotlinx.cinterop.addressOf
 import kotlinx.cinterop.readValue
 import kotlinx.cinterop.useContents
 import kotlinx.cinterop.usePinned
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.IO
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -51,11 +61,13 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
+import okio.ByteString.Companion.encodeUtf8
 import org.jetbrains.skia.Image
 import org.jetbrains.skia.impl.use
 import platform.AVFAudio.AVAudioSession
@@ -176,8 +188,14 @@ class MusicPlayer internal constructor(
     initialPlayer: AVPlayer? = null,
     private val activateAudioSession: () -> Unit = { AVAudioSession.sharedInstance().setActive(true, error = null) },
     private val outputVolume: () -> Float,
+    private val animatedArtworkService: AnimatedArtworkService = AnimatedArtworkService(GlobalYouTube.client),
 ) {
-    constructor() : this(outputVolume = { AVAudioSession.sharedInstance().outputVolume })
+    constructor(
+        animatedArtworkService: AnimatedArtworkService = AnimatedArtworkService(GlobalYouTube.client),
+    ) : this(
+        outputVolume = { AVAudioSession.sharedInstance().outputVolume },
+        animatedArtworkService = animatedArtworkService,
+    )
 
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
     private var playbackReporter = YouTubePlaybackReporter(scope, GlobalYouTubeRepository.instance)
@@ -185,6 +203,8 @@ class MusicPlayer internal constructor(
     private var player: AVPlayer = initialPlayer ?: newPlayer()
     internal var playbackCache: IosPlaybackCache? = null
     internal val sabrPreparationFailures = MutableSharedFlow<IosAudioCaptureFailure>(extraBufferCapacity = 8)
+    private val playbackCommandEvents = MutableStateFlow(0L)
+    internal val playbackCommands = playbackCommandEvents.asStateFlow()
     internal var audioCaptureFailure: IosAudioCaptureFailure? = null
         private set
     private var playbackCapture: IosPlaybackCapture? = null
@@ -270,7 +290,14 @@ class MusicPlayer internal constructor(
     private var publishedDurationMs = -1L
     private var metadataDurationSeconds: Long? = null
     private var artworkJob: Job? = null
+    private var animatedArtworkJob: Job? = null
+    private var hasActiveNowPlayingSession = false
     private var nowPlayingArtwork: MPMediaItemArtwork? = null
+    private var nowPlayingArtworkImage: UIImage? = null
+    private var nowPlayingAnimatedArtwork: Map<String, Any> = emptyMap()
+    private var activeAnimatedArtworkIds: Set<String> = emptySet()
+    private var animatedArtworkAlbumId: String? = null
+    private var animatedArtworkSettingsKey: List<Any>? = null
     private var didEmitEof = false
     private var pendingEofPlaybackInstanceId: Long? = null
     private var isQueueTransitionPending = false
@@ -475,6 +502,27 @@ class MusicPlayer internal constructor(
         }
         scope.launch {
             combine(songQueue, currentMediaItemIndex) { _, _ -> Unit }.collect { sampleChanges.trySend(Unit) }
+        }
+        scope.launch {
+            var initialized = false
+            combine(
+                snapshotFlow { nowPlayingAnimatedArtworkSettingsKey() },
+                PlaybackNetworkStateStore.state,
+            ) { key, network -> key to Settings.shared.isAnimatedArtworkAllowedOnNetwork(network) }
+                .distinctUntilChanged()
+                .collect { (_, allowed) ->
+                    if (!initialized) {
+                        initialized = true
+                        return@collect
+                    }
+                    if (!hasActiveNowPlayingSession) return@collect
+                    val song = _currentSong.value ?: return@collect
+                    if (!allowed || !isNowPlayingAnimatedArtworkEnabled()) {
+                        clearNowPlayingAnimatedArtwork(updateInfo = true)
+                    } else {
+                        loadNowPlayingAnimatedArtwork(song, forceReload = true)
+                    }
+                }
         }
         scope.launch {
             var lastPublishedRendering: Boolean? = null
@@ -1037,6 +1085,7 @@ class MusicPlayer internal constructor(
     }
 
     fun pause() {
+        playbackCommandEvents.update { it + 1 }
         failedPlaybackWanted = false
         _currentPosition.value = currentPositionMs()
         pauseOnMute.cancelResume()
@@ -1072,6 +1121,7 @@ class MusicPlayer internal constructor(
     }
 
     fun resume() {
+        playbackCommandEvents.update { it + 1 }
         pauseOnMute.cancelResume()
         if (isQueueTransitionPending) return
         if (_currentPlaybackResource.value == null || _loadError.value != null) {
@@ -1130,13 +1180,17 @@ class MusicPlayer internal constructor(
         wantsPlayback = false
         _isPlaying.value = false
         _currentPosition.value = 0L
+        hasActiveNowPlayingSession = false
         artworkJob?.cancel()
         artworkJob = null
         nowPlayingArtwork = null
+        nowPlayingArtworkImage = null
+        clearNowPlayingAnimatedArtwork(updateInfo = false)
         MPNowPlayingInfoCenter.defaultCenter().nowPlayingInfo = null
     }
 
     fun seekTo(position: Long) {
+        playbackCommandEvents.update { it + 1 }
         _currentPosition.value = currentPositionMs()
         sampleChanges.trySend(Unit)
         cancelActiveCrossfade()
@@ -1850,6 +1904,12 @@ class MusicPlayer internal constructor(
         player.pause()
         remoteTargets.forEach { (command, target) -> command.removeTarget(target) }
         remoteTargets.clear()
+        hasActiveNowPlayingSession = false
+        artworkJob?.cancel()
+        artworkJob = null
+        nowPlayingArtwork = null
+        nowPlayingArtworkImage = null
+        clearNowPlayingAnimatedArtwork(updateInfo = false)
         MPNowPlayingInfoCenter.defaultCenter().nowPlayingInfo = null
         scope.cancel()
     }
@@ -2138,13 +2198,17 @@ class MusicPlayer internal constructor(
             ).apply {
                 song.album?.name?.let { put(MPMediaItemPropertyAlbumTitle, it) }
                 nowPlayingArtwork?.let { put(MPMediaItemPropertyArtwork, it) }
+                nowPlayingAnimatedArtwork.forEach { (key, value) -> put(key, value) }
             }
     }
 
     @OptIn(BetaInteropApi::class)
     private fun loadNowPlayingArtwork(song: SongItem) {
+        hasActiveNowPlayingSession = true
         artworkJob?.cancel()
         nowPlayingArtwork = null
+        nowPlayingArtworkImage = null
+        loadNowPlayingAnimatedArtwork(song)
         val artworkUrl = song.thumbnail ?: return
         artworkJob =
             scope.launch {
@@ -2171,7 +2235,138 @@ class MusicPlayer internal constructor(
                         }
                     } ?: return@launch
                 if (_currentSong.value?.id != song.id) return@launch
+                nowPlayingArtworkImage = image
                 nowPlayingArtwork = MPMediaItemArtwork(CGSizeMake(600.0, 600.0)) { image }
+                updateNowPlayingInfo()
+            }
+    }
+
+    private fun nowPlayingAnimatedArtworkSettingsKey(): List<Any> =
+        listOf(
+            Settings.shared.isCanvasEnabled,
+            Settings.shared.enableAnimatedCovers,
+            Settings.shared.canvasEnabledSources,
+            Settings.shared.animatedCoverResolution,
+            Settings.shared.disableAnimatedArtworkOnMobileData,
+        )
+
+    private fun isNowPlayingAnimatedArtworkEnabled(): Boolean =
+        Settings.shared.isAnimatedArtworkAllowedOnNetwork() &&
+            CanvasContentSource.APPLE_MUSIC in CanvasContentSource.parseEnabled(Settings.shared.canvasEnabledSources) &&
+            CanvasContentSource.APPLE_MUSIC.isEnabled(Settings.shared.isCanvasEnabled, Settings.shared.enableAnimatedCovers)
+
+    private fun clearNowPlayingAnimatedArtwork(updateInfo: Boolean) {
+        animatedArtworkJob?.cancel()
+        animatedArtworkJob = null
+        val hadEntries = nowPlayingAnimatedArtwork.isNotEmpty()
+        nowPlayingAnimatedArtwork = emptyMap()
+        activeAnimatedArtworkIds = emptySet()
+        animatedArtworkAlbumId = null
+        animatedArtworkSettingsKey = null
+        IosNowPlayingAnimatedArtworkCache.updateActiveArtworkIds(emptySet())
+        if (updateInfo && hadEntries) updateNowPlayingInfo()
+    }
+
+    private fun loadNowPlayingAnimatedArtwork(
+        song: SongItem,
+        forceReload: Boolean = false,
+    ) {
+        if (!IosNowPlayingAnimatedArtworkBridge.isSupported) return
+        if (!isNowPlayingAnimatedArtworkEnabled()) {
+            clearNowPlayingAnimatedArtwork(updateInfo = true)
+            return
+        }
+        val settingsKey = nowPlayingAnimatedArtworkSettingsKey()
+        val albumId = song.album?.id?.takeIf(String::isNotBlank)
+        if (!forceReload &&
+            albumId != null &&
+            albumId == animatedArtworkAlbumId &&
+            animatedArtworkSettingsKey == settingsKey &&
+            nowPlayingAnimatedArtwork.isNotEmpty()
+        ) {
+            return
+        }
+        val artist = song.artists.joinToString(", ") { it.name }.trim()
+        if (artist.isBlank()) {
+            clearNowPlayingAnimatedArtwork(updateInfo = true)
+            return
+        }
+        clearNowPlayingAnimatedArtwork(updateInfo = true)
+        animatedArtworkSettingsKey = settingsKey
+        animatedArtworkJob =
+            scope.launch {
+                val result =
+                    try {
+                        withContext(Dispatchers.IO) {
+                            animatedArtworkService.fetchAnimatedCover(
+                                title = song.title,
+                                artist = artist,
+                                album = song.album?.name,
+                                explicit = song.artworkExplicitness,
+                            )
+                        }
+                    } catch (error: CancellationException) {
+                        throw error
+                    } catch (_: Exception) {
+                        null
+                    }
+                if (!hasActiveNowPlayingSession || _currentSong.value?.id != song.id || !isNowPlayingAnimatedArtworkEnabled()) return@launch
+                if (result == null) {
+                    clearNowPlayingAnimatedArtwork(updateInfo = true)
+                    return@launch
+                }
+                val squareUrl = result.url.takeUnless { result.squareIsTallFallback }
+                val tallUrl = result.tallUrl
+                val squareId = squareUrl?.let { "1x1:${it.encodeUtf8().sha256().hex()}" }
+                val tallId = tallUrl?.let { "3x4:${it.encodeUtf8().sha256().hex()}" }
+                val newActiveIds = setOfNotNull(squareId, tallId)
+                if (newActiveIds.isEmpty()) {
+                    clearNowPlayingAnimatedArtwork(updateInfo = true)
+                    return@launch
+                }
+                if (newActiveIds == activeAnimatedArtworkIds && nowPlayingAnimatedArtwork.isNotEmpty()) {
+                    animatedArtworkAlbumId = albumId
+                    return@launch
+                }
+                val (squarePreview, tallPreview) =
+                    withTimeoutOrNull(4_000L) {
+                        coroutineScope {
+                            val squareDeferred =
+                                result.previewImageUrl?.takeIf { squareUrl != null }?.let { url ->
+                                    async(Dispatchers.IO) {
+                                        runCatching { preloadIosAnimatedArtworkPreviewImage(url, 768, 768) }.getOrNull()
+                                    }
+                                }
+                            val tallDeferred =
+                                result.tallPreviewImageUrl?.takeIf { tallUrl != null }?.let { url ->
+                                    async(Dispatchers.IO) {
+                                        runCatching { preloadIosAnimatedArtworkPreviewImage(url, 768, 1024) }.getOrNull()
+                                    }
+                                }
+                            squareDeferred?.await() to tallDeferred?.await()
+                        }
+                    } ?: (null to null)
+                if (!hasActiveNowPlayingSession || _currentSong.value?.id != song.id || !isNowPlayingAnimatedArtworkEnabled()) return@launch
+                val spec =
+                    IosNowPlayingAnimatedArtworkSpec(
+                        squareArtworkId = squareId,
+                        squareVideoUrl = squareUrl,
+                        squarePreviewImageUrl = result.previewImageUrl.takeIf { squareUrl != null },
+                        squarePreviewImage = squarePreview,
+                        tallArtworkId = tallId,
+                        tallVideoUrl = tallUrl,
+                        tallPreviewImageUrl = result.tallPreviewImageUrl.takeIf { tallUrl != null },
+                        tallPreviewImage = tallPreview,
+                    )
+                val entries = IosNowPlayingAnimatedArtworkBridge.createEntries(spec, nowPlayingArtworkImage)
+                if (entries.isEmpty()) {
+                    clearNowPlayingAnimatedArtwork(updateInfo = true)
+                    return@launch
+                }
+                activeAnimatedArtworkIds = newActiveIds
+                animatedArtworkAlbumId = albumId
+                IosNowPlayingAnimatedArtworkCache.updateActiveArtworkIds(newActiveIds)
+                nowPlayingAnimatedArtwork = entries
                 updateNowPlayingInfo()
             }
     }

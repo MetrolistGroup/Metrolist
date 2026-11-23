@@ -1,123 +1,158 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
-    tools:targetApi="s"
     android:id="@android:id/background"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@drawable/widget_background"
     android:clipToOutline="true"
-    android:gravity="center_vertical"
-    android:orientation="vertical"
-    android:paddingStart="4dp"
-    android:paddingTop="4dp"
-    android:paddingEnd="4dp"
-    android:paddingBottom="4dp"
-    android:theme="@style/Theme.Widget.Metrolist">
+    android:theme="@style/Theme.Widget.Metrolist"
+    tools:ignore="UseAppTint"
+    tools:targetApi="s">
+
+    <ImageView
+        android:id="@+id/widget_playlist_surface_background"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:importantForAccessibility="no"
+        android:scaleType="fitXY"
+        android:src="@drawable/widget_background" />
 
     <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="48dp"
+        android:layout_height="match_parent"
         android:gravity="center_vertical"
-        android:orientation="horizontal">
-
-        <ImageView
-            android:id="@+id/widget_playlist_compact_album_art"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
-            android:contentDescription="@string/album_art"
-            android:scaleType="centerCrop"
-            android:src="@mipmap/ic_launcher" />
+        android:orientation="vertical"
+        android:padding="6dp">
 
         <LinearLayout
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="4dp"
-            android:layout_marginEnd="2dp"
-            android:layout_weight="1"
-            android:orientation="vertical">
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
 
-            <TextView
-                android:id="@+id/widget_playlist_compact_song_title"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:ellipsize="end"
-                android:maxLines="1"
-                android:text="@string/not_playing"
-                android:textColor="@color/widget_text_primary"
-                android:textSize="13sp"
-                android:textStyle="bold" />
+            <ImageView
+                android:id="@+id/widget_playlist_compact_album_art"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:contentDescription="@string/album_art"
+                android:scaleType="fitCenter"
+                android:src="@mipmap/ic_launcher" />
 
-            <TextView
-                android:id="@+id/widget_playlist_compact_artist_name"
-                android:layout_width="match_parent"
+            <LinearLayout
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:ellipsize="end"
-                android:maxLines="1"
-                android:text="@string/choose_something_below"
-                android:textColor="@color/widget_text_secondary"
-                android:textSize="11sp" />
+                android:layout_marginStart="6dp"
+                android:layout_marginEnd="4dp"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/widget_playlist_compact_song_title"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:ellipsize="end"
+                    android:maxLines="1"
+                    android:text="@string/not_playing"
+                    android:textColor="@color/widget_text_primary"
+                    android:textSize="13sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/widget_playlist_compact_artist_name"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:ellipsize="end"
+                    android:maxLines="1"
+                    android:text="@string/choose_something_below"
+                    android:textColor="@color/widget_text_secondary"
+                    android:textSize="11sp" />
+            </LinearLayout>
+
+            <FrameLayout
+                android:id="@+id/widget_playlist_compact_play_container"
+                android:layout_width="46dp"
+                android:layout_height="46dp"
+                android:clickable="true"
+                android:contentDescription="@string/play_pause"
+                android:focusable="true">
+
+                <ImageView
+                    android:id="@+id/widget_playlist_compact_play_bg"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:importantForAccessibility="no"
+                    android:scaleType="fitCenter"
+                    android:src="@drawable/widget_circle_bg"
+                    android:tint="@color/widget_primary" />
+
+                <ImageView
+                    android:id="@+id/widget_playlist_compact_play_pause"
+                    android:layout_width="22dp"
+                    android:layout_height="22dp"
+                    android:layout_gravity="center"
+                    android:importantForAccessibility="no"
+                    android:src="@drawable/ic_widget_play"
+                    android:tint="@color/widget_on_primary" />
+            </FrameLayout>
         </LinearLayout>
 
-        <FrameLayout
-            android:id="@+id/widget_playlist_compact_play_container"
-            android:layout_width="48dp"
+        <LinearLayout
+            android:id="@+id/widget_playlist_compact_quick_pick"
+            android:layout_width="match_parent"
             android:layout_height="48dp"
-            android:background="@drawable/widget_play_pill_bg">
+            android:layout_marginTop="6dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
 
             <ImageView
-                android:id="@+id/widget_playlist_compact_play_pause"
-                android:layout_width="24dp"
-                android:layout_height="24dp"
-                android:layout_gravity="center"
-                android:contentDescription="@string/play_pause"
-                android:src="@drawable/ic_widget_play" />
-        </FrameLayout>
-    </LinearLayout>
+                android:id="@+id/widget_playlist_compact_quick_pick_art"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:contentDescription="@null"
+                android:scaleType="centerCrop"
+                android:src="@mipmap/ic_launcher" />
 
-    <LinearLayout
-        android:id="@+id/widget_playlist_compact_quick_pick"
-        android:layout_width="match_parent"
-        android:layout_height="48dp"
-        android:layout_marginTop="6dp"
-        android:gravity="center_vertical"
-        android:orientation="horizontal">
+            <TextView
+                android:id="@+id/widget_playlist_compact_quick_pick_title"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="6dp"
+                android:layout_marginEnd="4dp"
+                android:layout_weight="1"
+                android:ellipsize="end"
+                android:maxLines="2"
+                android:text="@string/playlists"
+                android:textColor="@color/widget_text_primary"
+                android:textSize="12sp"
+                android:textStyle="bold" />
 
-        <ImageView
-            android:id="@+id/widget_playlist_compact_quick_pick_art"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
-            android:contentDescription="@null"
-            android:scaleType="centerCrop"
-            android:src="@mipmap/ic_launcher" />
-
-        <TextView
-            android:id="@+id/widget_playlist_compact_quick_pick_title"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="4dp"
-            android:layout_marginEnd="2dp"
-            android:layout_weight="1"
-            android:ellipsize="end"
-            android:maxLines="2"
-            android:text="@string/playlists"
-            android:textColor="@color/widget_text_primary"
-            android:textSize="12sp"
-            android:textStyle="bold" />
-
-        <FrameLayout
-            android:id="@+id/widget_playlist_compact_quick_pick_play_container"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
-            android:background="@drawable/widget_play_button_circular">
-
-            <ImageView
-                android:id="@+id/widget_playlist_compact_quick_pick_play"
-                android:layout_width="24dp"
-                android:layout_height="24dp"
-                android:layout_gravity="center"
+            <FrameLayout
+                android:id="@+id/widget_playlist_compact_quick_pick_play_container"
+                android:layout_width="44dp"
+                android:layout_height="44dp"
+                android:clickable="true"
                 android:contentDescription="@string/play"
-                android:src="@drawable/ic_widget_play_low" />
-        </FrameLayout>
+                android:focusable="true">
+
+                <ImageView
+                    android:id="@+id/widget_playlist_compact_quick_pick_play_bg"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:importantForAccessibility="no"
+                    android:scaleType="fitCenter"
+                    android:src="@drawable/widget_circle_bg"
+                    android:tint="@color/widget_primary_container" />
+
+                <ImageView
+                    android:id="@+id/widget_playlist_compact_quick_pick_play"
+                    android:layout_width="22dp"
+                    android:layout_height="22dp"
+                    android:layout_gravity="center"
+                    android:importantForAccessibility="no"
+                    android:src="@drawable/ic_widget_play_low"
+                    android:tint="@color/widget_on_primary_container" />
+            </FrameLayout>
+        </LinearLayout>
     </LinearLayout>
-</LinearLayout>
+</FrameLayout>

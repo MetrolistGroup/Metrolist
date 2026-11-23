@@ -28,7 +28,6 @@ import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-import kotlin.math.abs
 
 @Suppress("DEPRECATION")
 @OptIn(ExperimentalMaterial3Api::class)
@@ -76,13 +75,10 @@ class ModalSheetState internal constructor(
             return anchorsState.currentValue != SheetValue.Hidden || anchorsState.targetValue != SheetValue.Hidden || isAnimationRunning
         }
 
-    private val settleSlop = 16f * density
-
-    // The spring's last pixels take long to settle; once the sheet is visually in place, taps must land.
+    // Input follows the target anchor: a visible sheet stays interactive while it slides in or settles.
+    // A sheet moving to Hidden keeps swallowing input, except while the user is still dragging it.
     internal val acceptsInput: Boolean by derivedStateOf {
-        val target = anchorsState.targetValue
-        val settling = target != SheetValue.Hidden && abs(anchorsState.offset - anchorsState.anchors.positionOf(target)) <= settleSlop
-        (isDragging || target != SheetValue.Hidden) && (!isAnimationRunning || settling)
+        isDragging || anchorsState.targetValue != SheetValue.Hidden
     }
 
     internal val isAnimationRunning: Boolean get() = anchorsState.isAnimationRunning

@@ -212,7 +212,7 @@ class DirectCanvasProvider(
             ) {
                 continue
             }
-            val canvas = publicSpotifyCanvas(id)
+            val canvas = spotifyTrackCanvas(client, id)
             if (trustedMedia(canvas, false)) {
                 YtLogger.d("Canvas", "Resolved Spotify Canvas")
                 return canvas
@@ -221,16 +221,19 @@ class DirectCanvasProvider(
         return null
     }
 
-    private suspend fun publicSpotifyCanvas(trackId: String): String? {
+    private suspend fun spotifyTrackCanvas(
+        client: SpotifyClient,
+        trackId: String,
+    ): String? {
         if (!trackId.matches(Regex("[A-Za-z0-9]{22}"))) return null
         val response =
-            http.prepareGet("https://spotify-canva.vercel.app/api/canvas") { parameter("trackId", trackId) }.readTextLimited(256 * 1024)
-        if (!response.status.isSuccess()) return null
-        val canvases = (response.body?.let { json.parseToJsonElement(it) } as? JsonObject)?.array("canvasesList") ?: return null
-        return canvases
-            .mapNotNull { it as? JsonObject }
-            .firstOrNull { it.text("trackUri") == "spotify:track:$trackId" && trustedMedia(it.text("canvasUrl"), false) }
-            ?.text("canvasUrl")
+            client.canvasQuery("canvas", SPOTIFY_CANVAS_HASH, buildJsonObject { put("trackUri", "spotify:track:$trackId") })
+        return response
+            .obj("data")
+            ?.obj("trackUnion")
+            ?.obj("canvas")
+            ?.text("url")
+            ?.takeIf { trustedMedia(it, false) }
     }
 
     private suspend fun apple(
@@ -373,6 +376,7 @@ class DirectCanvasProvider(
         private const val USER_AGENT =
             "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 " +
                 "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        private const val SPOTIFY_CANVAS_HASH = "575138ab27cd5c1b3e54da54d0a7cc8d85485402de26340c2145f0f6bb5e7a9f"
         private const val SPOTIFY_SEARCH_HASH = "12d940b3f7381506a82ff5382eb59b0ed65118656e6bcdfbe4cebc528f75d29d"
 
         internal fun trustedMedia(

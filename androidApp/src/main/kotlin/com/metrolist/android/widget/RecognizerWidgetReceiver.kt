@@ -25,10 +25,13 @@ import com.metrolist.android.R
 import com.metrolist.android.recognition.MusicRecognitionService
 import com.metrolist.android.recognition.RecognitionLaunchActivity
 import com.metrolist.android.recognition.RecognitionWidgetService
+import com.metrolist.android.ui.theme.extractThemeColor
 import com.metrolist.android.utils.launchAsync
 import com.metrolist.shared.recognition.RecognitionStatus
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
@@ -69,6 +72,7 @@ class RecognizerWidgetReceiver : AppWidgetProvider() {
 
 object RecognizerWidgets : KoinComponent {
     private const val TINY_MAX_WIDTH_DP = 110
+    private val updateMutex = Mutex()
     private val imageLoader: ImageLoader by inject()
 
     suspend fun update(context: Context) {
@@ -76,22 +80,37 @@ object RecognizerWidgets : KoinComponent {
         val widgetIds = appWidgetManager.getAppWidgetIds(ComponentName(context, RecognizerWidgetReceiver::class.java))
         if (widgetIds.isEmpty()) return
         val status = MusicRecognitionService.status.value
-        val artwork =
+        val rawArtwork =
             (status as? RecognitionStatus.Success)
                 ?.result
                 ?.let { it.coverArtUrl ?: it.coverArtHqUrl }
                 ?.let { loadArtwork(context, it) }
-        widgetIds.forEach { widgetId ->
-            val minWidth = appWidgetManager.getAppWidgetOptions(widgetId).getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH)
-            val compact = minWidth in 1 until TINY_MAX_WIDTH_DP
-            val views =
-                if (compact) {
-                    RemoteViews(context.packageName, R.layout.widget_recognizer_tiny)
+        updateMutex.withLock {
+            if (status != MusicRecognitionService.status.value) return@withLock
+            val config = WidgetThemeConfig.fromSettings()
+            val artworkSeed =
+                if (config.materialYouEnabled && config.dynamicTheme) {
+                    rawArtwork?.extractThemeColor()
                 } else {
-                    RemoteViews(context.packageName, R.layout.widget_recognizer).also { bindDetails(context, it, status, artwork) }
+                    null
                 }
-            bindMic(context, views, status, compact)
-            appWidgetManager.updateAppWidget(widgetId, views)
+            val schemes = resolveWidgetColorSchemes(context, artworkSeed, config)
+            val shapedArtwork = rawArtwork?.let(::getCookie9Bitmap)
+            widgetIds.forEach { widgetId ->
+                val minWidth = appWidgetManager.getAppWidgetOptions(widgetId).getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH)
+                val compact = minWidth in 1 until TINY_MAX_WIDTH_DP
+                val views =
+                    if (compact) {
+                        RemoteViews(context.packageName, R.layout.widget_recognizer_tiny)
+                    } else {
+                        RemoteViews(context.packageName, R.layout.widget_recognizer).also {
+                            bindDetails(context, it, status, shapedArtwork, schemes)
+                        }
+                    }
+                views.setWidgetTint(context, R.id.widget_recognizer_surface_background, schemes, ::widgetSurfaceRole)
+                bindMic(context, views, status, compact, schemes)
+                appWidgetManager.updateAppWidget(widgetId, views)
+            }
         }
     }
 
@@ -100,11 +119,12 @@ object RecognizerWidgets : KoinComponent {
         views: RemoteViews,
         status: RecognitionStatus,
         compact: Boolean,
+        schemes: WidgetColorSchemes,
     ) {
         val active = status is RecognitionStatus.Listening || status is RecognitionStatus.Processing
         val showResult = compact && status is RecognitionStatus.Success
         views.setContentDescription(
-            R.id.widget_recognizer_mic_icon,
+            R.id.widget_recognizer_mic_container,
             context.getString(
                 when {
                     active -> R.string.menu_stop
@@ -114,11 +134,14 @@ object RecognizerWidgets : KoinComponent {
             ),
         )
         views.setViewVisibility(R.id.widget_recognizer_progress, if (active) View.VISIBLE else View.GONE)
-        views.setInt(
-            R.id.widget_recognizer_mic_button,
-            "setBackgroundResource",
-            if (active) R.drawable.widget_mic_active_bg else R.drawable.widget_mic_bg,
-        )
+        views.setWidgetIndeterminateTint(R.id.widget_recognizer_progress, schemes) { it.primary }
+        views.setImageViewBitmap(R.id.widget_recognizer_mic_bg, cookie12MaskBitmap())
+        views.setWidgetTint(context, R.id.widget_recognizer_mic_bg, schemes) {
+            if (active) it.primary else it.primaryContainer
+        }
+        views.setWidgetTint(context, R.id.widget_recognizer_mic_icon, schemes) {
+            if (active) it.onPrimary else it.onPrimaryContainer
+        }
         views.setImageViewResource(
             R.id.widget_recognizer_mic_icon,
             when {
@@ -146,6 +169,7 @@ object RecognizerWidgets : KoinComponent {
         views: RemoteViews,
         status: RecognitionStatus,
         artwork: Bitmap?,
+        schemes: WidgetColorSchemes,
     ) {
         val (title, subtitle) =
             when (status) {
@@ -176,6 +200,8 @@ object RecognizerWidgets : KoinComponent {
             }
         views.setTextViewText(R.id.widget_recognizer_title, title)
         views.setTextViewText(R.id.widget_recognizer_subtitle, subtitle.orEmpty())
+        views.setWidgetTextColor(context, R.id.widget_recognizer_title, schemes) { it.onSurface }
+        views.setWidgetTextColor(context, R.id.widget_recognizer_subtitle, schemes) { it.onSurfaceVariant }
         views.setViewVisibility(R.id.widget_recognizer_subtitle, if (subtitle.isNullOrBlank()) View.GONE else View.VISIBLE)
         views.setViewVisibility(R.id.widget_recognizer_album_art, if (artwork != null) View.VISIBLE else View.GONE)
         artwork?.let { views.setImageViewBitmap(R.id.widget_recognizer_album_art, it) }
@@ -211,7 +237,6 @@ object RecognizerWidgets : KoinComponent {
                     .execute(request)
                     .image
                     ?.toBitmap()
-                    ?.let(::getRoundedCornerBitmap)
             } catch (e: CancellationException) {
                 throw e
             } catch (_: Exception) {

@@ -1,6 +1,7 @@
 package com.metrolist.desktop.state.playback
 
 import androidx.compose.runtime.snapshotFlow
+import com.metrolist.desktop.deviceconnect.DesktopDeviceConnect
 import com.metrolist.desktop.state.app.UiState
 import com.metrolist.desktop.state.playback.PlayerState
 import com.metrolist.shared.cast.CastDevice
@@ -19,6 +20,23 @@ import kotlinx.coroutines.flow.stateIn
 class DesktopPlaybackController(
     scope: CoroutineScope,
 ) : PlaybackController {
+    override val playbackVolume = PlayerState.volumeState
+    override val playbackCommandGeneration: Long get() = PlayerState.explicitPlaybackGeneration
+    override val playbackCommands = PlayerState.playbackCommands
+    private val wrappedSharedPlayback =
+        ListenTogetherState.listenTogetherManager.let { manager ->
+            combine(manager.isInRoom, manager.roomRequestPending, manager.persistedRoomSession) { active, pending, persisted ->
+                active || pending || persisted
+            }
+        }
+    override val wrappedSoundtrackAllowed =
+        combine(
+            PlayerState.castManager.state,
+            wrappedSharedPlayback,
+            DesktopDeviceConnect.manager.remote.state,
+            snapshotFlow { PlayerState.sleepTimerEnabled || PlayerState.sleepTimerStopAfterCurrentSong },
+        ) { cast, shared, remote, timer -> !cast.isConnected && !shared && remote.sessionId == null && !timer }
+
     override val listState =
         combine(PlayerState.player.currentSong, PlayerState.player.isPlaying) { song, playing ->
             PlaybackListState(

@@ -216,6 +216,7 @@ import com.metrolist.android.ui.screens.SearchScreen
 import com.metrolist.android.ui.screens.SettingsScreen
 import com.metrolist.android.ui.screens.settings.AndroidAboutScreen
 import com.metrolist.android.ui.screens.settings.AndroidAutoScreen
+import com.metrolist.android.ui.screens.settings.AndroidWrappedScreen
 import com.metrolist.android.ui.screens.settings.BackupRestoreScreen
 import com.metrolist.android.ui.screens.settings.DevtoolsSettingsScreen
 import com.metrolist.android.ui.screens.settings.ListenTogetherBlockedUsersScreen
@@ -2474,6 +2475,7 @@ fun getEntryProvider(
                 onNavigateToPlaylist = { id, thumbnail -> navigator.navigate(Screen.Playlist(id, thumbnailHint = thumbnail)) },
                 onNavigateToPodcast = { podcastId -> navigator.navigate(Screen.Podcast(podcastId)) },
                 onNavigateToRecognition = { navigator.navigate(Screen.Recognition) },
+                onNavigateToWrapped = { navigator.navigate(Screen.Wrapped) },
                 onNavigateToLibrary = { filter ->
                     filter?.let { Settings.shared.libraryFilter = it }
                     navigator.navigate(Screen.Library)
@@ -2827,6 +2829,10 @@ fun getEntryProvider(
                     navigator.navigate(Screen.StatisticsDetail(detail, period, dateRange, mode))
                 },
             )
+        }
+
+        entry<Screen.Wrapped>(metadata = navTabMetadata) {
+            AndroidWrappedScreen(onBack = { navigator.goBack() })
         }
 
         entry<Screen.StatisticsDetail>(metadata = navTabMetadata) { detail ->

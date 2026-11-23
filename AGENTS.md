@@ -133,5 +133,7 @@ If a change breaks an existing test that falls outside the list, delete that tes
 
 - Use Conventional Commits for commits and PR titles, such as `fix(player): preserve queue position`. Name new branches `<type>/<short-kebab-case-description>`.
 - Keep PR bodies to a few factual sentences without lists. Describe the actual change; omit filler and invented claims.
+- Every PR body must contain a visible `AI usage:` line naming all AI models used to author or modify its code or documentation, including follow-up edits. Include model versions when known; tool names such as Codex or Cursor alone are insufficient. Do not guess model identities. If no AI authored any changes, write `AI usage: No AI was used.`
+- Do not approve or merge a PR with a missing or incomplete AI disclosure; ask the author to add it to the PR body. The PR disclosure workflow comments on missing declarations; reviewers must still check that the declared models are specific and accurate.
 - Reference a fixed issue in the PR body with `fixes: #<issue>` or `resolves: #<issue>`. Use `related to: #<issue>` when it is not resolved.
 - Keep issue references in the PR body, not the commit message. Only when pushing without a PR, put the reference in the commit message using the same keywords.

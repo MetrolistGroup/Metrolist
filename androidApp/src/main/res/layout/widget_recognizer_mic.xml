@@ -1,10 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Mic toggle: round when idle, rounded square with a spinning ring while listening -->
+<!-- Mic toggle: scalloped MaterialShapes.Cookie12Sided when idle, primary accent with spinning ring while listening -->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/widget_recognizer_mic_container"
     android:layout_width="56dp"
     android:layout_height="56dp"
-    android:layout_gravity="center">
+    android:layout_gravity="center"
+    android:clickable="true"
+    android:focusable="true"
+    android:contentDescription="@string/widget_recognizer_mic_desc"
+    tools:ignore="UseAppTint">
 
     <ProgressBar
         android:id="@+id/widget_recognizer_progress"
@@ -12,22 +17,32 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:indeterminate="true"
+        android:importantForAccessibility="no"
         android:indeterminateTint="@color/widget_primary"
         android:visibility="gone" />
 
     <FrameLayout
         android:id="@+id/widget_recognizer_mic_button"
-        android:layout_width="44dp"
-        android:layout_height="44dp"
-        android:layout_gravity="center"
-        android:background="@drawable/widget_mic_bg">
+        android:layout_width="46dp"
+        android:layout_height="46dp"
+        android:layout_gravity="center">
+
+        <ImageView
+            android:id="@+id/widget_recognizer_mic_bg"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:importantForAccessibility="no"
+            android:scaleType="fitCenter"
+            android:src="@drawable/widget_circle_bg"
+            android:tint="@color/widget_primary_container" />
 
         <ImageView
             android:id="@+id/widget_recognizer_mic_icon"
-            android:layout_width="24dp"
-            android:layout_height="24dp"
+            android:layout_width="22dp"
+            android:layout_height="22dp"
             android:layout_gravity="center"
-            android:contentDescription="@string/widget_recognizer_mic_desc"
-            android:src="@drawable/ic_widget_mic" />
+            android:importantForAccessibility="no"
+            android:src="@drawable/ic_widget_mic"
+            android:tint="@color/widget_on_primary_container" />
     </FrameLayout>
 </FrameLayout>

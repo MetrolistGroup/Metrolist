@@ -11,34 +11,46 @@ import org.bytedeco.ffmpeg.avcodec.AVPacket
 import org.bytedeco.ffmpeg.avformat.AVFormatContext
 import org.bytedeco.ffmpeg.avformat.AVIOContext
 import org.bytedeco.ffmpeg.avformat.AVIOInterruptCB
+import org.bytedeco.ffmpeg.avformat.AVInputFormat
 import org.bytedeco.ffmpeg.avformat.AVOutputFormat
 import org.bytedeco.ffmpeg.avformat.AVStream
 import org.bytedeco.ffmpeg.avutil.AVDictionary
 import org.bytedeco.ffmpeg.avutil.AVFrame
 import org.bytedeco.ffmpeg.global.avcodec.AV_CODEC_FLAG_GLOBAL_HEADER
+import org.bytedeco.ffmpeg.global.avcodec.AV_CODEC_ID_AAC
+import org.bytedeco.ffmpeg.global.avcodec.AV_CODEC_ID_OPUS
 import org.bytedeco.ffmpeg.global.avcodec.av_packet_alloc
 import org.bytedeco.ffmpeg.global.avcodec.av_packet_free
 import org.bytedeco.ffmpeg.global.avcodec.av_packet_rescale_ts
+import org.bytedeco.ffmpeg.global.avcodec.av_packet_unref
 import org.bytedeco.ffmpeg.global.avcodec.avcodec_alloc_context3
 import org.bytedeco.ffmpeg.global.avcodec.avcodec_find_encoder_by_name
 import org.bytedeco.ffmpeg.global.avcodec.avcodec_free_context
 import org.bytedeco.ffmpeg.global.avcodec.avcodec_open2
+import org.bytedeco.ffmpeg.global.avcodec.avcodec_parameters_copy
 import org.bytedeco.ffmpeg.global.avcodec.avcodec_parameters_from_context
 import org.bytedeco.ffmpeg.global.avcodec.avcodec_receive_packet
 import org.bytedeco.ffmpeg.global.avcodec.avcodec_send_frame
 import org.bytedeco.ffmpeg.global.avformat.AVFMT_GLOBALHEADER
 import org.bytedeco.ffmpeg.global.avformat.AVIO_FLAG_WRITE
+import org.bytedeco.ffmpeg.global.avformat.av_find_best_stream
 import org.bytedeco.ffmpeg.global.avformat.av_interleaved_write_frame
+import org.bytedeco.ffmpeg.global.avformat.av_read_frame
 import org.bytedeco.ffmpeg.global.avformat.av_write_trailer
 import org.bytedeco.ffmpeg.global.avformat.avformat_alloc_output_context2
+import org.bytedeco.ffmpeg.global.avformat.avformat_close_input
+import org.bytedeco.ffmpeg.global.avformat.avformat_find_stream_info
 import org.bytedeco.ffmpeg.global.avformat.avformat_free_context
 import org.bytedeco.ffmpeg.global.avformat.avformat_new_stream
+import org.bytedeco.ffmpeg.global.avformat.avformat_open_input
 import org.bytedeco.ffmpeg.global.avformat.avformat_write_header
 import org.bytedeco.ffmpeg.global.avformat.avio_closep
 import org.bytedeco.ffmpeg.global.avformat.avio_open2
 import org.bytedeco.ffmpeg.global.avutil.AVERROR_EAGAIN
 import org.bytedeco.ffmpeg.global.avutil.AVERROR_EOF
+import org.bytedeco.ffmpeg.global.avutil.AVMEDIA_TYPE_AUDIO
 import org.bytedeco.ffmpeg.global.avutil.AV_LOG_WARNING
+import org.bytedeco.ffmpeg.global.avutil.AV_NOPTS_VALUE
 import org.bytedeco.ffmpeg.global.avutil.AV_SAMPLE_FMT_FLTP
 import org.bytedeco.ffmpeg.global.avutil.av_channel_layout_copy
 import org.bytedeco.ffmpeg.global.avutil.av_channel_layout_default
@@ -50,12 +62,112 @@ import org.bytedeco.ffmpeg.global.avutil.av_frame_make_writable
 import org.bytedeco.ffmpeg.global.avutil.av_make_q
 import org.bytedeco.javacpp.BytePointer
 import org.bytedeco.javacpp.FloatPointer
+import org.bytedeco.javacpp.PointerPointer
 import java.io.File
 import java.io.IOException
 import java.nio.FloatBuffer
 
 internal object AudioDownloadTranscoder {
     private const val AAC_BITRATE = 192_000L
+
+    internal class CopiedAudio(
+        val file: File,
+        val mimeType: String,
+    )
+
+    /**
+     * Copies Opus into Ogg and AAC into M4A without decoding. Returns null when the source codec
+     * has no lossless target, so the caller can transcode instead.
+     */
+    suspend fun streamCopy(
+        source: File,
+        song: SongItem,
+        reserveDestination: (extension: String) -> File,
+        onProgress: (Float) -> Unit = {},
+    ): CopiedAudio? {
+        val context = currentCoroutineContext()
+        context.ensureActive()
+        FFmpegLogCallback.set()
+        FFmpegLogCallback.setLevel(AV_LOG_WARNING)
+        val input = AVFormatContext(null)
+        val output = AVFormatContext(null)
+        var inputOpened = false
+        var packet: AVPacket? = null
+        var destination: File? = null
+        var temp: File? = null
+        try {
+            ffmpeg(avformat_open_input(input, source.path, null as AVInputFormat?, null as AVDictionary?), "open ${source.name}")
+            inputOpened = true
+            ffmpeg(avformat_find_stream_info(input, null as PointerPointer<*>?), "read the audio stream")
+            val inputIndex = av_find_best_stream(input, AVMEDIA_TYPE_AUDIO, -1, -1, null as PointerPointer<*>?, 0)
+            if (inputIndex < 0) return null
+            val inputStream = input.streams(inputIndex)
+            val (muxer, extension, mimeType) =
+                when (inputStream.codecpar().codec_id()) {
+                    AV_CODEC_ID_OPUS -> Triple("ogg", "opus", "audio/ogg")
+                    AV_CODEC_ID_AAC -> Triple("ipod", "m4a", "audio/mp4")
+                    else -> return null
+                }
+            val target = reserveDestination(extension).also { destination = it }
+            val tempFile = File(target.parentFile, ".${target.name}.${System.nanoTime()}.tmp.$extension").also { temp = it }
+            ffmpeg(avformat_alloc_output_context2(output, null as AVOutputFormat?, muxer, tempFile.path), "create the $extension muxer")
+            val outputStream = avformat_new_stream(output, null as AVCodec?) ?: throw IOException("Could not create the audio stream")
+            ffmpeg(avcodec_parameters_copy(outputStream.codecpar(), inputStream.codecpar()), "copy the audio stream parameters")
+            outputStream.codecpar().codec_tag(0)
+            outputStream.time_base(inputStream.time_base())
+            setMetadata(metadata(song)) { tags ->
+                if (muxer == "ogg") outputStream.metadata(tags) else output.metadata(tags)
+            }
+            val io = AVIOContext(null)
+            ffmpeg(avio_open2(io, tempFile.path, AVIO_FLAG_WRITE, null as AVIOInterruptCB?, null as AVDictionary?), "open ${tempFile.name}")
+            output.pb(io)
+            ffmpeg(avformat_write_header(output, null as AVDictionary?), "write the $extension header")
+
+            val pkt =
+                av_packet_alloc()?.takeUnless { it.isNull }?.also { packet = it } ?: throw IOException("Could not allocate an audio packet")
+            val durationMicros = input.duration().takeIf { it > 0 }
+            while (true) {
+                context.ensureActive()
+                val result = av_read_frame(input, pkt)
+                if (result == AVERROR_EOF) break
+                ffmpeg(result, "read an audio packet")
+                if (pkt.stream_index() != inputIndex) {
+                    av_packet_unref(pkt)
+                    continue
+                }
+                durationMicros?.let { duration ->
+                    pkt.pts().takeIf { it != AV_NOPTS_VALUE }?.let { pts ->
+                        val timeBase = inputStream.time_base()
+                        // Container duration is in AV_TIME_BASE units (microseconds).
+                        val micros = pts * 1_000_000.0 * timeBase.num() / timeBase.den()
+                        onProgress((micros / duration).toFloat().coerceIn(0f, 1f))
+                    }
+                }
+                av_packet_rescale_ts(pkt, inputStream.time_base(), outputStream.time_base())
+                pkt.stream_index(outputStream.index())
+                pkt.pos(-1)
+                ffmpeg(av_interleaved_write_frame(output, pkt), "write an audio packet")
+            }
+            ffmpeg(av_write_trailer(output), "finish the $extension file")
+            // Close before promoting: Windows cannot move a file that is still open.
+            avio_closep(output.pb())
+            output.pb(null as AVIOContext?)
+            context.ensureActive()
+            check(DownloadManager.promoteTempFile(tempFile, target, minimumBytes = 1024)) { "Failed to finalize the $extension download" }
+            onProgress(1f)
+            destination = null
+            return CopiedAudio(target, mimeType)
+        } finally {
+            av_packet_free(packet)
+            if (!output.isNull) {
+                output.pb()?.takeUnless { it.isNull }?.let { avio_closep(it) }
+                avformat_free_context(output)
+            }
+            if (inputOpened) avformat_close_input(input)
+            temp?.delete()
+            destination?.delete()
+        }
+    }
 
     suspend fun transcodeToM4a(
         source: File,
@@ -103,6 +215,32 @@ internal object AudioDownloadTranscoder {
             runCatching { grabber.release() }
             temp.delete()
         }
+    }
+
+    private fun setMetadata(
+        metadata: Map<String, String>,
+        assign: (AVDictionary) -> Unit,
+    ) {
+        val tags = AVDictionary(null)
+        try {
+            metadata.forEach { (key, value) ->
+                BytePointer(key, "UTF-8").use { nativeKey ->
+                    BytePointer(value, "UTF-8").use { nativeValue ->
+                        ffmpeg(av_dict_set(tags, nativeKey, nativeValue, 0), "set $key metadata")
+                    }
+                }
+            }
+        } finally {
+            // Format teardown also owns a partially populated dictionary.
+            assign(tags)
+        }
+    }
+
+    private fun ffmpeg(
+        result: Int,
+        action: String,
+    ) {
+        if (result < 0) throw IOException("Could not $action (FFmpeg error $result)")
     }
 
     private fun metadata(song: SongItem): Map<String, String> =
@@ -173,19 +311,7 @@ internal object AudioDownloadTranscoder {
                 stream.time_base(codec.time_base())
                 ffmpeg(avcodec_parameters_from_context(stream.codecpar(), codec), "configure the audio stream")
 
-                val tags = AVDictionary(null)
-                try {
-                    metadata.forEach { (key, value) ->
-                        BytePointer(key, "UTF-8").use { nativeKey ->
-                            BytePointer(value, "UTF-8").use { nativeValue ->
-                                ffmpeg(av_dict_set(tags, nativeKey, nativeValue, 0), "set $key metadata")
-                            }
-                        }
-                    }
-                } finally {
-                    // Format teardown also owns a partially populated dictionary.
-                    format.metadata(tags)
-                }
+                setMetadata(metadata) { format.metadata(it) }
 
                 val io = AVIOContext(null)
                 ffmpeg(avio_open2(io, file.path, AVIO_FLAG_WRITE, null as AVIOInterruptCB?, null as AVDictionary?), "open ${file.name}")
@@ -273,13 +399,6 @@ internal object AudioDownloadTranscoder {
                 format.pb()?.takeUnless { it.isNull }?.let { avio_closep(it) }
                 avformat_free_context(format)
             }
-        }
-
-        private fun ffmpeg(
-            result: Int,
-            action: String,
-        ) {
-            if (result < 0) throw IOException("Could not $action (FFmpeg error $result)")
         }
     }
 }

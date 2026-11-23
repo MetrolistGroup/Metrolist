@@ -10,5 +10,14 @@ val SongCacheLimitsMb = listOf(0, 128, 256, 512, 1024, 2048, 4096, 8192, 16384)
 fun songCacheLimitIndex(limitMb: Int): Int =
     SongCacheLimitsMb.indexOf(limitMb).takeIf { it >= 0 } ?: if (limitMb < 0) SongCacheLimitsMb.lastIndex else 0
 
+private val ImageCachePresetLimitsMb = listOf(0, 128, 256, 512, 1024, 2048, 4096, 8192)
+
+fun imageCacheLimitOptions(currentLimitMb: Int): List<Int> =
+    if (currentLimitMb < 0 || currentLimitMb in ImageCachePresetLimitsMb) {
+        ImageCachePresetLimitsMb
+    } else {
+        (ImageCachePresetLimitsMb + currentLimitMb).sorted()
+    }
+
 fun cacheAllocationBytes(vararg limitsMb: Int): Long =
     limitsMb.sumOf { (if (it < 0) SongCacheLimitsMb.last() else it).toLong() } * 1024 * 1024

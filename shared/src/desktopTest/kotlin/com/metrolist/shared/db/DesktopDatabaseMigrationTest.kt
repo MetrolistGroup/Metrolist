@@ -2,6 +2,14 @@ package com.metrolist.shared.db
 
 import androidx.sqlite.SQLiteConnection
 import androidx.sqlite.execSQL
+import com.metrolist.innertubex.InnerTube
+import com.metrolist.shared.api.ContinuationBranch
+import com.metrolist.shared.api.PlaylistPage
+import com.metrolist.shared.model.AlbumItem
+import com.metrolist.shared.model.AlbumPage
+import com.metrolist.shared.model.AlbumTiny
+import com.metrolist.shared.model.ArtistTiny
+import com.metrolist.shared.model.SongItem
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import java.io.File
@@ -236,6 +244,65 @@ class DesktopDatabaseMigrationTest {
                 while (statement.step()) {
                     add(List(statement.getColumnCount()) { if (statement.isNull(it)) null else statement.getText(it) })
                 }
+            }
+        }
+
+    @Test
+    fun downloadedAlbumOpensLocallyOnceHeaderMetadataIsCached() =
+        runBlocking<Unit> {
+            val directory = createTempDirectory("album-header-migration").toFile()
+            val file = File(directory, "library.db")
+            try {
+                createHistoricalLibrary(file.absolutePath, 67, JdbcSQLiteDriver())
+                JdbcSQLiteDriver().open(file.absolutePath).use { connection ->
+                    connection.execSQL(
+                        "INSERT INTO album (id, playlistId, title, songCount, duration, lastUpdateTime) " +
+                            "VALUES ('MPREb_test', 'OLAK5uy_test', 'Saved Album', 1, 240, 1000)",
+                    )
+                    connection.execSQL(
+                        "UPDATE song SET albumId = 'MPREb_test', albumName = 'Saved Album', isDownloaded = 1 WHERE id = 'song'",
+                    )
+                    connection.execSQL("INSERT INTO song_album_map (songId, albumId, `index`) VALUES ('song', 'MPREb_test', 0)")
+                }
+                val database = getDesktopDatabaseBuilder(file).build()
+                try {
+                    assertNull(database.loadOfflineAlbum("MPREb_test", requireComplete = true))
+                    assertEquals(listOf("song"), database.loadOfflineAlbum("MPREb_test")?.songs?.map(SongItem::id))
+
+                    val artists = listOf(ArtistTiny("artist", "Artist"))
+                    val album = AlbumItem("MPREb_test", "Saved Album", null, artists, playlistId = "OLAK5uy_test", songCount = 1)
+                    val song = SongItem("song", "Keep my music", null, artists, AlbumTiny(album.id, album.title), 240L)
+                    val deluxe = AlbumItem("MPREb_deluxe", "Saved Album (Deluxe)", null, artists)
+                    database.storeAlbumPage(
+                        AlbumPage(album, listOf(song), otherVersions = listOf(deluxe), description = "Liner notes"),
+                        hasHeaderMetadata = true,
+                    )
+                    // Continuation saves have no header and must keep the stored one.
+                    database.storeAlbumPage(AlbumPage(album, listOf(song)))
+
+                    val local = requireNotNull(database.loadOfflineAlbum("MPREb_test", requireComplete = true))
+                    assertEquals("Liner notes", local.description)
+                    assertEquals(listOf(deluxe), local.otherVersions)
+                    assertNull(database.loadOfflineAlbum("MPREb_test", availableSongIds = emptySet(), requireComplete = true))
+
+                    // A first page whose merged rows match the new total is still unfinished.
+                    val grown = album.copy(songCount = 2)
+                    val next = song.copy(id = "next")
+                    val partial =
+                        PlaylistPage(
+                            sections = mapOf("songs" to listOf(next)),
+                            pending = listOf(ContinuationBranch("more", "songs")),
+                            seen = emptySet(),
+                            session = InnerTube.SessionSnapshot(),
+                            album = grown,
+                        )
+                    database.storeAlbumPage(AlbumPage(grown, partial.songs, playlistPage = partial), hasHeaderMetadata = true)
+                    assertNull(database.loadOfflineAlbum("MPREb_test", setOf(song.id, next.id), requireComplete = true))
+                } finally {
+                    database.close()
+                }
+            } finally {
+                directory.deleteRecursively()
             }
         }
 

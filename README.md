@@ -117,6 +117,7 @@ DO NOT REMOVE THIS SECTION, I WANT TO ADD IT LATER!!!
 ```sh
 brew trust metrolistgroup/tap
 brew install --cask metrolistgroup/tap/metrolist
+brew install metrolistgroup/tap/metrolist
 ```
 
 <h3>Linux</h3>
@@ -146,6 +147,7 @@ nix profile install github:MetrolistGroup/Metrolist
 
 ```sh
 brew trust metrolistgroup/tap
+brew install --cask metrolistgroup/tap/metrolist
 brew install metrolistgroup/tap/metrolist
 ```
 

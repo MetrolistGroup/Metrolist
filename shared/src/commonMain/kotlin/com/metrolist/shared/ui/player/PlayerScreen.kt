@@ -2129,19 +2129,26 @@ fun PlayerScreen(
                                     }
                                 }
 
-                                Spacer(modifier = Modifier.height(12.dp))
-
-                                PlayerProgressSlider(
-                                    viewModel = viewModel,
-                                    duration = duration,
-                                    isPlaying = isPlaying,
-                                    textBackgroundColor = textBackgroundColor,
-                                    canSeek = !isListenTogetherGuest,
-                                    isCasting = castState.isConnected,
-                                    songId = currentSong?.id,
-                                    progressColor = textBackgroundColor.takeIf { playerType == PlayerType.CLASSIC },
-                                    isLive = uiState.isLive || playbackResource?.isLive == true,
-                                )
+                                playerControlsTransition.AnimatedVisibility(
+                                    visible = { (expanded, _) -> !expanded || showControlsInFullscreen },
+                                    enter = canvasControlsEnter,
+                                    exit = canvasControlsExit,
+                                ) {
+                                    Column {
+                                        Spacer(modifier = Modifier.height(12.dp))
+                                        PlayerProgressSlider(
+                                            viewModel = viewModel,
+                                            duration = duration,
+                                            isPlaying = isPlaying,
+                                            textBackgroundColor = textBackgroundColor,
+                                            canSeek = !isListenTogetherGuest,
+                                            isCasting = castState.isConnected,
+                                            songId = currentSong?.id,
+                                            progressColor = textBackgroundColor.takeIf { playerType == PlayerType.CLASSIC },
+                                            isLive = uiState.isLive || playbackResource?.isLive == true,
+                                        )
+                                    }
+                                }
 
                                 playerControlsTransition.AnimatedVisibility(
                                     visible = { (expanded, minimalUi) ->

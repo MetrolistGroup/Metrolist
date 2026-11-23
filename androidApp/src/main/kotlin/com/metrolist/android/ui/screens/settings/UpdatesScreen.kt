@@ -37,7 +37,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
-import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -131,7 +130,6 @@ import com.metrolist.shared.generated.resources.updates_size
 import com.metrolist.shared.generated.resources.updates_status_current
 import com.metrolist.shared.generated.resources.updates_title
 import com.metrolist.shared.generated.resources.updates_version
-import com.metrolist.shared.ui.components.RefreshIndicator
 import com.metrolist.shared.ui.icons.MetrolistIcons
 import com.metrolist.shared.ui.settings.LocalSettingsPageHasTopBar
 import com.metrolist.shared.ui.settings.settingsPageSubtitle
@@ -613,20 +611,12 @@ fun UpdateDetailsScreen(
             }
         },
     ) { paddingValues ->
-        val refreshState = rememberPullToRefreshState()
-        val refreshing = current is AppUpdateState.Checking
         PullToRefreshBox(
-            isRefreshing = refreshing,
+            isRefreshing = current is AppUpdateState.Checking,
             onRefresh = { scope.launch { AppUpdateManager.check(context, crashRecovery = crashRecovery) } },
             modifier = Modifier.fillMaxSize().padding(paddingValues),
-            state = refreshState,
-            indicator = {
-                RefreshIndicator(
-                    state = refreshState,
-                    isRefreshing = refreshing,
-                    modifier = Modifier.align(Alignment.TopCenter),
-                )
-            },
+            // The linear progress indicator below already shows the check.
+            indicator = {},
         ) {
             Column(
                 modifier =

@@ -27,7 +27,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalLocale
 import androidx.compose.ui.unit.dp
 import com.metrolist.shared.generated.resources.Res
 import com.metrolist.shared.generated.resources.apply
@@ -51,7 +50,7 @@ import kotlin.time.Instant
 
 @Composable
 internal fun statisticsDateRangeLabel(range: StatisticsDateRange): String {
-    val formatter = remember(LocalLocale.current) { StatisticsFormatter() }
+    val formatter = rememberStatisticsFormatter()
     return stringResource(Res.string.statistics_date_range, formatter.date(range.start), formatter.date(range.end))
 }
 

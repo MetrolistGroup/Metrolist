@@ -49,7 +49,12 @@ internal object SupportPromptSchedule {
     private var dueThisLaunch: Boolean? = null
 
     /** Counts one app launch per process and reports whether the prompt is due. */
-    fun claimLaunch(settings: Settings = Settings.shared): Boolean = dueThisLaunch ?: isDue(settings).also { dueThisLaunch = it }
+    fun claimLaunch(settings: Settings = Settings.shared): Boolean =
+        !settings.supportPromptDismissed && (dueThisLaunch ?: isDue(settings).also { dueThisLaunch = it })
+
+    fun dismissForLaunch() {
+        dueThisLaunch = false
+    }
 
     internal fun isDue(
         settings: Settings,
@@ -76,6 +81,12 @@ internal object SupportPromptSchedule {
 @Composable
 fun SupportPrompt() {
     var visible by remember { mutableStateOf(SupportPromptSchedule.claimLaunch()) }
+
+    fun dismiss() {
+        SupportPromptSchedule.dismissForLaunch()
+        visible = false
+    }
+
     val uriHandler = LocalUriHandler.current
     val developers =
         remember {
@@ -86,7 +97,7 @@ fun SupportPrompt() {
         }
     PopupVisibility(visible = visible) {
         AlertDialog(
-            onDismissRequest = { visible = false },
+            onDismissRequest = ::dismiss,
             title = { Text(stringResource(Res.string.support_prompt_title)) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(20.dp)) {
@@ -127,7 +138,7 @@ fun SupportPrompt() {
                 TextButton(
                     onClick = {
                         Settings.shared.supportPromptDismissed = true
-                        visible = false
+                        dismiss()
                     },
                     shapes = ButtonDefaults.shapes(),
                 ) {

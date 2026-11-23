@@ -152,8 +152,11 @@ fun AnimatedCoverVideo(
     LaunchedEffect(session) {
         if (!active) return@LaunchedEffect
         val prepareShortClips =
-            playbackResource != null && Settings.shared.youtubeCanvasMode == YouTubeCanvasMode.SHORT_CLIPS &&
-                !CanvasCache.isCachedUrl(url)
+            playbackResource != null &&
+                Settings.shared.youtubeCanvasMode == YouTubeCanvasMode.SHORT_CLIPS &&
+                !CanvasCache.isCachedUrl(url) &&
+                clips.isNotEmpty() &&
+                !playbackResource.hasSabrVideo
         session.prepare(
             context,
             url,

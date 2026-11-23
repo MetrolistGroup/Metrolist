@@ -92,6 +92,7 @@ object PodcastState {
     fun playAll() {
         val current = page ?: return
         val loadedSession = pagerSession
+        val generation = PlayerState.reserveExplicitPlaybackGeneration()
         AppState.scope.launch {
             val complete =
                 loadPodcastForPlayback(current) { loaded ->
@@ -100,8 +101,12 @@ object PodcastState {
                         GlobalYouTubeRepository.instance.getPodcast(loaded.podcast.id, initial)
                     }
                 }
+            if (PlayerState.explicitPlaybackGeneration != generation) return@launch
             val songs = complete?.episodes?.map { it.toSongItem(current.podcast.title) }.orEmpty()
-            songs.firstOrNull()?.let { PlayerState.playTrack(it, songs) }
+            val replacementGeneration = PlayerState.playbackReplacementGeneration
+            songs.firstOrNull()?.let {
+                PlayerState.playTrack(it, songs, advanceGeneration = false, expectedReplacementGeneration = replacementGeneration)
+            }
         }
     }
 

@@ -54,7 +54,15 @@ data class CastState(
         get() = status == CastConnectionStatus.CONNECTED && device != null
 }
 
-fun dlnaVolumePercent(volume: Float): Int = (volume.coerceIn(0f, 1f) * 100).toInt()
+fun castVolumePercent(volume: Float): Int {
+    val normalized = volume.coerceIn(0f, 1f)
+    val truncated = (normalized * 100).toInt()
+    // Recover an integer percentage converted to Float without rounding genuinely fractional levels.
+    val nextPercent = truncated + 1
+    return if (normalized == nextPercent / 100f) nextPercent else truncated
+}
+
+fun dlnaVolumePercent(volume: Float): Int = castVolumePercent(volume)
 
 internal fun acceptedCastPlaybackEnd(
     receiverHasEnded: Boolean,

@@ -35,6 +35,17 @@
       "allDeclaredConstructors": true
     },
     {
+      "type": "com.metrolist.desktop.input.WindowsPhysicalKeyHookProcedure",
+      "jniAccessible": true,
+      "allDeclaredMethods": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": "com.metrolist.desktop.input.WindowsPhysicalKeyHookProcedureContract",
+      "jniAccessible": true,
+      "allDeclaredMethods": true
+    },
+    {
       "type": "com.metrolist.desktop.window.jna.structure.MENUITEMINFO",
       "jniAccessible": true,
       "allDeclaredFields": true,

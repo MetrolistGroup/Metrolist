@@ -8,6 +8,7 @@ package com.metrolist.shared.db.entities
 import androidx.room3.ColumnInfo
 import androidx.room3.Entity
 import androidx.room3.PrimaryKey
+import com.metrolist.shared.model.AlbumItem
 import kotlinx.datetime.LocalDateTime
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
@@ -33,4 +34,7 @@ data class AlbumEntity(
     val isLocal: Boolean = false,
     @ColumnInfo(name = "isUploaded", defaultValue = "0")
     val isUploaded: Boolean = false,
+    val description: String? = null,
+    val otherVersions: List<AlbumItem>? = null,
+    val tracksComplete: Boolean? = null,
 )

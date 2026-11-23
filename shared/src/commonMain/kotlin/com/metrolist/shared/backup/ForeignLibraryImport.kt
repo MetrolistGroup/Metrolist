@@ -81,6 +81,8 @@ data class ForeignPlaylist(
     val browseId: String?,
     val songIds: List<String>,
     val isEditable: Boolean = false,
+    // The source app kept its own editable copy, so the import stays local even when it records a YouTube ID.
+    val localCopy: Boolean = false,
     val description: String? = null,
     val createdAt: Long? = null,
     val updatedAt: Long? = null,
@@ -357,11 +359,14 @@ private fun SQLiteConnection.readViMusic(
     }
     val playlists =
         rows("SELECT * FROM ${n.playlist}") { row ->
+            val editable = (row.long("isEditable") ?: row.long("editable"))?.let { it == 1L }
             ForeignPlaylist(
                 name = row.text("name").orEmpty(),
                 browseId = row.text(n.browseId)?.removePrefix("VL")?.takeIf(String::isNotBlank),
                 songIds = members[row.long("id")].orEmpty(),
-                isEditable = (row.long("isEditable") ?: row.long("editable")) == 1L,
+                isEditable = editable != false,
+                // ViMusic has no editable column and keeps every playlist, even YouTube imports, as a local copy.
+                localCopy = editable == null,
             )
         }
     val plays =
@@ -419,6 +424,7 @@ private fun SQLiteConnection.readSimpMusic(tables: Map<String, Set<String>>): Fo
                 browseId = row.text("youtubePlaylistId")?.removePrefix("VL")?.takeIf(String::isNotBlank),
                 songIds = members[row.long("id")].orEmpty(),
                 isEditable = true,
+                localCopy = true,
             )
         }
     val savedPlaylists =
@@ -589,7 +595,7 @@ suspend fun MusicDatabase.importForeignLibrary(
             if (name.isEmpty() && source.browseId == null) return@forEach
             val songIds = source.songIds.filter(imported::contains)
             val existing =
-                if (source.browseId != null) {
+                if (source.browseId != null && !source.localCopy) {
                     dao.findPlaylistEntity(source.browseId)
                 } else {
                     dao.findEditableLocalPlaylistByName(name)
@@ -599,8 +605,8 @@ suspend fun MusicDatabase.importForeignLibrary(
                 existing ?: PlaylistEntity(
                     name = name.ifEmpty { checkNotNull(source.browseId) },
                     browseId = source.browseId,
-                    isEditable = source.browseId == null || source.isEditable,
-                    isLocal = source.browseId == null,
+                    isEditable = source.browseId == null || source.isEditable || source.localCopy,
+                    isLocal = source.browseId == null || source.localCopy,
                     remoteSongCount = songIds.size.takeIf { source.browseId != null },
                     thumbnailUrl = source.thumbnailUrl ?: songIds.firstNotNullOfOrNull { sourceSongs[it]?.thumbnailUrl },
                     description = source.description,

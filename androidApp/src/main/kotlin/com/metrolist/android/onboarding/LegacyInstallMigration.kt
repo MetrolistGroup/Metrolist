@@ -58,7 +58,7 @@ class LegacyInstallMigration(
 
     private suspend fun startFreshBlocking() {
         check(hasLegacyInstallation()) { "No legacy Metrolist database was found" }
-        val recovery = File(context.filesDir, "legacy-library-recovery/${UUID.randomUUID()}")
+        val recovery = File(context.filesDir, "$RECOVERY_DIRECTORY/${UUID.randomUUID()}")
         check(recovery.mkdirs()) { "Could not create library recovery directory" }
         migrationMarker.writeText(MARKER_STAGING)
         try {
@@ -210,6 +210,7 @@ class LegacyInstallMigration(
 
     companion object {
         private const val DATABASE_NAME = "song.db"
+        private const val RECOVERY_DIRECTORY = "legacy-library-recovery"
         private const val MARKER_STAGING = "staging"
         private const val MARKER_ARCHIVED = "archived"
         private const val MARKER_INSTALLED = "installed"
@@ -237,8 +238,18 @@ class LegacyInstallMigration(
                 "1ca196e130ae9567d8c4105c5b58c64f",
                 "01a9a23385f209554c46514a55c55431",
                 "db8acd8f706295c39f72cd7a8a33f86d",
+                "0831837f24ebb6bd585e8f159fbc8e5b",
             )
 
         internal fun isKmpIdentity(identity: String?): Boolean = identity in KMP_IDENTITY_HASHES
+
+        /** The newest v13 database kept by "Continue with an empty library", or null when none is left. */
+        fun latestRecoveryCopy(context: Context): File? =
+            File(context.filesDir, RECOVERY_DIRECTORY)
+                .listFiles()
+                .orEmpty()
+                .map { File(it, DATABASE_NAME) }
+                .filter(File::isFile)
+                .maxByOrNull(File::lastModified)
     }
 }

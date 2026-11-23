@@ -69,6 +69,7 @@ import com.metrolist.shared.constants.DevtoolsBenchmarkClientsKey
 import com.metrolist.shared.constants.DevtoolsPlaybackClientKey
 import com.metrolist.shared.constants.DevtoolsUnlockedKey
 import com.metrolist.shared.constants.DisableAnimatedArtworkOnMobileDataKey
+import com.metrolist.shared.constants.DiscordAlbumTemplateKey
 import com.metrolist.shared.constants.DiscordPendingAuthSessionKey
 import com.metrolist.shared.constants.DownloadQueueJsonKey
 import com.metrolist.shared.constants.DownloadedCollectionSortDirectionKey
@@ -197,6 +198,7 @@ import com.metrolist.shared.constants.UseLegacyShuffleKey
 import com.metrolist.shared.constants.VarispeedKey
 import com.metrolist.shared.constants.VideoViewerVisibleKey
 import com.metrolist.shared.constants.VoiceSearchEnabledKey
+import com.metrolist.shared.constants.WrappedCardDismissedYearKey
 import com.metrolist.shared.constants.YouTubeCanvasModeKey
 import com.metrolist.shared.constants.YouTubeCanvasQualityKey
 import com.metrolist.shared.model.CollectionSort
@@ -634,6 +636,7 @@ class Settings(
     var discordActivityName by preference("")
     var discordStateTemplate by preference("{artist.name}")
     var discordDetailsTemplate by preference("{song.name}")
+    var discordAlbumTemplate by preference(DiscordAlbumTemplateKey, "{album.name}")
     var discordButton1Enabled by preference(true)
     var discordButton1Text by preference("Listen on YouTube Music")
     var discordButton1Url by preference("{song.url}")
@@ -839,6 +842,9 @@ class Settings(
         runCatching { Json.decodeFromString<Map<String, Boolean>>(libraryViewsByFilterJson) }.getOrDefault(emptyMap())
 
     var gridItemSize by preference(GridItemSizeKey, GridItemSize.BIG)
+
+    /** The year whose Wrapped Home card was dismissed or finished; the card returns next December. */
+    var wrappedCardDismissedYear by preference(WrappedCardDismissedYearKey, 0)
     private var storedLibraryGridColumns by preference(LibraryGridColumnsKey, 3)
     var libraryGridColumns: Int
         get() = storedLibraryGridColumns.coerceIn(LibraryGridColumnsRange)
@@ -1306,13 +1312,12 @@ class Settings(
     fun shouldShowHomeSection(
         sectionKey: String,
         legacyTitle: String = sectionKey,
+        legacyKey: String? = null,
     ): Boolean {
         val current = getHomeSectionVisibilityMap()
         current[sectionKey]?.let { return it }
-        val legacy = current[legacyTitle] ?: return true
-        if (sectionKey != legacyTitle) {
-            homeSectionVisibility = Json.encodeToString(current + (sectionKey to legacy))
-        }
+        val legacy = legacyKey?.let(current::get) ?: current[legacyTitle] ?: return true
+        homeSectionVisibility = Json.encodeToString(current + (sectionKey to legacy))
         return legacy
     }
 
