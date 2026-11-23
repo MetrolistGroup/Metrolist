@@ -419,10 +419,15 @@ fun MobileApp(
             else -> MobileRoute.Home
         }.takeIf { it in visibleTabRoutes } ?: visibleTabRoutes.first()
     var selectedTab by remember { mutableStateOf(defaultTab) }
+    val downloadsTitle = stringResource(Res.string.downloaded)
     val routeStack =
         remember {
             mutableStateListOf<MobileRouteEntry>().apply {
-                initialSettingsPage?.let { add(MobileRouteEntry(MobileRoute.Settings(initialPage = it))) }
+                if (initialSettingsPage != null) {
+                    add(MobileRouteEntry(MobileRoute.Settings(initialPage = initialSettingsPage)))
+                } else if (Settings.shared.defaultOpenTab == "DOWNLOADS" && MobileRoute.Library in visibleTabRoutes) {
+                    add(MobileRouteEntry(MobileRoute.SongCollection("downloaded", downloadsTitle)))
+                }
             }
         }
     val containers = remember { NavigationContainerState() }

@@ -238,9 +238,11 @@ internal fun SettingsUiRegistryBuilder.registerAppearanceSettings(host: SharedSe
                                     "SEARCH" -> Res.string.search
                                     "TRACKS" -> Res.string.tracks
                                     "FAVORITES" -> Res.string.favorites
+                                    "DOWNLOADS" -> Res.string.downloads
                                     "ARTISTS" -> Res.string.artists
                                     "ALBUMS" -> Res.string.albums
                                     "PLAYLISTS" -> Res.string.playlists
+                                    "PODCASTS" -> Res.string.podcasts
                                     else -> Res.string.library
                                 },
                             ),
@@ -419,9 +421,11 @@ internal fun SettingsUiRegistryBuilder.registerAppearanceSettings(host: SharedSe
                                 add(SettingsChoice("TRACKS", stringResource(Res.string.tracks)))
                                 add(SettingsChoice("FAVORITES", stringResource(Res.string.favorites)))
                             }
+                            add(SettingsChoice("DOWNLOADS", stringResource(Res.string.downloads)))
                             add(SettingsChoice("ARTISTS", stringResource(Res.string.artists)))
                             add(SettingsChoice("ALBUMS", stringResource(Res.string.albums)))
                             add(SettingsChoice("PLAYLISTS", stringResource(Res.string.playlists)))
+                            add(SettingsChoice("PODCASTS", stringResource(Res.string.podcasts)))
                         }
                         if (isEmpty()) add(SettingsChoice("MYSTERIOUS", stringResource(Res.string.mysterious_fourth_tab)))
                     }

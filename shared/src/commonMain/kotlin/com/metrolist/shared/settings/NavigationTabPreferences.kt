@@ -2,7 +2,7 @@ package com.metrolist.shared.settings
 
 import com.metrolist.shared.ui.navigation.Screen
 
-private val libraryStartupTabs = setOf("LIBRARY", "SONGS", "TRACKS", "FAVORITES", "ARTISTS", "ALBUMS", "PLAYLISTS")
+private val libraryStartupTabs = setOf("LIBRARY", "SONGS", "TRACKS", "FAVORITES", "DOWNLOADS", "ARTISTS", "ALBUMS", "PLAYLISTS", "PODCASTS")
 
 fun defaultOpenTabRoot(current: String): String =
     when (current) {
@@ -15,6 +15,10 @@ fun defaultOpenTabScreen(current: String): Screen =
     when (current) {
         "FAVORITES" -> {
             Screen.AutoPlaylist("liked")
+        }
+
+        "DOWNLOADS" -> {
+            Screen.AutoPlaylist("downloaded")
         }
 
         "MYSTERIOUS" -> {
@@ -106,6 +110,7 @@ fun Settings.initialLibraryFilter(): LibraryFilterType =
                 "ARTISTS" -> LibraryFilterType.ARTISTS
                 "ALBUMS" -> LibraryFilterType.ALBUMS
                 "PLAYLISTS" -> LibraryFilterType.PLAYLISTS
+                "PODCASTS" -> LibraryFilterType.PODCASTS
                 else -> LibraryFilterType.ALL
             }
         }

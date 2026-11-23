@@ -208,6 +208,7 @@ internal fun MobileLibrary(
                         "ARTISTS" -> LibraryFilter.ARTISTS
                         "ALBUMS" -> LibraryFilter.ALBUMS
                         "PLAYLISTS" -> LibraryFilter.PLAYLISTS
+                        "PODCASTS" -> LibraryFilter.PODCASTS
                         else -> null
                     }
                 }
