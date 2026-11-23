@@ -19,7 +19,7 @@ When YouTube Music does not serve the system region, `closestContentCountry` pic
 
 Only the InnerTube locale maps the language to a YouTube-accepted `hl`, trying the full tag, its first two subtags and then the primary language. The isolated song-details request applies the same mapping. YouTube response date parsing, Home cache signatures, playback diagnostics and search suggestions use the request locale. Discord labels and display number/date formats use the app or system locale.
 
-If no tag is accepted, `hl` is blank. Omitting it requires [InnerTubeX #38](https://github.com/MetrolistGroup/innertubex/pull/38) in the hosted dependency. Until that change is released and the pin is updated, those languages still receive HTTP 400. The existing content-country mapping is unchanged.
+If no tag is accepted, `hl` is blank and InnerTubeX v0.13.1 or later leaves it out of the request context, so YouTube picks the language from the IP address and request headers.
 
 ## Pagination
 
