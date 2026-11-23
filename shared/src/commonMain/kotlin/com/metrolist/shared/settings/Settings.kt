@@ -162,6 +162,7 @@ import com.metrolist.shared.constants.PreferWordSyncedLyricsKey
 import com.metrolist.shared.constants.PromptContinuePlaybackKey
 import com.metrolist.shared.constants.QueuedYouTubeHistoryJsonKey
 import com.metrolist.shared.constants.RecentPlayedSearchSongsJsonKey
+import com.metrolist.shared.constants.ResumeOnBluetoothConnectKey
 import com.metrolist.shared.constants.SeekDurationSecondsKey
 import com.metrolist.shared.constants.SentryEnabledKey
 import com.metrolist.shared.constants.ShowBottomNavHomeKey
@@ -470,6 +471,7 @@ class Settings(
     var seekExtraSeconds by preference(false)
     var seekDurationSeconds by preference(SeekDurationSecondsKey, 10)
     var pauseOnMute by preference(PauseOnMuteKey, false)
+    var resumeOnBluetoothConnect by preference(ResumeOnBluetoothConnectKey, false)
     var stopMusicOnTaskClear by preference(true)
     var githubNTransformEnabled by preference(GitHubNTransformEnabledKey, false)
     var githubNTransformConfigUrl by preference(
@@ -1471,7 +1473,6 @@ internal val retiredPortableSettingTypes =
         "lastFmArtistAvatarsJson" to SettingType.STRING,
         "enableMusicVideos" to SettingType.BOOLEAN,
         "autoPlayMusicVideos" to SettingType.BOOLEAN,
-        "resumeOnBluetoothConnect" to SettingType.BOOLEAN,
         "pureBlack" to SettingType.BOOLEAN,
         "desktopSidebarExpanded" to SettingType.BOOLEAN,
         "discordRpcActivityType" to SettingType.STRING,

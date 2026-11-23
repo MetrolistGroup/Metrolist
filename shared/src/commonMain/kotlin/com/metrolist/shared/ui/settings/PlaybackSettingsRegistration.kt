@@ -373,6 +373,12 @@ internal fun SettingsUiRegistryBuilder.registerPlaybackSettings(host: SharedSett
                     ) {
                         settings.stopMusicOnTaskClear = it
                     }
+                    switch(
+                        id = "resumeOnBluetoothConnect",
+                        title = stringResource(Res.string.resume_on_bluetooth_connect),
+                        description = stringResource(Res.string.resume_on_bluetooth_connect_desc),
+                        checked = settings.resumeOnBluetoothConnect,
+                    ) { settings.resumeOnBluetoothConnect = it }
                 }
                 switch(
                     id = "pauseOnMute",

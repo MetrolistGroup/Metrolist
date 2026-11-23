@@ -566,7 +566,7 @@ class LegacySettingsMigrationTest {
     }
 
     @Test
-    fun retiredSettingsAreRemovedFromLegacyStoreAndBackupConversion() {
+    fun legacyBluetoothResumeSurvivesMigrationAndBackupWhileRetiredVideoSettingsAreRemoved() {
         val backing =
             MapSettings(
                 "enableMusicVideos" to true,
@@ -574,10 +574,11 @@ class LegacySettingsMigrationTest {
                 "resumeOnBluetoothConnect" to true,
             )
 
-        Settings(backing)
+        val migrated = Settings(backing)
 
+        assertTrue(migrated.resumeOnBluetoothConnect)
         assertTrue(
-            listOf("enableMusicVideos", "autoPlayMusicVideos", "resumeOnBluetoothConnect")
+            listOf("enableMusicVideos", "autoPlayMusicVideos")
                 .none(backing::hasKey),
         )
 
@@ -591,10 +592,17 @@ class LegacySettingsMigrationTest {
                 ),
             )
         assertEquals("DE", portable.entries.single { it.key == "contentCountry" }.value)
+        assertEquals("true", portable.entries.single { it.key == "resumeOnBluetoothConnect" }.value)
         assertTrue(
-            listOf("enableMusicVideos", "autoPlayMusicVideos", "resumeOnBluetoothConnect")
+            listOf("enableMusicVideos", "autoPlayMusicVideos")
                 .none { key -> portable.entries.any { it.key == key } },
         )
+        val restored = Settings(MapSettings())
+        restored.importBackupSettings(portable)
+        assertTrue(restored.resumeOnBluetoothConnect)
+        restored.resumeOnBluetoothConnect = false
+        restored.importBackupSettings(migrated.exportBackupSettings())
+        assertTrue(restored.resumeOnBluetoothConnect)
     }
 
     @Test
@@ -643,10 +651,10 @@ class LegacySettingsMigrationTest {
             listOf(
                 "enableMusicVideos",
                 "autoPlayMusicVideos",
-                "resumeOnBluetoothConnect",
                 "enableAppleMusicArtwork",
             ).none(backing::hasKey),
         )
+        assertTrue(backing.getBoolean("resumeOnBluetoothConnect", false))
         assertEquals("APPLE_MUSIC,YOUTUBE_MUSIC_VIDEO", backing.getString("canvasContentOrder", ""))
         assertEquals(YouTubeCanvasMode.FULL_VIDEO.ordinal, backing.getInt("youtubeCanvasMode", -1))
         assertEquals(MusicVideoQuality.P720.ordinal, backing.getInt("youtubeCanvasQuality", -1))
