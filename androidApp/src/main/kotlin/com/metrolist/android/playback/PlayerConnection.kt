@@ -779,6 +779,45 @@ class PlayerConnection(
         shuffle: Boolean = false,
     ) = playPagedCollection(title, shuffle) { GlobalYouTubeRepository.instance.getAlbumPlaybackPage(albumId) }
 
+    fun queuePlaylist(
+        playlistId: String,
+        playNext: Boolean,
+    ) = queueCollection(playNext) {
+        GlobalYouTubeRepository.instance.run {
+            completePlaylistPage(getPlaylistPlaybackPage(playlistId), applyContentFilters = false).songs
+        }
+    }
+
+    fun queueAlbum(
+        albumId: String,
+        playNext: Boolean,
+    ) = queueCollection(playNext) {
+        GlobalYouTubeRepository.instance
+            .getAlbum(albumId)
+            ?.songs
+            .orEmpty()
+    }
+
+    private fun queueCollection(
+        playNext: Boolean,
+        load: suspend () -> List<SongItem>,
+    ) {
+        scope.launch {
+            try {
+                val songs = BlockedContent.filterPlayableSongs(withContext(Dispatchers.IO) { load() })
+                if (songs.isEmpty()) {
+                    Toast.makeText(context, getString(Res.string.playlist_unavailable), Toast.LENGTH_SHORT).show()
+                } else {
+                    addToQueue(songs, playNext)
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Exception) {
+                Toast.makeText(context, getString(Res.string.error_unknown), Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
     private fun playPagedCollection(
         title: String,
         shuffle: Boolean,
