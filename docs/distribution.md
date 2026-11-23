@@ -26,21 +26,21 @@ The workflow keeps `distribution-recipes` for 30 days. Cleanup removes only inte
 
 Run `winget validate --manifest PATH` on Windows, then test clean install, upgrade and uninstall before submission. Do not request elevation or purge user data.
 
-After each stable release, the `winget` job in `release.yml` runs [winget-releaser](https://github.com/vedantmgoyal9/winget-releaser), which copies the previous version's manifests from `microsoft/winget-pkgs`, points them at the new installer and opens the upstream PR from the `MetrolistGroup/winget-pkgs` fork. It needs the `WINGET_TOKEN` secret, a classic PAT with `public_repo` and `workflow` scopes, and skips without it. Keep these templates in step with the published manifests, because the generator still renders them for review.
+After each stable release, the `winget` job in `release.yml` runs [winget-releaser](https://github.com/vedantmgoyal9/winget-releaser), which copies the previous version's manifests from `microsoft/winget-pkgs`, points them at the new installer and opens the upstream PR from the `MetrolistGroup/winget-pkgs` fork. It needs the `WINGET_TOKEN` secret, a classic token with `public_repo` and `workflow` scopes, and skips without it. `fork-user: MetrolistGroup` points it at the org fork. Keep these templates in step with the published manifests, because the generator still renders them for review.
 
 ## Homebrew
 
-[MetrolistGroup/homebrew-tap](https://github.com/MetrolistGroup/homebrew-tap) publishes the `metrolist` cask and formula for macOS and Linux. The cask installs the DMG on macOS and the AppImage on Linux. The formula adds a `metrolist` command. On Linux it unpacks the release AppImage, and on macOS it installs the app from the DMG. Its scheduled workflow points both at the latest stable release using the release's `SHA256SUMS`, then runs `brew style`, `brew audit` and an install of each on macOS and Linux, so no release token is needed. Asset names and `SHA256SUMS` entries for the DMGs and AppImages must stay stable for it. `packaging/homebrew/metrolist.rb.in` remains the generator's cask template; keep it in step with the tap. Preserve Gatekeeper and user data.
+[MetrolistGroup/homebrew-tap](https://github.com/MetrolistGroup/homebrew-tap) publishes the `metrolist` cask and formula for macOS and Linux. The cask installs the DMG on macOS and the AppImage on Linux. The formula adds a `metrolist` command. On Linux it unpacks the release AppImage, and on macOS it installs the app from the DMG. Asset names and `SHA256SUMS` entries for the DMGs and AppImages must stay stable for it. `packaging/homebrew/metrolist.rb.in` remains the generator's cask template; keep it in step with the tap. Preserve Gatekeeper and user data.
 
-The `homebrew` job in `release.yml` sends a `metrolist-release` repository dispatch to the tap so it updates right after publication instead of at the next poll. It needs the `HOMEBREW_TAP_TOKEN` secret, a fine-grained token with Contents write access to the tap, and skips without it.
+Nothing polls for releases. After publication, the `homebrew` job in `release.yml` calls the tap's reusable `update.yml`, which points both at the new release using its `SHA256SUMS` and pushes with a write deploy key, passed in as the `HOMEBREW_TAP_DEPLOY_KEY` secret. The push starts the tap's `test.yml`, which runs `brew style`, `brew audit` and an install of each on macOS and Linux. The tap stores the same key as `DEPLOY_KEY`, so you can rerun `update.yml` there by hand.
 
 Run `brew style --cask PATH` and `brew audit --cask --online TOKEN` in the tap. Test both architectures and follow [unsigned-app installation](install/macos.md#install-and-verify).
 
 ## Scoop
 
-[MetrolistGroup/scoop-bucket](https://github.com/MetrolistGroup/scoop-bucket) publishes `bucket/metrolist.json` for Windows x64 and ARM64. It installs the portable ZIPs, `Metrolist-Desktop-windows.zip` and `metrolist-desktop-windows-arm64-VERSION.zip`, from the release tag and adds a Start Menu shortcut. Its scheduled workflow runs Scoop's `checkver` against the latest stable release, reads hashes from `SHA256SUMS`, installs the new manifest on a Windows runner and commits only after the install works. Keep those asset names and `SHA256SUMS` entries stable.
+[MetrolistGroup/scoop-bucket](https://github.com/MetrolistGroup/scoop-bucket) publishes `bucket/metrolist.json` for Windows x64 and ARM64. It installs the portable ZIPs, `Metrolist-Desktop-windows.zip` and `metrolist-desktop-windows-arm64-VERSION.zip`, from the release tag and adds a Start Menu shortcut. Keep those asset names and `SHA256SUMS` entries stable.
 
-The `scoop` job in `release.yml` sends a `metrolist-release` repository dispatch to the bucket so it updates right after publication. It needs the `SCOOP_BUCKET_TOKEN` secret, a fine-grained token with Contents write access to the bucket, and skips without it.
+After publication, the `scoop` job in `release.yml` calls the bucket's reusable `update.yml`. It runs Scoop's `checkver` against the new release, reads hashes from `SHA256SUMS`, installs the manifest on a Windows runner and pushes only after the install works, using the write deploy key passed in as `SCOOP_BUCKET_DEPLOY_KEY`. The bucket stores the same key as `DEPLOY_KEY` for manual reruns.
 
 ## Arch Linux
 

@@ -505,7 +505,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git commit -m "chore(nix): pin the stable $APP_VERSION packages [skip ci]" -- packaging/release.json
-          for attempt in 1 2 3; do
+          for _ in 1 2 3; do
             git pull --rebase --quiet origin main && git push origin HEAD:main && exit 0
             sleep 10
           done
@@ -532,6 +532,7 @@ jobs:
           release-tag: ${{ github.ref_name }}
           installers-regex: 'metrolist-installer-windows-x64-.*\.exe$'
           token: ${{ secrets.WINGET_TOKEN }}
+          fork-user: MetrolistGroup
 
   flatpark:
     name: Notify flatpark
@@ -547,39 +548,24 @@ jobs:
           app-id: com.metrolist.desktop
           tag: ${{ github.ref_name }}
 
+  # Each package repository keeps its update logic in a reusable workflow and pushes with its own deploy key.
   homebrew:
     name: Update the Homebrew tap
     needs: publish
-    runs-on: blacksmith-2vcpu-ubuntu-2604
-    timeout-minutes: 5
-    continue-on-error: true
-    permissions: {}
-    env:
-      HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
-    steps:
-      # The tap also polls every four hours; this only makes the update immediate.
-      - name: Dispatch the tap update
-        if: env.HOMEBREW_TAP_TOKEN != ''
-        env:
-          GH_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
-        run: gh api repos/MetrolistGroup/homebrew-tap/dispatches -f event_type=metrolist-release
+    permissions:
+      contents: read
+    uses: MetrolistGroup/homebrew-tap/.github/workflows/update.yml@main
+    secrets:
+      DEPLOY_KEY: ${{ secrets.HOMEBREW_TAP_DEPLOY_KEY }}
 
   scoop:
     name: Update the Scoop bucket
     needs: publish
-    runs-on: blacksmith-2vcpu-ubuntu-2604
-    timeout-minutes: 5
-    continue-on-error: true
-    permissions: {}
-    env:
-      SCOOP_BUCKET_TOKEN: ${{ secrets.SCOOP_BUCKET_TOKEN }}
-    steps:
-      # The bucket also polls every four hours; this only makes the update immediate.
-      - name: Dispatch the bucket update
-        if: env.SCOOP_BUCKET_TOKEN != ''
-        env:
-          GH_TOKEN: ${{ secrets.SCOOP_BUCKET_TOKEN }}
-        run: gh api repos/MetrolistGroup/scoop-bucket/dispatches -f event_type=metrolist-release
+    permissions:
+      contents: read
+    uses: MetrolistGroup/scoop-bucket/.github/workflows/update.yml@main
+    secrets:
+      DEPLOY_KEY: ${{ secrets.SCOOP_BUCKET_DEPLOY_KEY }}
 
   finalize-sentry:
     name: Finalize Sentry releases
