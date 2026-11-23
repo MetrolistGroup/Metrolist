@@ -520,9 +520,9 @@ object PlayerState {
                 snapshot = write.snapshot,
                 positionMs = write.positionMs,
                 repeatMode = write.repeatMode,
-                finite = syncSession.finite,
-                explicitRadioQueue = syncSession.explicitRadioQueue,
-                recommendationsLocked = syncSession.recommendationsLocked,
+                finite = write.finite,
+                explicitRadioQueue = write.explicitRadioQueue,
+                recommendationsLocked = write.recommendationsLocked,
                 force = write.force,
             )
         })
@@ -2230,6 +2230,7 @@ object PlayerState {
                 persistedPlaybackPositionMs(),
                 repeatMode,
                 finite = syncSession.finite,
+                explicitRadioQueue = syncSession.explicitRadioQueue,
                 recommendationsLocked = syncSession.recommendationsLocked,
             ),
         )
@@ -2255,6 +2256,9 @@ object PlayerState {
                 queue.snapshots.value,
                 persistedPlaybackPositionMs(),
                 repeatMode,
+                finite = syncSession.finite,
+                explicitRadioQueue = syncSession.explicitRadioQueue,
+                recommendationsLocked = syncSession.recommendationsLocked,
                 force = true,
             ),
         )

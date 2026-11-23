@@ -54,6 +54,7 @@ internal data class PlaybackStateWrite(
     val positionMs: Long,
     val repeatMode: RepeatMode,
     val finite: Boolean = false,
+    val explicitRadioQueue: Boolean = false,
     val recommendationsLocked: Boolean = false,
     val force: Boolean = false,
 )

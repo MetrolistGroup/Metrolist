@@ -116,7 +116,9 @@ internal class AndroidQueueCoordinator(
         private set
     private val pendingRestorePosition = PendingQueueRestorePosition()
     private var remoteLoadGeneration = 0L
+    @Volatile
     var recommendationLockedSessionId: Long? = null
+    @Volatile
     private var radioSeedLockedSessionId: Long? = null
     val recommendationsLocked: Boolean get() = recommendationLockedSessionId == queueSessionId
 
