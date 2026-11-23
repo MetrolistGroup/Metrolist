@@ -2675,4 +2675,21 @@
     <string name="metroeq_preset_electronic">Electronică</string>
     <string name="metroeq_preset_acoustic">Acustică</string>
     <string name="metroeq_preset_loudness">Intensitate sonoră</string>
+    <string name="fetched_lyrics">Versuri preluate</string>
+    <string name="clear_fetched_lyrics">Șterge versurile preluate</string>
+    <string name="clear_fetched_lyrics_description">Preia din nou versurile de la furnizorii actuali. Versurile proprii, versurile pe care le-ai ales pentru o melodie și decalajele versurilor rămân.</string>
+    <string name="clear_fetched_lyrics_confirm">Ștergi toate versurile preluate de la furnizori? Acestea sunt preluate din nou data viitoare când fiecare melodie este redată.</string>
+    <string name="updates_install_method">Instalează actualizări cu</string>
+    <string name="updates_install_method_desc">Root și Shizuku instalează actualizări fără prompt.</string>
+    <string name="updates_install_method_system">Instalatorul de pachete Android</string>
+    <string name="updates_install_method_root">Root</string>
+    <string name="updates_install_method_shizuku">Shizuku</string>
+    <string name="updates_root_unavailable">Accesul root a fost refuzat sau nu este disponibil</string>
+    <string name="updates_shizuku_unavailable">Shizuku nu rulează</string>
+    <string name="updates_shizuku_denied">Permisiunea Shizuku a fost refuzată</string>
+    <string name="updates_auto_install">Instalează automat actualizări</string>
+    <string name="updates_auto_install_desc">Descarcă și instalează actualizări când nu se redă nimic. Necesită root, Shizuku sau Android 12 sau o versiune mai nouă, cu permisiunea de a instala aplicații.</string>
+    <string name="listenbrainz_server_url">URL server</string>
+    <string name="listenbrainz_server_url_description">Lasă gol pentru ListenBrainz. Pentru un server compatibil, precum Koito, introdu adresa sa API.</string>
+    <string name="listenbrainz_invalid_server_url">Introdu o adresă http sau https</string>
 </resources>
