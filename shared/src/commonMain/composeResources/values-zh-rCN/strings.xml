@@ -837,9 +837,9 @@
     <string name="listen_together_auto_approval_suggestions">自动批准歌曲推荐</string>
     <string name="continue_action">继续</string>
     <string name="listen_together_disconnected">已断开连接</string>
-    <string name="widget_playlists_description"></string>
-    <string name="listen_together_description"></string>
-    <string name="choose_something_below"></string>
+    <string name="widget_playlists_description">带有迷你播放器控制的播放列表快捷方式</string>
+    <string name="listen_together_description">与好友实时一起听音乐。创建房间成为房主，或使用邀请码加入现有房间</string>
+    <string name="choose_something_below">请在下方选择</string>
     <string name="foreign_import_title"></string>
     <string name="restore_error_unknown"></string>
     <string name="spotify_sign_in_again"></string>
