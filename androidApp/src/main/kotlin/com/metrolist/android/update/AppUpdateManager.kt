@@ -523,13 +523,20 @@ object AppUpdateManager {
 
     internal fun onInstallFinished(success: Boolean) {
         val current = mutableState.value as? AppUpdateState.Downloaded ?: return
+        if (!success) stopAutoInstallAfterFailure(current.release)
         mutableState.value =
             if (success) current.copy(installing = false) else AppUpdateState.Error(UpdateFailure.INSTALL, current.release)
     }
 
     internal fun onInstallAborted() {
         val current = mutableState.value as? AppUpdateState.Downloaded ?: return
+        stopAutoInstallAfterFailure(current.release)
         mutableState.value = current.copy(installing = false)
+    }
+
+    // The package installer reports its result after install() returns, so a later rejection or a declined prompt lands here.
+    private fun stopAutoInstallAfterFailure(release: GitHubRelease) {
+        if (release.updateKey == backgroundUpdateKey) autoInstallFailed = true
     }
 
     fun pendingReleaseForInstalledVersion(): GitHubRelease? =
