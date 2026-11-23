@@ -407,7 +407,8 @@ class MusicService :
                     !isDestroying && isRunning && Settings.shared.resumeOnBluetoothConnect &&
                         playbackRestoreJob.isCompleted && player.playbackState == Player.STATE_READY && !player.wantsPlayback &&
                         player.currentSong.value != null && castManager.state.value.status == CastConnectionStatus.DISCONNECTED &&
-                        !AndroidDeviceConnect.manager.remote.willStartRemotePlayback && !AndroidListenTogetherManager.isGuestPlaybackLocked
+                        !AndroidDeviceConnect.manager.remote.willStartRemotePlayback &&
+                        !AndroidListenTogetherManager.isGuestPlaybackLocked && !shouldPauseLocalPlaybackInBackground()
 
                 if (newOutputs.isEmpty() || !canResume()) return
                 val requestId = player.latestQueuePlaybackRequestId
