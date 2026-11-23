@@ -215,6 +215,264 @@
       }
     },
     {
+      "type": "com.sun.jna.platform.unix.X11",
+      "jniAccessible": true,
+      "allDeclaredFields": true,
+      "allDeclaredMethods": true
+    },
+    {
+      "type": "com.sun.jna.platform.unix.X11$Atom",
+      "jniAccessible": true,
+      "allDeclaredFields": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": "com.sun.jna.platform.unix.X11$Colormap",
+      "jniAccessible": true,
+      "allDeclaredFields": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": "com.sun.jna.platform.unix.X11$Display",
+      "jniAccessible": true,
+      "allDeclaredFields": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": "com.sun.jna.platform.unix.X11$Drawable",
+      "jniAccessible": true,
+      "allDeclaredFields": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": "com.sun.jna.platform.unix.X11$Window",
+      "jniAccessible": true,
+      "allDeclaredFields": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": "com.sun.jna.platform.unix.X11$WindowByReference",
+      "jniAccessible": true,
+      "allDeclaredFields": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": "com.sun.jna.platform.unix.X11$XAnyEvent",
+      "jniAccessible": true,
+      "allDeclaredFields": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": "com.sun.jna.platform.unix.X11$XButtonEvent",
+      "jniAccessible": true,
+      "allDeclaredFields": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": "com.sun.jna.platform.unix.X11$XCirculateEvent",
+      "jniAccessible": true,
+      "allDeclaredFields": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": "com.sun.jna.platform.unix.X11$XCirculateRequestEvent",
+      "jniAccessible": true,
+      "allDeclaredFields": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": "com.sun.jna.platform.unix.X11$XClientMessageEvent",
+      "jniAccessible": true,
+      "allDeclaredFields": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": "com.sun.jna.platform.unix.X11$XClientMessageEvent$Data",
+      "jniAccessible": true,
+      "allDeclaredFields": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": "com.sun.jna.platform.unix.X11$XColormapEvent",
+      "jniAccessible": true,
+      "allDeclaredFields": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": "com.sun.jna.platform.unix.X11$XConfigureEvent",
+      "jniAccessible": true,
+      "allDeclaredFields": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": "com.sun.jna.platform.unix.X11$XConfigureRequestEvent",
+      "jniAccessible": true,
+      "allDeclaredFields": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": "com.sun.jna.platform.unix.X11$XCreateWindowEvent",
+      "jniAccessible": true,
+      "allDeclaredFields": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": "com.sun.jna.platform.unix.X11$XCrossingEvent",
+      "jniAccessible": true,
+      "allDeclaredFields": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": "com.sun.jna.platform.unix.X11$XDestroyWindowEvent",
+      "jniAccessible": true,
+      "allDeclaredFields": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": "com.sun.jna.platform.unix.X11$XErrorEvent",
+      "jniAccessible": true,
+      "allDeclaredFields": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": "com.sun.jna.platform.unix.X11$XEvent",
+      "jniAccessible": true,
+      "allDeclaredFields": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": "com.sun.jna.platform.unix.X11$XExposeEvent",
+      "jniAccessible": true,
+      "allDeclaredFields": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": "com.sun.jna.platform.unix.X11$XFocusChangeEvent",
+      "jniAccessible": true,
+      "allDeclaredFields": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": "com.sun.jna.platform.unix.X11$XGenericEvent",
+      "jniAccessible": true,
+      "allDeclaredFields": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": "com.sun.jna.platform.unix.X11$XGenericEventCookie",
+      "jniAccessible": true,
+      "allDeclaredFields": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": "com.sun.jna.platform.unix.X11$XGraphicsExposeEvent",
+      "jniAccessible": true,
+      "allDeclaredFields": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": "com.sun.jna.platform.unix.X11$XGravityEvent",
+      "jniAccessible": true,
+      "allDeclaredFields": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": "com.sun.jna.platform.unix.X11$XID",
+      "jniAccessible": true,
+      "allDeclaredFields": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": "com.sun.jna.platform.unix.X11$XKeyEvent",
+      "jniAccessible": true,
+      "allDeclaredFields": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": "com.sun.jna.platform.unix.X11$XKeymapEvent",
+      "jniAccessible": true,
+      "allDeclaredFields": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": "com.sun.jna.platform.unix.X11$XMapEvent",
+      "jniAccessible": true,
+      "allDeclaredFields": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": "com.sun.jna.platform.unix.X11$XMapRequestEvent",
+      "jniAccessible": true,
+      "allDeclaredFields": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": "com.sun.jna.platform.unix.X11$XMappingEvent",
+      "jniAccessible": true,
+      "allDeclaredFields": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": "com.sun.jna.platform.unix.X11$XMotionEvent",
+      "jniAccessible": true,
+      "allDeclaredFields": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": "com.sun.jna.platform.unix.X11$XNoExposeEvent",
+      "jniAccessible": true,
+      "allDeclaredFields": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": "com.sun.jna.platform.unix.X11$XPropertyEvent",
+      "jniAccessible": true,
+      "allDeclaredFields": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": "com.sun.jna.platform.unix.X11$XReparentEvent",
+      "jniAccessible": true,
+      "allDeclaredFields": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": "com.sun.jna.platform.unix.X11$XResizeRequestEvent",
+      "jniAccessible": true,
+      "allDeclaredFields": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": "com.sun.jna.platform.unix.X11$XSelectionClearEvent",
+      "jniAccessible": true,
+      "allDeclaredFields": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": "com.sun.jna.platform.unix.X11$XSelectionEvent",
+      "jniAccessible": true,
+      "allDeclaredFields": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": "com.sun.jna.platform.unix.X11$XSelectionRequestEvent",
+      "jniAccessible": true,
+      "allDeclaredFields": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": "com.sun.jna.platform.unix.X11$XUnmapEvent",
+      "jniAccessible": true,
+      "allDeclaredFields": true,
+      "allDeclaredConstructors": true
+    },
+    {
+      "type": "com.sun.jna.platform.unix.X11$XVisibilityEvent",
+      "jniAccessible": true,
+      "allDeclaredFields": true,
+      "allDeclaredConstructors": true
+    },
+    {
       "type": "sun.awt.AWTAccessor",
       "methods": [
         {

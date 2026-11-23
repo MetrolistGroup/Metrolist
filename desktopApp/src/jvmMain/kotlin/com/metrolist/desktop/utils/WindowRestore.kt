@@ -40,7 +40,8 @@ fun WindowScope.WindowDragHandle(
                     while (true) {
                         val down = awaitFirstDown(requireUnconsumed = true, pass = PointerEventPass.Final)
                         if (!currentEvent.buttons.isPrimaryPressed) continue
-                        if (LinuxWindowMove.start(window)) {
+                        // A failed native move falls back to moving the window from AWT.
+                        if (runCatching { LinuxWindowMove.start(window) }.getOrDefault(false)) {
                             down.consume()
                             continue
                         }
