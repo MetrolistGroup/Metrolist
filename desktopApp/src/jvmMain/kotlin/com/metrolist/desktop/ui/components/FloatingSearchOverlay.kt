@@ -71,6 +71,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
+import com.metrolist.desktop.deviceconnect.DesktopDeviceConnect
 import com.metrolist.desktop.state.app.UiState
 import com.metrolist.desktop.state.content.ArtistState
 import com.metrolist.desktop.state.content.BrowseState
@@ -307,7 +308,9 @@ fun FloatingSearchOverlay(
                         .onPreviewKeyEvent { event ->
                             // Native Wayland has no global AWT dispatcher, and this overlay sits outside the shortcut layer.
                             if (WaylandScale.isNativeWaylandActive() && event.type == KeyEventType.KeyDown && event.isCtrlPressed &&
-                                (event.key == Key.K || event.key == Key.F)
+                                (event.key == Key.K || event.key == Key.F) &&
+                                DesktopDeviceConnect.manager.state.value.pairingRequests
+                                    .none { it.requiresApproval }
                             ) {
                                 animateDismiss()
                                 return@onPreviewKeyEvent true

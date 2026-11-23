@@ -146,12 +146,16 @@ fun DesktopShortcutLayer(
             modifier
                 .pointerInput(keyFocus) {
                     awaitPointerEventScope {
+                        var forwardHeld = false
                         while (true) {
                             val event = awaitPointerEvent(PointerEventPass.Initial)
+                            // buttons is the held state, so only the transition to held counts as a forward press.
+                            val forwardPressed = event.buttons.isForwardPressed && !forwardHeld
+                            forwardHeld = event.buttons.isForwardPressed
                             if (event.type != PointerEventType.Press) continue
                             if (event.buttons.isPrimaryPressed) keyFocus.keyboardNavigation = false
                             // The AWT forward-button handler is not installed on Tao.
-                            if (event.buttons.isForwardPressed && !isComposeModalActive()) {
+                            if (forwardPressed && !isComposeModalActive()) {
                                 event.changes.forEach { it.consume() }
                                 forward()
                             }
