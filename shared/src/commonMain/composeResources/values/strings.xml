@@ -1482,6 +1482,12 @@
     <string name="listenbrainz_connect_title">Connect ListenBrainz</string>
     <!-- Translators: Option or section label for user token in the ListenBrainz settings. -->
     <string name="listenbrainz_user_token">User token</string>
+    <!-- Translators: Label for the optional ListenBrainz-compatible server address field in the connect dialog. -->
+    <string name="listenbrainz_server_url">Server URL</string>
+    <!-- Translators: Help text under the ListenBrainz server address field. -->
+    <string name="listenbrainz_server_url_description">Leave empty for ListenBrainz. For a compatible server such as Koito, enter its API address.</string>
+    <!-- Translators: Error shown when the ListenBrainz server address is not a web address. -->
+    <string name="listenbrainz_invalid_server_url">Enter an http or https address</string>
     <string name="scrobble_create_account">Create account</string>
     <!-- Translators: Message explaining database incompatible in the Backup & Restore. %1$d is the backup database version; %2$d is the newest supported database version. -->
     <string name="restore_database_incompatible">This backup uses database version %1$d, but this app supports up to version %2$d. Update Metrolist and try again.</string>

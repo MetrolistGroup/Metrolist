@@ -455,6 +455,8 @@ Android Spotify and Apple Music library imports open the destination picker for 
 
 Last.fm and ListenBrainz login dialogs link to account registration; ListenBrainz also links to its token page.
 
+The ListenBrainz dialog takes an optional server URL for ListenBrainz-compatible servers such as Koito. Enter the API root that ends before `/submit-listens`, for example `https://koito.example/apis/listenbrainz/1`. The dialog validates the token against that server and saves the URL only after it connects; an empty field uses `https://api.listenbrainz.org/1`.
+
 Last.fm session keys only work with the API key that issued them. When Last.fm answers a scrobble or now-playing update with error 9, the account is marked as needing sign-in: Last.fm plays stay queued and are not sent, and the Last.fm settings page offers to sign in again. Signing back into the same account keeps and sends the held plays; another account still clears them.
 
 ## Desktop stored playback

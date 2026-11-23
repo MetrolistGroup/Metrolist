@@ -122,6 +122,7 @@ import com.metrolist.shared.constants.LikedSongsCustomOrdersJsonKey
 import com.metrolist.shared.constants.LikedSongsOrderAccountKey
 import com.metrolist.shared.constants.LikedSongsOrderCustomizedKey
 import com.metrolist.shared.constants.LikedSongsRecencyJsonKey
+import com.metrolist.shared.constants.ListenBrainzApiUrlKey
 import com.metrolist.shared.constants.ListenTogetherEnabledKey
 import com.metrolist.shared.constants.ListenTogetherServerMetadataKey
 import com.metrolist.shared.constants.LoudnessLevelKey
@@ -670,6 +671,7 @@ class Settings(
     var listenBrainzUsername by preference("")
     var listenBrainzEnabled by preference(false)
     var listenBrainzUseNowPlaying by preference(true)
+    var listenBrainzApiUrl by preference(ListenBrainzApiUrlKey, "")
     var pendingScrobblesJson by preference("[]")
     var corruptPendingScrobblesJson by preference("")
     var systemInDarkTheme by preference(false)
