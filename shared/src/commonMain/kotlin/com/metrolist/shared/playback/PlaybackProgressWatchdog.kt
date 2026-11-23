@@ -40,5 +40,10 @@ class PlaybackProgressWatchdog(
         return true
     }
 
+    fun rearm(nowMs: Long) {
+        lastProgressAtMs = nowMs
+        reported = false
+    }
+
     fun stalledForMs(nowMs: Long): Long = if (expectingProgress && playbackInstanceId > 0L) nowMs - lastProgressAtMs else 0L
 }
