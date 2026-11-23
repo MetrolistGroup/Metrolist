@@ -47,6 +47,8 @@
     <uses-permission
         android:name="android.permission.REQUEST_INSTALL_PACKAGES"
         tools:ignore="RequestInstallPackagesPolicy" />
+    <!-- Lets updates install without a prompt once Metrolist is its own installer (Android 12+). -->
+    <uses-permission android:name="android.permission.UPDATE_PACKAGES_WITHOUT_USER_ACTION" />
 
     <queries>
         <provider android:authorities="androidx.car.app.connection" />
@@ -487,6 +489,14 @@
         <receiver
             android:name="com.metrolist.android.update.UpdateInstallReceiver"
             android:exported="false" />
+        <!-- Shizuku delivers its binder through this provider; the permission limits callers to the system. -->
+        <provider
+            android:name="rikka.shizuku.ShizukuProvider"
+            android:authorities="${applicationId}.shizuku"
+            android:enabled="true"
+            android:exported="true"
+            android:multiprocess="false"
+            android:permission="android.permission.INTERACT_ACROSS_USERS_FULL" />
 
         <receiver
             android:name="com.metrolist.android.widget.MusicWidgetReceiver"

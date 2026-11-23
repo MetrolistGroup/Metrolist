@@ -1490,6 +1490,26 @@
     <string name="clear_fetched_lyrics_description">Fetch lyrics again from your current providers. Your own lyrics, lyrics you picked for a song and lyric offsets stay.</string>
     <!-- Translators: Confirmation message before clearing fetched lyrics. -->
     <string name="clear_fetched_lyrics_confirm">Delete all lyrics fetched from providers? They are fetched again the next time each song plays.</string>
+    <!-- Translators: Setting title on the Android updates screen for how downloaded updates are installed. -->
+    <string name="updates_install_method">Install updates with</string>
+    <!-- Translators: Supporting text for the update install method setting. -->
+    <string name="updates_install_method_desc">Root and Shizuku install updates without a prompt and set Metrolist as its own installer, so on Android 12 and newer later updates need no prompt either.</string>
+    <!-- Translators: Update install method that uses the standard Android package installer. -->
+    <string name="updates_install_method_system">Android package installer</string>
+    <!-- Translators: Update install method that uses root (superuser) access. -->
+    <string name="updates_install_method_root">Root</string>
+    <!-- Translators: Update install method that uses the Shizuku app; Shizuku is a product name. -->
+    <string name="updates_install_method_shizuku">Shizuku</string>
+    <!-- Translators: Message shown when root access was not granted for installing updates. -->
+    <string name="updates_root_unavailable">Root access was denied or is not available</string>
+    <!-- Translators: Message shown when the Shizuku app is not running or not installed. -->
+    <string name="updates_shizuku_unavailable">Shizuku is not running</string>
+    <!-- Translators: Message shown when Shizuku permission was not granted to Metrolist. -->
+    <string name="updates_shizuku_denied">Shizuku permission was denied</string>
+    <!-- Translators: Switch on the Android updates screen that installs updates in the background. -->
+    <string name="updates_auto_install">Install updates automatically</string>
+    <!-- Translators: Supporting text for the automatic update install switch. -->
+    <string name="updates_auto_install_desc">Download and install updates while nothing is playing. Needs root, Shizuku, or Metrolist set as its own installer on Android 12 and newer.</string>
     <!-- Translators: Label for the optional ListenBrainz-compatible server address field in the connect dialog. -->
     <string name="listenbrainz_server_url">Server URL</string>
     <!-- Translators: Help text under the ListenBrainz server address field. -->

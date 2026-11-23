@@ -10,6 +10,7 @@ import android.content.pm.PackageInfo
 import android.content.pm.PackageInstaller
 import android.content.pm.PackageManager
 import android.os.Build
+import androidx.annotation.RequiresApi
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import com.metrolist.android.BuildConfig
@@ -28,6 +29,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
@@ -39,6 +41,7 @@ import okhttp3.Request
 import org.jetbrains.compose.resources.getString
 import java.io.File
 import java.security.MessageDigest
+import java.util.concurrent.atomic.AtomicBoolean
 
 @Serializable
 data class GitHubRelease(
@@ -137,6 +140,7 @@ object AppUpdateManager {
     private val operationMutex = Mutex()
 
     @Volatile private var activeDownload: Call? = null
+    private val autoInstallRunning = AtomicBoolean(false)
 
     val state: StateFlow<AppUpdateState> = mutableState.asStateFlow()
     val releases: StateFlow<List<GitHubRelease>> = mutableReleases.asStateFlow()
@@ -374,7 +378,60 @@ object AppUpdateManager {
 
     // Before Android 8 unknown sources is a global setting checked by the installer prompt itself.
     fun canInstallPackages(context: Context): Boolean =
-        Build.VERSION.SDK_INT < Build.VERSION_CODES.O || context.packageManager.canRequestPackageInstalls()
+        installMethod() != UpdateInstallMethod.SYSTEM ||
+            Build.VERSION.SDK_INT < Build.VERSION_CODES.O ||
+            context.packageManager.canRequestPackageInstalls()
+
+    fun installMethod(): UpdateInstallMethod =
+        UpdateInstallMethod.entries.firstOrNull { it.name == Settings.shared.updateInstallMethod } ?: UpdateInstallMethod.SYSTEM
+
+    /** Switches the install method after the user grants root or Shizuku access, then claims Metrolist as its own installer. */
+    suspend fun selectInstallMethod(
+        context: Context,
+        method: UpdateInstallMethod,
+    ): PrivilegedAccess {
+        val access = PrivilegedInstaller.requestAccess(method)
+        if (access != PrivilegedAccess.GRANTED) return access
+        Settings.shared.updateInstallMethod = method.name
+        if (method != UpdateInstallMethod.SYSTEM) {
+            withContext(Dispatchers.IO) { PrivilegedInstaller.claimInstaller(method, context.packageName) }
+        }
+        return access
+    }
+
+    /** True when an update can install with no prompt: through root or Shizuku, or on Android 12+ when Metrolist is its own installer. */
+    fun canInstallWithoutPrompt(context: Context): Boolean =
+        when (installMethod()) {
+            UpdateInstallMethod.ROOT -> true
+            UpdateInstallMethod.SHIZUKU -> PrivilegedInstaller.shizukuGranted()
+            UpdateInstallMethod.SYSTEM -> Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && isOwnInstaller(context)
+        }
+
+    @RequiresApi(Build.VERSION_CODES.S)
+    private fun isOwnInstaller(context: Context): Boolean =
+        runCatching {
+            val source = context.packageManager.getInstallSourceInfo(context.packageName)
+            val updateOwner = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) source.updateOwnerPackageName else null
+            source.installingPackageName == context.packageName && (updateOwner == null || updateOwner == context.packageName)
+        }.getOrDefault(false)
+
+    /** Downloads [release] and installs it once nothing is playing. Installing replaces the running app. */
+    suspend fun autoInstall(
+        context: Context,
+        release: GitHubRelease,
+        isPlaying: StateFlow<Boolean>,
+    ) {
+        if (!Settings.shared.autoInstallUpdates || !canInstallWithoutPrompt(context)) return
+        if (!autoInstallRunning.compareAndSet(false, true)) return
+        try {
+            download(context, release)
+            isPlaying.first { !it }
+            val downloaded = mutableState.value as? AppUpdateState.Downloaded ?: return
+            if (!downloaded.installing && canInstallWithoutPrompt(context)) install(context, downloaded)
+        } finally {
+            autoInstallRunning.set(false)
+        }
+    }
 
     suspend fun install(
         context: Context,
@@ -387,6 +444,13 @@ object AppUpdateManager {
                 downloaded.file.delete()
                 mutableState.value = AppUpdateState.Available(downloaded.release)
                 return@withContext false
+            }
+            val method = installMethod()
+            if (method != UpdateInstallMethod.SYSTEM) {
+                // pm usually replaces this process on success before returning.
+                val installed = PrivilegedInstaller.install(method, context.packageName, downloaded.file)
+                onInstallFinished(installed)
+                return@withContext installed
             }
             val installer = context.packageManager.packageInstaller
             var sessionId = -1

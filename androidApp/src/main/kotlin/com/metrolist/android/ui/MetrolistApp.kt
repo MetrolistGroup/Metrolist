@@ -605,6 +605,8 @@ fun MetrolistApp(
             if (available == null) {
                 Settings.shared.updatePromptVersion = ""
                 Settings.shared.launchesSinceUpdatePrompt = 0
+            } else if (Settings.shared.autoInstallUpdates && AppUpdateManager.canInstallWithoutPrompt(context)) {
+                updateScope.launch { AppUpdateManager.autoInstall(context, available, playbackViewModel.playerConnection.isPlaying) }
             } else if (Settings.shared.updatePromptVersion != available.updateKey) {
                 Settings.shared.updatePromptVersion = available.updateKey
                 Settings.shared.launchesSinceUpdatePrompt = 0
@@ -634,7 +636,10 @@ fun MetrolistApp(
             // Hourly keeps nightly users current while staying far below GitHub's unauthenticated rate limit.
             while (true) {
                 delay(1.hours)
-                if (Settings.shared.checkForUpdates) AppUpdateManager.checkAtStartup(context, networkEnabled = true)
+                if (!Settings.shared.checkForUpdates) continue
+                AppUpdateManager.checkAtStartup(context, networkEnabled = true)?.let { release ->
+                    updateScope.launch { AppUpdateManager.autoInstall(context, release, playbackViewModel.playerConnection.isPlaying) }
+                }
             }
         }
 
