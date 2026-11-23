@@ -415,17 +415,6 @@ private fun DesktopWindowScope.AppContent(
                     .clip(RoundedCornerShape(windowCornerRadius)),
         ) {
             LastFmArtistBrowserHost(lastFmBrowser)
-            Box(
-                Modifier
-                    .fillMaxSize()
-                    .windowInsetsPadding(LocalCaptionBarInsets.current.only(WindowInsetsSides.Top))
-                    .focusRequester(rootFocusRequester)
-                    .onFocusChanged { isRootFocused = it.isFocused }
-                    .focusable()
-                    .pointerInput(rootFocusRequester) {
-                        detectTapGestures { rootFocusRequester.requestFocus() }
-                    },
-            )
             DesktopPageBoundTokenHost(GlobalContext.get().get<DesktopPageBoundTokenRuntime>())
             DesktopWebViewError()
             if (UiState.showIntegrationsSettings) {
@@ -565,6 +554,18 @@ private fun DesktopWindowScope.AppContent(
                 onRefresh = { LayoutUtils.refreshCurrentPage(navigator.state.currentRoute) },
                 toggleWindowFullscreen = toggleWindowFullscreen,
             ) {
+                // Inside the layer so Compose shortcuts on native Wayland reach it while it holds focus.
+                Box(
+                    Modifier
+                        .fillMaxSize()
+                        .windowInsetsPadding(LocalCaptionBarInsets.current.only(WindowInsetsSides.Top))
+                        .focusRequester(rootFocusRequester)
+                        .onFocusChanged { isRootFocused = it.isFocused }
+                        .focusable()
+                        .pointerInput(rootFocusRequester) {
+                            detectTapGestures { rootFocusRequester.requestFocus() }
+                        },
+                )
                 Box(
                     modifier =
                         Modifier

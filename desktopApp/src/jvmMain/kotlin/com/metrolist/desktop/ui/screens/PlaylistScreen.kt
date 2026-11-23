@@ -130,6 +130,7 @@ import com.metrolist.shared.ui.screens.playlistContentText
 import com.metrolist.shared.ui.screens.playlistOrderControlsText
 import com.metrolist.shared.ui.selection.rememberSelectionState
 import com.metrolist.shared.utils.XdgUtils
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.isActive
@@ -354,7 +355,19 @@ fun PlaylistScreen(
     }
 
     suspend fun pickDesktopCover() {
-        val chosen = pickDesktopFile(editCoverLabel, playlistCoverExtensions.toList())?.takeIf { it.exists() } ?: return
+        // Cancelling or reopening the editor bumps the generation, so a picker left open must not stage its file.
+        val session = coverReadGeneration
+        val picked =
+            try {
+                pickDesktopFile(editCoverLabel, playlistCoverExtensions.toList())
+            } catch (error: CancellationException) {
+                throw error
+            } catch (_: Exception) {
+                if (session == coverReadGeneration) coverError = true
+                return
+            }
+        if (session != coverReadGeneration) return
+        val chosen = picked?.takeIf { it.exists() } ?: return
         coverReadJob?.cancel()
         val generation = ++coverReadGeneration
         val playlistId = playlistInfo?.id

@@ -16,7 +16,6 @@ import dev.nucleusframework.window.tao.NativeView
 import dev.nucleusframework.window.tao.nucleusGtkPlatformView
 import kotlinx.coroutines.suspendCancellableCoroutine
 import java.io.File
-import kotlin.coroutines.resume
 
 /**
  * A WebKitGTK view for native Wayland windows, where wry cannot attach to an X11 parent.
@@ -74,6 +73,9 @@ internal class WebKitGtkView(
         }
         widget = WebKit.lib.webkit_web_view_new_with_context(context)
         GObject.lib.g_object_ref_sink(widget)
+        // The context keeps the data manager and the view keeps the context, so drop the creation references.
+        GObject.lib.g_object_unref(manager)
+        GObject.lib.g_object_unref(context)
         userAgent?.let { WebKit.lib.webkit_settings_set_user_agent(WebKit.lib.webkit_web_view_get_settings(widget), it) }
         initScript?.let {
             val script = WebKit.lib.webkit_user_script_new(it, FRAMES_TOP, INJECT_AT_START, null, null)
@@ -98,8 +100,19 @@ internal class WebKitGtkView(
             finish = { result ->
                 val value = WebKit.lib.webkit_web_view_evaluate_javascript_finish(widget, result, PointerByReference())
                 value
-                    ?.let { JavaScriptCore.lib.jsc_value_to_json(it, 0).also { _ -> GObject.lib.g_object_unref(value) } }
-                    .orEmpty()
+                    ?.let {
+                        try {
+                            JavaScriptCore.lib.jsc_value_to_json(it, 0)?.let { json ->
+                                try {
+                                    json.getString(0, "UTF-8")
+                                } finally {
+                                    GLib.lib.g_free(json)
+                                }
+                            }
+                        } finally {
+                            GObject.lib.g_object_unref(value)
+                        }
+                    }.orEmpty()
             },
         )
 
@@ -134,11 +147,17 @@ internal class WebKitGtkView(
             handler =
                 AsyncResultHandler { result ->
                     pending.remove(handler)
-                    val value = finish(result)
-                    if (continuation.isActive) continuation.resume(value)
+                    // JNA swallows exceptions thrown in callbacks, so hand them to the caller instead.
+                    val value = runCatching { finish(result) }
+                    if (continuation.isActive) continuation.resumeWith(value)
                 }
             pending += handler
-            start(handler)
+            try {
+                start(handler)
+            } catch (error: Throwable) {
+                pending.remove(handler)
+                throw error
+            }
         }
 
     /** Releases this view's reference. Tao owns removing the widget from its window, so it must not be destroyed here. */
@@ -312,7 +331,7 @@ internal class WebKitGtkView(
         fun jsc_value_to_json(
             value: Pointer,
             indent: Int,
-        ): String?
+        ): Pointer?
 
         companion object {
             val lib: JavaScriptCore by lazy { Native.load("javascriptcoregtk-4.1", JavaScriptCore::class.java) }
@@ -360,6 +379,8 @@ internal class WebKitGtkView(
     @Suppress("FunctionName")
     private interface GLib : Library {
         fun g_list_free(list: Pointer)
+
+        fun g_free(memory: Pointer)
 
         companion object {
             val lib: GLib by lazy { Native.load("glib-2.0", GLib::class.java) }

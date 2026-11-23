@@ -30,8 +30,11 @@ actual fun openDiscordUrl(
             }
         }.isSuccess
     if (!opened && (OsUtil.isLinux || OsUtil.isMac)) {
-        runCatching { openUrl(targetUrl) }.onFailure {
-            if (targetUrl != url) runCatching { openUrl(url) }
-        }
+        // xdg-open and open report an unhandled discord:// link only through their exit status.
+        val opener = if (OsUtil.isLinux) "xdg-open" else "open"
+        runCatching { ProcessBuilder(opener, targetUrl).start() }
+            .onSuccess { process ->
+                if (targetUrl != url) process.onExit().thenAccept { if (it.exitValue() != 0) runCatching { openUrl(url) } }
+            }.onFailure { if (targetUrl != url) runCatching { openUrl(url) } }
     }
 }

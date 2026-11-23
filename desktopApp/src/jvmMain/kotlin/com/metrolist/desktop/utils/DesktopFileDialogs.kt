@@ -32,7 +32,7 @@ internal suspend fun pickDesktopFile(
             } else {
                 FileKit
                     .openFilePicker(
-                        type = FileKitType.File(extensions),
+                        type = FileKitType.File(extensions.withCaseVariants()),
                         dialogSettings = FileKitDialogSettings(title = title),
                     )?.file
             }
@@ -55,7 +55,7 @@ internal suspend fun pickDesktopFiles(
         fileKitDialog = {
             FileKit
                 .openFilePicker(
-                    type = FileKitType.File(extensions),
+                    type = FileKitType.File(extensions.withCaseVariants()),
                     mode = FileKitMode.Multiple(),
                     dialogSettings = FileKitDialogSettings(title = title),
                 ).orEmpty()
@@ -122,6 +122,9 @@ internal suspend fun pickDesktopDirectory(
             if (chooser.showOpenDialog(null) == JFileChooser.APPROVE_OPTION) chooser.selectedFile else null
         },
     )
+
+// Portal globs are case-sensitive, unlike the Swing filter they replace, so cover.JPG needs its own pattern.
+private fun List<String>.withCaseVariants(): List<String> = flatMap { listOf(it.lowercase(), it.uppercase()) }.distinct()
 
 internal suspend fun <T> desktopFileDialog(
     isLinux: Boolean = OsUtil.isLinux,

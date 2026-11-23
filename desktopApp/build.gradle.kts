@@ -330,7 +330,11 @@ kotlin {
                 implementation(libs.windowstaskbar)
                 implementation(libs.mediacontrols)
                 // KMP's dependency handler takes exclusions only with string notation.
-                implementation(libs.decorated.window.tao.get().toString()) {
+                implementation(
+                    libs.decorated.window.tao
+                        .get()
+                        .toString(),
+                ) {
                     exclude(group = "dev.nucleusframework", module = "nucleus.angle-natives")
                     exclude(group = "org.jetbrains.compose.desktop")
                 }
@@ -480,7 +484,7 @@ tasks.withType<JavaExec>().configureEach {
         val gdkBackend =
             providers.environmentVariable("GDK_BACKEND").orNull
                 ?: when {
-                    wantsWayland -> "wayland"
+                    wantsWayland && hasWaylandDisplay -> "wayland"
                     hasDisplay -> "x11"
                     hasWaylandDisplay -> "wayland"
                     else -> "x11"

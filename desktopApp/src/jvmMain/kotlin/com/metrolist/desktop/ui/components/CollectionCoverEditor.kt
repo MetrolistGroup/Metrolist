@@ -53,7 +53,18 @@ fun CollectionCoverEditor(
         busy = busy,
         failed = failed,
         onChoose = {
-            scope.launch { pickDesktopFile(title, playlistCoverExtensions.toList())?.let(::save) }
+            scope.launch {
+                val file =
+                    try {
+                        pickDesktopFile(title, playlistCoverExtensions.toList())
+                    } catch (error: CancellationException) {
+                        throw error
+                    } catch (_: Exception) {
+                        failed = true
+                        return@launch
+                    }
+                file?.let(::save)
+            }
         },
         onRemove = { save(null) },
         onDismiss = onDismiss,

@@ -22,6 +22,10 @@ import androidx.compose.ui.input.key.isShiftPressed
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.PointerEventType
+import androidx.compose.ui.input.pointer.isPrimaryPressed
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.InterceptPlatformTextInput
 import androidx.compose.ui.platform.PlatformTextInputInterceptor
 import com.metrolist.desktop.deviceconnect.DesktopDeviceConnect
@@ -137,35 +141,44 @@ fun DesktopShortcutLayer(
 
     val boxModifier =
         if (useTaoWayland) {
-            modifier.onPreviewKeyEvent { event ->
-                if (event.type != KeyEventType.KeyDown || event.key == Key.Escape) return@onPreviewKeyEvent false
-                if (event.key == Key.Tab ||
-                    ((event.key == Key.DirectionUp || event.key == Key.DirectionDown) && !backgroundFocused())
-                ) {
-                    keyFocus.keyboardNavigation = true
+            // Matches the AWT mouse queue: a primary click leaves keyboard navigation.
+            modifier
+                .pointerInput(keyFocus) {
+                    awaitPointerEventScope {
+                        while (true) {
+                            val event = awaitPointerEvent(PointerEventPass.Initial)
+                            if (event.type == PointerEventType.Press && event.buttons.isPrimaryPressed) keyFocus.keyboardNavigation = false
+                        }
+                    }
+                }.onPreviewKeyEvent { event ->
+                    if (event.type != KeyEventType.KeyDown || event.key == Key.Escape) return@onPreviewKeyEvent false
+                    if (event.key == Key.Tab ||
+                        ((event.key == Key.DirectionUp || event.key == Key.DirectionDown) && !backgroundFocused())
+                    ) {
+                        keyFocus.keyboardNavigation = true
+                    }
+                    val editableInputActive = keyFocus.textInputActive || UiState.isTextInputFocused || UiState.isSearchFocused
+                    val modalActive = isComposeModalActive()
+                    if (event.key == Key.F5 && modalActive) return@onPreviewKeyEvent false
+                    val pairingApprovalPending =
+                        DesktopDeviceConnect.manager.state.value.pairingRequests
+                            .any { it.requiresApproval }
+                    handleShortcut(
+                        ctrl = event.isCtrlPressed,
+                        meta = event.isMetaPressed,
+                        shift = event.isShiftPressed,
+                        keyCode = ShortcutKeyCode.Compose(event.key),
+                        suppressUnmodified = editableInputActive || modalActive,
+                        modalActive = modalActive,
+                        onRefresh = { refresh() },
+                        toggleWindowFullscreen = { toggleFullscreen() },
+                        pairingApprovalPending = pairingApprovalPending,
+                        isPlaybackBackgroundFocused = backgroundFocused(),
+                        mediaKeysAllowed = keyFocus.allowsMediaKeys(backgroundFocused()),
+                        alt = event.isAltPressed,
+                        cancelLyricsSelection = LyricsState.cancelSelection.takeUnless { modalActive },
+                    )
                 }
-                val editableInputActive = keyFocus.textInputActive || UiState.isTextInputFocused || UiState.isSearchFocused
-                val modalActive = isComposeModalActive()
-                if (event.key == Key.F5 && modalActive) return@onPreviewKeyEvent false
-                val pairingApprovalPending =
-                    DesktopDeviceConnect.manager.state.value.pairingRequests
-                        .any { it.requiresApproval }
-                handleShortcut(
-                    ctrl = event.isCtrlPressed,
-                    meta = event.isMetaPressed,
-                    shift = event.isShiftPressed,
-                    keyCode = ShortcutKeyCode.Compose(event.key),
-                    suppressUnmodified = editableInputActive || modalActive,
-                    modalActive = modalActive,
-                    onRefresh = { refresh() },
-                    toggleWindowFullscreen = { toggleFullscreen() },
-                    pairingApprovalPending = pairingApprovalPending,
-                    isPlaybackBackgroundFocused = backgroundFocused(),
-                    mediaKeysAllowed = keyFocus.allowsMediaKeys(backgroundFocused()),
-                    alt = event.isAltPressed,
-                    cancelLyricsSelection = LyricsState.cancelSelection.takeUnless { modalActive },
-                )
-            }
         } else {
             modifier
         }
