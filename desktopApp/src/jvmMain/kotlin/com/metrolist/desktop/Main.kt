@@ -147,6 +147,7 @@ import com.metrolist.desktop.utils.SystemMediaManager
 import com.metrolist.desktop.utils.ThemeUtils
 import com.metrolist.desktop.utils.WaylandScale
 import com.metrolist.desktop.utils.WindowsAppIdentity
+import com.metrolist.desktop.utils.allowMainQueueInAwtRunLoop
 import com.metrolist.desktop.utils.configureDesktopJvmErrorFile
 import com.metrolist.desktop.utils.configureLinuxWebKitRenderer
 import com.metrolist.desktop.utils.desktopRenderApiOverride
@@ -923,6 +924,7 @@ private fun runDesktopApp(args: Array<String>) {
     // Initialize logging only after settings migration to avoid java.util.prefs/JUL class-init deadlocks.
     AppLogger.initialize(applicationScope)
     AppLogger.setEnabled(settings.enableLogging)
+    if (OsUtil.isMac) allowMainQueueInAwtRunLoop()
     flushDesktopCredentialWarnings()
     startup.trace("settings")
 
