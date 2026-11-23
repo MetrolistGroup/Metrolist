@@ -2757,4 +2757,11 @@
     <string name="wrapped_share_lastfm_failed">Не удалось обновить данные Last.fm; могут использоваться сохранённые результаты.</string>
     <string name="wrapped_share_lastfm_included">Данные Last.fm учтены; неоднозначные совпадения исключены.</string>
     <string name="wrapped_lastfm_failed">Не удалось обновить данные Last.fm. В этих итогах используется последний полный результат за этот сеанс, если он доступен.</string>
+    <string name="wrapped_lastfm_coverage">Учтено скробблов Last.fm: %1$s; исключено неоднозначных: %2$s. Из-за различий в метаданных часть пересечений может остаться незамеченной.</string>
+    <string name="wrapped_sync_failed">Не удалось обновить историю YouTube. В этих итогах используется история, уже сохранённая на этом устройстве.</string>
+    <string name="wrapped_top_song">Ваш главный трек</string>
+    <string name="wrapped_top_artist">Ваш главный исполнитель</string>
+    <string name="wrapped_top_album">Ваш главный альбом</string>
+    <string name="wrapped_artist_mix">Ваш микс исполнителей</string>
+    <string name="wrapped_minutes_listened">минут прослушивания</string>
 </resources>
