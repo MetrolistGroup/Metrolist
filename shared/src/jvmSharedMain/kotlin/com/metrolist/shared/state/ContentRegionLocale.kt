@@ -21,7 +21,7 @@ fun GlobalYouTube.applyContentRegion(
         contentCountry = contentCountry,
         contentLanguage = contentLanguage,
         systemCountry = closestContentCountry(systemLocale),
-        systemLanguage = systemLocale.language,
+        systemLanguage = systemLocale.toLanguageTag(),
         settings = settings,
     )
 }
