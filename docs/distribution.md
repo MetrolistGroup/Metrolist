@@ -48,7 +48,7 @@ The source recipe and verification live in `aur/`. The generator writes `aur/rel
 
 ## Nix
 
-`flake.nix` uses `appimageTools` for Linux x86_64/aarch64 and pins nixpkgs. On aarch64 and x86_64 macOS, `packaging/nix/darwin.nix` unpacks the release DMG into `Applications/Metrolist.app` and adds a `bin/metrolist` launcher. It copies the bundle unchanged, so its ad-hoc signature stays valid. Generated output includes `nix/packaging/release.json` with fixed-output hashes for the AppImages and DMGs. The FHS sandbox uses the host's ALSA configuration. Do not add `alsa-plugins` to `extraPkgs`, because its `/etc/alsa` hides the host's PipeWire configuration.
+`flake.nix` uses `appimageTools` for Linux x86_64/aarch64 and pins nixpkgs. On aarch64 and x86_64 macOS, `packaging/nix/darwin.nix` unpacks the release DMG into `Applications/Metrolist.app` and adds a `bin/metrolist` launcher. It copies the bundle unchanged, so its ad-hoc signature stays valid. Generated output includes `nix/packaging/release.json` with fixed-output hashes for the AppImages and DMGs. After each stable release, the `nix` job in `release.yml` copies the generated `packaging/release.json` to main and pushes it with the workflow token, so `nix run github:MetrolistGroup/Metrolist` follows the new release with no polling. The FHS sandbox uses the host's ALSA configuration. Do not add `alsa-plugins` to `extraPkgs`, because its `/etc/alsa` hides the host's PipeWire configuration.
 
 The sandbox includes `glib-networking` and adds its GIO modules to `GIO_EXTRA_MODULES` for WebKitGTK TLS. It preserves any existing module paths.
 
