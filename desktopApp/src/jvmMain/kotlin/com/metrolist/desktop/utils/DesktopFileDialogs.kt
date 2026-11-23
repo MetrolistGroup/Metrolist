@@ -4,6 +4,7 @@ import com.metrolist.shared.utils.OsUtil
 import io.github.vinceglb.filekit.FileKit
 import io.github.vinceglb.filekit.PlatformFile
 import io.github.vinceglb.filekit.dialogs.FileKitDialogSettings
+import io.github.vinceglb.filekit.dialogs.FileKitMode
 import io.github.vinceglb.filekit.dialogs.FileKitType
 import io.github.vinceglb.filekit.dialogs.openDirectoryPicker
 import io.github.vinceglb.filekit.dialogs.openFilePicker
@@ -43,6 +44,31 @@ internal suspend fun pickDesktopFile(
                     if (extensions.isNotEmpty()) fileFilter = FileNameExtensionFilter(null, *extensions.toTypedArray())
                 }
             if (chooser.showOpenDialog(null) == JFileChooser.APPROVE_OPTION) chooser.selectedFile else null
+        },
+    )
+
+internal suspend fun pickDesktopFiles(
+    title: String,
+    extensions: List<String>,
+): List<File> =
+    desktopFileDialog(
+        fileKitDialog = {
+            FileKit
+                .openFilePicker(
+                    type = FileKitType.File(extensions),
+                    mode = FileKitMode.Multiple(),
+                    dialogSettings = FileKitDialogSettings(title = title),
+                ).orEmpty()
+                .map { it.file }
+        },
+        nativeDialog = {
+            val chooser =
+                JFileChooser().apply {
+                    dialogTitle = title
+                    isMultiSelectionEnabled = true
+                    fileFilter = FileNameExtensionFilter(title, *extensions.toTypedArray())
+                }
+            if (chooser.showOpenDialog(null) == JFileChooser.APPROVE_OPTION) chooser.selectedFiles.toList() else emptyList()
         },
     )
 

@@ -51,6 +51,7 @@ import com.metrolist.desktop.ui.components.PlaylistContextMenu
 import com.metrolist.desktop.ui.components.SongContextMenu
 import com.metrolist.desktop.ui.components.SongSwipeActions
 import com.metrolist.desktop.utils.AppLogger
+import com.metrolist.desktop.utils.pickDesktopFiles
 import com.metrolist.shared.api.YouTubeRepository
 import com.metrolist.shared.api.playlistSongs
 import com.metrolist.shared.db.MusicDatabase
@@ -128,8 +129,6 @@ import org.jetbrains.compose.resources.getString
 import org.jetbrains.compose.resources.stringResource
 import org.koin.core.context.GlobalContext
 import java.io.File
-import javax.swing.JFileChooser
-import javax.swing.filechooser.FileNameExtensionFilter
 
 @Composable
 fun LocalPlaylistScreen(type: String) {
@@ -350,33 +349,35 @@ private fun UploadedPlaylistScreen() {
         headerActionIcon = MetrolistIcons.Outlined.CloudUpload,
         isHeaderActionLoading = pendingUploads > 0,
         onHeaderAction = {
-            val files = chooseUploadAudioFiles(fileFilterLabel)
-            pendingUploads += files.size
-            // Picked files upload one at a time; picking again while uploading adds to the queue.
-            files.forEach { file ->
-                scope.launch {
-                    val result =
-                        try {
-                            uploadQueue.withLock {
-                                withContext(Dispatchers.IO) {
-                                    GlobalYouTubeRepository.instance.uploadSong(file.name, file.length()) {
-                                        file.inputStream().toByteReadChannel(Dispatchers.IO)
+            scope.launch {
+                val files = pickDesktopFiles(fileFilterLabel, YouTubeRepository.SUPPORTED_UPLOAD_EXTENSIONS.toList())
+                pendingUploads += files.size
+                // Picked files upload one at a time; picking again while uploading adds to the queue.
+                files.forEach { file ->
+                    scope.launch {
+                        val result =
+                            try {
+                                uploadQueue.withLock {
+                                    withContext(Dispatchers.IO) {
+                                        GlobalYouTubeRepository.instance.uploadSong(file.name, file.length()) {
+                                            file.inputStream().toByteReadChannel(Dispatchers.IO)
+                                        }
                                     }
                                 }
+                            } finally {
+                                pendingUploads--
                             }
-                        } finally {
-                            pendingUploads--
+                        if (!result.success) {
+                            AppState.snackbarHostState.showSnackbar(result.localizedErrorMessage())
+                            return@launch
                         }
-                    if (!result.success) {
-                        AppState.snackbarHostState.showSnackbar(result.localizedErrorMessage())
-                        return@launch
-                    }
-                    val knownIds = songs.mapTo(mutableSetOf()) { it.id }
-                    launch { AppState.snackbarHostState.showSnackbar(uploaded) }
-                    GlobalYouTubeRepository.instance.awaitProcessedUpload(knownIds) {
-                        val processed = it
-                        scope.launch { database.synchronizeUploadedSongs(processed) }
-                        loadFailed = false
+                        val knownIds = songs.mapTo(mutableSetOf()) { it.id }
+                        launch { AppState.snackbarHostState.showSnackbar(uploaded) }
+                        GlobalYouTubeRepository.instance.awaitProcessedUpload(knownIds) {
+                            val processed = it
+                            scope.launch { database.synchronizeUploadedSongs(processed) }
+                            loadFailed = false
+                        }
                     }
                 }
             }
@@ -627,13 +628,6 @@ private fun launchCollectionMutation(action: suspend () -> Unit) {
             AppState.snackbarHostState.showSnackbar(getString(Res.string.error_occurred))
         }
     }
-}
-
-private fun chooseUploadAudioFiles(description: String): List<File> {
-    val chooser = JFileChooser()
-    chooser.isMultiSelectionEnabled = true
-    chooser.fileFilter = FileNameExtensionFilter(description, *YouTubeRepository.SUPPORTED_UPLOAD_EXTENSIONS.toTypedArray())
-    return if (chooser.showOpenDialog(null) == JFileChooser.APPROVE_OPTION) chooser.selectedFiles.toList() else emptyList()
 }
 
 private fun CachedSongEntry.toSafeSongItem(): SongItem {

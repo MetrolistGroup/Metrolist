@@ -59,7 +59,8 @@ import com.metrolist.desktop.ui.components.AddSongDialog
 import com.metrolist.desktop.ui.components.PlaylistContextMenu
 import com.metrolist.desktop.ui.components.SongContextMenu
 import com.metrolist.desktop.ui.components.SongSwipeActions
-import com.metrolist.desktop.utils.playlistCoverFilenameFilter
+import com.metrolist.desktop.utils.pickDesktopFile
+import com.metrolist.desktop.utils.playlistCoverExtensions
 import com.metrolist.desktop.utils.readPlaylistCover
 import com.metrolist.innertubex.InnerTubeHttpException
 import com.metrolist.shared.api.PlaylistNotFoundException
@@ -137,8 +138,6 @@ import kotlinx.coroutines.withContext
 import org.jetbrains.compose.resources.getString
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
-import java.awt.FileDialog
-import java.awt.Frame
 import java.io.File
 import java.util.IdentityHashMap
 
@@ -354,13 +353,8 @@ fun PlaylistScreen(
         showRenameDialog = false
     }
 
-    fun pickDesktopCover() {
-        val dialog = FileDialog(null as Frame?, editCoverLabel, FileDialog.LOAD).apply { filenameFilter = playlistCoverFilenameFilter }
-        dialog.isVisible = true
-        val chosen =
-            dialog.directory?.let { dir -> dialog.file?.let { file -> File(dir, file) } }?.takeIf { it.exists() }
-        dialog.dispose()
-        if (chosen == null) return
+    suspend fun pickDesktopCover() {
+        val chosen = pickDesktopFile(editCoverLabel, playlistCoverExtensions.toList())?.takeIf { it.exists() } ?: return
         coverReadJob?.cancel()
         val generation = ++coverReadGeneration
         val playlistId = playlistInfo?.id
@@ -713,7 +707,7 @@ fun PlaylistScreen(
                             )
                         }
                         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                            TextButton(onClick = { pickDesktopCover() }, shapes = ButtonDefaults.shapes()) {
+                            TextButton(onClick = { coverScope.launch { pickDesktopCover() } }, shapes = ButtonDefaults.shapes()) {
                                 Text(stringResource(Res.string.choose_from_library))
                             }
                             if (stagedDesktopCoverPath != null || hasDesktopCustom) {
