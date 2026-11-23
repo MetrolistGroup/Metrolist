@@ -1903,7 +1903,10 @@ private class MemoryPlaybackPort(
 
     private var controlling = false
 
-    override suspend fun setControllerPlayback(playback: DcLocalPlaybackState?) {
+    override suspend fun setControllerPlayback(
+        playback: DcLocalPlaybackState?,
+        provisional: Boolean,
+    ) {
         if (playback != null || controlling) state.value = playback ?: state.value.copy(playing = false)
         controlling = playback != null
     }

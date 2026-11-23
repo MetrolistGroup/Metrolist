@@ -1389,6 +1389,7 @@ class PlayerConnection(
             return removal
         }
         val localRemoval = player.removeQueueItems(validIndices) ?: return null
+        if (player.queueSnapshot().displayedItems.isEmpty()) musicService?.clearPersistedPlaybackState()
         queueUndo =
             (queueUndo ?: QueueUndo(emptyList(), expectedQueue, expectedQueue, null, null))
                 .append(localRemoval, expectedQueue, player.queueSnapshot(), null, null)
@@ -1598,6 +1599,7 @@ class PlayerConnection(
         musicService?.player?.let { player ->
             if (_currentSong.value == null) {
                 player.setQueue(songs, startIndex = -1)
+                if (player.queueSnapshot().displayedItems.isEmpty()) musicService?.clearPersistedPlaybackState()
             } else {
                 player.replaceUpcomingQueue(songs)
             }
