@@ -442,6 +442,7 @@ object LastFM {
 
     private const val HISTORY_PAGE_SIZE = 200
     private const val MAX_HISTORY_SCROBBLES = 250_000
+    private const val MAX_HISTORY_RESPONSE_BYTES = 64 * 1_024 * 1_024
 
     suspend fun getListeningHistory(
         httpClient: HttpClient,
@@ -453,6 +454,7 @@ object LastFM {
             check(apiKeyConfigured() && user.isNotBlank() && sinceMs <= untilMs)
             val listens = mutableListOf<LastFmListen>()
             var page = 1
+            var remainingBytes = MAX_HISTORY_RESPONSE_BYTES
             var expectedTotal: Int? = null
             var pages: Int
             do {
@@ -467,8 +469,12 @@ object LastFM {
                         parameter("from", sinceMs / 1000 - 1)
                         parameter("to", untilMs / 1000 + 1)
                     }
-                val limited = response.readTextLimited(MAX_SCRAPED_HTML_BYTES)
-                val payload = validateResponse(limited.status.value, checkNotNull(limited.body), limited.headers[HttpHeaders.RetryAfter])
+                check(remainingBytes > 0) { "Last.fm history exceeds the response size limit" }
+                val limited = response.readTextLimited(minOf(MAX_SCRAPED_HTML_BYTES, remainingBytes))
+                val body = checkNotNull(limited.body) { "Last.fm history exceeds the response size limit" }
+                remainingBytes -= body.encodeToByteArray().size
+                check(remainingBytes >= 0) { "Last.fm history exceeds the response size limit" }
+                val payload = validateResponse(limited.status.value, body, limited.headers[HttpHeaders.RetryAfter])
                 val recent = checkNotNull(payload.jsonObject["recenttracks"] as? JsonObject)
                 val attr = checkNotNull(recent["@attr"] as? JsonObject)
                 check(attr["page"]?.jsonPrimitive?.intOrNull == page)
