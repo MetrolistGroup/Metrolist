@@ -1193,7 +1193,21 @@ fun MetrolistApp(
                             onIncomingIntentConsumed(intent)
                             return@LaunchedEffect
                         }
-                        val destination = intent.toIncomingDestination(context.contentResolver)
+                        val uri = intent.data
+                        val resolvedMimeType =
+                            if (intent.action == Intent.ACTION_VIEW &&
+                                intent.type == null &&
+                                uri != null &&
+                                uri.scheme.equals(ContentResolver.SCHEME_CONTENT, ignoreCase = true) &&
+                                uri.lastPathSegment?.endsWith(".csv", ignoreCase = true) != true
+                            ) {
+                                withContext(Dispatchers.IO) {
+                                    runCatching { context.contentResolver.getType(uri) }.getOrNull()
+                                }
+                            } else {
+                                null
+                            }
+                        val destination = intent.toIncomingDestination(resolvedMimeType)
                         if (!Settings.shared.listenTogetherEnabled &&
                             (destination is IncomingDestination.ListenTogether || destination == IncomingDestination.ListenTogetherRoom)
                         ) {
@@ -1324,22 +1338,10 @@ fun MetrolistApp(
                                                 ?.takeIf { it.isNotBlank() }
                                                 ?: importedPlaylistText
                                         val safeFileName =
-                                            if (
-                                                displayName != null &&
-                                                (
-                                                    displayName.endsWith(".csv", ignoreCase = true) ||
-                                                        displayName.endsWith(".tsv", ignoreCase = true)
-                                                )
-                                            ) {
+                                            if (displayName != null && displayName.endsWith(".csv", ignoreCase = true)) {
                                                 displayName
                                             } else {
-                                                val fallbackExt =
-                                                    if (destination.mimeType == "text/tab-separated-values") {
-                                                        "tsv"
-                                                    } else {
-                                                        "csv"
-                                                    }
-                                                "$baseName.$fallbackExt"
+                                                "$baseName.csv"
                                             }
                                         val prepResult =
                                             AndroidPlaylistImportTransfer.prepareForeground(
@@ -2312,7 +2314,6 @@ sealed class IncomingDestination {
     data class PlaylistImport(
         val resultMessage: String?,
         val fileUri: Uri? = null,
-        val mimeType: String? = null,
     ) : IncomingDestination()
 
     object ListenTogetherRoom : IncomingDestination()
@@ -2376,32 +2377,28 @@ private val CSV_MIME_TYPES =
     setOf(
         "text/csv",
         "text/comma-separated-values",
-        "text/tab-separated-values",
         "application/csv",
         "application/x-csv",
     )
 
 private fun resolveCsvOpenIntent(
     intent: Intent,
-    contentResolver: ContentResolver?,
+    resolvedMimeType: String? = null,
 ): IncomingDestination.PlaylistImport? {
     if (intent.action != Intent.ACTION_VIEW) return null
     val uri = intent.data ?: return null
     if (!uri.scheme.equals(ContentResolver.SCHEME_CONTENT, ignoreCase = true)) return null
-    val rawType = intent.type ?: runCatching { contentResolver?.getType(uri) }.getOrNull()
+    val rawType = intent.type ?: resolvedMimeType
     val effectiveMimeType =
         rawType
             ?.substringBefore(';')
             ?.trim()
             ?.lowercase()
-    val lastSegment = uri.lastPathSegment
-    val hasDelimitedExtension =
-        lastSegment?.endsWith(".csv", ignoreCase = true) == true ||
-            lastSegment?.endsWith(".tsv", ignoreCase = true) == true
+    val hasCsvExtension = uri.lastPathSegment?.endsWith(".csv", ignoreCase = true) == true
     val isSupported =
         effectiveMimeType in CSV_MIME_TYPES ||
             (
-                hasDelimitedExtension &&
+                hasCsvExtension &&
                     (
                         effectiveMimeType == null ||
                             effectiveMimeType == "text/plain" ||
@@ -2412,15 +2409,14 @@ private fun resolveCsvOpenIntent(
     return IncomingDestination.PlaylistImport(
         resultMessage = null,
         fileUri = uri,
-        mimeType = effectiveMimeType,
     )
 }
 
-fun Intent.toIncomingDestination(contentResolver: ContentResolver? = null): IncomingDestination? {
+fun Intent.toIncomingDestination(resolvedMimeType: String? = null): IncomingDestination? {
     if (action == MainActivity.ACTION_OPEN_WIDGET_TARGET) {
         return widgetTargetDestination()
     }
-    resolveCsvOpenIntent(this, contentResolver)?.let { return it }
+    resolveCsvOpenIntent(this, resolvedMimeType)?.let { return it }
 
     val urls =
         when (action) {
