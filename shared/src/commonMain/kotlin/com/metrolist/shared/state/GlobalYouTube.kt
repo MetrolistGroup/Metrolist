@@ -35,7 +35,7 @@ private fun isContentLanguage(tag: String): Boolean {
     val language = match.groupValues[1]
     val region = match.groupValues[3]
     return (language in contentLanguageCodes || canonicalLanguageTag(language) in contentLanguageCodes) &&
-        (region.isEmpty() || region.first().isDigit() || region in contentCountryCodes)
+        (region.isEmpty() || region.first().isDigit() || region in platformCountryCodes)
 }
 
 val coreModule =

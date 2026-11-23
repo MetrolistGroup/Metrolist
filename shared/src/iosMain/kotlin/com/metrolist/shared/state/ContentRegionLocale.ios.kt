@@ -6,7 +6,7 @@ import platform.Foundation.NSLocale
 import platform.Foundation.availableLocaleIdentifiers
 import platform.Foundation.canonicalLanguageIdentifierFromString
 
-actual val contentCountryCodes: Set<String> by lazy { NSLocale.ISOCountryCodes.filterIsInstance<String>().toSet() }
+internal actual val platformCountryCodes: Set<String> by lazy { NSLocale.ISOCountryCodes.filterIsInstance<String>().toSet() }
 
 internal actual val platformContentLanguageCodes: Set<String> by lazy {
     NSLocale.ISOLanguageCodes.filterIsInstance<String>().toSet() +
@@ -14,3 +14,22 @@ internal actual val platformContentLanguageCodes: Set<String> by lazy {
 }
 
 internal actual fun canonicalLanguageTag(tag: String): String = NSLocale.canonicalLanguageIdentifierFromString(tag).replace('_', '-')
+
+// shortcut: Foundation has no likely-subtags or region containment API, so this matches language and script only and keeps an unserved region when no locale shares the language.
+internal fun closestContentCountry(
+    languageTag: String,
+    country: String,
+): String {
+    if (country in contentCountryCodes) return country
+    val target = languageTag.split('-')
+    val script = target.getOrNull(1)?.takeIf { it.length == 4 }
+    val sameLanguage =
+        NSLocale.availableLocaleIdentifiers
+            .filterIsInstance<String>()
+            .map { it.split('_') }
+            .filter { it.size > 1 && it.first() == target.first() && it.last() in contentCountryCodes }
+    return sameLanguage
+        .filter { script != null && script in it }
+        .ifEmpty { sameLanguage }
+        .minOfOrNull { it.last() } ?: country
+}
