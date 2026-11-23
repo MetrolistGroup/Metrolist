@@ -31,7 +31,7 @@ private const val CF_STRING_ENCODING_UTF8 = 0x08000100
  */
 fun allowMainQueueInAwtRunLoop() {
     runCatching {
-        val cf = Native.load("CoreFoundation", CoreFoundation::class.java)
+        val cf = Native.load("/System/Library/Frameworks/CoreFoundation.framework/CoreFoundation", CoreFoundation::class.java)
         val mode =
             checkNotNull(cf.CFStringCreateWithCString(null, "AWTRunLoopMode", CF_STRING_ENCODING_UTF8)) {
                 "CFStringCreateWithCString returned null"
