@@ -2712,4 +2712,5 @@
     <string name="wrapped_home_title">Il tuo Wrapped %1$s è qui</string>
     <string name="wrapped_home_body">Scopri il tuo anno in musica e condividilo.</string>
     <string name="wrapped_home_card_dismissed">Potrai trovare il tuo Wrapped %1$s in Statistiche fino al 31 dicembre.</string>
+    <string name="dislikes">Non mi piace (stima di Return YouTube Dislike)</string>
 </resources>
