@@ -445,7 +445,13 @@ fun MobileApp(
         onStopOrDispose { libraryViewModel.setActive(false) }
     }
     val latestVideoResolver = rememberUpdatedState(resolveAndPlayVideo)
-    val videoLookup = remember(scope) { MobileVideoLookup(scope, { latestVideoResolver.value(it) }) { showPlayer = true } }
+    val videoLookup =
+        remember(scope) {
+            MobileVideoLookup(scope, { latestVideoResolver.value(it) }) {
+                if (routeStack.lastOrNull()?.route == MobileRoute.Wrapped) routeStack.removeAt(routeStack.lastIndex)
+                showPlayer = true
+            }
+        }
 
     fun cancelVideoLookup() = videoLookup.cancel()
 
@@ -2032,7 +2038,12 @@ fun MobileApp(
                         }
                     }
                     SideEffect { playerSheetSettled = sheetState.isSettledExpanded }
-                    DisposableEffect(Unit) { onDispose { playerSheetSettled = false } }
+                    DisposableEffect(Unit) {
+                        onDispose {
+                            playerSheetSettled = false
+                            playerSheetCoversSnackbars = false
+                        }
+                    }
                     val playerPlatform =
                         remember(
                             database,

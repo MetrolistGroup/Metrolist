@@ -80,7 +80,7 @@ internal fun renderStatisticsImage(
     timeLabel: String,
     sections: List<Pair<String, List<StatisticsItem>>>,
     artwork: Map<String, ImageBitmap>,
-    artworkShapes: Map<String, Shape>,
+    artworkShapes: List<List<Shape>>,
     colors: StatisticsImageColors,
     typography: Typography,
     heroShape: Shape,
@@ -228,7 +228,7 @@ internal fun renderStatisticsImage(
                 textAt(rank, padding + inset, y + (rowHeight - rank.size.height) / 2f)
                 translate(x(imageStart, artworkSize), imageTop) {
                     val outline =
-                        artworkShapes.getValue(items[index].id).createOutline(
+                        artworkShapes[sectionIndex][index].createOutline(
                             Size(artworkSize.toFloat(), artworkSize.toFloat()),
                             layoutDirection,
                             this,

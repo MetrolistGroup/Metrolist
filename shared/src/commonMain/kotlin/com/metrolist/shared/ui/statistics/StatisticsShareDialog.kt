@@ -88,9 +88,9 @@ internal fun StatisticsShareDialog(
         ).filter { it.second.isNotEmpty() }
     val artworkShapes =
         sections
-            .flatMap { (_, items) ->
-                items.take(3).mapIndexed { index, item -> item.id to statisticsArtworkShape(item, index) }
-            }.toMap()
+            .map { (_, items) ->
+                items.take(3).mapIndexed { index, item -> statisticsArtworkShape(item, index) }
+            }
     val context = LocalPlatformContext.current
     val colors = imageColors ?: MaterialTheme.colorScheme.statisticsImageColors()
     val typography = MaterialTheme.typography
