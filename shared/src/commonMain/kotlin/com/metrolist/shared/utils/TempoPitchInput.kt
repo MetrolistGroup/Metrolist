@@ -5,13 +5,14 @@ import kotlin.math.roundToInt
 internal fun parseTempoPitchInput(
     input: String,
     range: ClosedFloatingPointRange<Float>,
+    decimalSeparator: Char = localeDecimalSeparator(),
 ): Float? {
     val normalized =
         buildString {
             for (character in input.trim()) {
                 append(
                     when {
-                        character == '.' || character == ',' -> '.'
+                        character == '.' || character == ',' || character == decimalSeparator -> '.'
                         character == '+' || character == '-' -> character
                         character.digitToIntOrNull() != null -> character.digitToInt()
                         else -> return null
