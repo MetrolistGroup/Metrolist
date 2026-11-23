@@ -2744,9 +2744,9 @@
     <string name="wrapped_year">Ваш Wrapped %1$s</string>
     <string name="wrapped_chapter">%1$s из %2$s</string>
     <string name="wrapped_summary">Ваш год в музыке</string>
-    <string name="wrapped_empty">За этот год пока нет сохранённых прослушиваний. Слушайте музыку или синхронизируйте историю YouTube, чтобы сформировать свой Wrapped.</string>
+    <string name="wrapped_empty">За этот год пока нет сохранённых прослушиваний. Слушайте музыку или синхронизируйте историю YouTube, чтобы собрать свой Wrapped.</string>
     <string name="wrapped_measured_time">Учтённое время прослушивания</string>
-    <string name="wrapped_time_coverage">На основе прослушиваний с зафиксированной длительностью (%1$s из %2$s всего). Импортированные данные о длительности могут быть неполными.</string>
+    <string name="wrapped_time_coverage">Рассчитано по прослушиваниям с известной длительностью (%1$s из %2$s всего). В импортированной истории эти данные могут быть неполными.</string>
     <string name="wrapped_merge_note">Объединяет сохранённую историю Metrolist и YouTube, а также Last.fm (если подключён и загружен). Если исполнитель и название совпали однозначно, за день берётся большее число прослушиваний. Треки из Last.fm без совпадений добавляются к статистике, а неоднозначные совпадения пропускаются. Из-за этого часть отдельных прослушиваний может не учитываться. Время прослушивания считается только по трекам с известной длительностью.</string>
     <string name="wrapped_share_summary">Поделиться итогами</string>
     <string name="wrapped_soundtrack">Саундтрек</string>
@@ -2757,8 +2757,8 @@
     <string name="wrapped_share_lastfm_failed">Не удалось обновить Last.fm; могут использоваться сохранённые данные.</string>
     <string name="wrapped_share_lastfm_included">Данные Last.fm учтены; неоднозначные совпадения пропущены.</string>
     <string name="wrapped_lastfm_failed">Не удалось обновить данные Last.fm. В этих итогах используется последний полный результат за этот сеанс, если он доступен.</string>
-    <string name="wrapped_lastfm_coverage">Учтено скробблов Last.fm: %1$s; исключено неоднозначных: %2$s. Из-за различий в метаданных часть пересечений может остаться незамеченной.</string>
-    <string name="wrapped_sync_failed">Не удалось обновить историю YouTube. В этих итогах используется история, уже сохранённая на этом устройстве.</string>
+    <string name="wrapped_lastfm_coverage">Учтено скробблов Last.fm: %1$s; пропущено неоднозначных: %2$s. Из-за различий в метаданных часть совпадений может не распознаться.</string>
+    <string name="wrapped_sync_failed">Не удалось обновить историю YouTube. Wrapped построен по данным, которые уже сохранены на этом устройстве.</string>
     <string name="wrapped_top_song">Ваш главный трек</string>
     <string name="wrapped_top_artist">Ваш главный исполнитель</string>
     <string name="wrapped_top_album">Ваш главный альбом</string>
