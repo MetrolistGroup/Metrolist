@@ -6,6 +6,7 @@ import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
 import rikka.shizuku.Shizuku
 import java.io.File
+import kotlin.concurrent.thread
 import kotlin.coroutines.resume
 
 enum class UpdateInstallMethod { SYSTEM, ROOT, SHIZUKU }
@@ -15,6 +16,9 @@ enum class PrivilegedAccess { GRANTED, UNAVAILABLE, DENIED }
 /** Installs updates through a root or Shizuku shell, so no installer prompt appears. */
 internal object PrivilegedInstaller {
     private const val SHIZUKU_PERMISSION_REQUEST = 1401
+
+    // Long enough for the user to answer the root manager's grant prompt.
+    private const val COMMAND_TIMEOUT_MILLIS = 5 * 60 * 1_000L
 
     fun shizukuRunning(): Boolean = runCatching { Shizuku.pingBinder() && !Shizuku.isPreV11() }.getOrDefault(false)
 
@@ -89,11 +93,21 @@ internal object PrivilegedInstaller {
     ): String? =
         runCatching {
             val process = start(method, command)
+            // Process.waitFor(long, TimeUnit) needs API 26. Destroying the process also unblocks the stream I/O below.
+            val watchdog =
+                thread(isDaemon = true) {
+                    try {
+                        Thread.sleep(COMMAND_TIMEOUT_MILLIS)
+                        process.destroy()
+                    } catch (_: InterruptedException) {
+                    }
+                }
             try {
                 process.outputStream.use { stdin -> input?.inputStream()?.use { it.copyTo(stdin) } }
                 val output = process.inputStream.bufferedReader().readText()
                 output.takeIf { process.waitFor() == 0 }
             } finally {
+                watchdog.interrupt()
                 process.destroy()
             }
         }.getOrNull()

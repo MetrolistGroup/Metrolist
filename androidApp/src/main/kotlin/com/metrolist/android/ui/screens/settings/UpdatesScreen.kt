@@ -498,8 +498,8 @@ fun UpdateDetailsScreen(
 
     LaunchedEffect(state) {
         val downloaded = state as? AppUpdateState.Downloaded ?: return@LaunchedEffect
-        // A background update installs itself once playback stops; opening this screen must not install it early.
-        if (!autoInstallHandled && !downloaded.installing && !AppUpdateManager.autoInstallPending) {
+        // A background download installs only once playback stops, so opening this screen must not install it.
+        if (!autoInstallHandled && !downloaded.installing && downloaded.release.updateKey != AppUpdateManager.backgroundUpdateKey) {
             autoInstallHandled = true
             install(downloaded)
         }

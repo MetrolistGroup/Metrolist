@@ -145,8 +145,9 @@ object AppUpdateManager {
 
     @Volatile private var autoInstallFailed = false
 
-    /** True while a background update waits for playback to stop, so screens leave the install to it. */
-    val autoInstallPending: Boolean get() = autoInstallRunning.get()
+    /** The release an automatic update downloaded. Screens must not install it on their own; only the Install button may. */
+    @Volatile var backgroundUpdateKey: String? = null
+        private set
 
     val state: StateFlow<AppUpdateState> = mutableState.asStateFlow()
     val releases: StateFlow<List<GitHubRelease>> = mutableReleases.asStateFlow()
@@ -450,6 +451,7 @@ object AppUpdateManager {
         if (autoInstallFailed || !Settings.shared.autoInstallUpdates || !canInstallWithoutPrompt(context)) return
         if (!autoInstallRunning.compareAndSet(false, true)) return
         try {
+            backgroundUpdateKey = release.updateKey
             download(context, release)
             playbackActive.first { !it }
             val downloaded = mutableState.value as? AppUpdateState.Downloaded ?: return
