@@ -84,6 +84,7 @@ import com.metrolist.shared.generated.resources.top_playlist_subtitle
 import com.metrolist.shared.generated.resources.top_playlist_title
 import com.metrolist.shared.generated.resources.try_again
 import com.metrolist.shared.generated.resources.upload_action
+import com.metrolist.shared.generated.resources.upload_failed
 import com.metrolist.shared.generated.resources.uploaded_song_to_youtube_music
 import com.metrolist.shared.generated.resources.uploaded_songs_empty
 import com.metrolist.shared.generated.resources.uploaded_songs_empty_hint
@@ -295,6 +296,7 @@ private fun UploadedPlaylistScreen() {
     val database = remember { GlobalContext.get().get<MusicDatabase>() }
     val scope = rememberCoroutineScope()
     val uploaded = stringResource(Res.string.uploaded_song_to_youtube_music)
+    val pickerFailed = stringResource(Res.string.upload_failed)
     val fileFilterLabel = stringResource(Res.string.local_file)
     var songs by remember { mutableStateOf<List<SongItem>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
@@ -350,7 +352,15 @@ private fun UploadedPlaylistScreen() {
         isHeaderActionLoading = pendingUploads > 0,
         onHeaderAction = {
             scope.launch {
-                val files = pickDesktopFiles(fileFilterLabel, YouTubeRepository.SUPPORTED_UPLOAD_EXTENSIONS.toList())
+                val files =
+                    try {
+                        pickDesktopFiles(fileFilterLabel, YouTubeRepository.SUPPORTED_UPLOAD_EXTENSIONS.toList())
+                    } catch (error: CancellationException) {
+                        throw error
+                    } catch (_: Exception) {
+                        AppState.snackbarHostState.showSnackbar(pickerFailed)
+                        return@launch
+                    }
                 pendingUploads += files.size
                 // Picked files upload one at a time; picking again while uploading adds to the queue.
                 files.forEach { file ->

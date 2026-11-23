@@ -56,6 +56,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.isCtrlPressed
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
@@ -76,6 +77,7 @@ import com.metrolist.desktop.state.content.BrowseState
 import com.metrolist.desktop.state.content.PlaylistAlbumState
 import com.metrolist.desktop.state.content.SearchState
 import com.metrolist.desktop.state.playback.PlayerState
+import com.metrolist.desktop.utils.WaylandScale
 import com.metrolist.shared.generated.resources.Res
 import com.metrolist.shared.generated.resources.clear
 import com.metrolist.shared.generated.resources.close_search
@@ -303,6 +305,13 @@ fun FloatingSearchOverlay(
                         .fillMaxWidth()
                         .focusGroup()
                         .onPreviewKeyEvent { event ->
+                            // Native Wayland has no global AWT dispatcher, and this overlay sits outside the shortcut layer.
+                            if (WaylandScale.isNativeWaylandActive() && event.type == KeyEventType.KeyDown && event.isCtrlPressed &&
+                                (event.key == Key.K || event.key == Key.F)
+                            ) {
+                                animateDismiss()
+                                return@onPreviewKeyEvent true
+                            }
                             if (event.type == KeyEventType.KeyDown && (queryFocused || event.key == Key.Escape)) {
                                 when (event.key) {
                                     Key.Escape -> {

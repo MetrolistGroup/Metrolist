@@ -24,6 +24,7 @@ import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.PointerEventType
+import androidx.compose.ui.input.pointer.isForwardPressed
 import androidx.compose.ui.input.pointer.isPrimaryPressed
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.InterceptPlatformTextInput
@@ -147,7 +148,13 @@ fun DesktopShortcutLayer(
                     awaitPointerEventScope {
                         while (true) {
                             val event = awaitPointerEvent(PointerEventPass.Initial)
-                            if (event.type == PointerEventType.Press && event.buttons.isPrimaryPressed) keyFocus.keyboardNavigation = false
+                            if (event.type != PointerEventType.Press) continue
+                            if (event.buttons.isPrimaryPressed) keyFocus.keyboardNavigation = false
+                            // The AWT forward-button handler is not installed on Tao.
+                            if (event.buttons.isForwardPressed && !isComposeModalActive()) {
+                                event.changes.forEach { it.consume() }
+                                forward()
+                            }
                         }
                     }
                 }.onPreviewKeyEvent { event ->
