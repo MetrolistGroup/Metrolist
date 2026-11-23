@@ -132,10 +132,10 @@ fun LyricsMenu(
             onSearchOnline = { query ->
                 try {
                     context.startActivity(Intent(Intent.ACTION_WEB_SEARCH).putExtra(SearchManager.QUERY, query))
+                    showSearchDialog = false
+                    onDismiss()
                 } catch (_: ActivityNotFoundException) {
                 }
-                showSearchDialog = false
-                onDismiss()
             },
         )
     }
