@@ -2970,7 +2970,8 @@
     <string name="likes">Likes</string>
     <!-- Translators: Label for the date YouTube lists for the video upload in the song details. -->
     <string name="upload_date">Upload date</string>
-    <!-- Translators: Label for dislikes; retained for translation compatibility but not currently referenced by app code. -->
+    <!-- Translators: Label for the estimated dislike count in the song details. -->
+    <string name="dislikes">Dislikes (estimated by Return YouTube Dislike)</string>
     <!-- Translators: Imperative action label for subscribe in the artist screen and media item menus. -->
     <string name="subscribe">Subscribe</string>
     <!-- Translators: Label for subscribed in the artist screen. -->

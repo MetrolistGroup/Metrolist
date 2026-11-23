@@ -1828,7 +1828,8 @@ class YouTubeRepository(
             ).also { requireCurrentSession(session) }
         } catch (e: CancellationException) {
             throw e
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            YtLogger.w(TAG, "getSongWatchInformation failed type=${e::class.simpleName ?: "unknown"}")
             null
         } finally {
             requestTube.close()
