@@ -460,9 +460,14 @@ object AppUpdateManager {
         if (!autoInstallRunning.compareAndSet(false, true)) return
         try {
             backgroundUpdateKey = release.updateKey
-            download(context, release)
-            // A rebuilt nightly replaces the requested release during download.
-            (mutableState.value as? AppUpdateState.Downloaded)?.let { backgroundUpdateKey = it.release.updateKey }
+            try {
+                download(context, release)
+            } finally {
+                // A rebuilt nightly replaces the requested release during download; record it even if this job is cancelled.
+                (mutableState.value as? AppUpdateState.Downloaded)
+                    ?.takeIf { it.release.version == release.version }
+                    ?.let { backgroundUpdateKey = it.release.updateKey }
+            }
             playbackActive.first { !it }
             val downloaded = mutableState.value as? AppUpdateState.Downloaded ?: return
             if (downloaded.installing || playbackActive.first()) return
