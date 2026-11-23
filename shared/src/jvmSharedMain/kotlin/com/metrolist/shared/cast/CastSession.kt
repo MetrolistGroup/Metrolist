@@ -39,7 +39,11 @@ data class CastMedia(
         song.title,
         artworkUrl,
         resource,
-        durationMs,
+        // A song started while casting has no prepared local player, so the caller's duration can be 0.
+        durationMs.takeIf { it > 0L }
+            ?: resource.durationSeconds?.takeIf { it > 0L }?.times(1_000L)
+            ?: song.duration?.takeIf { it > 0L }?.times(1_000L)
+            ?: 0L,
         song.artists.joinToString(", ") { it.name }.takeIf(String::isNotBlank),
         song.album?.name,
         queueEntry,
