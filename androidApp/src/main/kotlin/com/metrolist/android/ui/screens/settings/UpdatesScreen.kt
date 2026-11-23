@@ -470,7 +470,7 @@ fun UpdateDetailsScreen(
     val installPermissionLauncher =
         rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {
             installAfterPermission?.let { downloaded ->
-                if (AppUpdateManager.canInstallPackages(context)) {
+                if (AppUpdateManager.canInstallPackages(context, crashRecovery)) {
                     scope.launch { installerError = !AppUpdateManager.install(context, downloaded, crashRecovery) }
                     installAfterPermission = null
                 }
@@ -479,7 +479,7 @@ fun UpdateDetailsScreen(
 
     fun install(downloaded: AppUpdateState.Downloaded) {
         installerError = false
-        if (AppUpdateManager.canInstallPackages(context)) {
+        if (AppUpdateManager.canInstallPackages(context, crashRecovery)) {
             scope.launch { installerError = !AppUpdateManager.install(context, downloaded, crashRecovery) }
         } else {
             installAfterPermission = downloaded

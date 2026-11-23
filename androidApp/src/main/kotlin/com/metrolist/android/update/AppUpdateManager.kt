@@ -391,13 +391,20 @@ object AppUpdateManager {
     }
 
     // Before Android 8 unknown sources is a global setting checked by the installer prompt itself.
-    fun canInstallPackages(context: Context): Boolean =
-        installMethod() != UpdateInstallMethod.SYSTEM ||
+    fun canInstallPackages(
+        context: Context,
+        crashRecovery: Boolean = false,
+    ): Boolean =
+        installMethod(crashRecovery) != UpdateInstallMethod.SYSTEM ||
             Build.VERSION.SDK_INT < Build.VERSION_CODES.O ||
             context.packageManager.canRequestPackageInstalls()
 
-    fun installMethod(): UpdateInstallMethod =
-        UpdateInstallMethod.entries.firstOrNull { it.name == Settings.shared.updateInstallMethod } ?: UpdateInstallMethod.SYSTEM
+    fun installMethod(crashRecovery: Boolean = false): UpdateInstallMethod {
+        val method =
+            UpdateInstallMethod.entries.firstOrNull { it.name == Settings.shared.updateInstallMethod } ?: UpdateInstallMethod.SYSTEM
+        // Shizuku hands its binder only to the main process, and crash recovery runs in the :crash process.
+        return if (crashRecovery && method == UpdateInstallMethod.SHIZUKU) UpdateInstallMethod.SYSTEM else method
+    }
 
     /** Switches the install method after the user grants root or Shizuku access, then claims Metrolist as its own installer. */
     suspend fun selectInstallMethod(
@@ -478,7 +485,7 @@ object AppUpdateManager {
                 mutableState.value = AppUpdateState.Available(downloaded.release)
                 return@withContext false
             }
-            val method = installMethod()
+            val method = installMethod(crashRecovery)
             if (method != UpdateInstallMethod.SYSTEM) {
                 // pm usually replaces this process on success before returning.
                 val installed = PrivilegedInstaller.install(method, context.packageName, downloaded.file)
