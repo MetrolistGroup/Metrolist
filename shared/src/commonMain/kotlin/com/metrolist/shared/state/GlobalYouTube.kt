@@ -38,6 +38,15 @@ private fun isContentLanguage(tag: String): Boolean {
         (region.isEmpty() || region.first().isDigit() || region in platformCountryCodes)
 }
 
+// The full tag, then its first two subtags (zh-Hant-MO to zh-Hant), then the language. InnerTubeX leaves a blank hl out
+// of the request, so YouTube picks the language when it accepts none of them.
+private fun youTubeLanguage(tag: String): String {
+    val parts = tag.replace('_', '-').split('-')
+    return listOf(parts.joinToString("-"), parts.take(2).joinToString("-"), parts.first())
+        .firstOrNull { it in youTubeLanguageTags }
+        .orEmpty()
+}
+
 val coreModule =
     module {
         single { GlobalYouTube.client }
@@ -92,7 +101,8 @@ object GlobalYouTube {
         if (contentLanguage != SYSTEM && !validContentLanguage) {
             settings.contentLanguage = SYSTEM
         }
-        val resolvedHl = if (validContentLanguage) contentLanguage else systemLanguage.substringBefore('-').substringBefore('_')
+        val resolvedHl =
+            youTubeLanguage(if (validContentLanguage) contentLanguage else systemLanguage.substringBefore('-').substringBefore('_'))
         val validContentCountry = contentCountry in contentCountryCodes
         if (contentCountry != SYSTEM && !validContentCountry) {
             settings.contentCountry = SYSTEM
