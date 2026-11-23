@@ -16,20 +16,19 @@ import kotlinx.serialization.json.Json
 import kotlin.time.Instant
 
 class Converters {
-    private val json = Json { ignoreUnknownKeys = true }
+    private val playlistJson = Json { ignoreUnknownKeys = true }
 
     @ColumnTypeConverter
-    fun playlistHeaderToJson(header: PlaylistItem?): String? = header?.let { json.encodeToString(it) }
+    fun playlistHeaderToJson(header: PlaylistItem?): String? = header?.let { playlistJson.encodeToString(it) }
 
     @ColumnTypeConverter
-    fun playlistHeaderFromJson(value: String?): PlaylistItem? = value?.let { json.decodeFromString<PlaylistItem>(it) }
+    fun playlistHeaderFromJson(value: String?): PlaylistItem? = value?.let { playlistJson.decodeFromString<PlaylistItem>(it) }
 
     @ColumnTypeConverter
-    fun albumListToJson(albums: List<AlbumItem>?): String? = albums?.let { json.encodeToString(it) }
+    fun albumListToJson(albums: List<AlbumItem>?): String? = albums?.let { playlistJson.encodeToString(it) }
 
     @ColumnTypeConverter
-    fun albumListFromJson(value: String?): List<AlbumItem>? =
-        value?.let { runCatching { json.decodeFromString<List<AlbumItem>>(it) }.getOrNull() }
+    fun albumListFromJson(value: String?): List<AlbumItem>? = value?.let { playlistJson.decodeFromString<List<AlbumItem>>(it) }
 
     @ColumnTypeConverter
     fun fromTimestamp(value: Long?): LocalDateTime? =

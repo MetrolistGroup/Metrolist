@@ -2,6 +2,7 @@ package com.metrolist.shared.db
 
 import com.metrolist.shared.db.entities.Album
 import com.metrolist.shared.db.entities.Song
+import com.metrolist.shared.db.entities.toSongItem
 import com.metrolist.shared.model.AlbumItem
 import com.metrolist.shared.model.AlbumPage
 import com.metrolist.shared.model.ArtistTiny
@@ -12,7 +13,26 @@ import kotlinx.coroutines.withContext
 suspend fun MusicDatabase.loadOfflineAlbum(
     albumId: String,
     availableSongIds: Set<String>? = null,
-): AlbumPage? = loadCachedAlbum(albumId, availableSongIds, offlineOnly = true)?.page
+    requireComplete: Boolean = false,
+): AlbumPage? {
+    val dao = dao()
+    val stored = dao.album(albumId).first()
+    val storedSongs = dao.storedAlbumSongs(albumId).first()
+    val songs = storedSongs.filter { it.isAvailableOffline(availableSongIds) }
+    // Null otherVersions means the album was saved before its header was cached.
+    if (requireComplete &&
+        (stored?.album?.otherVersions == null || songs.size != storedSongs.size || songs.size != stored.album.songCount)
+    ) {
+        return null
+    }
+    val album = offlineAlbumHeader(albumId, stored, songs) ?: return null
+    return AlbumPage(
+        album = album,
+        songs = songs.map { it.toSongItem() },
+        otherVersions = stored?.album?.otherVersions.orEmpty(),
+        description = stored?.album?.description,
+    )
+}
 
 internal suspend fun MusicDatabase.loadOfflineAlbumHeader(
     albumId: String,

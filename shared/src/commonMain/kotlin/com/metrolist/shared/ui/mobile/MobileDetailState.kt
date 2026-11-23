@@ -13,15 +13,12 @@ import com.metrolist.shared.state.GlobalYouTubeRepository
 import com.metrolist.shared.state.resolveArtistSubscribed
 import com.metrolist.shared.viewmodels.ArtistSubscriptionState
 import com.metrolist.shared.viewmodels.BrowseViewModel
-import com.metrolist.shared.youtube.playback.PlaybackNetworkStateStore
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 internal class MobileRouteEntry(
     route: MobileRoute,
@@ -76,34 +73,15 @@ internal class MobileDetailState(
     private var browseLoader: BrowseViewModel? = null
 
     fun album(id: String): MobileDetailLoader<AlbumPage> =
-        albumLoader ?: MobileDetailLoader(
-            scope = scope,
-            loadCached = {
-                repository.getCachedAlbum(id, applyContentFilters = false)?.let { cached ->
-                    CachedDetail(
-                        page = cached.page,
-                        needsRefresh = PlaybackNetworkStateStore.current.connected && !cached.canReuseWithoutRefresh,
-                        showRefreshIndicator = !(cached.isComplete && cached.isOfflineReady),
-                        isComplete = cached.isComplete,
-                    )
-                }
-            },
-        ) { hasCached ->
-            checkNotNull(
-                repository.getAlbum(
-                    id,
-                    applyContentFilters = false,
-                    forceRefresh = true,
-                    allowOfflineFallback = !hasCached,
-                ),
-            )
+        albumLoader ?: MobileDetailLoader(scope) {
+            checkNotNull(repository.getAlbum(id))
         }.also { albumLoader = it }
 
     fun artist(
         id: String,
         database: MusicDatabase,
     ): MobileDetailLoader<ArtistPageResult> =
-        artistLoader ?: MobileDetailLoader(scope) { _ ->
+        artistLoader ?: MobileDetailLoader(scope) {
             val revision = subscription.revision
             repository.getArtist(id).also { page ->
                 check(page.sections.isNotEmpty()) { "Artist load failed" }
@@ -139,17 +117,9 @@ internal class MobileDetailState(
     fun close() = scope.cancel()
 }
 
-internal data class CachedDetail<T>(
-    val page: T,
-    val needsRefresh: Boolean,
-    val showRefreshIndicator: Boolean = needsRefresh,
-    val isComplete: Boolean = true,
-)
-
 internal class MobileDetailLoader<T>(
     private val scope: CoroutineScope,
-    private val loadCached: (suspend () -> CachedDetail<T>?)? = null,
-    private val fetch: suspend (hasCached: Boolean) -> T,
+    private val fetch: suspend () -> T,
 ) {
     var page by mutableStateOf<T?>(null)
         private set
@@ -164,39 +134,20 @@ internal class MobileDetailLoader<T>(
         load()
     }
 
-    fun load(forceRefresh: Boolean = false) {
+    fun load() {
         val requestGeneration = ++generation
-        val retainedPage = page
         job?.cancel()
-        isLoading = retainedPage == null || forceRefresh
+        isLoading = true
         failed = false
         job =
             scope.launch {
-                var suppressFailure = false
                 try {
-                    var hasCached = false
-                    var cachedComplete = false
-                    if (!forceRefresh && loadCached != null) {
-                        val cached = withContext(Dispatchers.Default) { loadCached() }
-                        if (generation != requestGeneration) return@launch
-                        if (cached != null) {
-                            hasCached = true
-                            cachedComplete = cached.isComplete
-                            page = cached.page
-                            if (!cached.needsRefresh) return@launch
-                            isLoading = cached.showRefreshIndicator
-                        } else {
-                            isLoading = true
-                        }
-                    }
-                    val hasDisplayedPage = hasCached || retainedPage != null
-                    suppressFailure = hasCached && cachedComplete && !forceRefresh
-                    val loaded = fetch(hasDisplayedPage)
+                    val loaded = fetch()
                     if (generation == requestGeneration) page = loaded
                 } catch (error: CancellationException) {
                     throw error
                 } catch (_: Exception) {
-                    if (generation == requestGeneration && !suppressFailure) failed = true
+                    if (generation == requestGeneration) failed = true
                 } finally {
                     if (generation == requestGeneration) isLoading = false
                 }

@@ -17,7 +17,6 @@ import com.metrolist.innertubex.InnerTubeHttpException
 import com.metrolist.shared.api.PlaylistNotFoundException
 import com.metrolist.shared.api.YouTubeRepository
 import com.metrolist.shared.api.playlistSongs
-import com.metrolist.shared.db.CachedAlbum
 import com.metrolist.shared.db.MusicDatabase
 import com.metrolist.shared.db.emptyHistoryPlaylist
 import com.metrolist.shared.db.entities.toPlaylistItem
@@ -430,19 +429,15 @@ object PlaylistAlbumState {
         id: String,
         addToHistory: Boolean = true,
         artworkSource: String? = null,
-        forceRefresh: Boolean = false,
     ) {
         PodcastState.clear()
         if (addToHistory) DesktopNavigation.navigate(Screen.Album(id, artworkSource = artworkSource))
         PlayerState.exitExpanded()
-        val session = GlobalYouTube.innerTube.sessionSnapshot()
-        val retainedPage = unfilteredAlbumPageData.takeIf { selectedAlbumId == id }
-        if (selectedAlbumId != id) {
-            albumSession = null
-            albumPageData = null
-            unfilteredAlbumPageData = null
-        }
         selectedAlbumId = id
+        val session = GlobalYouTube.innerTube.sessionSnapshot()
+        albumSession = null
+        albumPageData = null
+        unfilteredAlbumPageData = null
         selectedLocalPlaylist = null
         ArtistState.selectedArtistId = null
         selectedPlaylistId = null
@@ -452,46 +447,15 @@ object PlaylistAlbumState {
         albumLoadJob =
             AppState.scope.launch {
                 var firstPage: AlbumPage? = null
-                var cached: CachedAlbum? = null
                 try {
-                    if (!forceRefresh) {
-                        cached =
-                            withContext(Dispatchers.IO) {
-                                GlobalYouTubeRepository.instance.getCachedAlbum(id, applyContentFilters = false)
-                            }
-                        if (selectedAlbumId != id || GlobalYouTube.innerTube.sessionSnapshot() != session) return@launch
-                        if (cached != null) {
-                            unfilteredAlbumPageData = cached.page
-                            albumSession = session
-                            albumPageData = BlockedContent.filterAlbumPage(cached.page)
-                            if (cached.canReuseWithoutRefresh || !PlaybackNetworkStateStore.current.connected) {
-                                isAlbumLoading = false
-                                return@launch
-                            }
-                            if (cached.isComplete && cached.isOfflineReady) {
-                                isAlbumLoading = false
-                            }
-                        }
-                    }
-                    val hasDisplayedPage = cached != null || retainedPage != null
                     val result =
                         withContext(Dispatchers.IO) {
-                            GlobalYouTubeRepository.instance.getAlbum(
-                                id,
-                                loadAllPages = false,
-                                applyContentFilters = false,
-                                forceRefresh = true,
-                                allowOfflineFallback = !hasDisplayedPage,
-                            )
+                            GlobalYouTubeRepository.instance.getAlbum(id, loadAllPages = false, applyContentFilters = false)
                         }
                     if (selectedAlbumId != id || GlobalYouTube.innerTube.sessionSnapshot() != session) return@launch
-                    if (result == null) {
-                        if (!hasDisplayedPage || forceRefresh || cached?.isComplete == false) albumLoadFailed = true
-                        return@launch
-                    }
-                    albumLoadFailed = false
+                    albumLoadFailed = result == null
                     firstPage = result
-                    val cursor = result.playlistPage
+                    val cursor = result?.playlistPage
                     val page =
                         if (cursor?.hasMore == true) {
                             val complete =
@@ -505,7 +469,7 @@ object PlaylistAlbumState {
                     if (selectedAlbumId == id && GlobalYouTube.innerTube.sessionSnapshot() == session) {
                         unfilteredAlbumPageData = page
                         albumSession = session
-                        albumPageData = BlockedContent.filterAlbumPage(page)
+                        albumPageData = page?.let(BlockedContent::filterAlbumPage)
                     }
                 } catch (e: CancellationException) {
                     throw e
@@ -516,20 +480,11 @@ object PlaylistAlbumState {
                             "status=${(error as? InnerTubeHttpException)?.status?.value} type=${error::class.simpleName}",
                     )
                     if (selectedAlbumId == id && GlobalYouTube.innerTube.sessionSnapshot() == session) {
-                        val preserveCompleteCache = cached?.isComplete == true
-                        val retainedComplete =
-                            retainedPage?.let { !it.isIncompleteCache && it.playlistPage?.hasMore != true } == true
-                        val fallback =
-                            when {
-                                preserveCompleteCache -> cached.page
-                                retainedComplete -> retainedPage
-                                else -> listOfNotNull(retainedPage, firstPage, cached?.page).maxByOrNull { it.songs.size }
-                            }
-                        albumLoadFailed = fallback == null || !preserveCompleteCache
-                        unfilteredAlbumPageData = fallback
+                        albumLoadFailed = true
+                        unfilteredAlbumPageData = firstPage
                         albumSession = session
-                        albumPageData = fallback?.let(BlockedContent::filterAlbumPage)
-                        if (firstPage != null && !preserveCompleteCache) {
+                        albumPageData = firstPage?.let(BlockedContent::filterAlbumPage)
+                        if (firstPage != null) {
                             AppState.snackbarHostState.showSnackbar(getString(Res.string.error_occurred))
                         }
                     }

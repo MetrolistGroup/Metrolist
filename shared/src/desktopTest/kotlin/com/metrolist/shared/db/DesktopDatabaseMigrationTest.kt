@@ -2,9 +2,6 @@ package com.metrolist.shared.db
 
 import androidx.sqlite.SQLiteConnection
 import androidx.sqlite.execSQL
-import com.metrolist.innertubex.InnerTube
-import com.metrolist.shared.api.ContinuationBranch
-import com.metrolist.shared.api.PlaylistPage
 import com.metrolist.shared.model.AlbumItem
 import com.metrolist.shared.model.AlbumPage
 import com.metrolist.shared.model.AlbumTiny
@@ -248,9 +245,9 @@ class DesktopDatabaseMigrationTest {
         }
 
     @Test
-    fun albumDescriptionMigrationAndCachingPreservesDownloadedAlbums() =
+    fun downloadedAlbumOpensLocallyOnceHeaderMetadataIsCached() =
         runBlocking<Unit> {
-            val directory = createTempDirectory("album-description-migration").toFile()
+            val directory = createTempDirectory("album-header-migration").toFile()
             val file = File(directory, "library.db")
             try {
                 createHistoricalLibrary(file.absolutePath, 67, JdbcSQLiteDriver())
@@ -266,109 +263,24 @@ class DesktopDatabaseMigrationTest {
                 }
                 val database = getDesktopDatabaseBuilder(file).build()
                 try {
-                    val upgraded = requireNotNull(database.loadCachedAlbum("MPREb_test"))
-                    assertEquals("Saved Album", upgraded.page.album.title)
-                    assertEquals(listOf("song"), upgraded.page.songs.map(SongItem::id))
-                    assertNull(upgraded.page.description)
-                    assertTrue(upgraded.page.otherVersions.isEmpty())
-                    assertTrue(upgraded.isComplete)
-                    assertTrue(upgraded.isOfflineReady)
-                    assertFalse(upgraded.hasCachedHeaderMetadata)
-                    assertFalse(upgraded.canReuseWithoutRefresh)
+                    assertNull(database.loadOfflineAlbum("MPREb_test", requireComplete = true))
+                    assertEquals(listOf("song"), database.loadOfflineAlbum("MPREb_test")?.songs?.map(SongItem::id))
 
-                    val album =
-                        AlbumItem(
-                            id = "MPREb_test",
-                            title = "Saved Album",
-                            thumbnail = null,
-                            artists = listOf(ArtistTiny("artist", "Artist")),
-                            playlistId = "OLAK5uy_test",
-                            songCount = 1,
-                            duration = 240L,
-                        )
-                    val song =
-                        SongItem(
-                            "song",
-                            "Keep my music",
-                            null,
-                            listOf(ArtistTiny("artist", "Artist")),
-                            AlbumTiny(album.id, album.title),
-                            240L,
-                        )
-                    val deluxe =
-                        AlbumItem(
-                            id = "MPREb_deluxe",
-                            title = "Saved Album (Deluxe)",
-                            thumbnail = null,
-                            artists = listOf(ArtistTiny("artist", "Artist")),
-                            year = "2026",
-                        )
+                    val artists = listOf(ArtistTiny("artist", "Artist"))
+                    val album = AlbumItem("MPREb_test", "Saved Album", null, artists, playlistId = "OLAK5uy_test", songCount = 1)
+                    val song = SongItem("song", "Keep my music", null, artists, AlbumTiny(album.id, album.title), 240L)
+                    val deluxe = AlbumItem("MPREb_deluxe", "Saved Album (Deluxe)", null, artists)
                     database.storeAlbumPage(
-                        AlbumPage(
-                            album = album,
-                            songs = listOf(song),
-                            otherVersions = listOf(deluxe),
-                            description = "Cached liner notes",
-                        ),
-                        updateHeaderMetadata = true,
+                        AlbumPage(album, listOf(song), otherVersions = listOf(deluxe), description = "Liner notes"),
+                        hasHeaderMetadata = true,
                     )
-                    // Continuation saves omit header metadata and must keep cached values.
-                    database.storeAlbumPage(
-                        AlbumPage(album = album, songs = listOf(song), description = null),
-                        updateHeaderMetadata = false,
-                    )
+                    // Continuation saves have no header and must keep the stored one.
+                    database.storeAlbumPage(AlbumPage(album, listOf(song)))
 
-                    val cached = requireNotNull(database.loadCachedAlbum("MPREb_test"))
-                    assertEquals("Cached liner notes", cached.page.description)
-                    assertEquals(listOf(deluxe), cached.page.otherVersions)
-                    assertTrue(cached.hasCachedHeaderMetadata)
-                    assertTrue(cached.canReuseWithoutRefresh)
-                    val offline = requireNotNull(database.loadOfflineAlbum("MPREb_test"))
-                    assertEquals("Cached liner notes", offline.description)
-                    assertEquals(listOf(deluxe), offline.otherVersions)
-
-                    // An album whose remote header has no description or other versions is still marked cached.
-                    database.storeAlbumPage(
-                        AlbumPage(album = album, songs = listOf(song), otherVersions = emptyList(), description = null),
-                        updateHeaderMetadata = true,
-                    )
-                    val emptyMetadata = requireNotNull(database.loadCachedAlbum("MPREb_test"))
-                    assertNull(emptyMetadata.page.description)
-                    assertTrue(emptyMetadata.page.otherVersions.isEmpty())
-                    assertTrue(emptyMetadata.hasCachedHeaderMetadata)
-                    assertTrue(emptyMetadata.canReuseWithoutRefresh)
-
-                    val replacement = song.copy(id = "replacement")
-                    val refreshedAlbum = album.copy(songCount = 2)
-                    val partial =
-                        PlaylistPage(
-                            sections = mapOf("songs" to listOf(replacement)),
-                            pending = listOf(ContinuationBranch("next", "songs")),
-                            seen = emptySet(),
-                            session = InnerTube.SessionSnapshot(),
-                            album = refreshedAlbum,
-                        )
-                    database.storeAlbumPage(AlbumPage(refreshedAlbum, partial.songs, playlistPage = partial))
-                    val mixed = requireNotNull(database.loadCachedAlbum(album.id, setOf(song.id, replacement.id)))
-                    assertEquals(
-                        setOf(song.id, replacement.id),
-                        mixed.page.songs
-                            .map(SongItem::id)
-                            .toSet(),
-                    )
-                    assertFalse(mixed.isComplete)
-                    assertFalse(mixed.canReuseWithoutRefresh)
-
-                    val last = song.copy(id = "last")
-                    database.storeAlbumPage(AlbumPage(refreshedAlbum, listOf(replacement, last)), updateHeaderMetadata = true)
-                    val completed = requireNotNull(database.loadCachedAlbum(album.id, setOf(replacement.id, last.id)))
-                    assertEquals(listOf(replacement.id, last.id), completed.page.songs.map(SongItem::id))
-                    assertTrue(completed.canReuseWithoutRefresh)
-                    val offlineSubset = requireNotNull(database.loadCachedAlbum(album.id, setOf(replacement.id), offlineOnly = true))
-                    assertEquals(listOf(replacement.id), offlineSubset.page.songs.map(SongItem::id))
-                    assertFalse(offlineSubset.isComplete)
-                    assertTrue(offlineSubset.isOfflineReady)
-                    assertFalse(offlineSubset.canReuseWithoutRefresh)
+                    val local = requireNotNull(database.loadOfflineAlbum("MPREb_test", requireComplete = true))
+                    assertEquals("Liner notes", local.description)
+                    assertEquals(listOf(deluxe), local.otherVersions)
+                    assertNull(database.loadOfflineAlbum("MPREb_test", availableSongIds = emptySet(), requireComplete = true))
                 } finally {
                     database.close()
                 }

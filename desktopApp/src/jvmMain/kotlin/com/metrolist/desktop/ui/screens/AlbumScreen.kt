@@ -132,7 +132,7 @@ fun AlbumScreen(
         val errorNavigator = LocalNavigator.current
         CollectionHeaderNavigation({ errorNavigator.goBack() }) {
             RetryableError(stringResource(Res.string.error_occurred)) {
-                PlaylistAlbumState.fetchAlbumData(albumId, addToHistory = false, forceRefresh = true)
+                PlaylistAlbumState.fetchAlbumData(albumId, addToHistory = false)
             }
         }
         return
@@ -206,17 +206,12 @@ fun AlbumScreen(
             trackContainer = { song, content -> SongSwipeActions(song, content = content) },
             album = album,
             songs = songs,
-            needsPlaybackCompletion = page.isIncompleteCache || page.playlistPage?.hasMore == true,
-            downloadedSongIds = downloadedSongIds,
-            onPlaybackError = {
-                AppState.scope.launch { AppState.snackbarHostState.showSnackbar(getString(Res.string.error_occurred)) }
-            },
             paginationContent = {
-                if (selected && PlaylistAlbumState.isAlbumLoading && loaded == null) {
+                if (selected && PlaylistAlbumState.isAlbumLoading) {
                     CollectionSongsLoadingPlaceholder()
                 } else if (selected && PlaylistAlbumState.albumLoadFailed) {
                     TextButton(
-                        onClick = { PlaylistAlbumState.fetchAlbumData(albumId, addToHistory = false, forceRefresh = true) },
+                        onClick = { PlaylistAlbumState.fetchAlbumData(albumId, addToHistory = false) },
                         shapes = ButtonDefaults.shapes(),
                     ) {
                         Text(stringResource(Res.string.try_again))

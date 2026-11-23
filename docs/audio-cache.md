@@ -22,17 +22,7 @@ Android and desktop downloaded collections can filter by a library playlist befo
 
 Remote playlist download refreshes store every page of unfiltered membership. Offline playlist pages read those stored entries. Failed and offline refreshes keep the previous membership.
 
-## Album pages
-
-Android, desktop and iOS display stored album tracks before requesting remote metadata. Album descriptions and links to other editions are stored with the tracks. Complete downloaded albums with cached header metadata open locally without a refresh. Older cached albums show their tracks while missing metadata loads in the background.
-
-Refreshes retain displayed tracks on failure. A complete album stays visible until all refreshed pages arrive. Cache-read failures and failed refreshes of incomplete albums expose Retry instead of leaving an empty page or a permanent loading indicator.
-
-When a desktop retry fails, an incomplete album keeps the partial result with the most tracks. Offline album actions use locally available downloaded tracks without waiting for a refresh.
-
-Online playback from an incomplete cache loads the missing tracks before starting the album queue. Play, shuffle and track clicks preserve the selected sort order and search behavior. Failed loads leave playback unchanged and report an error for retry.
-
-Album storage records whether pagination finished. Partial saves keep existing rows for recovery but invalidate completeness, even when their combined row count matches the header. Offline views retain that status when showing only downloaded tracks, so whole-album actions can load missing tracks after reconnecting.
+Album browses store the album description and other editions with the tracks. An album opens from storage without a network request once every stored track is available offline, the stored track count matches the album, and that header metadata is cached. Albums saved before version 68 of the database refresh once to fill it.
 
 ## Android v13 recovery
 

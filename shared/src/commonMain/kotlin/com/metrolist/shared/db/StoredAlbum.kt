@@ -11,83 +11,41 @@ import com.metrolist.shared.model.ArtistTiny
 import com.metrolist.shared.model.SongItem
 import kotlinx.coroutines.flow.first
 
-data class CachedAlbum(
-    val page: AlbumPage,
-    val isComplete: Boolean,
-    val hasCachedHeaderMetadata: Boolean,
-    val isOfflineReady: Boolean,
-    val hasRequiredMetadata: Boolean = true,
-) {
-    val canReuseWithoutRefresh: Boolean
-        get() = isComplete && hasCachedHeaderMetadata && isOfflineReady && hasRequiredMetadata
-}
-
-suspend fun MusicDatabase.loadCachedAlbum(
-    albumId: String,
-    availableSongIds: Set<String>? = null,
-    offlineOnly: Boolean = false,
-): CachedAlbum? {
-    val (stored, storedSongs) = dao().storedAlbumSnapshot(albumId)
-    val songs = if (offlineOnly) storedSongs.filter { it.isAvailableOffline(availableSongIds) } else storedSongs
+suspend fun MusicDatabase.loadStoredAlbum(albumId: String): AlbumPage? {
+    val stored = dao().album(albumId).first()
+    val songs = dao().storedAlbumSongs(albumId).first()
     if (songs.isEmpty()) return null
     val album = stored?.album
     val title = album?.title ?: songs.first().song.albumName ?: return null
-    val hasCachedHeaderMetadata = album?.description != null && album.otherVersions != null
-    // Legacy rows have no cached headers; only a subsequent fetch can make them reusable.
-    val completeSnapshot =
-        album?.tracksComplete
-            ?: (album != null && !hasCachedHeaderMetadata && album.songCount > 0 && storedSongs.size >= album.songCount)
-    val isComplete = completeSnapshot && album?.songCount == storedSongs.size && songs.size == storedSongs.size
-    val playableSongs = songs.filterNot { it.song.isUnavailable }
-    val isOfflineReady =
-        offlineOnly || album?.isLocal == true ||
-            (playableSongs.isNotEmpty() && playableSongs.all { it.isAvailableOffline(availableSongIds) })
-    val hasRequiredMetadata =
-        album?.isLocal == true ||
-            albumId.startsWith("FEmusic_library_privately_owned_release") ||
-            !album?.playlistId.isNullOrBlank()
-    return CachedAlbum(
-        page =
-            AlbumPage(
-                album =
-                    AlbumItem(
-                        id = albumId,
-                        title = title,
-                        thumbnail = album?.thumbnailUrl ?: songs.first().thumbnailUrl,
-                        artists =
-                            (stored?.artists?.takeIf { it.isNotEmpty() } ?: songs.first().orderedArtists).map { artist ->
-                                ArtistTiny(artist.id.takeUnless { artist.isLocal && !offlineOnly }, artist.name, artist.thumbnailUrl)
-                            },
-                        year = album?.year?.toString(),
-                        playlistId = album?.playlistId,
-                        isExplicit = album?.explicit ?: songs.any { it.song.explicit },
-                        songCount = album?.songCount?.takeIf { it > 0 },
-                        duration = album?.duration?.takeIf { it > 0 }?.toLong(),
-                    ),
-                songs = songs.map { it.toSongItem() },
-                otherVersions = album?.otherVersions.orEmpty(),
-                description = album?.description?.takeIf(String::isNotBlank),
-                isIncompleteCache = !isComplete,
+    return AlbumPage(
+        album =
+            AlbumItem(
+                id = albumId,
+                title = title,
+                thumbnail = album?.thumbnailUrl ?: songs.first().thumbnailUrl,
+                artists =
+                    (stored?.artists?.takeIf { it.isNotEmpty() } ?: songs.first().orderedArtists).map { artist ->
+                        ArtistTiny(artist.id.takeUnless { artist.isLocal }, artist.name, artist.thumbnailUrl)
+                    },
+                year = album?.year?.toString(),
+                playlistId = album?.playlistId,
+                isExplicit = album?.explicit ?: songs.any { it.song.explicit },
+                songCount = album?.songCount,
             ),
-        isComplete = isComplete,
-        hasCachedHeaderMetadata = hasCachedHeaderMetadata,
-        isOfflineReady = isOfflineReady,
-        hasRequiredMetadata = hasRequiredMetadata,
+        songs = songs.map { it.toSongItem() },
     )
 }
-
-suspend fun MusicDatabase.loadStoredAlbum(albumId: String): AlbumPage? = loadCachedAlbum(albumId)?.page
 
 suspend fun MusicDatabase.storeAlbumPage(
     page: AlbumPage,
     incrementalSongs: List<SongItem>? = null,
-    updateHeaderMetadata: Boolean = false,
+    hasHeaderMetadata: Boolean = false,
 ) {
     withDatabaseTransaction {
         val dao = dao()
         val album = page.album
         val existing = dao.album(album.id).first()?.album
-        val complete = !page.isIncompleteCache && page.playlistPage?.hasMore != true
+        val complete = page.playlistPage?.hasMore != true
         val songCount =
             if (complete) {
                 page.songs.size
@@ -104,19 +62,6 @@ suspend fun MusicDatabase.storeAlbumPage(
                         ?.takeIf { it > 0 }
                         ?.toLong() ?: 0L
                 }
-        // Empty string and empty list distinguish fetched headers with no values from uncached rows (null).
-        val description =
-            if (updateHeaderMetadata) {
-                page.description?.trim().orEmpty()
-            } else {
-                page.description?.trim()?.takeIf(String::isNotEmpty) ?: existing?.description
-            }
-        val otherVersions =
-            if (updateHeaderMetadata) {
-                page.otherVersions
-            } else {
-                page.otherVersions.takeIf(List<AlbumItem>::isNotEmpty) ?: existing?.otherVersions
-            }
         dao.upsert(
             (existing ?: AlbumEntity(id = album.id, title = album.title, songCount = 0, duration = 0)).copy(
                 title = album.title,
@@ -126,9 +71,9 @@ suspend fun MusicDatabase.storeAlbumPage(
                 explicit = album.isExplicit,
                 songCount = songCount,
                 duration = duration.coerceAtMost(Int.MAX_VALUE.toLong()).toInt(),
-                description = description,
-                otherVersions = otherVersions,
-                tracksComplete = complete,
+                // Continuation pages carry no header; keep what the last album browse stored.
+                description = if (hasHeaderMetadata) page.description else existing?.description,
+                otherVersions = if (hasHeaderMetadata) page.otherVersions else existing?.otherVersions,
             ),
         )
         val savedPositions = if (complete) emptyMap() else dao.albumSongMaps(album.id).associate { it.songId to it.index }

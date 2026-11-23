@@ -125,7 +125,6 @@ fun AlbumScreen(
 ) {
     val playerConnection = LocalPlayerConnection.current
     val context = LocalContext.current
-    val playbackErrorText = stringResource(Res.string.error_unknown)
     val coroutineScope = rememberCoroutineScope()
     val downloadManager: SongDownloadManager = koinInject()
     val database: MusicDatabase = koinInject()
@@ -338,8 +337,6 @@ fun AlbumScreen(
                         AlbumContent(
                             album = info,
                             songs = songs,
-                            needsPlaybackCompletion = albumPage?.isIncompleteCache == true,
-                            onPlaybackError = { Toast.makeText(context, playbackErrorText, Toast.LENGTH_SHORT).show() },
                             text = albumContentText(),
                             paginationContent = {
                                 if (albumInfo == null) {
@@ -349,16 +346,7 @@ fun AlbumScreen(
                                         if (isLoadingMore) {
                                             ContainedLoadingIndicator()
                                         } else if (error != null) {
-                                            TextButton(
-                                                onClick = {
-                                                    if (albumPage?.playlistPage?.hasMore == true) {
-                                                        viewModel.loadMore(Int.MAX_VALUE)
-                                                    } else {
-                                                        viewModel.refresh()
-                                                    }
-                                                },
-                                                shapes = ButtonDefaults.shapes(),
-                                            ) {
+                                            TextButton(onClick = { viewModel.loadMore(Int.MAX_VALUE) }, shapes = ButtonDefaults.shapes()) {
                                                 Text(stringResource(Res.string.retry))
                                             }
                                         }
@@ -398,10 +386,11 @@ fun AlbumScreen(
                                     }
                                 }
                             },
-                            onCurrentTrackClick = { playerConnection?.togglePlayPause() },
                             onTrackClick = { song, queue, index ->
                                 if (selection.active) {
                                     selection.toggle(song.id)
+                                } else if (song.id == currentSong?.id) {
+                                    playerConnection?.togglePlayPause()
                                 } else {
                                     playQueue(queue, index)
                                 }

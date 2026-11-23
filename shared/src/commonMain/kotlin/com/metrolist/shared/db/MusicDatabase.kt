@@ -49,7 +49,6 @@ internal val MIGRATION_67_68_SQL =
     listOf(
         "ALTER TABLE album ADD COLUMN description TEXT",
         "ALTER TABLE album ADD COLUMN otherVersions TEXT",
-        "ALTER TABLE album ADD COLUMN tracksComplete INTEGER",
     )
 
 internal val MIGRATION_66_67_SQL =

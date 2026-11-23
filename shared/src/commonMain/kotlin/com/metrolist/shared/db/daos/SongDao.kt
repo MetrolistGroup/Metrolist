@@ -160,15 +160,9 @@ interface SongDao {
 
     @Transaction
     @Query(
-        "SELECT song.* FROM (SELECT songId, `index` AS trackIndex FROM song_album_map WHERE albumId = :albumId UNION ALL SELECT id AS songId, NULL AS trackIndex FROM song WHERE albumId = :albumId AND NOT EXISTS (SELECT 1 FROM album a WHERE a.id = :albumId AND a.tracksComplete = 1) AND NOT EXISTS (SELECT 1 FROM song_album_map m WHERE m.albumId = :albumId AND m.songId = song.id)) tracks JOIN song ON song.id = tracks.songId ORDER BY tracks.trackIndex IS NULL, tracks.trackIndex, song.rowid",
+        "SELECT song.* FROM (SELECT songId, `index` AS trackIndex FROM song_album_map WHERE albumId = :albumId UNION ALL SELECT id AS songId, NULL AS trackIndex FROM song WHERE albumId = :albumId AND NOT EXISTS (SELECT 1 FROM song_album_map m WHERE m.albumId = :albumId AND m.songId = song.id)) tracks JOIN song ON song.id = tracks.songId ORDER BY tracks.trackIndex IS NULL, tracks.trackIndex, song.rowid",
     )
     fun storedAlbumSongs(albumId: String): Flow<List<Song>>
-
-    @Transaction
-    @Query(
-        "SELECT song.* FROM (SELECT songId, `index` AS trackIndex FROM song_album_map WHERE albumId = :albumId UNION ALL SELECT id AS songId, NULL AS trackIndex FROM song WHERE albumId = :albumId AND NOT EXISTS (SELECT 1 FROM album a WHERE a.id = :albumId AND a.tracksComplete = 1) AND NOT EXISTS (SELECT 1 FROM song_album_map m WHERE m.albumId = :albumId AND m.songId = song.id)) tracks JOIN song ON song.id = tracks.songId ORDER BY tracks.trackIndex IS NULL, tracks.trackIndex, song.rowid",
-    )
-    suspend fun storedAlbumSongsOnce(albumId: String): List<Song>
 
     @Transaction
     @Query(
@@ -510,13 +504,6 @@ interface SongDao {
     @Transaction
     @Query("SELECT * FROM album WHERE id = :id")
     fun album(id: String): Flow<Album?>
-
-    @Transaction
-    @Query("SELECT * FROM album WHERE id = :id")
-    suspend fun albumOnce(id: String): Album?
-
-    @Transaction
-    suspend fun storedAlbumSnapshot(albumId: String): Pair<Album?, List<Song>> = albumOnce(albumId) to storedAlbumSongsOnce(albumId)
 
     @Transaction
     @Query(
