@@ -41,26 +41,38 @@ actual fun tryOpenUrl(
     onResult((OsUtil.isLinux || OsUtil.isMac) && runCatching { openUrl(url) }.isSuccess)
 }
 
+/** Physical monitor sizes for windows that AWT cannot see, such as native Wayland. Empty when unknown. */
+@Volatile
+var headlessDisplaySizes: () -> List<Pair<Int, Int>> = { emptyList() }
+
 actual fun getDeviceDisplayMaxVideoHeight(): Int =
     runCatching {
-        if (GraphicsEnvironment.isHeadless()) return DEFAULT_DESKTOP_MAX_VIDEO_HEIGHT
+        if (GraphicsEnvironment.isHeadless()) {
+            val largest = headlessDisplaySizes().maxByOrNull { (width, height) -> width.toLong() * height }
+            return largest?.let { (width, height) -> videoHeightFor(width, height) } ?: DEFAULT_DESKTOP_MAX_VIDEO_HEIGHT
+        }
         val ge = GraphicsEnvironment.getLocalGraphicsEnvironment()
         val defaultDevice = ge.defaultScreenDevice
         val mode = defaultDevice.displayMode
         val transform = defaultDevice.defaultConfiguration.defaultTransform
         val scale = maxOf(transform.scaleX, transform.scaleY, 1.0)
-        val physicalWidth = (mode.width * scale).toInt()
-        val physicalHeight = (mode.height * scale).toInt()
-        val maxDim = maxOf(physicalWidth, physicalHeight)
-        val minDim = minOf(physicalWidth, physicalHeight)
-        when {
-            maxDim >= 3840 || minDim >= 2160 -> 2160
-            maxDim >= 2560 || minDim >= 1440 -> 1440
-            maxDim >= 1920 || minDim >= 1080 -> 1080
-            maxDim >= 1280 || minDim >= 720 -> 720
-            else -> 480
-        }
+        videoHeightFor((mode.width * scale).toInt(), (mode.height * scale).toInt())
     }.getOrDefault(DEFAULT_DESKTOP_MAX_VIDEO_HEIGHT)
+
+private fun videoHeightFor(
+    physicalWidth: Int,
+    physicalHeight: Int,
+): Int {
+    val maxDim = maxOf(physicalWidth, physicalHeight)
+    val minDim = minOf(physicalWidth, physicalHeight)
+    return when {
+        maxDim >= 3840 || minDim >= 2160 -> 2160
+        maxDim >= 2560 || minDim >= 1440 -> 1440
+        maxDim >= 1920 || minDim >= 1080 -> 1080
+        maxDim >= 1280 || minDim >= 720 -> 720
+        else -> 480
+    }
+}
 
 private const val DEFAULT_DESKTOP_MAX_VIDEO_HEIGHT = 2160
 

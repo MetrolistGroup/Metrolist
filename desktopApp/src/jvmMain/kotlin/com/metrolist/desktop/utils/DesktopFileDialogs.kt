@@ -2,8 +2,11 @@ package com.metrolist.desktop.utils
 
 import com.metrolist.shared.utils.OsUtil
 import io.github.vinceglb.filekit.FileKit
+import io.github.vinceglb.filekit.PlatformFile
 import io.github.vinceglb.filekit.dialogs.FileKitDialogSettings
+import io.github.vinceglb.filekit.dialogs.FileKitMode
 import io.github.vinceglb.filekit.dialogs.FileKitType
+import io.github.vinceglb.filekit.dialogs.openDirectoryPicker
 import io.github.vinceglb.filekit.dialogs.openFilePicker
 import io.github.vinceglb.filekit.dialogs.openFileSaver
 import kotlinx.coroutines.Dispatchers
@@ -29,7 +32,7 @@ internal suspend fun pickDesktopFile(
             } else {
                 FileKit
                     .openFilePicker(
-                        type = FileKitType.File(extensions),
+                        type = FileKitType.File(extensions.withCaseVariants()),
                         dialogSettings = FileKitDialogSettings(title = title),
                     )?.file
             }
@@ -41,6 +44,31 @@ internal suspend fun pickDesktopFile(
                     if (extensions.isNotEmpty()) fileFilter = FileNameExtensionFilter(null, *extensions.toTypedArray())
                 }
             if (chooser.showOpenDialog(null) == JFileChooser.APPROVE_OPTION) chooser.selectedFile else null
+        },
+    )
+
+internal suspend fun pickDesktopFiles(
+    title: String,
+    extensions: List<String>,
+): List<File> =
+    desktopFileDialog(
+        fileKitDialog = {
+            FileKit
+                .openFilePicker(
+                    type = FileKitType.File(extensions.withCaseVariants()),
+                    mode = FileKitMode.Multiple(),
+                    dialogSettings = FileKitDialogSettings(title = title),
+                ).orEmpty()
+                .map { it.file }
+        },
+        nativeDialog = {
+            val chooser =
+                JFileChooser().apply {
+                    dialogTitle = title
+                    isMultiSelectionEnabled = true
+                    fileFilter = FileNameExtensionFilter(title, *extensions.toTypedArray())
+                }
+            if (chooser.showOpenDialog(null) == JFileChooser.APPROVE_OPTION) chooser.selectedFiles.toList() else emptyList()
         },
     )
 
@@ -72,13 +100,41 @@ internal suspend fun saveDesktopFile(
         },
     )
 
+internal suspend fun pickDesktopDirectory(
+    title: String,
+    initialDirectory: File? = null,
+): File? =
+    desktopFileDialog(
+        fileKitDialog = {
+            FileKit
+                .openDirectoryPicker(
+                    directory = initialDirectory?.takeIf(File::isDirectory)?.let(::PlatformFile),
+                    dialogSettings = FileKitDialogSettings(title = title),
+                )?.file
+        },
+        nativeDialog = {
+            val chooser =
+                JFileChooser().apply {
+                    fileSelectionMode = JFileChooser.DIRECTORIES_ONLY
+                    dialogTitle = title
+                    initialDirectory?.takeIf(File::isDirectory)?.let { currentDirectory = it }
+                }
+            if (chooser.showOpenDialog(null) == JFileChooser.APPROVE_OPTION) chooser.selectedFile else null
+        },
+    )
+
+// Portal globs are case-sensitive, unlike the Swing filter they replace, so cover.JPG needs its own pattern.
+private fun List<String>.withCaseVariants(): List<String> = flatMap { listOf(it.lowercase(), it.uppercase()) }.distinct()
+
 internal suspend fun <T> desktopFileDialog(
     isLinux: Boolean = OsUtil.isLinux,
     portalAvailable: () -> Boolean = ::isFileChooserPortalAvailable,
     fileKitDialog: suspend () -> T,
     nativeDialog: () -> T,
 ): T {
-    if (!isLinux || withContext(Dispatchers.IO) { portalAvailable() }) return fileKitDialog()
+    if (!isLinux || WaylandScale.isNativeWaylandActive() || withContext(Dispatchers.IO) { portalAvailable() }) {
+        return fileKitDialog()
+    }
     return withContext(Dispatchers.Swing) { nativeDialog() }
 }
 

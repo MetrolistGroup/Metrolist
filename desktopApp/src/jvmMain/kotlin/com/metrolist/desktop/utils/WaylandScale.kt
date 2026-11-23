@@ -7,6 +7,7 @@ package com.metrolist.desktop.utils
 
 import com.metrolist.shared.settings.Settings
 import com.metrolist.shared.utils.XdgUtils
+import com.metrolist.shared.utils.headlessDisplaySizes
 import com.sun.jna.Library
 import com.sun.jna.Native
 import kotlinx.coroutines.runBlocking
@@ -20,14 +21,21 @@ import kotlinx.serialization.json.jsonPrimitive
 import java.io.File
 import java.util.Properties
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicLong
 import java.util.concurrent.atomic.AtomicReference
+import kotlin.concurrent.thread
 import kotlin.math.roundToInt
 
 object WaylandScale {
     private const val MAX_COMMAND_OUTPUT_CHARS = 64 * 1_024
+    private const val MONITOR_REFRESH_NANOS = 60_000_000_000L
     private val TRUSTED_EXECUTABLE_DIRECTORIES = listOf("/usr/bin", "/bin", "/usr/local/bin")
     private val LOG_FILE: File = File(XdgUtils.getXdgCacheHome(), "metrolist/wayland_scale.log")
     private var applied = false
+
+    @Volatile
+    private var nativeWaylandActive = false
     private val probeBudget = ThreadLocal<ProbeBudget>()
     private val monitorCache = AtomicReference<List<Monitor>>(emptyList())
     private val fallbackScale = AtomicReference<Float?>(null)
@@ -56,6 +64,13 @@ object WaylandScale {
 
     fun detectAndApply() {
         if (applied) return
+
+        if (configureNativeWaylandBackend()) {
+            applied = true
+            log("Applied native Wayland backend (Tao)")
+            return
+        }
+
         if (isWayland() && Settings.shared.disableWaylandScaleFix) {
             log("Wayland scale fix disabled by settings")
             applied = true
@@ -63,15 +78,6 @@ object WaylandScale {
         }
 
         val forceScale = forcedScale()
-
-        if (isWayland() && usesNativeWayland()) {
-            System.setProperty("awt.toolkit.name", "WLToolkit")
-            System.setProperty("jdk.gtk.version", "3")
-            System.setProperty("sun.java2d.uiScale.enabled", "true")
-            if (forceScale != null) System.setProperty("sun.java2d.uiScale", forceScale.toString())
-            applied = true
-            return
-        }
 
         val scale =
             withProbeBudget {
@@ -104,8 +110,65 @@ object WaylandScale {
         properties.setProperty("skiko.uiScale", scale.toString())
     }
 
-    private fun usesNativeWayland(): Boolean =
-        System.getProperty("metrolist.useWakefield") == "true" || System.getenv("METROLIST_USE_WAKEFIELD") == "1"
+    fun isNativeWaylandActive(): Boolean = nativeWaylandActive
+
+    internal fun hasWaylandDisplay(
+        environment: Map<String, String> = System.getenv(),
+        defaultSocketExists: (File) -> Boolean = File::exists,
+    ): Boolean {
+        if (!environment["WAYLAND_DISPLAY"].isNullOrBlank()) return true
+        val runtimeDir = environment["XDG_RUNTIME_DIR"]?.takeIf(String::isNotBlank) ?: return false
+        return defaultSocketExists(File(runtimeDir, "wayland-0"))
+    }
+
+    internal fun shouldUseNativeWayland(
+        environment: Map<String, String> = System.getenv(),
+        properties: Properties = System.getProperties(),
+        waylandDisplayAvailable: Boolean = hasWaylandDisplay(environment),
+    ): Boolean {
+        if (properties.getProperty("metrolist.useWayland") == "false") return false
+        if (properties.getProperty("metrolist.useWakefield") == "false") return false
+        if (environment["METROLIST_USE_WAYLAND"] == "0" || environment["METROLIST_USE_WAKEFIELD"] == "0") return false
+        if (!waylandDisplayAvailable) return false
+
+        val explicitlyRequested =
+            properties.getProperty("metrolist.useWayland") == "true" ||
+                properties.getProperty("metrolist.useWakefield") == "true" ||
+                environment["METROLIST_USE_WAYLAND"] == "1" ||
+                environment["METROLIST_USE_WAKEFIELD"] == "1"
+        return explicitlyRequested || environment["DISPLAY"].isNullOrBlank()
+    }
+
+    fun configureNativeWaylandBackend(): Boolean {
+        if (!shouldUseNativeWayland()) return false
+        // Keep AWT headless so accidental Swing/AWT lookups never attempt an X11 connection.
+        System.setProperty("java.awt.headless", "true")
+        nativeWaylandActive = true
+        // Headless AWT cannot measure displays, so the automatic video cap reads the compositor's monitors.
+        // shortcut: KDE reports no per-monitor sizes here, so it keeps the 2160p default; read GdkMonitor if that matters.
+        // Probes spawn compositor commands, so they run on their own thread and callers read the last result.
+        val refreshing = AtomicBoolean(false)
+        val lastRefresh = AtomicLong(0L)
+
+        fun refreshInBackground() {
+            if (!refreshing.compareAndSet(false, true)) return
+            lastRefresh.set(System.nanoTime())
+            thread(isDaemon = true, name = "WaylandMonitorRefresh") {
+                try {
+                    runCatching { refreshMonitorCache() }
+                } finally {
+                    refreshing.set(false)
+                }
+            }
+        }
+        refreshInBackground()
+        headlessDisplaySizes = {
+            // Re-read at most once a minute so a monitor change reaches a later stream.
+            if (System.nanoTime() - lastRefresh.get() >= MONITOR_REFRESH_NANOS) refreshInBackground()
+            monitorCache.get().map { (it.w * it.scale).roundToInt() to (it.h * it.scale).roundToInt() }
+        }
+        return true
+    }
 
     private fun forcedScale(): Float? =
         parseScale(System.getProperty("metrolist.forceScale")) ?: parseScale(System.getenv("METROLIST_FORCE_SCALE"))
@@ -117,6 +180,7 @@ object WaylandScale {
     }
 
     fun ensureDisplay(): Boolean {
+        if (configureNativeWaylandBackend()) return true
         System.setProperty("java.awt.headless", "false")
 
         val currentDisplay = System.getenv("DISPLAY")
@@ -125,7 +189,6 @@ object WaylandScale {
             return true
         }
 
-        if (System.getProperty("metrolist.useWakefield") == "true" || System.getenv("METROLIST_USE_WAKEFIELD") == "1") return true
         val detectedDisplay =
             resolveSessionDisplay(
                 runtimeDirectory = System.getenv("XDG_RUNTIME_DIR")?.takeIf(String::isNotBlank)?.let(::File),
@@ -206,7 +269,7 @@ object WaylandScale {
         windowWidth: Int,
         windowHeight: Int,
     ): Float? {
-        if (isWayland() && (Settings.shared.disableWaylandScaleFix || usesNativeWayland())) return null
+        if (nativeWaylandActive || (isWayland() && (Settings.shared.disableWaylandScaleFix || shouldUseNativeWayland()))) return null
 
         forcedScale()?.let { return it }
 

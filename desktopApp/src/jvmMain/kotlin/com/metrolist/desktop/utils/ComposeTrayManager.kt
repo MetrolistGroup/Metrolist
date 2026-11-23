@@ -7,12 +7,13 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.window.ApplicationScope
 import androidx.compose.ui.window.WindowState
 import com.metrolist.desktop.state.app.DesktopNavigation
 import com.metrolist.desktop.state.app.UiState
 import com.metrolist.desktop.state.playback.ListenTogetherState
 import com.metrolist.desktop.state.playback.PlayerState
+import com.metrolist.desktop.window.DesktopApplicationScope
+import com.metrolist.desktop.window.runOnDesktopUiThread
 import com.metrolist.shared.generated.resources.Res
 import com.metrolist.shared.generated.resources.tray_by
 import com.metrolist.shared.generated.resources.tray_hide_miniplayer
@@ -33,6 +34,7 @@ import com.metrolist.shared.settings.Settings
 import com.metrolist.shared.settings.displayName
 import com.metrolist.shared.ui.navigation.Screen
 import com.metrolist.shared.utils.OsUtil
+import dev.nucleusframework.window.tao.TaoWindow
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -40,7 +42,6 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import org.jetbrains.compose.resources.stringResource
 import java.awt.Desktop
-import java.awt.EventQueue
 import java.awt.Frame
 import java.awt.Window
 import kotlin.time.Duration.Companion.milliseconds
@@ -56,6 +57,7 @@ object ComposeTrayManager {
 
     private var windowState: WindowState? = null
     private var mainWindow: Window? = null
+    private var mainTaoWindow: TaoWindow? = null
     private var onQuit: (() -> Unit)? = null
     private var isWindowVisible = mutableStateOf(true)
     internal val windowVisible: Boolean get() = isWindowVisible.value
@@ -71,11 +73,13 @@ object ComposeTrayManager {
 
     fun initialize(
         mainWindowState: WindowState,
-        mainWindow: Window,
+        mainWindow: Window?,
+        mainTaoWindow: TaoWindow? = null,
         onQuit: () -> Unit,
     ) {
         windowState = mainWindowState
         this.mainWindow = mainWindow
+        this.mainTaoWindow = mainTaoWindow
         this.onQuit = onQuit
         trayDisposed = CompletableDeferred()
         trayEnabled.value = true
@@ -106,9 +110,18 @@ object ComposeTrayManager {
     }
 
     fun showWindow() {
-        EventQueue.invokeLater {
+        runOnDesktopUiThread {
+            val tao = mainTaoWindow
+            if (tao != null) {
+                windowState?.isMinimized = false
+                isWindowVisible.value = true
+                tao.setMinimized(false)
+                tao.show()
+                tao.focus()
+                return@runOnDesktopUiThread
+            }
             // Disposal can precede tray cleanup; a disposed Compose window cannot be shown again.
-            val window = mainWindow?.takeIf { it.isDisplayable } ?: return@invokeLater
+            val window = mainWindow?.takeIf { it.isDisplayable } ?: return@runOnDesktopUiThread
             windowState?.let { state ->
                 state.isMinimized = false
                 isWindowVisible.value = true
@@ -130,8 +143,14 @@ object ComposeTrayManager {
     }
 
     fun hideWindow() {
-        EventQueue.invokeLater {
-            val window = mainWindow?.takeIf { it.isDisplayable } ?: return@invokeLater
+        runOnDesktopUiThread {
+            val tao = mainTaoWindow
+            if (tao != null) {
+                isWindowVisible.value = false
+                tao.hide()
+                return@runOnDesktopUiThread
+            }
+            val window = mainWindow?.takeIf { it.isDisplayable } ?: return@runOnDesktopUiThread
             isWindowVisible.value = false
             window.isVisible = false
         }
@@ -142,7 +161,7 @@ object ComposeTrayManager {
     }
 
     @Composable
-    fun ApplicationScope.TrayIcon() {
+    fun DesktopApplicationScope.TrayIcon() {
         if (!trayEnabled.value) return
         val mediaControls by PlayerState.mediaControls.collectAsState()
         val isPlaying = PlayerState.isPlaying
@@ -198,69 +217,71 @@ object ComposeTrayManager {
         }
 
         if (OsUtil.isMac) {
-            StockTray(
-                icon = icon,
-                tooltip = tooltip,
-                onAction = onTrayAction,
-                menu = {
-                    currentTrack?.let {
+            awtApplicationScope?.apply {
+                StockTray(
+                    icon = icon,
+                    tooltip = tooltip,
+                    onAction = onTrayAction,
+                    menu = {
+                        currentTrack?.let {
+                            Item(
+                                text = currentTitleLabel,
+                                onClick = { showWindow() },
+                            )
+                            Item(
+                                text = currentArtistLabel ?: "",
+                                enabled = currentArtistId != null,
+                                onClick = {
+                                    currentArtistId?.let {
+                                        showWindow()
+                                        runOnDesktopUiThread { DesktopNavigation.navigate(Screen.Artist(it)) }
+                                    }
+                                },
+                            )
+                            Separator()
+                        }
+
+                        if (!isListenTogetherGuest) {
+                            Item(
+                                text = playPauseLabel,
+                                enabled = mediaControls.playPause,
+                                onClick = { PlayerState.togglePlay() },
+                            )
+
+                            if (currentTrack != null) {
+                                Item(
+                                    text = strNextTrack,
+                                    enabled = mediaControls.next,
+                                    onClick = { PlayerState.skipNext() },
+                                )
+
+                                Item(
+                                    text = strPreviousTrack,
+                                    enabled = mediaControls.previous,
+                                    onClick = { PlayerState.skipPrevious() },
+                                )
+                            }
+
+                            Separator()
+                        }
+
+                        Item(text = windowToggleLabel, onClick = { toggleWindow() })
+                        Item(text = miniplayerToggleLabel, onClick = { PlayerState.showMiniplayer = !PlayerState.showMiniplayer })
+                        Separator()
                         Item(
-                            text = currentTitleLabel,
-                            onClick = { showWindow() },
-                        )
-                        Item(
-                            text = currentArtistLabel ?: "",
-                            enabled = currentArtistId != null,
+                            text = strSettings,
                             onClick = {
-                                currentArtistId?.let {
+                                UiState.showSettings = true
+                                if (!isWindowVisible.value) {
                                     showWindow()
-                                    EventQueue.invokeLater { DesktopNavigation.navigate(Screen.Artist(it)) }
                                 }
                             },
                         )
                         Separator()
-                    }
-
-                    if (!isListenTogetherGuest) {
-                        Item(
-                            text = playPauseLabel,
-                            enabled = mediaControls.playPause,
-                            onClick = { PlayerState.togglePlay() },
-                        )
-
-                        if (currentTrack != null) {
-                            Item(
-                                text = strNextTrack,
-                                enabled = mediaControls.next,
-                                onClick = { PlayerState.skipNext() },
-                            )
-
-                            Item(
-                                text = strPreviousTrack,
-                                enabled = mediaControls.previous,
-                                onClick = { PlayerState.skipPrevious() },
-                            )
-                        }
-
-                        Separator()
-                    }
-
-                    Item(text = windowToggleLabel, onClick = { toggleWindow() })
-                    Item(text = miniplayerToggleLabel, onClick = { PlayerState.showMiniplayer = !PlayerState.showMiniplayer })
-                    Separator()
-                    Item(
-                        text = strSettings,
-                        onClick = {
-                            UiState.showSettings = true
-                            if (!isWindowVisible.value) {
-                                showWindow()
-                            }
-                        },
-                    )
-                    Separator()
-                    Item(text = strQuitMetrolist, onClick = { onQuit?.invoke() })
-                },
-            )
+                        Item(text = strQuitMetrolist, onClick = { onQuit?.invoke() })
+                    },
+                )
+            }
         } else {
             NativeTray(
                 icon = icon,
@@ -272,7 +293,7 @@ object ComposeTrayManager {
                         Item(label = currentArtistLabel ?: "", isEnabled = currentArtistId != null) {
                             currentArtistId?.let {
                                 showWindow()
-                                EventQueue.invokeLater { DesktopNavigation.navigate(Screen.Artist(it)) }
+                                runOnDesktopUiThread { DesktopNavigation.navigate(Screen.Artist(it)) }
                             }
                         }
                         Divider()
@@ -324,6 +345,7 @@ object ComposeTrayManager {
         delay(50.milliseconds)
         windowState = null
         mainWindow = null
+        mainTaoWindow = null
         onQuit = null
     }
 }

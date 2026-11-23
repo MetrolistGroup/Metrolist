@@ -1906,6 +1906,15 @@
       "type": "kotlinx.coroutines.scheduling.WorkQueue"
     },
     {
+      "type": "com.metrolist.desktop.window.DesktopMainDispatcherFactory",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
       "type": "kotlinx.coroutines.swing.SwingDispatcherFactory",
       "methods": [
         {
@@ -6034,6 +6043,9 @@
     },
     {
       "bundle": "sun.util.logging.resources.logging"
+    },
+    {
+      "glob": "nucleus/nucleus-app.properties"
     }
   ]
 }

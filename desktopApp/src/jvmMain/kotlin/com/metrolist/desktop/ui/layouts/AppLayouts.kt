@@ -69,7 +69,6 @@ import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.WindowScope
 import com.metrolist.desktop.state.app.DesktopNavigation
 import com.metrolist.desktop.state.app.UiState
 import com.metrolist.desktop.state.content.HomeState
@@ -90,6 +89,7 @@ import com.metrolist.desktop.ui.components.StandardBottomPlayer
 import com.metrolist.desktop.ui.components.TopBarWithPlayer
 import com.metrolist.desktop.ui.components.VideoMiniViewer
 import com.metrolist.desktop.ui.components.deviceConnectSideSheetWidth
+import com.metrolist.desktop.window.DesktopWindowScope
 import com.metrolist.shared.generated.resources.Res
 import com.metrolist.shared.generated.resources.close
 import com.metrolist.shared.generated.resources.desktop_navigation_together
@@ -337,7 +337,7 @@ private fun DesktopNavigationScaffold(
 }
 
 @Composable
-fun WindowScope.ExpressLayout(
+fun DesktopWindowScope.ExpressLayout(
     onMaximized: () -> Unit,
     toggleWindowFullscreen: () -> Unit,
     requestBackgroundFocus: () -> Unit,
@@ -351,7 +351,7 @@ fun WindowScope.ExpressLayout(
 }
 
 @Composable
-fun WindowScope.FocusedLayout(
+fun DesktopWindowScope.FocusedLayout(
     onMaximized: () -> Unit,
     toggleWindowFullscreen: () -> Unit,
     requestBackgroundFocus: () -> Unit,
@@ -365,7 +365,7 @@ fun WindowScope.FocusedLayout(
 }
 
 @Composable
-private fun WindowScope.AdaptiveDesktopLayout(
+private fun DesktopWindowScope.AdaptiveDesktopLayout(
     onMaximized: () -> Unit,
     toggleWindowFullscreen: () -> Unit,
     requestBackgroundFocus: () -> Unit,

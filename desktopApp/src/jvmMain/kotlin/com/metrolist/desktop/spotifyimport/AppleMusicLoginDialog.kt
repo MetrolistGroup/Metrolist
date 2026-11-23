@@ -19,7 +19,7 @@ internal fun AppleMusicLoginDialog(
         signInHint = stringResource(Res.string.apple_music_session_sign_in),
         onDismissRequest = onDismissRequest,
         extractCredentials = { state ->
-            val cookies = state.cookieManager.getCookies(APPLE_MUSIC_URL)
+            val cookies = state.cookies(APPLE_MUSIC_URL)
             val cookieHeader = cookies.joinToString("; ") { "${it.name}=${it.value}" }
             AppleMusicPlaylistImporter.extractAppleMusicUserToken(cookieHeader)
         },

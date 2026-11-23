@@ -6,7 +6,7 @@ androidxTest = "1.8.0-alpha04"
 componentsResources = "1.13.0-rc01"
 composenativetray = "2.1.7"
 # Every Nucleus module must share one version: they all depend on nucleus.core-runtime.
-nucleusframework = "3.0.0-dev-202611161221"
+nucleusframework = "3.0.0-dev-202611222143"
 kotlin = "2.4.21"
 compose = "1.13.0-rc01"
 composeMaterial3 = "1.13.0-rc01"
@@ -70,6 +70,7 @@ androidx-work-runtime = { module = "androidx.work:work-runtime", version.ref = "
 components-resources = { module = "org.jetbrains.compose.components:components-resources", version.ref = "componentsResources" }
 composenativetray = { module = "dev.nucleusframework:composenativetray", version.ref = "composenativetray" }
 mediacontrols = { module = "dev.nucleusframework:nucleus.media-control", version.ref = "nucleusframework" }
+decorated-window-tao = { module = "dev.nucleusframework:nucleus.decorated-window-tao", version.ref = "nucleusframework" }
 windowstaskbar = { module = "dev.nucleusframework:nucleus.launcher-windows", version.ref = "nucleusframework" }
 sharesheet = { module = "dev.nucleusframework:nucleus.share", version.ref = "nucleusframework" }
 compose-desktop = { module = "org.jetbrains.compose.desktop:desktop", version.ref = "compose" }

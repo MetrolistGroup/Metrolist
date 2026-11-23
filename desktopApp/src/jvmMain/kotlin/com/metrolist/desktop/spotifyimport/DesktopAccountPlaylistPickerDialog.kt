@@ -29,10 +29,10 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.DialogWindow
 import androidx.compose.ui.window.rememberDialogState
 import com.metrolist.desktop.ui.DesktopDensityProvider
 import com.metrolist.desktop.window.ClearWindowContentOnDispose
+import com.metrolist.desktop.window.DesktopDialogWindow
 import com.metrolist.shared.generated.resources.Res
 import com.metrolist.shared.generated.resources.cancel
 import com.metrolist.shared.generated.resources.clear_selection
@@ -64,13 +64,13 @@ internal fun DesktopAccountPlaylistPickerDialog(
     onReview: () -> Unit,
     onDismissRequest: () -> Unit,
 ) {
-    DialogWindow(
+    DesktopDialogWindow(
         onCloseRequest = onDismissRequest,
         title = stringResource(title),
         state = rememberDialogState(width = 760.dp, height = 720.dp),
         visible = true,
     ) {
-        ClearWindowContentOnDispose(window)
+        ClearWindowContentOnDispose(awtDialog)
         DesktopDensityProvider {
             Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.surface) {
                 Column(Modifier.fillMaxSize()) {
