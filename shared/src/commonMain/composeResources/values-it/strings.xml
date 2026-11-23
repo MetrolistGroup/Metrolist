@@ -2717,6 +2717,13 @@
     <string name="legacy_recovery_export_desc">Salva come file di backup la libreria che non è stato possibile migrare dalla versione 13. Ripristina quel file per riprovare la migrazione.</string>
     <string name="legacy_recovery_export_success">Libreria precedente esportata</string>
     <string name="legacy_recovery_export_failed">Impossibile esportare la libreria precedente</string>
-    <string name="fetched_lyrics">Testo recuperato</string>
-    <string name="clear_fetched_lyrics">Cancella testo recuperato</string>
+    <string name="fetched_lyrics">Testi recuperati</string>
+    <string name="clear_fetched_lyrics">Cancella testi recuperati</string>
+    <string name="clear_fetched_lyrics_description">Recupera di nuovo i testi dai provider attuali. I tuoi testi personali, quelli che hai scelto per un brano e gli offset dei testi vengono mantenuti.</string>
+    <string name="clear_fetched_lyrics_confirm">Eliminare tutti i testi recuperati dai provider? Verranno recuperati nuovamente alla prossima riproduzione di ciascun brano.</string>
+    <string name="listenbrainz_server_url">URL server</string>
+    <string name="listenbrainz_server_url_description">Lascia vuoto per ListenBrainz. Per un server compatible come Koito, inserisci l'indirizzo API.</string>
+    <string name="listenbrainz_invalid_server_url">Inserisci un indirizzo http o https</string>
+    <string name="song_share_link">Link brano</string>
+    <string name="song_share_link_description">song.link apre una pagina con il brano su altri servizi musicali. I link con un timestamp e gli episodi podcast usano sempre YouTube Music.</string>
 </resources>
