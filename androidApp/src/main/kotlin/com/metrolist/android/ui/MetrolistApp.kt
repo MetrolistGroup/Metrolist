@@ -384,6 +384,7 @@ import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
@@ -610,7 +611,7 @@ fun MetrolistApp(
                     AppUpdateManager.autoInstall(
                         context,
                         available,
-                        playbackViewModel.playerConnection.wantsPlaybackState,
+                        playbackViewModel.playerConnection.playbackActive(),
                     )
                 }
             } else if (Settings.shared.updatePromptVersion != available.updateKey) {
@@ -648,7 +649,7 @@ fun MetrolistApp(
                         AppUpdateManager.autoInstall(
                             context,
                             release,
-                            playbackViewModel.playerConnection.wantsPlaybackState,
+                            playbackViewModel.playerConnection.playbackActive(),
                         )
                     }
                 }
@@ -2913,3 +2914,6 @@ private fun NavigationContentProvider(
 }
 
 val LocalImmersiveContent = staticCompositionLocalOf<MutableState<Boolean>> { mutableStateOf(false) }
+
+// The local intent stays true while buffering; isPlaying covers a Cast session, which pauses the local player.
+private fun PlayerConnection.playbackActive() = combine(wantsPlaybackState, isPlaying) { wants, playing -> wants || playing }

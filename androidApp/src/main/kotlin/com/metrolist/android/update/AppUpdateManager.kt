@@ -26,6 +26,7 @@ import com.metrolist.shared.update.ReleaseVersion
 import com.metrolist.shared.update.checkNightly
 import com.metrolist.shared.update.followsNightlyUpdates
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -443,16 +444,16 @@ object AppUpdateManager {
     suspend fun autoInstall(
         context: Context,
         release: GitHubRelease,
-        wantsPlayback: StateFlow<Boolean>,
+        playbackActive: Flow<Boolean>,
     ) {
         // After a failed install (root revoked, Shizuku stopped) wait for the next launch instead of retrying hourly.
         if (autoInstallFailed || !Settings.shared.autoInstallUpdates || !canInstallWithoutPrompt(context)) return
         if (!autoInstallRunning.compareAndSet(false, true)) return
         try {
             download(context, release)
-            wantsPlayback.first { !it }
+            playbackActive.first { !it }
             val downloaded = mutableState.value as? AppUpdateState.Downloaded ?: return
-            if (downloaded.installing || wantsPlayback.value) return
+            if (downloaded.installing || playbackActive.first()) return
             if (!Settings.shared.autoInstallUpdates || !canInstallWithoutPrompt(context)) return
             if (!install(context, downloaded)) autoInstallFailed = true
         } finally {
