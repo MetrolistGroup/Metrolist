@@ -62,6 +62,7 @@ import androidx.sqlite.driver.AndroidSQLiteDriver
 import com.metrolist.android.R
 import com.metrolist.android.backup.AutomaticBackupWorker
 import com.metrolist.android.backup.BackupRestoreManager
+import com.metrolist.android.onboarding.LegacyInstallMigration
 import com.metrolist.android.playlistimport.AmazonMusicLoginScreen
 import com.metrolist.android.playlistimport.AndroidPlaylistImportTransfer
 import com.metrolist.android.playlistimport.AppleMusicLoginScreen
@@ -170,6 +171,10 @@ import com.metrolist.shared.generated.resources.import_provider_youtube_desc
 import com.metrolist.shared.generated.resources.import_review_playlists
 import com.metrolist.shared.generated.resources.import_spotify_account_playlists
 import com.metrolist.shared.generated.resources.imported_playlist
+import com.metrolist.shared.generated.resources.legacy_recovery_export_desc
+import com.metrolist.shared.generated.resources.legacy_recovery_export_failed
+import com.metrolist.shared.generated.resources.legacy_recovery_export_success
+import com.metrolist.shared.generated.resources.legacy_recovery_export_title
 import com.metrolist.shared.generated.resources.liked_songs
 import com.metrolist.shared.generated.resources.local_playlist
 import com.metrolist.shared.generated.resources.n_song
@@ -462,6 +467,32 @@ fun BackupRestoreScreen(onNavigateBack: () -> Unit) {
                     val result = manager.backup(uri)
                     isBusy = false
                     Toast.makeText(context, if (result.isSuccess) backupSuccess else backupFailed, Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+
+    val recoveryExportSuccess = stringResource(Res.string.legacy_recovery_export_success)
+    val recoveryExportFailed = stringResource(Res.string.legacy_recovery_export_failed)
+    var legacyRecoveryCopy by remember { mutableStateOf<File?>(null) }
+    LaunchedEffect(Unit) {
+        legacyRecoveryCopy = withContext(Dispatchers.IO) { LegacyInstallMigration.latestRecoveryCopy(context) }
+    }
+    val exportRecoveryLauncher =
+        rememberLauncherForActivityResult(
+            contract = ActivityResultContracts.CreateDocument("application/zip"),
+        ) { uri ->
+            val recovery = legacyRecoveryCopy
+            if (uri != null && recovery != null) {
+                scope.launch {
+                    isBusy = true
+                    val result = manager.exportRecoveryCopy(recovery, uri)
+                    isBusy = false
+                    Toast
+                        .makeText(
+                            context,
+                            if (result.isSuccess) recoveryExportSuccess else recoveryExportFailed,
+                            Toast.LENGTH_SHORT,
+                        ).show()
                 }
             }
         }
@@ -1915,7 +1946,7 @@ fun BackupRestoreScreen(onNavigateBack: () -> Unit) {
         SettingsSubScreenGroup(
             title = stringResource(Res.string.backup_restore_title),
             items =
-                listOf(
+                listOfNotNull(
                     SettingsSubScreenItem(
                         title = stringResource(Res.string.action_backup),
                         description =
@@ -1961,6 +1992,16 @@ fun BackupRestoreScreen(onNavigateBack: () -> Unit) {
                             }
                         },
                     ),
+                    legacyRecoveryCopy?.let {
+                        SettingsSubScreenItem(
+                            title = stringResource(Res.string.legacy_recovery_export_title),
+                            description = stringResource(Res.string.legacy_recovery_export_desc),
+                            enabled = controlsEnabled,
+                            onClick = {
+                                runCatching { exportRecoveryLauncher.launch("${defaultBackupFilename(backupFilenamePrefix)}-v13.zip") }
+                            },
+                        )
+                    },
                     SettingsSubScreenItem(
                         title = stringResource(Res.string.foreign_import_title),
                         description =

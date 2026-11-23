@@ -1411,6 +1411,10 @@
     <string name="foreign_import_title">Import from another app</string>
     <!-- Translators: Supporting text beneath the import-from-another-app option in the Backup & Restore. App names are product names. -->
     <string name="foreign_import_desc">Import likes, playlists and listening history from an InnerTune, OuterTune, ViMusic, RiMusic, Kreate, SimpMusic or Prism backup. The app keeps your current library.</string>
+    <string name="legacy_recovery_export_title">Export old library</string>
+    <string name="legacy_recovery_export_desc">Save the library that could not be migrated from version 13 as a backup file. Restore that file to try the migration again.</string>
+    <string name="legacy_recovery_export_success">Old library exported</string>
+    <string name="legacy_recovery_export_failed">Could not export the old library</string>
     <!-- Translators: Result message after importing another app's backup. %1$d songs, %2$d newly liked songs, %3$d playlists, %4$d history plays. -->
     <string name="foreign_import_success">Imported %1$d songs, %2$d likes, %3$d playlists and %4$d plays</string>
     <!-- Translators: Error shown when the selected file is not a backup from a supported music app. -->
