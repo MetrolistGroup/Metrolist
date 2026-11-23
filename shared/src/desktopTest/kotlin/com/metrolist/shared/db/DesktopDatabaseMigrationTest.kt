@@ -2,6 +2,9 @@ package com.metrolist.shared.db
 
 import androidx.sqlite.SQLiteConnection
 import androidx.sqlite.execSQL
+import com.metrolist.innertubex.InnerTube
+import com.metrolist.shared.api.ContinuationBranch
+import com.metrolist.shared.api.PlaylistPage
 import com.metrolist.shared.model.AlbumItem
 import com.metrolist.shared.model.AlbumPage
 import com.metrolist.shared.model.AlbumTiny
@@ -281,6 +284,20 @@ class DesktopDatabaseMigrationTest {
                     assertEquals("Liner notes", local.description)
                     assertEquals(listOf(deluxe), local.otherVersions)
                     assertNull(database.loadOfflineAlbum("MPREb_test", availableSongIds = emptySet(), requireComplete = true))
+
+                    // A first page whose merged rows match the new total is still unfinished.
+                    val grown = album.copy(songCount = 2)
+                    val next = song.copy(id = "next")
+                    val partial =
+                        PlaylistPage(
+                            sections = mapOf("songs" to listOf(next)),
+                            pending = listOf(ContinuationBranch("more", "songs")),
+                            seen = emptySet(),
+                            session = InnerTube.SessionSnapshot(),
+                            album = grown,
+                        )
+                    database.storeAlbumPage(AlbumPage(grown, partial.songs, playlistPage = partial), hasHeaderMetadata = true)
+                    assertNull(database.loadOfflineAlbum("MPREb_test", setOf(song.id, next.id), requireComplete = true))
                 } finally {
                     database.close()
                 }

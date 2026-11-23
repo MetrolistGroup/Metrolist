@@ -22,7 +22,7 @@ Android and desktop downloaded collections can filter by a library playlist befo
 
 Remote playlist download refreshes store every page of unfiltered membership. Offline playlist pages read those stored entries. Failed and offline refreshes keep the previous membership.
 
-Album browses store the album description and other editions with the tracks. An album opens from storage without a network request once every stored track is available offline, the stored track count matches the album, and that header metadata is cached. Albums saved before version 68 of the database refresh once to fill it.
+Album browses store the album description and other editions with the tracks. An album opens from storage without a network request once the last save loaded every track page, every stored track is available offline and that header metadata is cached. Downloaded tracks returned after a failed playlist request are not saved over the album. Albums saved before version 68 of the database refresh once to fill it.
 
 ## Android v13 recovery
 

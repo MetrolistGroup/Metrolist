@@ -19,9 +19,14 @@ suspend fun MusicDatabase.loadOfflineAlbum(
     val stored = dao.album(albumId).first()
     val storedSongs = dao.storedAlbumSongs(albumId).first()
     val songs = storedSongs.filter { it.isAvailableOffline(availableSongIds) }
-    // Null otherVersions means the album was saved before its header was cached.
+    // Partial saves merge pages, so only a save that finished pagination proves the track list; null otherVersions predates header caching.
     if (requireComplete &&
-        (stored?.album?.otherVersions == null || songs.size != storedSongs.size || songs.size != stored.album.songCount)
+        (
+            stored?.album?.tracksComplete != true ||
+                stored.album.otherVersions == null ||
+                songs.size != storedSongs.size ||
+                songs.size != stored.album.songCount
+        )
     ) {
         return null
     }

@@ -74,6 +74,7 @@ suspend fun MusicDatabase.storeAlbumPage(
                 // Continuation pages carry no header; keep what the last album browse stored.
                 description = if (hasHeaderMetadata) page.description else existing?.description,
                 otherVersions = if (hasHeaderMetadata) page.otherVersions else existing?.otherVersions,
+                tracksComplete = complete,
             ),
         )
         val savedPositions = if (complete) emptyMap() else dao.albumSongMaps(album.id).associate { it.songId to it.index }
