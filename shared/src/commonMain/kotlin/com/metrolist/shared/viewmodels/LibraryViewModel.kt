@@ -24,6 +24,7 @@ import com.metrolist.shared.model.SongItem
 import com.metrolist.shared.model.YTItem
 import com.metrolist.shared.model.librarySearchKey
 import com.metrolist.shared.model.parseDisplayCount
+import com.metrolist.shared.network.isHttpTransportException
 import com.metrolist.shared.playlist.LibraryBookmarkMutations
 import com.metrolist.shared.playlist.LibraryBookmarkSnapshot
 import com.metrolist.shared.playlist.LibraryDeletionTracker
@@ -31,6 +32,7 @@ import com.metrolist.shared.settings.Settings
 import com.metrolist.shared.state.GlobalYouTubeRepository
 import com.metrolist.shared.state.PodcastLibrary
 import com.metrolist.shared.youtube.logging.YtLogger
+import com.metrolist.shared.youtube.playback.PlaybackNetworkStateStore
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -53,6 +55,7 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.datetime.LocalDateTime
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toInstant
@@ -64,6 +67,7 @@ import kotlinx.serialization.json.Json
 import kotlin.time.Clock
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
 
 const val LIBRARY_REFRESH_TTL_MILLIS = 5 * 60 * 1000L
@@ -72,6 +76,7 @@ internal const val LIBRARY_SEARCH_PAGE_SIZE = 200
 
 // A refresh makes ~100 requests; retry the whole sync quietly before reporting a blip as a failure.
 private val LIBRARY_SYNC_RETRY_DELAYS = listOf(5.seconds, 15.seconds, 45.seconds)
+private val OFFLINE_SYNC_RETRY_INTERVAL = 5.minutes
 
 fun shouldRefreshLibrary(
     nowEpochMillis: Long,
@@ -500,7 +505,12 @@ class LibraryViewModel(
                     Settings.shared.lastLibraryRefreshAccount = accountKey
                     YouTubeSyncState.succeeded("library")
                 } else {
-                    onRefreshFailed(accountKey, retryAttempt)
+                    val networkFailure =
+                        listOfNotNull(
+                            podcastsResult.exceptionOrNull(),
+                            episodesResult.exceptionOrNull(),
+                        ).any { it.isHttpTransportException() }
+                    onRefreshFailed(accountKey, retryAttempt, networkFailure)
                 }
                 localReloads.trySend(Unit)
                 countResolutionJob =
@@ -565,7 +575,7 @@ class LibraryViewModel(
             } catch (e: Exception) {
                 if (generation == refreshGeneration && currentLibraryAccountKey() == accountKey) {
                     YtLogger.e("LibrarySync", "Refresh failed type=${e::class.simpleName}")
-                    onRefreshFailed(accountKey, retryAttempt)
+                    onRefreshFailed(accountKey, retryAttempt, e.isHttpTransportException())
                 }
             } finally {
                 refreshInProgress = false
@@ -580,10 +590,29 @@ class LibraryViewModel(
     private fun onRefreshFailed(
         accountKey: String,
         retryAttempt: Int,
+        networkFailure: Boolean,
     ) {
         val retryDelay = syncRetryDelays.getOrNull(retryAttempt)
+        // Without a connection the library is not out of sync, so wait for the network instead of reporting a failure.
+        val offline = networkFailure || !PlaybackNetworkStateStore.current.connected
         _uiState.update {
-            it.copy(isLoading = retryDelay != null && it.items.isEmpty(), isRefreshing = false, error = retryDelay == null)
+            it.copy(
+                isLoading = retryDelay != null && it.items.isEmpty(),
+                isRefreshing = false,
+                error = retryDelay == null && (!offline || it.items.isEmpty()),
+            )
+        }
+        if (retryDelay == null && offline) {
+            val failedNetwork = PlaybackNetworkStateStore.current
+            syncRetryJob =
+                scope.launch {
+                    withTimeoutOrNull(OFFLINE_SYNC_RETRY_INTERVAL) {
+                        PlaybackNetworkStateStore.state.first { it.connected && it != failedNetwork }
+                    }
+                    syncRetryJob = null
+                    if (currentLibraryAccountKey() == accountKey) refresh(force = true)
+                }
+            return
         }
         if (retryDelay == null) {
             YouTubeSyncState.failed("library") { if (currentLibraryAccountKey() == accountKey) refresh(force = true) }
