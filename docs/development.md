@@ -329,6 +329,8 @@ Lines that share one start and have no word timing count as unsynced. Lookup kee
 
 Room stores confirmed misses with their lookup identity for seven days. Metadata, enabled providers, provider order, video context and explicit refresh trigger a new lookup. Provider failures are never saved as misses.
 
+**Clear fetched lyrics** in Lyrics > Sources deletes saved provider results so the next play fetches them again. It keeps User lyrics and drafts, protected 13.x lyrics, sources picked for a song, and per-song offsets.
+
 Shared lyrics HTTP reads retry a 503 twice with 500 ms and 1 s backoff, honoring Retry-After within a five-second budget.
 
 Lyprio fetches remove a leading title-and-artist header only when the whole line matches the requested metadata, separated by a spaced hyphen, en dash or em dash in either order, and another nonblank line follows. Matching ignores case and repeated whitespace.

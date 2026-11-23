@@ -1527,6 +1527,8 @@ class LyricsRepository(
             }
         }
 
+    suspend fun clearFetchedLyrics(): Int = databaseDao?.clearFetchedLyrics() ?: 0
+
     suspend fun getUserLyrics(videoId: String): String? = databaseDao?.cachedLyrics(videoId)?.userLyrics
 
     suspend fun getUserLyricsDraft(videoId: String): String? = databaseDao?.cachedLyrics(videoId)?.userLyricsDraft

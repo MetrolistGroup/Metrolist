@@ -1482,6 +1482,14 @@
     <string name="listenbrainz_connect_title">Connect ListenBrainz</string>
     <!-- Translators: Option or section label for user token in the ListenBrainz settings. -->
     <string name="listenbrainz_user_token">User token</string>
+    <!-- Translators: Section heading for lyrics already saved from lyrics providers, in the lyrics source settings. -->
+    <string name="fetched_lyrics">Fetched lyrics</string>
+    <!-- Translators: Action that deletes lyrics saved from lyrics providers. -->
+    <string name="clear_fetched_lyrics">Clear fetched lyrics</string>
+    <!-- Translators: Supporting text for the clear fetched lyrics action. -->
+    <string name="clear_fetched_lyrics_description">Fetch lyrics again from your current providers. Your own lyrics, lyrics you picked for a song and lyric offsets stay.</string>
+    <!-- Translators: Confirmation message before clearing fetched lyrics. -->
+    <string name="clear_fetched_lyrics_confirm">Delete all lyrics fetched from providers? They are fetched again the next time each song plays.</string>
     <!-- Translators: Label for the optional ListenBrainz-compatible server address field in the connect dialog. -->
     <string name="listenbrainz_server_url">Server URL</string>
     <!-- Translators: Help text under the ListenBrainz server address field. -->
