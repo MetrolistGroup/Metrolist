@@ -640,6 +640,18 @@ fun MetrolistApp(
         }
 
         LaunchedEffect(Unit) {
+            // Recreating the activity cancels a pending automatic install; resume it instead of waiting for the next check.
+            val pending =
+                when (val state = AppUpdateManager.state.value) {
+                    is AppUpdateState.Downloading -> state.release
+                    is AppUpdateState.Downloaded -> state.release
+                    else -> null
+                }
+            if (pending != null && AppUpdateManager.isBackgroundUpdate(pending)) {
+                updateScope.launch {
+                    AppUpdateManager.autoInstall(context, pending, playbackViewModel.playerConnection.playbackActive())
+                }
+            }
             // Hourly keeps nightly users current while staying far below GitHub's unauthenticated rate limit.
             while (true) {
                 delay(1.hours)
