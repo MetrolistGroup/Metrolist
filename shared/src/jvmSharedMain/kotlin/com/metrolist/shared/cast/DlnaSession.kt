@@ -278,7 +278,7 @@ internal class DlnaSession(
             val trackUri = position.text("TrackURI")
             val transportState = transport.text("CurrentTransportState")
             val transportStatus = transport.text("CurrentTransportStatus")
-            val transportOk = transportStatus.isNullOrEmpty() || transportStatus.equals("OK", ignoreCase = true)
+            val transportOk = transportStatus.equals("OK", ignoreCase = true)
             val volume = readVolume(logFailure = false) ?: current.volume
             val isPlaying = transportState == "PLAYING" || transportState == "TRANSITIONING"
             val isBuffering = transportState == "TRANSITIONING"

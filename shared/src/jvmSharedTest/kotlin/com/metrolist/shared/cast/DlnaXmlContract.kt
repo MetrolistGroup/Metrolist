@@ -108,7 +108,7 @@ abstract class DlnaXmlContract {
         charset: Charset,
         durationMs: Long = 180_000L,
     ) = runBlocking {
-        Receiver(charset).use { receiver ->
+        Receiver(charset, trackDuration = if (durationMs > 0L) "00:03:00" else "00:00:00").use { receiver ->
             val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
             val session = DlnaSession(scope, receiver.location)
             val media =
@@ -199,6 +199,7 @@ abstract class DlnaXmlContract {
         private val charset: Charset = Charsets.UTF_8,
         namespaced: Boolean = true,
         sonos: Boolean = false,
+        private val trackDuration: String = "00:03:00",
     ) : AutoCloseable {
         private val server = HttpServer.create(InetSocketAddress("127.0.0.1", 0), 0)
         val baseUrl = "http://127.0.0.1:${server.address.port}"
@@ -238,7 +239,7 @@ abstract class DlnaXmlContract {
                             val fields =
                                 when (action) {
                                     "GetVolume" -> "<CurrentVolume>25</CurrentVolume>"
-                                    "GetPositionInfo" -> "<RelTime>00:00:42</RelTime><TrackDuration>00:03:00</TrackDuration>"
+                                    "GetPositionInfo" -> "<RelTime>00:00:42</RelTime><TrackDuration>$trackDuration</TrackDuration>"
                                     "GetTransportInfo" -> "<CurrentTransportState>PLAYING</CurrentTransportState>"
                                     else -> ""
                                 }
