@@ -427,6 +427,10 @@ private fun DesktopWindowScope.AppContent(
                 ApplicationLogsDialog(onDismiss = { UiState.showLogViewer = false })
             }
             if (UiState.showCrashLogs) {
+                LaunchedEffect(Unit) {
+                    recoveryReportId?.let { id -> runCatching { DesktopCrashRecovery.store.acknowledge(id) } }
+                    recoveryReportId = null
+                }
                 Dialog(
                     onDismissRequest = { UiState.showCrashLogs = false },
                     properties = DialogProperties(usePlatformDefaultWidth = false),
@@ -828,6 +832,8 @@ private fun installGracefulShutdownSignals() {
     runCatching { Signal.handle(Signal("INT"), handler) }
 }
 
+@Volatile private var recoveryReportId: String? = null
+
 fun main() {
     main(emptyArray())
 }
@@ -849,8 +855,9 @@ fun main(args: Array<String>) {
             return
         }
         // Swing cannot open a window under native Wayland, so the app starts with its crash log screen open.
-        // Without the crash handler a second crash exits instead of relaunching in a loop.
-        runCatching { DesktopCrashRecovery.store.acknowledge(reportId) }
+        // Without the crash handler a second crash exits instead of relaunching in a loop. The report stays
+        // pending until the screen appears, so a crash during startup shows it again on the next launch.
+        recoveryReportId = reportId
         UiState.showCrashLogs = true
         installCrashHandler = false
     }

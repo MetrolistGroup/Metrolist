@@ -26,6 +26,7 @@ import kotlin.math.roundToInt
 
 object WaylandScale {
     private const val MAX_COMMAND_OUTPUT_CHARS = 64 * 1_024
+    private const val MONITOR_REFRESH_NANOS = 60_000_000_000L
     private val TRUSTED_EXECUTABLE_DIRECTORIES = listOf("/usr/bin", "/bin", "/usr/local/bin")
     private val LOG_FILE: File = File(XdgUtils.getXdgCacheHome(), "metrolist/wayland_scale.log")
     private var applied = false
@@ -142,9 +143,14 @@ object WaylandScale {
         nativeWaylandActive = true
         // Headless AWT cannot measure displays, so the automatic video cap reads the compositor's monitors.
         // shortcut: KDE reports no per-monitor sizes here, so it keeps the 2160p default; read GdkMonitor if that matters.
-        val initialRefresh = lazy { runCatching { refreshMonitorCache() } }
+        var lastRefresh = 0L
         headlessDisplaySizes = {
-            initialRefresh.value
+            // Re-read at most once a minute so a monitor change reaches the next stream without a probe per request.
+            val now = System.nanoTime()
+            if (lastRefresh == 0L || now - lastRefresh >= MONITOR_REFRESH_NANOS) {
+                lastRefresh = now
+                runCatching { refreshMonitorCache() }
+            }
             monitorCache.get().map { (it.w * it.scale).roundToInt() to (it.h * it.scale).roundToInt() }
         }
         return true

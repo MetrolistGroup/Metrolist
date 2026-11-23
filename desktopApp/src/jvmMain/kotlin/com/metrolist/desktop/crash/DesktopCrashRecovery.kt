@@ -1,8 +1,10 @@
 package com.metrolist.desktop.crash
 
 import com.metrolist.desktop.update.DesktopUpdateManager
+import com.metrolist.desktop.utils.WaylandScale
 import com.metrolist.desktop.utils.desktopRestartCommand
 import com.metrolist.desktop.utils.prepareDesktopRelaunch
+import com.metrolist.desktop.utils.saveDesktopFile
 import com.metrolist.shared.BuildConfig
 import com.metrolist.shared.crash.CrashReport
 import com.metrolist.shared.crash.FatalCrashHandler
@@ -18,6 +20,7 @@ import com.metrolist.shared.generated.resources.crash_menu_reload
 import com.metrolist.shared.generated.resources.crash_no_log
 import com.metrolist.shared.generated.resources.crash_restart
 import com.metrolist.shared.generated.resources.crash_share_logs
+import com.metrolist.shared.generated.resources.crash_share_title
 import com.metrolist.shared.generated.resources.crash_title
 import com.metrolist.shared.generated.resources.crash_updates_action
 import com.metrolist.shared.generated.resources.crash_updates_checking
@@ -25,6 +28,10 @@ import com.metrolist.shared.generated.resources.crash_updates_error
 import com.metrolist.shared.generated.resources.crash_updates_no_updates
 import com.metrolist.shared.utils.XdgUtils
 import com.metrolist.shared.utils.openUrl
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.getString
@@ -51,6 +58,8 @@ import kotlin.system.exitProcess
 object DesktopCrashRecovery {
     const val ARGUMENT = "--crash-report"
     val store get() = FileCrashStore(File(XdgUtils.getXdgDataHome(), "metrolist/crashes"))
+
+    private val shareScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     fun install() {
         val fallback =
@@ -201,6 +210,13 @@ object DesktopCrashRecovery {
     }
 
     fun share(report: String) {
+        if (WaylandScale.isNativeWaylandActive()) {
+            // Swing is headless under native Wayland, so save through the file portal.
+            shareScope.launch {
+                runCatching { saveDesktopFile(label(Res.string.crash_share_title), "metrolist-crash", "txt")?.writeText(report) }
+            }
+            return
+        }
         val chooser = JFileChooser().apply { selectedFile = File("metrolist-crash.txt") }
         if (chooser.showSaveDialog(null) == JFileChooser.APPROVE_OPTION) chooser.selectedFile.writeText(report)
     }
