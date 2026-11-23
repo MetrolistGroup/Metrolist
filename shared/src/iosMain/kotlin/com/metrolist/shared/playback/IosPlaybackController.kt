@@ -91,12 +91,21 @@ import platform.UIKit.UIApplicationDidEnterBackgroundNotification
 import platform.UIKit.UIApplicationWillTerminateNotification
 import platform.UIKit.UIBackgroundTaskIdentifier
 import platform.UIKit.UIBackgroundTaskInvalid
+import platform.UIKit.UIDevice
 import kotlin.time.Clock
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.TimeMark
 import kotlin.time.TimeSource
 
 private const val RELATED_SONGS_LIMIT = 20
+
+// AVFoundation plays Opus-in-MP4 only from iOS 17; iOS 16 decodes the remuxed asset as silence.
+private val iosOpusRemuxSupported: Boolean =
+    (
+        UIDevice.currentDevice.systemVersion
+            .substringBefore('.')
+            .toIntOrNull() ?: 0
+    ) >= 17
 
 internal class IosPlaybackController(
     private val player: MusicPlayer,
@@ -509,6 +518,7 @@ internal class IosPlaybackController(
                             iosPlaybackAudioQuality(Settings.shared.audioQuality),
                             refresh = true,
                             forceAac = audioRecovery.forceAac(song.id),
+                            allowOpusRemux = iosOpusRemuxSupported,
                         ) { quality, _, allowHls ->
                             resolver.resolveRemote(
                                 song.id,
@@ -643,7 +653,9 @@ internal class IosPlaybackController(
                 if (enabled) {
                     val song = player.currentSong.value ?: return@collect
                     try {
-                        audioStorage?.getCachedPlaybackResource(song)?.let { player.analyzeSilenceFromCache(song, it) }
+                        audioStorage?.getCachedPlaybackResource(song, allowOpusRemux = iosOpusRemuxSupported)?.let {
+                            player.analyzeSilenceFromCache(song, it)
+                        }
                     } catch (error: CancellationException) {
                         throw error
                     } catch (error: Exception) {
@@ -1984,7 +1996,9 @@ internal class IosPlaybackController(
             val storage = audioStorage ?: return
             storage.cacheSong(song, resource)
             if (Settings.shared.skipSilence) {
-                storage.getCachedPlaybackResource(song)?.let { player.analyzeSilenceFromCache(song, it) }
+                storage.getCachedPlaybackResource(song, allowOpusRemux = iosOpusRemuxSupported)?.let {
+                    player.analyzeSilenceFromCache(song, it)
+                }
             }
         } catch (error: CancellationException) {
             throw error
@@ -2016,7 +2030,7 @@ internal class IosPlaybackController(
         val excludedProfiles = audioRecovery.excludedProfiles(song.id)
         if (!skipCachedAudio && !refresh && excludedProfiles.isEmpty()) {
             try {
-                audioStorage?.getCachedPlaybackResource(song)?.let { return it }
+                audioStorage?.getCachedPlaybackResource(song, allowOpusRemux = iosOpusRemuxSupported)?.let { return it }
             } catch (error: CancellationException) {
                 throw error
             } catch (error: Exception) {
@@ -2029,6 +2043,7 @@ internal class IosPlaybackController(
             quality,
             refresh = refresh,
             forceAac = audioRecovery.forceAac(song.id),
+            allowOpusRemux = iosOpusRemuxSupported,
         ) { requestedQuality, isRefresh, allowHls ->
             val hints =
                 song.toContentHints(wantVideo = false).withIosAudioCapabilities(allowHls)
