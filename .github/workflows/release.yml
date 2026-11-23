@@ -527,6 +527,23 @@ jobs:
           GH_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
         run: gh api repos/MetrolistGroup/homebrew-tap/dispatches -f event_type=metrolist-release
 
+  scoop:
+    name: Update the Scoop bucket
+    needs: publish
+    runs-on: blacksmith-2vcpu-ubuntu-2604
+    timeout-minutes: 5
+    continue-on-error: true
+    permissions: {}
+    env:
+      SCOOP_BUCKET_TOKEN: ${{ secrets.SCOOP_BUCKET_TOKEN }}
+    steps:
+      # The bucket also polls every four hours; this only makes the update immediate.
+      - name: Dispatch the bucket update
+        if: env.SCOOP_BUCKET_TOKEN != ''
+        env:
+          GH_TOKEN: ${{ secrets.SCOOP_BUCKET_TOKEN }}
+        run: gh api repos/MetrolistGroup/scoop-bucket/dispatches -f event_type=metrolist-release
+
   finalize-sentry:
     name: Finalize Sentry releases
     needs:

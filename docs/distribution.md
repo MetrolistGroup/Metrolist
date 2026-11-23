@@ -36,6 +36,12 @@ The `homebrew` job in `release.yml` sends a `metrolist-release` repository dispa
 
 Run `brew style --cask PATH` and `brew audit --cask --online TOKEN` in the tap. Test both architectures and follow [unsigned-app installation](install/macos.md#install-and-verify).
 
+## Scoop
+
+[MetrolistGroup/scoop-bucket](https://github.com/MetrolistGroup/scoop-bucket) publishes `bucket/metrolist.json` for Windows x64 and ARM64. It installs the portable ZIPs, `Metrolist-Desktop-windows.zip` and `metrolist-desktop-windows-arm64-VERSION.zip`, from the release tag and adds a Start Menu shortcut. Its scheduled workflow runs Scoop's `checkver` against the latest stable release, reads hashes from `SHA256SUMS`, installs the new manifest on a Windows runner and commits only after the install works. Keep those asset names and `SHA256SUMS` entries stable.
+
+The `scoop` job in `release.yml` sends a `metrolist-release` repository dispatch to the bucket so it updates right after publication. It needs the `SCOOP_BUCKET_TOKEN` secret, a fine-grained token with Contents write access to the bucket, and skips without it.
+
 ## Arch Linux
 
 The source recipe and verification live in `aur/`. The generator writes `aur/release.json` with binary asset URLs and hashes for a binary recipe. It does not update `pkgver()` or publish to AUR. See the [Arch package notes](../packaging/aur/README.md).
