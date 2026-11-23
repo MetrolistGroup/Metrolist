@@ -891,7 +891,6 @@ private fun runDesktopApp(args: Array<String>) {
     )?.let { System.setProperty("skiko.renderApi", it) }
     if (OsUtil.isMac) {
         System.setProperty("apple.awt.enableTemplateImages", "true")
-        allowMainQueueInAwtRunLoop()
         // Without this AppKit keeps the Aqua (light) title bar even in Dark Mode.
         System.setProperty("apple.awt.application.appearance", "system")
         if (System.getProperty("skiko.renderApi") == null && System.getenv("SKIKO_RENDER_API") == null) {
@@ -924,6 +923,7 @@ private fun runDesktopApp(args: Array<String>) {
     // Initialize logging only after settings migration to avoid java.util.prefs/JUL class-init deadlocks.
     AppLogger.initialize(applicationScope)
     AppLogger.setEnabled(settings.enableLogging)
+    if (OsUtil.isMac) allowMainQueueInAwtRunLoop()
     flushDesktopCredentialWarnings()
     startup.trace("settings")
 
