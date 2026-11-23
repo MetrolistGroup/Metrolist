@@ -640,6 +640,7 @@ class YouTubeRepository(
         params: String? = null,
         requestSession: InnerTube.SessionSnapshot = innerTube.sessionSnapshot(),
         includeRecommendations: Boolean = true,
+        missingContentsIsEmpty: Boolean = false,
     ): PaginationResult<YTItem> {
         val voteRevision = SongLikeState.voteObservationRevision()
         requireCurrentSession(requestSession)
@@ -647,6 +648,7 @@ class YouTubeRepository(
             readAccountBrowse(requestSession, browseId, voteRevision = voteRevision) {
                 innerTube.browse(YouTubeClient.WEB_REMIX, browseId = browseId, params = params, setLogin = true)
             }
+        if (firstResponse.contents == null && missingContentsIsEmpty) return PaginationResult(emptyList(), complete = true)
         check(firstResponse.contents != null) { "Missing library contents: $browseId" }
         val first = parseBrowseResponse(firstResponse, includeRecommendations = includeRecommendations)
         requireCurrentSession(requestSession)
@@ -1279,7 +1281,8 @@ class YouTubeRepository(
 
     suspend fun getSavedEpisodesForSync(): List<EpisodeItem> {
         require(innerTube.hasSapCookieAuth()) { "YouTube Music sign-in is required" }
-        val result = getAllBrowseItems("VLSE", includeRecommendations = false)
+        // YouTube omits contents for an empty Episodes for later list.
+        val result = getAllBrowseItems("VLSE", includeRecommendations = false, missingContentsIsEmpty = true)
         check(result.complete) { "Saved episode pagination ended before the final page" }
         return result.items
             .mapNotNull { item ->
