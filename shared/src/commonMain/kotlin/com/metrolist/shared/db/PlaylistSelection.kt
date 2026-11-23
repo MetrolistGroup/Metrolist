@@ -14,7 +14,7 @@ fun List<PlaylistEntity>.selectablePlaylists(hiddenKeys: Set<HiddenLibraryItemKe
         it.isEditable && it.bookmarkedAt != null && !it.isSystemPlaylist() &&
             (it.isLocal || it.browseId == null || it.browseId.isEditablePlaylistId()) &&
             HiddenLibraryItemKey(HiddenLibraryItemType.PLAYLIST, it.browseId ?: it.id).normalized() !in hiddenKeys
-    }.distinctBy { it.browseId?.removePrefix("VL") ?: it.id }
+    }.distinctBy { it.localCopyKey() }
 
 fun List<Playlist>.selectablePlaylistItems(
     signedIn: Boolean,
@@ -51,7 +51,10 @@ fun List<Playlist>.selectablePlaylistDetails(
 
 fun List<PlaylistEntity>.localPlaylists(): List<PlaylistEntity> =
     filter { it.isEditable && it.bookmarkedAt != null && (it.isLocal || it.browseId == null) && !it.isSystemPlaylist() }
-        .distinctBy { it.browseId?.removePrefix("VL") ?: it.id }
+        .distinctBy { it.localCopyKey() }
+
+// A local copy of a YouTube playlist is its own playlist, separate from the saved remote one.
+private fun PlaylistEntity.localCopyKey(): String = if (isLocal) id else browseId?.removePrefix("VL") ?: id
 
 fun List<PlaylistItem>.distinctPlaylistItems(): List<PlaylistItem> = distinctBy { it.id.removePrefix("VL") }
 
