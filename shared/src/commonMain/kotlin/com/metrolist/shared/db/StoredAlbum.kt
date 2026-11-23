@@ -25,16 +25,22 @@ data class CachedAlbum(
 suspend fun MusicDatabase.loadCachedAlbum(
     albumId: String,
     availableSongIds: Set<String>? = null,
+    offlineOnly: Boolean = false,
 ): CachedAlbum? {
-    val (stored, songs) = dao().storedAlbumSnapshot(albumId)
+    val (stored, storedSongs) = dao().storedAlbumSnapshot(albumId)
+    val songs = if (offlineOnly) storedSongs.filter { it.isAvailableOffline(availableSongIds) } else storedSongs
     if (songs.isEmpty()) return null
     val album = stored?.album
     val title = album?.title ?: songs.first().song.albumName ?: return null
-    val isComplete = album != null && album.songCount > 0 && songs.size >= album.songCount
     val hasCachedHeaderMetadata = album?.description != null && album.otherVersions != null
+    // Legacy rows have no cached headers; only a subsequent fetch can make them reusable.
+    val completeSnapshot =
+        album?.tracksComplete
+            ?: (album != null && !hasCachedHeaderMetadata && album.songCount > 0 && storedSongs.size >= album.songCount)
+    val isComplete = completeSnapshot && album?.songCount == storedSongs.size && songs.size == storedSongs.size
     val playableSongs = songs.filterNot { it.song.isUnavailable }
     val isOfflineReady =
-        album?.isLocal == true ||
+        offlineOnly || album?.isLocal == true ||
             (playableSongs.isNotEmpty() && playableSongs.all { it.isAvailableOffline(availableSongIds) })
     val hasRequiredMetadata =
         album?.isLocal == true ||
@@ -50,7 +56,7 @@ suspend fun MusicDatabase.loadCachedAlbum(
                         thumbnail = album?.thumbnailUrl ?: songs.first().thumbnailUrl,
                         artists =
                             (stored?.artists?.takeIf { it.isNotEmpty() } ?: songs.first().orderedArtists).map { artist ->
-                                ArtistTiny(artist.id.takeUnless { artist.isLocal }, artist.name, artist.thumbnailUrl)
+                                ArtistTiny(artist.id.takeUnless { artist.isLocal && !offlineOnly }, artist.name, artist.thumbnailUrl)
                             },
                         year = album?.year?.toString(),
                         playlistId = album?.playlistId,
@@ -61,6 +67,7 @@ suspend fun MusicDatabase.loadCachedAlbum(
                 songs = songs.map { it.toSongItem() },
                 otherVersions = album?.otherVersions.orEmpty(),
                 description = album?.description?.takeIf(String::isNotBlank),
+                isIncompleteCache = !isComplete,
             ),
         isComplete = isComplete,
         hasCachedHeaderMetadata = hasCachedHeaderMetadata,
@@ -80,7 +87,7 @@ suspend fun MusicDatabase.storeAlbumPage(
         val dao = dao()
         val album = page.album
         val existing = dao.album(album.id).first()?.album
-        val complete = page.playlistPage?.hasMore != true
+        val complete = !page.isIncompleteCache && page.playlistPage?.hasMore != true
         val songCount =
             if (complete) {
                 page.songs.size
@@ -121,6 +128,7 @@ suspend fun MusicDatabase.storeAlbumPage(
                 duration = duration.coerceAtMost(Int.MAX_VALUE.toLong()).toInt(),
                 description = description,
                 otherVersions = otherVersions,
+                tracksComplete = complete,
             ),
         )
         val savedPositions = if (complete) emptyMap() else dao.albumSongMaps(album.id).associate { it.songId to it.index }

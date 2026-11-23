@@ -54,10 +54,13 @@ import com.metrolist.shared.model.SortDirection
 import com.metrolist.shared.model.filterForPlaylistSearch
 import com.metrolist.shared.model.indexOfPlaylistOccurrence
 import com.metrolist.shared.model.sortedForPlaylist
+import com.metrolist.shared.model.withDownloadsPlayable
+import com.metrolist.shared.state.GlobalYouTubeRepository
 import com.metrolist.shared.state.SongMetadataState
 import com.metrolist.shared.ui.components.AlbumHeader
 import com.metrolist.shared.ui.components.CollectionHeaderHorizontalPadding
 import com.metrolist.shared.ui.components.CollectionHeaderNavigation
+import com.metrolist.shared.ui.components.ContainedLoadingIndicator
 import com.metrolist.shared.ui.components.GroupedListItem
 import com.metrolist.shared.ui.components.InlineSearchRow
 import com.metrolist.shared.ui.components.LazyListScrollbar
@@ -69,10 +72,15 @@ import com.metrolist.shared.ui.components.mediumCollectionArtworkSize
 import com.metrolist.shared.ui.components.rememberItemPlayback
 import com.metrolist.shared.ui.menu.onSecondaryClick
 import com.metrolist.shared.ui.navigation.NavigationBackHandler
+import com.metrolist.shared.ui.playback.LocalPlaybackController
 import com.metrolist.shared.ui.utils.DragScrollableColumn
 import com.metrolist.shared.ui.utils.carouselScroll
 import com.metrolist.shared.ui.utils.verticalScrollWithDrag
 import com.metrolist.shared.utils.isDesktop
+import com.metrolist.shared.youtube.playback.PlaybackNetworkStateStore
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import org.jetbrains.compose.resources.stringResource
 
 private val AlbumSortOptions =
@@ -101,11 +109,14 @@ fun AlbumContent(
     paginationContent: (@Composable () -> Unit)? = null,
     onPlayAll: (List<SongItem>) -> Unit,
     onShuffle: (List<SongItem>) -> Unit,
+    onPlaybackError: () -> Unit,
+    needsPlaybackCompletion: Boolean = false,
     onMoreOptions: (() -> Unit)? = null,
     isFavorite: Boolean = false,
     onFavorite: (() -> Unit)? = null,
     onArtistClick: (String) -> Unit,
     onTrackClick: (SongItem, List<SongItem>, Int) -> Unit,
+    onCurrentTrackClick: (() -> Unit)? = null,
     onTrackMenuClick: (SongItem) -> Unit,
     onBackClick: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
@@ -132,6 +143,7 @@ fun AlbumContent(
     isTrackSelected: (SongItem) -> Boolean = { false },
 ) {
     val currentSongIdState = rememberUpdatedState(currentSongId)
+    val downloadedSongIdsState = rememberUpdatedState(downloadedSongIds)
     val isPlayingState = rememberUpdatedState(isPlaying)
     var sort by remember(album.id) { mutableStateOf(PlaylistSongSort.ORIGINAL) }
     var sortDirection by remember(album.id) { mutableStateOf(SortDirection.ASCENDING) }
@@ -170,6 +182,76 @@ fun AlbumContent(
         remember(sortedSongs, effectiveQuery) {
             sortedSongs.filterForPlaylistSearch(effectiveQuery)
         }
+    val playbackController = LocalPlaybackController.current
+    var playbackRequest by remember(album.id) { mutableStateOf<((List<SongItem>) -> Unit)?>(null) }
+    LaunchedEffect(album.id, playbackRequest) {
+        val request = playbackRequest ?: return@LaunchedEffect
+        try {
+            val completeSongs =
+                withContext(Dispatchers.Default) {
+                    val repository = GlobalYouTubeRepository.instance
+                    val cached =
+                        try {
+                            repository.getCachedAlbum(album.id)
+                        } catch (error: CancellationException) {
+                            throw error
+                        } catch (error: Exception) {
+                            if (!PlaybackNetworkStateStore.current.connected) throw error
+                            null
+                        }
+                    if (!PlaybackNetworkStateStore.current.connected || cached?.isComplete == true) {
+                        cached
+                            ?.page
+                            ?.songs
+                            .orEmpty()
+                    } else {
+                        checkNotNull(repository.getAlbum(album.id, forceRefresh = true, allowOfflineFallback = false)).songs
+                    }
+                }
+            if (playbackRequest === request) request(completeSongs.withDownloadsPlayable(downloadedSongIdsState.value))
+        } catch (error: CancellationException) {
+            throw error
+        } catch (_: Exception) {
+            if (playbackRequest === request) onPlaybackError()
+        } finally {
+            if (playbackRequest === request) playbackRequest = null
+        }
+    }
+
+    fun withPlaybackSongs(
+        filtered: Boolean,
+        action: (List<SongItem>) -> Unit,
+    ) {
+        if (!needsPlaybackCompletion) {
+            playbackRequest = null
+            action(if (filtered) displayedSongs else sortedSongs)
+            return
+        }
+        val generation = playbackController.explicitPlaybackGeneration
+        playbackRequest = { complete ->
+            if (playbackController.explicitPlaybackGeneration == generation) {
+                val sorted =
+                    if (sortAvailable) complete.sortedForPlaylist(sort, sortDirection, listeningTimes = listeningTimes) else complete
+                action(if (filtered) sorted.filterForPlaylistSearch(effectiveQuery) else sorted)
+            }
+        }
+    }
+
+    fun playTrack(song: SongItem) {
+        if (selectionActive) {
+            onTrackClick(song, sortedSongs, sortedSongs.indexOfPlaylistOccurrence(song))
+            return
+        }
+        if (song.id == currentSongId && onCurrentTrackClick != null) {
+            playbackRequest = null
+            onCurrentTrackClick()
+            return
+        }
+        withPlaybackSongs(filtered = false) { queue ->
+            val index = queue.indexOfPlaylistOccurrence(song)
+            if (index >= 0) onTrackClick(queue[index], queue, index) else onTrackClick(song, listOf(song), 0)
+        }
+    }
     val orderText =
         playlistOrderControlsText().let { base ->
             base.copy(
@@ -236,8 +318,8 @@ fun AlbumContent(
                     if (showPlayback || onFavorite != null) {
                         {
                             PlaylistHeaderActions(
-                                onPlayAll = { onPlayAll(displayedSongs) },
-                                onShuffle = { onShuffle(displayedSongs) },
+                                onPlayAll = { withPlaybackSongs(filtered = true, onPlayAll) },
+                                onShuffle = { withPlaybackSongs(filtered = true, onShuffle) },
                                 playLabel = text.play,
                                 shuffleLabel = text.shuffle,
                                 buttonHeight = if (isWide) 48.dp else 40.dp,
@@ -360,13 +442,7 @@ fun AlbumContent(
                                                             isCurrent = playback.isCurrent,
                                                             isPlaying = playback.isPlaying,
                                                             isDownloaded = song.id in downloadedSongIds,
-                                                            onClick = {
-                                                                onTrackClick(
-                                                                    song,
-                                                                    sortedSongs,
-                                                                    sortedSongs.indexOfPlaylistOccurrence(song),
-                                                                )
-                                                            },
+                                                            onClick = { playTrack(song) },
                                                             onShowMenu = { onTrackMenuClick(song) },
                                                             onArtistClick = onArtistClick,
                                                             onLongClick = onTrackLongClick?.let { { it(song) } },
@@ -531,7 +607,7 @@ fun AlbumContent(
                                                 isCurrent = playback.isCurrent,
                                                 isPlaying = playback.isPlaying,
                                                 isDownloaded = song.id in downloadedSongIds,
-                                                onClick = { onTrackClick(song, sortedSongs, sortedSongs.indexOfPlaylistOccurrence(song)) },
+                                                onClick = { playTrack(song) },
                                                 onShowMenu = { onTrackMenuClick(song) },
                                                 onArtistClick = onArtistClick,
                                                 onLongClick = onTrackLongClick?.let { { it(song) } },
@@ -594,6 +670,9 @@ fun AlbumContent(
                     }
                 }
             }
+        }
+        if (playbackRequest != null) {
+            ContainedLoadingIndicator(Modifier.align(Alignment.TopCenter))
         }
     }
 }

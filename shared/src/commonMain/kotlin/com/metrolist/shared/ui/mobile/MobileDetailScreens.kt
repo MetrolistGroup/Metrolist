@@ -187,6 +187,9 @@ internal fun MobileAlbumScreen(
                     trackContainer = { song, content -> SongSwipeActions(song, onSwipeFeedback, content = content) },
                     album = page.album,
                     songs = page.songs,
+                    needsPlaybackCompletion = page.isIncompleteCache || page.playlistPage?.hasMore == true,
+                    downloadedSongIds = downloadedSongIds,
+                    onPlaybackError = { onSwipeFeedback(errorText) },
                     text = albumContentText(),
                     paginationContent =
                         if (loader.failed) {

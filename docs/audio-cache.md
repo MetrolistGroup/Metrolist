@@ -30,6 +30,10 @@ Refreshes retain displayed tracks on failure. A complete album stays visible unt
 
 When a desktop retry fails, an incomplete album keeps the partial result with the most tracks. Offline album actions use locally available downloaded tracks without waiting for a refresh.
 
+Online playback from an incomplete cache loads the missing tracks before starting the album queue. Play, shuffle and track clicks preserve the selected sort order and search behavior. Failed loads leave playback unchanged and report an error for retry.
+
+Album storage records whether pagination finished. Partial saves keep existing rows for recovery but invalidate completeness, even when their combined row count matches the header. Offline views retain that status when showing only downloaded tracks, so whole-album actions can load missing tracks after reconnecting.
+
 ## Android v13 recovery
 
 v13.7.0 stored downloads in `files/download` with no eviction and streamed audio in `files/exoplayer` with the configured LRU limit. Both caches used `StandaloneDatabaseProvider` and `databases/exoplayer_internal.db`. `MediaItemExt` and `DownloadUtil` used the song ID as the custom cache key. The download index can also map a custom key back to its request ID. Recovery uses that mapping rather than guessing IDs from suffixes or URLs.

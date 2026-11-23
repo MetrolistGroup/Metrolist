@@ -66,7 +66,6 @@ class AlbumViewModel(
         val generation = ++loadGeneration
         val switchingAlbum = _selectedAlbumId.value != albumId
         val retainedPage = unfilteredAlbumPage.takeIf { !switchingAlbum }
-        val retainedComplete = retainedPage != null && retainedPage.playlistPage?.hasMore != true && !incompleteCache
         if (switchingAlbum) {
             incompleteCache = false
             setAlbumPage(null)
@@ -78,7 +77,7 @@ class AlbumViewModel(
         loadJob =
             scope.launch {
                 _errorMessage.value = null
-                var reportFailure = retainedPage == null || incompleteCache || forceRefresh
+                var reportFailure = true
                 try {
                     val cached =
                         if (forceRefresh) {
@@ -92,7 +91,7 @@ class AlbumViewModel(
                     if (cached != null) {
                         incompleteCache = !cached.isComplete
                         setAlbumPage(cached.page)
-                        if (cached.canReuseWithoutRefresh) return@launch
+                        if (cached.canReuseWithoutRefresh || !PlaybackNetworkStateStore.current.connected) return@launch
                     }
                     val hasDisplayedPage = cached != null || retainedPage != null
                     reportFailure = !hasDisplayedPage || incompleteCache || forceRefresh
@@ -101,7 +100,7 @@ class AlbumViewModel(
                         withContext(Dispatchers.Default) {
                             repository.getAlbum(
                                 albumId,
-                                loadAllPages = cached?.isComplete == true || retainedComplete,
+                                loadAllPages = hasDisplayedPage,
                                 applyContentFilters = false,
                                 forceRefresh = true,
                                 allowOfflineFallback = !hasDisplayedPage,
@@ -158,6 +157,11 @@ class AlbumViewModel(
     }
 
     suspend fun allSongs(): List<SongItem> {
+        val generation = loadGeneration
+        if (incompleteCache && PlaybackNetworkStateStore.current.connected) {
+            loadJob?.join()
+            if (generation != loadGeneration) return emptyList()
+        }
         if (!PlaybackNetworkStateStore.current.connected) {
             val albumId = _selectedAlbumId.value ?: return emptyList()
             return withContext(Dispatchers.Default) {
@@ -167,11 +171,6 @@ class AlbumViewModel(
                     ?.songs
                     .orEmpty()
             }
-        }
-        val generation = loadGeneration
-        if (incompleteCache) {
-            loadJob?.join()
-            if (generation != loadGeneration) return emptyList()
         }
         val initial = unfilteredAlbumPage ?: return emptyList()
         val cursor = initial.playlistPage

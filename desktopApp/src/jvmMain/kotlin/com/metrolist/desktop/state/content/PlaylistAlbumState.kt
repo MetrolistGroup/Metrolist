@@ -464,7 +464,7 @@ object PlaylistAlbumState {
                             unfilteredAlbumPageData = cached.page
                             albumSession = session
                             albumPageData = BlockedContent.filterAlbumPage(cached.page)
-                            if (cached.canReuseWithoutRefresh) {
+                            if (cached.canReuseWithoutRefresh || !PlaybackNetworkStateStore.current.connected) {
                                 isAlbumLoading = false
                                 return@launch
                             }
@@ -518,22 +518,14 @@ object PlaylistAlbumState {
                     if (selectedAlbumId == id && GlobalYouTube.innerTube.sessionSnapshot() == session) {
                         val preserveCompleteCache = cached?.isComplete == true
                         val retainedComplete =
-                            retainedPage?.let { page ->
-                                page.playlistPage?.hasMore == false ||
-                                    (
-                                        page.playlistPage == null &&
-                                            page.album.songCount?.let { it > 0 && page.songs.size >= it } == true
-                                    )
-                            } == true
+                            retainedPage?.let { !it.isIncompleteCache && it.playlistPage?.hasMore != true } == true
                         val fallback =
                             when {
                                 preserveCompleteCache -> cached.page
                                 retainedComplete -> retainedPage
                                 else -> listOfNotNull(retainedPage, firstPage, cached?.page).maxByOrNull { it.songs.size }
                             }
-                        albumLoadFailed =
-                            fallback == null ||
-                            (!preserveCompleteCache && (firstPage != null || forceRefresh || cached?.isComplete == false))
+                        albumLoadFailed = fallback == null || !preserveCompleteCache
                         unfilteredAlbumPageData = fallback
                         albumSession = session
                         albumPageData = fallback?.let(BlockedContent::filterAlbumPage)

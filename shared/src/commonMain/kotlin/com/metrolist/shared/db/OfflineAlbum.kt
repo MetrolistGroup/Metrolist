@@ -2,7 +2,6 @@ package com.metrolist.shared.db
 
 import com.metrolist.shared.db.entities.Album
 import com.metrolist.shared.db.entities.Song
-import com.metrolist.shared.db.entities.toSongItem
 import com.metrolist.shared.model.AlbumItem
 import com.metrolist.shared.model.AlbumPage
 import com.metrolist.shared.model.ArtistTiny
@@ -13,20 +12,7 @@ import kotlinx.coroutines.withContext
 suspend fun MusicDatabase.loadOfflineAlbum(
     albumId: String,
     availableSongIds: Set<String>? = null,
-): AlbumPage? {
-    val (stored, storedSongs) = dao().storedAlbumSnapshot(albumId)
-    val songs =
-        storedSongs.filter {
-            it.isAvailableOffline(availableSongIds)
-        }
-    val album = offlineAlbumHeader(albumId, stored, songs) ?: return null
-    return AlbumPage(
-        album = album,
-        songs = songs.map { it.toSongItem() },
-        otherVersions = stored?.album?.otherVersions.orEmpty(),
-        description = stored?.album?.description?.takeIf(String::isNotBlank),
-    )
-}
+): AlbumPage? = loadCachedAlbum(albumId, availableSongIds, offlineOnly = true)?.page
 
 internal suspend fun MusicDatabase.loadOfflineAlbumHeader(
     albumId: String,

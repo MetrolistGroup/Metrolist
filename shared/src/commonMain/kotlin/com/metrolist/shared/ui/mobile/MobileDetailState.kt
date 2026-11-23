@@ -13,6 +13,7 @@ import com.metrolist.shared.state.GlobalYouTubeRepository
 import com.metrolist.shared.state.resolveArtistSubscribed
 import com.metrolist.shared.viewmodels.ArtistSubscriptionState
 import com.metrolist.shared.viewmodels.BrowseViewModel
+import com.metrolist.shared.youtube.playback.PlaybackNetworkStateStore
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -81,7 +82,7 @@ internal class MobileDetailState(
                 repository.getCachedAlbum(id, applyContentFilters = false)?.let { cached ->
                     CachedDetail(
                         page = cached.page,
-                        needsRefresh = !cached.canReuseWithoutRefresh,
+                        needsRefresh = PlaybackNetworkStateStore.current.connected && !cached.canReuseWithoutRefresh,
                         showRefreshIndicator = !(cached.isComplete && cached.isOfflineReady),
                         isComplete = cached.isComplete,
                     )

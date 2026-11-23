@@ -275,6 +275,7 @@ data class AlbumPage(
     val artistAlbums: List<AlbumItem> = emptyList(),
     val description: String? = null,
     @Transient val playlistPage: PlaylistPage? = null,
+    @Transient val isIncompleteCache: Boolean = false,
 )
 
 @Serializable

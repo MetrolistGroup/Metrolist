@@ -206,6 +206,11 @@ fun AlbumScreen(
             trackContainer = { song, content -> SongSwipeActions(song, content = content) },
             album = album,
             songs = songs,
+            needsPlaybackCompletion = page.isIncompleteCache || page.playlistPage?.hasMore == true,
+            downloadedSongIds = downloadedSongIds,
+            onPlaybackError = {
+                AppState.scope.launch { AppState.snackbarHostState.showSnackbar(getString(Res.string.error_occurred)) }
+            },
             paginationContent = {
                 if (selected && PlaylistAlbumState.isAlbumLoading && loaded == null) {
                     CollectionSongsLoadingPlaceholder()

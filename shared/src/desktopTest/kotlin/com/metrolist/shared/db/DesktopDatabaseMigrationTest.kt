@@ -2,8 +2,12 @@ package com.metrolist.shared.db
 
 import androidx.sqlite.SQLiteConnection
 import androidx.sqlite.execSQL
+import com.metrolist.innertubex.InnerTube
+import com.metrolist.shared.api.ContinuationBranch
+import com.metrolist.shared.api.PlaylistPage
 import com.metrolist.shared.model.AlbumItem
 import com.metrolist.shared.model.AlbumPage
+import com.metrolist.shared.model.AlbumTiny
 import com.metrolist.shared.model.ArtistTiny
 import com.metrolist.shared.model.SongItem
 import kotlinx.coroutines.flow.first
@@ -272,7 +276,6 @@ class DesktopDatabaseMigrationTest {
                     assertFalse(upgraded.hasCachedHeaderMetadata)
                     assertFalse(upgraded.canReuseWithoutRefresh)
 
-                    val song = SongItem("song", "Keep my music", null, listOf(ArtistTiny("artist", "Artist")), null, 240L)
                     val album =
                         AlbumItem(
                             id = "MPREb_test",
@@ -282,6 +285,15 @@ class DesktopDatabaseMigrationTest {
                             playlistId = "OLAK5uy_test",
                             songCount = 1,
                             duration = 240L,
+                        )
+                    val song =
+                        SongItem(
+                            "song",
+                            "Keep my music",
+                            null,
+                            listOf(ArtistTiny("artist", "Artist")),
+                            AlbumTiny(album.id, album.title),
+                            240L,
                         )
                     val deluxe =
                         AlbumItem(
@@ -325,6 +337,38 @@ class DesktopDatabaseMigrationTest {
                     assertTrue(emptyMetadata.page.otherVersions.isEmpty())
                     assertTrue(emptyMetadata.hasCachedHeaderMetadata)
                     assertTrue(emptyMetadata.canReuseWithoutRefresh)
+
+                    val replacement = song.copy(id = "replacement")
+                    val refreshedAlbum = album.copy(songCount = 2)
+                    val partial =
+                        PlaylistPage(
+                            sections = mapOf("songs" to listOf(replacement)),
+                            pending = listOf(ContinuationBranch("next", "songs")),
+                            seen = emptySet(),
+                            session = InnerTube.SessionSnapshot(),
+                            album = refreshedAlbum,
+                        )
+                    database.storeAlbumPage(AlbumPage(refreshedAlbum, partial.songs, playlistPage = partial))
+                    val mixed = requireNotNull(database.loadCachedAlbum(album.id, setOf(song.id, replacement.id)))
+                    assertEquals(
+                        setOf(song.id, replacement.id),
+                        mixed.page.songs
+                            .map(SongItem::id)
+                            .toSet(),
+                    )
+                    assertFalse(mixed.isComplete)
+                    assertFalse(mixed.canReuseWithoutRefresh)
+
+                    val last = song.copy(id = "last")
+                    database.storeAlbumPage(AlbumPage(refreshedAlbum, listOf(replacement, last)), updateHeaderMetadata = true)
+                    val completed = requireNotNull(database.loadCachedAlbum(album.id, setOf(replacement.id, last.id)))
+                    assertEquals(listOf(replacement.id, last.id), completed.page.songs.map(SongItem::id))
+                    assertTrue(completed.canReuseWithoutRefresh)
+                    val offlineSubset = requireNotNull(database.loadCachedAlbum(album.id, setOf(replacement.id), offlineOnly = true))
+                    assertEquals(listOf(replacement.id), offlineSubset.page.songs.map(SongItem::id))
+                    assertFalse(offlineSubset.isComplete)
+                    assertTrue(offlineSubset.isOfflineReady)
+                    assertFalse(offlineSubset.canReuseWithoutRefresh)
                 } finally {
                     database.close()
                 }

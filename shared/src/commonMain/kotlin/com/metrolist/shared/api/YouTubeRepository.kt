@@ -1394,19 +1394,7 @@ class YouTubeRepository(
     ): CachedAlbum? {
         val database = databaseProvider() ?: return null
         val availableSongIds = offlineSongAvailabilityProvider()?.songIds()
-        val cached =
-            if (!PlaybackNetworkStateStore.current.connected) {
-                database.loadOfflineAlbum(albumId, availableSongIds)?.let {
-                    CachedAlbum(
-                        page = it,
-                        isComplete = true,
-                        hasCachedHeaderMetadata = true,
-                        isOfflineReady = true,
-                    )
-                }
-            } else {
-                database.loadCachedAlbum(albumId, availableSongIds)
-            }
+        val cached = database.loadCachedAlbum(albumId, availableSongIds, offlineOnly = !PlaybackNetworkStateStore.current.connected)
         return cached?.let {
             if (applyContentFilters) it.copy(page = BlockedContent.filterAlbumPage(it.page)) else it
         }
@@ -1431,7 +1419,14 @@ class YouTubeRepository(
             }
         if (!PlaybackNetworkStateStore.current.connected) return loadLocal()
         if (!forceRefresh) {
-            val cached = database?.loadCachedAlbum(albumId, offlineSongAvailabilityProvider()?.songIds())
+            val cached =
+                try {
+                    database?.loadCachedAlbum(albumId, offlineSongAvailabilityProvider()?.songIds())
+                } catch (error: CancellationException) {
+                    throw error
+                } catch (_: Exception) {
+                    null
+                }
             if (cached?.canReuseWithoutRefresh == true) {
                 return if (applyContentFilters) BlockedContent.filterAlbumPage(cached.page) else cached.page
             }
@@ -1528,6 +1523,7 @@ class YouTubeRepository(
             seen = emptySet(),
             session = innerTube.sessionSnapshot(),
             album = page.album,
+            isOffline = page.isIncompleteCache || !PlaybackNetworkStateStore.current.connected,
         )
     }
 

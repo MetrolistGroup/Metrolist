@@ -36,4 +36,5 @@ data class AlbumEntity(
     val isUploaded: Boolean = false,
     val description: String? = null,
     val otherVersions: List<AlbumItem>? = null,
+    val tracksComplete: Boolean? = null,
 )
