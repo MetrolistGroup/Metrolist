@@ -438,24 +438,35 @@ class MusicService :
         canResumeOnBluetoothConnect() && player.latestQueuePlaybackRequestId == requestId &&
             playbackCommandGeneration == commandGeneration && outputs.any { it in connectedAudioOutputs }
 
+    private fun BluetoothResume.withPendingOutputs(): BluetoothResume {
+        val pending = pendingBluetoothResume
+        return if (pending != null && pending.requestId == requestId && pending.commandGeneration == commandGeneration) {
+            BluetoothResume(outputs + pending.outputs.filter { it in connectedAudioOutputs }, requestId, commandGeneration)
+        } else {
+            this
+        }
+    }
+
     private fun resumeOnBluetoothConnect(request: BluetoothResume) {
-        pendingBluetoothResume = null
         serviceScope.launch {
             if (!request.isCurrent()) return@launch
+            val resume = request.withPendingOutputs()
+            pendingBluetoothResume = null
             val lifecycle = ProcessLifecycleOwner.get().lifecycle
             val startedBeforePromotion = lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM && !promotePlaybackToForeground()) {
                 // Android 15 grants audio focus only to a foreground service or the top app, so retry when the app is next started.
-                if (request.isCurrent()) {
-                    pendingBluetoothResume = request
+                if (resume.isCurrent()) {
+                    val deferred = resume.withPendingOutputs()
+                    pendingBluetoothResume = deferred
                     // The app can become started before its rejected promotion completes.
                     if (!startedBeforePromotion && lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) {
-                        resumeOnBluetoothConnect(request)
+                        resumeOnBluetoothConnect(deferred)
                     }
                 }
                 return@launch
             }
-            if (request.isCurrent()) media3Player?.play() else triggerNotificationUpdate()
+            if (resume.isCurrent()) media3Player?.play() else triggerNotificationUpdate()
         }
     }
 
