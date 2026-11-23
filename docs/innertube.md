@@ -16,6 +16,7 @@ These flags do not alter hosted pins. QuackJS handles signature and throttling t
 App callers use `shared/src/commonMain/kotlin/com/metrolist/shared/api/YouTubeRepository.kt`.
 
 - Playlist page flows are cold and emit deltas without prefetch. `first()` must not request continuations. Resume from the saved cursor and preserve duplicates by song ID plus playlist occurrence ID.
+- Generated mix continuations have no final page. Whole-playlist actions use the loaded pages as a finite snapshot, and a cache refresh replaces the previous batch. Normal playlists and albums still load every page.
 - Consumers sharing a playlist cursor reuse successful deltas. Failure or cancellation leaves it retryable. Keep account/session checks around reused results.
 - Podcast pagination follows distinct continuation branches and deduplicates episode IDs. Retain sibling tokens and failed cursors. Whole-podcast actions need every episode.
 - Interactive browse/Home shelf loaders request first pages with `loadAllPages = false`. Resume shelf cursors before outer cursors, preserve response order and retain failures for retry.
