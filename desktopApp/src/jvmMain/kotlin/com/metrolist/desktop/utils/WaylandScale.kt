@@ -7,6 +7,7 @@ package com.metrolist.desktop.utils
 
 import com.metrolist.shared.settings.Settings
 import com.metrolist.shared.utils.XdgUtils
+import com.metrolist.shared.utils.headlessDisplaySizes
 import com.sun.jna.Library
 import com.sun.jna.Native
 import kotlinx.coroutines.runBlocking
@@ -139,6 +140,13 @@ object WaylandScale {
         // Keep AWT headless so accidental Swing/AWT lookups never attempt an X11 connection.
         System.setProperty("java.awt.headless", "true")
         nativeWaylandActive = true
+        // Headless AWT cannot measure displays, so the automatic video cap reads the compositor's monitors.
+        // shortcut: KDE reports no per-monitor sizes here, so it keeps the 2160p default; read GdkMonitor if that matters.
+        val initialRefresh = lazy { runCatching { refreshMonitorCache() } }
+        headlessDisplaySizes = {
+            initialRefresh.value
+            monitorCache.get().map { (it.w * it.scale).roundToInt() to (it.h * it.scale).roundToInt() }
+        }
         return true
     }
 

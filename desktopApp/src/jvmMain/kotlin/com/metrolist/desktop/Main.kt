@@ -78,6 +78,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.window.WindowPlacement
 import androidx.compose.ui.window.WindowPosition
 import androidx.compose.ui.window.rememberWindowState
@@ -217,11 +218,13 @@ import com.metrolist.shared.state.applyContentRegion
 import com.metrolist.shared.state.coreModule
 import com.metrolist.shared.ui.YouTubeSyncSnackbar
 import com.metrolist.shared.ui.components.AlertDialog
+import com.metrolist.shared.ui.components.Dialog
 import com.metrolist.shared.ui.components.HomeLoadingPlaceholder
 import com.metrolist.shared.ui.components.LoadingScreen
 import com.metrolist.shared.ui.components.LocalDownloadedSongIds
 import com.metrolist.shared.ui.components.LocalVisualWorkActive
 import com.metrolist.shared.ui.components.PopupVisibility
+import com.metrolist.shared.ui.crash.CrashLogsScreen
 import com.metrolist.shared.ui.navigation.LocalNavigationContainerState
 import com.metrolist.shared.ui.navigation.LocalNavigator
 import com.metrolist.shared.ui.navigation.NavigationContentProvider
@@ -422,6 +425,20 @@ private fun DesktopWindowScope.AppContent(
             }
             PopupVisibility(visible = UiState.showLogViewer) {
                 ApplicationLogsDialog(onDismiss = { UiState.showLogViewer = false })
+            }
+            if (UiState.showCrashLogs) {
+                Dialog(
+                    onDismissRequest = { UiState.showCrashLogs = false },
+                    properties = DialogProperties(usePlatformDefaultWidth = false),
+                ) {
+                    Surface(Modifier.fillMaxSize(), color = colorScheme.surface) {
+                        CrashLogsScreen(
+                            DesktopCrashRecovery.store,
+                            onClose = { UiState.showCrashLogs = false },
+                            onShare = DesktopCrashRecovery::share,
+                        )
+                    }
+                }
             }
             PopupVisibility(visible = UiState.showTokenLogin) {
                 TokenLoginDialog(
@@ -824,12 +841,20 @@ fun main(args: Array<String>) {
     startup.trace("main")
     val recoveryIndex = args.indexOf(DesktopCrashRecovery.ARGUMENT)
     val pendingReport = if (recoveryIndex < 0) runCatching { DesktopCrashRecovery.store.pendingReportId() }.getOrNull() else null
+    var installCrashHandler = true
     if (recoveryIndex >= 0 || pendingReport != null) {
-        if (OsUtil.isLinux) WaylandScale.configureNativeWaylandBackend()
-        DesktopCrashRecovery.show(pendingReport ?: args.getOrElse(recoveryIndex + 1) { "" })
-        return
+        val reportId = pendingReport ?: args.getOrElse(recoveryIndex + 1) { "" }
+        if (!OsUtil.isLinux || !WaylandScale.configureNativeWaylandBackend()) {
+            DesktopCrashRecovery.show(reportId)
+            return
+        }
+        // Swing cannot open a window under native Wayland, so the app starts with its crash log screen open.
+        // Without the crash handler a second crash exits instead of relaunching in a loop.
+        runCatching { DesktopCrashRecovery.store.acknowledge(reportId) }
+        UiState.showCrashLogs = true
+        installCrashHandler = false
     }
-    DesktopCrashRecovery.install()
+    if (installCrashHandler) DesktopCrashRecovery.install()
     try {
         configureDesktopJvmErrorFile()
         NativeMemoryTrimmer.limitArenasByReexec()
