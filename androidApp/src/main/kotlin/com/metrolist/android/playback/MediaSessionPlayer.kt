@@ -1460,19 +1460,19 @@ class MediaSessionPlayer(
     override fun getSurfaceSize(): androidx.media3.common.util.Size = androidx.media3.common.util.Size.UNKNOWN
 
     override fun increaseDeviceVolume() {
-        setDeviceVolume(getDeviceVolume() + 5, 0)
+        setDeviceVolume(getDeviceVolume() + Settings.shared.castVolumeStep, 0)
     }
 
     override fun increaseDeviceVolume(flags: Int) {
-        setDeviceVolume(getDeviceVolume() + 5, flags)
+        setDeviceVolume(getDeviceVolume() + Settings.shared.castVolumeStep, flags)
     }
 
     override fun decreaseDeviceVolume() {
-        setDeviceVolume(getDeviceVolume() - 5, 0)
+        setDeviceVolume(getDeviceVolume() - Settings.shared.castVolumeStep, 0)
     }
 
     override fun decreaseDeviceVolume(flags: Int) {
-        setDeviceVolume(getDeviceVolume() - 5, flags)
+        setDeviceVolume(getDeviceVolume() - Settings.shared.castVolumeStep, flags)
     }
 
     override fun setAudioAttributes(
