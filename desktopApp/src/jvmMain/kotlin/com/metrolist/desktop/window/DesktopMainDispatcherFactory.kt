@@ -5,6 +5,7 @@ import com.metrolist.shared.utils.OsUtil
 import kotlinx.coroutines.InternalCoroutinesApi
 import kotlinx.coroutines.MainCoroutineDispatcher
 import kotlinx.coroutines.internal.MainDispatcherFactory
+import kotlin.coroutines.CoroutineContext
 
 /**
  * Selects Nucleus's Tao main dispatcher when Linux runs on native Wayland, and keeps Swing's EDT
@@ -26,7 +27,8 @@ class DesktopMainDispatcherFactory : MainDispatcherFactory {
             allFactories.firstOrNull { it.javaClass.name == targetName }
                 ?: allFactories.firstOrNull { it !== this && it.javaClass.name != javaClass.name }
                 ?: error("No desktop MainDispatcherFactory found for $targetName")
-        return delegate.createDispatcher(allFactories)
+        val dispatcher = delegate.createDispatcher(allFactories)
+        return if (targetName == TAO_DISPATCHER_FACTORY) QueuedMainDispatcher(dispatcher) else dispatcher
     }
 
     override fun hintOnError(): String = "Failed to initialize desktop Main dispatcher"
@@ -35,4 +37,23 @@ class DesktopMainDispatcherFactory : MainDispatcherFactory {
         private const val TAO_DISPATCHER_FACTORY = "dev.nucleusframework.window.tao.dispatch.TaoMainDispatcherFactory"
         private const val SWING_DISPATCHER_FACTORY = "kotlinx.coroutines.swing.SwingDispatcherFactory"
     }
+}
+
+/**
+ * Tao runs Dispatchers.Main work inline when already on its thread. Swing always queues it, and startup code
+ * such as PlayerState's init launches collectors before later fields are assigned, so keep Swing's ordering.
+ */
+private class QueuedMainDispatcher(
+    private val delegate: MainCoroutineDispatcher,
+) : MainCoroutineDispatcher() {
+    override val immediate: MainCoroutineDispatcher get() = delegate.immediate
+
+    override fun isDispatchNeeded(context: CoroutineContext): Boolean = true
+
+    override fun dispatch(
+        context: CoroutineContext,
+        block: Runnable,
+    ) = delegate.dispatch(context, block)
+
+    override fun toString(): String = delegate.toString()
 }

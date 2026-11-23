@@ -59,7 +59,7 @@ internal fun WindowVisibility(
     val visibility = remember(taoWindow) { WindowVisibilityState() }
     val currentWindowShown by rememberUpdatedState(windowShown)
     LaunchedEffect(taoWindow, windowShown, state.isMinimized) {
-        visibility.updateWindow(shown = windowShown, minimized = taoWindow?.isMinimized() ?: state.isMinimized)
+        visibility.updateWindow(shown = windowShown, minimized = taoWindow?.isMinimized ?: state.isMinimized)
     }
     DisposableEffect(taoWindow, visibility) {
         // Only register multi-cast listeners; onShown/onWillHide are single-slot hooks owned by Tao's EGL host.

@@ -140,6 +140,7 @@ import com.metrolist.desktop.storage.downloadQueueSummary
 import com.metrolist.desktop.ui.layouts.AccountMenu
 import com.metrolist.desktop.utils.WindowDragHandle
 import com.metrolist.desktop.window.DesktopWindowScope
+import com.metrolist.desktop.window.asComposeWindowScope
 import com.metrolist.desktop.window.jna.structure.isWindows10OrLater
 import com.metrolist.shared.generated.resources.Res
 import com.metrolist.shared.generated.resources.cd_account_menu
@@ -749,7 +750,7 @@ fun DesktopWindowScope.TopBarWithPlayer(
     } else if (OsUtil.isWindows) {
         titlebarContent2()
     } else {
-        WindowDraggableArea(content = titlebarContent2)
+        asComposeWindowScope()?.WindowDraggableArea(content = titlebarContent2) ?: titlebarContent2()
     }
 }
 

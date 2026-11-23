@@ -366,7 +366,7 @@ private fun DesktopWindowScope.AppContent(
                 val dark = colorScheme.background.luminance() < 0.5f
                 ComposeTrayManager.setThemeColors(bg, fg, border, dark)
                 if (!isLinux) {
-                    window.background = colorScheme.background.toAwtColor()
+                    awtWindow?.background = colorScheme.background.toAwtColor()
                 }
             } catch (_: Exception) {
             }
@@ -1477,7 +1477,7 @@ private fun runDesktopApp(args: Array<String>) {
             DisposableEffect(awtFrame, taoWindow) {
                 val tao = taoWindow
                 if (tao != null) {
-                    UiState.isWindowFocused = tao.isFocused()
+                    UiState.isWindowFocused = tao.isFocused
                     tao.onFocusChanged { focused -> UiState.isWindowFocused = focused }
                     tao.onMinimizedChanged { minimized -> ComposeTrayManager.setWindowVisible(!minimized) }
                     onDispose { }

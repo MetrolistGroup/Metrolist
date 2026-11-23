@@ -14,6 +14,7 @@ import androidx.compose.ui.window.DialogState
 import androidx.compose.ui.window.DialogWindow
 import androidx.compose.ui.window.FrameWindowScope
 import androidx.compose.ui.window.Window
+import androidx.compose.ui.window.WindowScope
 import androidx.compose.ui.window.WindowState
 import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberDialogState
@@ -64,6 +65,13 @@ internal fun DesktopFrameWindowScope.asComposeFrameWindowScope(): FrameWindowSco
     (awtFrame as? ComposeWindow)?.let { composeWindow ->
         object : FrameWindowScope {
             override val window: ComposeWindow = composeWindow
+        }
+    }
+
+internal fun DesktopWindowScope.asComposeWindowScope(): WindowScope? =
+    awtWindow?.let { awt ->
+        object : WindowScope {
+            override val window: AwtWindow = awt
         }
     }
 

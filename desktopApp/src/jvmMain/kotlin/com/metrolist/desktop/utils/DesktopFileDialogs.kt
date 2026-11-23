@@ -82,8 +82,8 @@ internal suspend fun pickDesktopDirectory(
         fileKitDialog = {
             FileKit
                 .openDirectoryPicker(
-                    title = title,
                     directory = initialDirectory?.takeIf(File::isDirectory)?.let(::PlatformFile),
+                    dialogSettings = FileKitDialogSettings(title = title),
                 )?.file
         },
         nativeDialog = {

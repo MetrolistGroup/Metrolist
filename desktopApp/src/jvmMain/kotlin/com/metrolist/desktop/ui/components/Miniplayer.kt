@@ -158,7 +158,7 @@ fun MiniplayerWindow() {
                             content = {
                                 val colorScheme = MaterialTheme.colorScheme
                                 areWeInDarkMode.value = !MaterialTheme.colorScheme.background.isLight()
-                                WindowDraggableArea {
+                                composeFrameScope.WindowDraggableArea {
                                     if (isFocusMode) {
                                         FocusModeMiniplayer(colorScheme, isNightMode, transparentWindow)
                                     } else {

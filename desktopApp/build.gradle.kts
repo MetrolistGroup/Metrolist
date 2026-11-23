@@ -329,7 +329,8 @@ kotlin {
                 implementation(libs.sharesheet)
                 implementation(libs.windowstaskbar)
                 implementation(libs.mediacontrols)
-                implementation(libs.decorated.window.tao) {
+                // KMP's dependency handler takes exclusions only with string notation.
+                implementation(libs.decorated.window.tao.get().toString()) {
                     exclude(group = "dev.nucleusframework", module = "nucleus.angle-natives")
                     exclude(group = "org.jetbrains.compose.desktop")
                 }
