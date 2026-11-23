@@ -403,32 +403,62 @@ class MusicService :
                             (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && device.type == AudioDeviceInfo.TYPE_BLE_BROADCAST)
                     }
 
-                fun canResume() =
-                    !isDestroying && isRunning && Settings.shared.resumeOnBluetoothConnect &&
-                        playbackRestoreJob.isCompleted && player.playbackState == Player.STATE_READY && !player.wantsPlayback &&
-                        player.currentSong.value != null && castManager.state.value.status == CastConnectionStatus.DISCONNECTED &&
-                        !AndroidDeviceConnect.manager.remote.willStartRemotePlayback &&
-                        !AndroidListenTogetherManager.isGuestPlaybackLocked && !shouldPauseLocalPlaybackInBackground()
-
-                if (newOutputs.isEmpty() || !canResume()) return
-                val requestId = player.latestQueuePlaybackRequestId
-                val commandGeneration = playbackCommandGeneration
-                serviceScope.launch {
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM && !promotePlaybackToForeground()) return@launch
-                    if (canResume() && player.latestQueuePlaybackRequestId == requestId && playbackCommandGeneration == commandGeneration &&
-                        newOutputs.any { it.id in connectedAudioOutputs }
-                    ) {
-                        media3Player?.play()
-                    } else {
-                        triggerNotificationUpdate()
-                    }
-                }
+                if (newOutputs.isEmpty() || !canResumeOnBluetoothConnect()) return
+                resumeOnBluetoothConnect(
+                    BluetoothResume(
+                        newOutputs.mapTo(mutableSetOf()) { it.id },
+                        player.latestQueuePlaybackRequestId,
+                        playbackCommandGeneration,
+                    ),
+                )
             }
 
             override fun onAudioDevicesRemoved(removedDevices: Array<out AudioDeviceInfo>) {
                 removedDevices.forEach { connectedAudioOutputs.remove(it.id) }
+                if (pendingBluetoothResume?.outputs?.none { it in connectedAudioOutputs } == true) pendingBluetoothResume = null
             }
         }
+
+    private class BluetoothResume(
+        val outputs: Set<Int>,
+        val requestId: Long,
+        val commandGeneration: Long,
+    )
+
+    private var pendingBluetoothResume: BluetoothResume? = null
+
+    private fun canResumeOnBluetoothConnect() =
+        !isDestroying && isRunning && Settings.shared.resumeOnBluetoothConnect &&
+            playbackRestoreJob.isCompleted && player.playbackState == Player.STATE_READY && !player.wantsPlayback &&
+            player.currentSong.value != null && castManager.state.value.status == CastConnectionStatus.DISCONNECTED &&
+            !AndroidDeviceConnect.manager.remote.willStartRemotePlayback &&
+            !AndroidListenTogetherManager.isGuestPlaybackLocked && !shouldPauseLocalPlaybackInBackground()
+
+    private fun BluetoothResume.isCurrent() =
+        canResumeOnBluetoothConnect() && player.latestQueuePlaybackRequestId == requestId &&
+            playbackCommandGeneration == commandGeneration && outputs.any { it in connectedAudioOutputs }
+
+    private fun resumeOnBluetoothConnect(request: BluetoothResume) {
+        pendingBluetoothResume = null
+        serviceScope.launch {
+            if (!request.isCurrent()) return@launch
+            val lifecycle = ProcessLifecycleOwner.get().lifecycle
+            val startedBeforePromotion = lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM && !promotePlaybackToForeground()) {
+                // Android 15 grants audio focus only to a foreground service or the top app, so retry when the app is next started.
+                if (request.isCurrent()) {
+                    pendingBluetoothResume = request
+                    // The app can become started before its rejected promotion completes.
+                    if (!startedBeforePromotion && lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) {
+                        resumeOnBluetoothConnect(request)
+                    }
+                }
+                return@launch
+            }
+            if (request.isCurrent()) media3Player?.play() else triggerNotificationUpdate()
+        }
+    }
+
     private val pauseOnMute = PauseOnMuteController()
     private val volumeMuteObserver =
         object : ContentObserver(Handler(Looper.getMainLooper())) {
@@ -650,7 +680,10 @@ class MusicService :
     private fun observeServiceLifetime() {
         serviceScope.launch {
             ProcessLifecycleOwner.get().lifecycle.currentStateFlow.collect { state ->
-                if (state.isAtLeast(Lifecycle.State.STARTED)) taskRemoved.value = false
+                if (state.isAtLeast(Lifecycle.State.STARTED)) {
+                    taskRemoved.value = false
+                    pendingBluetoothResume?.let(::resumeOnBluetoothConnect)
+                }
             }
         }
         serviceScope.launch {
