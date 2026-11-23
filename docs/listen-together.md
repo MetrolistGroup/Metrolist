@@ -53,7 +53,7 @@ Settings and server management require the switch but not a username. Creating o
 
 ## Invitation links
 
-Room invitations use `https://metrolist.cc/listen?code=<code>` or `https://metrolist.cc/party?r=<code>`. Media share and copy actions use `https://music.youtube.com` through `ShareUrls`. Loopback and Workers preview hosts do not open media or room invitations.
+Room invitations use `https://metrolist.cc/listen?code=<code>` or `https://metrolist.cc/party?r=<code>`. Media share and copy actions use `https://music.youtube.com` through `ShareUrls`. With **Song links** set to song.link in Content settings, song shares use `https://song.link/y/<videoId>`; timestamped links, podcast episodes and Show in YouTube Music keep YouTube Music URLs. Loopback and Workers preview hosts do not open media or room invitations.
 
 Android video start positions are read from the normalized media target, including timestamps inside Metrolist `/open?url=` wrappers. A wrapper-level timestamp does not override the target. Direct Metrolist `/watch` links retain `#t=` fragments.
 

@@ -184,6 +184,7 @@ import com.metrolist.shared.constants.SleepTimerDefaultFinishCurrentSongKey
 import com.metrolist.shared.constants.SleepTimerDefaultMinutesKey
 import com.metrolist.shared.constants.SliderTrackThicknessDpKey
 import com.metrolist.shared.constants.SlimNavBarKey
+import com.metrolist.shared.constants.SongShareLinkKey
 import com.metrolist.shared.constants.SpeedDialArtworkRefreshTimesKey
 import com.metrolist.shared.constants.SpeedDialSurprisePinnedKey
 import com.metrolist.shared.constants.SponsorBlockEnabledKey
@@ -672,6 +673,7 @@ class Settings(
     var listenBrainzEnabled by preference(false)
     var listenBrainzUseNowPlaying by preference(true)
     var listenBrainzApiUrl by preference(ListenBrainzApiUrlKey, "")
+    var songShareLink by preference(SongShareLinkKey, SongShareLink.YOUTUBE_MUSIC.name)
     var pendingScrobblesJson by preference("[]")
     var corruptPendingScrobblesJson by preference("")
     var systemInDarkTheme by preference(false)

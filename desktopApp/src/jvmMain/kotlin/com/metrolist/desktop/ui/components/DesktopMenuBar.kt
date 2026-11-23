@@ -382,7 +382,7 @@ fun FrameWindowScope.DesktopMenuBar(
                 onClick = {
                     currentTrack?.let {
                         try {
-                            Desktop.getDesktop().browse(URI(ShareUrls.song(it.id)))
+                            Desktop.getDesktop().browse(URI(ShareUrls.youtubeMusicSong(it.id)))
                         } catch (_: Exception) {
                         }
                     }

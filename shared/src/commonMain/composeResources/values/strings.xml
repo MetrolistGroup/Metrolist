@@ -2705,6 +2705,12 @@
     <!-- Translators: Imperative action label for view all; retained for translation compatibility but not currently referenced by app code. -->
     <!-- Translators: Label for YouTube music in the multiple app screens. -->
     <string name="youtube_music" translatable="false">YouTube Music</string>
+    <!-- Translators: Name of the song.link (Odesli) link service; not translated. -->
+    <string name="song_link" translatable="false">song.link</string>
+    <!-- Translators: Setting title for which link format is used when sharing or copying a song. -->
+    <string name="song_share_link">Song links</string>
+    <!-- Translators: Supporting text for the song link format setting. -->
+    <string name="song_share_link_description">song.link opens a page with the song on other music services. Links with a timestamp and podcast episodes always use YouTube Music.</string>
     <!-- Translators: Label for you in the Android app. -->
     <string name="you">You</string>
 
