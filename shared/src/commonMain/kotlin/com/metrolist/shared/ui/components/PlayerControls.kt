@@ -598,7 +598,7 @@ fun PlayerLikeShareButtons(
                             interactionSource = likeInteractionSource,
                             modifier =
                                 Modifier
-                                    .size(width = buttonWidth, height = groupHeight)
+                                    .fillMaxSize()
                                     .tvFocusHighlight(
                                         if (isTv) RoundedCornerShape(50) else ButtonGroupDefaults.connectedTrailingButtonShape,
                                         scale = 1f,
