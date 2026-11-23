@@ -89,6 +89,7 @@ import com.metrolist.shared.playlist.PlaylistChanges
 import com.metrolist.shared.settings.BlockedContent
 import com.metrolist.shared.settings.Settings
 import com.metrolist.shared.state.SongLikeState
+import com.metrolist.shared.state.youTubeLanguage
 import com.metrolist.shared.utils.Logger
 import com.metrolist.shared.viewmodels.LIBRARY_REFRESH_TTL_MILLIS
 import com.metrolist.shared.youtube.logging.YtLogger
@@ -1762,7 +1763,7 @@ class YouTubeRepository(
     ): SongWatchInformation? {
         val session = innerTube.sessionSnapshot()
         val requestTube = innerTube.createIsolatedSession(true)
-        requestTube.locale = requestTube.locale.copy(hl = languageTag)
+        requestTube.locale = requestTube.locale.copy(hl = youTubeLanguage(languageTag))
         return try {
             val response =
                 requestTube.next(YouTubeClient.WEB, videoId = videoId).bodyLimited<JsonObject>(PLAYER_NEXT_RESPONSE_LIMIT)

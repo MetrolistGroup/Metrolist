@@ -212,7 +212,7 @@ class YouTubeSubtitleLyricsProvider(
                     ?.get("captionTracks")
                     ?.jsonArray
                     .orEmpty()
-            val preferredLang = GlobalYouTube.innerTube.locale.hl
+            val preferredLang = GlobalYouTube.contentLocale.hl
             val track =
                 captionTracks.firstOrNull { track ->
                     track.jsonObject["languageCode"]

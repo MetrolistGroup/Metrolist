@@ -38,9 +38,8 @@ private fun isContentLanguage(tag: String): Boolean {
         (region.isEmpty() || region.first().isDigit() || region in platformCountryCodes)
 }
 
-// The full tag, then its first two subtags (zh-Hant-MO to zh-Hant), then the language. InnerTubeX leaves a blank hl out
-// of the request, so YouTube picks the language when it accepts none of them.
-private fun youTubeLanguage(tag: String): String {
+// Blank hl requires InnerTubeX's blank-locale omission so YouTube can choose the language.
+internal fun youTubeLanguage(tag: String): String {
     val parts = tag.replace('_', '-').split('-')
     return listOf(parts.joinToString("-"), parts.take(2).joinToString("-"), parts.first())
         .firstOrNull { it in youTubeLanguageTags }
@@ -56,6 +55,11 @@ val coreModule =
 object GlobalYouTube {
     val client = createHttpClient()
     val innerTube: InnerTube = InnerTube(client, logger = MetrolistInnerTubeLogger)
+    private val resolvedContentLocale = atomic(innerTube.locale)
+
+    // Services outside InnerTube must retain the user's language even when YouTube rejects it.
+    val contentLocale: YouTubeLocale get() = resolvedContentLocale.value
+
     val repository: YouTubeRepository =
         YouTubeRepository(
             innerTube,
@@ -101,8 +105,7 @@ object GlobalYouTube {
         if (contentLanguage != SYSTEM && !validContentLanguage) {
             settings.contentLanguage = SYSTEM
         }
-        val resolvedHl =
-            youTubeLanguage(if (validContentLanguage) contentLanguage else systemLanguage.substringBefore('-').substringBefore('_'))
+        val resolvedHl = canonicalLanguageTag((if (validContentLanguage) contentLanguage else systemLanguage).replace('_', '-'))
         val validContentCountry = contentCountry in contentCountryCodes
         if (contentCountry != SYSTEM && !validContentCountry) {
             settings.contentCountry = SYSTEM
@@ -120,7 +123,8 @@ object GlobalYouTube {
             settings.lastHomePageJson = ""
         }
 
-        innerTube.locale = YouTubeLocale(gl = resolvedGl, hl = resolvedHl)
+        resolvedContentLocale.value = YouTubeLocale(gl = resolvedGl, hl = resolvedHl)
+        innerTube.locale = contentLocale.copy(hl = youTubeLanguage(resolvedHl))
         innerTube.regionOverrideActive = true
         playbackSessionGenerationCounter.incrementAndGet()
 
@@ -130,7 +134,7 @@ object GlobalYouTube {
                 "(contentLanguage=$contentLanguage contentCountry=$contentCountry " +
                 "systemLanguage=$systemLanguage systemCountry=$systemCountry)",
         )
-        _regionApplied.tryEmit(YouTubeLocale(gl = resolvedGl, hl = resolvedHl))
+        _regionApplied.tryEmit(innerTube.locale)
     }
 
     const val SYSTEM = "SYSTEM"
