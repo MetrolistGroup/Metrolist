@@ -1404,11 +1404,12 @@ class YouTubeRepository(
     ): AlbumPage? {
         val database = databaseProvider()
 
-        suspend fun loadLocal(): AlbumPage? =
+        suspend fun loadLocal(requireComplete: Boolean = false): AlbumPage? =
             database
-                ?.loadOfflineAlbum(albumId, offlineSongAvailabilityProvider()?.songIds())
+                ?.loadOfflineAlbum(albumId, offlineSongAvailabilityProvider()?.songIds(), requireComplete)
                 ?.let { if (applyContentFilters) BlockedContent.filterAlbumPage(it) else it }
         if (!PlaybackNetworkStateStore.current.connected) return loadLocal()
+        loadLocal(requireComplete = true)?.let { return it }
         var stage = "browse"
         return try {
             val requestSession = innerTube.sessionSnapshot()
@@ -1450,6 +1451,8 @@ class YouTubeRepository(
                 } else {
                     getPlaylistPlaybackPage(albumItem.playlistId ?: return loadLocal()).copy(album = albumItem)
                 }
+            // A failed playlist request falls back to downloaded tracks; storing them would replace the full album.
+            if (playlistTracks.isOffline) return loadLocal()
             // An album's playlist comes back empty when the account cannot play most of it; the browse shelf still lists every track.
             val shelfSongs =
                 if (playlistTracks.songs.isEmpty() && !playlistTracks.hasMore) secondaryContents.albumShelfSongs() else emptyList()
@@ -1481,7 +1484,7 @@ class YouTubeRepository(
                     artistAlbums = artistAlbums,
                     description = albumHeader.description,
                 )
-            database?.storeAlbumPage(page)
+            database?.storeAlbumPage(page, hasHeaderMetadata = true)
             if (applyContentFilters) BlockedContent.filterAlbumPage(page) else page
         } catch (e: CancellationException) {
             throw e
