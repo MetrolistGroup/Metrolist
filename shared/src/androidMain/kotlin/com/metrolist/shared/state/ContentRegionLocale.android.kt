@@ -20,6 +20,6 @@ internal actual fun closestContentCountry(locale: Locale): String {
         .filter { it.script == target.script }
         .ifEmpty { sameLanguage }
         .minOfOrNull(ULocale::getCountry)
-        // No served region uses the language; any served region beats a request YouTube rejects.
-        ?: contentCountryCodes.min()
+        // shortcut: no served region uses the language, so gl stays unserved; omit gl (needs InnerTubeX) to let YouTube pick by IP.
+        ?: region
 }
