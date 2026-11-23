@@ -391,6 +391,9 @@ fun MetrolistIOSApp() {
                     if (sessionClosed) reopenDatabaseAfterRestore()
                     if (databaseGeneration == generationBeforeRestore && result.isSuccess) {
                         MetrolistPlatform.refreshRestoredSettings()
+                        if (defaultOpenTabRoot(Settings.shared.defaultOpenTab) == "LIBRARY") {
+                            Settings.shared.libraryFilter = LibraryFilterType.DEFAULT
+                        }
                         appGeneration++
                     }
                     backupFailure = result.exceptionOrNull()
