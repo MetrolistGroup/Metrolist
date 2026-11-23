@@ -499,7 +499,8 @@ class HomeShelfCache {
 }
 
 private val HomeSection.visibilityKey: String
-    get() = "section:${browseId ?: headerBrowseId ?: title}:${params.orEmpty()}"
+    // Params are left out: YouTube rotates them for dynamic shelves, which would make hidden sections reappear.
+    get() = "section:${browseId ?: headerBrowseId ?: title}"
 
 private fun HomeSection.toHomeShelf(
     key: String,

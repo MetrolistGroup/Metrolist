@@ -1306,10 +1306,10 @@ class Settings(
     ): Boolean {
         val current = getHomeSectionVisibilityMap()
         current[sectionKey]?.let { return it }
-        val legacy = current[legacyTitle] ?: return true
-        if (sectionKey != legacyTitle) {
-            homeSectionVisibility = Json.encodeToString(current + (sectionKey to legacy))
-        }
+        // Keys saved before params were dropped end in ":<params>"; a hidden variant hides the section.
+        val savedVariants = current.filterKeys { it.startsWith("$sectionKey:") }.values
+        val legacy = if (savedVariants.isNotEmpty()) savedVariants.all { it } else current[legacyTitle] ?: return true
+        homeSectionVisibility = Json.encodeToString(current + (sectionKey to legacy))
         return legacy
     }
 
