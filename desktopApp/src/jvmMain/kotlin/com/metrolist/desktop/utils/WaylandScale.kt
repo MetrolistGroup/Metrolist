@@ -21,7 +21,10 @@ import kotlinx.serialization.json.jsonPrimitive
 import java.io.File
 import java.util.Properties
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicLong
 import java.util.concurrent.atomic.AtomicReference
+import kotlin.concurrent.thread
 import kotlin.math.roundToInt
 
 object WaylandScale {
@@ -143,14 +146,25 @@ object WaylandScale {
         nativeWaylandActive = true
         // Headless AWT cannot measure displays, so the automatic video cap reads the compositor's monitors.
         // shortcut: KDE reports no per-monitor sizes here, so it keeps the 2160p default; read GdkMonitor if that matters.
-        var lastRefresh = 0L
-        headlessDisplaySizes = {
-            // Re-read at most once a minute so a monitor change reaches the next stream without a probe per request.
-            val now = System.nanoTime()
-            if (lastRefresh == 0L || now - lastRefresh >= MONITOR_REFRESH_NANOS) {
-                lastRefresh = now
-                runCatching { refreshMonitorCache() }
+        // Probes spawn compositor commands, so they run on their own thread and callers read the last result.
+        val refreshing = AtomicBoolean(false)
+        val lastRefresh = AtomicLong(0L)
+
+        fun refreshInBackground() {
+            if (!refreshing.compareAndSet(false, true)) return
+            lastRefresh.set(System.nanoTime())
+            thread(isDaemon = true, name = "WaylandMonitorRefresh") {
+                try {
+                    runCatching { refreshMonitorCache() }
+                } finally {
+                    refreshing.set(false)
+                }
             }
+        }
+        refreshInBackground()
+        headlessDisplaySizes = {
+            // Re-read at most once a minute so a monitor change reaches a later stream.
+            if (System.nanoTime() - lastRefresh.get() >= MONITOR_REFRESH_NANOS) refreshInBackground()
             monitorCache.get().map { (it.w * it.scale).roundToInt() to (it.h * it.scale).roundToInt() }
         }
         return true
