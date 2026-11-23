@@ -44,7 +44,8 @@ import com.metrolist.desktop.ui.components.WebViewAvailabilityLoading
 import com.metrolist.desktop.ui.components.WebViewUnavailableContent
 import com.metrolist.desktop.ui.components.rememberLinuxWebKitAvailable
 import com.metrolist.desktop.utils.prepareDesktopWebViewDataDirectory
-import com.metrolist.desktop.web.DesktopWebView
+import com.metrolist.desktop.web.DesktopBrowser
+import com.metrolist.desktop.web.rememberDesktopBrowser
 import com.metrolist.desktop.window.ClearWindowContentOnDispose
 import com.metrolist.desktop.window.DesktopDialogWindow
 import com.metrolist.innertubex.models.response.AccountsListResponse
@@ -94,12 +95,6 @@ import com.metrolist.shared.ui.utils.verticalScrollWithDrag
 import com.metrolist.shared.utils.OsUtil
 import com.metrolist.shared.utils.clearWebCookies
 import com.metrolist.shared.youtube.logging.YtLogger
-import io.github.kdroidfilter.webview.cookie.Cookie
-import io.github.kdroidfilter.webview.cookie.CookieManager
-import io.github.kdroidfilter.webview.web.LoadingState
-import io.github.kdroidfilter.webview.web.WebViewNavigator
-import io.github.kdroidfilter.webview.web.rememberWebViewNavigator
-import io.github.kdroidfilter.webview.web.rememberWebViewState
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.currentCoroutineContext
@@ -186,7 +181,7 @@ fun LoginDialog(
         MaterialTheme(colorScheme = colorScheme, typography = typography, shapes = shapes) {
             Surface(Modifier.fillMaxSize()) {
                 DesktopDensityProvider {
-                    val webKitAvailable = rememberLinuxWebKitAvailable()
+                    val webKitAvailable = rememberLinuxWebKitAvailable(waylandHostSupported = true)
                     if (cleanupRequested) {
                         LaunchedEffect(cleanupAttempt) {
                             delay(250L.milliseconds)
@@ -619,15 +614,14 @@ private fun WebViewContent(
         } else {
             "https://accounts.google.com/ServiceLogin?continue=https%3A%2F%2Fmusic.youtube.com"
         }
-    val webViewState =
-        rememberWebViewState(initialUrl).apply {
-            webSettings.backgroundColor = MaterialTheme.colorScheme.surface
-            webSettings.desktopWebSettings.transparent = false
-            webSettings.desktopWebSettings.dataDirectory = webViewDataDirectory.getOrNull()
-            webSettings.desktopWebSettings.initScript = LOGIN_WEBVIEW_INIT_SCRIPT
-            webSettings.customUserAgentString = buildBrowserUserAgent()
-        }
-    val navigator = rememberWebViewNavigator()
+    val browser =
+        rememberDesktopBrowser(
+            initialUrl = initialUrl,
+            userAgent = buildBrowserUserAgent(),
+            dataDirectory = File(webViewDataDirectory.getOrThrow()),
+            initScript = LOGIN_WEBVIEW_INIT_SCRIPT,
+            backgroundColor = MaterialTheme.colorScheme.surface,
+        )
     val coroutineScope = rememberCoroutineScope()
     var loginStage by remember { mutableStateOf(LoginStage.Authenticating) }
     var pendingAuthData by remember { mutableStateOf<AuthData?>(null) }
@@ -641,8 +635,8 @@ private fun WebViewContent(
     suspend fun extractAuthData(): AuthData? {
         if (hasCompletedLogin) return null
         return awaitProviderCredentials {
-            if (webViewState.loadingState is LoadingState.Finished && isYouTubeMusicUrl(webViewState.lastLoadedUrl)) {
-                readWebViewAuthData(webViewState.cookieManager) { script -> evaluateJs(navigator, script) }
+            if (isYouTubeMusicUrl(browser.finishedUrl)) {
+                readWebViewAuthData(browser)
             } else {
                 null
             }
@@ -711,10 +705,10 @@ private fun WebViewContent(
         }
     }
 
-    LaunchedEffect(webViewState, navigator, completionAttempt) {
-        snapshotFlow { webViewState.loadingState to webViewState.lastLoadedUrl }
-            .collect { (loadingState, lastLoadedUrl) ->
-                if (hasCompletedLogin || loadingState !is LoadingState.Finished || !isYouTubeMusicUrl(lastLoadedUrl)) {
+    LaunchedEffect(browser, completionAttempt) {
+        snapshotFlow { browser.finishedUrl }
+            .collect { finishedUrl ->
+                if (hasCompletedLogin || !isYouTubeMusicUrl(finishedUrl)) {
                     return@collect
                 }
 
@@ -756,11 +750,7 @@ private fun WebViewContent(
                 modifier = Modifier.fillMaxWidth().padding(16.dp),
             )
         }
-        DesktopWebView(
-            state = webViewState,
-            navigator = navigator,
-            modifier = Modifier.fillMaxWidth().weight(1f),
-        )
+        browser.Content(Modifier.fillMaxWidth().weight(1f))
         // Native WebViews draw above Compose overlays, so keep completion controls outside the browser.
         Row(
             modifier = Modifier.fillMaxWidth().padding(16.dp),
@@ -814,7 +804,7 @@ private fun WebViewContent(
                                         validateAndComplete = { finalizeLogin(it) },
                                         navigate = { url ->
                                             loginStage = LoginStage.SwitchingAccount
-                                            navigator.loadUrl(url)
+                                            browser.loadUrl(url)
                                         },
                                     )
                                 ) {
@@ -972,8 +962,16 @@ private data class WebViewAuthConfig(
     val authUser: String,
 )
 
-internal suspend fun readWebViewAuthData(
-    cookieManager: CookieManager,
+internal suspend fun readWebViewAuthData(browser: DesktopBrowser): AuthData? =
+    readAuthData(
+        cookiesFor = { url -> browser.cookies(url).map { it.name to it.value } },
+        nativeCookies = { browser.storedCookies().map { it.name to it.value } },
+        evaluateJavaScript = { script -> withTimeoutOrNull(2000L.milliseconds) { browser.evaluateJavaScript(script) }.orEmpty() },
+    )
+
+private suspend fun readAuthData(
+    cookiesFor: suspend (String) -> List<Pair<String, String>>,
+    nativeCookies: suspend () -> List<Pair<String, String>>,
     evaluateJavaScript: suspend (String) -> String,
 ): AuthData? {
     val config =
@@ -986,16 +984,16 @@ internal suspend fun readWebViewAuthData(
 
     val urlCookies =
         try {
-            val musicCookies = cookieManager.getCookies("https://music.youtube.com")
-            val youtubeCookies = cookieManager.getCookies("https://www.youtube.com") + cookieManager.getCookies("https://youtube.com")
-            val googleCookies = cookieManager.getCookies("https://accounts.google.com") + cookieManager.getCookies("https://google.com")
+            val musicCookies = cookiesFor("https://music.youtube.com")
+            val youtubeCookies = cookiesFor("https://www.youtube.com") + cookiesFor("https://youtube.com")
+            val googleCookies = cookiesFor("https://accounts.google.com") + cookiesFor("https://google.com")
             buildCookiePairs(musicCookies, youtubeCookies + googleCookies)
         } catch (e: CancellationException) {
             throw e
         } catch (_: Exception) {
             emptyList()
         }
-    val nativeCookies = if (hasAuthCookie(buildCookieString(urlCookies))) emptyList() else readNativeCookiePairs(cookieManager)
+    val nativeCookies = if (hasAuthCookie(buildCookieString(urlCookies))) emptyList() else nativeCookies()
     val jsCookies =
         config.cookie
             .split(';')
@@ -1013,26 +1011,6 @@ internal suspend fun readWebViewAuthData(
     )
 }
 
-private suspend fun evaluateJs(
-    navigator: WebViewNavigator,
-    script: String,
-): String =
-    try {
-        withTimeoutOrNull(2000L.milliseconds) {
-            suspendCancellableCoroutine { continuation ->
-                navigator.evaluateJavaScript(script) { result ->
-                    if (continuation.isActive) {
-                        continuation.resume(result)
-                    }
-                }
-            }
-        } ?: ""
-    } catch (e: CancellationException) {
-        throw e
-    } catch (_: Exception) {
-        ""
-    }
-
 private fun buildBrowserUserAgent(): String {
     val platformToken =
         when {
@@ -1047,18 +1025,18 @@ private fun buildBrowserUserAgent(): String {
 }
 
 private fun buildCookiePairs(
-    primaryCookies: List<Cookie>,
-    fallbackCookies: List<Cookie>,
+    primaryCookies: List<Pair<String, String>>,
+    fallbackCookies: List<Pair<String, String>>,
 ): List<Pair<String, String>> {
     val cookieByName = LinkedHashMap<String, String>()
-    for (cookie in primaryCookies) {
-        if (cookie.name.isNotBlank()) {
-            cookieByName[cookie.name] = cookie.value
+    for ((name, value) in primaryCookies) {
+        if (name.isNotBlank()) {
+            cookieByName[name] = value
         }
     }
-    for (cookie in fallbackCookies) {
-        if (cookie.name.isNotBlank() && !cookieByName.containsKey(cookie.name)) {
-            cookieByName[cookie.name] = cookie.value
+    for ((name, value) in fallbackCookies) {
+        if (name.isNotBlank() && !cookieByName.containsKey(name)) {
+            cookieByName[name] = value
         }
     }
     return cookieByName.map { it.key to it.value }
@@ -1069,27 +1047,3 @@ private fun buildCookieString(cookies: List<Pair<String, String>>): String =
         .filter { it.first.isNotBlank() }
         .distinctBy { it.first }
         .joinToString(separator = "; ") { "${it.first}=${it.second}" }
-
-private suspend fun readNativeCookiePairs(cookieManager: Any): List<Pair<String, String>> =
-    withContext(Dispatchers.IO) {
-        runCatching {
-            val panelField = cookieManager.javaClass.getDeclaredField("panel").apply { isAccessible = true }
-            val panel = panelField.get(cookieManager) ?: return@runCatching emptyList()
-            val cookies = panel.javaClass.getMethod("getCookies").invoke(panel) as? List<*> ?: return@runCatching emptyList()
-            cookies.mapNotNull { cookie ->
-                cookie ?: return@mapNotNull null
-                val domain =
-                    (cookie.javaClass.getMethod("getDomain").invoke(cookie) as? String)
-                        ?.removePrefix(".")
-                        ?.lowercase() ?: return@mapNotNull null
-                if (domain != "youtube.com" && !domain.endsWith(".youtube.com") &&
-                    domain != "google.com" && !domain.endsWith(".google.com")
-                ) {
-                    return@mapNotNull null
-                }
-                val name = cookie.javaClass.getMethod("getName").invoke(cookie) as? String ?: return@mapNotNull null
-                val value = cookie.javaClass.getMethod("getValue").invoke(cookie) as? String ?: return@mapNotNull null
-                name to value
-            }
-        }.getOrDefault(emptyList())
-    }

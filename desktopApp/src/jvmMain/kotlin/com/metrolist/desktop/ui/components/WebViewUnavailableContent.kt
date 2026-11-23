@@ -27,6 +27,7 @@ import androidx.compose.ui.unit.dp
 import com.metrolist.desktop.utils.LINUX_WEBKIT_SONAME
 import com.metrolist.desktop.utils.WaylandScale
 import com.metrolist.desktop.utils.isLinuxWebKitAvailable
+import com.metrolist.desktop.utils.isWebKitGtkLibraryAvailable
 import com.metrolist.desktop.utils.linuxWebKitInstallCommand
 import com.metrolist.shared.generated.resources.Res
 import com.metrolist.shared.generated.resources.close
@@ -34,7 +35,6 @@ import com.metrolist.shared.generated.resources.loading
 import com.metrolist.shared.generated.resources.webkit_appimage_hint
 import com.metrolist.shared.generated.resources.webkit_install_command
 import com.metrolist.shared.generated.resources.webkit_install_hint
-import com.metrolist.shared.generated.resources.webkit_wayland_hint
 import com.metrolist.shared.ui.utils.verticalScrollWithDrag
 import com.metrolist.shared.utils.OsUtil
 import kotlinx.coroutines.Dispatchers
@@ -42,9 +42,20 @@ import kotlinx.coroutines.withContext
 import org.jetbrains.compose.resources.stringResource
 
 @Composable
-internal fun rememberLinuxWebKitAvailable(): Boolean? {
+internal fun rememberLinuxWebKitAvailable(waylandHostSupported: Boolean = false): Boolean? {
     val available by produceState<Boolean?>(if (OsUtil.isLinux) null else true) {
-        if (OsUtil.isLinux) value = withContext(Dispatchers.IO) { isLinuxWebKitAvailable() }
+        if (OsUtil.isLinux) {
+            value =
+                withContext(Dispatchers.IO) {
+                    if (waylandHostSupported &&
+                        WaylandScale.isNativeWaylandActive()
+                    ) {
+                        isWebKitGtkLibraryAvailable()
+                    } else {
+                        isLinuxWebKitAvailable()
+                    }
+                }
+        }
     }
     return available
 }
@@ -62,16 +73,12 @@ internal fun WebViewUnavailableContent(
     title: String,
     onDismissRequest: () -> Unit,
 ) {
+    val command = remember { linuxWebKitInstallCommand() }
+    val isAppImage = remember { !System.getenv("APPIMAGE").isNullOrBlank() || !System.getenv("APPDIR").isNullOrBlank() }
     val hint =
-        if (WaylandScale.isNativeWaylandActive()) {
-            stringResource(Res.string.webkit_wayland_hint)
-        } else {
-            val command = remember { linuxWebKitInstallCommand() }
-            val isAppImage = remember { !System.getenv("APPIMAGE").isNullOrBlank() || !System.getenv("APPDIR").isNullOrBlank() }
-            stringResource(Res.string.webkit_install_hint, LINUX_WEBKIT_SONAME) +
-                (command?.let { "\n\n" + stringResource(Res.string.webkit_install_command, it) }.orEmpty()) +
-                (if (isAppImage) "\n\n" + stringResource(Res.string.webkit_appimage_hint) else "")
-        }
+        stringResource(Res.string.webkit_install_hint, LINUX_WEBKIT_SONAME) +
+            (command?.let { "\n\n" + stringResource(Res.string.webkit_install_command, it) }.orEmpty()) +
+            (if (isAppImage) "\n\n" + stringResource(Res.string.webkit_appimage_hint) else "")
     Column(
         modifier =
             Modifier

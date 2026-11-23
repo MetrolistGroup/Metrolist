@@ -6043,6 +6043,9 @@
     },
     {
       "bundle": "sun.util.logging.resources.logging"
+    },
+    {
+      "glob": "nucleus/nucleus-app.properties"
     }
   ]
 }
