@@ -5,11 +5,11 @@
 
 package com.metrolist.shared.api
 
+import com.metrolist.shared.network.readTextLimited
 import com.metrolist.shared.state.GlobalYouTube
 import io.ktor.client.plugins.timeout
-import io.ktor.client.request.get
 import io.ktor.client.request.parameter
-import io.ktor.client.statement.bodyAsText
+import io.ktor.client.request.prepareGet
 import io.ktor.http.HttpStatusCode
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.sync.Mutex
@@ -26,6 +26,8 @@ data class VideoVotes(
 
 /** Third-party vote counts from returnyoutubedislikeapi.com; dislikes are the service's estimates. */
 object ReturnYouTubeDislike {
+    // A vote response is a few hundred bytes; anything larger is not one.
+    private const val MAX_RESPONSE_BYTES = 16 * 1024
     private val mutex = Mutex()
     private val cache = LinkedHashMap<String, VideoVotes>()
 
@@ -34,12 +36,13 @@ object ReturnYouTubeDislike {
         val votes =
             try {
                 val response =
-                    GlobalYouTube.client.get("https://returnyoutubedislikeapi.com/Votes") {
-                        parameter("videoId", videoId)
-                        timeout { requestTimeoutMillis = 5_000 }
-                    }
+                    GlobalYouTube.client
+                        .prepareGet("https://returnyoutubedislikeapi.com/Votes") {
+                            parameter("videoId", videoId)
+                            timeout { requestTimeoutMillis = 5_000 }
+                        }.readTextLimited(MAX_RESPONSE_BYTES)
                 if (response.status != HttpStatusCode.OK) return null
-                repositoryJson.decodeFromString<VideoVotes>(response.bodyAsText())
+                repositoryJson.decodeFromString<VideoVotes>(response.body ?: return null)
             } catch (e: CancellationException) {
                 throw e
             } catch (_: Exception) {
