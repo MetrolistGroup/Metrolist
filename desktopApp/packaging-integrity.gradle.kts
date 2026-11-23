@@ -340,7 +340,7 @@ private class VerifyReleaseDistributableAction(
             when (platform) {
                 "win" -> listOf("nucleus_windows_theme.dll", "nucleus_share.dll", "nucleus_media_control_windows.dll")
                 "mac" -> listOf("libnucleus_darkmode.dylib", "libnucleus_share.dylib", "libnucleus_media_control_macos.dylib")
-                else -> listOf("libnucleus_linux_theme.so", "libnucleus_share.so", "libnucleus_media_control_linux.so")
+                else -> listOf("libnucleus_linux_theme.so", "libnucleus_share.so", "libnucleus_media_control_linux.so", "libnucleus_tao.so")
             }
         requiredNatives.forEach { native ->
             check("$nucleusPlatform$native" in packagedEntries) { "Release distributable is missing $nucleusPlatform$native" }

@@ -149,7 +149,7 @@ fun MiniplayerWindow() {
                 LaunchedEffect(windowSize, scale) {
                     windowState.size = DpSize(windowSize.width * scale, windowSize.height * scale)
                 }
-                WindowVisibility(window) {
+                WindowVisibility(this@DesktopWindow, windowState) {
                     val composeFrameScope = asComposeFrameWindowScope()
                     if (OsUtil.isWindows && composeFrameScope != null) {
                         val areWeInDarkMode = remember { mutableStateOf(false) }

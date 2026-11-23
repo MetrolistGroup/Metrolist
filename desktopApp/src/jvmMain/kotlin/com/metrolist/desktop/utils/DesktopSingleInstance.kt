@@ -1,7 +1,7 @@
 package com.metrolist.desktop.utils
 
+import com.metrolist.desktop.window.runOnDesktopUiThread
 import com.metrolist.shared.utils.XdgUtils
-import java.awt.EventQueue
 import java.nio.channels.FileChannel
 import java.nio.channels.FileLock
 import java.nio.channels.OverlappingFileLockException
@@ -146,7 +146,7 @@ object DesktopSingleInstance {
         val payload = args.firstOrNull { it.isNotBlank() }
         val acquired =
             lock.acquire(payload) { receivedPayload ->
-                EventQueue.invokeLater {
+                runOnDesktopUiThread {
                     val handler = restoreHandler
                     if (handler != null) {
                         handler.invoke(receivedPayload)
@@ -167,7 +167,7 @@ object DesktopSingleInstance {
 
     fun setRestoreHandler(handler: (String?) -> Unit) {
         restoreHandler = handler
-        EventQueue.invokeLater {
+        runOnDesktopUiThread {
             while (true) {
                 val payload = pendingPayloads.poll() ?: break
                 handler(payload.takeIf { it.isNotEmpty() })

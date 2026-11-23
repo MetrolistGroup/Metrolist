@@ -50,13 +50,11 @@ fun DesktopFrameWindowScope.WindowFrame(
         PlayerState.isFullscreen = transition.playerFullscreen
         state.size = nextState.size
         state.position = nextState.position
-        setWindowPlacement(state, nextState.placement) { placement ->
-            val composeWindow = window as? ComposeWindow
-            if (composeWindow != null) {
-                composeWindow.placement = placement
-            } else {
-                applyFramePlacement(window, placement)
-            }
+        val composeWindow = awtFrame as? ComposeWindow
+        if (composeWindow != null) {
+            setWindowPlacement(state, nextState.placement) { composeWindow.placement = it }
+        } else {
+            state.placement = nextState.placement
         }
     }
 

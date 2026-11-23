@@ -166,7 +166,7 @@ private fun EmbeddedDiscordLoginDialog(
         state = rememberDialogState(width = 600.dp, height = 700.dp),
         visible = true,
     ) {
-        ClearWindowContentOnDispose(window)
+        ClearWindowContentOnDispose(awtDialog)
         DesktopDensityProvider {
             if (webKitAvailable == null) {
                 WebViewAvailabilityLoading()

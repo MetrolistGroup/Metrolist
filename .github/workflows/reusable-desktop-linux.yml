@@ -83,27 +83,6 @@ jobs:
         with:
           cache-read-only: ${{ inputs.cache-read-only }}
 
-      - name: Cache JetBrains Runtime archive
-        if: ${{ !inputs.cache-read-only }}
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
-        with:
-          path: ${{ runner.tool_cache }}/metrolist-jbr/archives
-          key: jbr-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('scripts/jbr-pins.json', 'scripts/install_jbr.py') }}
-
-      - name: Restore JetBrains Runtime archive (read-only)
-        if: inputs.cache-read-only
-        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
-        with:
-          path: ${{ runner.tool_cache }}/metrolist-jbr/archives
-          key: jbr-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('scripts/jbr-pins.json', 'scripts/install_jbr.py') }}
-
-      - name: Install JetBrains Runtime for Linux packaging
-        shell: bash
-        run: |
-          python3 scripts/install_jbr.py --platform "linux-${{ matrix.arch }}" \
-            --cache "$RUNNER_TOOL_CACHE/metrolist-jbr/archives" \
-            --destination "$RUNNER_TOOL_CACHE/metrolist-jbr/current"
-
       - name: Generate installer icons
         uses: ./.github/actions/generate-icons
 
@@ -123,7 +102,7 @@ jobs:
           LASTFM_SECRET: ${{ secrets.LASTFM_SECRET }}
           LYPRIO_BASE_URL: ${{ secrets.LYPRIO_BASE_URL }}
           LYPRIO_HMAC_KEY: ${{ secrets.LYPRIO_HMAC_KEY }}
-        run: ./scripts/build_appimage.sh "-Pmetrolist.desktop.javaHome=$PACKAGING_JAVA_HOME" -Pmetrolist.verifyPackaging=${{ inputs.run-verification }}
+        run: ./scripts/build_appimage.sh -Pmetrolist.verifyPackaging=${{ inputs.run-verification }}
 
       - name: Upload desktop Sentry source context
         if: inputs.upload-sentry

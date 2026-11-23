@@ -122,7 +122,6 @@ import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.WindowScope
 import com.metrolist.desktop.deviceconnect.DesktopDeviceConnect
 import com.metrolist.desktop.state.app.UiState
 import com.metrolist.desktop.state.auth.AuthState
@@ -140,6 +139,7 @@ import com.metrolist.desktop.storage.DownloadState
 import com.metrolist.desktop.storage.downloadQueueSummary
 import com.metrolist.desktop.ui.layouts.AccountMenu
 import com.metrolist.desktop.utils.WindowDragHandle
+import com.metrolist.desktop.window.DesktopWindowScope
 import com.metrolist.desktop.window.jna.structure.isWindows10OrLater
 import com.metrolist.shared.generated.resources.Res
 import com.metrolist.shared.generated.resources.cd_account_menu
@@ -199,7 +199,7 @@ val LocalCaptionBarInsets = staticCompositionLocalOf { WindowInsets(0) }
 internal val DesktopTitleBarHeight = 48.dp
 
 @Composable
-fun WindowScope.CustomTitleBar(
+fun DesktopWindowScope.CustomTitleBar(
     title: String,
     colorScheme: ColorScheme,
     searchText: String,
@@ -310,7 +310,7 @@ fun WindowScope.CustomTitleBar(
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-fun WindowScope.TopBarWithPlayer(
+fun DesktopWindowScope.TopBarWithPlayer(
     colorScheme: ColorScheme,
     searchText: String,
     onSearchChange: (String) -> Unit,

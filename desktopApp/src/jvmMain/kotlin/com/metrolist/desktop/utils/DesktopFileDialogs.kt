@@ -2,8 +2,10 @@ package com.metrolist.desktop.utils
 
 import com.metrolist.shared.utils.OsUtil
 import io.github.vinceglb.filekit.FileKit
+import io.github.vinceglb.filekit.PlatformFile
 import io.github.vinceglb.filekit.dialogs.FileKitDialogSettings
 import io.github.vinceglb.filekit.dialogs.FileKitType
+import io.github.vinceglb.filekit.dialogs.openDirectoryPicker
 import io.github.vinceglb.filekit.dialogs.openFilePicker
 import io.github.vinceglb.filekit.dialogs.openFileSaver
 import kotlinx.coroutines.Dispatchers
@@ -72,13 +74,38 @@ internal suspend fun saveDesktopFile(
         },
     )
 
+internal suspend fun pickDesktopDirectory(
+    title: String,
+    initialDirectory: File? = null,
+): File? =
+    desktopFileDialog(
+        fileKitDialog = {
+            FileKit
+                .openDirectoryPicker(
+                    title = title,
+                    directory = initialDirectory?.takeIf(File::isDirectory)?.let(::PlatformFile),
+                )?.file
+        },
+        nativeDialog = {
+            val chooser =
+                JFileChooser().apply {
+                    fileSelectionMode = JFileChooser.DIRECTORIES_ONLY
+                    dialogTitle = title
+                    initialDirectory?.takeIf(File::isDirectory)?.let { currentDirectory = it }
+                }
+            if (chooser.showOpenDialog(null) == JFileChooser.APPROVE_OPTION) chooser.selectedFile else null
+        },
+    )
+
 internal suspend fun <T> desktopFileDialog(
     isLinux: Boolean = OsUtil.isLinux,
     portalAvailable: () -> Boolean = ::isFileChooserPortalAvailable,
     fileKitDialog: suspend () -> T,
     nativeDialog: () -> T,
 ): T {
-    if (!isLinux || withContext(Dispatchers.IO) { portalAvailable() }) return fileKitDialog()
+    if (!isLinux || WaylandScale.isNativeWaylandActive() || withContext(Dispatchers.IO) { portalAvailable() }) {
+        return fileKitDialog()
+    }
     return withContext(Dispatchers.Swing) { nativeDialog() }
 }
 

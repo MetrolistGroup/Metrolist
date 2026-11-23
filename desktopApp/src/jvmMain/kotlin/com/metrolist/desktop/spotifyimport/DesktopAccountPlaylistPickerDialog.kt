@@ -70,7 +70,7 @@ internal fun DesktopAccountPlaylistPickerDialog(
         state = rememberDialogState(width = 760.dp, height = 720.dp),
         visible = true,
     ) {
-        ClearWindowContentOnDispose(window)
+        ClearWindowContentOnDispose(awtDialog)
         DesktopDensityProvider {
             Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.surface) {
                 Column(Modifier.fillMaxSize()) {

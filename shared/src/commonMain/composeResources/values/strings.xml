@@ -5242,6 +5242,7 @@
     <string name="webkit_install_hint">Embedded sign-in requires WebKitGTK 4.1 (%1$s). Install it using your system package manager.</string>
     <string name="webkit_install_command">Install it with:\n%1$s</string>
     <string name="webkit_appimage_hint">AppImage builds also use the system WebKitGTK libraries for sign-in.</string>
+    <string name="webkit_wayland_hint">Embedded sign-in is not available in native Wayland mode. Use token sign-in or launch Metrolist with X11/XWayland enabled.</string>
     <string name="search_history_keyboard_hint">Use ↑/↓ to select, Enter to search, or Delete to remove.</string>
     <string name="video_stats_codec_bitrate_value">%1$s (%2$d kbps)</string>
     <string name="video_stats_resolution_optimal_value">%1$s (Optimal: %2$s)</string>

@@ -182,7 +182,7 @@ fun LoginDialog(
         state = rememberDialogState(width = 600.dp, height = 700.dp),
         visible = true,
     ) {
-        ClearWindowContentOnDispose(window)
+        ClearWindowContentOnDispose(awtDialog)
         MaterialTheme(colorScheme = colorScheme, typography = typography, shapes = shapes) {
             Surface(Modifier.fillMaxSize()) {
                 DesktopDensityProvider {
@@ -861,7 +861,7 @@ private fun WebViewPromptWindow(
             }
         },
     ) {
-        ClearWindowContentOnDispose(window)
+        ClearWindowContentOnDispose(awtDialog)
         MaterialTheme(colorScheme = colorScheme, typography = typography, shapes = shapes) {
             DesktopDensityProvider {
                 Surface(Modifier.fillMaxSize()) {

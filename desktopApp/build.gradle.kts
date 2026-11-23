@@ -24,12 +24,12 @@ import java.util.zip.ZipEntry
 import java.util.zip.ZipFile
 import java.util.zip.ZipOutputStream
 
-// Adoptium publishes no Windows ARM64 JDK 25; Linux accepts any JDK 25 so JBR and Temurin both work.
-val jdkVendor: JvmVendorSpec? =
-    when {
-        System.getProperty("os.name").startsWith("Windows") && System.getProperty("os.arch") == "aarch64" -> JvmVendorSpec.MICROSOFT
-        System.getProperty("os.name").contains("Linux") -> null
-        else -> JvmVendorSpec.ADOPTIUM
+// Adoptium publishes no Windows ARM64 JDK 25; Microsoft's OpenJDK build is the one available there.
+val jdkVendor =
+    if (System.getProperty("os.name").startsWith("Windows") && System.getProperty("os.arch") == "aarch64") {
+        JvmVendorSpec.MICROSOFT
+    } else {
+        JvmVendorSpec.ADOPTIUM
     }
 
 val currentOperatingSystem =
@@ -258,7 +258,7 @@ val arm64WebViewJar =
 kotlin {
     jvmToolchain {
         languageVersion.set(JavaLanguageVersion.of(25))
-        jdkVendor?.let(vendor::set)
+        vendor.set(jdkVendor)
     }
     jvm {
         compilerOptions.jvmTarget.set(JvmTarget.JVM_21)
@@ -329,6 +329,10 @@ kotlin {
                 implementation(libs.sharesheet)
                 implementation(libs.windowstaskbar)
                 implementation(libs.mediacontrols)
+                implementation(libs.decorated.window.tao) {
+                    exclude(group = "dev.nucleusframework", module = "nucleus.angle-natives")
+                    exclude(group = "org.jetbrains.compose.desktop")
+                }
             }
         }
 
@@ -465,12 +469,18 @@ tasks.withType<JavaExec>().configureEach {
 
         environment("LC_NUMERIC", "C")
         val hasDisplay = !providers.environmentVariable("DISPLAY").orNull.isNullOrBlank()
-        val hasWaylandDisplay = !providers.environmentVariable("WAYLAND_DISPLAY").orNull.isNullOrBlank()
-        val wantsWakefield = providers.environmentVariable("METROLIST_USE_WAKEFIELD").orNull == "1"
+        val runtimeDir = providers.environmentVariable("XDG_RUNTIME_DIR").orNull
+        val hasWaylandDisplay =
+            !providers.environmentVariable("WAYLAND_DISPLAY").orNull.isNullOrBlank() ||
+                (!runtimeDir.isNullOrBlank() && File(runtimeDir, "wayland-0").exists())
+        val wantsWayland =
+            providers.environmentVariable("METROLIST_USE_WAYLAND").orNull == "1" ||
+                providers.environmentVariable("METROLIST_USE_WAKEFIELD").orNull == "1"
         val gdkBackend =
             providers.environmentVariable("GDK_BACKEND").orNull
                 ?: when {
-                    hasDisplay && !wantsWakefield -> "x11"
+                    wantsWayland -> "wayland"
+                    hasDisplay -> "x11"
                     hasWaylandDisplay -> "wayland"
                     else -> "x11"
                 }

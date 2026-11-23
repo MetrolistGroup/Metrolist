@@ -25,6 +25,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.metrolist.desktop.utils.LINUX_WEBKIT_SONAME
+import com.metrolist.desktop.utils.WaylandScale
 import com.metrolist.desktop.utils.isLinuxWebKitAvailable
 import com.metrolist.desktop.utils.linuxWebKitInstallCommand
 import com.metrolist.shared.generated.resources.Res
@@ -33,6 +34,7 @@ import com.metrolist.shared.generated.resources.loading
 import com.metrolist.shared.generated.resources.webkit_appimage_hint
 import com.metrolist.shared.generated.resources.webkit_install_command
 import com.metrolist.shared.generated.resources.webkit_install_hint
+import com.metrolist.shared.generated.resources.webkit_wayland_hint
 import com.metrolist.shared.ui.utils.verticalScrollWithDrag
 import com.metrolist.shared.utils.OsUtil
 import kotlinx.coroutines.Dispatchers
@@ -60,12 +62,16 @@ internal fun WebViewUnavailableContent(
     title: String,
     onDismissRequest: () -> Unit,
 ) {
-    val command = remember { linuxWebKitInstallCommand() }
-    val isAppImage = remember { !System.getenv("APPIMAGE").isNullOrBlank() || !System.getenv("APPDIR").isNullOrBlank() }
     val hint =
-        stringResource(Res.string.webkit_install_hint, LINUX_WEBKIT_SONAME) +
-            (command?.let { "\n\n" + stringResource(Res.string.webkit_install_command, it) }.orEmpty()) +
-            (if (isAppImage) "\n\n" + stringResource(Res.string.webkit_appimage_hint) else "")
+        if (WaylandScale.isNativeWaylandActive()) {
+            stringResource(Res.string.webkit_wayland_hint)
+        } else {
+            val command = remember { linuxWebKitInstallCommand() }
+            val isAppImage = remember { !System.getenv("APPIMAGE").isNullOrBlank() || !System.getenv("APPDIR").isNullOrBlank() }
+            stringResource(Res.string.webkit_install_hint, LINUX_WEBKIT_SONAME) +
+                (command?.let { "\n\n" + stringResource(Res.string.webkit_install_command, it) }.orEmpty()) +
+                (if (isAppImage) "\n\n" + stringResource(Res.string.webkit_appimage_hint) else "")
+        }
     Column(
         modifier =
             Modifier

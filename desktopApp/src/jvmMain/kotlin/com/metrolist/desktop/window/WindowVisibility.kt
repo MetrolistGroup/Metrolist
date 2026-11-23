@@ -3,7 +3,11 @@ package com.metrolist.desktop.window
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.ui.window.WindowState
 import com.metrolist.shared.ui.components.LocalVisualWorkActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -37,6 +41,43 @@ internal class WindowVisibilityState {
     private fun publish() {
         _visible.value = shown && !minimized && workspaceVisible
     }
+}
+
+@Composable
+internal fun WindowVisibility(
+    scope: DesktopFrameWindowScope,
+    state: WindowState,
+    windowShown: Boolean = true,
+    content: @Composable () -> Unit,
+) {
+    val frame = scope.awtFrame
+    if (frame != null) {
+        WindowVisibility(frame, content)
+        return
+    }
+    val taoWindow = scope.taoWindow
+    val visibility = remember(taoWindow) { WindowVisibilityState() }
+    val currentWindowShown by rememberUpdatedState(windowShown)
+    LaunchedEffect(taoWindow, windowShown, state.isMinimized) {
+        visibility.updateWindow(shown = windowShown, minimized = taoWindow?.isMinimized() ?: state.isMinimized)
+    }
+    DisposableEffect(taoWindow, visibility) {
+        // Only register multi-cast listeners; onShown/onWillHide are single-slot hooks owned by Tao's EGL host.
+        taoWindow?.onMinimizedChanged { minimized -> visibility.updateWindow(shown = currentWindowShown, minimized = minimized) }
+        onDispose {
+            visibility.updateWindow(shown = false, minimized = false)
+            if (taoWindow != null) setTaoWindowVisible(taoWindow.handle, false)
+        }
+    }
+    LaunchedEffect(taoWindow, visibility) {
+        if (taoWindow == null) return@LaunchedEffect
+        try {
+            visibility.visible.collect { visible -> setTaoWindowVisible(taoWindow.handle, visible) }
+        } finally {
+            setTaoWindowVisible(taoWindow.handle, false)
+        }
+    }
+    CompositionLocalProvider(LocalVisualWorkActive provides visibility.visible, content = content)
 }
 
 @Composable

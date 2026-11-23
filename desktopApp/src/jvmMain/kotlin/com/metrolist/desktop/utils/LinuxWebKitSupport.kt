@@ -33,7 +33,7 @@ internal fun isLinuxWebKitAvailable(
     loadLibrary: (String) -> Unit = { linuxWebKitLibraries.computeIfAbsent(it, NativeLibrary::getInstance) },
 ): Boolean {
     if (!osName.lowercase().contains("linux")) return true
-    // Embedded WebKitGTK reparents via X11 window handles, which are absent under native Wayland WLToolkit.
+    // Embedded WebKitGTK reparents via X11 window handles, which are absent under native Wayland.
     if (WaylandScale.isNativeWaylandActive()) return false
     val hasWebKit = librarySearchPaths.any { File(it, LINUX_WEBKIT_SONAME).isFile }
     val hasJavaScriptCore = librarySearchPaths.any { File(it, LINUX_JAVASCRIPTCORE_SONAME).isFile }

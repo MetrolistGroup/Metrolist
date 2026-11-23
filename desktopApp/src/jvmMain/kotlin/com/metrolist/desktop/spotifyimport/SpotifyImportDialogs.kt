@@ -95,7 +95,7 @@ internal fun SpotifyPlaylistPickerDialog(
         state = rememberDialogState(width = 760.dp, height = 720.dp),
         visible = true,
     ) {
-        ClearWindowContentOnDispose(window)
+        ClearWindowContentOnDispose(awtDialog)
         DesktopDensityProvider {
             Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.surface) {
                 Column(Modifier.fillMaxSize()) {
@@ -251,7 +251,7 @@ internal fun SpotifyPlaylistPreviewDialog(
         state = rememberDialogState(width = 980.dp, height = 760.dp),
         visible = true,
     ) {
-        ClearWindowContentOnDispose(window)
+        ClearWindowContentOnDispose(awtDialog)
         DesktopDensityProvider {
             Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.surface) {
                 Column(Modifier.fillMaxSize()) {
@@ -438,7 +438,7 @@ internal fun SpotifyDestinationDialog(
         state = rememberDialogState(width = 620.dp, height = 680.dp),
         visible = true,
     ) {
-        ClearWindowContentOnDispose(window)
+        ClearWindowContentOnDispose(awtDialog)
         DesktopDensityProvider {
             Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.surface) {
                 Column(Modifier.fillMaxSize()) {

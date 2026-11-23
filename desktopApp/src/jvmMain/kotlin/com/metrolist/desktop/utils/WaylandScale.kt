@@ -60,9 +60,9 @@ object WaylandScale {
     fun detectAndApply() {
         if (applied) return
 
-        if (configureNativeWaylandToolkit()) {
+        if (configureNativeWaylandBackend()) {
             applied = true
-            log("Applied native Wayland toolkit (WLToolkit)")
+            log("Applied native Wayland backend (Tao)")
             return
         }
 
@@ -107,22 +107,6 @@ object WaylandScale {
 
     fun isNativeWaylandActive(): Boolean = nativeWaylandActive
 
-    internal fun isWlToolkitAvailable(
-        properties: Properties = System.getProperties(),
-        libraryExists: (File) -> Boolean = File::isFile,
-    ): Boolean {
-        if (!properties.getProperty("org.graalvm.nativeimage.imagecode").isNullOrBlank()) return false
-        val bootPaths =
-            properties
-                .getProperty("sun.boot.library.path")
-                ?.split(File.pathSeparatorChar)
-                ?.filter(String::isNotBlank)
-                ?.map(::File)
-                .orEmpty()
-        val javaHomeLib = properties.getProperty("java.home")?.takeIf(String::isNotBlank)?.let { File(it, "lib") }
-        return (bootPaths + listOfNotNull(javaHomeLib)).any { libraryExists(File(it, "libawt_wlawt.so")) }
-    }
-
     internal fun hasWaylandDisplay(
         environment: Map<String, String> = System.getenv(),
         defaultSocketExists: (File) -> Boolean = File::exists,
@@ -135,32 +119,25 @@ object WaylandScale {
     internal fun shouldUseNativeWayland(
         environment: Map<String, String> = System.getenv(),
         properties: Properties = System.getProperties(),
-        wlToolkitAvailable: Boolean = isWlToolkitAvailable(properties),
         waylandDisplayAvailable: Boolean = hasWaylandDisplay(environment),
     ): Boolean {
-        if (properties.getProperty("awt.toolkit.name") == "XToolkit") return false
+        if (properties.getProperty("metrolist.useWayland") == "false") return false
         if (properties.getProperty("metrolist.useWakefield") == "false") return false
-        if (environment["METROLIST_USE_WAKEFIELD"] == "0") return false
-        if (!wlToolkitAvailable || !waylandDisplayAvailable) return false
+        if (environment["METROLIST_USE_WAYLAND"] == "0" || environment["METROLIST_USE_WAKEFIELD"] == "0") return false
+        if (!waylandDisplayAvailable) return false
 
         val explicitlyRequested =
-            properties.getProperty("awt.toolkit.name") == "WLToolkit" ||
+            properties.getProperty("metrolist.useWayland") == "true" ||
                 properties.getProperty("metrolist.useWakefield") == "true" ||
+                environment["METROLIST_USE_WAYLAND"] == "1" ||
                 environment["METROLIST_USE_WAKEFIELD"] == "1"
         return explicitlyRequested || environment["DISPLAY"].isNullOrBlank()
     }
 
-    fun configureNativeWaylandToolkit(): Boolean {
+    fun configureNativeWaylandBackend(): Boolean {
         if (!shouldUseNativeWayland()) return false
-        System.setProperty("java.awt.headless", "false")
-        System.setProperty("awt.toolkit.name", "WLToolkit")
-        System.setProperty("jdk.gtk.version", "3")
-        System.setProperty("sun.java2d.uiScale.enabled", "true")
-        forcedScale()?.let { System.setProperty("sun.java2d.uiScale", it.toString()) }
-        if (System.getenv("SKIKO_RENDER_API").isNullOrBlank() && System.getProperty("skiko.renderApi").isNullOrBlank()) {
-            // Skiko's Linux OpenGL Swing offscreen path opens an X11 display; start directly on software under WLToolkit.
-            System.setProperty("skiko.renderApi", "SOFTWARE_COMPAT")
-        }
+        // Keep AWT headless so accidental Swing/AWT lookups never attempt an X11 connection.
+        System.setProperty("java.awt.headless", "true")
         nativeWaylandActive = true
         return true
     }
@@ -175,9 +152,8 @@ object WaylandScale {
     }
 
     fun ensureDisplay(): Boolean {
+        if (configureNativeWaylandBackend()) return true
         System.setProperty("java.awt.headless", "false")
-
-        if (configureNativeWaylandToolkit()) return true
 
         val currentDisplay = System.getenv("DISPLAY")
         if (!currentDisplay.isNullOrBlank()) {
