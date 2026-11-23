@@ -2717,4 +2717,6 @@
     <string name="legacy_recovery_export_desc">Salva come file di backup la libreria che non è stato possibile migrare dalla versione 13. Ripristina quel file per riprovare la migrazione.</string>
     <string name="legacy_recovery_export_success">Libreria precedente esportata</string>
     <string name="legacy_recovery_export_failed">Impossibile esportare la libreria precedente</string>
+    <string name="fetched_lyrics">Testo recuperato</string>
+    <string name="clear_fetched_lyrics">Cancella testo recuperato</string>
 </resources>
