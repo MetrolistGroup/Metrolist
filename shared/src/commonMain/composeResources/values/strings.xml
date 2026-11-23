@@ -5600,6 +5600,11 @@
     <string name="wrapped_share_summary">Share your summary</string>
     <string name="wrapped_soundtrack">Soundtrack</string>
     <string name="wrapped_lastfm_loading">Loading this year of Last.fm history…</string>
+    <string name="wrapped_share_history_note">Saved history; older YouTube plays may be missing. Daily overlap may undercount.</string>
+    <string name="wrapped_share_sync_failed">YouTube refresh failed.</string>
+    <string name="wrapped_share_lastfm_loading">Last.fm history is still loading.</string>
+    <string name="wrapped_share_lastfm_failed">Last.fm refresh failed; saved results may be used.</string>
+    <string name="wrapped_share_lastfm_included">Last.fm included; ambiguous matches are excluded.</string>
     <string name="wrapped_lastfm_failed">Last.fm could not refresh. This recap uses the last complete result from this visit, if available.</string>
     <string name="wrapped_lastfm_coverage">%1$s Last.fm scrobbles included; %2$s ambiguous scrobbles excluded. Metadata differences can leave some overlap undetected.</string>
     <string name="wrapped_sync_failed">YouTube history could not refresh. This recap uses history already saved on this device.</string>

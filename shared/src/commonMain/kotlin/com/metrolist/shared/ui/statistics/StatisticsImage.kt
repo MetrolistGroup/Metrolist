@@ -88,6 +88,7 @@ internal fun renderStatisticsImage(
     textMeasurer: TextMeasurer,
     layoutDirection: LayoutDirection,
     logo: Painter? = null,
+    footer: String = "",
 ): ImageBitmap {
     val width = 1080
     val padding = 48f
@@ -122,6 +123,7 @@ internal fun renderStatisticsImage(
     val heading = measure(title, typography.headlineLargeEmphasized, lines = 2)
     val range = measure(period, typography.titleMedium, colors.accent, lines = 2)
     val description = summary.takeIf { it.isNotBlank() }?.let { measure(it, typography.bodyMedium, colors.muted, lines = Int.MAX_VALUE) }
+    val footerText = footer.takeIf { it.isNotBlank() }?.let { measure(it, typography.bodySmall, colors.muted, lines = Int.MAX_VALUE) }
     val metricWidth = (contentWidth - inset * 3).toInt() / 2
     val metrics =
         listOf(
@@ -157,7 +159,7 @@ internal fun renderStatisticsImage(
     val headerHeight =
         brandingHeight + heading.size.height + range.size.height + (description?.let { it.size.height + gap } ?: 0f).toInt() +
             gap * 3 + metricHeight
-    val height = (padding * 2 + headerHeight + sectionHeights.sum() + gap * sections.size).roundToInt()
+    val height = (padding * 2 + headerHeight + sectionHeights.sum() + gap * sections.size + (footerText?.size?.height ?: 0)).roundToInt()
     val bitmap = ImageBitmap(width, height)
     CanvasDrawScope().draw(density, layoutDirection, Canvas(bitmap), Size(width.toFloat(), height.toFloat())) {
         drawRect(colors.background)
@@ -253,6 +255,7 @@ internal fun renderStatisticsImage(
             }
             y += inset
         }
+        footerText?.let { textAt(it, padding, y) }
     }
     return bitmap
 }

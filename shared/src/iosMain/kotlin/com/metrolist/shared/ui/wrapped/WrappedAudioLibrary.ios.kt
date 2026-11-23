@@ -57,23 +57,27 @@ private class IosWrappedAudioLibrary(
     private val directory = "${NSTemporaryDirectory()}wrapped-${NSUUID.UUID().UUIDString}"
     private val closed = atomic(false)
 
-    // The session watches interruptions and lost headphones from the start, so a download cannot later start on the speaker.
-    private val sessionObservers =
-        NSNotificationCenter.defaultCenter.let { center ->
-            listOf(
-                center.addObserverForName(AVAudioSessionInterruptionNotification, null, NSOperationQueue.mainQueue) { notification ->
-                    val type = notification?.userInfo?.get(AVAudioSessionInterruptionTypeKey) as? NSNumber
-                    if (!closed.value && type?.unsignedLongValue == AVAudioSessionInterruptionTypeBegan) onInterrupted()
-                },
-                center.addObserverForName(AVAudioSessionRouteChangeNotification, null, NSOperationQueue.mainQueue) { notification ->
-                    val reason = notification?.userInfo?.get(AVAudioSessionRouteChangeReasonKey) as? NSNumber
-                    if (!closed.value && reason?.unsignedLongValue == AVAudioSessionRouteChangeReasonOldDeviceUnavailable) onInterrupted()
-                },
-            )
-        }
+    private val sessionObservers = mutableListOf<Any>()
 
     init {
         check(files.createDirectoryAtPath(directory, true, null, null))
+        val center = NSNotificationCenter.defaultCenter
+        try {
+            sessionObservers +=
+                center.addObserverForName(AVAudioSessionInterruptionNotification, null, NSOperationQueue.mainQueue) { notification ->
+                    val type = notification?.userInfo?.get(AVAudioSessionInterruptionTypeKey) as? NSNumber
+                    if (!closed.value && type?.unsignedLongValue == AVAudioSessionInterruptionTypeBegan) onInterrupted()
+                }
+            sessionObservers +=
+                center.addObserverForName(AVAudioSessionRouteChangeNotification, null, NSOperationQueue.mainQueue) { notification ->
+                    val reason = notification?.userInfo?.get(AVAudioSessionRouteChangeReasonKey) as? NSNumber
+                    if (!closed.value && reason?.unsignedLongValue == AVAudioSessionRouteChangeReasonOldDeviceUnavailable) onInterrupted()
+                }
+        } catch (error: Throwable) {
+            sessionObservers.forEach { center.removeObserver(it) }
+            files.removeItemAtPath(directory, null)
+            throw error
+        }
     }
 
     override suspend fun prepare(song: SongItem): String =

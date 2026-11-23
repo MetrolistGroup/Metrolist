@@ -138,7 +138,12 @@ import com.metrolist.shared.generated.resources.wrapped_lastfm_loading
 import com.metrolist.shared.generated.resources.wrapped_measured_time
 import com.metrolist.shared.generated.resources.wrapped_merge_note
 import com.metrolist.shared.generated.resources.wrapped_minutes_listened
+import com.metrolist.shared.generated.resources.wrapped_share_history_note
+import com.metrolist.shared.generated.resources.wrapped_share_lastfm_failed
+import com.metrolist.shared.generated.resources.wrapped_share_lastfm_included
+import com.metrolist.shared.generated.resources.wrapped_share_lastfm_loading
 import com.metrolist.shared.generated.resources.wrapped_share_summary
+import com.metrolist.shared.generated.resources.wrapped_share_sync_failed
 import com.metrolist.shared.generated.resources.wrapped_soundtrack
 import com.metrolist.shared.generated.resources.wrapped_summary
 import com.metrolist.shared.generated.resources.wrapped_sync_failed
@@ -350,6 +355,29 @@ fun WrappedScreen(
                     onBack,
                     showBackButton,
                     notes,
+                    listOfNotNull(
+                        stringResource(Res.string.wrapped_share_history_note),
+                        stringResource(Res.string.wrapped_share_sync_failed).takeIf { syncFailed },
+                        when {
+                            lastFmLoading || (lastFmLoaded && appliedLastFm !== lastFm) -> {
+                                stringResource(
+                                    Res.string.wrapped_share_lastfm_loading,
+                                )
+                            }
+
+                            lastFmFailed -> {
+                                stringResource(Res.string.wrapped_share_lastfm_failed)
+                            }
+
+                            lastFmLoaded -> {
+                                stringResource(Res.string.wrapped_share_lastfm_included)
+                            }
+
+                            else -> {
+                                null
+                            }
+                        },
+                    ).joinToString("\n"),
                     onHomeCardRetired,
                 )
             }
@@ -381,6 +409,7 @@ private fun WrappedReport(
     onBack: () -> Unit,
     showBackButton: Boolean,
     notes: List<String>,
+    shareFooter: String,
     onHomeCardRetired: (message: String) -> Unit,
 ) {
     val formatter = rememberStatisticsFormatter()
@@ -450,6 +479,7 @@ private fun WrappedReport(
             timeLabel = stringResource(Res.string.wrapped_measured_time),
             imageColors = wrappedShareColors(),
             logo = painterResource(Res.drawable.logo),
+            footer = shareFooter,
         )
     }
     val scope = rememberCoroutineScope()

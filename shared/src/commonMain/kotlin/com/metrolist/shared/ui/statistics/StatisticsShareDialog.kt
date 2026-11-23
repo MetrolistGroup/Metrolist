@@ -73,6 +73,7 @@ internal fun StatisticsShareDialog(
     timeLabel: String? = null,
     imageColors: StatisticsImageColors? = null,
     logo: Painter? = null,
+    footer: String = "",
 ) {
     val scope = rememberCoroutineScope()
     val measurer = rememberTextMeasurer(cacheSize = 0)
@@ -110,6 +111,7 @@ internal fun StatisticsShareDialog(
         state,
         period,
         summary,
+        footer,
         appName,
         imageTitle,
         sections,
@@ -180,6 +182,7 @@ internal fun StatisticsShareDialog(
                         measurer,
                         direction,
                         logo,
+                        footer,
                     )
                 }
         } catch (error: CancellationException) {
