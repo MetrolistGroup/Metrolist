@@ -123,7 +123,8 @@ internal class IosNetServiceCastDiscovery : MdnsCastDiscovery {
         while (offset < bytes.size) {
             val length = bytes[offset].toInt() and 0xFF
             offset++
-            if (length == 0 || offset + length > bytes.size) return null
+            if (length == 0) continue
+            if (offset + length > bytes.size) return null
             val record = bytes.copyOfRange(offset, offset + length).decodeToString()
             offset += length
             if (record.startsWith(FRIENDLY_NAME_KEY, ignoreCase = true)) {
@@ -168,15 +169,6 @@ internal class IosNetServiceCastDiscovery : MdnsCastDiscovery {
                 forgetServiceLocked(id)
             }
         staleService?.let(::stopService)
-        reportDiscoveryError(eventGeneration)
-    }
-
-    private fun reportDiscoveryError(eventGeneration: Long) {
-        val onError =
-            withLock {
-                if (!running || generation != eventGeneration) null else callbacks?.onError
-            }
-        onError?.invoke(CastError.DISCOVERY_FAILED)
     }
 
     private fun stopService(service: NSNetService) {
