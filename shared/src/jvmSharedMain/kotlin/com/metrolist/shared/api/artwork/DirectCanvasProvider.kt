@@ -68,6 +68,7 @@ class DirectCanvasProvider(
     private val json = Json { ignoreUnknownKeys = true }
     private val mutex = Mutex()
     private var token: Pair<String, Long>? = null
+    private var anonymousSpotifySession = SpotifySession()
     private val cache = LinkedHashMap<List<Any?>, Pair<DirectCanvasUrls, Long>>(32, 0.75f, true)
 
     suspend fun getSpotifyCanvas(
@@ -139,18 +140,26 @@ class DirectCanvasProvider(
         duration: Long?,
         login: String,
     ): String? {
-        // Spotify returns no canvas to anonymous sessions, so reuse the playlist import sign-in when there is one.
-        val stored = login.takeIf(String::isNotBlank)?.let { runCatching { json.decodeFromString<SpotifySession>(it) }.getOrNull() }
-        if (stored?.hasLoginCookie != true) return null
+        // Spotify returns no canvas to anonymous sessions. Signed-in import sessions ask Spotify first; everyone else
+        // finds the track anonymously and reads its canvas from public canvas indexes.
+        val stored =
+            login
+                .takeIf(String::isNotBlank)
+                ?.let { runCatching { json.decodeFromString<SpotifySession>(it) }.getOrNull() }
+                ?.takeIf { it.hasLoginCookie }
         return SpotifyClient
-            .create(SpotifyConfig(engine = http.engine, logLevel = LogLevel.NONE))
+            .create(SpotifyConfig(engine = http.engine, logLevel = LogLevel.NONE, allowAnonymous = stored == null))
             .use { client ->
-                client.attachSession(stored)
+                client.attachSession(stored ?: anonymousSpotifySession)
                 try {
                     spotifyCanvas(client, title, artist, primaryArtist, album, duration)
                 } finally {
-                    // Persist refreshed tokens unless the import flow replaced or cleared the session meanwhile.
-                    if (client.session != stored && session() == login) saveSession(json.encodeToString(client.session))
+                    if (stored == null) {
+                        anonymousSpotifySession = client.session
+                    } else if (client.session != stored && session() == login) {
+                        // Persist refreshed tokens unless the import flow replaced or cleared the session meanwhile.
+                        saveSession(json.encodeToString(client.session))
+                    }
                 }
             }
     }
@@ -219,7 +228,9 @@ class DirectCanvasProvider(
             ) {
                 continue
             }
-            val canvas = spotifyTrackCanvas(client, id)
+            val canvas =
+                (if (client.session.hasLoginCookie) attempt { spotifyTrackCanvas(client, id) } else null)
+                    ?: attempt { publicCanvas(id) }
             if (trustedMedia(canvas, false)) {
                 YtLogger.d("Canvas", "Resolved Spotify Canvas")
                 return canvas
@@ -240,6 +251,32 @@ class DirectCanvasProvider(
             ?.obj("trackUnion")
             ?.obj("canvas")
             ?.text("url")
+            ?.takeIf { trustedMedia(it, false) }
+    }
+
+    private suspend fun publicCanvas(trackId: String): String? {
+        if (!trackId.matches(Regex("[A-Za-z0-9]{22}"))) return null
+        val spicy =
+            http.prepareGet("https://regional.canvasstore.slnode.spicylyrics.org/provider/canvaslist/$trackId").readTextLimited(64 * 1024)
+        if (spicy.status.isSuccess()) {
+            val url =
+                spicy.body
+                    ?.let { json.parseToJsonElement(it) as? JsonObject }
+                    ?.obj("data")
+                    ?.obj(trackId)
+                    ?.text("url")
+            if (trustedMedia(url, false)) return url
+        }
+        val aura =
+            http
+                .prepareGet("https://canvas.auramusic.site/api/canvas") {
+                    attributes.put(ExpectedHttpFailureStatusCodes, setOf(HttpStatusCode.NotFound.value))
+                    parameter("trackId", trackId)
+                }.readTextLimited(256 * 1024)
+        if (!aura.status.isSuccess()) return null
+        return aura.body
+            ?.let { json.parseToJsonElement(it) as? JsonObject }
+            ?.text("canvasUrl")
             ?.takeIf { trustedMedia(it, false) }
     }
 
