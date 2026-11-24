@@ -30,7 +30,8 @@ class GoogleDriveBackupClientTest {
                                 jsonResponse("""{"accessToken":"drive-token","expiresIn":3600}""")
                             }
 
-                            request.url.encodedPath == "/drive/v3/files" && request.url.parameters["q"]?.contains("name =") == true -> {
+                            request.url.encodedPath == "/drive/v3/files" &&
+                                request.url.parameters["q"]?.contains("metrolistBackupFolder") == true -> {
                                 jsonResponse("""{"files":[]}""")
                             }
 
@@ -102,7 +103,8 @@ class GoogleDriveBackupClientTest {
                                 jsonResponse("""{"accessToken":"drive-token","expiresIn":3600}""")
                             }
 
-                            request.url.encodedPath == "/drive/v3/files" && request.url.parameters["q"]?.contains("name =") == true -> {
+                            request.url.encodedPath == "/drive/v3/files" &&
+                                request.url.parameters["q"]?.contains("metrolistBackupFolder") == true -> {
                                 jsonResponse("""{"files":[]}""")
                             }
 
@@ -168,7 +170,7 @@ class GoogleDriveBackupClientTest {
                     }
 
             assertEquals("resumed-backup", result.id)
-            assertEquals(listOf("bytes 0-2/3", "bytes */3", "bytes 1-2/3"), contentRanges)
+            assertEquals(listOf<String?>("bytes 0-2/3", "bytes */3", "bytes 1-2/3"), contentRanges)
             client.close()
         }
 

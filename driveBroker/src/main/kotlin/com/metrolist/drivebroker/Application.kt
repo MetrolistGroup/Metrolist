@@ -22,6 +22,7 @@ import io.ktor.server.routing.post
 import io.ktor.server.routing.route
 import io.ktor.server.routing.routing
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.sync.Semaphore
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import org.flywaydb.core.Flyway
@@ -109,6 +110,9 @@ fun Application.driveBrokerModule(
 ) {
     install(CallLogging)
     install(ContentNegotiation) { json(Json { ignoreUnknownKeys = true }) }
+    // A disconnect holds a pooled connection while Google answers and briefly needs a second one
+    // to persist the result. Cap concurrent disconnects so other requests keep pool capacity.
+    val disconnectLimit = Semaphore(4)
     routing {
         get("/healthz") { call.respond(HttpStatusCode.OK) }
         route("/v1") {
@@ -206,17 +210,22 @@ fun Application.driveBrokerModule(
                     call.respond(HttpStatusCode.Unauthorized, ErrorResponse("unauthorized"))
                     return@delete
                 }
+                disconnectLimit.acquire()
                 try {
-                    repository.revokeSession(token) { account ->
-                        if (account != null) googleOAuth.revoke(account.refreshToken)
+                    try {
+                        repository.revokeSession(token) { account ->
+                            if (account != null) googleOAuth.revoke(account.refreshToken)
+                        }
+                    } catch (cancelled: CancellationException) {
+                        throw cancelled
+                    } catch (_: Exception) {
+                        call.respond(HttpStatusCode.InternalServerError, ErrorResponse("revocation_failed"))
+                        return@delete
                     }
-                } catch (cancelled: CancellationException) {
-                    throw cancelled
-                } catch (_: Exception) {
-                    call.respond(HttpStatusCode.InternalServerError, ErrorResponse("revocation_failed"))
-                    return@delete
+                    call.respond(HttpStatusCode.NoContent)
+                } finally {
+                    disconnectLimit.release()
                 }
-                call.respond(HttpStatusCode.NoContent)
             }
         }
     }
