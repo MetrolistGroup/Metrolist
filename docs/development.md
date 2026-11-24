@@ -129,6 +129,8 @@ Song and artwork carousels have no horizontal scrollbars. Only desktop Home rows
 
 Android selects desktop mode for desk/DeX windows and for large windows with a mouse. Touchpad-only keyboard covers keep tablets on the mobile layout. Desktop mode uses the desktop player bar when the window's smallest width reaches Material's 600 dp medium-width breakpoint. Landscape phones keep the mobile mini-player even when Android reports a pointer device.
 
+The Android manifest retains v13's audio app category and explicit `resizeableActivity="true"` on `MainActivity`. Android distinguishes declared resizing from resizing inferred from the target SDK. [Samsung recommends an explicit declaration for multi-window support](https://developer.samsung.com/samsung-dex/modify-optimizing.html). Launcher aliases inherit the target activity's resizing support. Keep these declarations when changing Android entry points.
+
 Android 15+ windows with a mouse or touchpad place search and the account menu in the transparent system caption bar at every width; narrow captions use a search icon. Touch-only floating windows keep the account menu in the app bar and place content below the caption. Home and Library count the caption inset once. The layout reserves the system-reported app-menu and window-control bounds; only interactive app controls exclude caption drag gestures.
 
 Player-driven keyboard suppression in Android search uses actual expansion; transient sheet progress during keyboard resizing must not dismiss the keyboard. TV navigation focus stays blocked while the player is expanding.
