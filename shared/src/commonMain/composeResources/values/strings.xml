@@ -37,6 +37,8 @@
     <!-- Home -->
     <!-- Translators: Home-screen destination that opens listening history. -->
     <string name="history">Listening history</string>
+
+    <string name="recently_played">Recently played</string>
     <!-- Translators: Label for mood and genres in the Home and browse screens. -->
     <string name="mood_and_genres">Moods and genres</string>
     <!-- Translators: Label for footer greeting in the Home. -->

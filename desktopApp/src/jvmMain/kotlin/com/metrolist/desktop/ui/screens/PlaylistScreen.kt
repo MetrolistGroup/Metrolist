@@ -837,6 +837,7 @@ fun PlaylistScreen(
 
     PopupVisibility(visible = showAddSongDialog) {
         AddSongDialog(
+            isLocalPlaylist = isLocal,
             existingSongIds = songs.mapTo(mutableSetOf()) { it.id },
             onDismiss = { showAddSongDialog = false },
             onAddSong = { song, allowDuplicate ->

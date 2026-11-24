@@ -656,6 +656,8 @@ internal fun MobilePlaylistScreen(
             PopupVisibility(visible = showAddSong) {
                 ModalBottomSheet(onDismissRequest = { showAddSong = false }) {
                     AddSongSheetContent(
+                        database = database,
+                        isLocalPlaylist = playlist.isLocal,
                         existingSongIds = loadedSongs.mapTo(mutableSetOf()) { it.id },
                         onDismiss = { showAddSong = false },
                         onAddSong = { song, allowDuplicate ->

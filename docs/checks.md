@@ -55,6 +55,8 @@ For desktop startup and miniplayer changes, test a fresh profile through onboard
 
 ### Collections and pages
 
+On Android, desktop and iOS, open Add a song for local and editable YouTube Music playlists. Switch between Search, Recently played and Liked songs. Check empty sources, newest-first ordering, repeat plays appearing once, returning to a search with results, and the duplicate prompt from each source. With no network, the stored sources should still open and add to local playlists.
+
 On Android, desktop and iOS, choose list view for Library Tracks and grid view for Playlists, Artists and Albums. Switch tabs and restart the app. Each tab keeps its choice and the list/grid transition still animates. Sort Tracks by Downloaded in both directions; completed downloads precede tracks without downloads, with newest downloads first by default. Sort album, playlist and Liked songs by listening time, including unplayed songs and duplicate playlist entries. Check playback follows the displayed order. Save and remove a song while viewing album, playlist and artist rows; its library badge updates, including wide artist rows. Unlock an editable playlist in Playlist order, play a song, open its menu and move tracks using the handle. Reopen it and restart the app, then lock it again. Read-only, incomplete and differently sorted playlists must not expose reordering. Check touch, keyboard and TV movement, multi-selection and pull-to-refresh during a drag.
 
 In Android Library, search tracks, albums and playlists in list and grid views with swipe actions enabled and disabled. Item corners and spacing must stay the same when the query becomes nonblank. Check swipe actions and clearing the query.

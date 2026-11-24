@@ -88,6 +88,7 @@ import com.metrolist.android.viewmodels.PlaylistViewModel
 import com.metrolist.shared.api.PlaylistRemovalFailedException
 import com.metrolist.shared.api.YouTubeRepository
 import com.metrolist.shared.api.playlistRecommendationBatch
+import com.metrolist.shared.db.MusicDatabase
 import com.metrolist.shared.db.isHistoryPlaylistId
 import com.metrolist.shared.generated.resources.Res
 import com.metrolist.shared.generated.resources.action_cannot_be_undone
@@ -1244,6 +1245,7 @@ fun PlaylistScreen(
 
         PopupVisibility(visible = showAddSongSheet) {
             AddSongSheet(
+                isLocalPlaylist = isLocalPlaylist,
                 existingSongIds = songs.mapTo(mutableSetOf()) { it.id },
                 onDismiss = { showAddSongSheet = false },
                 onAddSong = { song, allowDuplicate ->
@@ -1273,14 +1275,21 @@ fun PlaylistScreen(
 
 @Composable
 private fun AddSongSheet(
+    isLocalPlaylist: Boolean,
     existingSongIds: Set<String>,
     onDismiss: () -> Unit,
     onAddSong: (SongItem, Boolean) -> Unit,
 ) {
+    val database = koinInject<MusicDatabase>()
     AdaptiveModalBottomSheet(onDismissRequest = onDismiss) {
-        AddSongSheetContent(existingSongIds, onDismiss, onAddSong, songContent = { song, onClick ->
-            AddSongResultRow(song, onClick)
-        })
+        AddSongSheetContent(
+            database = database,
+            isLocalPlaylist = isLocalPlaylist,
+            existingSongIds = existingSongIds,
+            onDismiss = onDismiss,
+            onAddSong = onAddSong,
+            songContent = { song, onClick -> AddSongResultRow(song, onClick) },
+        )
     }
 }
 
