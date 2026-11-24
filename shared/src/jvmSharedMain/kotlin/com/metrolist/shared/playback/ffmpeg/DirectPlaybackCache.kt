@@ -393,8 +393,9 @@ object DirectPlaybackCache {
                                         } == true
                                 }
 
+                                // Without a known length a full response cannot show that it is this file.
                                 200 -> {
-                                    start == 0L && response.body.contentLength().let { it < 0L || it == size }
+                                    start == 0L && response.body.contentLength() == size
                                 }
 
                                 else -> {
