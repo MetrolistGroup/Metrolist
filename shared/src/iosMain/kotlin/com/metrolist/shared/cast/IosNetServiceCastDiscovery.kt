@@ -7,15 +7,26 @@ import platform.Foundation.NSNetService
 import platform.Foundation.NSNetServiceBrowser
 import platform.Foundation.NSNetServiceBrowserDelegateProtocol
 import platform.Foundation.NSNetServiceDelegateProtocol
+import platform.Foundation.NSLock
 import platform.darwin.NSObject
 
 internal class IosNetServiceCastDiscovery : MdnsCastDiscovery {
-    private val lock = Any()
+    private val lock = NSLock()
     private var running = false
     private var generation = 0L
     private var callbacks: Callbacks? = null
     private val browsers = mutableMapOf<CastProtocol, NSNetServiceBrowser>()
     private val browserDelegates = mutableMapOf<CastProtocol, BrowserDelegate>()
+
+    private inline fun <T> withLock(block: () -> T): T {
+        lock.lock()
+        try {
+            return block()
+        } finally {
+            lock.unlock()
+        }
+    }
+
     private val services = mutableMapOf<String, NSNetService>()
     private val serviceDelegates = mutableMapOf<String, ServiceDelegate>()
 
@@ -25,7 +36,7 @@ internal class IosNetServiceCastDiscovery : MdnsCastDiscovery {
         onError: (CastError) -> Unit,
     ) {
         val startedGeneration =
-            synchronized(lock) {
+            withLock {
                 if (running) return
                 running = true
                 ++generation
@@ -43,7 +54,7 @@ internal class IosNetServiceCastDiscovery : MdnsCastDiscovery {
     ) {
         val browser = NSNetServiceBrowser()
         val delegate = BrowserDelegate(protocol, startedGeneration)
-        synchronized(lock) {
+        withLock {
             if (!running || generation != startedGeneration) return
             browsers[protocol] = browser
             browserDelegates[protocol] = delegate
@@ -59,7 +70,7 @@ internal class IosNetServiceCastDiscovery : MdnsCastDiscovery {
     ) {
         val id = deviceId(protocol, service.name)
         val shouldResolve =
-            synchronized(lock) {
+            withLock {
                 if (!running || generation != eventGeneration || services.containsKey(id)) {
                     false
                 } else {
@@ -79,7 +90,7 @@ internal class IosNetServiceCastDiscovery : MdnsCastDiscovery {
         eventGeneration: Long,
     ) {
         val service =
-            synchronized(lock) {
+            withLock {
                 if (!running || generation != eventGeneration) null else services[id]
             } ?: return
         val host = service.hostName?.takeIf(String::isNotBlank)
@@ -98,7 +109,7 @@ internal class IosNetServiceCastDiscovery : MdnsCastDiscovery {
                 port = port,
             )
         val onDeviceFound =
-            synchronized(lock) {
+            withLock {
                 if (!running || generation != eventGeneration) null else callbacks?.onDeviceFound
             }
         onDeviceFound?.invoke(device)
@@ -111,7 +122,7 @@ internal class IosNetServiceCastDiscovery : MdnsCastDiscovery {
     ) {
         val id = deviceId(protocol, service.name)
         val onDeviceLost =
-            synchronized(lock) {
+            withLock {
                 if (!running || generation != eventGeneration) {
                     null
                 } else {
@@ -132,7 +143,7 @@ internal class IosNetServiceCastDiscovery : MdnsCastDiscovery {
 
     private fun reportDiscoveryError(eventGeneration: Long) {
         val onError =
-            synchronized(lock) {
+            withLock {
                 if (!running || generation != eventGeneration) null else callbacks?.onError
             }
         onError?.invoke(CastError.DISCOVERY_FAILED)
@@ -140,7 +151,7 @@ internal class IosNetServiceCastDiscovery : MdnsCastDiscovery {
 
     private fun forgetService(id: String) {
         val service =
-            synchronized(lock) {
+            withLock {
                 forgetServiceLocked(id)
             }
         service?.delegate = null
@@ -154,7 +165,7 @@ internal class IosNetServiceCastDiscovery : MdnsCastDiscovery {
 
     override fun stop() {
         val (eventGeneration, activeBrowsers, activeServices) =
-            synchronized(lock) {
+            withLock {
                 if (!running) return
                 running = false
                 val stoppedGeneration = ++generation
@@ -215,7 +226,7 @@ internal class IosNetServiceCastDiscovery : MdnsCastDiscovery {
 
         override fun netService(
             sender: NSNetService,
-            didNotResolve: Map<Any?, *>,
+            didNotResolve: Map<*, *>,
         ) = onServiceFailed(id, eventGeneration)
     }
 
