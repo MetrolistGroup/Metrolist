@@ -171,7 +171,8 @@ final class IosRecognitionManager {
     private static func monoInt16Data(_ buffer: AVAudioPCMBuffer) -> Data {
         let frames = Int(buffer.frameLength)
         let channels = Int(buffer.format.channelCount)
-        guard frames > 0, channels > 0 else { return Data() }
+        let stride = Int(buffer.stride)
+        guard frames > 0, channels > 0, stride > 0 else { return Data() }
         var samples = [Int16]()
         samples.reserveCapacity(frames)
         switch buffer.format.commonFormat {
@@ -180,7 +181,7 @@ final class IosRecognitionManager {
             for frame in 0..<frames {
                 var sum = 0
                 for channel in 0..<channels {
-                    sum += Int(data[channel][frame])
+                    sum += Int(data[channel][frame * stride])
                 }
                 samples.append(Int16(clamping: sum / channels))
             }
@@ -189,7 +190,7 @@ final class IosRecognitionManager {
             for frame in 0..<frames {
                 var sum = 0
                 for channel in 0..<channels {
-                    sum += Int(data[channel][frame])
+                    sum += Int(data[channel][frame * stride])
                 }
                 samples.append(Int16(clamping: sum / channels / 65536))
             }
@@ -198,7 +199,7 @@ final class IosRecognitionManager {
             for frame in 0..<frames {
                 var sum: Float = 0
                 for channel in 0..<channels {
-                    sum += data[channel][frame]
+                    sum += data[channel][frame * stride]
                 }
                 samples.append(Int16((max(-1, min(1, sum / Float(channels))) * 32767).rounded()))
             }
