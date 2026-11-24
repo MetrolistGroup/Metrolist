@@ -16,15 +16,18 @@ import platform.CoreCrypto.kCCHmacAlgSHA256
 import platform.CoreFoundation.CFDataCreate
 import platform.CoreFoundation.CFDataGetBytePtr
 import platform.CoreFoundation.CFDataGetLength
+import platform.CoreFoundation.CFDataRef
 import platform.CoreFoundation.CFDictionaryAddValue
 import platform.CoreFoundation.CFDictionaryCreateMutable
 import platform.CoreFoundation.CFErrorGetCode
+import platform.CoreFoundation.CFErrorRef
 import platform.CoreFoundation.CFErrorRefVar
 import platform.CoreFoundation.CFMutableDictionaryRef
 import platform.CoreFoundation.CFRelease
 import platform.CoreFoundation.CFStringRef
 import platform.CoreFoundation.CFTypeRef
 import platform.Foundation.CFBridgingRetain
+import platform.Foundation.NSNumber
 import platform.Security.SecKeyCopyExternalRepresentation
 import platform.Security.SecKeyCopyKeyExchangeResult
 import platform.Security.SecKeyCopyPublicKey
@@ -52,74 +55,141 @@ actual object DeviceCrypto {
     private const val P256_PRIVATE_LEN = 32
     private const val P256_APPLE_PRIVATE_LEN = 97
 
-    private val spkiPrefix = byteArrayOf(
-        0x30, 0x59, 0x30, 0x13, 0x06, 0x07, 0x2a, 0x86.toByte(), 0x48, 0xce.toByte(), 0x3d, 0x02, 0x01,
-        0x06, 0x08, 0x2a, 0x86.toByte(), 0x48, 0xce.toByte(), 0x3d, 0x03, 0x01, 0x07,
-        0x03, 0x42, 0x00,
-    )
-    private val pkcs8Prefix = byteArrayOf(
-        0x30, 0x81.toByte(), 0x87.toByte(), 0x02, 0x01, 0x00, 0x30, 0x13, 0x06, 0x07, 0x2a, 0x86.toByte(),
-        0x48, 0xce.toByte(), 0x3d, 0x02, 0x01, 0x06, 0x08, 0x2a, 0x86.toByte(), 0x48, 0xce.toByte(), 0x3d,
-        0x03, 0x01, 0x07, 0x04, 0x6d, 0x30, 0x6b, 0x02, 0x01, 0x01, 0x04, 0x20,
-    )
+    private val spkiPrefix =
+        byteArrayOf(
+            0x30,
+            0x59,
+            0x30,
+            0x13,
+            0x06,
+            0x07,
+            0x2a,
+            0x86.toByte(),
+            0x48,
+            0xce.toByte(),
+            0x3d,
+            0x02,
+            0x01,
+            0x06,
+            0x08,
+            0x2a,
+            0x86.toByte(),
+            0x48,
+            0xce.toByte(),
+            0x3d,
+            0x03,
+            0x01,
+            0x07,
+            0x03,
+            0x42,
+            0x00,
+        )
+    private val pkcs8Prefix =
+        byteArrayOf(
+            0x30,
+            0x81.toByte(),
+            0x87.toByte(),
+            0x02,
+            0x01,
+            0x00,
+            0x30,
+            0x13,
+            0x06,
+            0x07,
+            0x2a,
+            0x86.toByte(),
+            0x48,
+            0xce.toByte(),
+            0x3d,
+            0x02,
+            0x01,
+            0x06,
+            0x08,
+            0x2a,
+            0x86.toByte(),
+            0x48,
+            0xce.toByte(),
+            0x3d,
+            0x03,
+            0x01,
+            0x07,
+            0x04,
+            0x6d,
+            0x30,
+            0x6b,
+            0x02,
+            0x01,
+            0x01,
+            0x04,
+            0x20,
+        )
     private val pkcs8PublicPrefix = byteArrayOf(0xa1.toByte(), 0x44, 0x03, 0x42, 0x00)
 
-    actual fun generateEcKeyPair(): EcKeyPair = memScoped {
-        val attrs = mutableCfDictionary().apply {
-            set(kSecAttrKeyType, kSecAttrKeyTypeECSECPrimeRandom)
-            set(kSecAttrKeySizeInBits, cfNumber(256))
-        }
-        val error = alloc<CFErrorRefVar>()
-        val privateKey = SecKeyCreateRandomKey(attrs, error.ptr)
-            ?: error("Failed to generate EC key: ${error.value.cfErrorMessage()}")
-        try {
-            val publicKey = SecKeyCopyPublicKey(privateKey) ?: error("Failed to derive public key")
+    actual fun generateEcKeyPair(): EcKeyPair =
+        memScoped {
+            val attrs = mutableCfDictionary()
+            val keySize = cfNumber(256)
             try {
-                val applePrivate = privateKey.externalRepresentation()
-                require(applePrivate.size == P256_APPLE_PRIVATE_LEN) { "Unexpected EC private key size" }
-                val public = publicKey.externalRepresentation()
-                require(public.size == P256_PUBLIC_LEN) { "Unexpected EC public key size" }
-                val privateScalar = applePrivate.copyOfRange(P256_PUBLIC_LEN, P256_APPLE_PRIVATE_LEN)
-                EcKeyPair(
-                    publicKeyUncompressed = spkiPrefix + public,
-                    privateKeyPkcs8 = pkcs8Prefix + privateScalar + pkcs8PublicPrefix + public,
-                )
+                attrs.set(kSecAttrKeyType, kSecAttrKeyTypeECSECPrimeRandom)
+                attrs.set(kSecAttrKeySizeInBits, keySize)
+                val error = alloc<CFErrorRefVar>()
+                val privateKey =
+                    SecKeyCreateRandomKey(attrs, error.ptr)
+                        ?: error("Failed to generate EC key: ${error.value.cfErrorMessage()}")
+                try {
+                    val publicKey = SecKeyCopyPublicKey(privateKey) ?: error("Failed to derive public key")
+                    try {
+                        val applePrivate = privateKey.externalRepresentation()
+                        require(applePrivate.size == P256_APPLE_PRIVATE_LEN) { "Unexpected EC private key size" }
+                        val public = publicKey.externalRepresentation()
+                        require(public.size == P256_PUBLIC_LEN) { "Unexpected EC public key size" }
+                        val privateScalar = applePrivate.copyOfRange(P256_PUBLIC_LEN, P256_APPLE_PRIVATE_LEN)
+                        EcKeyPair(
+                            publicKeyUncompressed = spkiPrefix + public,
+                            privateKeyPkcs8 = pkcs8Prefix + privateScalar + pkcs8PublicPrefix + public,
+                        )
+                    } finally {
+                        CFRelease(publicKey)
+                    }
+                } finally {
+                    CFRelease(privateKey)
+                }
             } finally {
-                CFRelease(publicKey)
+                CFRelease(keySize)
+                CFRelease(attrs)
             }
-        } finally {
-            CFRelease(privateKey)
         }
-    }
 
     actual fun deriveSharedSecret(
         privateKeyPkcs8: ByteArray,
         peerPublicUncompressed: ByteArray,
-    ): ByteArray = memScoped {
-        val privateKey = importPrivateKey(privateKeyPkcs8)
-        try {
-            val publicKey = importPublicKey(peerPublicUncompressed)
+    ): ByteArray =
+        memScoped {
+            val privateKey = importPrivateKey(privateKeyPkcs8)
             try {
-                val error = alloc<CFErrorRefVar>()
-                val shared = SecKeyCopyKeyExchangeResult(
-                    privateKey = privateKey,
-                    algorithm = kSecKeyAlgorithmECDHKeyExchangeStandard,
-                    publicKey = publicKey,
-                    parameters = null,
-                    error = error.ptr,
-                ) ?: error("ECDH failed: ${error.value.cfErrorMessage()}")
+                val publicKey = importPublicKey(peerPublicUncompressed)
                 try {
-                    shared.toByteArray()
+                    val error = alloc<CFErrorRefVar>()
+                    val shared =
+                        SecKeyCopyKeyExchangeResult(
+                            privateKey = privateKey,
+                            algorithm = kSecKeyAlgorithmECDHKeyExchangeStandard,
+                            publicKey = publicKey,
+                            parameters = null,
+                            error = error.ptr,
+                        ) ?: error("ECDH failed: ${error.value.cfErrorMessage()}")
+                    try {
+                        shared.toByteArray()
+                    } finally {
+                        CFRelease(shared)
+                    }
                 } finally {
-                    CFRelease(shared)
+                    CFRelease(publicKey)
                 }
             } finally {
-                CFRelease(publicKey)
+                CFRelease(privateKey)
             }
-        } finally {
-            CFRelease(privateKey)
         }
-    }
 
     actual fun hkdfSha256(
         ikm: ByteArray,
@@ -189,31 +259,42 @@ actual object DeviceCrypto {
         return bytes
     }
 
-    private fun importPublicKey(x509: ByteArray): SecKeyRef = memScoped {
-        val point = decodeSpkiPublicPoint(x509)
-        createEcKey(point, kSecAttrKeyClassPublic)
-    }
-
-    private fun importPrivateKey(pkcs8: ByteArray): SecKeyRef = memScoped {
-        val applePrivate = decodePkcs8Private(pkcs8)
-        createEcKey(applePrivate, kSecAttrKeyClassPrivate)
-    }
-
-    private fun createEcKey(bytes: ByteArray, keyClass: CFStringRef?): SecKeyRef = memScoped {
-        val attrs = mutableCfDictionary().apply {
-            set(kSecAttrKeyType, kSecAttrKeyTypeECSECPrimeRandom)
-            set(kSecAttrKeyClass, keyClass)
-            set(kSecAttrKeySizeInBits, cfNumber(256))
+    private fun importPublicKey(x509: ByteArray): SecKeyRef =
+        memScoped {
+            val point = decodeSpkiPublicPoint(x509)
+            createEcKey(point, kSecAttrKeyClassPublic)
         }
-        val data = bytes.toCFData()
-        try {
-            val error = alloc<CFErrorRefVar>()
-            SecKeyCreateWithData(data, attrs, error.ptr)
-                ?: error("Failed to import EC key: ${error.value.cfErrorMessage()}")
-        } finally {
-            CFRelease(data)
+
+    private fun importPrivateKey(pkcs8: ByteArray): SecKeyRef =
+        memScoped {
+            val applePrivate = decodePkcs8Private(pkcs8)
+            createEcKey(applePrivate, kSecAttrKeyClassPrivate)
         }
-    }
+
+    private fun createEcKey(
+        bytes: ByteArray,
+        keyClass: CFStringRef?,
+    ): SecKeyRef =
+        memScoped {
+            val attrs = mutableCfDictionary()
+            val keySize = cfNumber(256)
+            try {
+                attrs.set(kSecAttrKeyType, kSecAttrKeyTypeECSECPrimeRandom)
+                attrs.set(kSecAttrKeyClass, keyClass)
+                attrs.set(kSecAttrKeySizeInBits, keySize)
+                val data = bytes.toCFData()
+                try {
+                    val error = alloc<CFErrorRefVar>()
+                    SecKeyCreateWithData(data, attrs, error.ptr)
+                        ?: error("Failed to import EC key: ${error.value.cfErrorMessage()}")
+                } finally {
+                    CFRelease(data)
+                }
+            } finally {
+                CFRelease(keySize)
+                CFRelease(attrs)
+            }
+        }
 
     private fun decodeSpkiPublicPoint(x509: ByteArray): ByteArray {
         require(x509.size == spkiPrefix.size + P256_PUBLIC_LEN && x509.startsWith(spkiPrefix)) {
@@ -243,7 +324,10 @@ actual object DeviceCrypto {
         return true
     }
 
-    private fun ByteArray.indexOfSub(sub: ByteArray, from: Int): Int {
+    private fun ByteArray.indexOfSub(
+        sub: ByteArray,
+        from: Int,
+    ): Int {
         outer@ for (i in from..size - sub.size) {
             for (j in sub.indices) if (this[i + j] != sub[j]) continue@outer
             return i
@@ -251,26 +335,28 @@ actual object DeviceCrypto {
         return -1
     }
 
-    private fun SecKeyRef.externalRepresentation(): ByteArray = memScoped {
-        val error = alloc<CFErrorRefVar>()
-        val data = SecKeyCopyExternalRepresentation(this@externalRepresentation, error.ptr)
-            ?: error("Failed to export EC key: ${error.value.cfErrorMessage()}")
-        try {
-            data.toByteArray()
-        } finally {
-            CFRelease(data)
+    private fun SecKeyRef.externalRepresentation(): ByteArray =
+        memScoped {
+            val error = alloc<CFErrorRefVar>()
+            val data =
+                SecKeyCopyExternalRepresentation(this@externalRepresentation, error.ptr)
+                    ?: error("Failed to export EC key: ${error.value.cfErrorMessage()}")
+            try {
+                data.toByteArray()
+            } finally {
+                CFRelease(data)
+            }
         }
-    }
 }
 
 @OptIn(ExperimentalForeignApi::class)
-private fun ByteArray.toCFData(): platform.CoreFoundation.CFDataRef? =
+private fun ByteArray.toCFData(): CFDataRef? =
     usePinned { pinned ->
         CFDataCreate(null, pinned.addressOf(0).reinterpret(), size.toLong())
     }
 
 @OptIn(ExperimentalForeignApi::class)
-private fun platform.CoreFoundation.CFDataRef.toByteArray(): ByteArray {
+private fun CFDataRef.toByteArray(): ByteArray {
     val len = CFDataGetLength(this).toInt()
     val bytes = ByteArray(len)
     if (len > 0) {
@@ -282,18 +368,19 @@ private fun platform.CoreFoundation.CFDataRef.toByteArray(): ByteArray {
 }
 
 @OptIn(ExperimentalForeignApi::class)
-private fun CFMutableDictionaryRef?.set(key: CFTypeRef?, value: CFTypeRef?) {
+private fun CFMutableDictionaryRef?.set(
+    key: CFTypeRef?,
+    value: CFTypeRef?,
+) {
     if (this != null && key != null && value != null) CFDictionaryAddValue(this, key, value)
 }
 
 @OptIn(ExperimentalForeignApi::class)
-private fun cfNumber(value: Int): CFTypeRef? =
-    CFBridgingRetain(platform.Foundation.NSNumber(int = value))
+private fun cfNumber(value: Int): CFTypeRef? = CFBridgingRetain(NSNumber(int = value))
 
 @OptIn(ExperimentalForeignApi::class)
 private fun mutableCfDictionary(): CFMutableDictionaryRef =
     CFDictionaryCreateMutable(null, 4, null, null) ?: error("Failed to create CFDictionary")
 
 @OptIn(ExperimentalForeignApi::class)
-private fun platform.CoreFoundation.CFErrorRef?.cfErrorMessage(): String =
-    if (this == null) "unknown error" else "CFError(${platform.CoreFoundation.CFErrorGetCode(this)})"
+private fun CFErrorRef?.cfErrorMessage(): String = if (this == null) "unknown error" else "CFError(${CFErrorGetCode(this)})"

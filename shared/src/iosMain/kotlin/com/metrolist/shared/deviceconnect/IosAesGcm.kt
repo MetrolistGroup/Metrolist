@@ -8,7 +8,6 @@ import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.addressOf
 import kotlinx.cinterop.convert
 import kotlinx.cinterop.usePinned
-import platform.posix.size_tVar
 
 @OptIn(ExperimentalForeignApi::class)
 internal object IosAesGcm {
@@ -24,15 +23,13 @@ internal object IosAesGcm {
         val iv = DeviceCrypto.secureRandomBytes(GCM_IV_LEN)
         val ciphertext = ByteArray(plaintext.size)
         val tag = ByteArray(GCM_TAG_LEN)
-        val status = key.usePinned { keyPinned ->
-            plaintext.usePinned { plainPinned ->
-                ciphertext.usePinned { cipherPinned ->
-                    associatedData.usePinned { aadPinned ->
-                        iv.usePinned { ivPinned ->
-                            tag.usePinned { tagPinned ->
-                                kotlinx.cinterop.memScoped {
-                                    val tagLen = alloc<size_tVar>()
-                                    tagLen.value = GCM_TAG_LEN.convert()
+        val status =
+            key.usePinned { keyPinned ->
+                plaintext.usePinned { plainPinned ->
+                    ciphertext.usePinned { cipherPinned ->
+                        associatedData.usePinned { aadPinned ->
+                            iv.usePinned { ivPinned ->
+                                tag.usePinned { tagPinned ->
                                     CCCryptorGCMOneshotEncrypt(
                                         alg = kCCAlgorithmAES.convert(),
                                         key = keyPinned.addressOf(0),
@@ -45,7 +42,7 @@ internal object IosAesGcm {
                                         dataInLength = plaintext.size.convert(),
                                         dataOut = if (ciphertext.isEmpty()) null else cipherPinned.addressOf(0),
                                         tag = tagPinned.addressOf(0),
-                                        tagLength = tagLen.ptr,
+                                        tagLength = GCM_TAG_LEN.convert(),
                                     )
                                 }
                             }
@@ -53,7 +50,6 @@ internal object IosAesGcm {
                     }
                 }
             }
-        }
         check(status == kCCSuccess) { "AES-GCM encrypt failed: $status" }
         return iv + ciphertext + tag
     }
@@ -64,37 +60,38 @@ internal object IosAesGcm {
         associatedData: ByteArray,
     ): ByteArray {
         require(key.size == 16 || key.size == 24 || key.size == 32) { "Unsupported AES key size" }
-        require(data.size > GCM_IV_LEN + GCM_TAG_LEN) { "ciphertext too short" }
+        require(data.size >= GCM_IV_LEN + GCM_TAG_LEN) { "ciphertext too short" }
         val iv = data.copyOfRange(0, GCM_IV_LEN)
         val tag = data.copyOfRange(data.size - GCM_TAG_LEN, data.size)
         val ciphertext = data.copyOfRange(GCM_IV_LEN, data.size - GCM_TAG_LEN)
         val plaintext = ByteArray(ciphertext.size)
-        val status = key.usePinned { keyPinned ->
-            ciphertext.usePinned { cipherPinned ->
-                plaintext.usePinned { plainPinned ->
-                    associatedData.usePinned { aadPinned ->
-                        iv.usePinned { ivPinned ->
-                            tag.usePinned { tagPinned ->
-                                CCCryptorGCMOneshotDecrypt(
-                                    alg = kCCAlgorithmAES.convert(),
-                                    key = keyPinned.addressOf(0),
-                                    keyLength = key.size.convert(),
-                                    iv = ivPinned.addressOf(0),
-                                    ivLen = iv.size.convert(),
-                                    aData = if (associatedData.isEmpty()) null else aadPinned.addressOf(0),
-                                    aDataLen = associatedData.size.convert(),
-                                    dataIn = if (ciphertext.isEmpty()) null else cipherPinned.addressOf(0),
-                                    dataInLength = ciphertext.size.convert(),
-                                    dataOut = if (plaintext.isEmpty()) null else plainPinned.addressOf(0),
-                                    tag = tagPinned.addressOf(0),
-                                    tagLength = GCM_TAG_LEN.convert(),
-                                )
+        val status =
+            key.usePinned { keyPinned ->
+                ciphertext.usePinned { cipherPinned ->
+                    plaintext.usePinned { plainPinned ->
+                        associatedData.usePinned { aadPinned ->
+                            iv.usePinned { ivPinned ->
+                                tag.usePinned { tagPinned ->
+                                    CCCryptorGCMOneshotDecrypt(
+                                        alg = kCCAlgorithmAES.convert(),
+                                        key = keyPinned.addressOf(0),
+                                        keyLength = key.size.convert(),
+                                        iv = ivPinned.addressOf(0),
+                                        ivLen = iv.size.convert(),
+                                        aData = if (associatedData.isEmpty()) null else aadPinned.addressOf(0),
+                                        aDataLen = associatedData.size.convert(),
+                                        dataIn = if (ciphertext.isEmpty()) null else cipherPinned.addressOf(0),
+                                        dataInLength = ciphertext.size.convert(),
+                                        dataOut = if (plaintext.isEmpty()) null else plainPinned.addressOf(0),
+                                        tag = tagPinned.addressOf(0),
+                                        tagLength = GCM_TAG_LEN.convert(),
+                                    )
+                                }
                             }
                         }
                     }
                 }
             }
-        }
         check(status == kCCSuccess) { "AES-GCM decrypt failed: $status" }
         return plaintext
     }

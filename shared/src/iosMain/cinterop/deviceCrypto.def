@@ -18,7 +18,7 @@ CCCryptorStatus CCCryptorGCMOneshotEncrypt(
     const void *aData, size_t aDataLen,
     const void *dataIn, size_t dataInLength,
     void *dataOut,
-    void *tag, size_t *tagLength);
+    void *tag, size_t tagLength);
 
 CCCryptorStatus CCCryptorGCMOneshotDecrypt(
     uint32_t alg,
