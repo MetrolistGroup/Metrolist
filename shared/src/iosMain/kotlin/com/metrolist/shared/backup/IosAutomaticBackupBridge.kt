@@ -54,9 +54,15 @@ fun iosAutomaticBackupIntervalMillis(): Long = AutoBackupFrequency.fromSetting(S
 
 fun iosAutomaticBackupLastSuccessEpochMillis(): Long = Settings.shared.autoBackupLastSuccessEpochMillis
 
-fun iosAutomaticBackupRequiresNetworkConnectivity(): Boolean {
+fun iosAutomaticBackupRequiresNetworkConnectivity(scheduledAtEpochMillis: Long): Boolean {
     DriveAccountConnectionState.normalizeAutoBackupDestination(iosDriveBrokerUrl() != null)
-    return AutoBackupDestination.fromSetting(Settings.shared.autoBackupDestination) == AutoBackupDestination.GOOGLE_DRIVE
+    val settings = Settings.shared
+    if (AutoBackupDestination.fromSetting(settings.autoBackupDestination) != AutoBackupDestination.GOOGLE_DRIVE) return false
+    return isAutoBackupDue(
+        settings.autoBackupLastSuccessEpochMillis,
+        scheduledAtEpochMillis,
+        AutoBackupFrequency.fromSetting(settings.autoBackupFrequency),
+    )
 }
 
 fun notifyIosAutomaticBackupSettingsChanged() {

@@ -91,10 +91,13 @@ private final class AutomaticBackupAppDelegate: NSObject, UIApplicationDelegate 
         let lastSuccess = TimeInterval(IosAutomaticBackupBridgeKt.iosAutomaticBackupLastSuccessEpochMillis()) / 1000
         let request = BGProcessingTaskRequest(identifier: Self.taskIdentifier)
         let needsCleanup = IosAutomaticBackupBridgeKt.iosAutomaticBackupNeedsCleanup()
-        request.earliestBeginDate = needsCleanup
+        let earliestBeginDate = needsCleanup
             ? Date(timeIntervalSinceNow: 5 * 60)
             : Date(timeIntervalSince1970: lastSuccess + interval)
-        request.requiresNetworkConnectivity = IosAutomaticBackupBridgeKt.iosAutomaticBackupRequiresNetworkConnectivity() && !needsCleanup
+        request.earliestBeginDate = earliestBeginDate
+        request.requiresNetworkConnectivity = IosAutomaticBackupBridgeKt.iosAutomaticBackupRequiresNetworkConnectivity(
+            scheduledAtEpochMillis: Int64(earliestBeginDate.timeIntervalSince1970 * 1000)
+        )
         request.requiresExternalPower = false
         try? BGTaskScheduler.shared.submit(request)
     }

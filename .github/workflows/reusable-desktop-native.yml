@@ -142,6 +142,7 @@ jobs:
           LASTFM_SECRET: ${{ secrets.LASTFM_SECRET }}
           LYPRIO_BASE_URL: ${{ secrets.LYPRIO_BASE_URL }}
           LYPRIO_HMAC_KEY: ${{ secrets.LYPRIO_HMAC_KEY }}
+          METROLIST_DRIVE_BROKER_URL: ${{ vars.METROLIST_DRIVE_BROKER_URL }}
         run: |
           ./gradlew -I scripts/desktop-native-image/prepare.init.gradle \
             -PnativeExperimentDir="$NATIVE_WORK" -Pmetrolist.sourceRevision="$GITHUB_SHA" -Pmetrolist.debug=false \

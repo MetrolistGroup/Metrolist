@@ -61,6 +61,8 @@ jobs:
     env:
       LASTFM_API_KEY: ${{ secrets.LASTFM_API_KEY }}
       LASTFM_SECRET: ${{ secrets.LASTFM_SECRET }}
+      METROLIST_DRIVE_BROKER_URL: ${{ vars.METROLIST_DRIVE_BROKER_URL }}
+      GOOGLE_IOS_CLIENT_ID_SCHEME: ${{ vars.GOOGLE_IOS_CLIENT_ID_SCHEME }}
       GRADLE_OPTS: >-
         -Dorg.gradle.jvmargs="-XX:MaxRAMPercentage=60.0 -XX:+UseParallelGC -Dkotlin.daemon.jvm.options=-XX:MaxRAMPercentage=60.0"
       ORG_GRADLE_PROJECT_org.gradle.workers.max: "2"
@@ -163,6 +165,8 @@ jobs:
     env:
       LASTFM_API_KEY: ${{ secrets.LASTFM_API_KEY }}
       LASTFM_SECRET: ${{ secrets.LASTFM_SECRET }}
+      METROLIST_DRIVE_BROKER_URL: ${{ vars.METROLIST_DRIVE_BROKER_URL }}
+      GOOGLE_IOS_CLIENT_ID_SCHEME: ${{ vars.GOOGLE_IOS_CLIENT_ID_SCHEME }}
       GRADLE_OPTS: >-
         -Dorg.gradle.jvmargs="-XX:MaxRAMPercentage=60.0 -XX:+UseParallelGC -Dkotlin.daemon.jvm.options=-XX:MaxRAMPercentage=60.0"
       ORG_GRADLE_PROJECT_org.gradle.workers.max: "2"

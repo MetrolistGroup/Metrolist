@@ -1,7 +1,7 @@
 FROM eclipse-temurin:25-jdk AS build
 WORKDIR /workspace
 COPY . .
-RUN ./gradlew --no-daemon :driveBroker:installDist
+RUN ./gradlew --no-daemon --configure-on-demand :driveBroker:installDist
 
 FROM eclipse-temurin:21-jre
 RUN useradd --system --uid 10001 drivebroker

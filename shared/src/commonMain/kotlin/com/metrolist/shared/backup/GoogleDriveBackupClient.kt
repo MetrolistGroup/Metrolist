@@ -80,6 +80,7 @@ class GoogleDriveBackupClient(
         val cleanupError = runCatching { pruneOldBackups(tokens, folderIds) }.exceptionOrNull()
         if (cleanupError != null) {
             if (cleanupError is CancellationException) throw cleanupError
+            if (cleanupError is DriveReauthorizationRequiredException) throw cleanupError
             Logger.w("GoogleDriveBackup", "Could not prune expired Drive backups", cleanupError)
             throw DriveCleanupException(listOf(cleanupError))
         }
@@ -315,6 +316,8 @@ class GoogleDriveBackupClient(
                     }.requireDriveApiSuccess()
                 } catch (cancelled: CancellationException) {
                     throw cancelled
+                } catch (reauthorization: DriveReauthorizationRequiredException) {
+                    throw reauthorization
                 } catch (error: Exception) {
                     Logger.w("GoogleDriveBackup", "Could not delete expired backup ${file.id}", error)
                     failures += error

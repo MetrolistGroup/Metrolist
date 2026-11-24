@@ -1,5 +1,6 @@
 package com.metrolist.desktop.backup
 
+import com.metrolist.shared.BuildConfig
 import com.metrolist.shared.backup.DriveAccountConnectionState
 import com.metrolist.shared.backup.DriveClientPlatform
 import com.metrolist.shared.backup.DriveTokenBrokerClient
@@ -148,7 +149,9 @@ object DesktopDriveSignIn {
             }
         }
 
-    private fun brokerUrl(): String? = System.getenv(DRIVE_BROKER_URL_ENV)?.takeIf { it.startsWith("https://") }
+    private fun brokerUrl(): String? =
+        System.getenv(DRIVE_BROKER_URL_ENV)?.takeIf { it.startsWith("https://") }
+            ?: BuildConfig.DRIVE_BROKER_URL.takeIf { it.startsWith("https://") }
 
     internal fun requireBrokerUrl(): String = brokerUrl() ?: error("Google Drive broker is not configured")
 

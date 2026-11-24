@@ -1,5 +1,6 @@
 package com.metrolist.drivebroker
 
+import kotlinx.coroutines.CancellationException
 import java.security.MessageDigest
 import java.security.SecureRandom
 import java.sql.Connection
@@ -225,7 +226,7 @@ class TokenRepository(
                     revoke(accountToRevoke)
                 } catch (error: Exception) {
                     if (!alreadyRevoked) {
-                        if (error is GoogleRevocationAmbiguousException) {
+                        if (error is GoogleRevocationAmbiguousException || error is CancellationException) {
                             // A lost response cannot prove the grant survived. Keep a finished marker so a
                             // sign-in with earlier credentials is rejected, but leave sessions unmarked:
                             // a retry must still call Google and reconcile the final state.
@@ -354,7 +355,9 @@ class TokenRepository(
     private fun cleanupStaleRevocations(connection: Connection) {
         connection
             .prepareStatement(
-                "DELETE FROM google_drive_revocations WHERE started_at < CURRENT_TIMESTAMP - INTERVAL '10 minutes'",
+                """DELETE FROM google_drive_revocations
+                   WHERE (finished_at IS NULL AND started_at < CURRENT_TIMESTAMP - INTERVAL '10 minutes')
+                      OR (finished_at IS NOT NULL AND finished_at < CURRENT_TIMESTAMP - INTERVAL '10 minutes')""",
             ).use { statement -> statement.executeUpdate() }
     }
 
