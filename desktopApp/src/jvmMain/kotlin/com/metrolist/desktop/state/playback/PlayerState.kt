@@ -4035,7 +4035,16 @@ object PlayerState {
         )
     }
 
-    fun startRadio(song: SongItem) {
+    // A lone song starts its radio; guests still send it as a Listen Together request.
+    fun playSongRadio(song: SongItem) {
+        if (isListenTogetherGuest()) return playTrack(song)
+        startRadio(song, startPlaying = localSongChangeStartsPlayback())
+    }
+
+    fun startRadio(
+        song: SongItem,
+        startPlaying: Boolean = true,
+    ) {
         if (!isListenTogetherGuest() && !isSongBlocked(song)) {
             _playbackReplacementGeneration.incrementAndGet()
             _explicitPlaybackGeneration.updateAndGet { it + 1 }
@@ -4062,6 +4071,7 @@ object PlayerState {
                 song,
                 localPrepared = player.currentSong.value?.id == song.id && player.playbackReady && !isPlaybackResolving,
                 remote = castManager.state.value,
+                startPlaying = startPlaying,
             )
     }
 

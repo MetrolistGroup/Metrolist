@@ -27,6 +27,7 @@ internal class DesktopRadioPlayback(
         song: SongItem,
         localPrepared: Boolean,
         remote: CastState,
+        startPlaying: Boolean = true,
     ): Job {
         val preserveCurrent = localPrepared && !remote.isConnected
         val preserveCastPosition = remote.isConnected && remote.queueEntry?.song?.id == song.id
@@ -47,7 +48,7 @@ internal class DesktopRadioPlayback(
                 play(
                     song,
                     generation,
-                    if (preserveCastPosition) remote.isPlaying else true,
+                    if (preserveCastPosition) remote.isPlaying else startPlaying,
                     if (preserveCastPosition) remote.positionMs else 0L,
                 )
             }

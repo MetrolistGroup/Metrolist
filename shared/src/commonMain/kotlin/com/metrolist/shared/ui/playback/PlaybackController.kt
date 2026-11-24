@@ -84,16 +84,17 @@ interface PlaybackController {
 
     fun currentPositionMs(): Long = state.value.positionMs
 
+    // An empty queue marks a lone song, which Android follows with its radio.
     fun play(
         song: SongItem,
-        queue: List<SongItem> = listOf(song),
+        queue: List<SongItem> = emptyList(),
         songsOnly: Boolean = false,
     )
 
     fun playAtGeneration(
         expectedGeneration: Long,
         song: SongItem,
-        queue: List<SongItem> = listOf(song),
+        queue: List<SongItem> = emptyList(),
         songsOnly: Boolean = false,
     ) {
         if (explicitPlaybackGeneration == expectedGeneration) play(song, queue, songsOnly)

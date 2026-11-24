@@ -2945,6 +2945,16 @@ class MusicService :
         )
     }
 
+    fun playSongRadio(
+        song: SongItem,
+        startPositionMs: Long,
+        startPlaying: Boolean,
+        startVideo: Boolean,
+    ) {
+        playbackBenchmark.cancel()
+        queueCoordinator.playSongRadio(song, startPositionMs, startPlaying, startVideo)
+    }
+
     suspend fun playQueueFromRemote(
         songs: List<SongItem>,
         startIndex: Int,

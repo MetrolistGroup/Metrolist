@@ -75,6 +75,7 @@ class AndroidPlaybackController(
         queue: List<SongItem>,
         songsOnly: Boolean,
     ) {
+        if (queue.isEmpty() && !songsOnly) return connection.playSong(song, "")
         val songs = queue.ifEmpty { listOf(song) }
         val index = songs.indexOfPlaylistOccurrence(song)
         connection.playQueue(songs, index.coerceAtLeast(0), songsOnly = songsOnly)
