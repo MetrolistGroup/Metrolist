@@ -49,7 +49,7 @@ Home projects API renderers through shared models. Preserve shelf order, header 
 
 Home shelf pages use two columns for collections and artists, full-width 16:9 cards for video shelves, and rows for songs or mixed content. They retain the shelf items while loading its continuation or browse endpoint. Android and the shared mobile host retain page loaders with their navigation entries; paging failures keep the cursor for retry. Page identity includes the feed endpoint, chip parameters and shelf identity. Shelf More endpoints take precedence over header links. Artist header links never replace shelf contents with an artist page; a filtered shelf without its own endpoint parameters or cursor shows its existing items.
 
-Quick picks reuses a source shelf's browse endpoint and continuation only when that shelf contains every displayed pick. Local recommendations that only overlap an API shelf keep their existing songs when expanded. Without an endpoint or continuation, the page ends without a network request.
+Quick picks reuses a source shelf's browse endpoint and continuation only when that shelf contains every displayed pick. Local recommendations that only overlap an API shelf keep their existing songs when expanded. Without an endpoint or continuation, the page ends without a network request. Songs present in the "Heard in Shorts" shelf are always excluded from Quick picks while remaining in the "Heard in Shorts" shelf when it is visible.
 
 Signed-in, unfiltered Home fetches only missing moods and genres from Explore after its last continuation. Existing main-feed moods skip that request. The moods shelf stays at the end of the main feed, before any separately appended feeds. No other Explore shelves enter signed-in Home.
 

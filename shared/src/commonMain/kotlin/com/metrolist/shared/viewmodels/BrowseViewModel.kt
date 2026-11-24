@@ -8,6 +8,7 @@ import com.metrolist.shared.api.loadBrowsePage
 import com.metrolist.shared.model.BrowsePageData
 import com.metrolist.shared.model.HomeSection
 import com.metrolist.shared.model.SongItem
+import com.metrolist.shared.model.canonicalHomeItemId
 import com.metrolist.shared.state.GlobalYouTubeRepository
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -37,6 +38,7 @@ class BrowseViewModel(
     private var pageCount = 1
     private val seenTokens = mutableSetOf<String>()
     private val updatedSongs = mutableMapOf<String, SongItem>()
+    private val excludedItemIds: Set<String> = initialSection?.excludedItemIds.orEmpty()
     private var setLogin = false
     val hasMore: Boolean get() =
         pageCount < 50 && page.sections.size < 1_000 &&
@@ -53,7 +55,7 @@ class BrowseViewModel(
         seenTokens.clear()
         setLogin = initialSection?.isPersonal == true || repository.browseUsesLogin(browseId)
         if (initialSection?.continuation != null || browseId == null) {
-            page = applySongMetadata(BrowsePageData(title = title, sections = listOfNotNull(initialSection)))
+            page = applyPageTransforms(BrowsePageData(title = title, sections = listOfNotNull(initialSection)))
             isLoading = false
             isLoadingMore = false
             loadFailed = false
@@ -69,7 +71,7 @@ class BrowseViewModel(
             scope.launch {
                 try {
                     val loaded = repository.getBrowsePageData(browseId, params, title, loadAllPages = false)
-                    if (generation == requestGeneration) page = applySongMetadata(loaded)
+                    if (generation == requestGeneration) page = applyPageTransforms(loaded)
                 } catch (error: CancellationException) {
                     throw error
                 } catch (_: Exception) {
@@ -82,7 +84,7 @@ class BrowseViewModel(
 
     fun updateSongMetadata(song: SongItem) {
         updatedSongs[song.id] = song
-        page = applySongMetadata(page)
+        page = applyPageTransforms(page)
     }
 
     fun loadMore() {
@@ -107,7 +109,7 @@ class BrowseViewModel(
                     if (generation != requestGeneration) return@launch
                     seenTokens += token
                     pageCount++
-                    page = applySongMetadata(next)
+                    page = applyPageTransforms(next)
                 } catch (error: CancellationException) {
                     throw error
                 } catch (_: Exception) {
@@ -118,20 +120,19 @@ class BrowseViewModel(
             }
     }
 
-    private fun applySongMetadata(page: BrowsePageData): BrowsePageData =
-        if (updatedSongs.isEmpty()) {
-            page
-        } else {
-            page.copy(
-                sections =
-                    page.sections.map { section ->
-                        section.copy(
-                            items =
-                                section.items.map { item ->
-                                    if (item is SongItem) updatedSongs[item.id]?.let(item::withUpdatedMetadata) ?: item else item
-                                },
-                        )
-                    },
-            )
-        }
+    private fun applyPageTransforms(page: BrowsePageData): BrowsePageData {
+        if (excludedItemIds.isEmpty() && updatedSongs.isEmpty()) return page
+        return page.copy(
+            sections =
+                page.sections.mapNotNull { section ->
+                    val items =
+                        section.items
+                            .filterNot { canonicalHomeItemId(it) in excludedItemIds }
+                            .map { item ->
+                                if (item is SongItem) updatedSongs[item.id]?.let(item::withUpdatedMetadata) ?: item else item
+                            }
+                    if (items.isEmpty() && section.continuation == null) null else section.copy(items = items)
+                },
+        )
+    }
 }
