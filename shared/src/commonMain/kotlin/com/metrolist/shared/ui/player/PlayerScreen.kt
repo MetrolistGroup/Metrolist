@@ -916,6 +916,12 @@ fun PlayerScreen(
                 queueSheetState.expandSoft()
             }
 
+            // PiP restoration is reported outside this screen, where the local queue sheet is unreachable.
+            val queueCollapseRequestId = uiState.queueCollapseRequestId
+            LaunchedEffect(queueCollapseRequestId) {
+                if (queueCollapseRequestId > 0L) queueSheetState.collapseSoft()
+            }
+
             LaunchedEffect(useLandscapeLayout, queueSheetState.isSettledExpanded) {
                 if (!useLandscapeLayout && queueSheetState.isSettledExpanded && uiState.isLyricsExpanded) {
                     viewModel.setLyricsVisible(false)

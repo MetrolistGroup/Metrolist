@@ -468,6 +468,7 @@ fun MobileApp(
     DisposableEffect(playerViewModel) {
         latestPictureInPictureRestoreRegistration {
             playerViewModel.setLyricsVisible(false)
+            playerViewModel.requestQueueSheetCollapse()
             if (routeStack.lastOrNull()?.route == MobileRoute.Wrapped) routeStack.removeAt(routeStack.lastIndex)
             setPlayerVisible(true)
         }
