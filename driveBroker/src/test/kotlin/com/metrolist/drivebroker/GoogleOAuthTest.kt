@@ -22,7 +22,7 @@ class GoogleOAuthTest {
             val client =
                 oauthClient(
                     """{"access_token":"short-lived","refresh_token":"long-lived","id_token":"identity"}""",
-                    """{"sub":"google-subject","email":"user@example.com","aud":"web-client-id","iss":"https://accounts.google.com","exp":${System.currentTimeMillis() / 1000 + 3600}}""",
+                    """{"sub":"google-subject","email":"user@example.com","email_verified":"true","aud":"web-client-id","iss":"https://accounts.google.com","exp":"${System.currentTimeMillis() / 1000 + 3600}"}""",
                 )
 
             val account = GoogleOAuth(client, configuration).exchange(ClientPlatform.ANDROID, "one-time-code", null, null)

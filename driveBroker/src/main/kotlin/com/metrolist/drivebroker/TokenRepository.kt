@@ -200,10 +200,11 @@ class TokenRepository(
             connection.autoCommit = false
             try {
                 lockSubject(connection, account.subject)
-                // A reconnect can replace the grant while this request waits on Google. Retire sessions
-                // only when the rejected token is still stored, so a fresh connection survives.
+                // A reconnect can replace the grant while this request waits on Google. Retire the
+                // sessions issued before that replacement while preserving the new grant's session.
                 if (readRefreshToken(connection, account.subject, account.clientId) != account.refreshToken) {
-                    connection.rollback()
+                    retireSessionsFromRejectedGrant(connection, account.subject, account.clientId)
+                    connection.commit()
                     return
                 }
                 cleanupStaleRevocations(connection)
@@ -223,6 +224,37 @@ class TokenRepository(
                 throw error
             }
         }
+    }
+
+    private fun retireSessionsFromRejectedGrant(
+        connection: Connection,
+        subject: String,
+        clientId: String,
+    ) {
+        val staleGrant =
+            """google_subject = ? AND oauth_client_id = ?
+               AND created_at < (SELECT updated_at FROM google_drive_accounts
+                                 WHERE google_subject = ? AND oauth_client_id = ?)"""
+        connection
+            .prepareStatement("UPDATE google_drive_sessions SET google_revoked_at = clock_timestamp() WHERE $staleGrant")
+            .use { statement ->
+                statement.setString(1, subject)
+                statement.setString(2, clientId)
+                statement.setString(3, subject)
+                statement.setString(4, clientId)
+                statement.executeUpdate()
+            }
+        connection
+            .prepareStatement("DELETE FROM google_drive_sessions WHERE $staleGrant AND google_revoked_at IS NOT NULL")
+            .use { statement ->
+                statement.setString(1, subject)
+                statement.setString(2, clientId)
+                statement.setString(3, subject)
+                statement.setString(4, clientId)
+                statement.executeUpdate()
+            }
+        cleanupStaleRevocations(connection)
+        finishRevocation(connection, subject)
     }
 
     private fun findSession(

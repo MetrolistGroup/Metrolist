@@ -22,6 +22,7 @@ import io.ktor.http.contentType
 import io.ktor.utils.io.ByteWriteChannel
 import io.ktor.utils.io.writeFully
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.delay
 import kotlinx.io.Buffer
 import kotlinx.io.RawSource
 import kotlinx.serialization.Serializable
@@ -146,19 +147,35 @@ class GoogleDriveBackupClient(
         uploadUrl: String,
         archiveSize: Long,
     ): UploadProgress {
-        val response =
-            authenticatedRequest(tokens) { token ->
-                httpClient.put(uploadUrl) {
-                    header(HttpHeaders.Authorization, "Bearer $token")
-                    header(HttpHeaders.ContentRange, "bytes */$archiveSize")
-                    setBody(ByteArray(0))
+        var attempt = 0
+        while (true) {
+            val response =
+                try {
+                    authenticatedRequest(tokens) { token ->
+                        httpClient.put(uploadUrl) {
+                            header(HttpHeaders.Authorization, "Bearer $token")
+                            header(HttpHeaders.ContentRange, "bytes */$archiveSize")
+                            setBody(ByteArray(0))
+                        }
+                    }
+                } catch (cancelled: CancellationException) {
+                    throw cancelled
+                } catch (error: Exception) {
+                    if (attempt++ >= MAX_UPLOAD_RETRIES) throw error
+                    delay(STATUS_PROBE_RETRY_DELAY_MILLIS * attempt)
+                    continue
                 }
+            if (response.status == HttpStatusCode.OK || response.status == HttpStatusCode.Created) {
+                return UploadProgress(archiveSize, response.body())
             }
-        if (response.status == HttpStatusCode.OK || response.status == HttpStatusCode.Created) {
-            return UploadProgress(archiveSize, response.body())
+            if (response.status == HttpStatusCode.PermanentRedirect) {
+                return UploadProgress(acknowledgedOffset(response.headers[HttpHeaders.Range], archiveSize), null)
+            }
+            if (response.status.value !in 500..599 || attempt++ >= MAX_UPLOAD_RETRIES) {
+                throw DriveBrokerException(response.status.value)
+            }
+            delay(STATUS_PROBE_RETRY_DELAY_MILLIS * attempt)
         }
-        if (response.status != HttpStatusCode.PermanentRedirect) throw DriveBrokerException(response.status.value)
-        return UploadProgress(acknowledgedOffset(response.headers[HttpHeaders.Range], archiveSize), null)
     }
 
     private suspend fun authenticatedRequest(
@@ -283,6 +300,7 @@ class GoogleDriveBackupClient(
         const val UPLOAD_CONTENT_LENGTH_HEADER = "X-Upload-Content-Length"
         const val UPLOAD_TIMEOUT_MILLIS = 15 * 60 * 1000L
         const val MAX_UPLOAD_RETRIES = 3
+        const val STATUS_PROBE_RETRY_DELAY_MILLIS = 1_000L
         const val BACKUP_FOLDER_NAME = "Metrolist Backups"
         const val FOLDER_MIME_TYPE = "application/vnd.google-apps.folder"
         const val APP_PROPERTY_KEY = "metrolistBackup"
