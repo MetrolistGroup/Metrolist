@@ -13,8 +13,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.platform.Font
 import com.metrolist.shared.network.sharedOkHttpClient
 import com.metrolist.shared.settings.FontOption
+import com.metrolist.shared.settings.Settings
 import com.metrolist.shared.utils.XdgUtils
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import okhttp3.HttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrl
@@ -36,6 +39,7 @@ object DesktopFontManager {
     private const val MAX_REDIRECTS = 3
     private const val REGULAR_FILE = "Regular.ttf"
     private const val BOLD_FILE = "Bold.ttf"
+    private const val NAME_FILE = "name.txt"
 
     private data class Asset(
         val url: String,
@@ -90,6 +94,7 @@ object DesktopFontManager {
                 archiveBoldEntry = "MapleMono-Bold.ttf",
             ),
         )
+    private val customImportLock = Mutex()
     private val specsByOption = specs.associateBy(FontSpec::option)
     private val client =
         sharedOkHttpClient
@@ -106,14 +111,28 @@ object DesktopFontManager {
 
     fun installedOptions(): Set<FontOption> = downloadableOptions.filterTo(mutableSetOf(), ::isDownloaded)
 
+    /** Family name of the imported font, or null when none is installed. */
+    fun customFontName(): String? {
+        val directory = restoredFontDirectory(FontOption.CUSTOM)
+        val font = File(directory, REGULAR_FILE).takeIf(File::isFile) ?: return null
+        val familyName = runCatching { validateFont(font) }.getOrNull() ?: return null
+        return runCatching { File(directory, NAME_FILE).readText() }.getOrNull()?.takeIf(String::isNotBlank) ?: familyName
+    }
+
     fun loadFontFamily(option: FontOption): FontFamily? {
         if (!isDownloaded(option)) return null
         val directory = fontDirectory(option)
         return runCatching {
-            FontFamily(
-                Font(File(directory, REGULAR_FILE), FontWeight.Normal),
-                Font(File(directory, BOLD_FILE), FontWeight.Bold),
-            )
+            if (option == FontOption.CUSTOM) {
+                val file = File(directory, REGULAR_FILE)
+                // Imports reuse one path, and Compose caches file fonts by path; a per-file identity picks up replacements.
+                FontFamily(Font("custom-${file.lastModified()}-${file.length()}", file.readBytes(), FontWeight.Normal))
+            } else {
+                FontFamily(
+                    Font(File(directory, REGULAR_FILE), FontWeight.Normal),
+                    Font(File(directory, BOLD_FILE), FontWeight.Bold),
+                )
+            }
         }.getOrNull()
     }
 
@@ -163,6 +182,36 @@ object DesktopFontManager {
             }
         }
 
+    /** Copies a user-selected font into app storage, activates it and returns its family name. */
+    suspend fun importCustom(source: File): Result<String> =
+        // Imports share one staging directory, so a second one waits for the first to finish.
+        customImportLock.withLock {
+            withContext(Dispatchers.IO) {
+                runCatching {
+                    val option = FontOption.CUSTOM
+                    recoverInterruptedInstall(option)
+                    val staging = stagingDirectory(option).apply { deleteRecursively() }
+                    check(staging.mkdirs()) { "Could not create the font staging directory" }
+                    try {
+                        val font = File(staging, REGULAR_FILE)
+                        source.inputStream().use { input ->
+                            font.outputStream().use { output -> copyBounded(input, output) }
+                        }
+                        val familyName = validateFont(font).ifBlank { source.nameWithoutExtension }
+                        // Installed with the font so a file-name fallback survives reopening settings.
+                        File(staging, NAME_FILE).writeText(familyName)
+                        activate(fontDirectory(option), staging, backupDirectory(option))
+                        // Activate here so a cancelled settings scope cannot leave the import installed but unused.
+                        Settings.shared.appFont = option
+                        revision++
+                        familyName
+                    } finally {
+                        staging.deleteRecursively()
+                    }
+                }
+            }
+        }
+
     internal fun hasSha256(
         file: File,
         expected: String,
@@ -179,9 +228,10 @@ object DesktopFontManager {
         }
 
     private fun isDownloaded(option: FontOption): Boolean {
-        val directory = fontDirectory(option)
+        val directory = restoredFontDirectory(option)
         val regular = File(directory, REGULAR_FILE)
         val bold = File(directory, BOLD_FILE)
+        if (option == FontOption.CUSTOM) return regular.isFile && runCatching { validateFont(regular) }.isSuccess
         return regular.isFile && bold.isFile &&
             runCatching {
                 validateFont(regular)
@@ -189,9 +239,9 @@ object DesktopFontManager {
             }.isSuccess
     }
 
-    private fun validateFont(file: File) {
-        check(file.length() in 1..MAX_FONT_BYTES) { "Downloaded font has an invalid size" }
-        checkNotNull(FontMgr.default.makeFromFile(file.absolutePath)) { "Downloaded file is not a supported font" }.close()
+    private fun validateFont(file: File): String {
+        check(file.length() in 1..MAX_FONT_BYTES) { "Font file has an invalid size" }
+        return checkNotNull(FontMgr.default.makeFromFile(file.absolutePath)) { "File is not a supported font" }.use { it.familyName }
     }
 
     private fun download(
@@ -269,6 +319,7 @@ object DesktopFontManager {
         check(copied > 0) { "Font download is empty" }
     }
 
+    @Synchronized
     private fun activate(
         destination: File,
         staging: File,
@@ -308,6 +359,15 @@ object DesktopFontManager {
         }
         if (destination.exists()) backup.deleteRecursively()
         stagingDirectory(option).deleteRecursively()
+    }
+
+    /** Puts back a previous font left aside by an install that stopped between its two moves. */
+    @Synchronized
+    private fun restoredFontDirectory(option: FontOption): File {
+        val destination = fontDirectory(option)
+        val backup = backupDirectory(option)
+        if (!destination.exists() && backup.exists()) runCatching { move(backup, destination) }
+        return destination
     }
 
     private fun fontDirectory(option: FontOption): File = File(fontRoot(), option.name.lowercase())
