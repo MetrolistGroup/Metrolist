@@ -999,10 +999,11 @@ internal class IosPlaybackController(
     ) {
         val songs = queue.ifEmpty { listOf(song) }
         val index = songs.indexOfFirst { it === song }.takeIf { it >= 0 } ?: songs.indexOf(song).coerceAtLeast(0)
-        // Podcast episodes and local files have no YouTube radio, so they stay a finite single-item queue.
-        val startsRadio = !song.isPodcast && !song.isLocal && !song.id.startsWith("local_")
-        play(song, if (startsRadio) queue else songs, songsOnly, index)
+        play(song, if (song.startsRadio) queue else songs, songsOnly, index)
     }
+
+    // Podcast episodes and local files have no YouTube radio, so they stay a finite single-item queue.
+    private val SongItem.startsRadio: Boolean get() = !isPodcast && !isLocal && !id.startsWith("local_")
 
     private fun play(
         song: SongItem,
@@ -1018,7 +1019,7 @@ internal class IosPlaybackController(
         recommendationsSongsOnly = songsOnly
         isFiniteQueue = queue.isNotEmpty()
         val selectedSong = requestPlayback(song, songs, index, startPlaying = localSongChangeStartsPlayback(), shuffle = shuffle) ?: return
-        if (queue.size <= 1) bootstrapRecommendations(selectedSong.id)
+        if (queue.size <= 1 && selectedSong.startsRadio) bootstrapRecommendations(selectedSong.id)
     }
 
     override fun playQueue(
