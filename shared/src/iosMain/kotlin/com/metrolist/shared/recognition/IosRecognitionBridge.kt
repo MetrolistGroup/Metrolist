@@ -45,16 +45,17 @@ object IosRecognitionBridge {
         )
 
     @Throws(Exception::class)
-    suspend fun saveRecognitionHistory(history: RecognitionHistory) {
+    suspend fun saveRecognitionHistory(history: RecognitionHistory): Boolean =
         try {
             KoinPlatform.getKoin().get<DatabaseDao>().insert(history)
+            true
         } catch (error: CancellationException) {
             throw error
         } catch (error: Exception) {
             // A failed history insert must not hide a valid match from the caller.
             Logger.w("IosRecognitionBridge", "Failed to save recognized song type=${error::class.simpleName}", error)
+            false
         }
-    }
 
     @Throws(Exception::class)
     suspend fun updateRecognitionVideoId(

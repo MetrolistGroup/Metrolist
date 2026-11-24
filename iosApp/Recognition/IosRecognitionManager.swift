@@ -1,25 +1,15 @@
 import AVFoundation
 import Foundation
 import Shared
-import UIKit
 
 @MainActor
 final class IosRecognitionManager {
     static let shared = IosRecognitionManager()
 
-    private var isRunning = false
-
     private init() {}
 
     func recognize(from entryPoint: RecognitionEntryPoint) async throws -> RecognitionResult {
-        guard !isRunning else {
-            throw RecognitionManagerError.alreadyRunning
-        }
-        isRunning = true
-        defer { isRunning = false }
-
-        let granted = await requestMicrophonePermission()
-        guard granted else {
+        guard await requestMicrophonePermission() else {
             throw RecognitionManagerError.microphonePermissionDenied
         }
 
@@ -32,8 +22,12 @@ final class IosRecognitionManager {
         let signature = ShazamSignatureGenerator.shared.fromI16(samples: byteArray)
         let sampleDurationMs = Int64(audio.count / 2) * 1000 / Int64(RecognitionAudio.shared.FINGERPRINT_SAMPLE_RATE)
 
-        let result = try await withCheckedThrowingContinuation { continuation in
-            IosRecognitionBridge.shared.recognize(signature: signature, sampleDurationMs: sampleDurationMs) { result, error in
+        return try await withCheckedThrowingContinuation { continuation in
+            IosRecognitionManagerLogic.shared.recognize(
+                signature: signature,
+                sampleDurationMs: sampleDurationMs,
+                entryPoint: entryPoint
+            ) { result, error in
                 if let error {
                     continuation.resume(throwing: error)
                     return
@@ -43,47 +37,6 @@ final class IosRecognitionManager {
                     return
                 }
                 continuation.resume(returning: result)
-            }
-        }
-
-        let recognizedAt = Int64(Date().timeIntervalSince1970 * 1000)
-        let history = IosRecognitionBridge.shared.createRecognitionHistory(result: result, recognizedAtEpochMillis: recognizedAt)
-        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
-            IosRecognitionBridge.shared.saveRecognitionHistory(history: history) { error in
-                if let error {
-                    continuation.resume(throwing: error)
-                } else {
-                    continuation.resume(returning: ())
-                }
-            }
-        }
-
-        Task.detached {
-            guard let videoId = try? await Self.resolveVideoId(for: result), !videoId.isEmpty else { return }
-            let trackId = history.trackId
-            try? await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
-                IosRecognitionBridge.shared.updateRecognitionVideoId(trackId: trackId, youtubeVideoId: videoId) { error in
-                    if let error {
-                        continuation.resume(throwing: error)
-                    } else {
-                        continuation.resume(returning: ())
-                    }
-                }
-            }
-        }
-
-        notify(result: result, entryPoint: entryPoint)
-        return result
-    }
-
-    private static func resolveVideoId(for result: RecognitionResult) async throws -> String? {
-        try await withCheckedThrowingContinuation { continuation in
-            IosRecognitionBridge.shared.resolveYoutubeVideoId(result: result) { value, error in
-                if let error {
-                    continuation.resume(throwing: error)
-                } else {
-                    continuation.resume(returning: value)
-                }
             }
         }
     }
@@ -208,38 +161,18 @@ final class IosRecognitionManager {
         }
         return samples.withUnsafeBytes { Data($0) }
     }
-
-    private func notify(result: RecognitionResult, entryPoint: RecognitionEntryPoint) {
-        let payload = RecognitionPayload(result: result, recognizedAtEpochMillis: Int64(Date().timeIntervalSince1970 * 1000))
-        NotificationCenter.default.post(
-            name: .metrolistRecognitionCompleted,
-            object: nil,
-            userInfo: [
-                "payload": (try? payload.encode()) ?? "",
-                "entryPoint": entryPoint.rawValue,
-            ]
-        )
-    }
 }
 
 enum RecognitionManagerError: LocalizedError {
-    case alreadyRunning
     case microphonePermissionDenied
     case failed
 
     var errorDescription: String? {
         switch self {
-        case .alreadyRunning:
-            return "Recognition is already in progress."
         case .microphonePermissionDenied:
             return "Microphone access is required to recognize music."
         case .failed:
             return "Recognition failed. Please try again."
         }
     }
-}
-
-extension Notification.Name {
-    static let metrolistRecognitionCompleted = Notification.Name("com.metrolist.recognition.completed")
-    static let metrolistRecognitionRequested = Notification.Name("com.metrolist.recognition.requested")
 }

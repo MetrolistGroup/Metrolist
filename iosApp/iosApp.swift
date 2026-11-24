@@ -121,14 +121,9 @@ private final class AutomaticBackupAppDelegate: NSObject, UIApplicationDelegate 
 }
 
 private func handleRecognitionURL(_ url: URL) -> Bool {
-    guard url.scheme?.lowercased() == "metrolist" else { return false }
-    let host = url.host?.lowercased() ?? ""
-    let path = url.path.lowercased()
-    if host == "recognize" || path == "/recognize" {
-        NotificationCenter.default.post(name: .metrolistRecognitionRequested, object: nil)
-        return true
-    }
-    return false
+    guard IosRecognitionAppLogic.shared.isRecognizeUrl(url: url.absoluteString) else { return false }
+    RecognitionNotification.shared.postRequested()
+    return true
 }
 
 private struct AppHostView: View {
@@ -159,7 +154,7 @@ private struct AppHostView: View {
                 if handleRecognitionURL(url) { return }
                 MainViewControllerKt.handleOpenUrl(url: url.absoluteString)
             }
-            .onReceive(NotificationCenter.default.publisher(for: .metrolistRecognitionRequested)) { _ in
+            .onReceive(NotificationCenter.default.publisher(for: Notification.Name(RecognitionNotification.shared.requestedNotificationName))) { _ in
                 recognitionConfirmation = true
             }
             .alert("Recognize Music?", isPresented: $recognitionConfirmation) {

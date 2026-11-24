@@ -11,8 +11,6 @@
 		9FE61069A71042D393E7AA0B /* Sentry in Frameworks */ = {isa = PBXBuildFile; productRef = 9FE61069A71042D393E7AA0C /* Sentry */; };
 		A6A0F9B42F3D4A2B91B6C814 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 1E6D6B4964F047A8A6DC43F5 /* Assets.xcassets */; };
 
-		30995EC275694B048BD93A0A /* RecognitionCommand.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD182A75099A4C578617C628 /* RecognitionCommand.swift */; };
-		44372EE1D8AF47488BC591A7 /* RecognitionPayloadCodec.swift in Sources */ = {isa = PBXBuildFile; fileRef = CDF72FFC8E03475890D77307 /* RecognitionPayloadCodec.swift */; };
 		7E7FB69B305E4C19AFBB7EE7 /* IosRecognitionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F51392BC43894AA3944056A2 /* IosRecognitionManager.swift */; };
 		655E9612DCB443F0B7A804BA /* RecognizeMusicIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = CBA04558B61540FEB2AAA9B7 /* RecognizeMusicIntent.swift */; };
 		B1C2D3E4F5061728394A5B87 /* MetrolistShortcuts.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1C2D3E4F5061728394A5B86 /* MetrolistShortcuts.swift */; };
@@ -20,8 +18,6 @@
 		B1C2D3E4F5061728394A5B81 /* RecognitionControl.swift in Sources */ = {isa = PBXBuildFile; fileRef = 387C365365CC46B3B27F1F09 /* RecognitionControl.swift */; };
 		B1C2D3E4F5061728394A5B82 /* RecognizeMusicIntent.swift in Widget Sources */ = {isa = PBXBuildFile; fileRef = CBA04558B61540FEB2AAA9B7 /* RecognizeMusicIntent.swift */; };
 		B1C2D3E4F5061728394A5B83 /* IosRecognitionManager.swift in Widget Sources */ = {isa = PBXBuildFile; fileRef = F51392BC43894AA3944056A2 /* IosRecognitionManager.swift */; };
-		B1C2D3E4F5061728394A5B84 /* RecognitionPayloadCodec.swift in Widget Sources */ = {isa = PBXBuildFile; fileRef = CDF72FFC8E03475890D77307 /* RecognitionPayloadCodec.swift */; };
-		B1C2D3E4F5061728394A5B85 /* RecognitionCommand.swift in Widget Sources */ = {isa = PBXBuildFile; fileRef = DD182A75099A4C578617C628 /* RecognitionCommand.swift */; };
 		B1C2D3E4F5061728394A5B7C /* MetrolistRecognitionWidget.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = B1C2D3E4F5061728394A5B6D /* MetrolistRecognitionWidget.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		B1C2D3E4F5061728394A5B7F /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B1C2D3E4F5061728394A5B7D /* WidgetKit.framework */; };
 		B1C2D3E4F5061728394A5B80 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B1C2D3E4F5061728394A5B7E /* SwiftUI.framework */; };
@@ -58,8 +54,6 @@
 		B0FD6575DF35547EA4A7F264 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Configuration/Info.plist; sourceTree = "<group>"; };
 		1E6D6B4964F047A8A6DC43F5 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 
-		DD182A75099A4C578617C628 /* RecognitionCommand.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecognitionCommand.swift; sourceTree = "<group>"; };
-		CDF72FFC8E03475890D77307 /* RecognitionPayloadCodec.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecognitionPayloadCodec.swift; sourceTree = "<group>"; };
 		F51392BC43894AA3944056A2 /* IosRecognitionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IosRecognitionManager.swift; sourceTree = "<group>"; };
 		CBA04558B61540FEB2AAA9B7 /* RecognizeMusicIntent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecognizeMusicIntent.swift; sourceTree = "<group>"; };
 		387C365365CC46B3B27F1F09 /* RecognitionControl.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecognitionControl.swift; sourceTree = "<group>"; };
@@ -131,8 +125,6 @@
 		9E78821C3D0A46F99CCA1319 /* Recognition */ = {
 			isa = PBXGroup;
 			children = (
-				DD182A75099A4C578617C628 /* RecognitionCommand.swift */,
-				CDF72FFC8E03475890D77307 /* RecognitionPayloadCodec.swift */,
 				F51392BC43894AA3944056A2 /* IosRecognitionManager.swift */,
 				CBA04558B61540FEB2AAA9B7 /* RecognizeMusicIntent.swift */,
 				387C365365CC46B3B27F1F09 /* RecognitionControl.swift */,
@@ -300,8 +292,6 @@
 			buildActionMask = 2147483647;
 			files = (
 				48D55D6E3B0150F6A3E5DBD2 /* iosApp.swift in Sources */,
-				30995EC275694B048BD93A0A /* RecognitionCommand.swift in Sources */,
-				44372EE1D8AF47488BC591A7 /* RecognitionPayloadCodec.swift in Sources */,
 				7E7FB69B305E4C19AFBB7EE7 /* IosRecognitionManager.swift in Sources */,
 				655E9612DCB443F0B7A804BA /* RecognizeMusicIntent.swift in Sources */,
 				B1C2D3E4F5061728394A5B87 /* MetrolistShortcuts.swift in Sources */,
@@ -316,8 +306,6 @@
 				B1C2D3E4F5061728394A5B81 /* RecognitionControl.swift in Sources */,
 				B1C2D3E4F5061728394A5B82 /* RecognizeMusicIntent.swift in Widget Sources */,
 				B1C2D3E4F5061728394A5B83 /* IosRecognitionManager.swift in Widget Sources */,
-				B1C2D3E4F5061728394A5B84 /* RecognitionPayloadCodec.swift in Widget Sources */,
-				B1C2D3E4F5061728394A5B85 /* RecognitionCommand.swift in Widget Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
