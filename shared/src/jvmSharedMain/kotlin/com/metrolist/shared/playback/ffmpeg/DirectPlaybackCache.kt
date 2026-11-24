@@ -4,7 +4,6 @@ import com.metrolist.shared.youtube.playback.PlaybackResource
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.Flow
@@ -368,11 +367,12 @@ object DirectPlaybackCache {
                         .header("Range", "bytes=$start-$end")
                         .build()
                 val call = httpClient.newCall(request)
-                // Cancelling the fill must also stop a request that is blocked on the network.
+                // Cancelling the fill, playback completing the capture or clearing the cache must also stop a request that
+                // is blocked on the network.
                 val cancelCall =
                     launch(start = CoroutineStart.UNDISPATCHED) {
                         try {
-                            awaitCancellation()
+                            changes.first { synchronized(this@Capture) { complete || discarded } }
                         } finally {
                             call.cancel()
                         }
