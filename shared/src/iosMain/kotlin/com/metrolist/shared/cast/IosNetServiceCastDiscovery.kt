@@ -11,6 +11,8 @@ import platform.Foundation.NSNetServiceBrowser
 import platform.Foundation.NSNetServiceBrowserDelegateProtocol
 import platform.Foundation.NSNetServiceDelegateProtocol
 import platform.darwin.NSObject
+import platform.darwin.dispatch_async
+import platform.darwin.dispatch_get_main_queue
 
 internal class IosNetServiceCastDiscovery : MdnsCastDiscovery {
     private val lock = NSLock()
@@ -58,14 +60,16 @@ internal class IosNetServiceCastDiscovery : MdnsCastDiscovery {
         protocol: CastProtocol,
         startedGeneration: Long,
     ) {
-        val browser = NSNetServiceBrowser()
-        val delegate = BrowserDelegate(protocol, startedGeneration)
-        withLock {
-            if (!running || generation != startedGeneration) return
-            browsers[protocol] = browser
-            browserDelegates[protocol] = delegate
-            browser.delegate = delegate
-            browser.searchForServicesOfType(type, LOCAL_DOMAIN)
+        dispatch_async(dispatch_get_main_queue()) {
+            val browser = NSNetServiceBrowser()
+            val delegate = BrowserDelegate(protocol, startedGeneration)
+            withLock {
+                if (!running || generation != startedGeneration) return@dispatch_async
+                browsers[protocol] = browser
+                browserDelegates[protocol] = delegate
+                browser.delegate = delegate
+                browser.searchForServicesOfType(type, LOCAL_DOMAIN)
+            }
         }
     }
 
@@ -75,13 +79,15 @@ internal class IosNetServiceCastDiscovery : MdnsCastDiscovery {
         service: NSNetService,
     ) {
         val id = deviceId(protocol, service.name)
-        withLock {
-            if (!running || generation != eventGeneration || services.containsKey(id)) return
-            val delegate = ServiceDelegate(id, protocol, eventGeneration)
-            services[id] = service
-            serviceDelegates[id] = delegate
-            service.delegate = delegate
-            service.resolveWithTimeout(RESOLVE_TIMEOUT_SECONDS)
+        dispatch_async(dispatch_get_main_queue()) {
+            withLock {
+                if (!running || generation != eventGeneration || services.containsKey(id)) return@dispatch_async
+                val delegate = ServiceDelegate(id, protocol, eventGeneration)
+                services[id] = service
+                serviceDelegates[id] = delegate
+                service.delegate = delegate
+                service.resolveWithTimeout(RESOLVE_TIMEOUT_SECONDS)
+            }
         }
     }
 
@@ -172,13 +178,17 @@ internal class IosNetServiceCastDiscovery : MdnsCastDiscovery {
     }
 
     private fun stopService(service: NSNetService) {
-        service.delegate = null
-        service.stop()
+        dispatch_async(dispatch_get_main_queue()) {
+            service.delegate = null
+            service.stop()
+        }
     }
 
     private fun stopBrowser(browser: NSNetServiceBrowser) {
-        browser.delegate = null
-        browser.stop()
+        dispatch_async(dispatch_get_main_queue()) {
+            browser.delegate = null
+            browser.stop()
+        }
     }
 
     private fun forgetServiceLocked(id: String): NSNetService? {
