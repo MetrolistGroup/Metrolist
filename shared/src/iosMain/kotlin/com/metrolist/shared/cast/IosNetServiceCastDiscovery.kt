@@ -146,14 +146,16 @@ internal class IosNetServiceCastDiscovery : MdnsCastDiscovery {
         service: NSNetService,
     ) {
         val id = deviceId(protocol, service.name)
-        val (onDeviceLost, staleService) =
-            withLock {
-                if (!running || generation != eventGeneration) return
-                val removed = forgetServiceLocked(id)
-                callbacks?.onDeviceLost to removed
-            }
-        staleService?.let(::stopService)
-        onDeviceLost?.invoke(id)
+        dispatch_async(dispatch_get_main_queue()) {
+            val (onDeviceLost, staleService) =
+                withLock {
+                    if (!running || generation != eventGeneration) return@dispatch_async
+                    val removed = forgetServiceLocked(id)
+                    callbacks?.onDeviceLost to removed
+                }
+            staleService?.let(::stopService)
+            onDeviceLost?.invoke(id)
+        }
     }
 
     private fun onServiceFailed(
