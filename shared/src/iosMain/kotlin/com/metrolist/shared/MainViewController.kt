@@ -48,6 +48,7 @@ import com.metrolist.shared.backup.IosBackupRestoreManager
 import com.metrolist.shared.backup.defaultBackupFilename
 import com.metrolist.shared.backup.foreignImportMessage
 import com.metrolist.shared.backup.notifyIosAutomaticBackupSettingsChanged
+import com.metrolist.shared.carplay.IosCarPlayBridge
 import com.metrolist.shared.crash.IosCrashRecovery
 import com.metrolist.shared.db.MusicDatabase
 import com.metrolist.shared.discord.IosDiscordPresenceEffect
@@ -213,6 +214,10 @@ fun MetrolistIOSApp() {
                 musicVideoResolver = koin.get(),
             )
         }
+    DisposableEffect(playbackController, database, appScope) {
+        IosCarPlayBridge.register(playbackController, database, appScope)
+        onDispose { IosCarPlayBridge.unregister() }
+    }
     IosDiscordPresenceEffect(playbackController.state, player.playbackSpeed)
     val listenTogetherClient = remember(appScope) { createHttpClient() }
     val listenTogetherMessages by rememberUpdatedState(listenTogetherPresentationMessages())
