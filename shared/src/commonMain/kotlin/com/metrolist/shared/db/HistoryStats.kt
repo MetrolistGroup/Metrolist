@@ -429,18 +429,21 @@ private suspend fun MusicDatabase.timeBuckets(
     }
 }
 
-/** Adds Last.fm plays to buckets keyed like the SQL `strftime` buckets: `%Y-%m-%d` or `%H`. */
+/** Adds Last.fm plays to day buckets keyed like the SQL `strftime('%Y-%m-%d')` buckets. */
 private fun List<HistoryBucket>.withPlays(
     playTimes: List<Long>,
-    hourly: Boolean,
     localTime: Boolean,
 ): List<HistoryBucket> {
     if (playTimes.isEmpty()) return this
     val zone = if (localTime) TimeZone.currentSystemDefault() else TimeZone.UTC
     val counts = associate { it.bucket to it.playCount }.toMutableMap()
     for (time in playTimes) {
-        val local = Instant.fromEpochMilliseconds(time).toLocalDateTime(zone)
-        val key = if (hourly) local.hour.toString().padStart(2, '0') else local.date.toString()
+        val key =
+            Instant
+                .fromEpochMilliseconds(time)
+                .toLocalDateTime(zone)
+                .date
+                .toString()
         counts[key] = (counts[key] ?: 0) + 1
     }
     return counts.entries.sortedBy { it.key }.map { HistoryBucket(it.key, it.value) }
@@ -529,12 +532,13 @@ private suspend fun MusicDatabase.statisticsSnapshot(
                 if (mergeSourcesByDay) {
                     emptyList()
                 } else {
-                    timeBuckets(sinceMs, untilMs, false, localTime, catalogArtistIds).withPlays(merged.addedPlayTimes, false, localTime)
+                    timeBuckets(sinceMs, untilMs, false, localTime, catalogArtistIds).withPlays(merged.addedPlayTimes, localTime)
                 },
                 if (mergeSourcesByDay) {
                     emptyList()
                 } else {
-                    timeBuckets(sinceMs, untilMs, true, localTime, catalogArtistIds).withPlays(merged.addedPlayTimes, true, localTime)
+                    // Hourly stays local: merged plays are matched per day, so their hour cannot be told apart from a local play's.
+                    timeBuckets(sinceMs, untilMs, true, localTime, catalogArtistIds)
                 },
                 songItems = statisticsSongs(songs.filterNot { it.songId.startsWith("lastfm:") }.take(500)).distinctBy { it.id },
                 lastFmPlays = merged.included,

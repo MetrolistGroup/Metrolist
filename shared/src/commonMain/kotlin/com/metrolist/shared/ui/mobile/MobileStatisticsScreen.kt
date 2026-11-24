@@ -80,7 +80,14 @@ internal fun MobileStatisticsScreen(
                 // Last.fm can take a while for long periods, so local numbers show first.
                 val lastFm = LastFmHistoryCache.listens(range.first, range.second)
                 if (lastFm.isNotEmpty()) {
-                    snapshot = database.historyStatisticsSnapshot(range.first, range.second, catalogArtistIds = true, lastFm = lastFm)
+                    val merged = database.historyStatisticsSnapshot(range.first, range.second, catalogArtistIds = true, lastFm = lastFm)
+                    // Keep the mobile ranking basis (listening time); stable sorting leaves play-count order for ties.
+                    snapshot =
+                        merged.copy(
+                            songs = merged.songs.sortedByDescending { it.playTimeMs },
+                            artists = merged.artists.sortedByDescending { it.playTimeMs },
+                            albums = merged.albums.sortedByDescending { it.playTimeMs },
+                        )
                 }
             } catch (error: CancellationException) {
                 throw error

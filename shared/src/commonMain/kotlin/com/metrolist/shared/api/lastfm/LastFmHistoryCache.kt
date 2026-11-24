@@ -29,7 +29,8 @@ object LastFmHistoryCache {
         return mutex.withLock {
             try {
                 val now = Clock.System.now().toEpochMilliseconds()
-                if (connected != user || sinceMs < this.sinceMs) {
+                // A range starting after the cached one ends would otherwise download everything in between.
+                if (connected != user || sinceMs < this.sinceMs || sinceMs > this.untilMs) {
                     user = null
                     listens = fetch(connected, sinceMs, untilMs)
                     user = connected
