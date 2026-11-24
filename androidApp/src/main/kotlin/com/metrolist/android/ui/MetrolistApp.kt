@@ -1851,7 +1851,7 @@ fun MetrolistApp(
                                     .fillMaxSize()
                                     .drawWithContent {
                                         val bottomInset =
-                                            if (playerBottomSheetState.progress <= 0f) {
+                                            if (navigationConsumesSpace && playerBottomSheetState.progress <= 0f) {
                                                 navigationBottomInset.toPx()
                                             } else {
                                                 0f
