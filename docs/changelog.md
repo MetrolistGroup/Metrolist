@@ -76,7 +76,7 @@ Metrolist 14.0.0 replaces the standalone Android app with Metrolist-KMP.
 - Rejected Lyprio results for the wrong artist and preserved manual lyric edits when switching providers (@nyxiereal)
 
 ## Known limitations
-- iOS does not yet support music-video playback, casting, Device Connect, SponsorBlock or foreign-app backup import
+- iOS does not yet support music-video playback, casting, Device Connect or foreign-app backup import
 - iOS HLS fallback streams cannot use MetroEQ or independent pitch adjustment
 
 Full changelog: https://github.com/MetrolistGroup/Metrolist/commits/v14.0.0

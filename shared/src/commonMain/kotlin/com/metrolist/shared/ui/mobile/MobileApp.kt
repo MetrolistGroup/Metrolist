@@ -349,6 +349,9 @@ fun MobileApp(
     HiddenHomeItemsSnackbar(snackbarHostState)
     UnavailableSongSnackbar(snackbarHostState)
     ListenTogetherGlobalEvents(listenTogetherManager) { snackbarHostState.showSnackbar(it) }
+    LaunchedEffect(snackbarHostState) {
+        com.metrolist.shared.playback.PlaybackSnackbarEvents.messages.collect { snackbarHostState.showSnackbar(it) }
+    }
     val onSwipeFeedback: (String) -> Unit = { message ->
         snackbarHostState.currentSnackbarData?.dismiss()
         scope.launch { snackbarHostState.showSnackbar(message, duration = SnackbarDuration.Short) }

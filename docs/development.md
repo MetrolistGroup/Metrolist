@@ -437,7 +437,7 @@ The Discord settings page shows a live preview of the rendered activity, includi
 
 ### SponsorBlock
 
-Android and desktop offer an opt-in **SponsorBlock (podcasts)** switch. Only items typed as podcast episodes request segments. It skips `sponsor`, `selfpromo` and `interaction` segments, but not during casting or remote guest playback. iOS has no integration. The observer uses the [hash-prefix API](https://wiki.sponsor.ajay.app/w/API_Docs#GET_/api/skipSegments/:sha256HashPrefix), sending four SHA-256 characters and matching the full ID locally. Results are cached in memory for an hour, or five minutes for empty results and failures. Invalid ranges are dropped, overlaps merged and ranges past the duration ignored. Uses [SponsorBlock data](https://sponsor.ajay.app/) under [CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/).
+Android, desktop and iOS offer an opt-in **SponsorBlock (podcasts)** switch. Only items typed as podcast episodes request segments. It skips `sponsor`, `selfpromo` and `interaction` segments, but not during casting or remote guest playback. The observer uses the [hash-prefix API](https://wiki.sponsor.ajay.app/w/API_Docs#GET_/api/skipSegments/:sha256HashPrefix), sending four SHA-256 characters and matching the full ID locally. Results are cached in memory for an hour, or five minutes for empty results and failures. Invalid ranges are dropped, overlaps merged and ranges past the duration ignored. Uses [SponsorBlock data](https://sponsor.ajay.app/) under [CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/).
 
 ### Sentry
 

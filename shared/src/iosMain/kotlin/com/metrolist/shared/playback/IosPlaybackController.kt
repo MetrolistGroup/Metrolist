@@ -25,6 +25,11 @@ import com.metrolist.shared.model.isNonMusicalVideo
 import com.metrolist.shared.model.isPodcast
 import com.metrolist.shared.model.isVideoSong
 import com.metrolist.shared.model.selectRadioQueueChip
+import com.metrolist.shared.generated.resources.Res
+import com.metrolist.shared.generated.resources.sponsorblock_skipped
+import com.metrolist.shared.playback.PlaybackSnackbarEvents
+import com.metrolist.shared.playback.sponsorblock.observeSponsorBlockSkipping
+import org.jetbrains.compose.resources.getString
 import com.metrolist.shared.playback.QUEUE_SOURCE_AUTO_MIX
 import com.metrolist.shared.scrobble.ScrobbleManager
 import com.metrolist.shared.settings.Settings
@@ -496,6 +501,22 @@ internal class IosPlaybackController(
                 center.removeObserver(observer)
                 center.removeObserver(terminationObserver)
             }
+        }
+        scope.launch {
+            observeSponsorBlockSkipping(
+                currentSong = player.currentSong,
+                currentPosition = player.currentPosition,
+                duration = player.duration,
+                isPlaying = player.isPlaying,
+                enabled = snapshotFlow { Settings.shared.sponsorBlockEnabled },
+                canSeek = { Settings.shared.sponsorBlockEnabled && !guestLocked },
+                seekTo = { position -> seekTo(position) },
+                onSkipped = {
+                    scope.launch {
+                        PlaybackSnackbarEvents.emit(getString(com.metrolist.shared.generated.resources.Res.string.sponsorblock_skipped))
+                    }
+                },
+            )
         }
         scope.launch {
             TokenlessStreamRenewal.observe(
