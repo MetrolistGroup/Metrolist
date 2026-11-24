@@ -71,6 +71,8 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.supervisorScope
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.serialization.Serializable
@@ -283,6 +285,7 @@ class HomeViewModel(
     @Volatile private var speedDialRecommendationItems: List<YTItem> = emptyList()
     private var paginationJob: Job? = null
     private var loadJob: Job? = null
+    private val quickPicksRebuildMutex = Mutex()
 
     @Volatile private var contentLoadGeneration = 0L
 
@@ -1342,70 +1345,71 @@ class HomeViewModel(
     private fun HomeUiState.canRebuildQuickPicks(): Boolean =
         !isLoading && !isRefreshing && !isRevalidating && !isContentLoading && !isAllContentPending && !isLoadingMore
 
-    private suspend fun rebuildQuickPicks(): Boolean {
-        val generation = contentLoadGeneration
-        val state = _uiState.value
-        if (!state.canRebuildQuickPicks()) return false
-        val selectedChip = state.selectedChip
-        val isFiltered = isFilteredHome(selectedChip?.params, selectedChip?.browseId ?: "FEmusic_home")
-        // A restored startup snapshot keeps quickPicks separately and may lack
-        // the API shelf; fall back to the current picks so they are not lost.
-        val dataSections = state.data.orEmpty()
-        val heardInShortsIds = (dataSections + state.sections + state.chipFeeds.flatMap { it.sections }).heardInShortsItemIds()
-        val apiQuickPicks =
-            findQuickPickSongs(dataSections)
-                .ifEmpty { state.quickPicks.filterNot { canonicalHomeItemId(it) in heardInShortsIds } }
-        val localQuickPicks =
-            database
-                .dao()
-                .quickPicks()
-                .first()
-                .map { it.toSongItem() }
-        val localForgottenFavorites =
-            database
-                .dao()
-                .forgottenFavorites()
-                .first()
-                .map { it.toSongItem() }
-        val quickPicks =
-            if (Settings.shared.useLocalHomeRecommendations && !isFiltered) {
-                classicQuickPicks(localQuickPicks, localForgottenFavorites, heardInShortsIds).ifEmpty { apiQuickPicks }
-            } else {
-                personalizedSection(apiQuickPicks, localQuickPicks, isFiltered)
-            }.filterNot { canonicalHomeItemId(it) in heardInShortsIds }
-                .distinctBy(::canonicalHomeItemId)
-        val filteredQuickPicks = BlockedContent.filterSongs(quickPicks, BlockedContent.snapshot())
-        var publishedQuickPicks = filteredQuickPicks
-        _uiState.update { current ->
-            if (generation == contentLoadGeneration && current.canRebuildQuickPicks() && current.selectedChip == selectedChip) {
-                val currentExcludedIds =
-                    (current.data.orEmpty() + current.sections + current.chipFeeds.flatMap { it.sections })
-                        .heardInShortsItemIds()
-                publishedQuickPicks =
-                    filteredQuickPicks.filterNot { canonicalHomeItemId(it) in currentExcludedIds }
-                current.copy(quickPicks = publishedQuickPicks)
-            } else {
-                current
+    private suspend fun rebuildQuickPicks(): Boolean =
+        quickPicksRebuildMutex.withLock {
+            val generation = contentLoadGeneration
+            val state = _uiState.value
+            if (!state.canRebuildQuickPicks()) return@withLock false
+            val selectedChip = state.selectedChip
+            val isFiltered = isFilteredHome(selectedChip?.params, selectedChip?.browseId ?: "FEmusic_home")
+            // A restored startup snapshot keeps quickPicks separately and may lack
+            // the API shelf; fall back to the current picks so they are not lost.
+            val dataSections = state.data.orEmpty()
+            val heardInShortsIds = (dataSections + state.sections + state.chipFeeds.flatMap { it.sections }).heardInShortsItemIds()
+            val apiQuickPicks =
+                findQuickPickSongs(dataSections)
+                    .ifEmpty { state.quickPicks.filterNot { canonicalHomeItemId(it) in heardInShortsIds } }
+            val localQuickPicks =
+                database
+                    .dao()
+                    .quickPicks()
+                    .first()
+                    .map { it.toSongItem() }
+            val localForgottenFavorites =
+                database
+                    .dao()
+                    .forgottenFavorites()
+                    .first()
+                    .map { it.toSongItem() }
+            val quickPicks =
+                if (Settings.shared.useLocalHomeRecommendations && !isFiltered) {
+                    classicQuickPicks(localQuickPicks, localForgottenFavorites, heardInShortsIds).ifEmpty { apiQuickPicks }
+                } else {
+                    personalizedSection(apiQuickPicks, localQuickPicks, isFiltered)
+                }.filterNot { canonicalHomeItemId(it) in heardInShortsIds }
+                    .distinctBy(::canonicalHomeItemId)
+            val filteredQuickPicks = BlockedContent.filterSongs(quickPicks, BlockedContent.snapshot())
+            var publishedQuickPicks = filteredQuickPicks
+            _uiState.update { current ->
+                if (generation == contentLoadGeneration && current.canRebuildQuickPicks() && current.selectedChip == selectedChip) {
+                    val currentExcludedIds =
+                        (current.data.orEmpty() + current.sections + current.chipFeeds.flatMap { it.sections })
+                            .heardInShortsItemIds()
+                    publishedQuickPicks =
+                        filteredQuickPicks.filterNot { canonicalHomeItemId(it) in currentExcludedIds }
+                    current.copy(quickPicks = publishedQuickPicks)
+                } else {
+                    current
+                }
             }
+            // Mirror the rebuild into the caches and the persisted snapshot so
+            // pagination and chip round trips keep the rebuilt picks.
+            val updated = _uiState.value
+            if (generation != contentLoadGeneration || !updated.canRebuildQuickPicks() ||
+                updated.selectedChip != selectedChip || updated.quickPicks != publishedQuickPicks
+            ) {
+                return@withLock false
+            }
+            if (isFiltered) {
+                cachedSelectedChipContent = updated
+                updated.selectedChip?.let { chip -> cacheChipContent(chip, updated) }
+                rebuildCachedAllQuickPicks(localQuickPicks, localForgottenFavorites)
+            } else {
+                cacheAllContentState(updated)
+            }
+            saveLastHomePage(updated)
+            true
         }
-        // Mirror the rebuild into the caches and the persisted snapshot so
-        // pagination and chip round trips keep the rebuilt picks.
-        val updated = _uiState.value
-        if (generation != contentLoadGeneration || !updated.canRebuildQuickPicks() ||
-            updated.selectedChip != selectedChip || updated.quickPicks != publishedQuickPicks
-        ) {
-            return false
-        }
-        if (isFiltered) {
-            cachedSelectedChipContent = updated
-            updated.selectedChip?.let { chip -> cacheChipContent(chip, updated) }
-            rebuildCachedAllQuickPicks(localQuickPicks, localForgottenFavorites)
-        } else {
-            cacheAllContentState(updated)
-        }
-        saveLastHomePage(updated)
-        return true
-    }
 
     // The mode change applies to the cached All feed too; rebuild its picks so
     // returning to All does not restore the previous mode's selection.
