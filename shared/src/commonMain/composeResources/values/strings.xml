@@ -198,6 +198,8 @@
     <string name="remove_from_queue">Remove from queue</string>
     <!-- Translators: Button in the manual lyrics search dialog that opens a web search for the song's lyrics. -->
     <string name="search_online">Search online</string>
+    <!-- Translators: Short form of Search online, used when the full label does not fit beside Cancel and Search in the manual lyrics search dialog. Keep it to one short word if possible. -->
+    <string name="search_online_short">Online</string>
 
     <!-- Sort menu -->
     <!-- Translators: Label for sort by create date in the Home and browse screens and Library. -->
