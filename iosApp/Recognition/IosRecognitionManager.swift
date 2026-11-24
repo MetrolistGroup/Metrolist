@@ -9,24 +9,34 @@ final class IosRecognitionManager {
     private init() {}
 
     func recognize(from entryPoint: RecognitionEntryPoint) async throws -> RecognitionResult {
+        guard let lease = IosRecognitionManagerLogic.shared.tryAcquireLease() else {
+            throw RecognitionManagerError.alreadyRunning
+        }
+        defer { lease.release() }
+
         guard await requestMicrophonePermission() else {
             throw RecognitionManagerError.microphonePermissionDenied
         }
 
-        let audio = try await recordAudio()
-        let byteArray = KotlinByteArray(size: Int32(audio.count))
-        for (index, byte) in audio.enumerated() {
-            byteArray.set(index: Int32(index), value: Int8(bitPattern: byte))
+        let (audio, sampleRate) = try await recordAudio()
+        let audioSignature: IosRecognitionAudioSignature = try await withCheckedThrowingContinuation { continuation in
+            IosRecognitionAudio.shared.signature(pcm: audio as NSData, inputRate: Int32(sampleRate)) { signature, error in
+                if let error {
+                    continuation.resume(throwing: error)
+                } else if let signature {
+                    continuation.resume(returning: signature)
+                } else {
+                    continuation.resume(throwing: RecognitionManagerError.failed)
+                }
+            }
         }
-
-        let signature = ShazamSignatureGenerator.shared.fromI16(samples: byteArray)
-        let sampleDurationMs = Int64(audio.count / 2) * 1000 / Int64(RecognitionAudio.shared.FINGERPRINT_SAMPLE_RATE)
 
         return try await withCheckedThrowingContinuation { continuation in
             IosRecognitionManagerLogic.shared.recognize(
-                signature: signature,
-                sampleDurationMs: sampleDurationMs,
-                entryPoint: entryPoint
+                signature: audioSignature.signature,
+                sampleDurationMs: audioSignature.sampleDurationMs,
+                entryPoint: entryPoint,
+                lease: lease
             ) { result, error in
                 if let error {
                     if error is RecognitionAlreadyRunningException {
@@ -62,7 +72,7 @@ final class IosRecognitionManager {
         }
     }
 
-    private func recordAudio() async throws -> Data {
+    private func recordAudio() async throws -> (Data, Double) {
         let session = AVAudioSession.sharedInstance()
         let previousCategory = session.category
         let previousMode = session.mode
@@ -108,24 +118,7 @@ final class IosRecognitionManager {
         guard !collected.isEmpty else {
             throw RecognitionManagerError.failed
         }
-        if Int(sampleRate) != Int(RecognitionAudio.shared.FINGERPRINT_SAMPLE_RATE) {
-            let byteArray = KotlinByteArray(size: Int32(collected.count))
-            for (index, byte) in collected.enumerated() {
-                byteArray.set(index: Int32(index), value: Int8(bitPattern: byte))
-            }
-            let resampled = RecognitionAudio.shared.resample16BitMono(
-                input: byteArray,
-                inputRate: Int32(sampleRate),
-                outputRate: RecognitionAudio.shared.FINGERPRINT_SAMPLE_RATE
-            )
-            var out = Data(count: Int(resampled.size))
-            for i in 0..<Int(resampled.size) {
-                let value = resampled.get(index: Int32(i))
-                out[i] = UInt8(bitPattern: value)
-            }
-            return out
-        }
-        return collected
+        return (collected, sampleRate)
     }
 
     private static func monoInt16Data(_ buffer: AVAudioPCMBuffer) -> Data {

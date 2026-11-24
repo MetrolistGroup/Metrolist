@@ -23,7 +23,7 @@ object RecognitionWidgetTimeline {
             trackId = payload.trackId,
             title = payload.title,
             artist = payload.artist,
-            coverArtUrl = payload.coverArtUrlHq ?: payload.coverArtUrl,
+            coverArtUrl = payload.coverArtHqUrl ?: payload.coverArtUrl,
             recognizedAtEpochMillis = payload.recognizedAtEpochMillis,
             entryPoint = entryPoint.rawValue,
             historySaved = historySaved,

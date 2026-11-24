@@ -121,7 +121,7 @@ private final class AutomaticBackupAppDelegate: NSObject, UIApplicationDelegate 
 }
 
 private func handleRecognitionURL(_ url: URL) -> Bool {
-    guard IosRecognitionAppLogic.shared.isRecognizeUrl(url: url.absoluteString) else { return false }
+    guard IosRecognitionAppLogic.shared.isRecognizeUrl(urlString: url.absoluteString) else { return false }
     RecognitionNotification.shared.postRequested()
     return true
 }
