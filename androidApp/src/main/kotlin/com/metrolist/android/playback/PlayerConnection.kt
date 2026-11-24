@@ -692,9 +692,17 @@ class PlayerConnection(
             _progress.value = (_currentPosition.value.toFloat() / dur.toFloat()).coerceIn(0f, 1f)
             val inVideoMode = _isVideoModeActive.value || _isVideoViewerVisible.value
             val buffered = (_bufferedPosition.value.toFloat() / dur.toFloat()).coerceIn(0f, 1f)
-            // In audio mode the buffered track shows how far the song plays without the network: the player's buffer, or
-            // all of it once the song is stored.
-            _bufferedProgress.value = if (inVideoMode) buffered else maxOf(buffered, storedSongFraction)
+            _bufferedProgress.value =
+                when {
+                    inVideoMode -> buffered
+
+                    // A cast receiver streams on its own, so this phone's buffer and stored audio say nothing about it.
+                    _castState.value.isConnected -> 0f
+
+                    // In audio mode the buffered track shows how far the song plays without the network: the player's buffer,
+                    // or all of it once the song is stored.
+                    else -> maxOf(buffered, storedSongFraction)
+                }
         } else {
             _progress.value = 0f
             _bufferedProgress.value = 0f
