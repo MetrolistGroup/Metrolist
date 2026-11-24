@@ -16,6 +16,7 @@ import io.ktor.client.request.post
 import io.ktor.client.request.put
 import io.ktor.client.request.setBody
 import io.ktor.client.statement.HttpResponse
+import io.ktor.client.statement.bodyAsText
 import io.ktor.http.ContentType
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
@@ -136,8 +137,8 @@ class GoogleDriveBackupClient(
                 offset = acknowledged
                 continue
             }
-            if (response.status == HttpStatusCode.TooManyRequests || response.status.value in 500..599) {
-                if (response.status == HttpStatusCode.TooManyRequests) waitForRetry(response)
+            if (isRetryableFailure(response)) {
+                if (response.status == HttpStatusCode.TooManyRequests || response.status == HttpStatusCode.Forbidden) waitForRetry(response)
                 val progress = recoverUpload(DriveBrokerException(response.status.value))
                 progress.completed?.let { return it }
                 continue
@@ -176,11 +177,10 @@ class GoogleDriveBackupClient(
             if (response.status == HttpStatusCode.PermanentRedirect) {
                 return UploadProgress(acknowledgedOffset(response.headers[HttpHeaders.Range], archiveSize), null)
             }
-            val retryableStatus = response.status == HttpStatusCode.TooManyRequests || response.status.value in 500..599
-            if (!retryableStatus || attempt++ >= MAX_UPLOAD_RETRIES) {
+            if (!isRetryableFailure(response) || attempt++ >= MAX_UPLOAD_RETRIES) {
                 throw DriveBrokerException(response.status.value)
             }
-            if (response.status == HttpStatusCode.TooManyRequests) {
+            if (response.status == HttpStatusCode.TooManyRequests || response.status == HttpStatusCode.Forbidden) {
                 waitForRetry(response)
             } else {
                 delay(STATUS_PROBE_RETRY_DELAY_MILLIS * attempt)
@@ -205,6 +205,13 @@ class GoogleDriveBackupClient(
     private suspend fun waitForRetry(response: HttpResponse) {
         val retryAfterMillis = response.headers[HttpHeaders.RetryAfter]?.let(::parseRetryAfter) ?: return
         if (retryAfterMillis > 0) delay(retryAfterMillis)
+    }
+
+    private suspend fun isRetryableFailure(response: HttpResponse): Boolean {
+        if (response.status == HttpStatusCode.TooManyRequests || response.status.value in 500..599) return true
+        if (response.status != HttpStatusCode.Forbidden) return false
+        val body = runCatching { response.bodyAsText() }.getOrNull() ?: return false
+        return RATE_LIMIT_REASONS.any { reason -> body.contains(reason) }
     }
 
     private fun acknowledgedOffset(
@@ -327,6 +334,7 @@ class GoogleDriveBackupClient(
         const val FOLDER_PROPERTY_KEY = "metrolistBackupFolder"
         const val APP_PROPERTY_KEY = "metrolistBackup"
         const val MAX_RETAINED_BACKUPS = 10
+        val RATE_LIMIT_REASONS = setOf("rateLimitExceeded", "userRateLimitExceeded")
     }
 }
 

@@ -216,7 +216,11 @@ class GoogleDriveBackupClientTest {
                                 contentRanges += range
                                 when (range) {
                                     "bytes 0-2/3" -> {
-                                        respond("", HttpStatusCode.TooManyRequests, headersOf(HttpHeaders.RetryAfter, "1"))
+                                        respond(
+                                            """{"error":{"errors":[{"reason":"rateLimitExceeded"}]}}""",
+                                            HttpStatusCode.Forbidden,
+                                            headersOf(HttpHeaders.RetryAfter, "1"),
+                                        )
                                     }
 
                                     "bytes */3" -> {
