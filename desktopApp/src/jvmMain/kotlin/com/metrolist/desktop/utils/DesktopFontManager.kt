@@ -37,6 +37,7 @@ object DesktopFontManager {
     private const val MAX_REDIRECTS = 3
     private const val REGULAR_FILE = "Regular.ttf"
     private const val BOLD_FILE = "Bold.ttf"
+    private const val NAME_FILE = "name.txt"
 
     private data class Asset(
         val url: String,
@@ -108,10 +109,12 @@ object DesktopFontManager {
     fun installedOptions(): Set<FontOption> = downloadableOptions.filterTo(mutableSetOf(), ::isDownloaded)
 
     /** Family name of the imported font, or null when none is installed. */
-    fun customFontName(): String? =
-        File(restoredFontDirectory(FontOption.CUSTOM), REGULAR_FILE)
-            .takeIf(File::isFile)
-            ?.let { runCatching { validateFont(it) }.getOrNull() }
+    fun customFontName(): String? {
+        val directory = restoredFontDirectory(FontOption.CUSTOM)
+        val font = File(directory, REGULAR_FILE).takeIf(File::isFile) ?: return null
+        val familyName = runCatching { validateFont(font) }.getOrNull() ?: return null
+        return runCatching { File(directory, NAME_FILE).readText() }.getOrNull()?.takeIf(String::isNotBlank) ?: familyName
+    }
 
     fun loadFontFamily(option: FontOption): FontFamily? {
         if (!isDownloaded(option)) return null
@@ -190,6 +193,8 @@ object DesktopFontManager {
                         font.outputStream().use { output -> copyBounded(input, output) }
                     }
                     val familyName = validateFont(font).ifBlank { source.nameWithoutExtension }
+                    // Installed with the font so a file-name fallback survives reopening settings.
+                    File(staging, NAME_FILE).writeText(familyName)
                     activate(fontDirectory(option), staging, backupDirectory(option))
                     // Activate here so a cancelled settings scope cannot leave the import installed but unused.
                     Settings.shared.appFont = option
