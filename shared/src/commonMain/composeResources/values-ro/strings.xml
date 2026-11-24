@@ -2653,4 +2653,10 @@
     <string name="devtools_playback_log_cleared">Jurnalul aplicației a fost șters</string>
     <string name="devtools_playback_log_export_failed">Nu s-a putut exporta jurnalul aplicației</string>
     <string name="devtools_playback_log_share_title">Exportă jurnalul aplicației</string>
+    <string name="legacy_recovery_export_title">Exportă biblioteca veche</string>
+    <string name="legacy_recovery_export_desc">Salvează biblioteca care nu a putut fi migrată din versiunea 13 ca fișier de backup. Restaurează acel fișier pentru a încerca migrarea din nou.</string>
+    <string name="legacy_recovery_export_success">Biblioteca veche a fost exportată</string>
+    <string name="legacy_recovery_export_failed">Nu s-a putut exporta biblioteca veche</string>
+    <string name="appearance_swipe_song_gesture_queue">Gest de glisare pentru melodii în coadă</string>
+    <string name="appearance_swipe_song_gesture_queue_description">Glisează o melodie spre marginea de început pentru a o elimina din coadă chiar și când este blocată</string>
 </resources>
