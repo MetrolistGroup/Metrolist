@@ -19,6 +19,7 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.io.File
 import java.io.RandomAccessFile
+import kotlin.math.nextDown
 
 object DirectPlaybackCache {
     private const val MAX_CAPTURES = 4
@@ -304,7 +305,14 @@ object DirectPlaybackCache {
             changes
                 .map {
                     synchronized(this) {
-                        if (discarded) 0f else ranges.sumOf { it.last - it.first + 1L }.toFloat() / size
+                        when {
+                            discarded -> 0f
+
+                            complete -> 1f
+
+                            // Float rounding can reach 1 for a large file with bytes still missing, so a partial capture stays below it.
+                            else -> minOf((ranges.sumOf { it.last - it.first + 1L }.toDouble() / size).toFloat(), 1f.nextDown())
+                        }
                     }
                 }.distinctUntilChanged()
 
