@@ -9,14 +9,14 @@
     <plurals name="n_selected">
         <item quantity="other">已选择 %1$d 项</item>
     </plurals>
-    <string name="history">历史</string>
+    <string name="history">收听记录</string>
     <string name="mood_and_genres">曲调和流派</string>
     <string name="account">账号</string>
     <string name="quick_picks">猜你喜欢</string>
     <string name="forgotten_favorites">重温最爱</string>
     <string name="keep_listening">继续听</string>
     <string name="similar_to">类似风格</string>
-    <string name="new_releases">新发布</string>
+    <string name="new_releases">新发行</string>
     <string name="podcasts_for_you">为你推荐播客</string>
     <string name="recap">回顾</string>
     <string name="home_unavailable">首页不可用</string>
