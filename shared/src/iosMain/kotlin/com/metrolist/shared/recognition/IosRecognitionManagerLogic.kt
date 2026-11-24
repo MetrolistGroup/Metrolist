@@ -5,6 +5,8 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.sync.Mutex
 import kotlin.time.Clock
 
+class RecognitionAlreadyRunningException : RuntimeException()
+
 object IosRecognitionManagerLogic {
     private val recognitionMutex = Mutex()
 
@@ -15,7 +17,7 @@ object IosRecognitionManagerLogic {
         entryPoint: RecognitionEntryPoint,
     ): RecognitionResult {
         if (!recognitionMutex.tryLock()) {
-            throw IllegalStateException("Recognition is already in progress.")
+            throw RecognitionAlreadyRunningException()
         }
         try {
             val result = IosRecognitionBridge.recognize(signature, sampleDurationMs)

@@ -29,7 +29,11 @@ final class IosRecognitionManager {
                 entryPoint: entryPoint
             ) { result, error in
                 if let error {
-                    continuation.resume(throwing: error)
+                    if error is RecognitionAlreadyRunningException {
+                        continuation.resume(throwing: RecognitionManagerError.alreadyRunning)
+                    } else {
+                        continuation.resume(throwing: error)
+                    }
                     return
                 }
                 guard let result else {
@@ -167,11 +171,14 @@ final class IosRecognitionManager {
 }
 
 enum RecognitionManagerError: LocalizedError {
+    case alreadyRunning
     case microphonePermissionDenied
     case failed
 
     var errorDescription: String? {
         switch self {
+        case .alreadyRunning:
+            return "Recognition is already in progress."
         case .microphonePermissionDenied:
             return "Microphone access is required to recognize music."
         case .failed:
