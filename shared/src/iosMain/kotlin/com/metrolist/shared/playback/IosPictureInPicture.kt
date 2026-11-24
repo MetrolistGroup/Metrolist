@@ -103,6 +103,18 @@ private object IosPictureInPictureBridge : NSObject(), AVPictureInPictureControl
 
     override fun pictureInPictureController(
         pictureInPictureController: AVPictureInPictureController,
+        restoreUserInterfaceForPictureInPictureStopWithCompletionHandler: (Boolean) -> Unit,
+    ) {
+        if (pictureInPictureController !== this.pictureInPictureController) {
+            restoreUserInterfaceForPictureInPictureStopWithCompletionHandler(false)
+            return
+        }
+        controller?.onPictureInPictureRestoreUi?.invoke()
+        restoreUserInterfaceForPictureInPictureStopWithCompletionHandler(true)
+    }
+
+    override fun pictureInPictureController(
+        pictureInPictureController: AVPictureInPictureController,
         failedToStartPictureInPictureWithError: NSError,
     ) {
         if (pictureInPictureController !== this.pictureInPictureController) return

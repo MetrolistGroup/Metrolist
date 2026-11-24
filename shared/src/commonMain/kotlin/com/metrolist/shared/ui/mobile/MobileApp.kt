@@ -336,6 +336,7 @@ fun MobileApp(
     pictureInPictureSupported: Boolean = false,
     pictureInPictureRequiresPlayingVideo: Boolean = false,
     onEnterPictureInPicture: (isPlaying: Boolean, hasVideo: Boolean) -> Unit = { _, _ -> },
+    onRegisterPictureInPictureRestore: ((() -> Unit)?) -> Unit = {},
     loginContent: @Composable (
         isSwitchingChannel: Boolean,
         onBack: () -> Unit,
@@ -461,6 +462,15 @@ fun MobileApp(
     fun setPlayerVisible(visible: Boolean) {
         cancelVideoLookup()
         showPlayer = visible
+    }
+
+    val latestPictureInPictureRestoreRegistration by rememberUpdatedState(onRegisterPictureInPictureRestore)
+    DisposableEffect(playerViewModel) {
+        latestPictureInPictureRestoreRegistration {
+            playerViewModel.setLyricsVisible(false)
+            setPlayerVisible(true)
+        }
+        onDispose { latestPictureInPictureRestoreRegistration(null) }
     }
 
     fun playVideo(videoId: String) = videoLookup.play(videoId)

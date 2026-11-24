@@ -1203,6 +1203,7 @@ internal class IosPlaybackController(
     }
 
     internal var pictureInPictureSurfaceChanged: (() -> Unit)? = null
+    internal var onPictureInPictureRestoreUi: (() -> Unit)? = null
 
     internal fun releaseMusicVideoSurfacePlayer() {
         if (pipSurfacePlayer === videoSurfacePlayer) {

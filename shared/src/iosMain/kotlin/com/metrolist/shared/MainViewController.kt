@@ -185,6 +185,7 @@ fun MetrolistIOSApp() {
     var initialSettingsPage by remember { mutableStateOf<SettingsPageId?>(null) }
     var pendingMobileDispose by remember { mutableStateOf<CompletableDeferred<Unit>?>(null) }
     var sessionClosed by remember { mutableStateOf(false) }
+    var pictureInPictureRestore by remember { mutableStateOf<(() -> Unit)?>(null) }
     val latestPendingDispose by rememberUpdatedState(pendingMobileDispose)
     val database = remember(koin, databaseGeneration) { koin.get<MusicDatabase>() }
     LaunchedEffect(database) {
@@ -546,8 +547,10 @@ fun MetrolistIOSApp() {
                     pictureInPictureSupported = iosPictureInPictureSupported(),
                     pictureInPictureRequiresPlayingVideo = true,
                     onEnterPictureInPicture = { isPlaying, hasVideo ->
+                        playbackController.onPictureInPictureRestoreUi = { pictureInPictureRestore?.invoke() }
                         requestIosPictureInPicture(playbackController, isPlaying, hasVideo)
                     },
+                    onRegisterPictureInPictureRestore = { restore -> pictureInPictureRestore = restore },
                     iosSettingsPageContent = { page, onDownloads ->
                         when (page) {
                             SettingsPageId.STORAGE -> {
