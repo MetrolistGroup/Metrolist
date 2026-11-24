@@ -44,6 +44,7 @@ import java.util.Locale
 
 class DirectCanvasProvider(
     client: HttpClient,
+    private val session: () -> String = { Settings.shared.spotifySession },
     private val country: () -> String = {
         Settings.shared.contentCountry.takeUnless { it == "SYSTEM" } ?: SystemLocale.current.country
     },
@@ -51,6 +52,7 @@ class DirectCanvasProvider(
         Settings.shared.contentLanguage.takeUnless { it == "SYSTEM" } ?: SystemLocale.current.toLanguageTag()
     },
     private val now: () -> Long = System::currentTimeMillis,
+    private val saveSession: (String) -> Unit = { Settings.shared.spotifySession = it },
 ) {
     private val http =
         HttpClient(client.engine) {
@@ -66,7 +68,6 @@ class DirectCanvasProvider(
     private val json = Json { ignoreUnknownKeys = true }
     private val mutex = Mutex()
     private var token: Pair<String, Long>? = null
-    private var anonymousSpotifySession = SpotifySession()
     private val cache = LinkedHashMap<List<Any?>, Pair<DirectCanvasUrls, Long>>(32, 0.75f, true)
 
     suspend fun getSpotifyCanvas(
@@ -94,15 +95,16 @@ class DirectCanvasProvider(
         includeAppleMusic: Boolean,
     ): DirectCanvasUrls {
         if (title.isBlank() || artist.isBlank()) return DirectCanvasUrls()
+        val login = session()
         val storefront = country().lowercase(Locale.ROOT)
         val lang = language()
-        val key = listOf(title, artist, primaryArtist, duration, album, storefront, lang, includeAppleMusic)
+        val key = listOf(title, artist, primaryArtist, duration, album, storefront, lang, login.isNotBlank(), includeAppleMusic)
         // shortcut: One lock serializes cold lookups; use per-key jobs if artwork throughput becomes a problem.
         return mutex.withLock {
             cache[key]?.takeIf { it.second > now() }?.let { return@withLock it.first }
             val result =
                 coroutineScope {
-                    val spotify = async { attempt { spotify(title, artist, primaryArtist, album, duration) } }
+                    val spotify = async { attempt { spotify(title, artist, primaryArtist, album, duration, login) } }
                     val apple =
                         async {
                             if (includeAppleMusic) {
@@ -135,18 +137,23 @@ class DirectCanvasProvider(
         primaryArtist: String?,
         album: String?,
         duration: Long?,
-    ): String? =
-        // Canvas lookups never use the user's Spotify account; search runs anonymously.
-        SpotifyClient
-            .create(SpotifyConfig(engine = http.engine, logLevel = LogLevel.NONE, allowAnonymous = true))
+        login: String,
+    ): String? {
+        // Spotify returns no canvas to anonymous sessions, so reuse the playlist import sign-in when there is one.
+        val stored = login.takeIf(String::isNotBlank)?.let { runCatching { json.decodeFromString<SpotifySession>(it) }.getOrNull() }
+        if (stored?.hasLoginCookie != true) return null
+        return SpotifyClient
+            .create(SpotifyConfig(engine = http.engine, logLevel = LogLevel.NONE))
             .use { client ->
-                client.attachSession(anonymousSpotifySession)
+                client.attachSession(stored)
                 try {
                     spotifyCanvas(client, title, artist, primaryArtist, album, duration)
                 } finally {
-                    anonymousSpotifySession = client.session
+                    // Persist refreshed tokens unless the import flow replaced or cleared the session meanwhile.
+                    if (client.session != stored && session() == login) saveSession(json.encodeToString(client.session))
                 }
             }
+    }
 
     private suspend fun spotifyCanvas(
         client: SpotifyClient,
