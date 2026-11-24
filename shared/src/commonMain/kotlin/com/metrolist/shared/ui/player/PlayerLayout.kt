@@ -78,6 +78,7 @@ import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shadow
@@ -1921,9 +1922,9 @@ internal fun ActiveLyricsLine(
                     fontWeight = FontWeight.Bold,
                     textAlign = LyricsUtils.textAlignment(Settings.shared.activeLyricsTextPosition),
                     // Keeps the boxless line readable over bright artwork.
-                    shadow = if (hasBackground) Shadow(Color.Black.copy(alpha = 0.5f), blurRadius = 8f) else null,
+                    shadow = if (hasBackground) Shadow(Color.Black.copy(alpha = 0.85f), Offset(0f, 2f), blurRadius = 12f) else null,
                 )
-            val reservedLineHeight = with(LocalDensity.current) { style.lineHeight.toDp() * if (hasBackground) 1 else 2 }
+            val reservedLineHeight = with(LocalDensity.current) { style.lineHeight.toDp() * 2 }
             val lyricsContent = @Composable {
                 AnimatedContent(
                     targetState = currentLine to lineEndTime,
@@ -1939,21 +1940,20 @@ internal fun ActiveLyricsLine(
                         val isActive by remember(line, displayedLineEndTime, lyricsPositionState) {
                             derivedStateOf(structuralEqualityPolicy()) { lyricsPositionState.value in line.time..displayedLineEndTime }
                         }
-                        val baseTextColor = if (hasBackground) Color.White else textColor
                         ActiveLyricsLineContent(
                             entry = line,
                             isActive = isActive,
                             positionProvider = { lyricsPositionState.value },
                             lineEndTimeMs = displayedLineEndTime,
                             isPlaying = isPlaying,
-                            textColor = resolveLyricsTextColor(baseTextColor),
+                            textColor = if (hasBackground) Color.White else resolveLyricsTextColor(textColor),
                             useFixedTone = false,
                             lyricStyle = style,
                             textMeasurer = rememberTextMeasurer(),
                             maxLines = 2,
                             alignment = LyricsUtils.textAlignment(Settings.shared.activeLyricsTextPosition),
                             fillWidth = !hasBackground,
-                            singleLine = hasBackground,
+                            mainLineOnly = hasBackground,
                         )
                     }
                 }
