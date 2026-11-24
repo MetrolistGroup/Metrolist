@@ -88,7 +88,6 @@ import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.longOrNull
-import org.jetbrains.compose.resources.getString
 import platform.Foundation.NSNotificationCenter
 import platform.Foundation.NSOperationQueue
 import platform.UIKit.UIApplication
@@ -510,11 +509,7 @@ internal class IosPlaybackController(
                 enabled = snapshotFlow { Settings.shared.sponsorBlockEnabled },
                 canSeek = { Settings.shared.sponsorBlockEnabled && !guestLocked },
                 seekTo = { position -> seekTo(position) },
-                onSkipped = {
-                    scope.launch {
-                        PlaybackSnackbarEvents.emit(getString(Res.string.sponsorblock_skipped))
-                    }
-                },
+                onSkipped = { PlaybackSnackbarEvents.emit(Res.string.sponsorblock_skipped) },
             )
         }
         scope.launch {

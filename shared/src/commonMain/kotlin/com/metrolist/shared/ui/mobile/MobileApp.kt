@@ -353,6 +353,11 @@ fun MobileApp(
     LaunchedEffect(snackbarHostState) {
         PlaybackSnackbarEvents.messages.collect { snackbarHostState.showSnackbar(it) }
     }
+    val resourceMessage by PlaybackSnackbarEvents.resourceMessages.collectAsState(null)
+    val localizedResourceMessage = resourceMessage?.let { stringResource(it.resource) }
+    LaunchedEffect(resourceMessage) {
+        localizedResourceMessage?.let { snackbarHostState.showSnackbar(it) }
+    }
     val onSwipeFeedback: (String) -> Unit = { message ->
         snackbarHostState.currentSnackbarData?.dismiss()
         scope.launch { snackbarHostState.showSnackbar(message, duration = SnackbarDuration.Short) }
