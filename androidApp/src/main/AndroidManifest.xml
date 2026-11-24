@@ -68,6 +68,7 @@
     <application
         tools:ignore="PictureInPictureIssue"
         android:name="com.metrolist.android.App"
+        android:appCategory="audio"
         android:banner="@mipmap/tv_banner"
         android:icon="@mipmap/ic_launcher"
         android:allowBackup="true"
@@ -105,6 +106,7 @@
             android:name="com.metrolist.android.MainActivity"
             android:exported="true"
             android:launchMode="singleTask"
+            android:resizeableActivity="true"
             android:supportsPictureInPicture="true"
             android:configChanges="screenSize|smallestScreenSize|screenLayout|orientation"
             android:windowSoftInputMode="adjustResize">
