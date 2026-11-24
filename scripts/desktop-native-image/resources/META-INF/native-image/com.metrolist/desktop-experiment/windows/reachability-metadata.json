@@ -1,6 +1,76 @@
 {
   "reflection": [
     {
+      "type": "sun.java2d.d3d.D3DGraphicsDevice$2",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "run",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "sun.java2d.d3d.D3DGraphicsDevice$3",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "run",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "sun.java2d.d3d.D3DGraphicsDevice$4",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "run",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "sun.java2d.d3d.D3DGraphicsDevice$5",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "run",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "sun.java2d.d3d.D3DGraphicsDevice$6",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "run",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "sun.java2d.d3d.D3DGraphicsDevice$7",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "run",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "sun.java2d.d3d.D3DGraphicsDevice$8",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "run",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
       "type": "com.sun.jna.Callback$UncaughtExceptionHandler",
       "jniAccessible": true,
       "methods": [
