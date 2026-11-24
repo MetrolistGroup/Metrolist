@@ -2024,7 +2024,9 @@
     <!-- Translators: Label for album no songs in the album screen. -->
     <string name="album_no_songs">No songs in this album</string>
     <!-- Translators: Label for album type with year; retained for translation compatibility but not currently referenced by app code. %1$s is the release year. -->
-    <!-- Translators: Label for already in playlist name in the multiple app screens. %1$s is the playlist name. -->
+    <!-- Translators: Shown under a playlist in the Add to playlist dialog when the selected songs are already in that playlist. The playlist name is shown just above it. -->
+    <string name="already_in_playlist">Already there</string>
+    <!-- Translators: Label for already in playlist name; retained for translation compatibility but not currently referenced by app code. %1$s is the playlist name. -->
     <string name="already_in_playlist_name">Already in %1$s</string>
     <!-- Translators: Option or section label for animated gradient in the settings. -->
     <string name="animated_gradient">Animated gradient</string>
