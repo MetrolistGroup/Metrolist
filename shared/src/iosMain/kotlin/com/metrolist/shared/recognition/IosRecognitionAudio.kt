@@ -2,6 +2,7 @@ package com.metrolist.shared.recognition
 
 import kotlinx.cinterop.ByteVar
 import kotlinx.cinterop.ExperimentalForeignApi
+import kotlinx.cinterop.get
 import kotlinx.cinterop.reinterpret
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
