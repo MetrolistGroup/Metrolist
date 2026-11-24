@@ -221,6 +221,8 @@ object PendingPlaylistAdds {
         repository: YouTubeRepository,
     ): Boolean {
         val accountKey = currentLibraryAccountKey()
+        // Each read and send checks the account again once its session is fixed, so none runs under another account.
+        val isAccountCurrent = { currentLibraryAccountKey() == accountKey }
         val queued = queuedFor(accountKey)
         if (queued.isEmpty()) return false
         if (!PlaybackNetworkStateStore.current.connected || !repository.canManagePlaylists()) return true
@@ -246,7 +248,7 @@ object PendingPlaylistAdds {
                         }
                     }
                 if (active.isEmpty()) continue
-                val listed = remoteSongCounts(repository, remoteId)
+                val listed = remoteSongCounts(repository, remoteId, isAccountCurrent)
                 if (listed == null) {
                     // A playlist YouTube cannot list waits on its own, so it does not hold back the other playlists.
                     if (!PlaybackNetworkStateStore.current.connected) return true
@@ -273,7 +275,7 @@ object PendingPlaylistAdds {
                         continue
                     }
                     // Only the account that queued the add may send it.
-                    if (currentLibraryAccountKey() != entry.accountKey) return true
+                    if (!isAccountCurrent()) return true
                     // Claiming records the target before sending, so a lost response, a failed read-back or a later failure
                     // cannot send it twice, and an add a sign-out cleared meanwhile is skipped.
                     if (!claim(entry.id, expected)) continue
@@ -284,6 +286,7 @@ object PendingPlaylistAdds {
                                 entry.songId,
                                 allowDuplicate = entry.allowDuplicate,
                                 notifyChange = false,
+                                isAccountCurrent = isAccountCurrent,
                             ).exceptionOrNull()
                     when {
                         failure == null -> {
@@ -313,7 +316,7 @@ object PendingPlaylistAdds {
                 }
                 if (sent.isNotEmpty()) {
                     // Reading the playlist back verifies the adds; one YouTube lists too few copies of is sent again later.
-                    val verified = remoteSongCounts(repository, remoteId)
+                    val verified = remoteSongCounts(repository, remoteId, isAccountCurrent)
                     if (verified == null && !PlaybackNetworkStateStore.current.connected) return true
                     sent.forEach { (entry, expected) ->
                         if ((verified?.get(entry.songId) ?: 0) >= expected) remove(entry.id) else postpone(entry.id)
@@ -342,11 +345,12 @@ object PendingPlaylistAdds {
     private suspend fun remoteSongs(
         repository: YouTubeRepository,
         remoteId: String,
+        isAccountCurrent: () -> Boolean = { true },
     ): List<SongItem>? =
         try {
             val page =
                 repository.completePlaylistPage(
-                    repository.getPlaylistPageData(remoteId, applyContentFilters = false),
+                    repository.getPlaylistPageData(remoteId, applyContentFilters = false, isAccountCurrent),
                     applyContentFilters = false,
                 )
             // The offline fallback answers from the local playlist, which already lists the queued songs.
@@ -362,7 +366,8 @@ object PendingPlaylistAdds {
     private suspend fun remoteSongCounts(
         repository: YouTubeRepository,
         remoteId: String,
-    ): MutableMap<String, Int>? = remoteSongs(repository, remoteId)?.groupingBy { it.id }?.eachCountTo(mutableMapOf())
+        isAccountCurrent: () -> Boolean,
+    ): MutableMap<String, Int>? = remoteSongs(repository, remoteId, isAccountCurrent)?.groupingBy { it.id }?.eachCountTo(mutableMapOf())
 
     private fun queuedFor(accountKey: String) = synchronized(lock) { read() }.filter { it.accountKey == accountKey }
 
