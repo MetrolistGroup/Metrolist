@@ -3,7 +3,9 @@ package com.metrolist.shared.playback
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import platform.AVFoundation.AVPlayer
@@ -47,6 +49,7 @@ private object IosPictureInPictureBridge : NSObject(), AVPictureInPictureControl
     private var transportObservation: IosKeyValueObservation? = null
     private var observedPlayer: AVPlayer? = null
     private var timeObserver: Any? = null
+    private var syncJob: Job? = null
     private var pendingRequest = false
     private var forwardingPlayPause = false
     private var forwardingSeek = false
@@ -58,7 +61,10 @@ private object IosPictureInPictureBridge : NSObject(), AVPictureInPictureControl
         nextSurface: IosMusicVideoSurfacePlayer,
     ) {
         controller = playbackController
-        surface?.takeIf { it !== nextSurface }?.onApplicationTransportChange = null
+        surface?.takeIf { it !== nextSurface }?.let { previousSurface ->
+            previousSurface.onApplicationTransportChange = null
+            previousSurface.setPictureInPictureActive(false)
+        }
         surface = nextSurface
         nextSurface.onApplicationTransportChange = { ignoredTransportRate = it }
         playbackController.pictureInPictureSurfaceChanged = { retryPendingRequest() }
@@ -131,9 +137,25 @@ private object IosPictureInPictureBridge : NSObject(), AVPictureInPictureControl
             player.addPeriodicTimeObserverForInterval(CMTimeMakeWithSeconds(1.0, 600), null) {
                 onTransportTick(playbackController, surfacePlayer)
             }
+        syncJob =
+            scope.launch {
+                playbackController.state.collect { state ->
+                    val positionMap = state.videoPositionMap
+                    val targetPositionMs = positionMap?.mapPosition(state.positionMs) ?: state.positionMs
+                    val positionMapped = positionMap?.containsSourcePosition(state.positionMs) ?: true
+                    surfacePlayer.synchronize(
+                        targetPositionMs,
+                        state.isPlaying && !state.isLoading && state.isVideoModeActive && positionMapped,
+                        state.playbackSpeed,
+                        surfaceVisible = true,
+                    )
+                }
+            }
     }
 
     private fun stopTransportObservation() {
+        syncJob?.cancel()
+        syncJob = null
         transportObservation?.close()
         transportObservation = null
         timeObserver?.let { observedPlayer?.removeTimeObserver(it) }

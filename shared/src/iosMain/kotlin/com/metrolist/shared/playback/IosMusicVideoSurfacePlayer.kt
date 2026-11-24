@@ -121,7 +121,11 @@ internal class IosMusicVideoSurfacePlayer(
         }
     }
 
-    fun attach(): Long = (++surfaceGeneration).also { attachedSurfaceGeneration = it }
+    fun attach(): Long =
+        (++surfaceGeneration).also {
+            attachedSurfaceGeneration = it
+            seekLifecycle.setForeground(foreground)
+        }
 
     fun synchronize(
         positionMs: Long,
