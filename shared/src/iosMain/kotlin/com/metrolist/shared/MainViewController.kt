@@ -65,6 +65,8 @@ import com.metrolist.shared.listentogether.ListenTogetherTrackResolver
 import com.metrolist.shared.listentogether.toSongItem
 import com.metrolist.shared.network.createHttpClient
 import com.metrolist.shared.playback.IosPlaybackController
+import com.metrolist.shared.playback.iosPictureInPictureSupported
+import com.metrolist.shared.playback.requestIosPictureInPicture
 import com.metrolist.shared.playback.IosPlayerPlatformServices
 import com.metrolist.shared.playback.MusicPlayer
 import com.metrolist.shared.playlist.IosPlaylistCoverMapper
@@ -540,6 +542,10 @@ fun MetrolistIOSApp() {
                                 downloadManager.stopTrackingPlaylist(playlistId)
                                 ids.count { downloadManager.removeDownload(it) }
                             }.await()
+                    },
+                    pictureInPictureSupported = iosPictureInPictureSupported(),
+                    onEnterPictureInPicture = { isPlaying, hasVideo ->
+                        requestIosPictureInPicture(playbackController, isPlaying, hasVideo)
                     },
                     iosSettingsPageContent = { page, onDownloads ->
                         when (page) {

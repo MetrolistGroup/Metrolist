@@ -315,6 +315,8 @@ internal class IosPlaybackController(
     private var videoSurfacePlayer: IosMusicVideoSurfacePlayer? = null
     private var videoSurfaceUrl: String? = null
     private var videoSurfaceHeaders: Map<String, String>? = null
+    private var pipSurfacePlayer: IosMusicVideoSurfacePlayer? = null
+    private var pipSurfaceUrl: String? = null
 
     private val coreState =
         combine(baseState, player.currentMediaItemIndex, pendingPlayback, playbackError) { base, index, pending, error ->
@@ -1170,7 +1172,35 @@ internal class IosPlaybackController(
         releaseMusicVideoSurfacePlayer()
     }
 
+    internal fun registerPictureInPictureSurface(player: IosMusicVideoSurfacePlayer, url: String) {
+        if (pipSurfacePlayer === player && pipSurfaceUrl == url) return
+        pipSurfacePlayer = player
+        pipSurfaceUrl = url
+        notifyPictureInPictureSurfaceChanged()
+    }
+
+    internal fun unregisterPictureInPictureSurface(player: IosMusicVideoSurfacePlayer, url: String) {
+        if (pipSurfacePlayer !== player || pipSurfaceUrl != url) return
+        pipSurfacePlayer = null
+        pipSurfaceUrl = null
+        notifyPictureInPictureSurfaceChanged()
+    }
+
+    internal fun pictureInPicturePlayerLayer(): Any? =
+        pipSurfacePlayer?.takeIf { pipSurfaceUrl == videoPlaybackResource.value?.videoUrl }?.layer
+
+    private fun notifyPictureInPictureSurfaceChanged() {
+        pictureInPictureSurfaceChanged?.invoke()
+    }
+
+    internal var pictureInPictureSurfaceChanged: (() -> Unit)? = null
+
     internal fun releaseMusicVideoSurfacePlayer() {
+        if (pipSurfacePlayer === videoSurfacePlayer) {
+            pipSurfacePlayer = null
+            pipSurfaceUrl = null
+            notifyPictureInPictureSurfaceChanged()
+        }
         videoSurfacePlayer?.close()
         videoSurfacePlayer = null
         videoSurfaceUrl = null

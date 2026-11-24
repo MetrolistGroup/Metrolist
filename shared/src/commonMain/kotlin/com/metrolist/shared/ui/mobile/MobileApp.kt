@@ -333,6 +333,8 @@ fun MobileApp(
     formatHistoryMonth: (Long) -> String,
     oauthCallbackUrls: Flow<String> = emptyFlow(),
     initialSettingsPage: SettingsPageId? = null,
+    pictureInPictureSupported: Boolean = false,
+    onEnterPictureInPicture: (isPlaying: Boolean, hasVideo: Boolean) -> Unit = { _, _ -> },
     loginContent: @Composable (
         isSwitchingChannel: Boolean,
         onBack: () -> Unit,
@@ -2054,13 +2056,15 @@ fun MobileApp(
                             lyricsShareAction,
                         ) {
                             MobilePlayerPlatform(
-                                database,
-                                downloadSongs,
-                                removeDownloads,
-                                playlistWorkflow::select,
-                                listenTogetherManager,
-                                touchExplorationEnabled,
-                                lyricsShareAction,
+                                database = database,
+                                onDownloadSongs = downloadSongs,
+                                onRemoveDownloads = removeDownloads,
+                                onAddToPlaylist = playlistWorkflow::select,
+                                listenTogether = listenTogetherManager,
+                                touchExplorationEnabled = touchExplorationEnabled,
+                                shareLyrics = lyricsShareAction,
+                                pictureInPictureSupported = pictureInPictureSupported,
+                                onEnterPictureInPicture = onEnterPictureInPicture,
                             )
                         }
                     val playerUiState by playerViewModel.uiState.collectAsState()

@@ -75,11 +75,13 @@ internal class MobilePlayerPlatform(
     private val listenTogether: ListenTogetherManager,
     private val touchExplorationEnabled: Boolean,
     private val shareLyrics: @Composable (PlayerViewModel) -> ((String) -> Unit)?,
+    private val pictureInPictureSupported: Boolean = false,
+    private val onEnterPictureInPicture: (isPlaying: Boolean, hasVideo: Boolean) -> Unit = { _, _ -> },
 ) : PlayerPlatform {
     @Composable
     override fun lyricsShareAction(viewModel: PlayerViewModel): ((String) -> Unit)? = shareLyrics(viewModel)
 
-    override val supportsPictureInPicture = false
+    override val supportsPictureInPicture = pictureInPictureSupported
     override val supportsVideoPlayback = true
     override val supportsCasting = false
 
@@ -112,7 +114,7 @@ internal class MobilePlayerPlatform(
     override fun enterPictureInPicture(
         isPlaying: Boolean,
         hasVideo: Boolean,
-    ) = Unit
+    ) = onEnterPictureInPicture(isPlaying, hasVideo)
 
     @Composable
     override fun MusicVideoSurface(

@@ -69,6 +69,12 @@ internal actual fun MobileMusicVideoSurface(
         remember(controller, url, resource.headers) {
             iosController?.musicVideoSurfacePlayer(url, resource.headers) ?: IosMusicVideoSurfacePlayer(url, resource.headers)
         }
+    LaunchedEffect(iosController, video, url) {
+        iosController?.registerPictureInPictureSurface(video, url)
+    }
+    DisposableEffect(iosController, video, url) {
+        onDispose { iosController?.unregisterPictureInPictureSurface(video, url) }
+    }
     var firstFrameRendered by remember(video) { mutableStateOf(video.ready && video.positionSynchronized) }
     var foreground by remember {
         mutableStateOf(UIApplication.sharedApplication.applicationState == UIApplicationState.UIApplicationStateActive)
