@@ -1413,6 +1413,7 @@
     <string name="automatic_backup_destination">Backup destination</string>
     <string name="automatic_backup_local">On this device</string>
     <string name="automatic_backup_google_drive">Google Drive</string>
+    <string name="google_drive_backup_folder">Metrolist Backups</string>
     <string name="automatic_backup_use_google_drive">Use Google Drive</string>
     <string name="automatic_backup_daily">Daily</string>
     <string name="automatic_backup_weekly">Weekly</string>

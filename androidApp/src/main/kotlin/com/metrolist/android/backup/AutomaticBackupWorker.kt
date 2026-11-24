@@ -124,7 +124,7 @@ class AutomaticBackupWorker(
             throw cancellation
         } catch (reauthorization: DriveReauthorizationRequiredException) {
             DriveAccountConnectionState.requireReauthorization(session)
-            Result.failure()
+            Result.retry()
         } catch (_: Exception) {
             Result.retry()
         } finally {

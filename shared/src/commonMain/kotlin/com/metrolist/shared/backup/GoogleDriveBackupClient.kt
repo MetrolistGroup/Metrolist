@@ -1,5 +1,7 @@
 package com.metrolist.shared.backup
 
+import com.metrolist.shared.generated.resources.Res
+import com.metrolist.shared.generated.resources.google_drive_backup_folder
 import com.metrolist.shared.network.createHttpClient
 import com.metrolist.shared.utils.Logger
 import io.ktor.client.HttpClient
@@ -28,6 +30,7 @@ import kotlinx.io.RawSource
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import org.jetbrains.compose.resources.getString
 import kotlin.time.Clock
 
 class GoogleDriveBackupClient(
@@ -211,7 +214,7 @@ class GoogleDriveBackupClient(
                             header(HttpHeaders.Authorization, "Bearer $token")
                             parameter(
                                 "q",
-                                "name = '$BACKUP_FOLDER_NAME' and mimeType = '$FOLDER_MIME_TYPE' and trashed = false",
+                                "appProperties has { key='$FOLDER_PROPERTY_KEY' and value='true' } and mimeType = '$FOLDER_MIME_TYPE' and trashed = false",
                             )
                             parameter("fields", "nextPageToken,files(id)")
                             parameter("pageSize", "100")
@@ -228,6 +231,7 @@ class GoogleDriveBackupClient(
     private suspend fun getOrCreateBackupFolders(tokens: DriveAccessTokenProvider): List<String> {
         val existing = findBackupFolders(tokens)
         if (existing.isNotEmpty()) return existing
+        val folderName = getString(Res.string.google_drive_backup_folder)
         val created =
             authenticatedRequest(tokens) { token ->
                 httpClient
@@ -235,7 +239,13 @@ class GoogleDriveBackupClient(
                         header(HttpHeaders.Authorization, "Bearer $token")
                         contentType(ContentType.Application.Json)
                         parameter("fields", "id")
-                        setBody(DriveCreateMetadata(BACKUP_FOLDER_NAME, FOLDER_MIME_TYPE))
+                        setBody(
+                            DriveCreateMetadata(
+                                folderName,
+                                FOLDER_MIME_TYPE,
+                                appProperties = mapOf(FOLDER_PROPERTY_KEY to "true"),
+                            ),
+                        )
                     }
             }.requireDriveApiSuccess()
                 .body<DriveBackupFile>()
@@ -301,8 +311,8 @@ class GoogleDriveBackupClient(
         const val UPLOAD_TIMEOUT_MILLIS = 15 * 60 * 1000L
         const val MAX_UPLOAD_RETRIES = 3
         const val STATUS_PROBE_RETRY_DELAY_MILLIS = 1_000L
-        const val BACKUP_FOLDER_NAME = "Metrolist Backups"
         const val FOLDER_MIME_TYPE = "application/vnd.google-apps.folder"
+        const val FOLDER_PROPERTY_KEY = "metrolistBackupFolder"
         const val APP_PROPERTY_KEY = "metrolistBackup"
         const val MAX_RETAINED_BACKUPS = 10
     }

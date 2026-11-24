@@ -22,8 +22,6 @@ import io.ktor.server.routing.post
 import io.ktor.server.routing.route
 import io.ktor.server.routing.routing
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import org.flywaydb.core.Flyway
@@ -83,6 +81,7 @@ fun main() {
         .load()
         .migrate()
     val repository = TokenRepository(dataSource, configuration.encryptionKey)
+    repository.backfillSessionGrantHashes()
     val httpClient =
         HttpClient(CIO) {
             install(ClientContentNegotiation) { json(Json { ignoreUnknownKeys = true }) }
@@ -110,8 +109,6 @@ fun Application.driveBrokerModule(
 ) {
     install(CallLogging)
     install(ContentNegotiation) { json(Json { ignoreUnknownKeys = true }) }
-    // A Google revocation can invalidate refresh tokens obtained by an overlapping sign-in.
-    val driveAuthorizationMutex = Mutex()
     routing {
         get("/healthz") { call.respond(HttpStatusCode.OK) }
         route("/v1") {
@@ -126,40 +123,39 @@ fun Application.driveBrokerModule(
                 )
             }
             post("/auth/exchange") {
-                // Read unauthenticated input before taking the lock shared with disconnect.
                 val request = safeOperation { call.receive<ExchangeRequest>() }
                 val platform = request?.platform?.let(ClientPlatform::parse)
                 if (request == null || platform == null) {
                     call.respond(HttpStatusCode.BadRequest, ErrorResponse("invalid_request"))
                     return@post
                 }
-                driveAuthorizationMutex.withLock {
-                    val initialIssuedAt = safeOperation { repository.currentDatabaseTime() }
-                    if (initialIssuedAt == null) {
+                // Capture the database time before the Google exchange so a revocation that
+                // overlaps it can be detected when the session is created.
+                val initialIssuedAt = safeOperation { repository.currentDatabaseTime() }
+                if (initialIssuedAt == null) {
+                    call.respond(HttpStatusCode.InternalServerError, ErrorResponse("session_creation_failed"))
+                    return@post
+                }
+                val account =
+                    safeOperation {
+                        googleOAuth.exchange(platform, request.code, request.redirectUri, request.codeVerifier)
+                    }
+                if (account == null) {
+                    call.respond(HttpStatusCode.Unauthorized, ErrorResponse("authorization_failed"))
+                    return@post
+                }
+                when (val creation = safeOperation { repository.createSession(account, platform, initialIssuedAt) }) {
+                    is SessionCreationResult.Created -> {
+                        call.respond(SessionResponse(creation.token, account.email))
+                    }
+
+                    // A revocation overlapped the code exchange; the client must obtain a new code.
+                    SessionCreationResult.StaleCredentials -> {
+                        call.respond(HttpStatusCode.Conflict, ErrorResponse("authorization_failed"))
+                    }
+
+                    null -> {
                         call.respond(HttpStatusCode.InternalServerError, ErrorResponse("session_creation_failed"))
-                        return@withLock
-                    }
-                    val account =
-                        safeOperation {
-                            googleOAuth.exchange(platform, request.code, request.redirectUri, request.codeVerifier)
-                        }
-                    if (account == null) {
-                        call.respond(HttpStatusCode.Unauthorized, ErrorResponse("authorization_failed"))
-                        return@withLock
-                    }
-                    when (val creation = safeOperation { repository.createSession(account, platform, initialIssuedAt) }) {
-                        is SessionCreationResult.Created -> {
-                            call.respond(SessionResponse(creation.token, account.email))
-                        }
-
-                        // A revocation overlapped the code exchange; the client must obtain a new code.
-                        SessionCreationResult.StaleCredentials -> {
-                            call.respond(HttpStatusCode.Conflict, ErrorResponse("authorization_failed"))
-                        }
-
-                        null -> {
-                            call.respond(HttpStatusCode.InternalServerError, ErrorResponse("session_creation_failed"))
-                        }
                     }
                 }
             }
@@ -191,10 +187,7 @@ fun Application.driveBrokerModule(
                     GoogleAccessTokenResult.ReauthorizationRequired -> {
                         // Google already rejected the grant, so retire its sessions before the client
                         // reconnects; otherwise a later code exchange would revive the old tokens.
-                        val invalidated =
-                            driveAuthorizationMutex.withLock {
-                                safeOperation { repository.invalidateAccount(account) }
-                            }
+                        val invalidated = safeOperation { repository.invalidateAccount(account) }
                         if (invalidated == null) {
                             call.respond(HttpStatusCode.InternalServerError, ErrorResponse("session_cleanup_failed"))
                         } else {
@@ -213,19 +206,17 @@ fun Application.driveBrokerModule(
                     call.respond(HttpStatusCode.Unauthorized, ErrorResponse("unauthorized"))
                     return@delete
                 }
-                driveAuthorizationMutex.withLock {
-                    try {
-                        repository.revokeSession(token) { account ->
-                            if (account != null) googleOAuth.revoke(account.refreshToken)
-                        }
-                    } catch (cancelled: CancellationException) {
-                        throw cancelled
-                    } catch (_: Exception) {
-                        call.respond(HttpStatusCode.InternalServerError, ErrorResponse("revocation_failed"))
-                        return@withLock
+                try {
+                    repository.revokeSession(token) { account ->
+                        if (account != null) googleOAuth.revoke(account.refreshToken)
                     }
-                    call.respond(HttpStatusCode.NoContent)
+                } catch (cancelled: CancellationException) {
+                    throw cancelled
+                } catch (_: Exception) {
+                    call.respond(HttpStatusCode.InternalServerError, ErrorResponse("revocation_failed"))
+                    return@delete
                 }
+                call.respond(HttpStatusCode.NoContent)
             }
         }
     }

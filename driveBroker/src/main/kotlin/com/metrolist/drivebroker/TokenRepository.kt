@@ -88,12 +88,14 @@ class TokenRepository(
                     }
                 connection
                     .prepareStatement(
-                        "INSERT INTO google_drive_sessions (token_hash, google_subject, oauth_client_id, platform) VALUES (?, ?, ?, ?)",
+                        """INSERT INTO google_drive_sessions (token_hash, google_subject, oauth_client_id, platform, refresh_token_hash)
+                           VALUES (?, ?, ?, ?, ?)""",
                     ).use { statement ->
                         statement.setBytes(1, hash(sessionToken))
                         statement.setString(2, account.subject)
                         statement.setString(3, account.clientId)
                         statement.setString(4, platform.wireValue)
+                        statement.setBytes(5, grantHash(account.refreshToken))
                         statement.executeUpdate()
                     }
                 connection.commit()
@@ -103,6 +105,53 @@ class TokenRepository(
             }
         }
         return SessionCreationResult.Created(Base64.getUrlEncoder().withoutPadding().encodeToString(sessionToken))
+    }
+
+    /** Assigns legacy sessions to the grant currently stored for their account. */
+    fun backfillSessionGrantHashes() {
+        dataSource.connection.use { connection ->
+            connection.autoCommit = false
+            try {
+                val grants = mutableMapOf<Pair<String, String>, ByteArray>()
+                connection
+                    .prepareStatement(
+                        "SELECT google_subject, oauth_client_id, refresh_token_iv, refresh_token_ciphertext FROM google_drive_accounts",
+                    ).use { statement ->
+                        statement.executeQuery().use { result ->
+                            while (result.next()) {
+                                val subject = result.getString("google_subject")
+                                val clientId = result.getString("oauth_client_id")
+                                grants[subject to clientId] =
+                                    grantHash(
+                                        decrypt(
+                                            result.getBytes("refresh_token_ciphertext"),
+                                            result.getBytes("refresh_token_iv"),
+                                            subject,
+                                            clientId,
+                                        ),
+                                    )
+                            }
+                        }
+                    }
+                connection
+                    .prepareStatement(
+                        """UPDATE google_drive_sessions SET refresh_token_hash = ?
+                           WHERE google_subject = ? AND oauth_client_id = ? AND refresh_token_hash IS NULL""",
+                    ).use { statement ->
+                        grants.forEach { (account, hash) ->
+                            statement.setBytes(1, hash)
+                            statement.setString(2, account.first)
+                            statement.setString(3, account.second)
+                            statement.addBatch()
+                        }
+                        if (grants.isNotEmpty()) statement.executeBatch()
+                    }
+                connection.commit()
+            } catch (error: Exception) {
+                connection.rollback()
+                throw error
+            }
+        }
     }
 
     fun accountForSession(sessionToken: String): DriveAccount? {
@@ -200,10 +249,10 @@ class TokenRepository(
             connection.autoCommit = false
             try {
                 lockSubject(connection, account.subject)
-                // A reconnect can replace the grant while this request waits on Google. Retire the
-                // sessions issued before that replacement while preserving the new grant's session.
+                // A reconnect can replace the grant while this request waits on Google. Retire only
+                // the sessions issued from the rejected grant so newer connections keep working.
                 if (readRefreshToken(connection, account.subject, account.clientId) != account.refreshToken) {
-                    retireSessionsFromRejectedGrant(connection, account.subject, account.clientId)
+                    retireSessionsFromRejectedGrant(connection, account.subject, account.clientId, grantHash(account.refreshToken))
                     connection.commit()
                     return
                 }
@@ -230,18 +279,15 @@ class TokenRepository(
         connection: Connection,
         subject: String,
         clientId: String,
+        rejectedGrantHash: ByteArray,
     ) {
-        val staleGrant =
-            """google_subject = ? AND oauth_client_id = ?
-               AND created_at < (SELECT updated_at FROM google_drive_accounts
-                                 WHERE google_subject = ? AND oauth_client_id = ?)"""
+        val staleGrant = "google_subject = ? AND oauth_client_id = ? AND refresh_token_hash = ?"
         connection
             .prepareStatement("UPDATE google_drive_sessions SET google_revoked_at = clock_timestamp() WHERE $staleGrant")
             .use { statement ->
                 statement.setString(1, subject)
                 statement.setString(2, clientId)
-                statement.setString(3, subject)
-                statement.setString(4, clientId)
+                statement.setBytes(3, rejectedGrantHash)
                 statement.executeUpdate()
             }
         connection
@@ -249,8 +295,7 @@ class TokenRepository(
             .use { statement ->
                 statement.setString(1, subject)
                 statement.setString(2, clientId)
-                statement.setString(3, subject)
-                statement.setString(4, clientId)
+                statement.setBytes(3, rejectedGrantHash)
                 statement.executeUpdate()
             }
         cleanupStaleRevocations(connection)
@@ -514,4 +559,6 @@ class TokenRepository(
         runCatching { Base64.getUrlDecoder().decode(value) }.getOrNull()?.takeIf { it.size == 32 }
 
     private fun hash(value: ByteArray): ByteArray = MessageDigest.getInstance("SHA-256").digest(value)
+
+    private fun grantHash(refreshToken: String): ByteArray = hash(refreshToken.toByteArray(Charsets.UTF_8))
 }

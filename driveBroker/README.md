@@ -2,6 +2,8 @@
 
 The broker exchanges Google authorization codes, stores Google refresh tokens encrypted with AES-256-GCM in PostgreSQL, and issues revocable opaque session tokens to Metrolist clients. It does not receive or store backup archives; clients upload directly to Drive with short-lived access tokens and the `drive.file` scope.
 
+Each session records a hash of the grant that created it. When Google rejects a stale grant, the broker retires only that grant's sessions, while per-subject database advisory locks and revocation timestamps order sign-ins against sign-outs without serializing unrelated accounts.
+
 Configure a Google Cloud project with the Drive API and OAuth consent screen. Register Android, iOS, desktop and web OAuth clients, and allow the `openid`, `email` and `https://www.googleapis.com/auth/drive.file` scopes. Android requests a server authorization code for the web client through Google Sign-In. iOS uses its native OAuth client with PKCE. Desktop uses the installed-app client with loopback redirects and PKCE.
 
 The service requires `DATABASE_URL`, `DATABASE_USER`, `DATABASE_PASSWORD`, `DRIVE_REFRESH_TOKEN_ENCRYPTION_KEY` (base64 encoded 32-byte key), `GOOGLE_WEB_CLIENT_ID`, `GOOGLE_WEB_CLIENT_SECRET`, `GOOGLE_ANDROID_CLIENT_ID`, `GOOGLE_IOS_CLIENT_ID` and `GOOGLE_DESKTOP_CLIENT_ID`. `PORT` defaults to 8080. Keep secrets in the deployment secret manager, terminate TLS at the ingress, restrict ingress to HTTPS, cap request bodies, rate-limit authentication routes, and never enable request-body or authorization-header logging.
