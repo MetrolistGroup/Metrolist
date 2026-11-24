@@ -53,7 +53,7 @@ object DesktopAutomaticBackupScheduler {
                         delay(CREDENTIAL_RECOVERY_POLL_MILLIS)
                         continue
                     }
-                    if (DriveAccountConnectionState.normalizeAutoBackupDestination()) {
+                    if (DriveAccountConnectionState.normalizeAutoBackupDestination(DesktopDriveSignIn.isConfigured())) {
                         destination = AutoBackupDestination.LOCAL
                     }
                     if (AutoBackupDestination.fromSetting(settings.autoBackupDestination) != destination) return@launch

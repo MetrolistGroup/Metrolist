@@ -54,15 +54,10 @@ class AutomaticBackupWorker(
         }
         val settings = Settings.shared
         if (!settings.autoBackupEnabled) return Result.success()
-        DriveAccountConnectionState.normalizeAutoBackupDestination()
-
         val brokerUrl = BuildConfig.DRIVE_BROKER_URL.takeIf(String::isNotBlank)
-        var backupDestination = AutoBackupDestination.fromSetting(settings.autoBackupDestination)
-        if (backupDestination == AutoBackupDestination.GOOGLE_DRIVE && brokerUrl == null) {
-            settings.autoBackupDestination = AutoBackupDestination.LOCAL.name
-            runCatching { settings.flush() }
-            backupDestination = AutoBackupDestination.LOCAL
-        }
+        DriveAccountConnectionState.normalizeAutoBackupDestination(brokerUrl != null)
+
+        val backupDestination = AutoBackupDestination.fromSetting(settings.autoBackupDestination)
         val session = settings.driveBrokerSession
         val directory =
             when (backupDestination) {

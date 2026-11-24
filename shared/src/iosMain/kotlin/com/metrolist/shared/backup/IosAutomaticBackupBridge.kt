@@ -72,9 +72,9 @@ fun createIosAutomaticBackup(completion: (Boolean) -> Unit) {
                 }
                 val fileManager = NSFileManager.defaultManager
                 val settings = Settings.shared
-                DriveAccountConnectionState.normalizeAutoBackupDestination()
+                val brokerUrl = iosDriveBrokerUrl()
+                DriveAccountConnectionState.normalizeAutoBackupDestination(brokerUrl != null)
                 val destinationType = AutoBackupDestination.fromSetting(settings.autoBackupDestination)
-                val brokerUrl = if (destinationType == AutoBackupDestination.GOOGLE_DRIVE) iosDriveBrokerUrl() else null
                 val session =
                     if (destinationType == AutoBackupDestination.GOOGLE_DRIVE) {
                         settings.driveBrokerSession.takeIf(String::isNotBlank)
