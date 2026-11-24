@@ -81,6 +81,9 @@ import com.metrolist.shared.generated.resources.Res
 import com.metrolist.shared.generated.resources.display_density
 import com.metrolist.shared.generated.resources.filter_downloaded
 import com.metrolist.shared.generated.resources.library_load_failed
+import com.metrolist.shared.generated.resources.n_album
+import com.metrolist.shared.generated.resources.n_artist
+import com.metrolist.shared.generated.resources.n_playlist
 import com.metrolist.shared.generated.resources.playlist_direction_ascending
 import com.metrolist.shared.generated.resources.playlist_direction_descending
 import com.metrolist.shared.generated.resources.song_count
@@ -463,6 +466,7 @@ fun LibraryContent(
                             selectedFilter = effectiveFilter,
                             isGridView = isGridView,
                             sortType = effectiveSortType,
+                            itemCount = searchedItems.size,
                             isSearchOpen = isSearchOpen,
                             onSearchToggle = toggleSearch,
                             onFilterChange = onFilterChange,
@@ -644,6 +648,7 @@ private fun LibraryHeader(
     selectedFilter: LibraryFilter?,
     isGridView: Boolean,
     sortType: LibrarySortType,
+    itemCount: Int,
     isSearchOpen: Boolean,
     onSearchToggle: () -> Unit,
     onFilterChange: (LibraryFilter?) -> Unit,
@@ -792,6 +797,22 @@ private fun LibraryHeader(
                         contentDescription = text.search,
                     )
                 }
+            }
+            val countPlural =
+                when (selectedFilter) {
+                    LibraryFilter.TRACKS -> Res.plurals.song_count
+                    LibraryFilter.PLAYLISTS -> Res.plurals.n_playlist
+                    LibraryFilter.ARTISTS -> Res.plurals.n_artist
+                    LibraryFilter.ALBUMS -> Res.plurals.n_album
+                    else -> null
+                }
+            if (countPlural != null) {
+                Text(
+                    text = pluralStringResource(countPlural, itemCount, itemCount),
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.secondary,
+                    maxLines = 1,
+                )
             }
             if (isDesktop && isGridView) {
                 Box(Modifier.trackPressPosition { gridSizeMenuOffset = it.round() }) {

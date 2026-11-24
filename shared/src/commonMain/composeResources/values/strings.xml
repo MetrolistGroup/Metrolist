@@ -293,6 +293,11 @@
         <item quantity="one">%1$d artist</item>
         <item quantity="other">%1$d artists</item>
     </plurals>
+    <!-- Translators: Pluralized playlist count shown next to the sort control in the Library. %1$d is the playlist count. -->
+    <plurals name="n_playlist">
+        <item quantity="one">%1$d playlist</item>
+        <item quantity="other">%1$d playlists</item>
+    </plurals>
     <!-- Translators: Pluralized count or status for album in the listening statistics. %1$d is the album count. -->
     <plurals name="n_album">
         <item quantity="one">%1$d album</item>
