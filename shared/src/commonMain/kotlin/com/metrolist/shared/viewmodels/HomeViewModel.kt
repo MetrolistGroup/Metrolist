@@ -1034,21 +1034,22 @@ class HomeViewModel(
                                 }
                                 if (isFiltered) cachedSelectedChipContent = null
                                 if (loadingMoods) paginationInProgress.value = true
-                                _uiState.value = loadedState.withoutBlockedContent()
-                                primaryContentSnapshot = loadedState
+                                val publishedState = loadedState.copy(speedDialSurprisePinned = _uiState.value.speedDialSurprisePinned)
+                                _uiState.value = publishedState.withoutBlockedContent()
+                                primaryContentSnapshot = publishedState
                                 if (isFiltered) {
-                                    cachedSelectedChipContent = loadedState
-                                    loadedState.selectedChip?.let { chip ->
-                                        cacheChipContent(chip, loadedState)
+                                    cachedSelectedChipContent = publishedState
+                                    publishedState.selectedChip?.let { chip ->
+                                        cacheChipContent(chip, publishedState)
                                     }
                                     publishedPrimaryChipContent.update { it?.takeUnless { primary -> primary.first == generation } }
                                 } else {
                                     allContentReloadRequired = false
-                                    cacheAllContentState(loadedState)
+                                    cacheAllContentState(publishedState)
                                     publishedPrimaryAllContent.value = null
                                     publishedPrimaryChipContent.value = null
                                 }
-                                saveLastHomePage(loadedState)
+                                saveLastHomePage(publishedState)
                             }
                             if (!isFiltered) appendMissingMainFeedMoods(generation)
                         } finally {
