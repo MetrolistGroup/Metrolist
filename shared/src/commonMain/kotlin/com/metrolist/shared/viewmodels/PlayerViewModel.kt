@@ -214,6 +214,7 @@ class PlayerViewModel(
     private var lyricsRequestId = 0L
     private var lyricsRequestKey: String? = null
     private var lyricsRequestCacheOnly = false
+    private var pendingManualTranslationAudioId: String? = null
 
     private val canvasPlaybackRecovery = CanvasPlaybackRecovery()
     private val canvasPreloader = CanvasPreloader(viewModelScope, ::preloadCanvas)
@@ -228,6 +229,10 @@ class PlayerViewModel(
         }.onEach { song ->
             val isNewSong = song?.id != lastProcessedSongId
             val previousSongId = lastProcessedSongId
+            val newSongIsVideo = song?.isVideoSong == true
+            val manualTranslationAudioIdBeforeChange = pendingManualTranslationAudioId
+            val switchingToVideoWithManualTranslation =
+                newSongIsVideo && song?.originalQueueItemId != null && song.originalQueueItemId == previousSongId
             if (isNewSong) {
                 canvasPlaybackRecovery.reset()
                 lastProcessedSongId = song?.id
@@ -322,9 +327,10 @@ class PlayerViewModel(
                         manualAiTranslationForSongChange(
                             isNewSong = isNewSong,
                             newSongId = song?.id,
-                            newSongIsVideo = song?.isVideoSong == true,
+                            newSongIsVideo = newSongIsVideo,
                             newSongOriginalQueueItemId = song?.originalQueueItemId,
                             counterpartTrackId = _uiState.value.counterpartTrackId,
+                            pendingAudioId = manualTranslationAudioIdBeforeChange,
                             previousSongId = previousSongId,
                             currentValue = _uiState.value.manualAiTranslationEnabled,
                         ),
@@ -343,6 +349,8 @@ class PlayerViewModel(
                         },
                 )
             if (isNewSong) {
+                pendingManualTranslationAudioId =
+                    if (switchingToVideoWithManualTranslation) previousSongId else null
                 if (preloaded == null ||
                     (preloaded.spotifyAnimatedCoverUrl == null && preloaded.appleMusicAnimatedCoverUrl == null) ||
                     preloaded.canvasState == CanvasArtworkState.NOT_REQUESTED ||
@@ -2226,6 +2234,7 @@ internal fun manualAiTranslationForSongChange(
     newSongIsVideo: Boolean,
     newSongOriginalQueueItemId: String?,
     counterpartTrackId: String?,
+    pendingAudioId: String?,
     previousSongId: String?,
     currentValue: Boolean,
 ): Boolean =
@@ -2233,8 +2242,10 @@ internal fun manualAiTranslationForSongChange(
         currentValue
     } else {
         // The video ID is committed before fetchCounterpart resolves its audio ID, so the
-        // outward switch is identified by the original queue item carried on the video.
-        val returningToAudio = newSongId != null && newSongId == counterpartTrackId && previousSongId != newSongId
+        // outward switch uses the original queue item and an early return uses the remembered audio ID.
+        val returningToAudio =
+            newSongId != null && previousSongId != newSongId &&
+                (newSongId == counterpartTrackId || newSongId == pendingAudioId)
         val switchingToVideo =
             newSongIsVideo && newSongOriginalQueueItemId != null && newSongOriginalQueueItemId == previousSongId
         currentValue && (returningToAudio || switchingToVideo)
