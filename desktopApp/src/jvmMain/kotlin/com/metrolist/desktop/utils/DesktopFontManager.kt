@@ -308,6 +308,7 @@ object DesktopFontManager {
         check(copied > 0) { "Font download is empty" }
     }
 
+    @Synchronized
     private fun activate(
         destination: File,
         staging: File,
@@ -350,6 +351,7 @@ object DesktopFontManager {
     }
 
     /** Puts back a previous font left aside by an install that stopped between its two moves. */
+    @Synchronized
     private fun restoredFontDirectory(option: FontOption): File {
         val destination = fontDirectory(option)
         val backup = backupDirectory(option)

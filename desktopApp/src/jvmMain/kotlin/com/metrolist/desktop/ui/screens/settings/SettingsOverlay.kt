@@ -231,7 +231,7 @@ fun SettingsOverlay(colorScheme: ColorScheme) {
                         } else {
                             stringResource(Res.string.app_font_import_custom)
                         },
-                    enabled = downloadingFont == null,
+                    enabled = installedFontOptions != null && downloadingFont == null,
                     onClick = {
                         downloadingFont = FontOption.CUSTOM
                         failedFontImport = false
@@ -330,10 +330,10 @@ fun SettingsOverlay(colorScheme: ColorScheme) {
     LaunchedEffect(Unit) {
         UiState.openDevtoolsSettingsRequested = false
         UiState.openPlaylistImportRequested = false
-        withContext(Dispatchers.IO) {
-            customFontName = DesktopFontManager.customFontName()
-            installedFontOptions = DesktopFontManager.installedOptions()
-        }
+        val (name, installed) = withContext(Dispatchers.IO) { DesktopFontManager.customFontName() to DesktopFontManager.installedOptions() }
+        customFontName = name
+        // Set last: it enables importing, so no import result can be overwritten by this read.
+        installedFontOptions = installed
     }
 
     val dismiss = {
