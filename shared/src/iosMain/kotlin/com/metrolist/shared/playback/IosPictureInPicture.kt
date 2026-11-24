@@ -50,6 +50,7 @@ private object IosPictureInPictureBridge : NSObject(), AVPictureInPictureControl
     private var pendingRequest = false
     private var forwardingPlayPause = false
     private var forwardingSeek = false
+    private var ignoredTransportRate: Float? = null
     private var lastSurfacePositionMs: Long? = null
 
     fun request(
@@ -57,7 +58,9 @@ private object IosPictureInPictureBridge : NSObject(), AVPictureInPictureControl
         nextSurface: IosMusicVideoSurfacePlayer,
     ) {
         controller = playbackController
+        surface?.takeIf { it !== nextSurface }?.onApplicationTransportChange = null
         surface = nextSurface
+        nextSurface.onApplicationTransportChange = { ignoredTransportRate = it }
         playbackController.pictureInPictureSurfaceChanged = { retryPendingRequest() }
         val layer = nextSurface.layer
         if (pictureInPictureController?.playerLayer !== layer) {
@@ -134,6 +137,7 @@ private object IosPictureInPictureBridge : NSObject(), AVPictureInPictureControl
         observedPlayer = null
         forwardingPlayPause = false
         forwardingSeek = false
+        ignoredTransportRate = null
         lastSurfacePositionMs = null
     }
 
@@ -142,6 +146,10 @@ private object IosPictureInPictureBridge : NSObject(), AVPictureInPictureControl
         surfacePlayer: IosMusicVideoSurfacePlayer,
     ) {
         if (!surfacePlayer.pictureInPictureActive.value || forwardingPlayPause) return
+        if (ignoredTransportRate == surfacePlayer.player.rate) {
+            ignoredTransportRate = null
+            return
+        }
         val snapshot = playbackController.state.value
         if (snapshot.isLoading) return
         val surfacePlaying = surfacePlayer.player.rate != 0f

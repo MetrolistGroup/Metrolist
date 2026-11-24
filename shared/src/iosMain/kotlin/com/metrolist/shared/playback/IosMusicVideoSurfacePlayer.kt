@@ -38,6 +38,7 @@ internal class IosMusicVideoSurfacePlayer(
     internal val player = AVPlayer()
     val layer = AVPlayerLayer.playerLayerWithPlayer(player)
     val pictureInPictureActive = MutableStateFlow(false)
+    internal var onApplicationTransportChange: ((Float) -> Unit)? = null
     private var closed = false
     private var surfaceGeneration = 0L
     private var attachedSurfaceGeneration: Long? = null
@@ -107,12 +108,12 @@ internal class IosMusicVideoSurfacePlayer(
         surfaceVisible: Boolean = true,
     ) {
         if (closed) return
-        if (!surfaceVisible) {
+        if (!surfaceVisible && !pictureInPictureActive.value) {
             expectingProgress = false
             watchdog.reset()
             cancelPendingSeek()
             seekLifecycle.markUnsynchronized()
-            player.pause()
+            pauseForApplication()
             return
         }
         if (expectingProgress != playing) {
@@ -133,9 +134,9 @@ internal class IosMusicVideoSurfacePlayer(
         latestTargetUpdatedAt = TimeSource.Monotonic.markNow()
         applyPendingSeek()
         if (playing && player.rate != playbackSpeed) {
-            player.rate = playbackSpeed
+            setRateForApplication(playbackSpeed)
         } else if (!playing && player.rate != 0f) {
-            player.pause()
+            pauseForApplication()
         }
     }
 
@@ -152,7 +153,7 @@ internal class IosMusicVideoSurfacePlayer(
             seekCooldownStartedAt = null
             driftRetryPolicy.reset()
             driftRecoveryFailed = false
-            player.pause()
+            pauseForApplication()
         } else if (!wasForeground && isForeground) {
             userSeekPending = false
             seekCooldownStartedAt = null
@@ -250,7 +251,7 @@ internal class IosMusicVideoSurfacePlayer(
         userSeekPending = false
         seekCooldownStartedAt = null
         watchdog.reset()
-        player.pause()
+        pauseForApplication()
     }
 
     fun close() {
@@ -261,12 +262,22 @@ internal class IosMusicVideoSurfacePlayer(
         cancelPendingSeek()
         userSeekPending = false
         watchdog.reset()
-        player.pause()
+        pauseForApplication()
         closed = true
         failureObserver?.let { NSNotificationCenter.defaultCenter.removeObserver(it) }
         failureObserver = null
         layer.player = null
         player.replaceCurrentItemWithPlayerItem(null)
+    }
+
+    private fun pauseForApplication() {
+        player.pause()
+        onApplicationTransportChange?.invoke(0f)
+    }
+
+    private fun setRateForApplication(rate: Float) {
+        player.rate = rate
+        onApplicationTransportChange?.invoke(rate)
     }
 
     private companion object {
