@@ -75,9 +75,9 @@ class AndroidPlaybackController(
         queue: List<SongItem>,
         songsOnly: Boolean,
     ) {
-        val songs = queue.ifEmpty { listOf(song) }
-        val index = songs.indexOfPlaylistOccurrence(song)
-        connection.playQueue(songs, index.coerceAtLeast(0), songsOnly = songsOnly)
+        if (queue.size <= 1) return connection.playSong(song, "")
+        val index = queue.indexOfPlaylistOccurrence(song)
+        connection.playQueue(queue, index.coerceAtLeast(0), songsOnly = songsOnly)
     }
 
     override fun shuffleQueue(

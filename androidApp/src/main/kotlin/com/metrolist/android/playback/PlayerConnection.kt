@@ -738,7 +738,7 @@ class PlayerConnection(
     }
 
     // Podcast episodes and local files have no YouTube radio to follow them.
-    private val SongItem.startsRadio: Boolean get() = !isPodcast && !isLocal
+    private val SongItem.startsRadio: Boolean get() = !isPodcast && !isLocal && !id.startsWith("local_")
 
     fun playNext(song: SongItem) {
         addToQueue(song, playNext = true)
