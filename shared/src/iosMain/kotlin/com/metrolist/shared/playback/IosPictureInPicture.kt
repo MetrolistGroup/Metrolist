@@ -177,7 +177,7 @@ private object IosPictureInPictureBridge : NSObject(), AVPictureInPictureControl
                     }
                 }
                 while (isActive) {
-                    if (playbackController.pictureInPictureSurface() !== surfacePlayer) break
+                    if (surfacePlayer.released || !surfacePlayer.pictureInPictureActive.value) break
                     if (surfacePlayer.hasFailed() || surfacePlayer.driftRecoveryFailed) {
                         playbackController.reportVideoPlaybackFailure()
                         break

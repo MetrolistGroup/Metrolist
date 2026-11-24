@@ -102,6 +102,9 @@ internal class IosMusicVideoSurfacePlayer(
         }
     }
 
+    val released: Boolean
+        get() = closed
+
     val failed: Boolean
         get() = closed || didFail || player.currentItem == null || player.currentItem?.status == AVPlayerItemStatusFailed
 
