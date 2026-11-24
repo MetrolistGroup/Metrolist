@@ -2,6 +2,7 @@
 
 package com.metrolist.shared.deviceconnect
 
+import com.metrolist.shared.utils.Logger
 import kotlinx.atomicfu.locks.SynchronizedObject
 import kotlinx.atomicfu.locks.synchronized
 import kotlinx.cinterop.readBytes
@@ -14,8 +15,10 @@ import platform.Foundation.NSRunLoop
 import platform.Foundation.NSRunLoopCommonModes
 import platform.Network.nw_browse_descriptor_create_bonjour_service
 import platform.Network.nw_browse_descriptor_set_include_txt_record
+import platform.Network.nw_browse_result_change_identical
 import platform.Network.nw_browse_result_copy_endpoint
 import platform.Network.nw_browse_result_copy_txt_record_object
+import platform.Network.nw_browse_result_get_changes
 import platform.Network.nw_browse_result_t
 import platform.Network.nw_browser_cancel
 import platform.Network.nw_browser_create
@@ -47,6 +50,7 @@ actual class DeviceDiscoveryController actual constructor(
     private val lock = SynchronizedObject()
     private var browser: nw_browser_t? = null
     private var discovering = false
+    private var session = 0L
     private val devicesByService = mutableMapOf<String, DiscoveredDevice>()
     private val resolversByService = mutableMapOf<String, ActiveResolver>()
 
@@ -68,13 +72,12 @@ actual class DeviceDiscoveryController actual constructor(
         onFound: (DiscoveredDevice) -> Unit,
         onLost: (DiscoveredDevice) -> Unit,
     ) {
-        val shouldStart =
+        val currentSession =
             synchronized(lock) {
                 if (discovering) return
                 discovering = true
-                true
+                ++session
             }
-        if (!shouldStart) return
 
         val descriptor =
             nw_browse_descriptor_create_bonjour_service(
@@ -82,34 +85,42 @@ actual class DeviceDiscoveryController actual constructor(
                 null,
             )
         if (descriptor == null) {
-            synchronized(lock) { discovering = false }
-            onError("Failed to create iOS Bonjour browse descriptor.", null)
-            onFailure()
+            synchronized(lock) {
+                if (session == currentSession) discovering = false
+            }
+            if (isSameSession(currentSession)) {
+                onError("Failed to create iOS Bonjour browse descriptor.", null)
+                onFailure()
+            }
             return
         }
         nw_browse_descriptor_set_include_txt_record(descriptor, true)
 
         val createdBrowser = nw_browser_create(descriptor, null)
         if (createdBrowser == null) {
-            synchronized(lock) { discovering = false }
-            onError("Failed to create iOS Bonjour browser.", null)
-            onFailure()
+            synchronized(lock) {
+                if (session == currentSession) discovering = false
+            }
+            if (isSameSession(currentSession)) {
+                onError("Failed to create iOS Bonjour browser.", null)
+                onFailure()
+            }
             return
         }
 
         nw_browser_set_queue(createdBrowser, dispatch_get_main_queue())
         nw_browser_set_state_changed_handler(createdBrowser) { state, _ ->
-            if (state == nw_browser_state_failed) {
+            if (state == nw_browser_state_failed && isCurrentSession(currentSession)) {
                 onError("iOS Bonjour discovery failed.", null)
                 onFailure()
             }
         }
         nw_browser_set_browse_results_changed_handler(createdBrowser) { oldResult, newResult, _ ->
-            handleBrowseChange(oldResult, newResult, onFound, onLost)
+            handleBrowseChange(oldResult, newResult, onFound, onLost, currentSession)
         }
 
         synchronized(lock) {
-            if (!discovering) {
+            if (!discovering || session != currentSession) {
                 nw_browser_cancel(createdBrowser)
                 return
             }
@@ -118,22 +129,35 @@ actual class DeviceDiscoveryController actual constructor(
         nw_browser_start(createdBrowser)
     }
 
+    private fun isSameSession(currentSession: Long): Boolean = synchronized(lock) { session == currentSession }
+
+    private fun isCurrentSession(currentSession: Long): Boolean = synchronized(lock) { discovering && session == currentSession }
+
     private fun handleBrowseChange(
         oldResult: nw_browse_result_t?,
         newResult: nw_browse_result_t?,
         onFound: (DiscoveredDevice) -> Unit,
         onLost: (DiscoveredDevice) -> Unit,
+        currentSession: Long,
     ) {
         val removed = bonjourService(oldResult)
         val added = bonjourService(newResult)
         val removedKey = removed?.serviceName
         val addedKey = added?.serviceName
+        val changes = nw_browse_result_get_changes(oldResult, newResult)
+        val inPlaceUpdate =
+            removedKey != null && removedKey == addedKey &&
+                (changes and nw_browse_result_change_identical.toULong()) == 0uL
 
         if (removed != null && removedKey != null && removedKey != addedKey) {
             val lost =
                 synchronized(lock) {
-                    resolversByService.remove(removedKey)?.let(::stopResolver)
-                    devicesByService.remove(removedKey)
+                    if (!discovering || session != currentSession) {
+                        null
+                    } else {
+                        resolversByService.remove(removedKey)?.let(::stopResolver)
+                        devicesByService.remove(removedKey)
+                    }
                 }
             lost?.let(onLost)
         }
@@ -141,43 +165,54 @@ actual class DeviceDiscoveryController actual constructor(
         if (added != null && addedKey != null) {
             val (staleDevice, shouldResolve) =
                 synchronized(lock) {
-                    val cached = devicesByService[addedKey]
-                    val stale = cached?.takeIf { !it.matches(added) }
-                    if (stale != null) {
-                        resolversByService.remove(addedKey)?.let(::stopResolver)
-                        devicesByService.remove(addedKey)
+                    if (!discovering || session != currentSession) {
+                        null to false
+                    } else {
+                        val cached = devicesByService[addedKey]
+                        val active = resolversByService[addedKey]
+                        val identityChanged = active != null && active.service != added
+                        val stale = cached?.takeIf { !it.matches(added) || inPlaceUpdate }
+                        if (identityChanged) {
+                            resolversByService.remove(addedKey)?.let(::stopResolver)
+                        }
+                        if (stale != null) {
+                            devicesByService.remove(addedKey)
+                        }
+                        stale to
+                            (
+                                (cached == null || stale != null || identityChanged) &&
+                                    !resolversByService.containsKey(addedKey)
+                            )
                     }
-                    stale to (
-                        discovering &&
-                            (cached == null || stale != null) &&
-                            !resolversByService.containsKey(addedKey)
-                    )
                 }
             staleDevice?.let(onLost)
-            if (shouldResolve) resolve(added, onFound)
+            if (shouldResolve) resolve(added, onFound, currentSession)
         }
     }
 
     private fun resolve(
         service: BonjourService,
         onFound: (DiscoveredDevice) -> Unit,
+        currentSession: Long,
         attempt: Int = 1,
     ) {
         val netService = NSNetService(service.domain, service.type, service.serviceName)
         val delegate =
             BonjourResolverDelegate(service) { resolver, resolved ->
-                finishResolution(service.serviceName, resolver, resolved, attempt, onFound)
+                finishResolution(service.serviceName, resolver, resolved, attempt, onFound, currentSession)
             }
         val accepted =
             synchronized(lock) {
                 if (
                     !discovering ||
+                    session != currentSession ||
                     devicesByService.containsKey(service.serviceName) ||
                     resolversByService.containsKey(service.serviceName)
                 ) {
                     false
                 } else {
-                    resolversByService[service.serviceName] = ActiveResolver(service, netService, delegate, attempt)
+                    resolversByService[service.serviceName] =
+                        ActiveResolver(service, netService, delegate, attempt, currentSession)
                     true
                 }
             }
@@ -198,11 +233,17 @@ actual class DeviceDiscoveryController actual constructor(
         device: DiscoveredDevice?,
         attempt: Int,
         onFound: (DiscoveredDevice) -> Unit,
+        currentSession: Long,
     ) {
         val result =
             synchronized(lock) {
                 val owner = resolversByService[serviceName]
-                if (owner == null || owner.netService !== netService || owner.attempt != attempt) {
+                if (
+                    owner == null ||
+                    owner.netService !== netService ||
+                    owner.attempt != attempt ||
+                    owner.session != currentSession
+                ) {
                     return@synchronized null
                 }
                 resolversByService.remove(serviceName)
@@ -210,6 +251,7 @@ actual class DeviceDiscoveryController actual constructor(
                 when {
                     device != null &&
                         discovering &&
+                        session == currentSession &&
                         !devicesByService.containsKey(serviceName) -> {
                         devicesByService[serviceName] = device
                         ResolutionResult.Found(device)
@@ -217,9 +259,10 @@ actual class DeviceDiscoveryController actual constructor(
 
                     device == null &&
                         discovering &&
+                        session == currentSession &&
                         !devicesByService.containsKey(serviceName) &&
                         attempt < BONJOUR_RESOLVE_MAX_ATTEMPTS -> {
-                        ResolutionResult.Retry(owner.service, attempt + 1)
+                        ResolutionResult.Retry(owner.service, attempt + 1, currentSession)
                     }
 
                     else -> {
@@ -233,12 +276,14 @@ actual class DeviceDiscoveryController actual constructor(
             }
 
             is ResolutionResult.Retry -> {
-                resolve(result.service, onFound, result.attempt)
+                resolve(result.service, onFound, result.session, result.attempt)
             }
 
             ResolutionResult.Failed -> {
-                onError("iOS Bonjour resolution failed for $serviceName.", null)
-                onFailure()
+                Logger.w(
+                    "DeviceDiscoveryController",
+                    "iOS Bonjour resolution failed for $serviceName after $attempt attempt(s).",
+                )
             }
 
             null -> {
@@ -285,6 +330,7 @@ actual class DeviceDiscoveryController actual constructor(
         val netService: NSNetService,
         val delegate: BonjourResolverDelegate,
         val attempt: Int,
+        val session: Long,
     )
 
     private sealed interface ResolutionResult {
@@ -295,6 +341,7 @@ actual class DeviceDiscoveryController actual constructor(
         data class Retry(
             val service: BonjourService,
             val attempt: Int,
+            val session: Long,
         ) : ResolutionResult
 
         data object Failed : ResolutionResult
@@ -304,6 +351,7 @@ actual class DeviceDiscoveryController actual constructor(
         val (activeBrowser, activeResolvers) =
             synchronized(lock) {
                 discovering = false
+                session++
                 devicesByService.clear()
                 val resolvers = resolversByService.values.toList()
                 resolversByService.clear()
