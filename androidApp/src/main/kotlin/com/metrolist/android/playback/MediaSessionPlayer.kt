@@ -970,7 +970,7 @@ class MediaSessionPlayer(
         if (isPlaybackLockedProvider()) return
         if (interceptDeviceConnect(DcPlaybackCommand(DcPlaybackAction.PREVIOUS))) return
         getPreviousMediaItemIndex().takeUnless { it == C.INDEX_UNSET }?.let {
-            musicPlayer.skipToQueueItem(it, resumePlayback = musicPlayer.wantsPlayback)
+            musicPlayer.skipToQueueItem(it, resumePlayback = musicPlayer.wantsPlayback, backward = true)
         }
     }
 

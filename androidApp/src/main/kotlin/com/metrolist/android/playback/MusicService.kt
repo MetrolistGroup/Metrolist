@@ -2263,14 +2263,17 @@ class MusicService :
         request: QueuePlaybackRequest,
     ) {
         val available = audioCacheManager.cachedSongIds(player.songQueue.value.mapTo(mutableSetOf()) { it.id })
+        // Read the queue after the lookup suspends, so a queue move meanwhile cannot shift the chosen index.
+        val songs = player.songQueue.value
+        val currentIndex = player.currentMediaItemIndex.value
+        val repeatAll = _repeatMode.value == Player.REPEAT_MODE_ALL
+        val isPlayable: suspend (SongItem) -> Boolean = { song ->
+            song.isLocal || song.id.startsWith("local_") || song.id in available
+        }
+        // Previous keeps moving backwards; without an earlier playable track it returns forwards as before.
         val next =
-            nextOfflineQueueIndex(
-                player.songQueue.value,
-                player.currentMediaItemIndex.value,
-                _repeatMode.value == Player.REPEAT_MODE_ALL,
-            ) { song ->
-                song.isLocal || song.id.startsWith("local_") || song.id in available
-            }
+            nextOfflineQueueIndex(songs, currentIndex, repeatAll, backward = request.backward, isPlayable = isPlayable)
+                ?: if (request.backward) nextOfflineQueueIndex(songs, currentIndex, repeatAll, isPlayable = isPlayable) else null
         if (!isCurrentQueueRequest(sessionId, request)) return
         if (next != null && !AndroidListenTogetherManager.isGuestPlaybackLocked && !AndroidDeviceConnect.manager.remote.isActive) {
             player.skipToQueueItem(next, resumePlayback = player.wantsPlayback)
