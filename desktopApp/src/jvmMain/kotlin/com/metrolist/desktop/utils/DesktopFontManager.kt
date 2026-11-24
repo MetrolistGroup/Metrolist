@@ -16,6 +16,8 @@ import com.metrolist.shared.settings.FontOption
 import com.metrolist.shared.settings.Settings
 import com.metrolist.shared.utils.XdgUtils
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import okhttp3.HttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrl
@@ -92,6 +94,7 @@ object DesktopFontManager {
                 archiveBoldEntry = "MapleMono-Bold.ttf",
             ),
         )
+    private val customImportLock = Mutex()
     private val specsByOption = specs.associateBy(FontSpec::option)
     private val client =
         sharedOkHttpClient
@@ -181,27 +184,30 @@ object DesktopFontManager {
 
     /** Copies a user-selected font into app storage, activates it and returns its family name. */
     suspend fun importCustom(source: File): Result<String> =
-        withContext(Dispatchers.IO) {
-            runCatching {
-                val option = FontOption.CUSTOM
-                recoverInterruptedInstall(option)
-                val staging = stagingDirectory(option).apply { deleteRecursively() }
-                check(staging.mkdirs()) { "Could not create the font staging directory" }
-                try {
-                    val font = File(staging, REGULAR_FILE)
-                    source.inputStream().use { input ->
-                        font.outputStream().use { output -> copyBounded(input, output) }
+        // Imports share one staging directory, so a second one waits for the first to finish.
+        customImportLock.withLock {
+            withContext(Dispatchers.IO) {
+                runCatching {
+                    val option = FontOption.CUSTOM
+                    recoverInterruptedInstall(option)
+                    val staging = stagingDirectory(option).apply { deleteRecursively() }
+                    check(staging.mkdirs()) { "Could not create the font staging directory" }
+                    try {
+                        val font = File(staging, REGULAR_FILE)
+                        source.inputStream().use { input ->
+                            font.outputStream().use { output -> copyBounded(input, output) }
+                        }
+                        val familyName = validateFont(font).ifBlank { source.nameWithoutExtension }
+                        // Installed with the font so a file-name fallback survives reopening settings.
+                        File(staging, NAME_FILE).writeText(familyName)
+                        activate(fontDirectory(option), staging, backupDirectory(option))
+                        // Activate here so a cancelled settings scope cannot leave the import installed but unused.
+                        Settings.shared.appFont = option
+                        revision++
+                        familyName
+                    } finally {
+                        staging.deleteRecursively()
                     }
-                    val familyName = validateFont(font).ifBlank { source.nameWithoutExtension }
-                    // Installed with the font so a file-name fallback survives reopening settings.
-                    File(staging, NAME_FILE).writeText(familyName)
-                    activate(fontDirectory(option), staging, backupDirectory(option))
-                    // Activate here so a cancelled settings scope cannot leave the import installed but unused.
-                    Settings.shared.appFont = option
-                    revision++
-                    familyName
-                } finally {
-                    staging.deleteRecursively()
                 }
             }
         }
