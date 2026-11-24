@@ -7,7 +7,6 @@ import android.content.ServiceConnection
 import android.os.Build
 import android.os.IBinder
 import android.widget.Toast
-import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.media3.common.Player
 import com.metrolist.android.R
@@ -60,7 +59,6 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.dropWhile
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
@@ -627,11 +625,9 @@ class PlayerConnection(
                 updateProgress()
             }
         }
-        // While whole songs are cached during playback, the buffered track shows how much of the song is stored.
+        // The stored share of the stream lets the buffered track run ahead of the player's own buffer.
         scope.launch {
-            combine(snapshotFlow { Settings.shared.cacheWholeSongWhilePlaying }, player.currentPlaybackResource) { enabled, resource ->
-                resource?.takeIf { enabled }
-            }.distinctUntilChanged()
+            player.currentPlaybackResource
                 .flatMapLatest { resource ->
                     when {
                         resource == null -> flowOf(0f)
@@ -682,12 +678,10 @@ class PlayerConnection(
         if (dur > 0) {
             _progress.value = (_currentPosition.value.toFloat() / dur.toFloat()).coerceIn(0f, 1f)
             val inVideoMode = _isVideoModeActive.value || _isVideoViewerVisible.value
-            _bufferedProgress.value =
-                if (inVideoMode) {
-                    (_bufferedPosition.value.toFloat() / dur.toFloat()).coerceIn(0f, 1f)
-                } else {
-                    storedSongFraction
-                }
+            val buffered = (_bufferedPosition.value.toFloat() / dur.toFloat()).coerceIn(0f, 1f)
+            // In audio mode the buffered track shows everything playable without the network: the player's buffer or
+            // the stored share of the song, whichever reaches further.
+            _bufferedProgress.value = if (inVideoMode) buffered else maxOf(buffered, storedSongFraction)
         } else {
             _progress.value = 0f
             _bufferedProgress.value = 0f
