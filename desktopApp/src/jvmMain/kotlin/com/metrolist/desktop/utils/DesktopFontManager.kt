@@ -106,14 +106,20 @@ object DesktopFontManager {
 
     fun installedOptions(): Set<FontOption> = downloadableOptions.filterTo(mutableSetOf(), ::isDownloaded)
 
+    fun hasCustomFont(): Boolean = isDownloaded(FontOption.CUSTOM)
+
     fun loadFontFamily(option: FontOption): FontFamily? {
         if (!isDownloaded(option)) return null
         val directory = fontDirectory(option)
         return runCatching {
-            FontFamily(
-                Font(File(directory, REGULAR_FILE), FontWeight.Normal),
-                Font(File(directory, BOLD_FILE), FontWeight.Bold),
-            )
+            if (option == FontOption.CUSTOM) {
+                FontFamily(Font(File(directory, REGULAR_FILE), FontWeight.Normal))
+            } else {
+                FontFamily(
+                    Font(File(directory, REGULAR_FILE), FontWeight.Normal),
+                    Font(File(directory, BOLD_FILE), FontWeight.Bold),
+                )
+            }
         }.getOrNull()
     }
 
@@ -163,6 +169,29 @@ object DesktopFontManager {
             }
         }
 
+    /** Copies a user-selected font into app storage and returns its family name. */
+    suspend fun importCustom(source: File): Result<String> =
+        withContext(Dispatchers.IO) {
+            runCatching {
+                val option = FontOption.CUSTOM
+                recoverInterruptedInstall(option)
+                val staging = stagingDirectory(option).apply { deleteRecursively() }
+                check(staging.mkdirs()) { "Could not create the font staging directory" }
+                try {
+                    val font = File(staging, REGULAR_FILE)
+                    source.inputStream().use { input ->
+                        font.outputStream().use { output -> copyBounded(input, output) }
+                    }
+                    val familyName = validateFont(font).ifBlank { source.nameWithoutExtension }
+                    activate(fontDirectory(option), staging, backupDirectory(option))
+                    revision++
+                    familyName
+                } finally {
+                    staging.deleteRecursively()
+                }
+            }
+        }
+
     internal fun hasSha256(
         file: File,
         expected: String,
@@ -182,6 +211,7 @@ object DesktopFontManager {
         val directory = fontDirectory(option)
         val regular = File(directory, REGULAR_FILE)
         val bold = File(directory, BOLD_FILE)
+        if (option == FontOption.CUSTOM) return regular.isFile && runCatching { validateFont(regular) }.isSuccess
         return regular.isFile && bold.isFile &&
             runCatching {
                 validateFont(regular)
@@ -189,9 +219,9 @@ object DesktopFontManager {
             }.isSuccess
     }
 
-    private fun validateFont(file: File) {
-        check(file.length() in 1..MAX_FONT_BYTES) { "Downloaded font has an invalid size" }
-        checkNotNull(FontMgr.default.makeFromFile(file.absolutePath)) { "Downloaded file is not a supported font" }.close()
+    private fun validateFont(file: File): String {
+        check(file.length() in 1..MAX_FONT_BYTES) { "Font file has an invalid size" }
+        return checkNotNull(FontMgr.default.makeFromFile(file.absolutePath)) { "File is not a supported font" }.use { it.familyName }
     }
 
     private fun download(

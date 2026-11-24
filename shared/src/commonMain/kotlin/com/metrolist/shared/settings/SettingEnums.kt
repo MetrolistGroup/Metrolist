@@ -117,6 +117,7 @@ enum class FontOption {
     INTER,
     GOOGLE_SANS,
     MAPLE_MONO,
+    CUSTOM,
 }
 
 enum class AnimatedCoverResolution {
