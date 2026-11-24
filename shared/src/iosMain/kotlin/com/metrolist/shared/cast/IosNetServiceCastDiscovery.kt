@@ -3,11 +3,13 @@
 package com.metrolist.shared.cast
 
 import kotlinx.cinterop.ExperimentalForeignApi
+import kotlinx.cinterop.ObjCSignatureOverride
+import kotlinx.cinterop.readBytes
+import platform.Foundation.NSLock
 import platform.Foundation.NSNetService
 import platform.Foundation.NSNetServiceBrowser
 import platform.Foundation.NSNetServiceBrowserDelegateProtocol
 import platform.Foundation.NSNetServiceDelegateProtocol
-import platform.Foundation.NSLock
 import platform.darwin.NSObject
 
 internal class IosNetServiceCastDiscovery : MdnsCastDiscovery {
@@ -17,6 +19,8 @@ internal class IosNetServiceCastDiscovery : MdnsCastDiscovery {
     private var callbacks: Callbacks? = null
     private val browsers = mutableMapOf<CastProtocol, NSNetServiceBrowser>()
     private val browserDelegates = mutableMapOf<CastProtocol, BrowserDelegate>()
+    private val services = mutableMapOf<String, NSNetService>()
+    private val serviceDelegates = mutableMapOf<String, ServiceDelegate>()
 
     private inline fun <T> withLock(block: () -> T): T {
         lock.lock()
@@ -27,8 +31,10 @@ internal class IosNetServiceCastDiscovery : MdnsCastDiscovery {
         }
     }
 
-    private val services = mutableMapOf<String, NSNetService>()
-    private val serviceDelegates = mutableMapOf<String, ServiceDelegate>()
+    private data class ActiveHandles(
+        val browsers: List<NSNetServiceBrowser>,
+        val services: List<NSNetService>,
+    )
 
     override fun start(
         onDeviceFound: (CastDevice) -> Unit,
@@ -58,9 +64,9 @@ internal class IosNetServiceCastDiscovery : MdnsCastDiscovery {
             if (!running || generation != startedGeneration) return
             browsers[protocol] = browser
             browserDelegates[protocol] = delegate
+            browser.delegate = delegate
+            browser.searchForServicesOfType(type, LOCAL_DOMAIN)
         }
-        browser.delegate = delegate
-        browser.searchForServicesOfType(type, LOCAL_DOMAIN)
     }
 
     private fun onServiceFound(
@@ -69,41 +75,36 @@ internal class IosNetServiceCastDiscovery : MdnsCastDiscovery {
         service: NSNetService,
     ) {
         val id = deviceId(protocol, service.name)
-        val shouldResolve =
-            withLock {
-                if (!running || generation != eventGeneration || services.containsKey(id)) {
-                    false
-                } else {
-                    val delegate = ServiceDelegate(id, protocol, eventGeneration)
-                    services[id] = service
-                    serviceDelegates[id] = delegate
-                    service.delegate = delegate
-                    true
-                }
-            }
-        if (shouldResolve) service.resolveWithTimeout(5.0)
+        withLock {
+            if (!running || generation != eventGeneration || services.containsKey(id)) return
+            val delegate = ServiceDelegate(id, protocol, eventGeneration)
+            services[id] = service
+            serviceDelegates[id] = delegate
+            service.delegate = delegate
+            service.resolveWithTimeout(RESOLVE_TIMEOUT_SECONDS)
+        }
     }
 
     private fun onServiceResolved(
         id: String,
         protocol: CastProtocol,
         eventGeneration: Long,
+        service: NSNetService,
     ) {
-        val service =
+        val current =
             withLock {
-                if (!running || generation != eventGeneration) null else services[id]
+                if (!running || generation != eventGeneration || services[id] !== service) null else service
             } ?: return
-        val host = service.hostName?.takeIf(String::isNotBlank)
-        val port = service.port.toInt()
+        val host = current.hostName?.takeIf(String::isNotBlank)
+        val port = current.port.toInt()
         if (host == null || port <= 0) {
-            forgetService(id)
-            reportDiscoveryError(eventGeneration)
+            failService(service, id, eventGeneration)
             return
         }
         val device =
             CastDevice(
                 id = id,
-                name = service.name.takeIf(String::isNotBlank) ?: id,
+                name = friendlyName(current) ?: current.name.takeIf(String::isNotBlank) ?: id,
                 protocol = protocol,
                 host = host,
                 port = port,
@@ -115,29 +116,58 @@ internal class IosNetServiceCastDiscovery : MdnsCastDiscovery {
         onDeviceFound?.invoke(device)
     }
 
+    private fun friendlyName(service: NSNetService): String? {
+        val txtData = service.TXTRecordData() ?: return null
+        val bytes = txtData.bytes?.readBytes(txtData.length.toInt()) ?: return null
+        var offset = 0
+        while (offset < bytes.size) {
+            val length = bytes[offset].toInt() and 0xFF
+            offset++
+            if (length == 0 || offset + length > bytes.size) return null
+            val record = bytes.copyOfRange(offset, offset + length).decodeToString()
+            offset += length
+            if (record.startsWith(FRIENDLY_NAME_KEY, ignoreCase = true)) {
+                return record.substring(FRIENDLY_NAME_KEY.length).takeIf(String::isNotBlank)
+            }
+        }
+        return null
+    }
+
     private fun onServiceLost(
         protocol: CastProtocol,
         eventGeneration: Long,
         service: NSNetService,
     ) {
         val id = deviceId(protocol, service.name)
-        val onDeviceLost =
+        val (onDeviceLost, staleService) =
             withLock {
-                if (!running || generation != eventGeneration) {
-                    null
-                } else {
-                    forgetServiceLocked(id)
-                    callbacks?.onDeviceLost
-                }
+                if (!running || generation != eventGeneration) return
+                val removed = forgetServiceLocked(id)
+                callbacks?.onDeviceLost to removed
             }
+        staleService?.let(::stopService)
         onDeviceLost?.invoke(id)
     }
 
     private fun onServiceFailed(
         id: String,
         eventGeneration: Long,
+        service: NSNetService,
     ) {
-        forgetService(id)
+        failService(service, id, eventGeneration)
+    }
+
+    private fun failService(
+        service: NSNetService,
+        id: String,
+        eventGeneration: Long,
+    ) {
+        val staleService =
+            withLock {
+                if (!running || generation != eventGeneration || services[id] !== service) return
+                forgetServiceLocked(id)
+            }
+        staleService?.let(::stopService)
         reportDiscoveryError(eventGeneration)
     }
 
@@ -149,13 +179,14 @@ internal class IosNetServiceCastDiscovery : MdnsCastDiscovery {
         onError?.invoke(CastError.DISCOVERY_FAILED)
     }
 
-    private fun forgetService(id: String) {
-        val service =
-            withLock {
-                forgetServiceLocked(id)
-            }
-        service?.delegate = null
-        service?.stop()
+    private fun stopService(service: NSNetService) {
+        service.delegate = null
+        service.stop()
+    }
+
+    private fun stopBrowser(browser: NSNetServiceBrowser) {
+        browser.delegate = null
+        browser.stop()
     }
 
     private fun forgetServiceLocked(id: String): NSNetService? {
@@ -163,29 +194,42 @@ internal class IosNetServiceCastDiscovery : MdnsCastDiscovery {
         return services.remove(id)
     }
 
+    private fun clearLocked(): ActiveHandles {
+        running = false
+        ++generation
+        callbacks = null
+        val activeBrowsers = browsers.values.toList()
+        val activeServices = services.values.toList()
+        browsers.clear()
+        browserDelegates.clear()
+        services.clear()
+        serviceDelegates.clear()
+        return ActiveHandles(activeBrowsers, activeServices)
+    }
+
+    private fun stopHandles(handles: ActiveHandles) {
+        handles.browsers.forEach(::stopBrowser)
+        handles.services.forEach(::stopService)
+    }
+
+    private fun failDiscovery(eventGeneration: Long) {
+        val (onError, handles) =
+            withLock {
+                if (!running || generation != eventGeneration) return
+                val error = callbacks?.onError
+                error to clearLocked()
+            }
+        stopHandles(handles)
+        onError?.invoke(CastError.DISCOVERY_FAILED)
+    }
+
     override fun stop() {
-        val (eventGeneration, activeBrowsers, activeServices) =
+        val handles =
             withLock {
                 if (!running) return
-                running = false
-                val stoppedGeneration = ++generation
-                callbacks = null
-                val browserList = browsers.values.toList()
-                val serviceList = services.values.toList()
-                browsers.clear()
-                browserDelegates.clear()
-                services.clear()
-                serviceDelegates.clear()
-                Triple(stoppedGeneration, browserList, serviceList)
+                clearLocked()
             }
-        activeBrowsers.forEach { browser ->
-            browser.delegate = null
-            browser.stop()
-        }
-        activeServices.forEach { service ->
-            service.delegate = null
-            service.stop()
-        }
+        stopHandles(handles)
     }
 
     private fun deviceId(
@@ -202,37 +246,47 @@ internal class IosNetServiceCastDiscovery : MdnsCastDiscovery {
     private inner class BrowserDelegate(
         private val protocol: CastProtocol,
         private val eventGeneration: Long,
-    ) : NSObject(), NSNetServiceBrowserDelegateProtocol {
+    ) : NSObject(),
+        NSNetServiceBrowserDelegateProtocol {
+        @ObjCSignatureOverride
         override fun netServiceBrowser(
             browser: NSNetServiceBrowser,
             didFindService: NSNetService,
             moreComing: Boolean,
         ) = onServiceFound(protocol, eventGeneration, didFindService)
 
+        @ObjCSignatureOverride
         override fun netServiceBrowser(
             browser: NSNetServiceBrowser,
             didRemoveService: NSNetService,
             moreComing: Boolean,
         ) = onServiceLost(protocol, eventGeneration, didRemoveService)
+
+        override fun netServiceBrowser(
+            browser: NSNetServiceBrowser,
+            didNotSearch: Map<Any?, *>,
+        ) = failDiscovery(eventGeneration)
     }
 
     private inner class ServiceDelegate(
         private val id: String,
         private val protocol: CastProtocol,
         private val eventGeneration: Long,
-    ) : NSObject(), NSNetServiceDelegateProtocol {
-        override fun netServiceDidResolveAddress(sender: NSNetService) =
-            onServiceResolved(id, protocol, eventGeneration)
+    ) : NSObject(),
+        NSNetServiceDelegateProtocol {
+        override fun netServiceDidResolveAddress(sender: NSNetService) = onServiceResolved(id, protocol, eventGeneration, sender)
 
         override fun netService(
             sender: NSNetService,
-            didNotResolve: Map<*, *>,
-        ) = onServiceFailed(id, eventGeneration)
+            didNotResolve: Map<Any?, *>,
+        ) = onServiceFailed(id, eventGeneration, sender)
     }
 
     private companion object {
         const val CAST_TYPE = "_fcast._tcp."
         const val GOOGLE_CAST_TYPE = "_googlecast._tcp."
         const val LOCAL_DOMAIN = "local."
+        const val FRIENDLY_NAME_KEY = "fn="
+        const val RESOLVE_TIMEOUT_SECONDS = 5.0
     }
 }
