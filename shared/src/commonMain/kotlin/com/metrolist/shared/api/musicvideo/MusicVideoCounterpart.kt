@@ -29,6 +29,11 @@ data class CounterpartPositionMap(
         }
     }
 
+    fun isPastLastSegment(positionMs: Long): Boolean {
+        val last = segments.lastOrNull() ?: return false
+        return positionMs.coerceAtLeast(0L) >= last.sourceStartMs + last.durationMs
+    }
+
     fun mappedPosition(positionMs: Long): Long? {
         val position = positionMs.coerceAtLeast(0L)
         for (segment in segments) {

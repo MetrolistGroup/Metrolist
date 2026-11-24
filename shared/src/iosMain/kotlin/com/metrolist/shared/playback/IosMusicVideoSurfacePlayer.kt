@@ -135,6 +135,7 @@ internal class IosMusicVideoSurfacePlayer(
         playing: Boolean,
         playbackSpeed: Float,
         surfaceVisible: Boolean = true,
+        shouldExpectProgress: Boolean = playing,
     ) {
         if (closed) return
         if (!surfaceVisible && !_pictureInPictureActive.value) {
@@ -145,8 +146,8 @@ internal class IosMusicVideoSurfacePlayer(
             pauseForApplication()
             return
         }
-        if (expectingProgress != playing) {
-            expectingProgress = playing
+        if (expectingProgress != shouldExpectProgress) {
+            expectingProgress = shouldExpectProgress
             watchdog.reset()
         }
         val targetPositionMs = positionMs.coerceAtLeast(0L)

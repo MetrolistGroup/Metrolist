@@ -175,11 +175,16 @@ private object IosPictureInPictureBridge : NSObject(), AVPictureInPictureControl
                             } else {
                                 surfacePositionMs
                             }
+                        val playing = state.isPlaying && !state.isLoading && state.isVideoModeActive
+                        // A mapped target past its last segment has reached video EOF; progress cannot resume,
+                        // so the watchdog must not treat the remaining audio-only tail as a stall.
+                        val shouldExpectProgress = playing && positionMap?.isPastLastSegment(state.positionMs) != true
                         surfacePlayer.synchronize(
                             targetPositionMs,
-                            state.isPlaying && !state.isLoading && state.isVideoModeActive,
+                            playing,
                             state.playbackSpeed,
                             surfaceVisible = true,
+                            shouldExpectProgress = shouldExpectProgress,
                         )
                     }
                 }
