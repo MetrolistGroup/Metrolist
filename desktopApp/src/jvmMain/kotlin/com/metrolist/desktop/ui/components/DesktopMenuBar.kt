@@ -420,7 +420,7 @@ fun FrameWindowScope.DesktopMenuBar(
                         }
                     }
                 },
-                enabled = isTrackActive,
+                enabled = isDownloaded || currentTrack?.let(DownloadManager::isDownloadableSong) == true,
             )
         }
 
