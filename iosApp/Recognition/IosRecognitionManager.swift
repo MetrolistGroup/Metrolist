@@ -77,7 +77,10 @@ final class IosRecognitionManager {
         let engine = AVAudioEngine()
         let input = engine.inputNode
         let inputFormat = input.inputFormat(forBus: 0)
-        let sampleRate = inputFormat.sampleRate > 0 ? inputFormat.sampleRate : 44_100
+        guard inputFormat.channelCount > 0, inputFormat.sampleRate > 0 else {
+            throw RecognitionManagerError.failed
+        }
+        let sampleRate = inputFormat.sampleRate
         let bufferSize: AVAudioFrameCount = 4096
         var collected = Data()
         let maxBytes = Int(sampleRate * 2 * Double(RecognitionAudio.shared.RECORDING_DURATION_MS) / 1000.0)
