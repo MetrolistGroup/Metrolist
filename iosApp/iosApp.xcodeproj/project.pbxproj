@@ -180,7 +180,7 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = B1C2D3E4F5061728394A5B78 /* Build configuration list for PBXNativeTarget "MetrolistRecognitionWidget" */;
 			buildPhases = (
-				B1C2D3E4F5061728394A5B75 /* Generate Recognition Widget Version Header */,
+				B1C2D3E4F5061728394A5B75 /* Compile Kotlin Multiplatform Framework */,
 				B1C2D3E4F5061728394A5B72 /* Sources */,
 				B1C2D3E4F5061728394A5B73 /* Frameworks */,
 				B1C2D3E4F5061728394A5B74 /* Resources */,
@@ -272,8 +272,9 @@
 			shellPath = /bin/sh;
 			shellScript = "set -e\ncd \"$SRCROOT/..\"\nbash scripts/ios_version.sh \"$DERIVED_FILE_DIR/MetrolistVersion.h\"\n./gradlew :shared:embedAndSignAppleFrameworkForXcode\n";
 		};
-		B1C2D3E4F5061728394A5B75 /* Generate Recognition Widget Version Header */ = {
+		B1C2D3E4F5061728394A5B75 /* Compile Kotlin Multiplatform Framework */ = {
 			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
 			buildActionMask = 2147483647;
 			files = (
 			);
@@ -281,7 +282,7 @@
 			);
 			inputPaths = (
 			);
-			name = "Generate Recognition Widget Version Header";
+			name = "Compile Kotlin Multiplatform Framework";
 			outputFileListPaths = (
 			);
 			outputPaths = (
@@ -289,7 +290,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "set -e\ncd \"$SRCROOT/..\"\nbash scripts/ios_version.sh \"$DERIVED_FILE_DIR/MetrolistVersion.h\"\n";
+			shellScript = "set -e\ncd \"$SRCROOT/..\"\nbash scripts/ios_version.sh \"$DERIVED_FILE_DIR/MetrolistVersion.h\"\n./gradlew :shared:embedAndSignAppleFrameworkForXcode\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 

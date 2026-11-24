@@ -202,15 +202,6 @@ final class IosRecognitionManager {
                 }
                 samples.append(Int16((max(-1, min(1, sum / Float(channels))) * 32767).rounded()))
             }
-        case .pcmFormatFloat64:
-            guard let data = buffer.float64ChannelData else { return Data() }
-            for frame in 0..<frames {
-                var sum: Double = 0
-                for channel in 0..<channels {
-                    sum += data[channel][frame]
-                }
-                samples.append(Int16((max(-1, min(1, sum / Double(channels))) * 32767).rounded()))
-            }
         default:
             return Data()
         }
