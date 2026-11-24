@@ -2,6 +2,7 @@ package com.metrolist.shared.playlist
 
 import androidx.compose.runtime.snapshotFlow
 import com.metrolist.shared.api.PlaylistNotFoundException
+import com.metrolist.shared.api.PlaylistSongAlreadyPresentException
 import com.metrolist.shared.api.YouTubeRepository
 import com.metrolist.shared.auth.YouTubeSyncState
 import com.metrolist.shared.db.MusicDatabase
@@ -90,19 +91,43 @@ object PendingPlaylistAdds {
         return id
     }
 
-    internal fun cancel(id: Long) = remove(id)
+    internal fun discard(id: Long) = remove(id)
 
-    // Drops a queued add that was never sent, so removing the song from the playlist needs no YouTube item ID.
-    internal fun cancelUnsent(
+    internal fun isQueued(
+        playlistId: String,
+        songId: String,
+    ): Boolean = synchronized(lock) { read() }.any { it.playlistId == playlistId && it.songId == songId }
+
+    // Drops one queued add of the song, preferring one never sent, so removing it from the playlist needs no item ID.
+    internal fun cancel(
         playlistId: String,
         songId: String,
     ): Boolean =
         synchronized(lock) {
             val entries = read()
-            val unsent = entries.lastOrNull { it.playlistId == playlistId && it.songId == songId && it.expectedCount == null }
-            if (unsent != null) write(entries - unsent)
-            unsent != null
+            val matching = entries.filter { it.playlistId == playlistId && it.songId == songId }
+            val cancelled = matching.lastOrNull { it.expectedCount == null } ?: matching.lastOrNull()
+            if (cancelled != null) write(entries - cancelled)
+            cancelled != null
         }
+
+    // Removing remote copies of a song lowers the copies its queued duplicates still wait for by the same number.
+    internal fun lowerTargets(
+        playlistId: String,
+        songId: String,
+        removedCopies: Int,
+    ) = synchronized(lock) {
+        write(
+            read().map { entry ->
+                val target = entry.expectedCount
+                if (entry.playlistId != playlistId || entry.songId != songId || target == null) {
+                    entry
+                } else {
+                    entry.copy(expectedCount = (target - removedCopies).coerceAtLeast(1))
+                }
+            },
+        )
+    }
 
     // Copies of each song the local playlist keeps beyond those YouTube lists until their queued adds are confirmed.
     internal fun unconfirmedCopies(
@@ -204,20 +229,26 @@ object PendingPlaylistAdds {
                 }
                 // Only the account that queued the add may send it.
                 if (currentLibraryAccountKey() != entry.accountKey) return true
-                // Recorded before sending, so a lost response, a failed read-back or a later failure cannot send it twice.
-                if (entry.expectedCount == null) markExpected(entry.id, expected)
+                // Claiming records the target before sending, so a lost response, a failed read-back or a later failure
+                // cannot send it twice, and an add cancelled while the playlist was read is skipped.
+                if (!claim(entry.id, expected)) continue
                 val failure =
                     repository
                         .addToPlaylist(
                             remoteId,
                             entry.songId,
-                            allowDuplicate = true,
+                            allowDuplicate = entry.allowDuplicate,
                             notifyChange = false,
                         ).exceptionOrNull()
                 when {
                     failure == null -> {
                         listed[entry.songId] = copies + 1
                         sent += entry to expected
+                    }
+
+                    // Another add put the song there after the count, which is all an add without duplicates needs.
+                    failure is PlaylistSongAlreadyPresentException -> {
+                        remove(entry.id)
                     }
 
                     failure is PlaylistNotFoundException -> {
@@ -282,10 +313,16 @@ object PendingPlaylistAdds {
 
     private fun remove(id: Long) = synchronized(lock) { write(read().filterNot { it.id == id }) }
 
-    private fun markExpected(
+    private fun claim(
         id: Long,
         expectedCount: Int,
-    ) = synchronized(lock) { write(read().map { if (it.id == id) it.copy(expectedCount = expectedCount) else it }) }
+    ): Boolean =
+        synchronized(lock) {
+            val entries = read()
+            val entry = entries.firstOrNull { it.id == id } ?: return@synchronized false
+            if (entry.expectedCount == null) write(entries.map { if (it.id == id) it.copy(expectedCount = expectedCount) else it })
+            true
+        }
 
     // A rejected add backs off up to an hour instead of being dropped, so a YouTube outage cannot lose it.
     private fun postpone(id: Long) =
