@@ -224,7 +224,7 @@ internal fun AndroidPlaybackPlayer.skipToPrevious(
             isLive = currentSong.value?.isLive == true,
         )
     ) {
-        skipToQueueItem(lastIndex, resumePlayback = resumePlayback)
+        skipToQueueItem(lastIndex, resumePlayback = resumePlayback, backward = true)
     } else {
         skipToPrevious(resumePlayback)
     }
@@ -1482,7 +1482,7 @@ class ExoPlaybackPlayer(
                 exo.currentPosition,
                 queue.currentIndex.value,
             )
-            request(queue.previous(), resumePlayback = resumePlayback)
+            request(queue.previous(), resumePlayback = resumePlayback, backward = true)
         }
     }
 
@@ -1490,11 +1490,12 @@ class ExoPlaybackPlayer(
         index: Int,
         positionMs: Long,
         resumePlayback: Boolean,
+        backward: Boolean,
     ) {
         if (resumePlayback && wantsPlayback && positionMs == 0L && index == queue.currentIndex.value + 1) {
             skipToNext()
         } else {
-            request(queue.skipTo(index), positionMs, resumePlayback)
+            request(queue.skipTo(index), positionMs, resumePlayback, backward)
         }
     }
 
@@ -3205,6 +3206,7 @@ class ExoPlaybackPlayer(
         song: SongItem?,
         positionMs: Long = 0L,
         resumePlayback: Boolean = true,
+        backward: Boolean = false,
     ) {
         cancelScreenOffFocusRecovery()
         song ?: return
@@ -3237,7 +3239,7 @@ class ExoPlaybackPlayer(
         _loadError.value = null
         if (stoppedInstance > 0L) playbackReporter.onPlaybackStopped(stoppedInstance, stoppedPosition)
         queuePlaybackRequestsState.tryEmit(
-            QueuePlaybackRequest(requestCounter, song, startPositionMs, resumePlayback),
+            QueuePlaybackRequest(requestCounter, song, startPositionMs, resumePlayback, backward),
         )
     }
 
