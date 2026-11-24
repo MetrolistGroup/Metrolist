@@ -2738,4 +2738,9 @@
     <string name="updates_auto_install_desc">Scarica e installa gli aggiornamenti mentre non è in corso alcuna riproduzione. Richiede root, Shizuku o Android 12 e versioni successive con l'autorizzazione per installare app.</string>
     <string name="resume_on_bluetooth_connect">Riprendi alla connessione Bluetooth</string>
     <string name="resume_on_bluetooth_connect_desc">Riprendi la riproduzione in pausa quando si connette un dispositivo audio Bluetooth mentre il servizio di riproduzione è attivo.</string>
+    <string name="recently_played">Riprodotti di recente</string>
+    <string name="already_in_playlist">Già presente</string>
+    <string name="no_new_playlist_suggestions">Nessun nuovo suggerimento di playlist</string>
+    <string name="cast_volume_step">Passo del volume Cast</string>
+    <string name="cast_volume_step_description">Regola di quanto ogni pressione dei tasti del volume del telefono modifica il volume dell'altoparlante o della TV durante la trasmissione</string>
 </resources>
