@@ -25,6 +25,7 @@ import com.metrolist.shared.generated.resources.*
 import com.metrolist.shared.settings.AiSlopBlocklist
 import com.metrolist.shared.settings.BlockedContent
 import com.metrolist.shared.settings.Settings
+import com.metrolist.shared.settings.SongShareLink
 import com.metrolist.shared.ui.icons.MetrolistIcons
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
@@ -229,6 +230,21 @@ internal fun SettingsUiRegistryBuilder.registerContentSettings(host: SharedSetti
                     ) { host.onHostChoiceSelected(SettingsHostChoice.ARTIST_BANNER_SOURCE, it) }
                 }
             }
+        }
+        val songShareLinkChoices =
+            listOf(
+                SettingsChoice(SongShareLink.YOUTUBE_MUSIC.name, stringResource(Res.string.youtube_music)),
+                SettingsChoice(SongShareLink.SONG_LINK.name, stringResource(Res.string.song_link)),
+            )
+        group("sharing", stringResource(Res.string.share)) {
+            choice(
+                id = "songShareLink",
+                title = stringResource(Res.string.song_share_link),
+                valueLabel = songShareLinkChoices.firstOrNull { it.id == settings.songShareLink }?.label,
+                choices = songShareLinkChoices,
+                selectedChoiceId = settings.songShareLink,
+                description = stringResource(Res.string.song_share_link_description),
+            ) { settings.songShareLink = it }
         }
         group(
             "autoPlaylists",

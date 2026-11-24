@@ -420,7 +420,37 @@ class MediaSessionPlayer(
             ) {
                 listeners.forEach { it.onSurfaceSizeChanged(width, height) }
             }
+
+            // Without a seek discontinuity Media3 keeps publishing the pre-seek position to the system media controls.
+            override fun onPositionDiscontinuity(
+                oldPosition: Player.PositionInfo,
+                newPosition: Player.PositionInfo,
+                reason: Int,
+            ) {
+                if (reason != Player.DISCONTINUITY_REASON_SEEK && reason != Player.DISCONTINUITY_REASON_SEEK_ADJUSTMENT) return
+                val old = sessionPositionInfo(oldPosition.positionMs)
+                val new = sessionPositionInfo(newPosition.positionMs)
+                listeners.forEach { it.onPositionDiscontinuity(old, new, reason) }
+            }
         }
+
+    // The backend player's indices and uids differ from the session timeline, so rebuild them from the session's view.
+    private fun sessionPositionInfo(positionMs: Long): Player.PositionInfo {
+        val timeline = getCurrentTimeline()
+        val index = getCurrentMediaItemIndex()
+        val hasItem = index in 0 until timeline.windowCount
+        return Player.PositionInfo(
+            if (hasItem) timeline.getUidOfPeriod(index) else null,
+            index,
+            getCurrentMediaItem(),
+            if (hasItem) timeline.getUidOfPeriod(index) else null,
+            index,
+            positionMs,
+            positionMs,
+            C.INDEX_UNSET,
+            C.INDEX_UNSET,
+        )
+    }
 
     init {
         musicPlayer.addPlayerListener(musicPlayerListener)
@@ -1430,19 +1460,19 @@ class MediaSessionPlayer(
     override fun getSurfaceSize(): androidx.media3.common.util.Size = androidx.media3.common.util.Size.UNKNOWN
 
     override fun increaseDeviceVolume() {
-        setDeviceVolume(getDeviceVolume() + 5, 0)
+        setDeviceVolume(getDeviceVolume() + Settings.shared.castVolumeStep, 0)
     }
 
     override fun increaseDeviceVolume(flags: Int) {
-        setDeviceVolume(getDeviceVolume() + 5, flags)
+        setDeviceVolume(getDeviceVolume() + Settings.shared.castVolumeStep, flags)
     }
 
     override fun decreaseDeviceVolume() {
-        setDeviceVolume(getDeviceVolume() - 5, 0)
+        setDeviceVolume(getDeviceVolume() - Settings.shared.castVolumeStep, 0)
     }
 
     override fun decreaseDeviceVolume(flags: Int) {
-        setDeviceVolume(getDeviceVolume() - 5, flags)
+        setDeviceVolume(getDeviceVolume() - Settings.shared.castVolumeStep, flags)
     }
 
     override fun setAudioAttributes(

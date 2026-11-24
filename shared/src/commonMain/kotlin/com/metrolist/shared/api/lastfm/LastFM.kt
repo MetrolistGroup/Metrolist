@@ -5,7 +5,7 @@ import com.metrolist.shared.api.ScrobbleFailureDisposition
 import com.metrolist.shared.api.parseRetryAfter
 import com.metrolist.shared.api.scrobbleStatusDisposition
 import com.metrolist.shared.network.readTextLimited
-import com.metrolist.shared.state.GlobalInnerTube
+import com.metrolist.shared.state.GlobalYouTube
 import com.metrolist.shared.utils.md5Hex
 import com.metrolist.shared.youtube.logging.YtLogger
 import io.ktor.client.HttpClient
@@ -590,7 +590,7 @@ object LastFM {
     var renderedPageLoader: (suspend (String) -> String?)? = null
 
     /** The content language as Last.fm's ISO 639 alpha-2 code. */
-    fun contentLanguage(): String = primaryLanguage(GlobalInnerTube.instance.locale.hl)
+    fun contentLanguage(): String = primaryLanguage(GlobalYouTube.contentLocale.hl)
 
     internal fun primaryLanguage(tag: String): String = tag.substringBefore('-').substringBefore('_').lowercase()
 

@@ -1413,6 +1413,10 @@
     <string name="foreign_import_title">Import from another app</string>
     <!-- Translators: Supporting text beneath the import-from-another-app option in the Backup & Restore. App names are product names. -->
     <string name="foreign_import_desc">Import likes, playlists and listening history from an InnerTune, OuterTune, ViMusic, RiMusic, Kreate, SimpMusic or Prism backup. The app keeps your current library.</string>
+    <string name="legacy_recovery_export_title">Export old library</string>
+    <string name="legacy_recovery_export_desc">Save the library that could not be migrated from version 13 as a backup file. Restore that file to try the migration again.</string>
+    <string name="legacy_recovery_export_success">Old library exported</string>
+    <string name="legacy_recovery_export_failed">Could not export the old library</string>
     <!-- Translators: Result message after importing another app's backup. %1$d songs, %2$d newly liked songs, %3$d playlists, %4$d history plays. -->
     <string name="foreign_import_success">Imported %1$d songs, %2$d likes, %3$d playlists and %4$d plays</string>
     <!-- Translators: Error shown when the selected file is not a backup from a supported music app. -->
@@ -1480,6 +1484,40 @@
     <string name="listenbrainz_connect_title">Connect ListenBrainz</string>
     <!-- Translators: Option or section label for user token in the ListenBrainz settings. -->
     <string name="listenbrainz_user_token">User token</string>
+    <!-- Translators: Section heading for lyrics already saved from lyrics providers, in the lyrics source settings. -->
+    <string name="fetched_lyrics">Fetched lyrics</string>
+    <!-- Translators: Action that deletes lyrics saved from lyrics providers. -->
+    <string name="clear_fetched_lyrics">Clear fetched lyrics</string>
+    <!-- Translators: Supporting text for the clear fetched lyrics action. -->
+    <string name="clear_fetched_lyrics_description">Fetch lyrics again from your current providers. Your own lyrics, lyrics you picked for a song and lyric offsets stay.</string>
+    <!-- Translators: Confirmation message before clearing fetched lyrics. -->
+    <string name="clear_fetched_lyrics_confirm">Delete all lyrics fetched from providers? They are fetched again the next time each song plays.</string>
+    <!-- Translators: Setting title on the Android updates screen for how downloaded updates are installed. -->
+    <string name="updates_install_method">Install updates with</string>
+    <!-- Translators: Supporting text for the update install method setting. -->
+    <string name="updates_install_method_desc">Root and Shizuku install updates without a prompt.</string>
+    <!-- Translators: Update install method that uses the standard Android package installer. -->
+    <string name="updates_install_method_system">Android package installer</string>
+    <!-- Translators: Update install method that uses root (superuser) access. -->
+    <string name="updates_install_method_root">Root</string>
+    <!-- Translators: Update install method that uses the Shizuku app; Shizuku is a product name. -->
+    <string name="updates_install_method_shizuku">Shizuku</string>
+    <!-- Translators: Message shown when root access was not granted for installing updates. -->
+    <string name="updates_root_unavailable">Root access was denied or is not available</string>
+    <!-- Translators: Message shown when the Shizuku app is not running or not installed. -->
+    <string name="updates_shizuku_unavailable">Shizuku is not running</string>
+    <!-- Translators: Message shown when Shizuku permission was not granted to Metrolist. -->
+    <string name="updates_shizuku_denied">Shizuku permission was denied</string>
+    <!-- Translators: Switch on the Android updates screen that installs updates in the background. -->
+    <string name="updates_auto_install">Install updates automatically</string>
+    <!-- Translators: Supporting text for the automatic update install switch. -->
+    <string name="updates_auto_install_desc">Download and install updates while nothing is playing. Needs root, Shizuku, or Android 12 and newer with permission to install apps.</string>
+    <!-- Translators: Label for the optional ListenBrainz-compatible server address field in the connect dialog. -->
+    <string name="listenbrainz_server_url">Server URL</string>
+    <!-- Translators: Help text under the ListenBrainz server address field. -->
+    <string name="listenbrainz_server_url_description">Leave empty for ListenBrainz. For a compatible server such as Koito, enter its API address.</string>
+    <!-- Translators: Error shown when the ListenBrainz server address is not a web address. -->
+    <string name="listenbrainz_invalid_server_url">Enter an http or https address</string>
     <string name="scrobble_create_account">Create account</string>
     <!-- Translators: Message explaining database incompatible in the Backup & Restore. %1$d is the backup database version; %2$d is the newest supported database version. -->
     <string name="restore_database_incompatible">This backup uses database version %1$d, but this app supports up to version %2$d. Update Metrolist and try again.</string>
@@ -1988,7 +2026,9 @@
     <!-- Translators: Label for album no songs in the album screen. -->
     <string name="album_no_songs">No songs in this album</string>
     <!-- Translators: Label for album type with year; retained for translation compatibility but not currently referenced by app code. %1$s is the release year. -->
-    <!-- Translators: Label for already in playlist name in the multiple app screens. %1$s is the playlist name. -->
+    <!-- Translators: Shown under a playlist in the Add to playlist dialog when the selected songs are already in that playlist. The playlist name is shown just above it. -->
+    <string name="already_in_playlist">Already there</string>
+    <!-- Translators: Label for already in playlist name; retained for translation compatibility but not currently referenced by app code. %1$s is the playlist name. -->
     <string name="already_in_playlist_name">Already in %1$s</string>
     <!-- Translators: Option or section label for animated gradient in the settings. -->
     <string name="animated_gradient">Animated gradient</string>
@@ -2448,6 +2488,7 @@
     <string name="recommended">Recommended</string>
     <!-- Translators: Imperative action label for refresh in the Home screen. -->
     <string name="refresh">Refresh</string>
+    <string name="no_new_playlist_suggestions">No new playlist suggestions</string>
     <!-- Translators: Progress or status message for refreshing in the Home screen. -->
     <string name="refreshing">Refreshing</string>
     <!-- Translators: Imperative action label for remove in the playlist screen and downloaded and cached songs. -->
@@ -2689,6 +2730,12 @@
     <!-- Translators: Imperative action label for view all; retained for translation compatibility but not currently referenced by app code. -->
     <!-- Translators: Label for YouTube music in the multiple app screens. -->
     <string name="youtube_music" translatable="false">YouTube Music</string>
+    <!-- Translators: Name of the song.link (Odesli) link service; not translated. -->
+    <string name="song_link" translatable="false">song.link</string>
+    <!-- Translators: Setting title for which link format is used when sharing or copying a song. -->
+    <string name="song_share_link">Song links</string>
+    <!-- Translators: Supporting text for the song link format setting. -->
+    <string name="song_share_link_description">song.link opens a page with the song on other music services. Links with a timestamp and podcast episodes always use YouTube Music.</string>
     <!-- Translators: Label for you in the Android app. -->
     <string name="you">You</string>
 
@@ -2972,7 +3019,8 @@
     <string name="likes">Likes</string>
     <!-- Translators: Label for the date YouTube lists for the video upload in the song details. -->
     <string name="upload_date">Upload date</string>
-    <!-- Translators: Label for dislikes; retained for translation compatibility but not currently referenced by app code. -->
+    <!-- Translators: Label for the estimated dislike count in the song details. -->
+    <string name="dislikes">Dislikes (estimated by Return YouTube Dislike)</string>
     <!-- Translators: Imperative action label for subscribe in the artist screen and media item menus. -->
     <string name="subscribe">Subscribe</string>
     <!-- Translators: Label for subscribed in the artist screen. -->
@@ -2995,6 +3043,8 @@
     <string name="pause_music_when_media_is_muted">Pause when media is muted</string>
     <!-- Translators: Supporting text beneath the pause when media is muted option in the settings. -->
     <string name="pause_music_when_media_is_muted_desc">Pause playback when the device media volume is muted. The app resumes playback when the volume is restored.</string>
+    <string name="resume_on_bluetooth_connect">Resume on Bluetooth connect</string>
+    <string name="resume_on_bluetooth_connect_desc">Resume paused playback when a Bluetooth audio device connects while the playback service is running.</string>
     <!-- Translators: Option or section label for keep screen on when player is expanded in the settings. -->
     <string name="keep_screen_on">Keep screen on</string>
     <string name="keep_screen_on_both">%1$s + %2$s</string>
@@ -5019,6 +5069,10 @@
     <string name="cast_description">Play music on your TV, Chromecast or Sonos speakers using the same Wi-Fi</string>
     <!-- Translators: Short heading and switch label for TV and speaker playback in the Player settings. -->
     <string name="settings_cast_title">Cast</string>
+    <!-- Translators: Slider label in the Player settings for how much the receiver volume changes per volume button press while casting. -->
+    <string name="cast_volume_step">Cast volume step</string>
+    <!-- Translators: Description of the cast volume step slider in the Player settings. -->
+    <string name="cast_volume_step_description">How much each press of the phone volume buttons changes the speaker or TV volume while casting</string>
 
     <!-- Statistics chart units and legend. -->
     <string name="statistics_chart_listens">Listens</string>

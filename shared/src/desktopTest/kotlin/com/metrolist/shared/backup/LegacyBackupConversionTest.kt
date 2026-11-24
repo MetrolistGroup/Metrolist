@@ -17,6 +17,38 @@ import kotlin.test.assertFalse
 
 class LegacyBackupConversionTest {
     @Test
+    fun conversionKeepsVersionThirteenArtistEdits() =
+        runBlocking {
+            val directory = Files.createTempDirectory("edited-artist-conversion").toFile()
+            try {
+                val legacy = directory.resolve("legacy.db")
+                val current = directory.resolve("current.db")
+                createHistoricalLibrary(legacy.path, 38, JdbcSQLiteDriver())
+                val database = getDatabaseBuilder(current).build()
+                try {
+                    database.dao().eventCount().first()
+                } finally {
+                    database.close()
+                }
+                JdbcSQLiteDriver().open(legacy.path).use { connection ->
+                    listOf(
+                        "INSERT INTO song (id, title, duration, liked, totalPlayTime) VALUES ('remote', 'Untouched', 200, 0, 0)",
+                        "INSERT INTO artist (id, name, lastUpdateTime, isLocal) VALUES " +
+                            "('LAedited1', 'Boards of Canada', 0, 1), ('LAedited2', 'Guest', 0, 1), ('UCchannel', 'Channel', 0, 0)",
+                        "INSERT INTO song_artist_map VALUES ('song', 'LAedited2', 1), ('song', 'LAedited1', 0), ('remote', 'UCchannel', 0)",
+                    ).forEach(connection::execSQL)
+                }
+                JdbcSQLiteDriver().open(current.path).use { connection ->
+                    copyLegacyBackupTables(connection, legacy.path, 38)
+                    assertEquals(listOf("Boards of Canada, Guest"), connection.texts("SELECT customArtist FROM song WHERE id = 'song'"))
+                    assertEquals(listOf("1"), connection.texts("SELECT COUNT(*) FROM song WHERE id = 'remote' AND customArtist IS NULL"))
+                }
+            } finally {
+                directory.deleteRecursively()
+            }
+        }
+
+    @Test
     fun conversionRemovesDanglingChildrenAndKeepsLibraryData() =
         runBlocking {
             val directory = Files.createTempDirectory("orphan-backup-conversion").toFile()

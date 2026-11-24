@@ -115,8 +115,9 @@ object ShazamRecognitionClient {
                 put("timestamp", timestamp)
                 put("timezone", timezones.random())
             }.toString()
-        val resolvedHl = GlobalYouTube.innerTube.locale.hl
-        val resolvedGl = GlobalYouTube.innerTube.locale.gl
+        val locale = GlobalYouTube.contentLocale
+        val resolvedHl = locale.hl.substringBefore('-')
+        val resolvedGl = locale.gl
         val request =
             Request
                 .Builder()

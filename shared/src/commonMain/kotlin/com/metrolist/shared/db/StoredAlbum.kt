@@ -39,6 +39,7 @@ suspend fun MusicDatabase.loadStoredAlbum(albumId: String): AlbumPage? {
 suspend fun MusicDatabase.storeAlbumPage(
     page: AlbumPage,
     incrementalSongs: List<SongItem>? = null,
+    hasHeaderMetadata: Boolean = false,
 ) {
     withDatabaseTransaction {
         val dao = dao()
@@ -70,6 +71,10 @@ suspend fun MusicDatabase.storeAlbumPage(
                 explicit = album.isExplicit,
                 songCount = songCount,
                 duration = duration.coerceAtMost(Int.MAX_VALUE.toLong()).toInt(),
+                // Continuation pages carry no header; keep what the last album browse stored.
+                description = if (hasHeaderMetadata) page.description else existing?.description,
+                otherVersions = if (hasHeaderMetadata) page.otherVersions else existing?.otherVersions,
+                tracksComplete = complete,
             ),
         )
         val savedPositions = if (complete) emptyMap() else dao.albumSongMaps(album.id).associate { it.songId to it.index }

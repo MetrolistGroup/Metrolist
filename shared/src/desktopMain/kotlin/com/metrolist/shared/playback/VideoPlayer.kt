@@ -1,6 +1,5 @@
 package com.metrolist.shared.playback
 
-import androidx.compose.runtime.snapshots.Snapshot
 import com.metrolist.shared.playback.ffmpeg.FFmpegFrameGrabber
 import com.metrolist.shared.playback.ffmpeg.Frame
 import com.metrolist.shared.playback.ffmpeg.HttpRangeInputStream
@@ -1044,9 +1043,9 @@ actual class VideoPlayer actual constructor(
                 videoFrame.close()
                 return false
             }
-            Snapshot.withMutableSnapshot {
-                onFrame(videoFrame)
-            }
+            // A global state write lets Compose send the change from the UI thread. Applying a snapshot here
+            // sent it from the decoder thread, and Compose then crashed on cross-thread layer observation.
+            onFrame(videoFrame)
         }
         val renderDuration = processDuration + (System.nanoTime() - emitStartNanos)
 

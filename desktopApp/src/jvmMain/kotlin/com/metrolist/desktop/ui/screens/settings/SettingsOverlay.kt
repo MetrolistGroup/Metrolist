@@ -105,6 +105,8 @@ import com.metrolist.shared.ui.settings.SharedSettingsScreen
 import com.metrolist.shared.ui.settings.settingsHomeSections
 import com.metrolist.shared.ui.settings.settingsPageSubtitle
 import com.metrolist.shared.ui.utils.rememberFileSizeFormatter
+import com.metrolist.shared.utils.OsUtil
+import com.metrolist.shared.utils.openUrl
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -261,8 +263,17 @@ fun SettingsOverlay(colorScheme: ColorScheme) {
                 id = "openLogFolder",
                 title = stringResource(Res.string.settings_open_log_folder),
                 description = stringResource(Res.string.settings_log_directory_summary),
-                enabled = Desktop.isDesktopSupported(),
-                onClick = { runCatching { Desktop.getDesktop().open(AppLogger.getLogDirectory()) } },
+                enabled = OsUtil.isLinux || OsUtil.isMac || Desktop.isDesktopSupported(),
+                onClick = {
+                    val logDir = AppLogger.getLogDirectory()
+                    if (runCatching {
+                            check(Desktop.isDesktopSupported())
+                            Desktop.getDesktop().open(logDir)
+                        }.isFailure && (OsUtil.isLinux || OsUtil.isMac)
+                    ) {
+                        runCatching { openUrl(logDir.toURI().toString()) }
+                    }
+                },
             ),
         )
 

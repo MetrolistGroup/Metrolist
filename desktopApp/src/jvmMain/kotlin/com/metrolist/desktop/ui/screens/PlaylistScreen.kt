@@ -59,7 +59,8 @@ import com.metrolist.desktop.ui.components.AddSongDialog
 import com.metrolist.desktop.ui.components.PlaylistContextMenu
 import com.metrolist.desktop.ui.components.SongContextMenu
 import com.metrolist.desktop.ui.components.SongSwipeActions
-import com.metrolist.desktop.utils.playlistCoverFilenameFilter
+import com.metrolist.desktop.utils.pickDesktopFile
+import com.metrolist.desktop.utils.playlistCoverExtensions
 import com.metrolist.desktop.utils.readPlaylistCover
 import com.metrolist.innertubex.InnerTubeHttpException
 import com.metrolist.shared.api.PlaylistNotFoundException
@@ -129,6 +130,7 @@ import com.metrolist.shared.ui.screens.playlistContentText
 import com.metrolist.shared.ui.screens.playlistOrderControlsText
 import com.metrolist.shared.ui.selection.rememberSelectionState
 import com.metrolist.shared.utils.XdgUtils
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.isActive
@@ -137,8 +139,6 @@ import kotlinx.coroutines.withContext
 import org.jetbrains.compose.resources.getString
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
-import java.awt.FileDialog
-import java.awt.Frame
 import java.io.File
 import java.util.IdentityHashMap
 
@@ -354,13 +354,20 @@ fun PlaylistScreen(
         showRenameDialog = false
     }
 
-    fun pickDesktopCover() {
-        val dialog = FileDialog(null as Frame?, editCoverLabel, FileDialog.LOAD).apply { filenameFilter = playlistCoverFilenameFilter }
-        dialog.isVisible = true
-        val chosen =
-            dialog.directory?.let { dir -> dialog.file?.let { file -> File(dir, file) } }?.takeIf { it.exists() }
-        dialog.dispose()
-        if (chosen == null) return
+    suspend fun pickDesktopCover() {
+        // Cancelling or reopening the editor bumps the generation, so a picker left open must not stage its file.
+        val session = coverReadGeneration
+        val picked =
+            try {
+                pickDesktopFile(editCoverLabel, playlistCoverExtensions.toList())
+            } catch (error: CancellationException) {
+                throw error
+            } catch (_: Exception) {
+                if (session == coverReadGeneration) coverError = true
+                return
+            }
+        if (session != coverReadGeneration) return
+        val chosen = picked?.takeIf { it.exists() } ?: return
         coverReadJob?.cancel()
         val generation = ++coverReadGeneration
         val playlistId = playlistInfo?.id
@@ -713,7 +720,7 @@ fun PlaylistScreen(
                             )
                         }
                         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                            TextButton(onClick = { pickDesktopCover() }, shapes = ButtonDefaults.shapes()) {
+                            TextButton(onClick = { coverScope.launch { pickDesktopCover() } }, shapes = ButtonDefaults.shapes()) {
                                 Text(stringResource(Res.string.choose_from_library))
                             }
                             if (stagedDesktopCoverPath != null || hasDesktopCustom) {

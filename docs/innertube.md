@@ -11,6 +11,16 @@ For dependency development, choose one substitution:
 
 These flags do not alter hosted pins. QuackJS handles signature and throttling transforms separately from PO-token attestation.
 
+## Content locale
+
+`GlobalYouTube.contentLocale` retains the resolved content language, including region and script subtags. Shazam, Paxsenix lyrics, subtitle preferences and Last.fm use it. Subtitle selection tries the exact tag, then its primary language, while preserving the preference for manual captions over automatic captions. Saved `lastResolvedContentLanguage` also retains this tag for artwork and artist lookups.
+
+When YouTube Music does not serve the system region, `closestContentCountry` picks the alphabetically first served region with a locale in the same language, preferring the same script. If no served region uses that language, it sends `US`, as the maintainer decided in [#5150](https://github.com/MetrolistGroup/Metrolist/issues/5150).
+
+Only the InnerTube locale maps the language to a YouTube-accepted `hl`, trying the full tag, its first two subtags and then the primary language. The isolated song-details request applies the same mapping. YouTube response date parsing, Home cache signatures, playback diagnostics and search suggestions use the request locale. Discord labels and display number/date formats use the app or system locale.
+
+If no tag is accepted, `hl` is blank and InnerTubeX v0.13.1 or later leaves it out of the request context, so YouTube picks the language from the IP address and request headers.
+
 ## Pagination
 
 App callers use `shared/src/commonMain/kotlin/com/metrolist/shared/api/YouTubeRepository.kt`.

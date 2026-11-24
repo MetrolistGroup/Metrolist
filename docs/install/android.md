@@ -24,6 +24,8 @@ If the app is missing, report the phone/OS, Android Auto and app versions, packa
 
 [Export a backup](README.md#before-updating-or-uninstalling). Install an APK with the same app ID and signing key over the existing app. Debug and release builds do not update each other.
 
+The in-app updater, which the IzzyOnDroid build leaves out, installs through the Android package installer by default. In Settings > Updates, **Install updates with** can switch to root or [Shizuku](https://shizuku.rikka.app/). Both stream the verified APK into `pm install -i com.metrolist.music`, so no prompt appears, and choosing either runs `pm set-installer` to record Metrolist as its own installer. On Android 12 and newer the package installer also updates Metrolist without a prompt once it may install apps, using `UPDATE_PACKAGES_WITHOUT_USER_ACTION`, unless another app has claimed update ownership on Android 14 and newer. **Install updates automatically** downloads each update found by the startup or hourly check and installs it once playback is paused or stopped. After a failed automatic install it waits for the next launch. It needs one of those prompt-free paths. Installing closes Metrolist, which does not reopen by itself.
+
 Uninstalling removes private settings, library and downloads. Exported shared-storage files can remain. Preserve those files and backups before deleting data.
 
 ## Common problems

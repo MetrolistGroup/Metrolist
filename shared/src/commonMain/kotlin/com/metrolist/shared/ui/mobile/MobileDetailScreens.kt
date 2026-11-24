@@ -1036,7 +1036,7 @@ internal fun MobilePodcastScreen(
         },
         onDownload = null,
         onShare = { episode ->
-            onShare(ShareUrls.song(episode.id))
+            onShare(ShareUrls.youtubeMusicSong(episode.id))
         },
         contentPadding = PaddingValues(bottom = 88.dp + bottomContentPadding),
         modifier = modifier.fillMaxSize(),

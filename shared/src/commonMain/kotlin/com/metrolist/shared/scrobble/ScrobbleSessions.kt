@@ -4,6 +4,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import com.metrolist.shared.api.lastfm.LastFM
+import com.metrolist.shared.api.listenbrainz.ListenBrainz
 import com.metrolist.shared.settings.Settings
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -83,9 +84,11 @@ object ScrobbleSessions {
     suspend fun connectListenBrainz(
         account: String,
         credential: String,
+        apiRoot: String,
     ) = mutex.withLock {
         require(account.isNotBlank() && credential.isNotBlank())
         PendingScrobbleStore.clear(ScrobbleProvider.LISTEN_BRAINZ)
+        Settings.shared.listenBrainzApiUrl = apiRoot.takeUnless { it == ListenBrainz.DEFAULT_API_ROOT }.orEmpty()
         Settings.shared.listenBrainzUsername = account
         Settings.shared.listenBrainzToken = credential
         Settings.shared.listenBrainzEnabled = true

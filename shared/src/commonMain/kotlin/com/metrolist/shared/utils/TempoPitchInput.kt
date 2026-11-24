@@ -12,7 +12,7 @@ internal fun parseTempoPitchInput(
             for (character in input.trim()) {
                 append(
                     when {
-                        character == decimalSeparator -> '.'
+                        character == '.' || character == ',' || character == decimalSeparator -> '.'
                         character == '+' || character == '-' -> character
                         character.digitToIntOrNull() != null -> character.digitToInt()
                         else -> return null

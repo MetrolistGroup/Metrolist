@@ -10,24 +10,58 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.window.WindowDraggableArea
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.isPrimaryPressed
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.window.WindowScope
+import com.metrolist.desktop.window.DesktopWindowScope
 import com.metrolist.shared.utils.OsUtil
 import java.awt.MouseInfo
 import java.awt.Point
+import java.awt.Window
 
 @Composable
-fun WindowScope.WindowDragHandle(
+fun DesktopWindowScope.WindowDragHandle(
     isMaximized: Boolean,
     onRestoreFromMaximized: () -> Unit,
     content: @Composable () -> Unit,
 ) {
+    val tao = taoWindow
+    if (tao != null) {
+        Box(
+            modifier =
+                Modifier.pointerInput(tao) {
+                    awaitPointerEventScope {
+                        while (true) {
+                            val down = awaitFirstDown(requireUnconsumed = true, pass = PointerEventPass.Final)
+                            if (!currentEvent.buttons.isPrimaryPressed) continue
+                            tao.dragWindow()
+                            down.consume()
+                        }
+                    }
+                },
+        ) {
+            content()
+        }
+        return
+    }
+
+    val window =
+        awtWindow ?: run {
+            content()
+            return
+        }
     if (!OsUtil.isLinux) {
-        WindowDraggableArea(content = content)
+        val awtScope =
+            remember(window) {
+                object : WindowScope {
+                    override val window: Window = window
+                }
+            }
+        awtScope.WindowDraggableArea(content = content)
         return
     }
 
@@ -40,19 +74,20 @@ fun WindowScope.WindowDragHandle(
                     while (true) {
                         val down = awaitFirstDown(requireUnconsumed = true, pass = PointerEventPass.Final)
                         if (!currentEvent.buttons.isPrimaryPressed) continue
-                        if (LinuxWindowMove.start(window)) {
+                        // A failed native move falls back to moving the window from AWT.
+                        if (runCatching { LinuxWindowMove.start(window) }.getOrDefault(false)) {
                             down.consume()
                             continue
                         }
 
-                        val start = MouseInfo.getPointerInfo()?.location ?: continue
+                        val start = runCatching { MouseInfo.getPointerInfo()?.location }.getOrNull() ?: continue
                         var origin = window.location
                         var pointerOrigin = start
                         var dragging = false
                         while (true) {
                             val event = awaitPointerEvent()
                             if (!event.buttons.isPrimaryPressed) break
-                            val pointer = MouseInfo.getPointerInfo()?.location ?: continue
+                            val pointer = runCatching { MouseInfo.getPointerInfo()?.location }.getOrNull() ?: continue
                             if (!dragging) {
                                 val dx = pointer.x - start.x
                                 val dy = pointer.y - start.y

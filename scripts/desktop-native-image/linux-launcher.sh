@@ -4,8 +4,17 @@
 # Wayland support in Skiko
 export SKIKO_WAYLAND="${SKIKO_WAYLAND:-1}"
 
-# Embedded GTK login windows are X11 children of AWT windows
-export GDK_BACKEND="${GDK_BACKEND:-x11}"
+# Embedded GTK login windows are X11 children of AWT windows; use Wayland when X11 is absent or native Wayland is requested.
+if [ -n "${WAYLAND_DISPLAY:-}" ] || [ -S "${XDG_RUNTIME_DIR:-}/wayland-0" ]; then has_wayland=1; else has_wayland=0; fi
+if [ -z "${GDK_BACKEND:-}" ]; then
+    if [ "$has_wayland" = "1" ] && { [ "${METROLIST_USE_WAYLAND:-0}" = "1" ] || [ "${METROLIST_USE_WAKEFIELD:-0}" = "1" ]; }; then
+        export GDK_BACKEND=wayland
+    elif [ -n "${DISPLAY:-}" ]; then
+        export GDK_BACKEND=x11
+    elif [ "$has_wayland" = "1" ]; then
+        export GDK_BACKEND=wayland
+    fi
+fi
 
 # Prevent AWT from reparenting (needed for some tiling WMs)
 export _JAVA_AWT_WM_NONREPARENTING="${_JAVA_AWT_WM_NONREPARENTING:-1}"

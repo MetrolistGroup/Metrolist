@@ -13,17 +13,29 @@ import kotlinx.coroutines.withContext
 suspend fun MusicDatabase.loadOfflineAlbum(
     albumId: String,
     availableSongIds: Set<String>? = null,
+    requireComplete: Boolean = false,
 ): AlbumPage? {
     val dao = dao()
     val stored = dao.album(albumId).first()
-    val songs =
-        dao.storedAlbumSongs(albumId).first().filter {
-            it.isAvailableOffline(availableSongIds)
-        }
+    val storedSongs = dao.storedAlbumSongs(albumId).first()
+    val songs = storedSongs.filter { it.isAvailableOffline(availableSongIds) }
+    // Partial saves merge pages, so only a save that finished pagination proves the track list; null otherVersions predates header caching.
+    if (requireComplete &&
+        (
+            stored?.album?.tracksComplete != true ||
+                stored.album.otherVersions == null ||
+                songs.size != storedSongs.size ||
+                songs.size != stored.album.songCount
+        )
+    ) {
+        return null
+    }
     val album = offlineAlbumHeader(albumId, stored, songs) ?: return null
     return AlbumPage(
         album = album,
         songs = songs.map { it.toSongItem() },
+        otherVersions = stored?.album?.otherVersions.orEmpty(),
+        description = stored?.album?.description,
     )
 }
 

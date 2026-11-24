@@ -49,7 +49,7 @@ fun PodcastScreen(colorScheme: ColorScheme) {
             onPlayNext = { PlayerState.playNext(it.toSongItem(page?.podcast?.title)) },
             onAddToQueue = { PlayerState.addToQueue(it.toSongItem(page?.podcast?.title)) },
             onDownload = { DownloadManager.download(it.toSongItem(page?.podcast?.title)) },
-            onShare = { AppState.copyToClipboard(ShareUrls.song(it.id)) },
+            onShare = { AppState.copyToClipboard(ShareUrls.youtubeMusicSong(it.id)) },
             contentPadding = PaddingValues(bottom = 100.dp),
             currentEpisodeId = PlayerState.currentTrack?.id,
             isPlaying = PlayerState.isPlaying,

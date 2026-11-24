@@ -31,17 +31,14 @@ import androidx.compose.ui.window.DialogProperties
 import com.metrolist.desktop.ui.components.WebViewAvailabilityLoading
 import com.metrolist.desktop.ui.components.WebViewUnavailableContent
 import com.metrolist.desktop.ui.components.rememberLinuxWebKitAvailable
-import com.metrolist.desktop.web.DesktopWebView
+import com.metrolist.desktop.web.DesktopBrowser
+import com.metrolist.desktop.web.rememberDesktopBrowser
 import com.metrolist.shared.generated.resources.Res
 import com.metrolist.shared.generated.resources.cancel
 import com.metrolist.shared.generated.resources.import_error_generic
 import com.metrolist.shared.playlistimport.awaitProviderCredentials
 import com.metrolist.shared.ui.components.Dialog
 import com.metrolist.shared.utils.OsUtil
-import io.github.kdroidfilter.webview.web.LoadingState
-import io.github.kdroidfilter.webview.web.WebViewState
-import io.github.kdroidfilter.webview.web.rememberWebViewNavigator
-import io.github.kdroidfilter.webview.web.rememberWebViewState
 import kotlinx.coroutines.CancellationException
 import org.jetbrains.compose.resources.stringResource
 
@@ -52,11 +49,11 @@ internal fun <T : Any> ProviderLoginDialog(
     loginUrl: String,
     signInHint: String,
     onDismissRequest: () -> Unit,
-    extractCredentials: suspend (WebViewState) -> T?,
+    extractCredentials: suspend (DesktopBrowser) -> T?,
     onAuthenticated: (T) -> Unit,
 ) {
     ProviderLoginWindow(title, onDismissRequest) {
-        val webKitAvailable = rememberLinuxWebKitAvailable()
+        val webKitAvailable = rememberLinuxWebKitAvailable(waylandHostSupported = true)
         if (webKitAvailable == null) {
             WebViewAvailabilityLoading()
         } else if (!webKitAvailable && !OsUtil.isWindows && !OsUtil.isMac) {
@@ -82,22 +79,18 @@ private fun <T : Any> ProviderLoginContent(
     loginUrl: String,
     signInHint: String,
     onDismissRequest: () -> Unit,
-    extractCredentials: suspend (WebViewState) -> T?,
+    extractCredentials: suspend (DesktopBrowser) -> T?,
     onAuthenticated: (T) -> Unit,
 ) {
-    val webViewState =
-        rememberWebViewState(loginUrl).apply {
-            webSettings.customUserAgentString = buildProviderBrowserUserAgent()
-        }
-    val navigator = rememberWebViewNavigator()
+    val browser = rememberDesktopBrowser(initialUrl = loginUrl, userAgent = buildProviderBrowserUserAgent())
     val currentExtractor by rememberUpdatedState(extractCredentials)
     val currentOnAuthenticated by rememberUpdatedState(onAuthenticated)
     var extractionFailed by remember { mutableStateOf(false) }
 
-    LaunchedEffect(webViewState) {
+    LaunchedEffect(browser) {
         awaitProviderCredentials {
             try {
-                currentExtractor(webViewState).also { extractionFailed = false }
+                currentExtractor(browser).also { extractionFailed = false }
             } catch (error: CancellationException) {
                 throw error
             } catch (_: Exception) {
@@ -110,14 +103,10 @@ private fun <T : Any> ProviderLoginContent(
     }
 
     Column(Modifier.fillMaxSize()) {
-        if (webViewState.loadingState is LoadingState.Loading) {
+        if (browser.isLoading) {
             LinearWavyProgressIndicator(modifier = Modifier.fillMaxWidth())
         }
-        DesktopWebView(
-            state = webViewState,
-            navigator = navigator,
-            modifier = Modifier.fillMaxWidth().weight(1f),
-        )
+        browser.Content(Modifier.fillMaxWidth().weight(1f))
         Surface(
             modifier = Modifier.fillMaxWidth(),
             tonalElevation = 3.dp,

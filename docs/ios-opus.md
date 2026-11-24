@@ -4,7 +4,7 @@
 
 iOS uses AVPlayer with AAC/MP4 or remuxed Opus. The InnerTubeX pin in `gradle.properties` determines available clients and format selection. Client overrides still apply and can fail when no compatible response exists.
 
-Existing downloads and cache entries take priority over new streaming quality choices. Use an uncached song to test selection. Manual downloads request AAC without HLS or SABR. With song caching on, an Opus capture publishes the remuxed MP4 to the song cache, never the raw WebM. SABR captures remain temporary.
+Playback uses remuxed Opus only on iOS 17 and later, because AVFoundation on iOS 16 decodes that MP4 as silence. Earlier systems select AAC and reject stored files with an Opus MP4 sample entry. Rejected cache entries are removed; downloaded files are retained and bypassed. AAC downloads and cache entries still take priority over new streaming quality choices. Use an uncached song to test selection. Manual downloads request AAC without HLS or SABR. With song caching on, an Opus capture publishes the remuxed MP4 to the song cache, never the raw WebM. SABR captures remain temporary.
 
 ## Remux format
 

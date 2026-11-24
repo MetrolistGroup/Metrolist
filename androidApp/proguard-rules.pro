@@ -19,3 +19,8 @@
 
 # ScrobbleManager uses coroutine lambdas that R8 may strip as unreachable.
 -keep class com.metrolist.shared.scrobble.ScrobbleManager$** { *; }
+
+# PrivilegedInstaller reaches Shizuku's private newProcess through reflection.
+-keepclassmembers class rikka.shizuku.Shizuku {
+    private static rikka.shizuku.ShizukuRemoteProcess newProcess(java.lang.String[], java.lang.String[], java.lang.String);
+}

@@ -71,7 +71,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.WindowPosition
 import androidx.compose.ui.window.WindowState
 import com.materialkolor.ktx.isLight
@@ -84,8 +83,10 @@ import com.metrolist.desktop.ui.DesktopDensityProvider
 import com.metrolist.desktop.ui.theme.MetrolistTheme
 import com.metrolist.desktop.utils.ComposeTrayManager
 import com.metrolist.desktop.utils.WindowDragHandle
+import com.metrolist.desktop.window.DesktopWindow
 import com.metrolist.desktop.window.WindowVisibility
 import com.metrolist.desktop.window.WindowsMiniPlayerWindowFrame
+import com.metrolist.desktop.window.asComposeFrameWindowScope
 import com.metrolist.shared.generated.resources.Res
 import com.metrolist.shared.generated.resources.cd_playback_position
 import com.metrolist.shared.generated.resources.close_miniplayer
@@ -131,7 +132,7 @@ fun MiniplayerWindow() {
     // Linux backends can consume the render loop without drawing transparent undecorated windows.
     val transparentWindow = !(OsUtil.isLinux || OsUtil.isWindows)
 
-    Window(
+    DesktopWindow(
         onCloseRequest = { PlayerState.showMiniplayer = false },
         title = stringResource(Res.string.miniplayer),
         resizable = false,
@@ -148,15 +149,16 @@ fun MiniplayerWindow() {
                 LaunchedEffect(windowSize, scale) {
                     windowState.size = DpSize(windowSize.width * scale, windowSize.height * scale)
                 }
-                WindowVisibility(window) {
-                    if (OsUtil.isWindows) {
+                WindowVisibility(this@DesktopWindow, windowState) {
+                    val composeFrameScope = asComposeFrameWindowScope()
+                    if (OsUtil.isWindows && composeFrameScope != null) {
                         val areWeInDarkMode = remember { mutableStateOf(false) }
-                        WindowsMiniPlayerWindowFrame(
+                        composeFrameScope.WindowsMiniPlayerWindowFrame(
                             onCloseRequest = { PlayerState.showMiniplayer = false },
                             content = {
                                 val colorScheme = MaterialTheme.colorScheme
                                 areWeInDarkMode.value = !MaterialTheme.colorScheme.background.isLight()
-                                WindowDraggableArea {
+                                composeFrameScope.WindowDraggableArea {
                                     if (isFocusMode) {
                                         FocusModeMiniplayer(colorScheme, isNightMode, transparentWindow)
                                     } else {

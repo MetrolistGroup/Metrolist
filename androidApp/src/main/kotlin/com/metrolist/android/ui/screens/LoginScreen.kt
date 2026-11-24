@@ -100,6 +100,7 @@ import com.metrolist.shared.ui.sanitizeDataSyncId
 import com.metrolist.shared.ui.tv.tvFocusHighlight
 import com.metrolist.shared.utils.BlockScreenshots
 import com.metrolist.shared.utils.Logger
+import com.metrolist.shared.youtube.logging.YtLogger
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Deferred
@@ -214,6 +215,7 @@ fun LoginScreen(
     val coroutineScope = rememberCoroutineScope()
     var loginStage by remember { mutableStateOf(LoginStage.Authenticating) }
     var isLoading by remember { mutableStateOf(true) }
+    var onYouTubeMusic by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
     val loginError = stringResource(Res.string.login_failed_with_error, stringResource(Res.string.error))
     val isTv = LocalIsTv.current
@@ -261,7 +263,13 @@ fun LoginScreen(
             view.loadUrl("javascript:Android.onRetrieveVisitorData(window.yt && window.yt.config_ ? window.yt.config_.VISITOR_DATA : null)")
             view.loadUrl("javascript:Android.onRetrieveDataSyncId(window.yt && window.yt.config_ ? window.yt.config_.DATASYNC_ID : null)")
             view.loadUrl("javascript:Android.onRetrieveAuthUser(window.yt && window.yt.config_ ? window.yt.config_.SESSION_INDEX : null)")
-            awaitLoginAuthData(cookie, visitorDataDeferred, dataSyncIdDeferred, authUserDeferred)
+            awaitLoginAuthData(cookie, visitorDataDeferred, dataSyncIdDeferred, authUserDeferred).also {
+                YtLogger.w(
+                    "LoginScreen",
+                    "Sign-in data cookie=${!cookie.isNullOrEmpty()} sapisid=${cookie?.contains("SAPISID=") == true} " +
+                        "extracted=${it != null}",
+                )
+            }
         } finally {
             jsInterface.onVisitorDataReceived = null
             jsInterface.onDataSyncIdReceived = null
@@ -329,6 +337,7 @@ fun LoginScreen(
                 emptyList()
             }
 
+        YtLogger.w("LoginScreen", "Sign-in found ${accounts.size} accounts")
         when (accountDiscoveryAction(accounts.size, isSwitchingChannel)) {
             AccountDiscoveryAction.SELECT_ACCOUNT -> {
                 pendingAccounts = accounts
@@ -392,7 +401,9 @@ fun LoginScreen(
         completeSignIn: Boolean = false,
     ) {
         val pageUri = url?.toUri() ?: return
-        if (pageUri.scheme != "https" || pageUri.host != "music.youtube.com") return
+        onYouTubeMusic = pageUri.scheme == "https" && pageUri.host == "music.youtube.com"
+        if (!onYouTubeMusic) return
+        YtLogger.w("LoginScreen", "Sign-in page loaded stage=$loginStage manual=$completeSignIn")
 
         when (loginStage) {
             LoginStage.Authenticating -> {
@@ -441,7 +452,8 @@ fun LoginScreen(
                     }
                 },
                 actions = {
-                    if (loginStage == LoginStage.BrowsingAccounts) {
+                    // Single-page navigation into YouTube Music may never finish a page load, so let the user finish sign-in.
+                    if (loginStage == LoginStage.BrowsingAccounts || (loginStage == LoginStage.Authenticating && onYouTubeMusic)) {
                         TextButton(
                             onClick = { onPageFinishedForLogin(webViewRef?.url, completeSignIn = true) },
                             enabled = !isLoading,
@@ -514,6 +526,15 @@ fun LoginScreen(
                                     ) {
                                         isLoading = false
                                         onPageFinishedForLogin(url)
+                                    }
+
+                                    override fun doUpdateVisitedHistory(
+                                        view: WebView,
+                                        url: String?,
+                                        isReload: Boolean,
+                                    ) {
+                                        super.doUpdateVisitedHistory(view, url, isReload)
+                                        url?.toUri()?.let { onYouTubeMusic = it.scheme == "https" && it.host == "music.youtube.com" }
                                     }
 
                                     override fun onReceivedError(

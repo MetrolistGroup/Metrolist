@@ -43,7 +43,7 @@ import com.metrolist.shared.db.entities.Playlist
 import com.metrolist.shared.generated.resources.Res
 import com.metrolist.shared.generated.resources.add
 import com.metrolist.shared.generated.resources.add_to_playlist
-import com.metrolist.shared.generated.resources.already_in_playlist_name
+import com.metrolist.shared.generated.resources.already_in_playlist
 import com.metrolist.shared.generated.resources.cancel
 import com.metrolist.shared.generated.resources.close
 import com.metrolist.shared.generated.resources.create_playlist
@@ -267,7 +267,7 @@ fun PlaylistChooserContent(
                                     }
                                 if (description != null) Text(description)
                                 if (containsSongs) {
-                                    Text(stringResource(Res.string.already_in_playlist_name, playlist.title))
+                                    Text(stringResource(Res.string.already_in_playlist))
                                 }
                             },
                             cardColors =
