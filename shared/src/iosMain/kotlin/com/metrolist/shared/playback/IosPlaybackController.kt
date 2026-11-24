@@ -84,6 +84,7 @@ import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.longOrNull
+import platform.AVFoundation.AVPlayerLayer
 import platform.Foundation.NSNotificationCenter
 import platform.Foundation.NSOperationQueue
 import platform.UIKit.UIApplication
@@ -1172,22 +1173,30 @@ internal class IosPlaybackController(
         releaseMusicVideoSurfacePlayer()
     }
 
-    internal fun registerPictureInPictureSurface(player: IosMusicVideoSurfacePlayer, url: String) {
+    internal fun registerPictureInPictureSurface(
+        player: IosMusicVideoSurfacePlayer,
+        url: String,
+    ) {
         if (pipSurfacePlayer === player && pipSurfaceUrl == url) return
         pipSurfacePlayer = player
         pipSurfaceUrl = url
         notifyPictureInPictureSurfaceChanged()
     }
 
-    internal fun unregisterPictureInPictureSurface(player: IosMusicVideoSurfacePlayer, url: String) {
+    internal fun unregisterPictureInPictureSurface(
+        player: IosMusicVideoSurfacePlayer,
+        url: String,
+    ) {
         if (pipSurfacePlayer !== player || pipSurfaceUrl != url) return
         pipSurfacePlayer = null
         pipSurfaceUrl = null
         notifyPictureInPictureSurfaceChanged()
     }
 
-    internal fun pictureInPicturePlayerLayer(): platform.AVFoundation.AVPlayerLayer? =
-        pipSurfacePlayer?.takeIf { pipSurfaceUrl == videoPlaybackResource.value?.videoUrl }?.layer
+    internal fun pictureInPictureSurface(): IosMusicVideoSurfacePlayer? =
+        pipSurfacePlayer?.takeIf { pipSurfaceUrl == videoPlaybackResource.value?.videoUrl }
+
+    internal fun pictureInPicturePlayerLayer(): AVPlayerLayer? = pictureInPictureSurface()?.layer
 
     private fun notifyPictureInPictureSurfaceChanged() {
         pictureInPictureSurfaceChanged?.invoke()

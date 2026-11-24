@@ -65,10 +65,10 @@ import com.metrolist.shared.listentogether.ListenTogetherTrackResolver
 import com.metrolist.shared.listentogether.toSongItem
 import com.metrolist.shared.network.createHttpClient
 import com.metrolist.shared.playback.IosPlaybackController
-import com.metrolist.shared.playback.iosPictureInPictureSupported
-import com.metrolist.shared.playback.requestIosPictureInPicture
 import com.metrolist.shared.playback.IosPlayerPlatformServices
 import com.metrolist.shared.playback.MusicPlayer
+import com.metrolist.shared.playback.iosPictureInPictureSupported
+import com.metrolist.shared.playback.requestIosPictureInPicture
 import com.metrolist.shared.playlist.IosPlaylistCoverMapper
 import com.metrolist.shared.playlist.migrateIosPlaylistCovers
 import com.metrolist.shared.playlist.removeStoredPlaylistCover
@@ -544,6 +544,7 @@ fun MetrolistIOSApp() {
                             }.await()
                     },
                     pictureInPictureSupported = iosPictureInPictureSupported(),
+                    pictureInPictureRequiresPlayingVideo = true,
                     onEnterPictureInPicture = { isPlaying, hasVideo ->
                         requestIosPictureInPicture(playbackController, isPlaying, hasVideo)
                     },

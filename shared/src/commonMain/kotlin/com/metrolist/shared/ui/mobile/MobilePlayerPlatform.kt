@@ -76,6 +76,7 @@ internal class MobilePlayerPlatform(
     private val touchExplorationEnabled: Boolean,
     private val shareLyrics: @Composable (PlayerViewModel) -> ((String) -> Unit)?,
     private val pictureInPictureSupported: Boolean = false,
+    private val pictureInPictureRequiresPlayingVideo: Boolean = false,
     private val onEnterPictureInPicture: (isPlaying: Boolean, hasVideo: Boolean) -> Unit = { _, _ -> },
 ) : PlayerPlatform {
     @Composable
@@ -116,6 +117,11 @@ internal class MobilePlayerPlatform(
         hasVideo: Boolean,
     ) = onEnterPictureInPicture(isPlaying, hasVideo)
 
+    override fun canEnterPictureInPicture(
+        isPlaying: Boolean,
+        hasVideo: Boolean,
+    ): Boolean = !pictureInPictureRequiresPlayingVideo || (isPlaying && hasVideo)
+
     @Composable
     override fun MusicVideoSurface(
         modifier: Modifier,
@@ -125,7 +131,14 @@ internal class MobilePlayerPlatform(
         useSurfaceView: Boolean,
         onFullscreenClick: (() -> Unit)?,
         onPiPClick: (() -> Unit)?,
-    ) = MobileMusicVideoSurface(modifier, cornerRadius, fillContainer, showControls, onFullscreenClick)
+    ) = MobileMusicVideoSurface(
+        modifier,
+        cornerRadius,
+        fillContainer,
+        showControls,
+        onFullscreenClick,
+        onPiPClick.takeIf { supportsPictureInPicture },
+    )
 
     @Composable
     override fun AnimatedCoverVideo(

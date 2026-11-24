@@ -1,6 +1,8 @@
 package com.metrolist.shared.ui.mobile
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -25,6 +27,7 @@ import androidx.compose.ui.viewinterop.UIKitInteropProperties
 import androidx.compose.ui.viewinterop.UIKitView
 import com.metrolist.shared.generated.resources.Res
 import com.metrolist.shared.generated.resources.enter_fullscreen
+import com.metrolist.shared.generated.resources.enter_pip
 import com.metrolist.shared.playback.IosMusicVideoSurfacePlayer
 import com.metrolist.shared.playback.IosPlaybackController
 import com.metrolist.shared.ui.components.images.AsyncImage
@@ -53,6 +56,7 @@ internal actual fun MobileMusicVideoSurface(
     fillContainer: Boolean,
     showControls: Boolean,
     onFullscreenClick: (() -> Unit)?,
+    onPiPClick: (() -> Unit)?,
 ) {
     val controller = LocalPlaybackController.current
     val iosController = controller as? IosPlaybackController
@@ -79,6 +83,8 @@ internal actual fun MobileMusicVideoSurface(
     var foreground by remember {
         mutableStateOf(UIApplication.sharedApplication.applicationState == UIApplicationState.UIApplicationStateActive)
     }
+    val pipActive by video.pictureInPictureActive.collectAsState()
+    val surfaceActive = foreground || pipActive
     DisposableEffect(video) {
         val surfaceGeneration = video.attach()
         video.setForeground(foreground)
@@ -110,7 +116,7 @@ internal actual fun MobileMusicVideoSurface(
         state.isLoading,
         state.isVideoModeActive,
         state.videoPositionMap,
-        foreground,
+        surfaceActive,
         surfaceVisible,
     ) {
         val positionMap = state.videoPositionMap
@@ -118,7 +124,7 @@ internal actual fun MobileMusicVideoSurface(
         val positionMapped = positionMap?.containsSourcePosition(state.positionMs) ?: true
         video.synchronize(
             targetPosition,
-            state.isPlaying && !state.isLoading && state.isVideoModeActive && foreground && positionMapped,
+            state.isPlaying && !state.isLoading && state.isVideoModeActive && surfaceActive && positionMapped,
             state.playbackSpeed,
             surfaceVisible,
         )
@@ -133,8 +139,8 @@ internal actual fun MobileMusicVideoSurface(
                 controller.reportVideoPlaybackFailure()
                 break
             }
-            if (foreground && surfaceVisible) video.applyPendingSeek()
-            if (foreground && surfaceVisible && video.ready && video.positionSynchronized) {
+            if (surfaceActive && surfaceVisible) video.applyPendingSeek()
+            if (surfaceActive && surfaceVisible && video.ready && video.positionSynchronized) {
                 firstFrameRendered = true
             } else {
                 firstFrameRendered = false
@@ -174,12 +180,21 @@ internal actual fun MobileMusicVideoSurface(
                 previewUrl = null,
             )
         }
-        if (showControls && onFullscreenClick != null) {
-            IconButton(
-                onClick = onFullscreenClick,
+        if (showControls && (onPiPClick != null || onFullscreenClick != null)) {
+            Row(
                 modifier = Modifier.align(Alignment.BottomEnd).padding(8.dp),
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
             ) {
-                Icon(MetrolistIcons.Default.Fullscreen, contentDescription = stringResource(Res.string.enter_fullscreen))
+                if (onPiPClick != null) {
+                    IconButton(onClick = onPiPClick) {
+                        Icon(MetrolistIcons.Filled.PictureInPicture, contentDescription = stringResource(Res.string.enter_pip))
+                    }
+                }
+                if (onFullscreenClick != null) {
+                    IconButton(onClick = onFullscreenClick) {
+                        Icon(MetrolistIcons.Default.Fullscreen, contentDescription = stringResource(Res.string.enter_fullscreen))
+                    }
+                }
             }
         }
     }

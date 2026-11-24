@@ -11,4 +11,5 @@ internal expect fun MobileMusicVideoSurface(
     fillContainer: Boolean,
     showControls: Boolean,
     onFullscreenClick: (() -> Unit)?,
+    onPiPClick: (() -> Unit)? = null,
 )

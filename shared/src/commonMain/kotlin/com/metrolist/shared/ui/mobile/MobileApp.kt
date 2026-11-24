@@ -334,6 +334,7 @@ fun MobileApp(
     oauthCallbackUrls: Flow<String> = emptyFlow(),
     initialSettingsPage: SettingsPageId? = null,
     pictureInPictureSupported: Boolean = false,
+    pictureInPictureRequiresPlayingVideo: Boolean = false,
     onEnterPictureInPicture: (isPlaying: Boolean, hasVideo: Boolean) -> Unit = { _, _ -> },
     loginContent: @Composable (
         isSwitchingChannel: Boolean,
@@ -2064,6 +2065,7 @@ fun MobileApp(
                                 touchExplorationEnabled = touchExplorationEnabled,
                                 shareLyrics = lyricsShareAction,
                                 pictureInPictureSupported = pictureInPictureSupported,
+                                pictureInPictureRequiresPlayingVideo = pictureInPictureRequiresPlayingVideo,
                                 onEnterPictureInPicture = onEnterPictureInPicture,
                             )
                         }

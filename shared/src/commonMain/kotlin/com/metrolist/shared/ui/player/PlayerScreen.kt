@@ -1797,12 +1797,13 @@ fun PlayerScreen(
                                                             showControls = true,
                                                             useSurfaceView = false,
                                                             onFullscreenClick = onToggleFullscreen,
-                                                            onPiPClick = {
-                                                                platform.enterPictureInPicture(
-                                                                    isPlaying = isPlaying,
-                                                                    hasVideo = true,
-                                                                )
-                                                            },
+                                                            onPiPClick =
+                                                                {
+                                                                    platform.enterPictureInPicture(
+                                                                        isPlaying = isPlaying,
+                                                                        hasVideo = true,
+                                                                    )
+                                                                }.takeIf { platform.canEnterPictureInPicture(isPlaying, true) },
                                                             modifier =
                                                                 Modifier.requiredWidthIn(max = windowWidth),
                                                         )

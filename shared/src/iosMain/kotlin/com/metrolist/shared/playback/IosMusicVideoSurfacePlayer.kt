@@ -2,6 +2,7 @@ package com.metrolist.shared.playback
 
 import com.metrolist.shared.api.artwork.CanvasPlaybackWatchdog
 import kotlinx.cinterop.ExperimentalForeignApi
+import kotlinx.coroutines.flow.MutableStateFlow
 import platform.AVFoundation.AVLayerVideoGravityResizeAspect
 import platform.AVFoundation.AVLayerVideoGravityResizeAspectFill
 import platform.AVFoundation.AVPlayer
@@ -34,8 +35,9 @@ internal class IosMusicVideoSurfacePlayer(
     url: String,
     headers: Map<String, String>,
 ) {
-    private val player = AVPlayer()
+    internal val player = AVPlayer()
     val layer = AVPlayerLayer.playerLayerWithPlayer(player)
+    val pictureInPictureActive = MutableStateFlow(false)
     private var closed = false
     private var surfaceGeneration = 0L
     private var attachedSurfaceGeneration: Long? = null
@@ -49,7 +51,7 @@ internal class IosMusicVideoSurfacePlayer(
     val positionSynchronized: Boolean
         get() = seekLifecycle.positionSynchronized
     private val foreground: Boolean
-        get() = seekLifecycle.isForeground
+        get() = seekLifecycle.isForeground || pictureInPictureActive.value
     private var expectingProgress = false
     private var lastPositionMs: Long? = null
     private var renderedProgress = 0L
@@ -138,9 +140,10 @@ internal class IosMusicVideoSurfacePlayer(
     }
 
     fun setForeground(isForeground: Boolean) {
-        if (closed || foreground == isForeground) return
-        val wasForeground = foreground
+        if (closed || seekLifecycle.isForeground == isForeground) return
+        val wasForeground = seekLifecycle.isForeground
         seekLifecycle.setForeground(isForeground)
+        if (pictureInPictureActive.value) return
         if (!isForeground) {
             expectingProgress = false
             watchdog.reset()
