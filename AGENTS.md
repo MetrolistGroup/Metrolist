@@ -54,6 +54,10 @@ Explain this policy and ask for a maintainer decision before coding a rejected f
 - Before opening an issue or PR, check it against [Rejected features](#rejected-features) and search open and closed issues and PRs for the same problem. Do not file duplicates or rejected features.
 - Apply [unslop](skills/unslop/SKILL.md) to every issue, PR body, comment and commit message you write, then cut it to the facts a maintainer needs.
 
+## AI-assisted contributions
+
+AI-assisted contributions are welcome. The contributor is responsible for the submitted work, understands it, and verifies it. Agent-written PRs, issues, and comments must end with `Written by an agent (<agent>, <model>)`. Keep AI-generated text short, precise, and factual. Unreviewed or duplicate agent output may be closed without detailed review.
+
 ## Code quality constraints
 
 - **No hardcoded strings.** Never hardcode user-facing strings or UI text in Kotlin code. Always extract strings into `shared/src/commonMain/composeResources/values/strings.xml` and access them via `stringResource(Res.string.<key>)` or `pluralStringResource(Res.plurals.<key>, ...)`. Translators localize these strings through Weblate.
@@ -133,7 +137,6 @@ If a change breaks an existing test that falls outside the list, delete that tes
 
 - Use Conventional Commits for commits and PR titles, such as `fix(player): preserve queue position`. Name new branches `<type>/<short-kebab-case-description>`.
 - Keep PR bodies to a few factual sentences without lists. Describe the actual change; omit filler and invented claims.
-- Every PR body must contain a visible `AI usage:` line naming all AI models used to author or modify its code or documentation, including follow-up edits. Include model versions when known; tool names such as Codex or Cursor alone are insufficient. Do not guess model identities. If no AI authored any changes, write `AI usage: No AI was used.`
-- Do not approve or merge a PR with a missing or incomplete AI disclosure; ask the author to add it to the PR body. The PR disclosure workflow comments on missing declarations; reviewers must still check that the declared models are specific and accurate.
+- Agent-written PRs, issues, and comments must end with `Written by an agent (<agent>, <model>)`. No disclosure is needed when no agent authored the contribution.
 - Reference a fixed issue in the PR body with `fixes: #<issue>` or `resolves: #<issue>`. Use `related to: #<issue>` when it is not resolved.
 - Keep issue references in the PR body, not the commit message. Only when pushing without a PR, put the reference in the commit message using the same keywords.

@@ -85,11 +85,9 @@ For example, Android's `ui/screens/HomeScreen.kt` uses the Android `HomeViewMode
 - Run the affected platform's [checks](checks.md). Format changed Kotlin with `ktlint --format` or the module's `ktlintFormat` task, then review the result.
 - Use Conventional Commits and `<type>/<short-kebab-case-description>` branch names. Do not bump `appVersion` in a feature or fix; it triggers releases.
 
-## PR disclosure
+## Agent disclosure
 
-Every PR body must include a visible `AI usage:` line naming all AI models used to author or modify its code or documentation, including later agent edits. Include model versions when known. An editor or agent name alone, such as Cursor or Codex, does not identify the model. Do not guess an identity that the tool does not expose. If no AI authored any changes, write `AI usage: No AI was used.`
-
-The [PR disclosure workflow](../.github/workflows/pr-ai-disclosure.yml) comments when the declaration is missing or unfilled and updates its existing comment when a declaration is provided. Do not approve or merge until the required disclosure is present and complete. The automated check verifies the declaration's presence, not whether the author named the models truthfully.
+Agent-written PRs, issues, and comments must end with `Written by an agent (<agent>, <model>)`. No disclosure is needed when no agent authored the contribution. The [PR disclosure workflow](../.github/workflows/pr-ai-disclosure.yml) comments on open PRs that are missing this footer.
 
 ## Icons
 

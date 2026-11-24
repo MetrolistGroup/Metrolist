@@ -25,18 +25,27 @@ jobs:
             if (pull.state !== 'open') return;
             const text = (pull.body || '')
               .replace(/<!--[\s\S]*?(?:-->|$)/g, '')
-              .replace(/```[\s\S]*?(?:```|$)|~~~[\s\S]*?(?:~~~|$)/g, '');
-            const declaration = text.match(/^AI usage:[ \t]*(\S[^\r\n]*)$/im)?.[1].trim();
-            const placeholder = /^(?:<.*>|\[.*\]|TODO|TBD|unknown|yes|AI|Codex|Cursor|Copilot|ChatGPT|Claude|\.{3})\.?$/i;
-            const disclosed = Boolean(declaration && !placeholder.test(declaration));
+              .replace(/```[\s\S]*?(?:```|$)|~~~[\s\S]*?(?:~~~|$)/g, '')
+              .trimEnd();
+            const footer = text.match(/(?:^|\n)Written by an agent \(([^(),\r\n]+),\s*([^()\r\n]+)\)\.?\s*$/i);
+            const agent = footer?.[1].trim();
+            const model = footer?.[2].trim();
+            const placeholder = /^(?:<[^>]+>|\[[^\]]+\]|TODO|TBD|unknown|agent|model|\.{3})$/i;
+            const disclosed = Boolean(
+              footer &&
+              agent &&
+              model &&
+              !placeholder.test(agent) &&
+              !placeholder.test(model));
+
             const marker = '<!-- metrolist-ai-disclosure -->';
             const comments = await github.paginate(github.rest.issues.listComments, { owner, repo, issue_number, per_page: 100 });
             const existing = comments.find(comment =>
               comment.user?.login === 'github-actions[bot]' && comment.body?.startsWith(marker));
             if (disclosed && !existing) return;
             const body = `${marker}\n\n` + (disclosed
-              ? 'An AI usage declaration is now present in the PR body. Reviewers should check that it names every model used to author the changes, or explicitly states that no AI was used.'
-              : 'Please add a visible `AI usage:` line to the PR body naming every AI model used to author or modify these changes, including model versions when known. Tool names alone are insufficient. If no AI authored any changes, write `AI usage: No AI was used.` This disclosure is required before approval or merge.');
+              ? 'An agent disclosure footer is present in the PR body. Reviewers should confirm it names the agent and model that authored the changes.'
+              : 'If an agent wrote or modified this PR, end the PR body with `Written by an agent (<agent>, <model>)`. No disclosure is needed when no agent authored the contribution.');
             if (!existing) {
               await github.rest.issues.createComment({ owner, repo, issue_number, body });
             } else if (existing.body !== body) {

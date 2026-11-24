@@ -31,7 +31,7 @@ Live YouTube tests are opt-in and never run in CI. See [InnerTube live tests](in
 
 ## Manual checks
 
-The [PR disclosure workflow](../.github/workflows/pr-ai-disclosure.yml) checks the PR body when it opens or changes. It posts one reminder for a missing or unfilled `AI usage:` declaration and updates that comment after the author supplies one. This is a comment-only check; review must verify the model names before approval or merge. See [PR disclosure](development.md#pr-disclosure) for the required declaration.
+The [PR disclosure workflow](../.github/workflows/pr-ai-disclosure.yml) checks PR bodies for the required `Written by an agent (<agent>, <model>)` footer. It posts one reminder comment when the footer is missing and updates that comment after it is added. See [Agent disclosure](development.md#agent-disclosure).
 
 ### Focus and navigation
 

@@ -5,7 +5,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        Writing this with an LLM? Check [rejected features](https://github.com/MetrolistGroup/Metrolist/blob/main/AGENTS.md#rejected-features) and existing issues first, apply [unslop](https://github.com/MetrolistGroup/Metrolist/blob/main/skills/unslop/SKILL.md) to the text and keep it short.
+        Writing this with an LLM? Check [rejected features](https://github.com/MetrolistGroup/Metrolist/blob/main/AGENTS.md#rejected-features) and existing issues first, apply [unslop](https://github.com/MetrolistGroup/Metrolist/blob/main/skills/unslop/SKILL.md), and keep it short. If an agent wrote this, end with `Written by an agent (<agent>, <model>)`.
   - type: dropdown
     id: device
     attributes:
