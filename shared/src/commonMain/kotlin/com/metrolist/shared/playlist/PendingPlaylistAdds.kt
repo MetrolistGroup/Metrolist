@@ -259,6 +259,7 @@ object PendingPlaylistAdds {
                         .groupBy { it.songId }
                         .mapValuesTo(mutableMapOf()) { (_, adds) -> adds.maxOf { checkNotNull(it.expectedCount) } }
                 val sent = mutableListOf<Pair<PendingPlaylistAdd, Int>>()
+                var confirmed = false
                 for (entry in active) {
                     val copies = listed[entry.songId] ?: 0
                     val expected =
@@ -267,6 +268,7 @@ object PendingPlaylistAdds {
                     // YouTube already lists the copies this add needs, from before or from an earlier send.
                     if (copies >= expected) {
                         remove(entry.id)
+                        confirmed = true
                         continue
                     }
                     // Only the account that queued the add may send it.
@@ -291,6 +293,7 @@ object PendingPlaylistAdds {
                         // Another add put the song there after the count, which is all an add without duplicates needs.
                         failure is PlaylistSongAlreadyPresentException -> {
                             remove(entry.id)
+                            confirmed = true
                         }
 
                         failure is PlaylistNotFoundException -> {
@@ -307,18 +310,16 @@ object PendingPlaylistAdds {
                         }
                     }
                 }
-                if (sent.isEmpty()) continue
-                // Reading the playlist back verifies the adds; one YouTube lists too few copies of is sent again later.
-                val verified = remoteSongCounts(repository, remoteId)
-                if (verified == null) {
-                    if (!PlaybackNetworkStateStore.current.connected) return true
-                    sent.forEach { (entry, _) -> postpone(entry.id) }
-                    continue
+                if (sent.isNotEmpty()) {
+                    // Reading the playlist back verifies the adds; one YouTube lists too few copies of is sent again later.
+                    val verified = remoteSongCounts(repository, remoteId)
+                    if (verified == null && !PlaybackNetworkStateStore.current.connected) return true
+                    sent.forEach { (entry, expected) ->
+                        if ((verified?.get(entry.songId) ?: 0) >= expected) remove(entry.id) else postpone(entry.id)
+                    }
                 }
-                sent.forEach { (entry, expected) ->
-                    if ((verified[entry.songId] ?: 0) >= expected) remove(entry.id) else postpone(entry.id)
-                }
-                PlaylistChanges.notifyChanged(remoteId)
+                // Open playlists reload after a send or a confirmation, so a confirmed copy gets the item ID YouTube lists.
+                if (confirmed || sent.isNotEmpty()) PlaylistChanges.notifyChanged(remoteId)
             }
         }
         val remaining = queuedFor(accountKey)
