@@ -154,7 +154,7 @@ def arguments(graal, work, output, target, experiment=False, agent=None, macos_v
         options += ['--add-opens=java.desktop/sun.awt=ALL-UNNAMED', '--add-opens=java.desktop/sun.awt.X11=ALL-UNNAMED']
     if not experiment:
         # Testers fall back like the JVM on a missing registration; CI smoke fails on any reported registration.
-        options += ['-R:MaxHeapSize=384m', '-R:MinHeapSize=32m', '-R:MissingRegistrationReportingMode=Warn']
+        options += ['-R:MaximumHeapSizePercent=25', '-R:MinHeapSize=32m', '-R:MissingRegistrationReportingMode=Warn']
         # The default x86-64-v3 / armv8.1-a target refuses to start on CPUs without AVX2 or on Raspberry Pi 4 class ARM.
         options += ['-march=compatibility']
         if windows:
