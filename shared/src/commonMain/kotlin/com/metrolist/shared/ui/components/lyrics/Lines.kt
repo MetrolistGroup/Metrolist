@@ -60,6 +60,7 @@ import androidx.compose.ui.text.TextMeasurer
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.LineHeightStyle
+import androidx.compose.ui.text.style.ResolvedTextDirection
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.text.style.TextMotion
@@ -448,20 +449,33 @@ fun ActiveLyricsLineContent(
                     remember(displayText, mainStyle, textMeasurer) {
                         textMeasurer.measure(displayText, mainStyle)
                     }
-                val activeWordStart by remember(mainWords) {
+                val hasWordTiming = remember(mainWords) { mainWords?.any { !it.isBackground && !it.isLineTimed } == true }
+                val activeWordStart by remember(mainWords, hasWordTiming, entry.time, lineEndTimeMs, displayText) {
                     derivedStateOf(structuralEqualityPolicy()) {
                         val currentPosition = currentPositionProvider()
-                        mainWords
-                            ?.filterNot { it.isBackground }
-                            ?.takeWhile { currentPosition >= (it.endTime * 1000).toLong() }
-                            ?.sumOf { it.text.length + if (it.hasTrailingSpace) 1 else 0 }
-                            ?: 0
+                        if (hasWordTiming) {
+                            mainWords
+                                ?.filterNot { it.isBackground }
+                                ?.takeWhile { currentPosition >= (it.endTime * 1000).toLong() }
+                                ?.sumOf { it.text.length + if (it.hasTrailingSpace) 1 else 0 }
+                                ?: 0
+                        } else if (lineEndTimeMs != Long.MAX_VALUE && lineEndTimeMs > entry.time) {
+                            // Line-timed lyrics have no word positions, so pan through the line over its duration.
+                            val progress = (currentPosition - entry.time).toFloat() / (lineEndTimeMs - entry.time)
+                            (progress.coerceIn(0f, 1f) * displayText.length).toInt()
+                        } else {
+                            0
+                        }
                     }
                 }
+                val isRtlText = measuredText.getParagraphDirection(0) == ResolvedTextDirection.Rtl
+                // Offset 0 must show the text's start edge, whatever the layout direction mirrors.
+                val reverseScrolling = isRtlText != (LocalLayoutDirection.current == LayoutDirection.Rtl)
                 LaunchedEffect(activeWordStart, measuredText, scrollState.maxValue) {
-                    if (activeWordStart > 0 && activeWordStart < displayText.length) {
-                        val wordX = measuredText.getBoundingBox(activeWordStart).left.toInt()
-                        scrollState.animateScrollTo(wordX.coerceIn(0, scrollState.maxValue))
+                    if (activeWordStart < displayText.length) {
+                        val box = measuredText.getBoundingBox(activeWordStart)
+                        val wordOffset = if (isRtlText) measuredText.size.width - box.right else box.left
+                        scrollState.animateScrollTo(wordOffset.toInt().coerceIn(0, scrollState.maxValue))
                     }
                 }
                 val isJoining = remember(displayText) { isJoiningScript(displayText) }
@@ -474,7 +488,7 @@ fun ActiveLyricsLineContent(
                         maxLines = 1,
                         softWrap = false,
                         overflow = TextOverflow.Clip,
-                        modifier = Modifier.horizontalScroll(scrollState, reverseScrolling = false),
+                        modifier = Modifier.horizontalScroll(scrollState, reverseScrolling = reverseScrolling),
                     )
                 } else {
                     Text(
@@ -484,7 +498,7 @@ fun ActiveLyricsLineContent(
                         maxLines = 1,
                         softWrap = false,
                         overflow = TextOverflow.Clip,
-                        modifier = Modifier.horizontalScroll(scrollState, reverseScrolling = false),
+                        modifier = Modifier.horizontalScroll(scrollState, reverseScrolling = reverseScrolling),
                     )
                 }
             } else {
