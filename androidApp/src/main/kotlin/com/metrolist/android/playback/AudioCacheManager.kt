@@ -320,37 +320,44 @@ class AudioCacheManager(
             }
 
             if (touch) database.dao().touchCachedAudio(songId, System.currentTimeMillis(), System.currentTimeMillis() - 60_000L)
-            PlaybackResource(
-                videoId = songId,
-                url =
-                    when {
-                        isContentUri(entry.filePath) -> {
-                            entry.filePath
-                        }
-
-                        LegacyAudioFile.fromPath(context, entry.filePath) != null -> {
-                            File(entry.filePath)
-                                .toUri()
-                                .buildUpon()
-                                .scheme(LegacyAudioFile.SCHEME)
-                                .build()
-                                .toString()
-                        }
-
-                        else -> {
-                            File(entry.filePath).toUri().toString()
-                        }
-                    },
-                headers = emptyMap(),
-                loudnessDb = null,
-                expiresAt = null,
-                contentLengthBytes = fileSize.takeIf { it >= 0L },
-                clientName = "local",
-                profileId = CACHED_AUDIO_PROFILE_ID,
-                requireBoundedRange = false,
-                allowPlaybackTrackingFallback = !song.isLocal && !song.isUploaded && !song.isPodcast && !song.id.startsWith("local_"),
-            ).withCachedFormat(database.dao().format(songId).first())
+            cachedPlaybackResource(song, entry, fileSize)
         }
+
+    private suspend fun cachedPlaybackResource(
+        song: SongItem,
+        entry: CachedAudioEntity,
+        fileSize: Long,
+    ): PlaybackResource =
+        PlaybackResource(
+            videoId = song.id,
+            url =
+                when {
+                    isContentUri(entry.filePath) -> {
+                        entry.filePath
+                    }
+
+                    LegacyAudioFile.fromPath(context, entry.filePath) != null -> {
+                        File(entry.filePath)
+                            .toUri()
+                            .buildUpon()
+                            .scheme(LegacyAudioFile.SCHEME)
+                            .build()
+                            .toString()
+                    }
+
+                    else -> {
+                        File(entry.filePath).toUri().toString()
+                    }
+                },
+            headers = emptyMap(),
+            loudnessDb = null,
+            expiresAt = null,
+            contentLengthBytes = fileSize.takeIf { it >= 0L },
+            clientName = "local",
+            profileId = CACHED_AUDIO_PROFILE_ID,
+            requireBoundedRange = false,
+            allowPlaybackTrackingFallback = !song.isLocal && !song.isUploaded && !song.isPodcast && !song.id.startsWith("local_"),
+        ).withCachedFormat(database.dao().format(song.id).first())
 
     suspend fun prefetchPlayback(resource: PlaybackResource) {
         try {
@@ -883,6 +890,22 @@ class AudioCacheManager(
         storageLock.song(song.id) { storeAudioFile(song, resource, KIND_DOWNLOAD, control, onProgress) }
     }
 
+    // Saves a complete song-cache entry as the download without resolving a stream, so it also works offline.
+    suspend fun downloadCachedSong(
+        song: SongItem,
+        control: AudioDownloadControl? = null,
+        onProgress: (downloadedBytes: Long, totalBytes: Long?) -> Unit = { _, _ -> },
+    ): Boolean =
+        withContext(Dispatchers.IO) {
+            storageLock.song(song.id) {
+                val entry = database.dao().cachedAudio(song.id)
+                if (entry?.kind != KIND_CACHE || audioSize(entry.filePath) != entry.fileSize) return@song false
+                val resource = cachedPlaybackResource(song, entry, entry.fileSize)
+                storeAudioFile(song, resource, KIND_DOWNLOAD, control, onProgress, promoteCache = true)
+                true
+            }
+        }
+
     @OptIn(ExperimentalCoilApi::class)
     private suspend fun storeAudioFile(
         song: SongItem,
@@ -894,6 +917,7 @@ class AudioCacheManager(
         sabrCapture: SabrInputStream.CompleteCapture? = null,
         allowSabrDownload: Boolean = true,
         cacheMayPublish: () -> Boolean = { true },
+        promoteCache: Boolean = false,
     ) {
         val existing = database.dao().cachedAudio(song.id)
         if (existing?.kind == kind &&
@@ -927,15 +951,20 @@ class AudioCacheManager(
                     val format = if (existing?.kind == KIND_CACHE && kind == KIND_DOWNLOAD) database.dao().format(song.id).first() else null
                     val reuseCache =
                         existing?.kind == KIND_CACHE && kind == KIND_DOWNLOAD &&
-                            canReuseCachedAudio(resource, format?.itag, format?.mimeType, format?.codecs, existing.fileSize) &&
+                            (
+                                promoteCache ||
+                                    canReuseCachedAudio(resource, format?.itag, format?.mimeType, format?.codecs, existing.fileSize)
+                            ) &&
                             audioSize(existing.filePath) == existing.fileSize
+                    check(reuseCache || !promoteCache) { "Cached audio is no longer complete" }
                     val downloadedMimeType =
                         if (reuseCache) {
                             copyAudioTo(checkNotNull(existing).filePath, tempFile)
+                            onProgress(existing.fileSize, existing.fileSize)
                             existing.mimeType
                         } else if (sabrCapture?.copyTo(tempFile) == true) {
                             checkNotNull(resource.sabrBootstrap).mimeType.substringBefore(';')
-                        } else if (DirectPlaybackCache.copyComplete(resource, tempFile)) {
+                        } else if (copyPlaybackCapture(kind, resource, tempFile, control, onProgress)) {
                             resource.mimeType?.substringBefore(';') ?: "application/octet-stream"
                         } else if (resource.isDirectFile && resource.contentLengthBytes != null && kind == KIND_CACHE) {
                             error("Playback capture is incomplete")
@@ -1084,6 +1113,37 @@ class AudioCacheManager(
             synchronized(activeAudioFiles) {
                 temporaryFiles.forEach { it.delete() }
                 activeAudioFiles.removeAll(temporaryFiles.toSet())
+            }
+        }
+    }
+
+    // A download finishes a partly played capture instead of fetching the whole file again.
+    private suspend fun copyPlaybackCapture(
+        kind: String,
+        resource: PlaybackResource,
+        destination: File,
+        control: AudioDownloadControl?,
+        onProgress: (downloadedBytes: Long, totalBytes: Long?) -> Unit,
+    ): Boolean {
+        if (kind == KIND_DOWNLOAD && !completePlaybackCapture(resource, control, onProgress)) return false
+        return DirectPlaybackCache.copyComplete(resource, destination)
+    }
+
+    private suspend fun completePlaybackCapture(
+        resource: PlaybackResource,
+        control: AudioDownloadControl?,
+        onProgress: (downloadedBytes: Long, totalBytes: Long?) -> Unit,
+    ): Boolean {
+        val coverage = DirectPlaybackCache.coverage(resource) ?: return false
+        val total = resource.contentLengthBytes ?: return false
+        return withSabrDownloadControl(control) {
+            coroutineScope {
+                val progress = launch { coverage.collect { onProgress((it * total).toLong(), total) } }
+                try {
+                    DirectPlaybackCache.complete(resource, awaitReady = { control?.awaitIfPaused() })
+                } finally {
+                    progress.cancel()
+                }
             }
         }
     }
