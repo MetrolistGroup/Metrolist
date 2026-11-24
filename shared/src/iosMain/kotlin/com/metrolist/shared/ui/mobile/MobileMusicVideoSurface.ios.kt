@@ -118,7 +118,11 @@ internal actual fun MobileMusicVideoSurface(
         state.videoPositionMap,
         surfaceActive,
         surfaceVisible,
+        pipActive,
     ) {
+        // While PiP is active the bridge owns the retained player's synchronization; synchronizing here
+        // as well races its gap handling and can pause or seek the audible PiP transport.
+        if (pipActive) return@LaunchedEffect
         val positionMap = state.videoPositionMap
         val targetPosition = positionMap?.mapPosition(state.positionMs) ?: state.positionMs
         val positionMapped = positionMap?.containsSourcePosition(state.positionMs) ?: true
