@@ -27,6 +27,7 @@ import com.metrolist.shared.generated.resources.playlist_unavailable
 import com.metrolist.shared.model.RadioQueueChip
 import com.metrolist.shared.model.SongItem
 import com.metrolist.shared.model.isLive
+import com.metrolist.shared.model.isPodcast
 import com.metrolist.shared.playback.MusicQueue
 import com.metrolist.shared.playback.MusicQueueSnapshot
 import com.metrolist.shared.playback.MusicQueueState
@@ -690,7 +691,8 @@ class PlayerConnection(
                     DcPlaybackAction.REPLACE_QUEUE,
                     songs = listOf(song),
                     index = 0,
-                    finite = true,
+                    finite = !song.startsRadio,
+                    explicitRadioQueue = song.startsRadio,
                     positionMs = startPositionMs,
                 ),
             )
@@ -715,7 +717,14 @@ class PlayerConnection(
         startVideo: Boolean = false,
     ) {
         if (deferUntilConnected { playSongInternal(song, url, startPositionMs, startVideo) }) return
-        if (url.isBlank()) {
+        if (url.isBlank() && song.startsRadio) {
+            musicService?.playSongRadio(
+                song,
+                startPositionMs = startPositionMs,
+                startPlaying = localSongChangeStartsPlayback(),
+                startVideo = startVideo,
+            )
+        } else if (url.isBlank()) {
             musicService?.playQueue(
                 listOf(song),
                 finite = true,
@@ -727,6 +736,9 @@ class PlayerConnection(
             musicService?.player?.play(song, url, startPlaying = localSongChangeStartsPlayback())
         }
     }
+
+    // Podcast episodes and local files have no YouTube radio to follow them.
+    private val SongItem.startsRadio: Boolean get() = !isPodcast && !isLocal
 
     fun playNext(song: SongItem) {
         addToQueue(song, playNext = true)
