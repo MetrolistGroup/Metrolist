@@ -26,7 +26,7 @@ def collect(work, target):
     pins = json.loads((Path(__file__).resolve().parents[2] / 'scripts/graalvm-pins.json').read_text())
     info = {'commit': subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip(),
             'platform': target, 'graalvm': pins['version'], 'collector': 'serial', 'optimization': '-Os',
-            'heap_min_mib': 32, 'heap_max_mib': 384, 'strict_registration': True,
+            'heap_min_mib': 32, 'heap_max_percent': 25, 'strict_registration': True,
             'artifacts': artifacts, 'run_url': os.environ.get('GITHUB_SERVER_URL', '') + '/' + os.environ.get('GITHUB_REPOSITORY', '') + '/actions/runs/' + os.environ.get('GITHUB_RUN_ID', '')}
     result = evidence / 'smoke/result.txt'
     info['smoke_result'] = result.read_text() if result.is_file() else 'Smoke did not complete'
