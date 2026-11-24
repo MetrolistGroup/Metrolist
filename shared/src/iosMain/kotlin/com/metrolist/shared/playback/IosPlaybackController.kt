@@ -999,7 +999,9 @@ internal class IosPlaybackController(
     ) {
         val songs = queue.ifEmpty { listOf(song) }
         val index = songs.indexOfFirst { it === song }.takeIf { it >= 0 } ?: songs.indexOf(song).coerceAtLeast(0)
-        play(song, queue, songsOnly, index)
+        // Podcast episodes and local files have no YouTube radio, so they stay a finite single-item queue.
+        val startsRadio = !song.isPodcast && !song.isLocal && !song.id.startsWith("local_")
+        play(song, if (startsRadio) queue else songs, songsOnly, index)
     }
 
     private fun play(
