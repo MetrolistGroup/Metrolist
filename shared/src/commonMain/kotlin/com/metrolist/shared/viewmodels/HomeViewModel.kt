@@ -1013,24 +1013,31 @@ class HomeViewModel(
                                 sections = uncategorizedHomeSections(sections),
                                 recentlyPlayed = emptyList(),
                             )
-                        if (isFiltered) cachedSelectedChipContent = null
-                        if (loadingMoods) paginationInProgress.value = true
                         try {
-                            _uiState.value = loadedState.withoutBlockedContent()
-                            primaryContentSnapshot = loadedState
-                            if (isFiltered) {
-                                cachedSelectedChipContent = loadedState
-                                loadedState.selectedChip?.let { chip ->
-                                    cacheChipContent(chip, loadedState)
+                            quickPicksRebuildMutex.withLock {
+                                if (generation != contentLoadGeneration ||
+                                    sessionKey != GlobalYouTube.innerTube.sessionSnapshot().homeCacheSessionKey()
+                                ) {
+                                    return@supervisorScope
                                 }
-                                publishedPrimaryChipContent.update { it?.takeUnless { primary -> primary.first == generation } }
-                            } else {
-                                allContentReloadRequired = false
-                                cacheAllContentState(loadedState)
-                                publishedPrimaryAllContent.value = null
-                                publishedPrimaryChipContent.value = null
+                                if (isFiltered) cachedSelectedChipContent = null
+                                if (loadingMoods) paginationInProgress.value = true
+                                _uiState.value = loadedState.withoutBlockedContent()
+                                primaryContentSnapshot = loadedState
+                                if (isFiltered) {
+                                    cachedSelectedChipContent = loadedState
+                                    loadedState.selectedChip?.let { chip ->
+                                        cacheChipContent(chip, loadedState)
+                                    }
+                                    publishedPrimaryChipContent.update { it?.takeUnless { primary -> primary.first == generation } }
+                                } else {
+                                    allContentReloadRequired = false
+                                    cacheAllContentState(loadedState)
+                                    publishedPrimaryAllContent.value = null
+                                    publishedPrimaryChipContent.value = null
+                                }
+                                saveLastHomePage(loadedState)
                             }
-                            saveLastHomePage(loadedState)
                             if (!isFiltered) appendMissingMainFeedMoods(generation)
                         } finally {
                             if (loadingMoods && generation == contentLoadGeneration) {
@@ -1053,102 +1060,104 @@ class HomeViewModel(
                             )
                         }
                     } catch (e: Exception) {
-                        if (generation != contentLoadGeneration ||
-                            sessionKey != GlobalYouTube.innerTube.sessionSnapshot().homeCacheSessionKey()
-                        ) {
-                            return@supervisorScope
-                        }
-                        val currentState = _uiState.value
-                        val failedAllPending =
-                            !isFiltered &&
-                                shouldKeepIncompleteAllContentPendingAfterFailure(
-                                    primaryContentPublished = primaryContentPublished,
-                                    cachedAllContent = cachedAllContent,
-                                    hadIncompleteAllContent = hadIncompleteAllContent,
-                                )
-                        val retainedPrimaryContent =
-                            publishedPrimaryAllContent.value
-                                ?.takeIf { it.first == generation }
-                                ?.second
-                                ?: primaryContentSnapshot
-                        val primaryFailureSnapshot =
-                            retainedPrimaryContent?.copy(
-                                userPlaylists = currentState.userPlaylists,
-                                isLoading = false,
-                                isRefreshing = false,
-                                isRevalidating = false,
-                                isContentLoading = false,
-                                isLoadingMore = false,
-                                isAllContentPending = false,
-                                continuation =
-                                    homeContinuationAfterAssemblyFailure(
-                                        currentContinuation = currentState.continuation,
-                                        primaryContinuation = primaryContinuation,
-                                        primaryContentPublished = true,
-                                    ),
-                                error = e.message.orEmpty(),
-                            )
-                        val failedState =
-                            currentState.copy(
-                                isLoading = false,
-                                isRefreshing = false,
-                                isRevalidating = false,
-                                isContentLoading = false,
-                                isLoadingMore = false,
-                                isAllContentPending = if (!isFiltered) false else currentState.isAllContentPending,
-                                continuation =
-                                    if (failedAllPending) {
-                                        null
-                                    } else {
+                        quickPicksRebuildMutex.withLock {
+                            if (generation != contentLoadGeneration ||
+                                sessionKey != GlobalYouTube.innerTube.sessionSnapshot().homeCacheSessionKey()
+                            ) {
+                                return@supervisorScope
+                            }
+                            val currentState = _uiState.value
+                            val failedAllPending =
+                                !isFiltered &&
+                                    shouldKeepIncompleteAllContentPendingAfterFailure(
+                                        primaryContentPublished = primaryContentPublished,
+                                        cachedAllContent = cachedAllContent,
+                                        hadIncompleteAllContent = hadIncompleteAllContent,
+                                    )
+                            val retainedPrimaryContent =
+                                publishedPrimaryAllContent.value
+                                    ?.takeIf { it.first == generation }
+                                    ?.second
+                                    ?: primaryContentSnapshot
+                            val primaryFailureSnapshot =
+                                retainedPrimaryContent?.copy(
+                                    userPlaylists = currentState.userPlaylists,
+                                    isLoading = false,
+                                    isRefreshing = false,
+                                    isRevalidating = false,
+                                    isContentLoading = false,
+                                    isLoadingMore = false,
+                                    isAllContentPending = false,
+                                    continuation =
                                         homeContinuationAfterAssemblyFailure(
                                             currentContinuation = currentState.continuation,
                                             primaryContinuation = primaryContinuation,
-                                            primaryContentPublished = primaryContentPublished,
-                                        )
-                                    },
-                                error = e.message.orEmpty(),
-                            )
-                        _uiState.value = failedState
-                        if (!isFiltered) {
-                            allContentReloadRequired = failedAllPending
-                            publishedPrimaryAllContent.update { it?.takeUnless { primary -> primary.first == generation } }
-                            cachedAllContent =
-                                homeCacheAfterAssemblyFailure(
-                                    cachedAllContent,
-                                    (primaryFailureSnapshot ?: failedState)
-                                        .withLatestLibraryAndSpeedDialState(currentState)
-                                        .withLatestSongMetadataFrom(currentState)
-                                        .withSpeedDialPins(latestSpeedDialPins, speedDialRecommendationItems),
-                                    primaryContentPublished,
+                                            primaryContentPublished = true,
+                                        ),
+                                    error = e.message.orEmpty(),
                                 )
-                            if (primaryContentPublished) {
-                                val locale = GlobalYouTube.innerTube.locale
-                                lastKnownLocaleSignature = "${locale.hl}:${locale.gl}"
-                            }
-                        } else if (primaryContentPublished) {
-                            val latestChipPrimarySnapshot =
-                                cachedSelectedChipContent
-                                    ?.takeIf { it.selectedChip == currentState.selectedChip }
-                                    ?.let { cached ->
-                                        homeChipSnapshotWithRecoveredContinuation(cached, primaryFailureSnapshot)
-                                    } ?: primaryFailureSnapshot
-                            val failedChipSnapshot =
-                                homeSelectedChipCacheAfterAssemblyFailure(
-                                    cachedSelectedChipContent,
-                                    latestChipPrimarySnapshot?.withLatestSongMetadataFrom(currentState),
-                                    failedState,
-                                    primaryContentPublished,
+                            val failedState =
+                                currentState.copy(
+                                    isLoading = false,
+                                    isRefreshing = false,
+                                    isRevalidating = false,
+                                    isContentLoading = false,
+                                    isLoadingMore = false,
+                                    isAllContentPending = if (!isFiltered) false else currentState.isAllContentPending,
+                                    continuation =
+                                        if (failedAllPending) {
+                                            null
+                                        } else {
+                                            homeContinuationAfterAssemblyFailure(
+                                                currentContinuation = currentState.continuation,
+                                                primaryContinuation = primaryContinuation,
+                                                primaryContentPublished = primaryContentPublished,
+                                            )
+                                        },
+                                    error = e.message.orEmpty(),
                                 )
-                            cachedSelectedChipContent = failedChipSnapshot
-                            failedChipSnapshot?.selectedChip?.let { chip -> cacheChipContent(chip, failedChipSnapshot) }
-                            publishedPrimaryChipContent.update { it?.takeUnless { primary -> primary.first == generation } }
-                        } else {
-                            cachedSelectedChipContent =
-                                cachedSelectedChipContent
-                                    ?.takeIf { it.selectedChip == currentState.selectedChip }
-                                    ?.asOfflineSnapshot()
-                            cachedSelectedChipContent?.let { cached ->
-                                cached.selectedChip?.let { chip -> cacheChipContent(chip, cached, markFresh = false) }
+                            _uiState.value = failedState
+                            if (!isFiltered) {
+                                allContentReloadRequired = failedAllPending
+                                publishedPrimaryAllContent.update { it?.takeUnless { primary -> primary.first == generation } }
+                                cachedAllContent =
+                                    homeCacheAfterAssemblyFailure(
+                                        cachedAllContent,
+                                        (primaryFailureSnapshot ?: failedState)
+                                            .withLatestLibraryAndSpeedDialState(currentState)
+                                            .withLatestSongMetadataFrom(currentState)
+                                            .withSpeedDialPins(latestSpeedDialPins, speedDialRecommendationItems),
+                                        primaryContentPublished,
+                                    )
+                                if (primaryContentPublished) {
+                                    val locale = GlobalYouTube.innerTube.locale
+                                    lastKnownLocaleSignature = "${locale.hl}:${locale.gl}"
+                                }
+                            } else if (primaryContentPublished) {
+                                val latestChipPrimarySnapshot =
+                                    cachedSelectedChipContent
+                                        ?.takeIf { it.selectedChip == currentState.selectedChip }
+                                        ?.let { cached ->
+                                            homeChipSnapshotWithRecoveredContinuation(cached, primaryFailureSnapshot)
+                                        } ?: primaryFailureSnapshot
+                                val failedChipSnapshot =
+                                    homeSelectedChipCacheAfterAssemblyFailure(
+                                        cachedSelectedChipContent,
+                                        latestChipPrimarySnapshot?.withLatestSongMetadataFrom(currentState),
+                                        failedState,
+                                        primaryContentPublished,
+                                    )
+                                cachedSelectedChipContent = failedChipSnapshot
+                                failedChipSnapshot?.selectedChip?.let { chip -> cacheChipContent(chip, failedChipSnapshot) }
+                                publishedPrimaryChipContent.update { it?.takeUnless { primary -> primary.first == generation } }
+                            } else {
+                                cachedSelectedChipContent =
+                                    cachedSelectedChipContent
+                                        ?.takeIf { it.selectedChip == currentState.selectedChip }
+                                        ?.asOfflineSnapshot()
+                                cachedSelectedChipContent?.let { cached ->
+                                    cached.selectedChip?.let { chip -> cacheChipContent(chip, cached, markFresh = false) }
+                                }
                             }
                         }
                     } finally {
