@@ -115,6 +115,18 @@ suspend fun MusicDatabase.cacheRemotePlaylist(
                 ?: song.playlistSetVideoId?.let { token -> existingBySetVideoId[token] }
         if (mapping != null && claimed.add(mapping.id)) matches[index] = mapping
     }
+    // Local copies of songs whose queued adds YouTube has not confirmed yet stay listed until it does. Their rows have no
+    // item ID yet and are set aside before the fallback below, so an older remote copy of the song cannot take one over.
+    val unconfirmed =
+        PendingPlaylistAdds.unconfirmedCopies(existing?.id ?: requestedId, songs.groupingBy { it.id }.eachCount()).toMutableMap()
+    val pendingMappings = mutableListOf<PlaylistSongMap>()
+    for (mapping in existingMappings) {
+        val left = unconfirmed[mapping.songId] ?: 0
+        if (left > 0 && mapping.setVideoId == null && claimed.add(mapping.id)) {
+            pendingMappings += mapping
+            unconfirmed[mapping.songId] = left - 1
+        }
+    }
     val unmatchedBySongId = existingMappings.filterNot { it.id in claimed }.groupBy { it.songId }
     songs.indices.filterNot(matches::containsKey).groupBy { songs[it].id }.forEach { (songId, indices) ->
         val old = unmatchedBySongId[songId].orEmpty()
@@ -123,18 +135,6 @@ suspend fun MusicDatabase.cacheRemotePlaylist(
                 val token = songs[index].playlistSetVideoId
                 if (token == null || mapping.setVideoId == null || token == mapping.setVideoId) matches[index] = mapping
             }
-        }
-    }
-    // Local copies of songs whose queued adds YouTube has not confirmed yet stay listed until it does.
-    val matchedIds = matches.values.mapTo(mutableSetOf()) { it.id }
-    val unconfirmed =
-        PendingPlaylistAdds.unconfirmedCopies(existing?.id ?: requestedId, songs.groupingBy { it.id }.eachCount()).toMutableMap()
-    val pendingMappings = mutableListOf<PlaylistSongMap>()
-    for (mapping in existingMappings) {
-        val left = unconfirmed[mapping.songId] ?: 0
-        if (left > 0 && mapping.id !in matchedIds) {
-            pendingMappings += mapping
-            unconfirmed[mapping.songId] = left - 1
         }
     }
     val entity =

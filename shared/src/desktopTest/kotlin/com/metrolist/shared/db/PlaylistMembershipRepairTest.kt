@@ -3,9 +3,11 @@ package com.metrolist.shared.db
 import com.metrolist.innertubex.InnerTube
 import com.metrolist.shared.api.YouTubeRepository
 import com.metrolist.shared.db.entities.PlaylistEntity
+import com.metrolist.shared.db.entities.PlaylistSongMap
 import com.metrolist.shared.model.PlaylistItem
 import com.metrolist.shared.model.SongItem
 import com.metrolist.shared.playlist.LibraryDeletionTracker
+import com.metrolist.shared.playlist.PendingPlaylistAdd
 import com.metrolist.shared.settings.Settings
 import com.metrolist.shared.youtube.playback.PlaybackNetworkState
 import com.metrolist.shared.youtube.playback.PlaybackNetworkStateStore
@@ -238,6 +240,35 @@ class PlaylistMembershipRepairTest {
                     .map { it.song.id },
             )
         }
+
+    @Test
+    fun refreshKeepsAQueuedCopyApartFromAnOlderRemoteCopy() =
+        runBlocking {
+            val item = PlaylistItem("PLqueued", "Queued", null)
+            database.cacheRemotePlaylist(item.id, item, emptyList())
+            val dao = database.dao()
+            dao.upsertHistorySong(song())
+            dao.insert(PlaylistSongMap(playlistId = item.id, songId = "song", position = 0))
+            val queued = dao.playlistSongMaps(item.id, Int.MIN_VALUE).single()
+            val add = PendingPlaylistAdd(1L, "account", item.id, "song", allowDuplicate = true)
+            Settings.shared.pendingPlaylistAddsJson = Json.encodeToString(listOf(add))
+
+            database.cacheRemotePlaylist(item.id, item, listOf(song()))
+
+            assertEquals(listOf("first" to false, null to true), rows(item.id, queued.id))
+            assertEquals(2, dao.findPlaylistEntity(item.id)!!.remoteSongCount)
+
+            // Once YouTube lists the expected copies, the queued row becomes the new remote copy.
+            Settings.shared.pendingPlaylistAddsJson = Json.encodeToString(listOf(add.copy(expectedCount = 2)))
+            database.cacheRemotePlaylist(item.id, item, listOf(song(), song().copy(playlistSetVideoId = "second")))
+
+            assertEquals(listOf("first" to false, "second" to true), rows(item.id, queued.id))
+        }
+
+    private suspend fun rows(
+        playlistId: String,
+        queuedId: Int,
+    ) = database.dao().playlistSongMaps(playlistId, Int.MIN_VALUE).map { it.setVideoId to (it.id == queuedId) }
 
     private fun song() = SongItem("song", "Song", null, emptyList(), null, playlistSetVideoId = "first")
 
