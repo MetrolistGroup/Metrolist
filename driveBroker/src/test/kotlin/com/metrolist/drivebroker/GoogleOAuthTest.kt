@@ -110,6 +110,23 @@ class GoogleOAuthTest {
             client.close()
         }
 
+    @Test
+    fun `treats a server error during revocation as ambiguous`() =
+        runBlocking {
+            val client =
+                HttpClient(
+                    MockEngine {
+                        respond("", HttpStatusCode.InternalServerError)
+                    },
+                )
+            val error =
+                runCatching {
+                    GoogleOAuth(client, testConfiguration()).revoke("refresh-token")
+                }.exceptionOrNull()
+            assertTrue(error is GoogleRevocationAmbiguousException)
+            client.close()
+        }
+
     private fun oauthClient(
         tokenResponse: String,
         identityResponse: String,

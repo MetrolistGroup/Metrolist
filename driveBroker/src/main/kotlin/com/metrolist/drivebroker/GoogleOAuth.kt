@@ -180,6 +180,10 @@ class GoogleOAuth(
                 throw GoogleRevocationAmbiguousException(cause = error)
             }
         if (response.status.isSuccess()) return
+        if (response.status.value in 500..599) {
+            // A server error cannot prove Google rejected the revocation; keep the marker for reconciliation.
+            throw GoogleRevocationAmbiguousException(message = "Google revocation failed with HTTP ${response.status.value}")
+        }
         val error =
             try {
                 response.body<GoogleTokenResponse>().error
