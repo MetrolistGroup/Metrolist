@@ -2743,4 +2743,10 @@
     <string name="no_new_playlist_suggestions">Nessun nuovo suggerimento di playlist</string>
     <string name="cast_volume_step">Passo del volume Cast</string>
     <string name="cast_volume_step_description">Regola di quanto ogni pressione dei tasti del volume del telefono modifica il volume dell'altoparlante o della TV durante la trasmissione</string>
+    <string name="search_online_short">Online</string>
+    <string name="lyrics_search_online_query">%1$s %2$s testo</string>
+    <string name="appearance_swipe_song_gesture_queue">Gesto di scorrimento brano in coda</string>
+    <string name="appearance_swipe_song_gesture_queue_description">Fai scorrere un brano verso il bordo iniziale per rimuoverlo dalla coda anche quando la coda è bloccata</string>
+    <string name="hide_playlist_recommendations">Nascondi consigli playlist</string>
+    <string name="hide_playlist_recommendations_desc">Nascondi i brani consigliati mostrati sotto le playlist</string>
 </resources>
