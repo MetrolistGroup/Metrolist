@@ -198,8 +198,10 @@
     <string name="delete">Delete</string>
     <!-- Translators: Imperative action label for remove from queue in the desktop player and playback queue. -->
     <string name="remove_from_queue">Remove from queue</string>
-    <!-- Translators: Imperative action label for online in the search. -->
+    <!-- Translators: Button in the manual lyrics search dialog that opens a web search for the song's lyrics. -->
     <string name="search_online">Search online</string>
+    <!-- Translators: Short form of Search online, used when the full label does not fit beside Cancel and Search in the manual lyrics search dialog. Keep it to one short word if possible. -->
+    <string name="search_online_short">Online</string>
 
     <!-- Sort menu -->
     <!-- Translators: Label for sort by create date in the Home and browse screens and Library. -->
@@ -244,6 +246,8 @@
     <string name="lyrics_youtube_captions">YouTube Captions</string>
     <!-- Translators: Title of the manual lyrics search dialog. -->
     <string name="search_lyrics">Search lyrics</string>
+    <!-- Translators: Web search query sent by Search online in the manual lyrics search dialog. %1$s is the artist; %2$s is the song title. Translate "lyrics" and reorder the parts as a search in your language would read. -->
+    <string name="lyrics_search_online_query">%1$s %2$s lyrics</string>
     <!-- Translators: Imperative action label for select songs in the media item menus. -->
     <string name="select_songs">Select songs</string>
 
