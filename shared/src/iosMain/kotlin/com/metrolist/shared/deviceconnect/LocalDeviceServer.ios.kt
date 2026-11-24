@@ -36,6 +36,7 @@ import platform.Network.nw_connection_state_ready
 import platform.Network.nw_connection_t
 import platform.Network.nw_content_context_copy_protocol_metadata
 import platform.Network.nw_content_context_create
+import platform.Network.nw_content_context_get_is_final
 import platform.Network.nw_content_context_set_metadata_for_protocol
 import platform.Network.nw_endpoint_copy_address_string
 import platform.Network.nw_listener_cancel
@@ -272,7 +273,7 @@ private class IosDeviceChannel(
         onText: (String) -> Boolean,
         onClosed: () -> Unit,
     ) {
-        nw_connection_receive_message(connection) { data, context, _, error ->
+        nw_connection_receive_message(connection) { data, context, isComplete, error ->
             if (error != null) {
                 onClosed()
                 return@nw_connection_receive_message
@@ -292,6 +293,10 @@ private class IosDeviceChannel(
                         return@nw_connection_receive_message
                     }
                 }
+            }
+            if (isComplete && (context == null || nw_content_context_get_is_final(context))) {
+                onClosed()
+                return@nw_connection_receive_message
             }
             receiveLoop(onText, onClosed)
         }

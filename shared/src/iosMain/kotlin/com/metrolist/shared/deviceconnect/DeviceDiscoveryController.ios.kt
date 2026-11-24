@@ -27,19 +27,37 @@ import platform.Network.nw_browser_set_queue
 import platform.Network.nw_browser_set_state_changed_handler
 import platform.Network.nw_browser_start
 import platform.Network.nw_browser_state_failed
+import platform.Network.nw_browser_state_waiting
 import platform.Network.nw_browser_t
 import platform.Network.nw_endpoint_get_bonjour_service_domain
 import platform.Network.nw_endpoint_get_bonjour_service_name
 import platform.Network.nw_endpoint_get_bonjour_service_type
+import platform.Network.nw_error_domain_dns
+import platform.Network.nw_error_get_error_code
+import platform.Network.nw_error_get_error_domain
+import platform.Network.nw_error_t
 import platform.Network.nw_txt_record_access_key
 import platform.Network.nw_txt_record_t
+import platform.darwin.DISPATCH_TIME_NOW
+import platform.darwin.NSEC_PER_SEC
 import platform.darwin.NSObject
+import platform.darwin.dispatch_after
 import platform.darwin.dispatch_get_main_queue
+import platform.darwin.dispatch_time
 import platform.posix.uint8_tVar
 
 private const val BONJOUR_LOCAL_DOMAIN = "local."
 private const val BONJOUR_RESOLVE_TIMEOUT_SECONDS = 5.0
 private const val BONJOUR_RESOLVE_MAX_ATTEMPTS = 3
+private const val BROWSER_WAITING_FAILURE_DELAY_SECONDS = 10L
+
+// Apple's kDNSServiceErr_PolicyDenied (TN3179) is not exposed by Kotlin/Native platform bindings.
+private const val DNS_SERVICE_ERR_POLICY_DENIED = -65570
+
+private fun isPolicyDenied(error: nw_error_t?): Boolean =
+    error != null &&
+        nw_error_get_error_domain(error) == nw_error_domain_dns &&
+        nw_error_get_error_code(error) == DNS_SERVICE_ERR_POLICY_DENIED
 
 actual class DeviceDiscoveryController actual constructor(
     context: Any,
@@ -51,6 +69,7 @@ actual class DeviceDiscoveryController actual constructor(
     private var browser: nw_browser_t? = null
     private var discovering = false
     private var session = 0L
+    private var waitingToken = 0L
     private val devicesByService = mutableMapOf<String, DiscoveredDevice>()
     private val resolversByService = mutableMapOf<String, ActiveResolver>()
 
@@ -109,10 +128,49 @@ actual class DeviceDiscoveryController actual constructor(
         }
 
         nw_browser_set_queue(createdBrowser, dispatch_get_main_queue())
-        nw_browser_set_state_changed_handler(createdBrowser) { state, _ ->
-            if (state == nw_browser_state_failed && isCurrentSession(currentSession)) {
-                onError("iOS Bonjour discovery failed.", null)
-                onFailure()
+        nw_browser_set_state_changed_handler(createdBrowser) { state, error ->
+            if (isCurrentSession(currentSession)) {
+                when (state) {
+                    nw_browser_state_failed -> {
+                        synchronized(lock) { waitingToken++ }
+                        onError("iOS Bonjour discovery failed.", null)
+                        onFailure()
+                    }
+
+                    nw_browser_state_waiting -> {
+                        if (error == null) {
+                            synchronized(lock) { waitingToken++ }
+                        } else {
+                            val token = synchronized(lock) { ++waitingToken }
+                            if (isPolicyDenied(error)) {
+                                onError("iOS Bonjour discovery is waiting for local network permission.", null)
+                                onFailure()
+                            } else {
+                                val delay = (BROWSER_WAITING_FAILURE_DELAY_SECONDS.toULong() * NSEC_PER_SEC).toLong()
+                                dispatch_after(
+                                    dispatch_time(DISPATCH_TIME_NOW, delay),
+                                    dispatch_get_main_queue(),
+                                ) {
+                                    val persistent =
+                                        synchronized(lock) {
+                                            discovering && session == currentSession && waitingToken == token
+                                        }
+                                    if (persistent) {
+                                        onError(
+                                            "iOS Bonjour discovery remained waiting for a usable network path.",
+                                            null,
+                                        )
+                                        onFailure()
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    else -> {
+                        synchronized(lock) { waitingToken++ }
+                    }
+                }
             }
         }
         nw_browser_set_browse_results_changed_handler(createdBrowser) { oldResult, newResult, _ ->
