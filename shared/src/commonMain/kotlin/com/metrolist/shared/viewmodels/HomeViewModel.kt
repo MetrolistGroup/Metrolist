@@ -9,6 +9,7 @@ import com.metrolist.shared.db.entities.Song
 import com.metrolist.shared.db.entities.SpeedDialItem
 import com.metrolist.shared.db.entities.toSongItem
 import com.metrolist.shared.db.entities.withoutHistoryArtistPlaceholder
+import com.metrolist.shared.db.historyChanges
 import com.metrolist.shared.db.refreshSpeedDialArtwork
 import com.metrolist.shared.deviceconnect.DeviceCrypto
 import com.metrolist.shared.model.AlbumItem
@@ -322,10 +323,15 @@ class HomeViewModel(
         scope.launch {
             combine(
                 snapshotFlow { Settings.shared.useLocalHomeRecommendations },
-                database.dao().quickPicks(),
-                database.dao().forgottenFavorites(),
-            ) { useLocal, quickPicks, forgottenFavorites ->
-                if (useLocal) quickPicks to forgottenFavorites else null
+                database.historyChanges(),
+                database.invalidationTracker.createFlow("related_song_map"),
+            ) { useLocal, _, _ ->
+                if (useLocal) {
+                    val now = getCurrentTimeMillis()
+                    database.dao().quickPicks(now).first() to database.dao().forgottenFavorites(now).first()
+                } else {
+                    null
+                }
             }.distinctUntilChanged()
                 .collectLatest {
                     // Keep this change pending when a new load or chip selection supersedes a rebuild.
@@ -469,7 +475,7 @@ class HomeViewModel(
                     database.dao().allPlaylists(),
                     snapshotFlow { Settings.shared.lastLibraryRefreshAccount },
                 ) { _, _ -> Unit }.collectLatest {
-                    val revision = ++librarySnapshotRevision
+                    val revision = quickPicksRebuildMutex.withLock { ++librarySnapshotRevision }
                     val snapshot = fetchUserPlaylists()
                     if (!isCurrentHomeLibraryRevision(snapshot.revision, librarySnapshotRevision) || snapshot.revision != revision) {
                         return@collectLatest
@@ -486,19 +492,22 @@ class HomeViewModel(
                                 },
                         )
                     }
-                    val ids = playlists.mapTo(mutableSetOf()) { it.id.removePrefix("VL") }
-                    speedDialRecommendationItems =
-                        speedDialRecommendationItems.filterNot { it is PlaylistItem && canonicalHomeItemId(it) in ids }
-                    _uiState.update { it.withLibrarySnapshot() }
-                    cachedAllContent = cachedAllContent?.withLibrarySnapshot()
-                    cachedSelectedChipContent = cachedSelectedChipContent?.withLibrarySnapshot()
-                    publishedPrimaryAllContent.update { primary ->
-                        primary?.let { (generation, state) -> generation to state.withLibrarySnapshot() }
+                    quickPicksRebuildMutex.withLock {
+                        if (!isCurrentHomeLibraryRevision(snapshot.revision, librarySnapshotRevision)) return@collectLatest
+                        val ids = playlists.mapTo(mutableSetOf()) { it.id.removePrefix("VL") }
+                        speedDialRecommendationItems =
+                            speedDialRecommendationItems.filterNot { it is PlaylistItem && canonicalHomeItemId(it) in ids }
+                        _uiState.update { it.withLibrarySnapshot() }
+                        cachedAllContent = cachedAllContent?.withLibrarySnapshot()
+                        cachedSelectedChipContent = cachedSelectedChipContent?.withLibrarySnapshot()
+                        publishedPrimaryAllContent.update { primary ->
+                            primary?.let { (generation, state) -> generation to state.withLibrarySnapshot() }
+                        }
+                        publishedPrimaryChipContent.update { primary ->
+                            primary?.let { (generation, state) -> generation to state.withLibrarySnapshot() }
+                        }
+                        chipContentCache = chipContentCache.mapValues { it.value.withLibrarySnapshot() }
                     }
-                    publishedPrimaryChipContent.update { primary ->
-                        primary?.let { (generation, state) -> generation to state.withLibrarySnapshot() }
-                    }
-                    chipContentCache = chipContentCache.mapValues { it.value.withLibrarySnapshot() }
                     val known =
                         playlists
                             .mapNotNull { playlist ->
@@ -1020,6 +1029,9 @@ class HomeViewModel(
                                 ) {
                                     return@supervisorScope
                                 }
+                                if (!isCurrentHomeLibraryRevision(userPlaylistsSnapshot.revision, librarySnapshotRevision)) {
+                                    throw HomeLibraryRevisionChangedException()
+                                }
                                 if (isFiltered) cachedSelectedChipContent = null
                                 if (loadingMoods) paginationInProgress.value = true
                                 _uiState.value = loadedState.withoutBlockedContent()
@@ -1200,28 +1212,31 @@ class HomeViewModel(
                     val pageMetadata = loadLocalSongMetadata(newSections)
                     if (generation != contentLoadGeneration || _uiState.value.continuation != continuation) return@launch
                     val hydratedNewSections = newSections.withLocalSongMetadata(pageMetadata)
-                    if (isFilteredHome(_uiState.value.selectedChip?.params, _uiState.value.selectedChip?.browseId ?: "FEmusic_home")) {
-                        val currentState = _uiState.value
-                        val merged =
-                            (cachedSelectedChipContent?.takeIf { it.selectedChip == currentState.selectedChip } ?: currentState)
-                                .withMergedSections(hydratedNewSections, nextContinuation, consumedContinuation = continuation)
-                        cachedSelectedChipContent = merged
-                        merged.selectedChip?.let { chip ->
-                            chipContentCache =
-                                boundedHomeChipCache(chipContentCache, chipCacheKey(chip), merged)
+                    quickPicksRebuildMutex.withLock {
+                        if (generation != contentLoadGeneration || _uiState.value.continuation != continuation) return@launch
+                        if (isFilteredHome(_uiState.value.selectedChip?.params, _uiState.value.selectedChip?.browseId ?: "FEmusic_home")) {
+                            val currentState = _uiState.value
+                            val merged =
+                                (cachedSelectedChipContent?.takeIf { it.selectedChip == currentState.selectedChip } ?: currentState)
+                                    .withMergedSections(hydratedNewSections, nextContinuation, consumedContinuation = continuation)
+                            cachedSelectedChipContent = merged
+                            merged.selectedChip?.let { chip ->
+                                chipContentCache =
+                                    boundedHomeChipCache(chipContentCache, chipCacheKey(chip), merged)
+                            }
+                            _uiState.value = merged.withoutBlockedContent().copy(isLoadingMore = true)
+                        } else {
+                            val merged =
+                                (cachedAllContent ?: _uiState.value).withMergedSections(
+                                    hydratedNewSections,
+                                    nextContinuation,
+                                    consumedContinuation = continuation,
+                                )
+                            cacheAllContentState(merged)
+                            _uiState.value = merged.withoutBlockedContent().copy(isLoadingMore = true)
                         }
-                        _uiState.value = merged.withoutBlockedContent().copy(isLoadingMore = true)
-                    } else {
-                        val merged =
-                            (cachedAllContent ?: _uiState.value).withMergedSections(
-                                hydratedNewSections,
-                                nextContinuation,
-                                consumedContinuation = continuation,
-                            )
-                        cacheAllContentState(merged)
-                        _uiState.value = merged.withoutBlockedContent().copy(isLoadingMore = true)
-                        appendMissingMainFeedMoods(generation)
                     }
+                    appendMissingMainFeedMoods(generation)
                 } catch (error: CancellationException) {
                     throw error
                 } catch (_: Exception) {
@@ -1246,19 +1261,26 @@ class HomeViewModel(
                     val state = _uiState.value
                     if (state.homePaginationKey == null) return@launch
                     val page = checkNotNull(chipFeedPager.loadNext(state)) { "An appended Home chip request is still in progress" }
-                    if (generation != contentLoadGeneration) return@launch
-                    val baseState = cachedAllContent ?: _uiState.value
-                    val heardInShortsIds =
-                        (baseState.data.orEmpty() + baseState.sections + page.chipFeeds.flatMap { it.sections })
-                            .heardInShortsItemIds()
-                    val merged =
-                        baseState.copy(
-                            chipFeeds = page.chipFeeds,
-                            usedHomeChips = page.usedHomeChips,
-                            quickPicks = baseState.quickPicks.filterNot { canonicalHomeItemId(it) in heardInShortsIds },
-                        )
-                    cacheAllContentState(merged)
-                    _uiState.value = merged.withoutBlockedContent().copy(isLoadingMore = true)
+                    quickPicksRebuildMutex.withLock {
+                        if (generation != contentLoadGeneration) return@launch
+                        val baseState = cachedAllContent ?: _uiState.value
+                        val heardInShortsIds =
+                            (baseState.data.orEmpty() + baseState.sections + page.chipFeeds.flatMap { it.sections })
+                                .heardInShortsItemIds()
+                        val merged =
+                            baseState.copy(
+                                chipFeeds = page.chipFeeds,
+                                usedHomeChips = page.usedHomeChips,
+                                quickPicks =
+                                    preferredQuickPicks(
+                                        findQuickPickSongs(baseState.data.orEmpty()),
+                                        baseState.quickPicks,
+                                        heardInShortsIds,
+                                    ),
+                            )
+                        cacheAllContentState(merged)
+                        _uiState.value = merged.withoutBlockedContent().copy(isLoadingMore = true)
+                    }
                 } catch (error: CancellationException) {
                     throw error
                 } catch (error: Exception) {
@@ -1302,14 +1324,17 @@ class HomeViewModel(
                     val pageMetadata = loadLocalSongMetadata(newSections)
                     if (generation != contentLoadGeneration || _uiState.value.continuation != continuation) return@launch
                     val hydratedNewSections = newSections.withLocalSongMetadata(pageMetadata)
-                    val merged =
-                        (cachedAllContent ?: _uiState.value).withMergedSections(
-                            hydratedNewSections,
-                            nextContinuation,
-                            consumedContinuation = continuation,
-                        )
-                    cacheAllContentState(merged)
-                    _uiState.value = merged.withoutBlockedContent().copy(isLoadingMore = true)
+                    quickPicksRebuildMutex.withLock {
+                        if (generation != contentLoadGeneration || _uiState.value.continuation != continuation) return@launch
+                        val merged =
+                            (cachedAllContent ?: _uiState.value).withMergedSections(
+                                hydratedNewSections,
+                                nextContinuation,
+                                consumedContinuation = continuation,
+                            )
+                        cacheAllContentState(merged)
+                        _uiState.value = merged.withoutBlockedContent().copy(isLoadingMore = true)
+                    }
                     appendMissingMainFeedMoods(generation)
                 } catch (error: CancellationException) {
                     throw error
@@ -1342,12 +1367,19 @@ class HomeViewModel(
         ) {
             return
         }
-        val latest = cachedAllContent ?: _uiState.value
-        if (latest.continuation != null || latest.data.orEmpty().any(HomeSection::isMoodAndGenresSection)) return
-        val merged = latest.withMergedSections(moods, null)
-        cacheAllContentState(merged)
-        _uiState.value = merged.withoutBlockedContent().copy(isLoadingMore = _uiState.value.isLoadingMore)
-        saveLastHomePage(merged)
+        quickPicksRebuildMutex.withLock {
+            if (generation != contentLoadGeneration ||
+                sessionKey != GlobalYouTube.innerTube.sessionSnapshot().homeCacheSessionKey()
+            ) {
+                return
+            }
+            val latest = cachedAllContent ?: _uiState.value
+            if (latest.continuation != null || latest.data.orEmpty().any(HomeSection::isMoodAndGenresSection)) return
+            val merged = latest.withMergedSections(moods, null)
+            cacheAllContentState(merged)
+            _uiState.value = merged.withoutBlockedContent().copy(isLoadingMore = _uiState.value.isLoadingMore)
+            saveLastHomePage(merged)
+        }
     }
 
     private fun HomeUiState.canRebuildQuickPicks(): Boolean =
@@ -1410,7 +1442,9 @@ class HomeViewModel(
             }
             if (isFiltered) {
                 cachedSelectedChipContent = updated
-                updated.selectedChip?.let { chip -> cacheChipContent(chip, updated) }
+                updated.selectedChip?.let { chip ->
+                    chipContentCache = boundedHomeChipCache(chipContentCache, chipCacheKey(chip), updated)
+                }
                 rebuildCachedAllQuickPicks(localQuickPicks, localForgottenFavorites)
             } else {
                 cacheAllContentState(updated)
@@ -1477,7 +1511,7 @@ class HomeViewModel(
                 if (isFilteredHome(selectedChip?.params, selectedChip?.browseId ?: "FEmusic_home")) {
                     apiQuickPicks.ifEmpty { quickPicks }
                 } else {
-                    preferredQuickPicks(apiQuickPicks, quickPicks)
+                    preferredQuickPicks(apiQuickPicks, quickPicks, heardInShortsIds)
                 }.filterNot { canonicalHomeItemId(it) in heardInShortsIds }
                     .distinctBy(::canonicalHomeItemId),
             newReleases = newReleasesFrom(allSections).distinctBy(::canonicalHomeItemId),
@@ -1880,8 +1914,7 @@ class HomeViewModel(
                     .distinctBy { it.id }
                     .ifEmpty { albumCharts },
             quickPicks =
-                preferredQuickPicks(apiQuickPicks, quickPicks)
-                    .filterNot { canonicalHomeItemId(it) in heardInShortsIds },
+                preferredQuickPicks(apiQuickPicks, quickPicks, heardInShortsIds),
             newReleases = newReleasesFrom(cachedSections).ifEmpty { newReleases },
             keepListening = apiKeepListening.ifEmpty { keepListening },
             forgottenFavorites = apiForgottenFavorites.ifEmpty { forgottenFavorites },
@@ -2645,9 +2678,11 @@ internal fun classicQuickPicks(
 private fun preferredQuickPicks(
     apiQuickPicks: List<SongItem>,
     current: List<SongItem>,
-): List<SongItem> =
-    if (Settings.shared.useLocalHomeRecommendations) {
-        current.ifEmpty { apiQuickPicks }
-    } else {
-        apiQuickPicks.ifEmpty { current }
-    }
+    excludedIds: Set<String>,
+): List<SongItem> {
+    val (preferred, fallback) =
+        if (Settings.shared.useLocalHomeRecommendations) current to apiQuickPicks else apiQuickPicks to current
+    return preferred
+        .filterNot { canonicalHomeItemId(it) in excludedIds }
+        .ifEmpty { fallback.filterNot { canonicalHomeItemId(it) in excludedIds } }
+}
