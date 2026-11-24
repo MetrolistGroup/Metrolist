@@ -8,6 +8,7 @@ import platform.AVFoundation.AVLayerVideoGravityResizeAspect
 import platform.AVFoundation.AVLayerVideoGravityResizeAspectFill
 import platform.AVFoundation.AVPlayer
 import platform.AVFoundation.AVPlayerItem
+import platform.AVFoundation.AVPlayerItemDidPlayToEndTimeNotification
 import platform.AVFoundation.AVPlayerItemFailedToPlayToEndTimeNotification
 import platform.AVFoundation.AVPlayerItemStatusFailed
 import platform.AVFoundation.AVPlayerItemStatusReadyToPlay
@@ -66,7 +67,9 @@ internal class IosMusicVideoSurfacePlayer(
     private val watchdog = CanvasPlaybackWatchdog()
     private val watchdogClock = TimeSource.Monotonic.markNow()
     private var failureObserver: Any? = null
+    private var endObserver: Any? = null
     private var didFail = false
+    private var didEnd = false
 
     init {
         player.muted = true
@@ -88,11 +91,26 @@ internal class IosMusicVideoSurfacePlayer(
                 ) {
                     didFail = true
                 }
+            endObserver =
+                NSNotificationCenter.defaultCenter.addObserverForName(
+                    AVPlayerItemDidPlayToEndTimeNotification,
+                    item,
+                    NSOperationQueue.mainQueue,
+                ) {
+                    didEnd = true
+                }
         }
     }
 
     val failed: Boolean
         get() = closed || didFail || player.currentItem == null || player.currentItem?.status == AVPlayerItemStatusFailed
+
+    internal val stoppedAutomatically: Boolean
+        get() = didFail || didEnd
+
+    internal fun clearAutomaticStop() {
+        didEnd = false
+    }
 
     val ready: Boolean
         get() = !closed && layer.readyForDisplay
@@ -202,6 +220,7 @@ internal class IosMusicVideoSurfacePlayer(
         val target = CMTimeMakeWithSeconds(targetPositionMs / 1000.0, 600)
         val zero = CMTimeMakeWithSeconds(0.0, 600)
         val seekStartedAt = TimeSource.Monotonic.markNow()
+        didEnd = false
         player.seekToTime(target, toleranceBefore = zero, toleranceAfter = zero) { finished ->
             if (!seekLifecycle.isCurrentSeek(currentSeekGeneration)) return@seekToTime
             val seekDurationMs = seekStartedAt.elapsedNow().inWholeMilliseconds
@@ -298,6 +317,8 @@ internal class IosMusicVideoSurfacePlayer(
         closed = true
         failureObserver?.let { NSNotificationCenter.defaultCenter.removeObserver(it) }
         failureObserver = null
+        endObserver?.let { NSNotificationCenter.defaultCenter.removeObserver(it) }
+        endObserver = null
         layer.player = null
         player.replaceCurrentItemWithPlayerItem(null)
     }
@@ -308,6 +329,7 @@ internal class IosMusicVideoSurfacePlayer(
     }
 
     private fun setRateForApplication(rate: Float) {
+        if (rate > 0f) didEnd = false
         player.rate = rate
         onApplicationTransportChange?.invoke(rate)
     }

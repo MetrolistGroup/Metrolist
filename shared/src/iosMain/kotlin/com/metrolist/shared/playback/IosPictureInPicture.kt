@@ -91,6 +91,7 @@ private object IosPictureInPictureBridge : NSObject(), AVPictureInPictureControl
     }
 
     override fun pictureInPictureControllerDidStartPictureInPicture(pictureInPictureController: AVPictureInPictureController) {
+        if (pictureInPictureController !== this.pictureInPictureController) return
         surface?.setPictureInPictureActive(true)
     }
 
@@ -98,18 +99,21 @@ private object IosPictureInPictureBridge : NSObject(), AVPictureInPictureControl
         pictureInPictureController: AVPictureInPictureController,
         failedToStartPictureInPictureWithError: NSError,
     ) {
+        if (pictureInPictureController !== this.pictureInPictureController) return
         pendingRequest = false
         surface?.setPictureInPictureActive(false)
         stopTransportObservation()
     }
 
     override fun pictureInPictureControllerWillStopPictureInPicture(pictureInPictureController: AVPictureInPictureController) {
+        if (pictureInPictureController !== this.pictureInPictureController) return
         pendingRequest = false
         surface?.setPictureInPictureActive(false)
         stopTransportObservation()
     }
 
     override fun pictureInPictureControllerDidStopPictureInPicture(pictureInPictureController: AVPictureInPictureController) {
+        if (pictureInPictureController !== this.pictureInPictureController) return
         surface?.setPictureInPictureActive(false)
         stopTransportObservation()
     }
@@ -145,14 +149,15 @@ private object IosPictureInPictureBridge : NSObject(), AVPictureInPictureControl
         playbackController: IosPlaybackController,
         surfacePlayer: IosMusicVideoSurfacePlayer,
     ) {
+        val ignoredRate = ignoredTransportRate
+        ignoredTransportRate = null
         if (!surfacePlayer.pictureInPictureActive.value || forwardingPlayPause) return
-        if (ignoredTransportRate == surfacePlayer.player.rate) {
-            ignoredTransportRate = null
-            return
-        }
+        if (ignoredRate == surfacePlayer.player.rate) return
         val snapshot = playbackController.state.value
         if (snapshot.isLoading) return
         val surfacePlaying = surfacePlayer.player.rate != 0f
+        if (!surfacePlaying && surfacePlayer.stoppedAutomatically) return
+        if (surfacePlaying) surfacePlayer.clearAutomaticStop()
         if (surfacePlaying == snapshot.isPlaying) return
         forwardingPlayPause = true
         playbackController.togglePlayPause()
