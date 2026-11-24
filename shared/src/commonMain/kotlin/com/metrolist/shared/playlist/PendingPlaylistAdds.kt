@@ -26,6 +26,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.serialization.Serializable
@@ -64,6 +65,10 @@ object PendingPlaylistAdds {
     private var boundDatabase: MusicDatabase? = null
     private var syncJob: Job? = null
 
+    // A sync pass of a playlist and a removal on YouTube never overlap. So a removal cannot change the counts a pass sets
+    // targets from, and a pass cannot send or confirm an add while a removal that cancels it is in flight.
+    private val remoteEdits = Mutex()
+
     fun bind(
         database: MusicDatabase,
         scope: CoroutineScope,
@@ -93,40 +98,51 @@ object PendingPlaylistAdds {
 
     internal fun discard(id: Long) = remove(id)
 
-    internal fun isQueued(
+    // Removes copies of songs from the playlist on YouTube, each given as its item ID there and its song ID. A copy without an
+    // item ID cancels a queued add of its song instead, preferring one never sent, so an add still waiting can be undone
+    // offline. The adds are cancelled only once the removal on YouTube succeeds, so a failed removal keeps them queued. An
+    // add sent before but not confirmed yet may already be on YouTube, and then returns with the next refresh.
+    internal suspend fun removeFromPlaylist(
         playlistId: String,
-        songId: String,
-    ): Boolean = synchronized(lock) { read() }.any { it.playlistId == playlistId && it.songId == songId }
-
-    // Drops one queued add of the song, preferring one never sent, so removing it from the playlist needs no item ID.
-    internal fun cancel(
-        playlistId: String,
-        songId: String,
-    ): Boolean =
-        synchronized(lock) {
-            val entries = read()
-            val matching = entries.filter { it.playlistId == playlistId && it.songId == songId }
-            val cancelled = matching.lastOrNull { it.expectedCount == null } ?: matching.lastOrNull()
-            if (cancelled != null) write(entries - cancelled)
-            cancelled != null
+        copies: List<Pair<String?, String>>,
+        removeFromYouTube: suspend (List<Pair<String, String>>) -> Unit,
+    ) = remoteEdits.withLock {
+        val queued =
+            synchronized(lock) { read() }
+                .filter { it.playlistId == playlistId }
+                .groupingBy { it.songId }
+                .eachCountTo(mutableMapOf())
+        val cancelled = mutableListOf<String>()
+        val removals = mutableListOf<Pair<String, String>>()
+        for ((itemId, songId) in copies) {
+            val queuedCopies = queued[songId] ?: 0
+            if (itemId == null && queuedCopies > 0) {
+                queued[songId] = queuedCopies - 1
+                cancelled += songId
+            } else {
+                removals += checkNotNull(itemId) { "Missing playlist item identifier" } to songId
+            }
         }
-
-    // Removing remote copies of a song lowers the copies its queued duplicates still wait for by the same number.
-    internal fun lowerTargets(
-        playlistId: String,
-        songId: String,
-        removedCopies: Int,
-    ) = synchronized(lock) {
-        write(
-            read().map { entry ->
-                val target = entry.expectedCount
-                if (entry.playlistId != playlistId || entry.songId != songId || target == null) {
-                    entry
-                } else {
-                    entry.copy(expectedCount = (target - removedCopies).coerceAtLeast(1))
+        if (removals.isNotEmpty()) removeFromYouTube(removals)
+        val removedCopies = removals.groupingBy { it.second }.eachCount()
+        synchronized(lock) {
+            // Removing remote copies of a song lowers the copies its queued duplicates still wait for by the same number.
+            var entries =
+                read().map { entry ->
+                    val target = entry.expectedCount
+                    val removed = removedCopies[entry.songId]
+                    if (entry.playlistId != playlistId || target == null || removed == null) {
+                        entry
+                    } else {
+                        entry.copy(expectedCount = (target - removed).coerceAtLeast(1))
+                    }
                 }
-            },
-        )
+            for (songId in cancelled) {
+                val matching = entries.filter { it.playlistId == playlistId && it.songId == songId }
+                (matching.lastOrNull { it.expectedCount == null } ?: matching.lastOrNull())?.let { entries = entries - it }
+            }
+            write(entries)
+        }
     }
 
     // Copies of each song the local playlist keeps beyond those YouTube lists until their queued adds are confirmed.
@@ -181,102 +197,108 @@ object PendingPlaylistAdds {
         repository: YouTubeRepository,
     ): Boolean {
         val accountKey = currentLibraryAccountKey()
-        val queued = synchronized(lock) { read() }.filter { it.accountKey == accountKey }
+        val queued = queuedFor(accountKey)
         if (queued.isEmpty()) return false
         if (!PlaybackNetworkStateStore.current.connected || !repository.canManagePlaylists()) return true
         val dao = database.dao()
-        val due = queued.filter { it.nextAttemptAtMs <= nowMs() }
-        for ((playlistId, entries) in due.groupBy { it.playlistId }) {
+        for (playlistId in queued.filter { it.nextAttemptAtMs <= nowMs() }.map { it.playlistId }.distinct()) {
             val remoteId = dao.findPlaylistEntity(playlistId)?.let { remotePlaylistId(it, playlistId) }
-            // The playlist was deleted or made local, so nothing is left to send.
-            if (remoteId == null) {
-                entries.forEach { remove(it.id) }
-                continue
-            }
-            // Checked under the add lock, so an add whose local row is not committed yet is never taken for removed.
-            val active =
-                playlistAddMutex.withLock {
-                    entries.filter { entry ->
-                        val listedLocally = dao.checkInPlaylist(playlistId, entry.songId) > 0
-                        if (!listedLocally) remove(entry.id)
-                        listedLocally
-                    }
-                }
-            if (active.isEmpty()) continue
-            val listed = remoteSongCounts(repository, remoteId)
-            if (listed == null) {
-                // A playlist YouTube cannot list waits on its own, so it does not hold back the other playlists.
-                if (!PlaybackNetworkStateStore.current.connected) return true
-                active.forEach { postpone(it.id) }
-                continue
-            }
-            // Each queued copy of a song needs its own target, including adds postponed or sent in an earlier pass.
-            val reserved =
-                queued
-                    .filter { it.playlistId == playlistId && it.expectedCount != null }
-                    .groupBy { it.songId }
-                    .mapValuesTo(mutableMapOf()) { (_, adds) -> adds.maxOf { checkNotNull(it.expectedCount) } }
-            val sent = mutableListOf<Pair<PendingPlaylistAdd, Int>>()
-            for (entry in active) {
-                val copies = listed[entry.songId] ?: 0
-                val expected =
-                    entry.expectedCount ?: if (entry.allowDuplicate) maxOf(copies, reserved[entry.songId] ?: 0) + 1 else 1
-                reserved[entry.songId] = maxOf(reserved[entry.songId] ?: 0, expected)
-                // YouTube already lists the copies this add needs, from before or from an earlier send.
-                if (copies >= expected) {
-                    remove(entry.id)
+            remoteEdits.withLock {
+                // Read again under the lock, since a removal just before it can cancel adds and lower their targets.
+                val waiting = queuedFor(accountKey).filter { it.playlistId == playlistId }
+                // The playlist was deleted or made local, so nothing is left to send.
+                if (remoteId == null) {
+                    waiting.forEach { remove(it.id) }
                     continue
                 }
-                // Only the account that queued the add may send it.
-                if (currentLibraryAccountKey() != entry.accountKey) return true
-                // Claiming records the target before sending, so a lost response, a failed read-back or a later failure
-                // cannot send it twice, and an add cancelled while the playlist was read is skipped.
-                if (!claim(entry.id, expected)) continue
-                val failure =
-                    repository
-                        .addToPlaylist(
-                            remoteId,
-                            entry.songId,
-                            allowDuplicate = entry.allowDuplicate,
-                            notifyChange = false,
-                        ).exceptionOrNull()
-                when {
-                    failure == null -> {
-                        listed[entry.songId] = copies + 1
-                        sent += entry to expected
+                val due = waiting.filter { it.nextAttemptAtMs <= nowMs() }
+                // Checked under the add lock, so an add whose local row is not committed yet is never taken for removed.
+                val active =
+                    playlistAddMutex.withLock {
+                        due.filter { entry ->
+                            val listedLocally = dao.checkInPlaylist(playlistId, entry.songId) > 0
+                            if (!listedLocally) remove(entry.id)
+                            listedLocally
+                        }
                     }
-
-                    // Another add put the song there after the count, which is all an add without duplicates needs.
-                    failure is PlaylistSongAlreadyPresentException -> {
+                if (active.isEmpty()) continue
+                val listed = remoteSongCounts(repository, remoteId)
+                if (listed == null) {
+                    // A playlist YouTube cannot list waits on its own, so it does not hold back the other playlists.
+                    if (!PlaybackNetworkStateStore.current.connected) return true
+                    active.forEach { postpone(it.id) }
+                    continue
+                }
+                // Each queued copy of a song needs its own target, including adds postponed or sent in an earlier pass.
+                val reserved =
+                    waiting
+                        .filter { it.expectedCount != null }
+                        .groupBy { it.songId }
+                        .mapValuesTo(mutableMapOf()) { (_, adds) -> adds.maxOf { checkNotNull(it.expectedCount) } }
+                val sent = mutableListOf<Pair<PendingPlaylistAdd, Int>>()
+                for (entry in active) {
+                    val copies = listed[entry.songId] ?: 0
+                    val expected =
+                        entry.expectedCount ?: if (entry.allowDuplicate) maxOf(copies, reserved[entry.songId] ?: 0) + 1 else 1
+                    reserved[entry.songId] = maxOf(reserved[entry.songId] ?: 0, expected)
+                    // YouTube already lists the copies this add needs, from before or from an earlier send.
+                    if (copies >= expected) {
                         remove(entry.id)
+                        continue
                     }
+                    // Only the account that queued the add may send it.
+                    if (currentLibraryAccountKey() != entry.accountKey) return true
+                    // Claiming records the target before sending, so a lost response, a failed read-back or a later failure
+                    // cannot send it twice, and an add a sign-out cleared meanwhile is skipped.
+                    if (!claim(entry.id, expected)) continue
+                    val failure =
+                        repository
+                            .addToPlaylist(
+                                remoteId,
+                                entry.songId,
+                                allowDuplicate = entry.allowDuplicate,
+                                notifyChange = false,
+                            ).exceptionOrNull()
+                    when {
+                        failure == null -> {
+                            listed[entry.songId] = copies + 1
+                            sent += entry to expected
+                        }
 
-                    failure is PlaylistNotFoundException -> {
-                        remove(entry.id)
-                    }
+                        // Another add put the song there after the count, which is all an add without duplicates needs.
+                        failure is PlaylistSongAlreadyPresentException -> {
+                            remove(entry.id)
+                        }
 
-                    failure.isHttpTransportException() || !PlaybackNetworkStateStore.current.connected -> {
-                        return true
-                    }
+                        failure is PlaylistNotFoundException -> {
+                            remove(entry.id)
+                        }
 
-                    else -> {
-                        YtLogger.w(TAG, "Pending playlist add failed type=${failure::class.simpleName}")
-                        postpone(entry.id)
+                        failure.isHttpTransportException() || !PlaybackNetworkStateStore.current.connected -> {
+                            return true
+                        }
+
+                        else -> {
+                            YtLogger.w(TAG, "Pending playlist add failed type=${failure::class.simpleName}")
+                            postpone(entry.id)
+                        }
                     }
                 }
+                if (sent.isEmpty()) continue
+                // Reading the playlist back verifies the adds; one YouTube lists too few copies of is sent again later.
+                val verified = remoteSongCounts(repository, remoteId)
+                if (verified == null) {
+                    if (!PlaybackNetworkStateStore.current.connected) return true
+                    sent.forEach { (entry, _) -> postpone(entry.id) }
+                    continue
+                }
+                sent.forEach { (entry, expected) ->
+                    if ((verified[entry.songId] ?: 0) >= expected) remove(entry.id) else postpone(entry.id)
+                }
+                PlaylistChanges.notifyChanged(remoteId)
             }
-            if (sent.isEmpty()) continue
-            // Reading the playlist back verifies the adds; one YouTube lists too few copies of is sent again later.
-            val verified = remoteSongCounts(repository, remoteId)
-            if (verified == null) {
-                if (!PlaybackNetworkStateStore.current.connected) return true
-                sent.forEach { (entry, _) -> postpone(entry.id) }
-                continue
-            }
-            sent.forEach { (entry, expected) -> if ((verified[entry.songId] ?: 0) >= expected) remove(entry.id) else postpone(entry.id) }
-            PlaylistChanges.notifyChanged(remoteId)
         }
-        val remaining = synchronized(lock) { read() }.filter { it.accountKey == accountKey }
+        val remaining = queuedFor(accountKey)
         if (remaining.any { it.failures >= REPORT_AFTER_REJECTIONS }) {
             // The songs stay listed locally, so a lasting rejection must not look like a finished sync.
             YouTubeSyncState.failed(SYNC_OPERATION) { retryRejected() }
@@ -310,6 +332,8 @@ object PendingPlaylistAdds {
             YtLogger.w(TAG, "Pending playlist read failed type=${error::class.simpleName}")
             null
         }
+
+    private fun queuedFor(accountKey: String) = synchronized(lock) { read() }.filter { it.accountKey == accountKey }
 
     private fun remove(id: Long) = synchronized(lock) { write(read().filterNot { it.id == id }) }
 

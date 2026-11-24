@@ -113,24 +113,11 @@ suspend fun removeSongsFromStoredPlaylist(
 
         if (remoteId != null) {
             check(repository.canManagePlaylists()) { "YouTube Music sign-in is required" }
-            // A song still queued for YouTube has no item ID yet, so removing it cancels its queued add instead. The adds
-            // are cancelled only after the remote removal succeeds, so a failed removal keeps them queued.
-            val (queued, listed) =
-                matchedPairs.partition { (song, occurrence) ->
-                    (song.playlistSetVideoId ?: occurrence?.map?.setVideoId) == null && PendingPlaylistAdds.isQueued(localId, song.id)
-                }
-            val remoteRemovals =
-                listed.map { (song, matchedOccurrence) ->
-                    val setVideoId =
-                        song.playlistSetVideoId
-                            ?: matchedOccurrence?.map?.setVideoId
-                    checkNotNull(setVideoId) { "Missing playlist item identifier" } to song.id
-                }
-            if (remoteRemovals.isNotEmpty()) repository.removePlaylistSongs(remoteId, remoteRemovals).getOrThrow()
-            remoteRemovals.groupingBy { it.second }.eachCount().forEach { (songId, removed) ->
-                PendingPlaylistAdds.lowerTargets(localId, songId, removed)
-            }
-            queued.forEach { (song, _) -> PendingPlaylistAdds.cancel(localId, song.id) }
+            // A song still queued for YouTube has no item ID yet, so removing it cancels its queued add instead.
+            PendingPlaylistAdds.removeFromPlaylist(
+                localId,
+                matchedPairs.map { (song, occurrence) -> (song.playlistSetVideoId ?: occurrence?.map?.setVideoId) to song.id },
+            ) { removals -> repository.removePlaylistSongs(remoteId, removals).getOrThrow() }
         }
 
         val matchedEntities = matchedPairs.mapNotNull { it.second }
