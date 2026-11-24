@@ -300,6 +300,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.jetbrains.compose.resources.PluralStringResource
 import org.jetbrains.compose.resources.getPluralString
+import org.jetbrains.compose.resources.getString
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 import org.koin.mp.KoinPlatform
@@ -353,10 +354,10 @@ fun MobileApp(
     LaunchedEffect(snackbarHostState) {
         PlaybackSnackbarEvents.messages.collect { snackbarHostState.showSnackbar(it) }
     }
-    val resourceMessage by PlaybackSnackbarEvents.resourceMessages.collectAsState(null)
-    val localizedResourceMessage = resourceMessage?.let { stringResource(it.resource) }
-    LaunchedEffect(resourceMessage) {
-        localizedResourceMessage?.let { snackbarHostState.showSnackbar(it) }
+    LaunchedEffect(snackbarHostState) {
+        PlaybackSnackbarEvents.resourceMessages.collect { resource ->
+            snackbarHostState.showSnackbar(getString(resource))
+        }
     }
     val onSwipeFeedback: (String) -> Unit = { message ->
         snackbarHostState.currentSnackbarData?.dismiss()

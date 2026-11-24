@@ -508,7 +508,7 @@ internal class IosPlaybackController(
                 isPlaying = player.isPlaying,
                 enabled = snapshotFlow { Settings.shared.sponsorBlockEnabled },
                 canSeek = { Settings.shared.sponsorBlockEnabled && !guestLocked },
-                seekTo = { position -> seekTo(position) },
+                seekTo = { position -> seekToAutomatic(position) },
                 onSkipped = { PlaybackSnackbarEvents.emit(Res.string.sponsorblock_skipped) },
             )
         }
@@ -1209,7 +1209,16 @@ internal class IosPlaybackController(
         listenTogether?.sendSeek(pendingPlayback.value?.startPositionMs ?: player.currentPositionMs())
     }
 
-    internal fun seekFromListenTogether(positionMs: Long) {
+    internal fun seekToAutomatic(positionMs: Long) {
+        if (guestLocked) return
+        seekFromListenTogether(positionMs, publishCommand = false)
+        listenTogether?.sendSeek(pendingPlayback.value?.startPositionMs ?: player.currentPositionMs())
+    }
+
+    internal fun seekFromListenTogether(
+        positionMs: Long,
+        publishCommand: Boolean = true,
+    ) {
         if (!canApplyListenTogetherPlayback) return
         val pending = pendingPlayback.value
         val duration = if (pending != null) pending.song.duration?.times(1000L) else player.duration.value
@@ -1217,7 +1226,7 @@ internal class IosPlaybackController(
         if (pending != null) {
             pendingPlayback.value = pending.copy(startPositionMs = target)
         } else {
-            player.seekTo(target)
+            player.seekTo(target, publishCommand = publishCommand)
         }
         savePlaybackState()
     }
