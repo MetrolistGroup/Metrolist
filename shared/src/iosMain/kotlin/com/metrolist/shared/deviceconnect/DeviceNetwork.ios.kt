@@ -18,8 +18,7 @@ import platform.posix.IFF_UP
 import platform.posix.inet_ntop
 import platform.posix.sockaddr_in
 
-internal actual fun getLocalIpV4Addresses(): List<String> =
-    deviceConnectLanIpv4Addresses()
+internal actual fun getLocalIpV4Addresses(): List<String> = deviceConnectLanIpv4Addresses()
 
 internal fun deviceConnectLanIpv4Addresses(): List<String> =
     memScoped {
@@ -37,7 +36,12 @@ internal fun deviceConnectLanIpv4Addresses(): List<String> =
                     item.ifa_flags.toInt() and IFF_UP != 0 &&
                     item.ifa_flags.toInt() and IFF_LOOPBACK == 0
                 ) {
-                    val host = ipv4HostAddress(address.reinterpret<sockaddr_in>().pointed.sin_addr.s_addr)
+                    val host =
+                        ipv4HostAddress(
+                            address
+                                .reinterpret<sockaddr_in>()
+                                .pointed.sin_addr.s_addr,
+                        )
                     if (host != null && isDeviceConnectLanHost(host)) {
                         result += host
                     }
@@ -61,17 +65,17 @@ private fun ipv4HostAddress(value: UInt): String? {
 
 internal fun isDeviceConnectAllowedClientAddress(value: String?): Boolean {
     val host = value?.substringBefore('%') ?: return false
-    if (host.isEmpty() || host.any { !it.isDigit() && it !in ".:abcdefABCDEF" }) return false
+    if (host.isEmpty() || (host.any { !it.isDigit() && it !in ".:abcdefABCDEF" })) return false
     if (isDeviceConnectLanHost(host)) return true
     val parts = host.split('.')
     if (parts.size == 4 && parts.all { it.toIntOrNull() in 0..255 }) {
         val first = parts[0].toInt()
         val second = parts[1].toInt()
-        return host == "127.0.0.1" || first == 169 && second == 254
+        return host == "127.0.0.1" || (first == 169 && second == 254)
     }
     if (':' in host) {
         val lower = host.lowercase()
-        return lower == "::1" || lower.startsWith("fe80:")
+        return (lower == "::1") || lower.startsWith("fe80:")
     }
     return false
 }
