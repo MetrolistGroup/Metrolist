@@ -10,7 +10,6 @@ import kotlinx.cinterop.toKString
 import platform.Foundation.NSData
 import platform.Foundation.NSNetService
 import platform.Foundation.NSNetServiceDelegateProtocol
-import platform.Foundation.NSObject
 import platform.Foundation.NSRunLoop
 import platform.Foundation.NSRunLoopCommonModes
 import platform.Network.nw_browse_descriptor_create_bonjour_service
@@ -31,6 +30,7 @@ import platform.Network.nw_endpoint_get_bonjour_service_name
 import platform.Network.nw_endpoint_get_bonjour_service_type
 import platform.Network.nw_txt_record_access_key
 import platform.Network.nw_txt_record_t
+import platform.darwin.NSObject
 import platform.darwin.dispatch_get_main_queue
 import platform.posix.uint8_tVar
 
@@ -163,8 +163,8 @@ actual class DeviceDiscoveryController actual constructor(
     ) {
         val netService = NSNetService(service.domain, service.type, service.serviceName)
         val delegate =
-            BonjourResolverDelegate(service) { resolved ->
-                finishResolution(service.serviceName, netService, resolved, onFound)
+            BonjourResolverDelegate(service) { resolver, resolved ->
+                finishResolution(service.serviceName, resolver, resolved, onFound)
             }
         val accepted =
             synchronized(lock) {
@@ -189,9 +189,16 @@ actual class DeviceDiscoveryController actual constructor(
     ) {
         val shouldNotify =
             synchronized(lock) {
-                resolversByService.remove(serviceName)?.first?.stop()
-                if (device != null && discovering && devicesByService.putIfAbsent(serviceName, device) == null) {
-                    true
+                val owner = resolversByService[serviceName]
+                if (owner != null && owner.first === netService) {
+                    resolversByService.remove(serviceName)
+                    owner.first.stop()
+                    if (device != null && discovering && !devicesByService.containsKey(serviceName)) {
+                        devicesByService[serviceName] = device
+                        true
+                    } else {
+                        false
+                    }
                 } else {
                     false
                 }
@@ -201,7 +208,7 @@ actual class DeviceDiscoveryController actual constructor(
 
     private inner class BonjourResolverDelegate(
         private val service: BonjourService,
-        private val finish: (DiscoveredDevice?) -> Unit,
+        private val finish: (NSNetService, DiscoveredDevice?) -> Unit,
     ) : NSObject(),
         NSNetServiceDelegateProtocol {
         override fun netServiceDidResolveAddress(sender: NSNetService) {
@@ -217,18 +224,18 @@ actual class DeviceDiscoveryController actual constructor(
                         deviceType = service.deviceType,
                     )
                 }
-            finish(device)
+            finish(sender, device)
         }
 
         override fun netService(
             sender: NSNetService,
             didNotResolve: Map<Any?, *>,
         ) {
-            finish(null)
+            finish(sender, null)
         }
 
         override fun netServiceDidStop(sender: NSNetService) {
-            finish(null)
+            finish(sender, null)
         }
     }
 
@@ -303,10 +310,23 @@ private fun resolvedAddress(service: NSNetService): Pair<String, Int>? {
                 }
 
                 30 -> {
-                    if (bytes.size >= 24) {
-                        formatIpv6Address(bytes.copyOfRange(8, 24))
-                    } else {
+                    if (bytes.size < 24) {
                         null
+                    } else {
+                        val address = formatIpv6Address(bytes.copyOfRange(8, 24))
+                        if (address.startsWith("fe80:", ignoreCase = true)) {
+                            if (bytes.size < 28) {
+                                null
+                            } else {
+                                val scope =
+                                    (0..3).fold(0L) { value, index ->
+                                        value or (byteValue(bytes, 24 + index).toLong() shl (8 * index))
+                                    }
+                                if (scope == 0L) null else "$address%$scope"
+                            }
+                        } else {
+                            address
+                        }
                     }
                 }
 
@@ -314,7 +334,7 @@ private fun resolvedAddress(service: NSNetService): Pair<String, Int>? {
                     null
                 }
             } ?: continue
-        if (isDeviceConnectLanHost(host) && !host.startsWith("fe80:", ignoreCase = true)) {
+        if (isDeviceConnectLanHost(host)) {
             return host to port
         }
     }
