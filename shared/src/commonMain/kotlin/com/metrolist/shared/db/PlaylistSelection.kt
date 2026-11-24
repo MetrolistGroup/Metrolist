@@ -1,9 +1,11 @@
 package com.metrolist.shared.db
 
+import com.metrolist.shared.api.isMixPlaylistId
 import com.metrolist.shared.db.entities.Playlist
 import com.metrolist.shared.db.entities.PlaylistEntity
 import com.metrolist.shared.model.PlaylistItem
 import com.metrolist.shared.model.isEditablePlaylistId
+import com.metrolist.shared.model.isSystemPlaylistId
 import com.metrolist.shared.settings.HiddenLibraryItemKey
 import com.metrolist.shared.settings.HiddenLibraryItemType
 import kotlinx.datetime.TimeZone
@@ -59,6 +61,7 @@ fun List<Playlist>.selectablePlaylistDetails(
 }
 
 // Saved YouTube playlists cannot be written while signed out; the chooser lists them only to show membership.
+// Mixes are left out because their membership lookup never reaches the end of their continuations.
 fun List<Playlist>.readOnlyPlaylistDetails(
     signedIn: Boolean,
     hiddenKeys: Set<HiddenLibraryItemKey> = emptySet(),
@@ -67,6 +70,7 @@ fun List<Playlist>.readOnlyPlaylistDetails(
     return filter {
         val entity = it.playlist
         entity.bookmarkedAt != null && !entity.isLocal && entity.browseId != null && !entity.isSystemPlaylist() &&
+            !entity.browseId.isSystemPlaylistId() && !entity.browseId.isMixPlaylistId() &&
             HiddenLibraryItemKey(HiddenLibraryItemType.PLAYLIST, entity.browseId).normalized() !in hiddenKeys
     }.distinctBy { it.playlist.localCopyKey() }
 }

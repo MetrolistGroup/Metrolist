@@ -1,7 +1,11 @@
 package com.metrolist.shared.model
 
-internal fun PlaylistItem.isLikedMusicPlaylist(): Boolean = id.equals("LM", true) || id.equals("VLLM", true) || id.startsWith("LM:")
+internal fun PlaylistItem.isLikedMusicPlaylist(): Boolean = id.isLikedMusicPlaylistId()
 
-internal fun PlaylistItem.isSystemPlaylist(): Boolean =
-    isLikedMusicPlaylist() || id.equals("RDPN", true) || id.equals("VLRDPN", true) ||
-        id.equals("SE", true) || id.equals("VLSE", true)
+internal fun PlaylistItem.isSystemPlaylist(): Boolean = id.isSystemPlaylistId()
+
+// Stored playlist entities keep these IDs in browseId without the VL prefix, so both forms match.
+internal fun String.isSystemPlaylistId(): Boolean =
+    isLikedMusicPlaylistId() || equals("RDPN", true) || equals("VLRDPN", true) || equals("SE", true) || equals("VLSE", true)
+
+private fun String.isLikedMusicPlaylistId(): Boolean = equals("LM", true) || equals("VLLM", true) || startsWith("LM:")
