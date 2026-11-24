@@ -109,7 +109,7 @@ object DesktopFontManager {
 
     /** Family name of the imported font, or null when none is installed. */
     fun customFontName(): String? =
-        File(fontDirectory(FontOption.CUSTOM), REGULAR_FILE)
+        File(restoredFontDirectory(FontOption.CUSTOM), REGULAR_FILE)
             .takeIf(File::isFile)
             ?.let { runCatching { validateFont(it) }.getOrNull() }
 
@@ -118,7 +118,9 @@ object DesktopFontManager {
         val directory = fontDirectory(option)
         return runCatching {
             if (option == FontOption.CUSTOM) {
-                FontFamily(Font(File(directory, REGULAR_FILE), FontWeight.Normal))
+                val file = File(directory, REGULAR_FILE)
+                // Imports reuse one path, and Compose caches file fonts by path; a per-file identity picks up replacements.
+                FontFamily(Font("custom-${file.lastModified()}-${file.length()}", file.readBytes(), FontWeight.Normal))
             } else {
                 FontFamily(
                     Font(File(directory, REGULAR_FILE), FontWeight.Normal),
@@ -215,7 +217,7 @@ object DesktopFontManager {
         }
 
     private fun isDownloaded(option: FontOption): Boolean {
-        val directory = fontDirectory(option)
+        val directory = restoredFontDirectory(option)
         val regular = File(directory, REGULAR_FILE)
         val bold = File(directory, BOLD_FILE)
         if (option == FontOption.CUSTOM) return regular.isFile && runCatching { validateFont(regular) }.isSuccess
@@ -345,6 +347,14 @@ object DesktopFontManager {
         }
         if (destination.exists()) backup.deleteRecursively()
         stagingDirectory(option).deleteRecursively()
+    }
+
+    /** Puts back a previous font left aside by an install that stopped between its two moves. */
+    private fun restoredFontDirectory(option: FontOption): File {
+        val destination = fontDirectory(option)
+        val backup = backupDirectory(option)
+        if (!destination.exists() && backup.exists()) runCatching { move(backup, destination) }
+        return destination
     }
 
     private fun fontDirectory(option: FontOption): File = File(fontRoot(), option.name.lowercase())
