@@ -279,22 +279,20 @@ fun LyricsShareDialog(
                         verticalArrangement = Arrangement.spacedBy(12.dp),
                         modifier = Modifier.fillMaxSize().padding(end = 16.dp),
                     ) {
-                        if (storyMode) {
-                            item {
-                                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                    ExpressiveFilterChip(
-                                        selected = !useStoryLayout,
-                                        enabled = !busy,
-                                        onClick = { useStoryLayout = false },
-                                        label = { Text(stringResource(Res.string.lyrics_share_square_image)) },
-                                    )
-                                    ExpressiveFilterChip(
-                                        selected = useStoryLayout,
-                                        enabled = !busy,
-                                        onClick = { useStoryLayout = true },
-                                        label = { Text(stringResource(Res.string.lyrics_share_story_image)) },
-                                    )
-                                }
+                        item {
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                ExpressiveFilterChip(
+                                    selected = !useStoryLayout,
+                                    enabled = !busy,
+                                    onClick = { useStoryLayout = false },
+                                    label = { Text(stringResource(Res.string.lyrics_share_square_image)) },
+                                )
+                                ExpressiveFilterChip(
+                                    selected = useStoryLayout,
+                                    enabled = !busy,
+                                    onClick = { useStoryLayout = true },
+                                    label = { Text(stringResource(Res.string.lyrics_share_story_image)) },
+                                )
                             }
                         }
                         item {
@@ -339,9 +337,9 @@ fun LyricsShareDialog(
                         if (!useStoryLayout) {
                             item {
                                 Text(stringResource(Res.string.player_background_style))
-                                val scrollState = rememberScrollState()
+                                val backgroundScrollState = rememberScrollState()
                                 Row(
-                                    Modifier.fillMaxWidth().carouselScroll(scrollState).horizontalScroll(scrollState),
+                                    Modifier.fillMaxWidth().carouselScroll(backgroundScrollState).horizontalScroll(backgroundScrollState),
                                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                                 ) {
                                     LyricsImageBackground.entries.forEach { background ->

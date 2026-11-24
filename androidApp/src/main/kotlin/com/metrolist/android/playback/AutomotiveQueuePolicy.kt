@@ -61,10 +61,16 @@ internal suspend fun nextOfflineQueueIndex(
     songs: List<SongItem>,
     currentIndex: Int,
     repeatAll: Boolean,
+    backward: Boolean = false,
     isPlayable: suspend (SongItem) -> Boolean,
 ): Int? {
     if (currentIndex !in songs.indices) return null
-    val indices = (currentIndex + 1 until songs.size) + if (repeatAll) (0 until currentIndex).toList() else emptyList()
+    val indices =
+        if (backward) {
+            (currentIndex - 1 downTo 0) + if (repeatAll) (songs.lastIndex downTo currentIndex + 1) else emptyList()
+        } else {
+            (currentIndex + 1 until songs.size) + if (repeatAll) (0 until currentIndex) else emptyList()
+        }
     return indices.firstOrNull { isPlayable(songs[it]) }
 }
 

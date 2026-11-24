@@ -1,9 +1,23 @@
 package com.metrolist.shared.utils
 
+import com.metrolist.shared.settings.Settings
+import com.metrolist.shared.settings.SongShareLink
+
 object ShareUrls {
     private const val MUSIC_DOMAIN = "https://music.youtube.com"
 
+    /** Link for sharing a song in the format chosen in settings. song.link has no timestamps, so those stay on YouTube Music. */
     fun song(
+        videoId: String,
+        startSeconds: Long? = null,
+    ): String =
+        if (startSeconds == null && Settings.shared.songShareLink == SongShareLink.SONG_LINK.name) {
+            "https://song.link/y/$videoId"
+        } else {
+            youtubeMusicSong(videoId, startSeconds)
+        }
+
+    fun youtubeMusicSong(
         videoId: String,
         startSeconds: Long? = null,
     ): String = "$MUSIC_DOMAIN/watch?v=$videoId" + (startSeconds?.let { "&t=${it.coerceAtLeast(0)}s" } ?: "")

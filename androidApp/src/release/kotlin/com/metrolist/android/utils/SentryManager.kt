@@ -69,9 +69,10 @@ object SentryManager {
             options.isAttachRawTombstone = true
             options.addInAppInclude("com.metrolist")
             options.logs.isEnabled = true
-            // Logs carry only the periodic playback client stats.
             options.logs.beforeSend =
-                SentryOptions.Logs.BeforeSendLogCallback { log -> log.takeIf { it.body == PLAYBACK_CLIENT_STATS_MESSAGE } }
+                SentryOptions.Logs.BeforeSendLogCallback { log ->
+                    log.takeIf { it.body == PLAYBACK_CLIENT_STATS_MESSAGE || it.body.startsWith(PLAYBACK_FAILURE_LOG_PREFIX) }
+                }
             options.beforeBreadcrumb =
                 SentryOptions.BeforeBreadcrumbCallback { breadcrumb, _ ->
                     sanitizeBreadcrumb(breadcrumb)
@@ -85,6 +86,7 @@ object SentryManager {
 }
 
 internal const val PLAYBACK_CLIENT_STATS_MESSAGE = "Playback client stats"
+internal const val PLAYBACK_FAILURE_LOG_PREFIX = "Playback failure log\n"
 
 internal fun sendPlaybackClientStats(report: Map<String, Map<String, Int>>) {
     report.forEach { (profile, counts) ->

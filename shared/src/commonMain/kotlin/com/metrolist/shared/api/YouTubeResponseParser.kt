@@ -663,6 +663,7 @@ internal object YouTubeResponseParser {
         browseIds: MutableMap<String, Pair<String?, String?>>? = null,
         untitledShelfTitle: String? = "Tracks",
         includeRecommendations: Boolean = true,
+        classifyPlaylistSuggestions: Boolean = false,
     ): ParsedBrowse {
         val sections = mutableMapOf<String, List<YTItem>>()
         val continuationTokens = mutableSetOf<String>()
@@ -735,9 +736,12 @@ internal object YouTubeResponseParser {
             recordContinuation(continuationItems)
         }
 
-        fun processContinuationShelf(shelf: JsonObject) {
+        fun processContinuationShelf(
+            shelf: JsonObject,
+            classifySuggestions: Boolean,
+        ) {
             val itemsArray = shelf["contents"]?.jsonArray ?: shelf["items"]?.jsonArray
-            val sectionTitle = shelf.shelfTitle(default = "Continuation")
+            val sectionTitle = shelf.shelfTitle("Continuation", classifySuggestions)
             if (itemsArray != null) {
                 val items = itemsArray.mapNotNull { parseItem(it.jsonObject) }
                 if (items.isNotEmpty()) {
@@ -806,8 +810,8 @@ internal object YouTubeResponseParser {
                         itemSection?.get("contents")?.jsonArray?.filter(::includeShelf)?.forEach { subElement ->
                             val subObj = subElement.jsonObject
                             val tempSections = mutableMapOf<String, List<YTItem>>()
-                            processShelf(subObj, tempSections, browseIds, untitledShelfTitle)
-                            recordContinuation(subObj, subObj.continuationSectionTitle())
+                            processShelf(subObj, tempSections, browseIds, untitledShelfTitle, classifyPlaylistSuggestions)
+                            recordContinuation(subObj, subObj.continuationSectionTitle(classifyPlaylistSuggestions))
                             if (tempSections.isNotEmpty()) {
                                 tempSections.forEach { (title, items) ->
                                     sections[title] = sections[title].orEmpty() + items
@@ -820,8 +824,8 @@ internal object YouTubeResponseParser {
                             sections[sectionTitle] = sections[sectionTitle].orEmpty() + itemContents
                         }
                     } else {
-                        processShelf(sectionObj, sections, browseIds, untitledShelfTitle)
-                        recordContinuation(sectionObj, sectionObj.continuationSectionTitle())
+                        processShelf(sectionObj, sections, browseIds, untitledShelfTitle, classifyPlaylistSuggestions)
+                        recordContinuation(sectionObj, sectionObj.continuationSectionTitle(classifyPlaylistSuggestions))
                     }
                 }
 
@@ -829,11 +833,10 @@ internal object YouTubeResponseParser {
             }
 
         response.continuationContents?.let { cont ->
-            listOfNotNull(
-                cont.musicShelfContinuation,
-                cont.musicPlaylistShelfContinuation,
-                cont.gridContinuation,
-            ).forEach(::processContinuationShelf)
+            cont.musicShelfContinuation?.let { processContinuationShelf(it, classifyPlaylistSuggestions) }
+            // A reloading playlist track shelf is still the track list, not suggestions.
+            cont.musicPlaylistShelfContinuation?.let { processContinuationShelf(it, false) }
+            cont.gridContinuation?.let { processContinuationShelf(it, classifyPlaylistSuggestions) }
 
             cont.sectionListContinuation?.let { sectionList ->
                 sectionList["contents"]?.jsonArray?.filter(::includeShelf)?.forEach { element ->
@@ -843,8 +846,14 @@ internal object YouTubeResponseParser {
                         itemSection["contents"]?.jsonArray?.filter(::includeShelf)?.forEach { child ->
                             val childObject = child.jsonObject
                             val before = sections.values.sumOf { it.size }
-                            processShelf(childObject, sections, browseIds, defaultTitle = "Continuation")
-                            recordContinuation(childObject, childObject.continuationSectionTitle())
+                            processShelf(
+                                childObject,
+                                sections,
+                                browseIds,
+                                defaultTitle = "Continuation",
+                                classifyPlaylistSuggestions = classifyPlaylistSuggestions,
+                            )
+                            recordContinuation(childObject, childObject.continuationSectionTitle(classifyPlaylistSuggestions))
                             if (sections.values.sumOf { it.size } == before) {
                                 parseItem(childObject)?.let { item ->
                                     sections["Continuation"] = sections["Continuation"].orEmpty() + item
@@ -853,8 +862,14 @@ internal object YouTubeResponseParser {
                         }
                     } else {
                         val before = sections.values.sumOf { it.size }
-                        processShelf(section, sections, browseIds, defaultTitle = "Continuation")
-                        recordContinuation(section, section.continuationSectionTitle())
+                        processShelf(
+                            section,
+                            sections,
+                            browseIds,
+                            defaultTitle = "Continuation",
+                            classifyPlaylistSuggestions = classifyPlaylistSuggestions,
+                        )
+                        recordContinuation(section, section.continuationSectionTitle(classifyPlaylistSuggestions))
                         if (sections.values.sumOf { it.size } == before) {
                             parseItem(section)?.let { item ->
                                 sections["Continuation"] = sections["Continuation"].orEmpty() + item
@@ -904,6 +919,7 @@ internal object YouTubeResponseParser {
         sections: MutableMap<String, List<YTItem>>,
         browseIds: MutableMap<String, Pair<String?, String?>>? = null,
         defaultTitle: String? = "Tracks",
+        classifyPlaylistSuggestions: Boolean,
     ) {
         val releaseCard = shelfObj["musicCardShelfRenderer"]?.jsonObject
         if (releaseCard != null) {
@@ -925,7 +941,13 @@ internal object YouTubeResponseParser {
                 ?: return
 
         // A null default drops untitled shelves, such as artist-page promo cards.
-        val title = defaultTitle?.let { shelf.shelfTitle(it) } ?: shelf.shelfTitle(default = "").ifEmpty { return }
+        // A reloading playlist track shelf is still the track list, not suggestions.
+        val title =
+            shelf
+                .shelfTitle(
+                    defaultTitle.orEmpty(),
+                    classifyPlaylistSuggestions && !shelfObj.containsKey("musicPlaylistShelfRenderer"),
+                ).ifEmpty { return }
 
         if (browseIds != null) {
             val endpoint = shelf.shelfNavigationEndpoint()
@@ -952,18 +974,36 @@ internal object YouTubeResponseParser {
         }
     }
 
-    private fun JsonObject.continuationSectionTitle(): String? {
+    private fun JsonObject.continuationSectionTitle(classifyPlaylistSuggestions: Boolean): String? {
         val shelf =
             this["musicShelfRenderer"]?.jsonObject
                 ?: this["musicCarouselShelfRenderer"]?.jsonObject
                 ?: this["musicPlaylistShelfRenderer"]?.jsonObject
                 ?: this["gridRenderer"]?.jsonObject
                 ?: return null
-        return shelf.shelfTitle(default = "Continuation").takeUnless { it == "Continuation" }
+        return shelf
+            .shelfTitle(
+                "Continuation",
+                classifyPlaylistSuggestions && !containsKey("musicPlaylistShelfRenderer"),
+            ).takeUnless { it == "Continuation" }
     }
 
-    private fun JsonObject.shelfTitle(default: String): String =
-        this["title"].asObject().runText()
+    internal fun JsonObject.playlistSuggestionReloadToken(): String? =
+        this["continuations"].asArray().orEmpty().firstNotNullOfOrNull {
+            it
+                .asObject()
+                ?.get("reloadContinuationData")
+                .asObject()
+                ?.get("continuation")
+                .primitiveText()
+        }
+
+    private fun JsonObject.shelfTitle(
+        default: String,
+        classifyPlaylistSuggestions: Boolean,
+    ): String =
+        "Suggestions".takeIf { classifyPlaylistSuggestions && playlistSuggestionReloadToken() != null }
+            ?: this["title"].asObject().runText()
             ?: this["header"]
                 .asObject()
                 ?.get("musicCarouselShelfBasicHeaderRenderer")

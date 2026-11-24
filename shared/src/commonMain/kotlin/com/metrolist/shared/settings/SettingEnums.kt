@@ -196,3 +196,5 @@ enum class GridItemSize {
     BIG,
     SMALL,
 }
+
+enum class SongShareLink { YOUTUBE_MUSIC, SONG_LINK }

@@ -14,6 +14,19 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.isAltPressed
+import androidx.compose.ui.input.key.isCtrlPressed
+import androidx.compose.ui.input.key.isMetaPressed
+import androidx.compose.ui.input.key.isShiftPressed
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.PointerEventType
+import androidx.compose.ui.input.pointer.isForwardPressed
+import androidx.compose.ui.input.pointer.isPrimaryPressed
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.InterceptPlatformTextInput
 import androidx.compose.ui.platform.PlatformTextInputInterceptor
 import com.metrolist.desktop.deviceconnect.DesktopDeviceConnect
@@ -21,6 +34,7 @@ import com.metrolist.desktop.state.app.DesktopNavigation
 import com.metrolist.desktop.state.app.UiState
 import com.metrolist.desktop.state.playback.LyricsState
 import com.metrolist.desktop.state.playback.PlayerState
+import com.metrolist.desktop.utils.WaylandScale
 import com.metrolist.desktop.web.DesktopWebViewAvailability
 import com.metrolist.shared.settings.Settings
 import com.metrolist.shared.ui.navigation.NavigationBackHandler
@@ -53,6 +67,19 @@ internal fun triggerSearchShortcut() {
     }
 }
 
+internal sealed interface ShortcutKeyCode {
+    data class Compose(
+        val key: Key,
+    ) : ShortcutKeyCode
+
+    data class Awt(
+        val code: Int,
+        val character: Char,
+        val physicalPosition: PhysicalKeyPosition? = null,
+        val physicalPositionsAvailable: Boolean = false,
+    ) : ShortcutKeyCode
+}
+
 @Composable
 fun DesktopShortcutLayer(
     isPlaybackBackgroundFocused: () -> Boolean,
@@ -69,7 +96,7 @@ fun DesktopShortcutLayer(
             ctrl = false,
             meta = false,
             shift = false,
-            keyCode = Key.Escape,
+            keyCode = ShortcutKeyCode.Compose(Key.Escape),
             suppressUnmodified = false,
             onRefresh = onRefresh,
             toggleWindowFullscreen = toggleWindowFullscreen,
@@ -88,7 +115,7 @@ fun DesktopShortcutLayer(
     val textInputInterceptor =
         remember(keyFocus) {
             PlatformTextInputInterceptor { request, next ->
-                val session = Any()
+                val session = DesktopTextInputSession()
                 keyFocus.setTextInputActive(session, true)
                 try {
                     next.startInputMethod(request)
@@ -97,24 +124,81 @@ fun DesktopShortcutLayer(
                 }
             }
         }
-    DisposableEffect(Unit) {
-        val dispatcher =
-            installGlobalShortcutDispatcher(
-                keyFocus,
-                { backgroundFocused() },
-                { refresh() },
-                { toggleFullscreen() },
-                { forward() },
-                { clearFocus() },
-            )
-        onDispose { dispatcher.close() }
+    val useTaoWayland = WaylandScale.isNativeWaylandActive()
+    if (!useTaoWayland) {
+        DisposableEffect(Unit) {
+            val dispatcher =
+                installGlobalShortcutDispatcher(
+                    keyFocus,
+                    { backgroundFocused() },
+                    { refresh() },
+                    { toggleFullscreen() },
+                    { forward() },
+                    { clearFocus() },
+                )
+            onDispose { dispatcher.close() }
+        }
     }
+
+    val boxModifier =
+        if (useTaoWayland) {
+            // Matches the AWT mouse queue: a primary click leaves keyboard navigation.
+            modifier
+                .pointerInput(keyFocus) {
+                    awaitPointerEventScope {
+                        var forwardHeld = false
+                        while (true) {
+                            val event = awaitPointerEvent(PointerEventPass.Initial)
+                            // buttons is the held state, so only the transition to held counts as a forward press.
+                            val forwardPressed = event.buttons.isForwardPressed && !forwardHeld
+                            forwardHeld = event.buttons.isForwardPressed
+                            if (event.type != PointerEventType.Press) continue
+                            if (event.buttons.isPrimaryPressed) keyFocus.keyboardNavigation = false
+                            // The AWT forward-button handler is not installed on Tao.
+                            if (forwardPressed && !isComposeModalActive()) {
+                                event.changes.forEach { it.consume() }
+                                forward()
+                            }
+                        }
+                    }
+                }.onPreviewKeyEvent { event ->
+                    if (event.type != KeyEventType.KeyDown || event.key == Key.Escape) return@onPreviewKeyEvent false
+                    if (event.key == Key.Tab ||
+                        ((event.key == Key.DirectionUp || event.key == Key.DirectionDown) && !backgroundFocused())
+                    ) {
+                        keyFocus.keyboardNavigation = true
+                    }
+                    val editableInputActive = keyFocus.textInputActive || UiState.isTextInputFocused || UiState.isSearchFocused
+                    val modalActive = isComposeModalActive()
+                    if (event.key == Key.F5 && modalActive) return@onPreviewKeyEvent false
+                    val pairingApprovalPending =
+                        DesktopDeviceConnect.manager.state.value.pairingRequests
+                            .any { it.requiresApproval }
+                    handleShortcut(
+                        ctrl = event.isCtrlPressed,
+                        meta = event.isMetaPressed,
+                        shift = event.isShiftPressed,
+                        keyCode = ShortcutKeyCode.Compose(event.key),
+                        suppressUnmodified = editableInputActive || modalActive,
+                        modalActive = modalActive,
+                        onRefresh = { refresh() },
+                        toggleWindowFullscreen = { toggleFullscreen() },
+                        pairingApprovalPending = pairingApprovalPending,
+                        isPlaybackBackgroundFocused = backgroundFocused(),
+                        mediaKeysAllowed = keyFocus.allowsMediaKeys(backgroundFocused()),
+                        alt = event.isAltPressed,
+                        cancelLyricsSelection = LyricsState.cancelSelection.takeUnless { modalActive },
+                    )
+                }
+        } else {
+            modifier
+        }
 
     CompositionLocalProvider(LocalPlaybackKeyFocus provides keyFocus) {
         InterceptPlatformTextInput(
             interceptor = textInputInterceptor,
         ) {
-            Box(modifier = modifier) { content() }
+            Box(modifier = boxModifier) { content() }
         }
     }
 }
@@ -128,7 +212,19 @@ private fun installGlobalShortcutDispatcher(
     clearPointerFocus: () -> Unit,
 ): AutoCloseable {
     val keyboardFocusManager = KeyboardFocusManager.getCurrentKeyboardFocusManager()
+    val toolkit = Toolkit.getDefaultToolkit()
     val pressed = ShortcutPressTracker()
+    val physicalKeyCapture: PlatformPhysicalKeyCapture? =
+        when {
+            OsUtil.isWindows -> WindowsPhysicalKeyCapture()
+            OsUtil.isMac -> MacOsPhysicalKeyCapture()
+            OsUtil.isLinux && toolkit.javaClass.name == "sun.awt.X11.XToolkit" -> LinuxPhysicalKeyCapture()
+            else -> null
+        }
+
+    fun updatePhysicalKeyCapture() {
+        physicalKeyCapture?.setEnabled(keyboardFocusManager.activeWindow != null)
+    }
 
     fun restorePointerFocus() {
         if (keyboardFocusManager.activeWindow != null && !keyFocus.keyboardNavigation && !keyFocus.retainsFocus &&
@@ -140,6 +236,7 @@ private fun installGlobalShortcutDispatcher(
     val focusListener =
         PropertyChangeListener {
             pressed.clear()
+            updatePhysicalKeyCapture()
             EventQueue.invokeLater { restorePointerFocus() }
         }
     val dispatcher =
@@ -151,11 +248,29 @@ private fun installGlobalShortcutDispatcher(
             ) {
                 keyFocus.keyboardNavigation = true
             }
-            pressed.dispatch(event) {
-                handleAwtKeyEvent(event, isPlaybackBackgroundFocused(), keyFocus, onRefresh, toggleWindowFullscreen)
+            val physicalCaptureAvailable = physicalKeyCapture?.isAvailable == true
+            val isModifierPress =
+                event.id == AwtKeyEvent.KEY_PRESSED && event.keyCode.isAwtModifierKey()
+            val physicalCapture =
+                if (physicalCaptureAvailable && event.id == AwtKeyEvent.KEY_PRESSED && !isModifierPress) {
+                    physicalKeyCapture?.consume(event)
+                } else {
+                    null
+                }
+            val physicalPosition = physicalCapture?.position
+            val physicalPositionsAvailable = physicalCaptureAvailable && physicalCapture != null
+            pressed.dispatch(event, physicalPosition, physicalPositionsAvailable) {
+                handleAwtKeyEvent(
+                    event,
+                    isPlaybackBackgroundFocused(),
+                    keyFocus,
+                    onRefresh,
+                    toggleWindowFullscreen,
+                    physicalPosition,
+                    physicalPositionsAvailable = physicalPositionsAvailable,
+                )
             }
         }
-    val toolkit = Toolkit.getDefaultToolkit()
     val backButton = backMouseButton(toolkit.javaClass.name)
     val forwardButton = forwardMouseButton(toolkit.javaClass.name)
     val mouseEventQueue =
@@ -178,7 +293,13 @@ private fun installGlobalShortcutDispatcher(
                     return
                 }
                 if (event is MouseEvent &&
-                    handleForwardMouseEvent(event, keyboardFocusManager.focusOwner, forwardButton, onForward)
+                    handleForwardMouseEvent(
+                        event,
+                        keyboardFocusManager.focusOwner,
+                        forwardButton,
+                        isModalActive = { keyboardFocusManager.activeWindow is Dialog || isComposeModalActive() },
+                        onForward = onForward,
+                    )
                 ) {
                     return
                 }
@@ -197,12 +318,14 @@ private fun installGlobalShortcutDispatcher(
 
     keyboardFocusManager.addPropertyChangeListener("activeWindow", focusListener)
     keyboardFocusManager.addKeyEventDispatcher(dispatcher)
+    updatePhysicalKeyCapture()
     toolkit.systemEventQueue.push(mouseEventQueue)
 
     return AutoCloseable {
         mouseEventQueue.close()
         keyboardFocusManager.removeKeyEventDispatcher(dispatcher)
         keyboardFocusManager.removePropertyChangeListener("activeWindow", focusListener)
+        physicalKeyCapture?.close()
     }
 }
 
@@ -215,12 +338,13 @@ internal fun handleForwardMouseEvent(
     event: MouseEvent,
     focusOwner: Component?,
     forwardButton: Int,
+    isModalActive: () -> Boolean,
     onForward: () -> Unit,
 ): Boolean {
     if (event.isConsumed || event.button != forwardButton || focusOwner == null) return false
     if (event.id !in listOf(MouseEvent.MOUSE_PRESSED, MouseEvent.MOUSE_RELEASED, MouseEvent.MOUSE_CLICKED)) return false
     event.consume()
-    if (event.id == MouseEvent.MOUSE_PRESSED) onForward()
+    if (event.id == MouseEvent.MOUSE_PRESSED && !isModalActive()) onForward()
     return true
 }
 
@@ -244,12 +368,24 @@ internal fun handleBackMouseEvent(
 internal fun shouldDispatchGlobalShortcut(event: AwtKeyEvent): Boolean =
     !event.isConsumed && event.id == AwtKeyEvent.KEY_PRESSED && event.keyCode != AwtKeyEvent.VK_ESCAPE
 
+private fun Int.isAwtModifierKey(): Boolean =
+    this == AwtKeyEvent.VK_SHIFT ||
+        this == AwtKeyEvent.VK_CONTROL ||
+        this == AwtKeyEvent.VK_ALT ||
+        this == AwtKeyEvent.VK_META ||
+        this == AwtKeyEvent.VK_ALT_GRAPH ||
+        this == AwtKeyEvent.VK_WINDOWS ||
+        this == AwtKeyEvent.VK_CAPS_LOCK ||
+        this == AwtKeyEvent.VK_KANA_LOCK
+
 private fun handleAwtKeyEvent(
     event: AwtKeyEvent,
     isPlaybackBackgroundFocused: Boolean,
     keyFocus: PlaybackKeyFocus,
     onRefresh: () -> Unit,
     toggleWindowFullscreen: () -> Unit,
+    physicalPosition: PhysicalKeyPosition?,
+    physicalPositionsAvailable: Boolean,
 ): Boolean {
     if (!shouldDispatchGlobalShortcut(event)) return false
     val focusManager = KeyboardFocusManager.getCurrentKeyboardFocusManager()
@@ -267,7 +403,13 @@ private fun handleAwtKeyEvent(
         ctrl = event.isControlDown,
         meta = event.isMetaDown,
         shift = event.isShiftDown,
-        keyCode = event.keyCode,
+        keyCode =
+            ShortcutKeyCode.Awt(
+                event.keyCode,
+                normalizeControlCharacter(event.keyChar, event.isControlDown),
+                physicalPosition,
+                physicalPositionsAvailable,
+            ),
         suppressUnmodified = editableInputActive || modalActive,
         modalActive = modalActive,
         onRefresh = onRefresh,
@@ -301,7 +443,7 @@ internal fun handleShortcut(
     ctrl: Boolean,
     meta: Boolean,
     shift: Boolean,
-    keyCode: Any,
+    keyCode: ShortcutKeyCode,
     suppressUnmodified: Boolean,
     onRefresh: () -> Unit,
     toggleWindowFullscreen: () -> Unit,
@@ -322,7 +464,7 @@ internal fun handleShortcut(
             return true
         }
         if (primary && UiState.showShortcutsDialog &&
-            (keyCodeMatches(keyCode, Key.Grave, AwtKeyEvent.VK_BACK_QUOTE) || keyCode == AwtKeyEvent.VK_DEAD_GRAVE)
+            (keyCodeMatches(keyCode, Key.Grave, AwtKeyEvent.VK_BACK_QUOTE) || keyCode.isAwtCode(AwtKeyEvent.VK_DEAD_GRAVE))
         ) {
             UiState.showShortcutsDialog = false
             return true
@@ -340,7 +482,7 @@ internal fun handleShortcut(
         return true
     }
 
-    if (primary && !alt && !shift && keyCodeMatches(keyCode, Key.Slash, AwtKeyEvent.VK_SLASH)) {
+    if (primary && !alt && keyCodeMatches(keyCode, Key.Slash, AwtKeyEvent.VK_SLASH)) {
         UiState.showShortcutsDialog = true
         return true
     }
@@ -356,7 +498,7 @@ internal fun handleShortcut(
     }
 
     if (primary &&
-        (keyCodeMatches(keyCode, Key.Grave, AwtKeyEvent.VK_BACK_QUOTE) || (keyCode is Int && keyCode == AwtKeyEvent.VK_DEAD_GRAVE))
+        (keyCodeMatches(keyCode, Key.Grave, AwtKeyEvent.VK_BACK_QUOTE) || keyCode.isAwtCode(AwtKeyEvent.VK_DEAD_GRAVE))
     ) {
         UiState.showShortcutsDialog = !UiState.showShortcutsDialog
         return true
@@ -457,6 +599,13 @@ internal fun handleShortcut(
         keyCodeMatches(keyCode, Key.DirectionUp, AwtKeyEvent.VK_UP) ||
             keyCodeMatches(keyCode, Key.DirectionDown, AwtKeyEvent.VK_DOWN)
     if (isVolumeArrow && !isPlaybackBackgroundFocused) return false
+
+    fun seekToTenth(tenth: Int) {
+        if (PlayerState.currentTrack == null) return
+        val durationMs = PlayerState.playbackDuration.value
+        if (durationMs <= 0L) return
+        PlayerState.seekToPosition(durationMs / 10L * tenth)
+    }
 
     return when {
         !ctrl && !meta && !shift && keyCodeMatches(keyCode, Key.D, AwtKeyEvent.VK_D) -> {
@@ -588,98 +737,47 @@ internal fun handleShortcut(
         }
 
         keyCodeMatches(keyCode, Key.One, AwtKeyEvent.VK_1) -> {
-            PlayerState.seekToPosition(
-                PlayerState.player.duration.value
-                    .div(10L),
-            )
+            seekToTenth(1)
             true
         }
 
         keyCodeMatches(keyCode, Key.Two, AwtKeyEvent.VK_2) -> {
-            if (PlayerState.currentTrack != null) {
-                PlayerState.seekToPosition(
-                    PlayerState.player.duration.value
-                        .div(10L)
-                        .times(2),
-                )
-            }
+            seekToTenth(2)
             true
         }
 
         keyCodeMatches(keyCode, Key.Three, AwtKeyEvent.VK_3) -> {
-            if (PlayerState.currentTrack != null) {
-                PlayerState.seekToPosition(
-                    PlayerState.player.duration.value
-                        .div(10L)
-                        .times(3),
-                )
-            }
+            seekToTenth(3)
             true
         }
 
         keyCodeMatches(keyCode, Key.Four, AwtKeyEvent.VK_4) -> {
-            if (PlayerState.currentTrack != null) {
-                PlayerState.seekToPosition(
-                    PlayerState.player.duration.value
-                        .div(10L)
-                        .times(4),
-                )
-            }
+            seekToTenth(4)
             true
         }
 
         keyCodeMatches(keyCode, Key.Five, AwtKeyEvent.VK_5) -> {
-            if (PlayerState.currentTrack != null) {
-                PlayerState.seekToPosition(
-                    PlayerState.player.duration.value
-                        .div(10L)
-                        .times(5),
-                )
-            }
+            seekToTenth(5)
             true
         }
 
         keyCodeMatches(keyCode, Key.Six, AwtKeyEvent.VK_6) -> {
-            if (PlayerState.currentTrack != null) {
-                PlayerState.seekToPosition(
-                    PlayerState.player.duration.value
-                        .div(10L)
-                        .times(6),
-                )
-            }
+            seekToTenth(6)
             true
         }
 
         keyCodeMatches(keyCode, Key.Seven, AwtKeyEvent.VK_7) -> {
-            if (PlayerState.currentTrack != null) {
-                PlayerState.seekToPosition(
-                    PlayerState.player.duration.value
-                        .div(10L)
-                        .times(7),
-                )
-            }
+            seekToTenth(7)
             true
         }
 
         keyCodeMatches(keyCode, Key.Eight, AwtKeyEvent.VK_8) -> {
-            if (PlayerState.currentTrack != null) {
-                PlayerState.seekToPosition(
-                    PlayerState.player.duration.value
-                        .div(10L)
-                        .times(8),
-                )
-            }
+            seekToTenth(8)
             true
         }
 
         keyCodeMatches(keyCode, Key.Nine, AwtKeyEvent.VK_9) -> {
-            if (PlayerState.currentTrack != null) {
-                PlayerState.seekToPosition(
-                    PlayerState.player.duration.value
-                        .div(10L)
-                        .times(9),
-                )
-            }
+            seekToTenth(9)
             true
         }
 
@@ -691,98 +789,47 @@ internal fun handleShortcut(
         }
 
         keyCodeMatches(keyCode, Key.NumPad1, AwtKeyEvent.VK_NUMPAD1) -> {
-            PlayerState.seekToPosition(
-                PlayerState.player.duration.value
-                    .div(10L),
-            )
+            seekToTenth(1)
             true
         }
 
         keyCodeMatches(keyCode, Key.NumPad2, AwtKeyEvent.VK_NUMPAD2) -> {
-            if (PlayerState.currentTrack != null) {
-                PlayerState.seekToPosition(
-                    PlayerState.player.duration.value
-                        .div(10L)
-                        .times(2),
-                )
-            }
+            seekToTenth(2)
             true
         }
 
         keyCodeMatches(keyCode, Key.NumPad3, AwtKeyEvent.VK_NUMPAD3) -> {
-            if (PlayerState.currentTrack != null) {
-                PlayerState.seekToPosition(
-                    PlayerState.player.duration.value
-                        .div(10L)
-                        .times(3),
-                )
-            }
+            seekToTenth(3)
             true
         }
 
         keyCodeMatches(keyCode, Key.NumPad4, AwtKeyEvent.VK_NUMPAD4) -> {
-            if (PlayerState.currentTrack != null) {
-                PlayerState.seekToPosition(
-                    PlayerState.player.duration.value
-                        .div(10L)
-                        .times(4),
-                )
-            }
+            seekToTenth(4)
             true
         }
 
         keyCodeMatches(keyCode, Key.NumPad5, AwtKeyEvent.VK_NUMPAD5) -> {
-            if (PlayerState.currentTrack != null) {
-                PlayerState.seekToPosition(
-                    PlayerState.player.duration.value
-                        .div(10L)
-                        .times(5),
-                )
-            }
+            seekToTenth(5)
             true
         }
 
         keyCodeMatches(keyCode, Key.NumPad6, AwtKeyEvent.VK_NUMPAD6) -> {
-            if (PlayerState.currentTrack != null) {
-                PlayerState.seekToPosition(
-                    PlayerState.player.duration.value
-                        .div(10L)
-                        .times(6),
-                )
-            }
+            seekToTenth(6)
             true
         }
 
         keyCodeMatches(keyCode, Key.NumPad7, AwtKeyEvent.VK_NUMPAD7) -> {
-            if (PlayerState.currentTrack != null) {
-                PlayerState.seekToPosition(
-                    PlayerState.player.duration.value
-                        .div(10L)
-                        .times(7),
-                )
-            }
+            seekToTenth(7)
             true
         }
 
         keyCodeMatches(keyCode, Key.NumPad8, AwtKeyEvent.VK_NUMPAD8) -> {
-            if (PlayerState.currentTrack != null) {
-                PlayerState.seekToPosition(
-                    PlayerState.player.duration.value
-                        .div(10L)
-                        .times(8),
-                )
-            }
+            seekToTenth(8)
             true
         }
 
         keyCodeMatches(keyCode, Key.NumPad9, AwtKeyEvent.VK_NUMPAD9) -> {
-            if (PlayerState.currentTrack != null) {
-                PlayerState.seekToPosition(
-                    PlayerState.player.duration.value
-                        .div(10L)
-                        .times(9),
-                )
-            }
+            seekToTenth(9)
             true
         }
 
@@ -801,6 +848,8 @@ internal fun handleShortcut(
         }
     }
 }
+
+private class DesktopTextInputSession
 
 private fun isComposeModalActive(): Boolean =
     UiState.showShortcutsDialog ||
@@ -823,19 +872,78 @@ private fun isComposeModalActive(): Boolean =
         PlayerState.showAddToPlaylistSong != null ||
         PlayerState.showPlayerError
 
-internal fun isVolumeDecreaseShortcut(keyCode: Any): Boolean =
+internal fun isVolumeDecreaseShortcut(keyCode: ShortcutKeyCode): Boolean =
     keyCodeMatches(keyCode, Key.Minus, AwtKeyEvent.VK_MINUS) ||
         keyCodeMatches(keyCode, Key.NumPadSubtract, AwtKeyEvent.VK_SUBTRACT)
 
-private fun keyCodeMatches(
-    keyCode: Any,
+internal fun keyCodeMatches(
+    keyCode: ShortcutKeyCode,
     composeKey: Key,
     awtKeyCode: Int,
 ): Boolean =
     when (keyCode) {
-        is Key -> keyCode == composeKey
-        is Int -> keyCode == awtKeyCode
-        else -> false
+        is ShortcutKeyCode.Compose -> {
+            keyCode.key == composeKey
+        }
+
+        is ShortcutKeyCode.Awt -> {
+            val physicalPosition = physicalPositionForAwtCode(awtKeyCode)
+            if (physicalPosition != null && keyCode.physicalPositionsAvailable) {
+                keyCode.physicalPosition == physicalPosition
+            } else if (awtKeyCode in AwtKeyEvent.VK_A..AwtKeyEvent.VK_Z) {
+                keyCode.character.uppercaseChar().code == awtKeyCode
+            } else {
+                keyCode.code == awtKeyCode
+            }
+        }
+    }
+
+internal fun normalizeControlCharacter(
+    character: Char,
+    controlDown: Boolean,
+): Char =
+    if (controlDown && character.code in 1..26) {
+        (character.code + 'A'.code - 1).toChar()
+    } else {
+        character
+    }
+
+private fun ShortcutKeyCode.isAwtCode(expectedCode: Int): Boolean {
+    val awtKey = this as? ShortcutKeyCode.Awt ?: return false
+    val physicalPosition = physicalPositionForAwtCode(expectedCode)
+    return if (physicalPosition != null && awtKey.physicalPositionsAvailable) {
+        awtKey.physicalPosition == physicalPosition
+    } else {
+        awtKey.code == expectedCode
+    }
+}
+
+internal enum class PhysicalKeyPosition { BACKQUOTE, MINUS, EQUALS, NUMPAD_PLUS, COMMA, SLASH }
+
+internal fun physicalPositionForAwtCode(awtKeyCode: Int): PhysicalKeyPosition? =
+    when (awtKeyCode) {
+        AwtKeyEvent.VK_BACK_QUOTE, AwtKeyEvent.VK_DEAD_GRAVE -> PhysicalKeyPosition.BACKQUOTE
+        AwtKeyEvent.VK_MINUS -> PhysicalKeyPosition.MINUS
+        AwtKeyEvent.VK_EQUALS -> PhysicalKeyPosition.EQUALS
+        AwtKeyEvent.VK_ADD -> PhysicalKeyPosition.NUMPAD_PLUS
+        AwtKeyEvent.VK_COMMA -> PhysicalKeyPosition.COMMA
+        AwtKeyEvent.VK_SLASH -> PhysicalKeyPosition.SLASH
+        else -> null
+    }
+
+internal fun windowsPhysicalPositionForScanCode(
+    scanCode: Int,
+    flags: Int = 0,
+): PhysicalKeyPosition? =
+    when {
+        scanCode and 0xFF == 0x35 && flags and WINDOWS_LOW_LEVEL_EXTENDED_KEY_FLAG != 0 -> null
+        scanCode and 0xFF == 0x29 -> PhysicalKeyPosition.BACKQUOTE
+        scanCode and 0xFF == 0x0C -> PhysicalKeyPosition.MINUS
+        scanCode and 0xFF == 0x0D -> PhysicalKeyPosition.EQUALS
+        scanCode and 0xFF == 0x4E -> PhysicalKeyPosition.NUMPAD_PLUS
+        scanCode and 0xFF == 0x33 -> PhysicalKeyPosition.COMMA
+        scanCode and 0xFF == 0x35 -> PhysicalKeyPosition.SLASH
+        else -> null
     }
 
 internal class ShortcutPressTracker {
@@ -845,6 +953,8 @@ internal class ShortcutPressTracker {
 
     fun dispatch(
         event: AwtKeyEvent,
+        physicalPosition: PhysicalKeyPosition?,
+        physicalPositionsAvailable: Boolean,
         action: () -> Boolean,
     ): Boolean {
         if (event.id == AwtKeyEvent.KEY_RELEASED) {
@@ -853,19 +963,34 @@ internal class ShortcutPressTracker {
         if (event.id != AwtKeyEvent.KEY_PRESSED) return false
         if (event.keyCode in handled) return true
         val consumed = action()
+        // Layouts can report a physical slash as VK_MINUS, so repeat follows the captured position when known.
         val repeatable =
-            event.keyCode in
-                setOf(
-                    AwtKeyEvent.VK_LEFT,
-                    AwtKeyEvent.VK_RIGHT,
-                    AwtKeyEvent.VK_UP,
-                    AwtKeyEvent.VK_DOWN,
-                    AwtKeyEvent.VK_EQUALS,
-                    AwtKeyEvent.VK_ADD,
-                    AwtKeyEvent.VK_MINUS,
-                    AwtKeyEvent.VK_SUBTRACT,
-                )
+            if (physicalPositionsAvailable && physicalPosition != null) {
+                physicalPosition in REPEATABLE_PHYSICAL_POSITIONS
+            } else {
+                event.keyCode in REPEATABLE_AWT_KEY_CODES
+            }
         if (consumed && !repeatable) handled.add(event.keyCode)
         return consumed
+    }
+
+    private companion object {
+        val REPEATABLE_PHYSICAL_POSITIONS =
+            setOf(
+                PhysicalKeyPosition.MINUS,
+                PhysicalKeyPosition.EQUALS,
+                PhysicalKeyPosition.NUMPAD_PLUS,
+            )
+        val REPEATABLE_AWT_KEY_CODES =
+            setOf(
+                AwtKeyEvent.VK_LEFT,
+                AwtKeyEvent.VK_RIGHT,
+                AwtKeyEvent.VK_UP,
+                AwtKeyEvent.VK_DOWN,
+                AwtKeyEvent.VK_EQUALS,
+                AwtKeyEvent.VK_ADD,
+                AwtKeyEvent.VK_MINUS,
+                AwtKeyEvent.VK_SUBTRACT,
+            )
     }
 }

@@ -105,6 +105,12 @@ DO NOT REMOVE THIS SECTION, I WANT TO ADD IT LATER!!!
   <a href="https://github.com/MetrolistGroup/Metrolist/releases/latest/download/Metrolist-Desktop-windows.zip"><img alt="Download the portable Windows x64 ZIP" src="assets/badges/platform/windows-portable.svg"></a>
   <a href="https://github.com/MetrolistGroup/Metrolist/releases/latest"><img alt="Download the portable Windows ARM64 ZIP" src="assets/badges/platform/windows-arm64.svg"></a>
 </p>
+<p><b>Scoop</b></p>
+
+```powershell
+scoop bucket add metrolist https://github.com/MetrolistGroup/scoop-bucket
+scoop install metrolist/metrolist
+```
 
 <h3>macOS</h3>
 <p><sub>macOS 15+ · unsigned, so you need to trust it on first launch</sub></p>
@@ -117,6 +123,7 @@ DO NOT REMOVE THIS SECTION, I WANT TO ADD IT LATER!!!
 ```sh
 brew trust metrolistgroup/tap
 brew install --cask metrolistgroup/tap/metrolist
+brew install metrolistgroup/tap/metrolist
 ```
 
 <h3>Linux</h3>
@@ -146,6 +153,7 @@ nix profile install github:MetrolistGroup/Metrolist
 
 ```sh
 brew trust metrolistgroup/tap
+brew install --cask metrolistgroup/tap/metrolist
 brew install metrolistgroup/tap/metrolist
 ```
 

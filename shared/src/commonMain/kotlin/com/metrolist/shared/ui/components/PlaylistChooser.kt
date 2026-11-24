@@ -33,6 +33,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
@@ -43,7 +44,7 @@ import com.metrolist.shared.db.entities.Playlist
 import com.metrolist.shared.generated.resources.Res
 import com.metrolist.shared.generated.resources.add
 import com.metrolist.shared.generated.resources.add_to_playlist
-import com.metrolist.shared.generated.resources.already_in_playlist_name
+import com.metrolist.shared.generated.resources.already_in_playlist
 import com.metrolist.shared.generated.resources.cancel
 import com.metrolist.shared.generated.resources.close
 import com.metrolist.shared.generated.resources.create_playlist
@@ -76,25 +77,30 @@ internal fun PlaylistChooser(
     busy: Boolean = false,
     failed: Boolean = false,
     sheet: Boolean = false,
+    readOnlyPlaylists: List<Playlist> = emptyList(),
 ) {
     val sort = Settings.shared.playlistPickerSort
     val direction = Settings.shared.playlistPickerSortDirection
     val librarySorting = Settings.shared.librarySorting(LibraryFilterType.PLAYLISTS)
     val manualOrder = Settings.shared.libraryManualOrder
+    val inPickerOrder: (List<Playlist>) -> List<Playlist> = { list ->
+        list.sortedForPlaylistPicker(
+            sort,
+            direction,
+            name = { it.title },
+            addedAt = { it.playlist.bookmarkedAt ?: it.playlist.createdAt },
+            lastUpdated = { it.playlist.lastUpdateTime },
+            songCount = { it.songCount },
+            id = { it.playlist.browseId ?: it.id },
+            librarySorting = librarySorting,
+            manualOrder = manualOrder,
+            playtime = { playtimes[it.id] },
+        )
+    }
+    // Read-only rows follow every selectable playlist, each group in the picker's order.
     val sortedPlaylists =
-        remember(playlists, sort, direction, librarySorting, manualOrder, playtimes) {
-            playlists.sortedForPlaylistPicker(
-                sort,
-                direction,
-                name = { it.title },
-                addedAt = { it.playlist.bookmarkedAt ?: it.playlist.createdAt },
-                lastUpdated = { it.playlist.lastUpdateTime },
-                songCount = { it.songCount },
-                id = { it.playlist.browseId ?: it.id },
-                librarySorting = librarySorting,
-                manualOrder = manualOrder,
-                playtime = { playtimes[it.id] },
-            )
+        remember(playlists, readOnlyPlaylists, sort, direction, librarySorting, manualOrder, playtimes) {
+            inPickerOrder(playlists) + inPickerOrder(readOnlyPlaylists)
         }
     PlaylistChooserContent(
         playlists =
@@ -118,6 +124,7 @@ internal fun PlaylistChooser(
         busy = busy,
         failed = failed,
         sheet = sheet,
+        readOnlyIds = remember(readOnlyPlaylists) { readOnlyPlaylists.mapTo(mutableSetOf()) { it.id } },
     )
 }
 
@@ -145,6 +152,8 @@ fun PlaylistChooserContent(
     busy: Boolean = false,
     failed: Boolean = false,
     disabledIds: Set<String> = emptySet(),
+    // Shown for membership only: greyed out and never selectable.
+    readOnlyIds: Set<String> = emptySet(),
     onCancel: (() -> Unit)? = null,
     statusContent: @Composable () -> Unit = {},
     // A bottom sheet dismisses by drag, back or scrim, so it drops the close button and fills its full height.
@@ -236,6 +245,8 @@ fun PlaylistChooserContent(
 
             itemsIndexed(playlists, key = { _, playlist -> playlist.id }) { index, playlist ->
                 val containsSongs = playlist.id in membership
+                val readOnly = playlist.id in readOnlyIds
+                val contentModifier = if (readOnly) Modifier.alpha(READ_ONLY_CONTENT_ALPHA) else Modifier
                 Material3MenuGroupItem(
                     item =
                         Material3MenuItemData(
@@ -243,12 +254,12 @@ fun PlaylistChooserContent(
                                 PlaylistCoverImage(
                                     url = playlist.artwork,
                                     modifier =
-                                        Modifier
+                                        contentModifier
                                             .size(40.dp)
                                             .clip(ComponentShapes.SmallThumbnailShape),
                                 )
                             },
-                            title = { Text(playlist.title) },
+                            title = { Text(playlist.title, modifier = contentModifier) },
                             description = {
                                 val description =
                                     when (playlist.id) {
@@ -265,9 +276,11 @@ fun PlaylistChooserContent(
                                                 ?: playlist.author
                                         }
                                     }
-                                if (description != null) Text(description)
-                                if (containsSongs) {
-                                    Text(stringResource(Res.string.already_in_playlist_name, playlist.title))
+                                Column(contentModifier) {
+                                    if (description != null) Text(description)
+                                    if (containsSongs) {
+                                        Text(stringResource(Res.string.already_in_playlist))
+                                    }
                                 }
                             },
                             cardColors =
@@ -280,7 +293,7 @@ fun PlaylistChooserContent(
                                     null
                                 },
                             onClick =
-                                if (busy || playlist.id in completedIds || playlist.id in disabledIds) {
+                                if (busy || readOnly || playlist.id in completedIds || playlist.id in disabledIds) {
                                     null
                                 } else {
                                     { onChoosePlaylist(playlist.id) }
@@ -288,7 +301,7 @@ fun PlaylistChooserContent(
                             trailingContent = {
                                 Checkbox(
                                     checked = playlist.id in selectedIds,
-                                    enabled = !busy && playlist.id !in completedIds && playlist.id !in disabledIds,
+                                    enabled = !busy && !readOnly && playlist.id !in completedIds && playlist.id !in disabledIds,
                                     onCheckedChange = { onChoosePlaylist(playlist.id) },
                                     modifier = Modifier.semantics { contentDescription = playlist.title },
                                 )
@@ -318,3 +331,6 @@ fun PlaylistChooserContent(
         }
     }
 }
+
+// Material's opacity for disabled content.
+private const val READ_ONLY_CONTENT_ALPHA = 0.38f

@@ -421,8 +421,7 @@ internal object YouTubeItemParser {
             musicVideoType = renderer.musicVideoType() ?: title.inferredMusicVideoType(renderer.hasVideoThumbnail()),
             playCountText = playCountText,
             isNew = flags.newRelease,
-            // Greyed album tracks keep their duration but drop every watch endpoint; only episodes may play without one.
-            isUnavailable = isUnavailable(renderer, title, duration = null),
+            isUnavailable = isUnavailable(renderer, title, duration),
         )
     }
 
@@ -433,21 +432,23 @@ internal object YouTubeItemParser {
     ): Boolean {
         if (renderer.string("musicItemRendererDisplayPolicy") != "MUSIC_ITEM_RENDERER_DISPLAY_POLICY_GREY_OUT") return false
         if (title.isBlank()) return true
-        // YouTube Music's display policy can hide playable videos, even omitting their play controls.
+        // Browse restrictions belong to that client; playback may succeed with another one.
         if ((duration ?: 0L) > 0L) return false
+        val titleEndpoint =
+            renderer["flexColumns"]
+                .asArray()
+                ?.getOrNull(0)
+                .flexColumnRuns()
+                ?.firstOrNull()
+                .asObject()
+                ?.get("navigationEndpoint")
         val endpoints =
             listOf(
                 renderer["onTap"],
                 renderer["navigationEndpoint"],
                 renderer["playNavigationEndpoint"],
                 renderer["overlay"].asObject()?.findFirstObject("musicPlayButtonRenderer"),
-                renderer["flexColumns"]
-                    .asArray()
-                    ?.getOrNull(0)
-                    .flexColumnRuns()
-                    ?.firstOrNull()
-                    .asObject()
-                    ?.get("navigationEndpoint"),
+                titleEndpoint,
             )
         return endpoints.none {
             !it

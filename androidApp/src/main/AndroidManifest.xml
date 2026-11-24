@@ -47,6 +47,8 @@
     <uses-permission
         android:name="android.permission.REQUEST_INSTALL_PACKAGES"
         tools:ignore="RequestInstallPackagesPolicy" />
+    <!-- Lets updates install without a prompt once Metrolist is its own installer (Android 12+). -->
+    <uses-permission android:name="android.permission.UPDATE_PACKAGES_WITHOUT_USER_ACTION" />
 
     <queries>
         <provider android:authorities="androidx.car.app.connection" />
@@ -66,6 +68,7 @@
     <application
         tools:ignore="PictureInPictureIssue"
         android:name="com.metrolist.android.App"
+        android:appCategory="audio"
         android:banner="@mipmap/tv_banner"
         android:icon="@mipmap/ic_launcher"
         android:allowBackup="true"
@@ -103,6 +106,7 @@
             android:name="com.metrolist.android.MainActivity"
             android:exported="true"
             android:launchMode="singleTask"
+            android:resizeableActivity="true"
             android:supportsPictureInPicture="true"
             android:configChanges="screenSize|smallestScreenSize|screenLayout|orientation"
             android:windowSoftInputMode="adjustResize">
@@ -487,6 +491,14 @@
         <receiver
             android:name="com.metrolist.android.update.UpdateInstallReceiver"
             android:exported="false" />
+        <!-- Shizuku delivers its binder through this provider; the permission limits callers to the system. -->
+        <provider
+            android:name="rikka.shizuku.ShizukuProvider"
+            android:authorities="${applicationId}.shizuku"
+            android:enabled="true"
+            android:exported="true"
+            android:multiprocess="false"
+            android:permission="android.permission.INTERACT_ACROSS_USERS_FULL" />
 
         <receiver
             android:name="com.metrolist.android.widget.MusicWidgetReceiver"
@@ -499,6 +511,19 @@
             <meta-data
                 android:name="android.appwidget.provider"
                 android:resource="@xml/music_widget_info" />
+        </receiver>
+
+        <receiver
+            android:name="com.metrolist.android.widget.ExpressiveWidgetReceiver"
+            android:exported="true"
+            android:label="@string/widget_expressive_player">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/expressive_widget_info" />
         </receiver>
 
         <receiver

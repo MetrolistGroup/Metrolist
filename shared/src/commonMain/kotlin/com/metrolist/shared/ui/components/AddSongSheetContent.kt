@@ -41,6 +41,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.metrolist.shared.db.MusicDatabase
 import com.metrolist.shared.generated.resources.Res
 import com.metrolist.shared.generated.resources.add_a_song
 import com.metrolist.shared.generated.resources.add_anyway
@@ -63,6 +64,8 @@ import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun AddSongSheetContent(
+    database: MusicDatabase,
+    isLocalPlaylist: Boolean,
     existingSongIds: Set<String>,
     onDismiss: () -> Unit,
     onAddSong: (SongItem, Boolean) -> Unit,
@@ -141,65 +144,68 @@ fun AddSongSheetContent(
                 containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
             )
 
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-            // Keep inline search editable; the collapsed SearchBar disables the keyboard.
-            Surface(
-                shape = SearchBarDefaults.inputFieldShape,
-                content = {
-                    SearchBarDefaults.InputField(
-                        textFieldState = textFieldState,
-                        searchBarState = searchBarState,
-                        onSearch = { search(textFieldState.text.toString()) },
-                        modifier = Modifier.weight(1f),
-                        placeholder = { Text(stringResource(Res.string.search_songs)) },
-                        leadingIcon = {
-                            Icon(
-                                imageVector = MetrolistIcons.Default.Search,
-                                contentDescription = null,
-                            )
-                        },
-                        trailingIcon = {
-                            if (query.isNotEmpty()) {
-                                IconButton(onClick = { query = "" }, shapes = IconButtonDefaults.shapes()) {
-                                    Icon(
-                                        imageVector = MetrolistIcons.Default.Clear,
-                                        contentDescription = stringResource(Res.string.clear_search),
-                                    )
+        val searchContent: @Composable () -> Unit = {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                // Keep inline search editable; the collapsed SearchBar disables the keyboard.
+                Surface(
+                    shape = SearchBarDefaults.inputFieldShape,
+                    content = {
+                        SearchBarDefaults.InputField(
+                            textFieldState = textFieldState,
+                            searchBarState = searchBarState,
+                            onSearch = { search(textFieldState.text.toString()) },
+                            modifier = Modifier.weight(1f),
+                            placeholder = { Text(stringResource(Res.string.search_songs)) },
+                            leadingIcon = {
+                                Icon(
+                                    imageVector = MetrolistIcons.Default.Search,
+                                    contentDescription = null,
+                                )
+                            },
+                            trailingIcon = {
+                                if (query.isNotEmpty()) {
+                                    IconButton(onClick = { query = "" }, shapes = IconButtonDefaults.shapes()) {
+                                        Icon(
+                                            imageVector = MetrolistIcons.Default.Clear,
+                                            contentDescription = stringResource(Res.string.clear_search),
+                                        )
+                                    }
                                 }
-                            }
-                        },
-                        colors = searchBarColors.inputFieldColors,
-                    )
-                },
-                modifier = Modifier.weight(1f),
-                color = searchBarColors.containerColor,
-                tonalElevation = 0.dp,
-                shadowElevation = 0.dp,
-            )
-            Button(
-                onClick = { search(query) },
-                shapes = ButtonDefaults.shapes(),
-            ) {
-                Text(stringResource(Res.string.search))
+                            },
+                            colors = searchBarColors.inputFieldColors,
+                        )
+                    },
+                    modifier = Modifier.weight(1f),
+                    color = searchBarColors.containerColor,
+                    tonalElevation = 0.dp,
+                    shadowElevation = 0.dp,
+                )
+                Button(
+                    onClick = { search(query) },
+                    shapes = ButtonDefaults.shapes(),
+                ) {
+                    Text(stringResource(Res.string.search))
+                }
+            }
+            if (failed) Text(stringResource(Res.string.error), color = MaterialTheme.colorScheme.error)
+            if (isSearching) {
+                Box(
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(24.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    ContainedLoadingIndicator()
+                }
             }
         }
-        if (failed) Text(stringResource(Res.string.error), color = MaterialTheme.colorScheme.error)
-        if (isSearching) {
-            Box(
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(24.dp),
-                contentAlignment = Alignment.Center,
-            ) {
-                ContainedLoadingIndicator()
-            }
-        } else {
+        AddSongSources(database, isLocalPlaylist, if (isSearching) emptyList() else results, searchContent) { songs ->
             LazyColumn(
                 modifier = Modifier.heightIn(max = 420.dp),
                 contentPadding = PaddingValues(bottom = 24.dp),
             ) {
-                itemsIndexed(results, key = { index, song -> "add_${song.id}_$index" }) { _, song ->
+                itemsIndexed(songs, key = { index, song -> "add_${song.id}_$index" }) { _, song ->
                     songContent(song) {
                         if (song.id in existingSongIds) {
                             duplicateSong = song

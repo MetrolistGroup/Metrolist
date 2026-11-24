@@ -20,7 +20,7 @@ import timber.log.Timber
 
 @RequiresApi(Build.VERSION_CODES.O)
 object PictureInPictureHelper {
-    private const val MIN_ASPECT_RATIO = 0.41841f
+    private val minimumAspectRatio = Rational(100, 239)
     private const val MAX_ASPECT_RATIO = 2.39f
 
     fun enterPictureInPicture(
@@ -158,7 +158,7 @@ object PictureInPictureHelper {
         if (!rawRatio.isFinite() || rawRatio <= 0f) {
             return Rational(1, 1)
         }
-        val clampedRatio = rawRatio.coerceIn(MIN_ASPECT_RATIO, MAX_ASPECT_RATIO)
-        return Rational((clampedRatio * 1000).toInt(), 1000)
+        val clampedRatio = rawRatio.coerceAtMost(MAX_ASPECT_RATIO)
+        return Rational((clampedRatio * 1000).toInt(), 1000).coerceAtLeast(minimumAspectRatio)
     }
 }

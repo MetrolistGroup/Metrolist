@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@android:id/background"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="4dp"
+    android:theme="@style/Theme.Widget.Metrolist"
+    tools:ignore="UseAppTint">
+
+    <FrameLayout
+        android:id="@+id/widget_play_pause_container"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:clickable="true"
+        android:contentDescription="@string/play"
+        android:focusable="true">
+
+        <ImageView
+            android:id="@+id/widget_expressive_artwork"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:importantForAccessibility="no"
+            android:scaleType="fitCenter"
+            android:src="@drawable/widget_pill_background" />
+
+        <ImageView
+            android:id="@+id/widget_play_pause"
+            android:layout_width="34dp"
+            android:layout_height="34dp"
+            android:layout_gravity="center"
+            android:importantForAccessibility="no"
+            android:src="@drawable/ic_widget_play"
+            android:tint="@color/widget_on_surface" />
+    </FrameLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_marginTop="8dp"
+        android:layout_weight="1"
+        android:layoutDirection="ltr"
+        android:orientation="horizontal">
+
+        <FrameLayout
+            android:id="@+id/widget_prev_container"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_marginEnd="4dp"
+            android:layout_weight="1"
+            android:clickable="true"
+            android:contentDescription="@string/previous"
+            android:focusable="true">
+
+            <ImageView
+                android:id="@+id/widget_prev_background"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:importantForAccessibility="no"
+                android:scaleType="fitCenter"
+                android:src="@drawable/widget_cookie12_background"
+                android:tint="@color/widget_tertiary_container" />
+
+            <ImageView
+                android:id="@+id/widget_prev"
+                android:layout_width="28dp"
+                android:layout_height="28dp"
+                android:layout_gravity="center"
+                android:importantForAccessibility="no"
+                android:src="@drawable/ic_widget_skip_previous"
+                android:tint="@color/widget_on_tertiary_container" />
+        </FrameLayout>
+
+        <FrameLayout
+            android:id="@+id/widget_next_container"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_marginStart="4dp"
+            android:layout_weight="1"
+            android:clickable="true"
+            android:contentDescription="@string/next"
+            android:focusable="true">
+
+            <ImageView
+                android:id="@+id/widget_next_background"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:importantForAccessibility="no"
+                android:scaleType="fitCenter"
+                android:src="@drawable/widget_cookie12_background"
+                android:tint="@color/widget_tertiary_container" />
+
+            <ImageView
+                android:id="@+id/widget_next"
+                android:layout_width="28dp"
+                android:layout_height="28dp"
+                android:layout_gravity="center"
+                android:importantForAccessibility="no"
+                android:src="@drawable/ic_widget_skip_next"
+                android:tint="@color/widget_on_tertiary_container" />
+        </FrameLayout>
+    </LinearLayout>
+</LinearLayout>

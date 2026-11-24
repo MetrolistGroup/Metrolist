@@ -203,6 +203,12 @@
       "type": "javax.swing.plaf.basic.BasicOptionPaneUI",
       "methods": [
         {
+          "name": "loadActionMap",
+          "parameterTypes": [
+            "javax.swing.plaf.basic.LazyActionMap"
+          ]
+        },
+        {
           "name": "createUI",
           "parameterTypes": [
             "javax.swing.JComponent"

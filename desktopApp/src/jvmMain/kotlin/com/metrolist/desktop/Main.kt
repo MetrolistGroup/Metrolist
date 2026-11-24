@@ -72,16 +72,15 @@ import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Window
+import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.window.WindowPlacement
 import androidx.compose.ui.window.WindowPosition
-import androidx.compose.ui.window.WindowScope
-import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
 import coil3.compose.setSingletonImageLoaderFactory
 import com.materialkolor.ktx.isLight
@@ -91,8 +90,10 @@ import com.metrolist.desktop.backup.DesktopBackupRestoreManager
 import com.metrolist.desktop.crash.DesktopCrashRecovery
 import com.metrolist.desktop.deviceconnect.DesktopDeviceConnect
 import com.metrolist.desktop.di.composeStateModule
+import com.metrolist.desktop.history.HistoryRepository
 import com.metrolist.desktop.input.DesktopShortcutLayer
 import com.metrolist.desktop.input.desktopScrollConfig
+import com.metrolist.desktop.input.initializeLinuxX11Threading
 import com.metrolist.desktop.state.DesktopLocaleManager
 import com.metrolist.desktop.state.app.AppState
 import com.metrolist.desktop.state.app.DesktopNavigation
@@ -146,6 +147,7 @@ import com.metrolist.desktop.utils.SystemMediaManager
 import com.metrolist.desktop.utils.ThemeUtils
 import com.metrolist.desktop.utils.WaylandScale
 import com.metrolist.desktop.utils.WindowsAppIdentity
+import com.metrolist.desktop.utils.allowMainQueueInAwtRunLoop
 import com.metrolist.desktop.utils.configureDesktopJvmErrorFile
 import com.metrolist.desktop.utils.configureLinuxWebKitRenderer
 import com.metrolist.desktop.utils.desktopRenderApiOverride
@@ -153,12 +155,18 @@ import com.metrolist.desktop.utils.isDesktopPlatformSupported
 import com.metrolist.desktop.utils.isOmarchy
 import com.metrolist.desktop.utils.openStopOmarchy
 import com.metrolist.desktop.web.DesktopWebViewError
+import com.metrolist.desktop.window.DesktopWindow
+import com.metrolist.desktop.window.DesktopWindowScope
 import com.metrolist.desktop.window.IconResources
 import com.metrolist.desktop.window.LinuxWindowFrame
 import com.metrolist.desktop.window.WindowFrame
 import com.metrolist.desktop.window.WindowVisibility
+import com.metrolist.desktop.window.asComposeFrameWindowScope
+import com.metrolist.desktop.window.desktopApplication
+import com.metrolist.desktop.window.findRenderApi
 import com.metrolist.desktop.window.findSkiaLayer
 import com.metrolist.desktop.window.restoreWindowPosition
+import com.metrolist.desktop.window.runOnDesktopUiThread
 import com.metrolist.desktop.window.setWindowPlacement
 import com.metrolist.desktop.youtube.DesktopPageBoundTokenHost
 import com.metrolist.desktop.youtube.DesktopPageBoundTokenRuntime
@@ -210,11 +218,13 @@ import com.metrolist.shared.state.applyContentRegion
 import com.metrolist.shared.state.coreModule
 import com.metrolist.shared.ui.YouTubeSyncSnackbar
 import com.metrolist.shared.ui.components.AlertDialog
+import com.metrolist.shared.ui.components.Dialog
 import com.metrolist.shared.ui.components.HomeLoadingPlaceholder
 import com.metrolist.shared.ui.components.LoadingScreen
 import com.metrolist.shared.ui.components.LocalDownloadedSongIds
 import com.metrolist.shared.ui.components.LocalVisualWorkActive
 import com.metrolist.shared.ui.components.PopupVisibility
+import com.metrolist.shared.ui.crash.CrashLogsScreen
 import com.metrolist.shared.ui.navigation.LocalNavigationContainerState
 import com.metrolist.shared.ui.navigation.LocalNavigator
 import com.metrolist.shared.ui.navigation.NavigationContentProvider
@@ -253,7 +263,6 @@ import org.koin.core.context.stopKoin
 import sun.misc.Signal
 import sun.misc.SignalHandler
 import java.awt.Desktop
-import java.awt.EventQueue
 import java.awt.Frame
 import java.awt.GraphicsEnvironment
 import java.awt.Toolkit
@@ -273,13 +282,18 @@ import kotlin.system.exitProcess
 import java.awt.Color as AwtColor
 
 @Composable
-fun WindowScope.App(
+fun DesktopWindowScope.App(
     navigator: Navigator,
     onMaximized: () -> Unit,
     toggleWindowFullscreen: () -> Unit,
     checkDarkMode: (Boolean) -> Unit,
     isLinux: Boolean = false,
 ) {
+    val clipboard = LocalClipboard.current
+    DisposableEffect(clipboard) {
+        AppState.bindClipboard(clipboard)
+        onDispose { AppState.unbindClipboard(clipboard) }
+    }
     val playbackController = remember { DesktopPlaybackController(AppState.scope) }
     val downloadStates = LibraryState.downloadStates
     val downloadedSongIds = remember(downloadStates) { downloadStates.filterValues { it == DownloadState.DOWNLOADED }.keys }
@@ -296,7 +310,7 @@ fun WindowScope.App(
 }
 
 @Composable
-private fun WindowScope.AppContent(
+private fun DesktopWindowScope.AppContent(
     navigator: Navigator,
     onMaximized: () -> Unit,
     toggleWindowFullscreen: () -> Unit,
@@ -355,7 +369,7 @@ private fun WindowScope.AppContent(
                 val dark = colorScheme.background.luminance() < 0.5f
                 ComposeTrayManager.setThemeColors(bg, fg, border, dark)
                 if (!isLinux) {
-                    window.background = colorScheme.background.toAwtColor()
+                    awtWindow?.background = colorScheme.background.toAwtColor()
                 }
             } catch (_: Exception) {
             }
@@ -404,17 +418,6 @@ private fun WindowScope.AppContent(
                     .clip(RoundedCornerShape(windowCornerRadius)),
         ) {
             LastFmArtistBrowserHost(lastFmBrowser)
-            Box(
-                Modifier
-                    .fillMaxSize()
-                    .windowInsetsPadding(LocalCaptionBarInsets.current.only(WindowInsetsSides.Top))
-                    .focusRequester(rootFocusRequester)
-                    .onFocusChanged { isRootFocused = it.isFocused }
-                    .focusable()
-                    .pointerInput(rootFocusRequester) {
-                        detectTapGestures { rootFocusRequester.requestFocus() }
-                    },
-            )
             DesktopPageBoundTokenHost(GlobalContext.get().get<DesktopPageBoundTokenRuntime>())
             DesktopWebViewError()
             if (UiState.showIntegrationsSettings) {
@@ -422,6 +425,24 @@ private fun WindowScope.AppContent(
             }
             PopupVisibility(visible = UiState.showLogViewer) {
                 ApplicationLogsDialog(onDismiss = { UiState.showLogViewer = false })
+            }
+            if (UiState.showCrashLogs) {
+                LaunchedEffect(Unit) {
+                    recoveryReportId?.let { id -> runCatching { DesktopCrashRecovery.store.acknowledge(id) } }
+                    recoveryReportId = null
+                }
+                Dialog(
+                    onDismissRequest = { UiState.showCrashLogs = false },
+                    properties = DialogProperties(usePlatformDefaultWidth = false),
+                ) {
+                    Surface(Modifier.fillMaxSize(), color = colorScheme.surface) {
+                        CrashLogsScreen(
+                            DesktopCrashRecovery.store,
+                            onClose = { UiState.showCrashLogs = false },
+                            onShare = DesktopCrashRecovery::share,
+                        )
+                    }
+                }
             }
             PopupVisibility(visible = UiState.showTokenLogin) {
                 TokenLoginDialog(
@@ -554,6 +575,18 @@ private fun WindowScope.AppContent(
                 onRefresh = { LayoutUtils.refreshCurrentPage(navigator.state.currentRoute) },
                 toggleWindowFullscreen = toggleWindowFullscreen,
             ) {
+                // Inside the layer so Compose shortcuts on native Wayland reach it while it holds focus.
+                Box(
+                    Modifier
+                        .fillMaxSize()
+                        .windowInsetsPadding(LocalCaptionBarInsets.current.only(WindowInsetsSides.Top))
+                        .focusRequester(rootFocusRequester)
+                        .onFocusChanged { isRootFocused = it.isFocused }
+                        .focusable()
+                        .pointerInput(rootFocusRequester) {
+                            detectTapGestures { rootFocusRequester.requestFocus() }
+                        },
+                )
                 Box(
                     modifier =
                         Modifier
@@ -594,7 +627,7 @@ private fun WindowScope.AppContent(
                         toggleFullscreen = { toggleWindowFullscreen() },
                         onBackgroundFocusChanged = { isPlayerBackgroundFocused = it },
                         onFocus = {
-                            window.requestFocus()
+                            requestFocus()
                         },
                     )
                 }
@@ -645,9 +678,9 @@ private fun WindowScope.AppContent(
 private fun Color.toAwtColor(): AwtColor = AwtColor(red, green, blue, alpha)
 
 @Composable
-private fun WindowScope.WindowsWindowBackground(color: Color) {
+private fun DesktopWindowScope.WindowsWindowBackground(color: Color) {
     if (!OsUtil.isWindows) return
-    val window = window as? ComposeWindow ?: return
+    val window = awtWindow as? ComposeWindow ?: return
     SideEffect {
         val background = color.toAwtColor()
         window.background = background
@@ -707,11 +740,12 @@ private fun startupRuntimeAvailable(): Boolean {
 private fun configureLinuxWindowIdentity() {
     if (!OsUtil.isLinux) return
     System.setProperty("awt.app.id", "Metrolist")
+    if (WaylandScale.isNativeWaylandActive()) return
     runCatching {
         // XToolkit's constructor names the X11 class after the creating thread, so create it here and then rename it.
-        Toolkit.getDefaultToolkit()
-        val xToolkit = Class.forName("sun.awt.X11.XToolkit")
-        xToolkit.getDeclaredField("awtAppClassName").apply {
+        val toolkit = Toolkit.getDefaultToolkit()
+        if (toolkit.javaClass.name != "sun.awt.X11.XToolkit") return@runCatching
+        toolkit.javaClass.getDeclaredField("awtAppClassName").apply {
             isAccessible = true
             set(null, "Metrolist")
         }
@@ -749,7 +783,7 @@ private fun shutdownApp(onComplete: () -> Unit) {
             runCatching { AppLogger.shutdown() }
         } finally {
             DesktopSingleInstance.release()
-            EventQueue.invokeLater(onComplete)
+            runOnDesktopUiThread(onComplete)
         }
     }
 }
@@ -798,22 +832,36 @@ private fun installGracefulShutdownSignals() {
     runCatching { Signal.handle(Signal("INT"), handler) }
 }
 
+@Volatile private var recoveryReportId: String? = null
+
 fun main() {
     main(emptyArray())
 }
 
 fun main(args: Array<String>) {
+    // Xlib must enter thread-safe mode before AWT can initialize it on Linux/X11.
+    if (OsUtil.isLinux && !WaylandScale.shouldUseNativeWayland()) initializeLinuxX11Threading()
     // The JDK reads this once when its default proxy selector initializes.
     if (OsUtil.isWindows) System.getProperties().putIfAbsent("java.net.useSystemProxies", "true")
     runCatching { System.getProperty("metrolist.cds.cache")?.let { File(it).mkdirs() } }
     startup.trace("main")
     val recoveryIndex = args.indexOf(DesktopCrashRecovery.ARGUMENT)
     val pendingReport = if (recoveryIndex < 0) runCatching { DesktopCrashRecovery.store.pendingReportId() }.getOrNull() else null
+    var installCrashHandler = true
     if (recoveryIndex >= 0 || pendingReport != null) {
-        DesktopCrashRecovery.show(pendingReport ?: args.getOrElse(recoveryIndex + 1) { "" })
-        return
+        val reportId = pendingReport ?: args.getOrElse(recoveryIndex + 1) { "" }
+        if (!OsUtil.isLinux || !WaylandScale.configureNativeWaylandBackend()) {
+            DesktopCrashRecovery.show(reportId)
+            return
+        }
+        // Swing cannot open a window under native Wayland, so the app starts with its crash log screen open.
+        // Without the crash handler a second crash exits instead of relaunching in a loop. The report stays
+        // pending until the screen appears, so a crash during startup shows it again on the next launch.
+        recoveryReportId = reportId
+        UiState.showCrashLogs = true
+        installCrashHandler = false
     }
-    DesktopCrashRecovery.install()
+    if (installCrashHandler) DesktopCrashRecovery.install()
     try {
         configureDesktopJvmErrorFile()
         NativeMemoryTrimmer.limitArenasByReexec()
@@ -922,6 +970,7 @@ private fun runDesktopApp(args: Array<String>) {
     // Initialize logging only after settings migration to avoid java.util.prefs/JUL class-init deadlocks.
     AppLogger.initialize(applicationScope)
     AppLogger.setEnabled(settings.enableLogging)
+    if (OsUtil.isMac) allowMainQueueInAwtRunLoop()
     flushDesktopCredentialWarnings()
     startup.trace("settings")
 
@@ -999,6 +1048,10 @@ private fun runDesktopApp(args: Array<String>) {
             runBlocking { SongLikeState.recoverDatabaseLikes(database) }
             DesktopAutomaticBackupScheduler.start(applicationScope)
             SongMetadataState.bind(database, applicationScope)
+            applicationScope.launch(Dispatchers.IO) {
+                runCatching { HistoryRepository.clearQueuedScrobbles() }
+                    .onFailure { AppLogger.warning("Main", "Failed to clear legacy queued scrobbles", it) }
+            }
 
             LastFM.initialize(
                 apiKey = BuildConfig.LASTFM_API_KEY,
@@ -1128,11 +1181,11 @@ private fun runDesktopApp(args: Array<String>) {
     applicationScope.launch(Dispatchers.IO) { ThemeUtils.observeSystemTheme() }
     startupJob = applicationScope.launch { initializeBackend() }
 
-    application {
+    desktopApplication {
         if (!uiVisible) {
             SideEffect { uiDisposed.complete(Unit) }
             LaunchedEffect(Unit) { awaitCancellation() }
-            return@application
+            return@desktopApplication
         }
         var integrationsReady by remember { mutableStateOf(false) }
         LaunchedEffect(Unit) {
@@ -1148,10 +1201,14 @@ private fun runDesktopApp(args: Array<String>) {
             }
         val savedPosition =
             remember {
-                restoreWindowPosition(
-                    Settings.shared.desktopWindowPosition,
-                    GraphicsEnvironment.getLocalGraphicsEnvironment().screenDevices.map { it.defaultConfiguration.bounds },
-                )
+                if (WaylandScale.isNativeWaylandActive()) {
+                    null
+                } else {
+                    restoreWindowPosition(
+                        Settings.shared.desktopWindowPosition,
+                        GraphicsEnvironment.getLocalGraphicsEnvironment().screenDevices.map { it.defaultConfiguration.bounds },
+                    )
+                }
             }
 
         val windowState =
@@ -1309,25 +1366,36 @@ private fun runDesktopApp(args: Array<String>) {
                 val artists = track.artists.joinToString { it.displayName }
                 if (artists.isBlank()) track.title else stringResource(Res.string.window_title_now_playing, track.title, artists)
             } ?: appTitle
-        Window(
+        DesktopWindow(
             onCloseRequest = { minimizeToTrayOrClose() },
             title = windowTitle,
             state = windowState,
             undecorated = isLinux && !useSystemWindowFrame,
             transparent = false,
             icon = dynamicIcon,
+            minimumSize = DpSize(800.dp, 500.dp),
         ) {
-            LaunchedEffect(window) {
-                while (!window.isShowing) delay(16L)
-                startup.windowShown.complete(Unit)
-                startup.firstFrame.await()
-                val renderApi = window.findSkiaLayer()?.renderApi
-                softwareRendering = renderApi == GraphicsApi.SOFTWARE_FAST || renderApi == GraphicsApi.SOFTWARE_COMPAT
-                AppLogger.info(
-                    "Main",
-                    "Skiko render API: requested=${System.getenv("SKIKO_RENDER_API") ?: System.getProperty("skiko.renderApi") ?: "AUTO"} " +
-                        "actual=$renderApi",
-                )
+            LaunchedEffect(awtFrame, taoWindow) {
+                val frame = awtFrame
+                if (frame != null) {
+                    while (!frame.isShowing) delay(16L)
+                    startup.windowShown.complete(Unit)
+                    startup.firstFrame.await()
+                    val renderApi = frame.findRenderApi()
+                    softwareRendering = renderApi == GraphicsApi.SOFTWARE_FAST || renderApi == GraphicsApi.SOFTWARE_COMPAT
+                    AppLogger.info(
+                        "Main",
+                        "Skiko render API: requested=${System.getenv(
+                            "SKIKO_RENDER_API",
+                        ) ?: System.getProperty("skiko.renderApi") ?: "AUTO"} " +
+                            "actual=$renderApi",
+                    )
+                } else {
+                    startup.windowShown.complete(Unit)
+                    startup.firstFrame.await()
+                    softwareRendering = false
+                    AppLogger.info("Main", "Native Wayland backend active (Tao EGL)")
+                }
             }
             if (!backendReady) {
                 DesktopDensityProvider {
@@ -1358,9 +1426,10 @@ private fun runDesktopApp(args: Array<String>) {
                         }
                     }
                 }
-                return@Window
+                return@DesktopWindow
             }
-            LaunchedEffect(window) {
+            LaunchedEffect(awtFrame) {
+                val frame = awtFrame ?: return@LaunchedEffect
                 runCatching {
                     val icon =
                         withContext(Dispatchers.IO) {
@@ -1370,47 +1439,51 @@ private fun runDesktopApp(args: Array<String>) {
                                 .getResourceAsStream("logo.png")
                                 ?.use(ImageIO::read)
                         }
-                    if (icon != null) (window as? Frame)?.iconImage = icon
+                    if (icon != null) (frame as? Frame)?.iconImage = icon
                 }
             }
 
             if (OsUtil.isMac) {
-                DesktopMenuBar(
-                    navigator = navigator,
-                    windowState = windowState,
-                    toggleWindowFullscreen = {
-                        val placement =
-                            if (windowState.placement == WindowPlacement.Fullscreen) {
-                                lastNormalPlacement.value
-                            } else {
-                                WindowPlacement.Fullscreen
+                asComposeFrameWindowScope()?.apply {
+                    DesktopMenuBar(
+                        navigator = navigator,
+                        windowState = windowState,
+                        toggleWindowFullscreen = {
+                            val placement =
+                                if (windowState.placement == WindowPlacement.Fullscreen) {
+                                    lastNormalPlacement.value
+                                } else {
+                                    WindowPlacement.Fullscreen
+                                }
+                            setWindowPlacement(windowState, placement) { window.placement = it }
+                        },
+                        onRefresh = {
+                            UiState.isRefreshingApp = true
+                            LibraryContentState.fetchLibraryData(force = true)
+                            UiState.appRefreshKey++
+                            HomeState.fetchHomeData {
+                                UiState.isRefreshingApp = false
                             }
-                        setWindowPlacement(windowState, placement) { window.placement = it }
-                    },
-                    onRefresh = {
-                        UiState.isRefreshingApp = true
-                        LibraryContentState.fetchLibraryData(force = true)
-                        UiState.appRefreshKey++
-                        HomeState.fetchHomeData {
-                            UiState.isRefreshingApp = false
-                        }
-                    },
-                    onCloseWindow = { minimizeToTrayOrClose() },
-                    onQuit = { shutdownApp { exitProcess(0) } },
-                )
+                        },
+                        onCloseWindow = { minimizeToTrayOrClose() },
+                        onQuit = { shutdownApp { exitProcess(0) } },
+                    )
+                }
             }
 
-            LaunchedEffect(Unit) {
+            LaunchedEffect(awtFrame) {
+                val frame = awtFrame ?: return@LaunchedEffect
                 try {
-                    window.minimumSize = java.awt.Dimension(800, 500)
+                    frame.minimumSize = java.awt.Dimension(800, 500)
                 } catch (_: Exception) {
                 }
             }
 
-            DisposableEffect(useSystemWindowFrame) {
-                if (OsUtil.isMac && !useSystemWindowFrame) {
+            DisposableEffect(useSystemWindowFrame, awtFrame) {
+                val frame = awtFrame
+                if (OsUtil.isMac && !useSystemWindowFrame && frame != null) {
                     try {
-                        val rootPane = window.rootPane
+                        val rootPane = frame.rootPane
                         rootPane.putClientProperty("apple.awt.fullWindowContent", true)
                         rootPane.putClientProperty("apple.awt.transparentTitleBar", true)
                         rootPane.putClientProperty("apple.awt.windowTitleVisible", false)
@@ -1434,100 +1507,109 @@ private fun runDesktopApp(args: Array<String>) {
                 }
             }
 
-            DisposableEffect(window) {
-                UiState.isWindowFocused = window.isFocused
-                var preMinimizePlacement: WindowPlacement? = null
+            DisposableEffect(awtFrame, taoWindow) {
+                val tao = taoWindow
+                if (tao != null) {
+                    UiState.isWindowFocused = tao.isFocused
+                    tao.onFocusChanged { focused -> UiState.isWindowFocused = focused }
+                    tao.onMinimizedChanged { minimized -> ComposeTrayManager.setWindowVisible(!minimized) }
+                    onDispose { }
+                } else {
+                    val window = awtFrame ?: return@DisposableEffect onDispose { }
+                    UiState.isWindowFocused = window.isFocused
+                    var preMinimizePlacement: WindowPlacement? = null
 
-                val listener =
-                    object : WindowAdapter() {
-                        override fun windowActivated(e: WindowEvent?) {
-                            UiState.isWindowFocused = true
-                        }
-
-                        override fun windowDeactivated(e: WindowEvent?) {
-                            UiState.isWindowFocused = false
-                        }
-
-                        override fun windowIconified(e: WindowEvent?) {
-                            preMinimizePlacement = windowState.placement
-                            ComposeTrayManager.setWindowVisible(false)
-                        }
-
-                        override fun windowDeiconified(e: WindowEvent?) {
-                            ComposeTrayManager.setWindowVisible(true)
-                            preMinimizePlacement?.let { targetPlacement ->
-                                SwingUtilities.invokeLater {
-                                    windowState.placement = targetPlacement
-                                }
+                    val listener =
+                        object : WindowAdapter() {
+                            override fun windowActivated(e: WindowEvent?) {
+                                UiState.isWindowFocused = true
                             }
-                        }
-                    }
-                window.addWindowListener(listener)
 
-                // AppKit changes fullscreen outside Compose; defer until windowState.placement catches up.
-                val windowStateListener =
-                    java.awt.event.WindowStateListener { _ ->
-                        if (OsUtil.isMac) {
-                            SwingUtilities.invokeLater {
-                                val isFs = windowState.placement == WindowPlacement.Fullscreen
-                                UiState.isNativeFullscreen = isFs
-                                UiState.isMaximized = windowState.placement == WindowPlacement.Maximized ||
-                                    windowState.placement == WindowPlacement.Fullscreen
+                            override fun windowDeactivated(e: WindowEvent?) {
+                                UiState.isWindowFocused = false
                             }
-                        }
-                    }
-                window.addWindowStateListener(windowStateListener)
 
-                var preFullscreenSize: java.awt.Dimension? = null
-                var preFullscreenLocation: java.awt.Point? = null
-
-                val componentListener =
-                    object : java.awt.event.ComponentAdapter() {
-                        override fun componentResized(e: java.awt.event.ComponentEvent?) {
-                            if (OsUtil.isMac) {
-                                val isFs = windowState.placement == WindowPlacement.Fullscreen
-                                if (!isFs) {
-                                    preFullscreenSize = window.size
-                                    preFullscreenLocation = window.location
-                                }
-                                UiState.isNativeFullscreen = isFs
+                            override fun windowIconified(e: WindowEvent?) {
+                                preMinimizePlacement = windowState.placement
+                                ComposeTrayManager.setWindowVisible(false)
                             }
-                        }
 
-                        override fun componentMoved(e: java.awt.event.ComponentEvent?) {
-                            if (OsUtil.isMac) {
-                                if (windowState.placement != WindowPlacement.Fullscreen) {
-                                    preFullscreenLocation = window.location
-                                }
-                                if (!useSystemWindowFrame && windowState.placement == WindowPlacement.Floating &&
-                                    !UiState.isMaximized
-                                ) {
-                                    try {
-                                        val config = window.graphicsConfiguration ?: return
-                                        val insets =
-                                            java.awt.Toolkit
-                                                .getDefaultToolkit()
-                                                .getScreenInsets(config)
-                                        val minTopY = insets.top
-                                        if (window.y < minTopY) {
-                                            window.setLocation(window.x, minTopY)
-                                        }
-                                    } catch (_: Exception) {
+                            override fun windowDeiconified(e: WindowEvent?) {
+                                ComposeTrayManager.setWindowVisible(true)
+                                preMinimizePlacement?.let { targetPlacement ->
+                                    SwingUtilities.invokeLater {
+                                        windowState.placement = targetPlacement
                                     }
                                 }
                             }
                         }
-                    }
-                window.addComponentListener(componentListener)
+                    window.addWindowListener(listener)
 
-                onDispose {
-                    window.removeWindowListener(listener)
-                    window.removeWindowStateListener(windowStateListener)
-                    window.removeComponentListener(componentListener)
+                    // AppKit changes fullscreen outside Compose; defer until windowState.placement catches up.
+                    val windowStateListener =
+                        java.awt.event.WindowStateListener { _ ->
+                            if (OsUtil.isMac) {
+                                SwingUtilities.invokeLater {
+                                    val isFs = windowState.placement == WindowPlacement.Fullscreen
+                                    UiState.isNativeFullscreen = isFs
+                                    UiState.isMaximized = windowState.placement == WindowPlacement.Maximized ||
+                                        windowState.placement == WindowPlacement.Fullscreen
+                                }
+                            }
+                        }
+                    window.addWindowStateListener(windowStateListener)
+
+                    var preFullscreenSize: java.awt.Dimension? = null
+                    var preFullscreenLocation: java.awt.Point? = null
+
+                    val componentListener =
+                        object : java.awt.event.ComponentAdapter() {
+                            override fun componentResized(e: java.awt.event.ComponentEvent?) {
+                                if (OsUtil.isMac) {
+                                    val isFs = windowState.placement == WindowPlacement.Fullscreen
+                                    if (!isFs) {
+                                        preFullscreenSize = window.size
+                                        preFullscreenLocation = window.location
+                                    }
+                                    UiState.isNativeFullscreen = isFs
+                                }
+                            }
+
+                            override fun componentMoved(e: java.awt.event.ComponentEvent?) {
+                                if (OsUtil.isMac) {
+                                    if (windowState.placement != WindowPlacement.Fullscreen) {
+                                        preFullscreenLocation = window.location
+                                    }
+                                    if (!useSystemWindowFrame && windowState.placement == WindowPlacement.Floating &&
+                                        !UiState.isMaximized
+                                    ) {
+                                        try {
+                                            val config = window.graphicsConfiguration ?: return
+                                            val insets =
+                                                java.awt.Toolkit
+                                                    .getDefaultToolkit()
+                                                    .getScreenInsets(config)
+                                            val minTopY = config.bounds.y + insets.top
+                                            if (window.y < minTopY) {
+                                                window.setLocation(window.x, minTopY)
+                                            }
+                                        } catch (_: Exception) {
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    window.addComponentListener(componentListener)
+
+                    onDispose {
+                        window.removeWindowListener(listener)
+                        window.removeWindowStateListener(windowStateListener)
+                        window.removeComponentListener(componentListener)
+                    }
                 }
             }
 
-            LaunchedEffect(window) {
+            LaunchedEffect(awtFrame, taoWindow) {
                 startup.appFrame.await()
                 windowsIdentity?.join()
                 SystemMediaManager.onQuit = {
@@ -1538,8 +1620,8 @@ private fun runDesktopApp(args: Array<String>) {
                 SystemMediaManager.onRaise = ComposeTrayManager::showWindow
             }
 
-            LaunchedEffect(window) {
-                ComposeTrayManager.initialize(windowState, window) {
+            LaunchedEffect(awtFrame, taoWindow) {
+                ComposeTrayManager.initialize(windowState, awtFrame, taoWindow) {
                     shutdownApp { exitProcess(0) }
                 }
                 DesktopSingleInstance.setRestoreHandler { payload ->
@@ -1610,7 +1692,7 @@ private fun runDesktopApp(args: Array<String>) {
                         startup.frameDrawn(backendReady = true)
                     },
                 ) {
-                    WindowVisibility(window) {
+                    WindowVisibility(this@DesktopWindow, windowState, windowShown = ComposeTrayManager.windowVisible) {
                         val mainWindowVisibility = LocalVisualWorkActive.current
                         LaunchedEffect(mainWindowVisibility) {
                             try {

@@ -127,7 +127,10 @@ interface DeviceConnectPlaybackPort {
         shouldCommit: () -> Boolean,
     )
 
-    suspend fun setControllerPlayback(playback: DcLocalPlaybackState?)
+    suspend fun setControllerPlayback(
+        playback: DcLocalPlaybackState?,
+        provisional: Boolean = false,
+    )
 
     suspend fun setPlaying(playing: Boolean)
 

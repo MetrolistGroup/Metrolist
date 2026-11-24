@@ -151,7 +151,7 @@ fun AboutArtistContent(
     val imageLoader = SingletonImageLoader.get(context)
     val scope = rememberCoroutineScope()
     var viewerOpen by rememberSaveable { mutableStateOf(false) }
-    var viewerPreview by remember { mutableStateOf<ArtistPhotoPreview?>(null) }
+    var viewerPreview by remember { mutableStateOf<Pair<String, ArtistPhotoPreview>?>(null) }
 
     val viewerVisibility = remember { MutableTransitionState(false) }
     viewerVisibility.targetState = viewerOpen && galleryPhotos.isNotEmpty()
@@ -169,14 +169,20 @@ fun AboutArtistContent(
     }
     var photoJob by remember { mutableStateOf<Job?>(null) }
 
-    fun openPhoto(index: Int) {
+    fun openPhoto(url: String) {
         if (photoActions == null || !galleryInteractive || photoJob?.isActive == true) return
         photoJob =
             scope.launch {
-                if (galleryPhotos.size > 1 && galleryState.currentItem != index) galleryState.animateScrollToItem(index)
-                viewerPreview = artistPhotoPreview(imageLoader, context, galleryPhotos[index].url)
-                viewerLastPage = index
-                viewerPhotoUrl = galleryPhotos[index].url
+                val startIndex = galleryPhotos.indexOfFirst { it.url == url }
+                if (startIndex < 0) return@launch
+                if (galleryPhotos.size > 1 && galleryState.currentItem != startIndex) galleryState.animateScrollToItem(startIndex)
+                if (galleryPhotos.none { it.url == url }) return@launch
+                val preview = artistPhotoPreview(imageLoader, context, url)
+                val currentIndex = galleryPhotos.indexOfFirst { it.url == url }
+                if (currentIndex < 0) return@launch
+                viewerPreview = preview?.let { url to it }
+                viewerLastPage = currentIndex
+                viewerPhotoUrl = url
                 viewerOpen = true
             }
     }
@@ -244,7 +250,7 @@ fun AboutArtistContent(
                                 .fillMaxSize()
                                 .then(sharedModifier)
                                 .clip(MaterialTheme.shapes.large)
-                                .clickable(enabled = galleryInteractive && photoActions != null) { openPhoto(index) },
+                                .clickable(enabled = galleryInteractive && photoActions != null) { openPhoto(photo.url) },
                     )
                 }
             }
@@ -562,7 +568,10 @@ fun AboutArtistContent(
                     ArtistPhotoViewer(
                         photos = galleryPhotos,
                         initialIndex = viewerPage ?: 0,
-                        initialPreview = viewerPreview,
+                        initialPreview =
+                            viewerPreview
+                                ?.takeIf { (url, _) -> url == galleryPhotos.getOrNull(viewerPage ?: 0)?.url }
+                                ?.second,
                         artistName = artistName,
                         actions = actions,
                         visibilityScope = this,

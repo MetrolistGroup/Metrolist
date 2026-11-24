@@ -107,18 +107,32 @@ private class BottomSheetClipShape(
             } else {
                 collapsedHeaderHeightPx + (size.height - collapsedHeaderHeightPx) * p
             }
-        val rect = Rect(0f, 0f, size.width, visibleHeight.coerceIn(0f, size.height))
+        val visibleBottom = visibleHeight.coerceIn(0f, size.height)
         return if (cornerRadius > 0f) {
+            // Use a four-corner rounded rect to avoid expensive path clipping during drag.
             Outline.Rounded(
                 RoundRect(
-                    rect = rect,
-                    topLeft = CornerRadius(cornerRadius),
-                    topRight = CornerRadius(cornerRadius),
+                    rect = Rect(0f, 0f, size.width, visibleBottom + cornerRadius * 2f),
+                    cornerRadius = CornerRadius(cornerRadius),
                 ),
             )
         } else {
-            Outline.Rectangle(rect)
+            Outline.Rectangle(Rect(0f, 0f, size.width, visibleBottom))
         }
+    }
+}
+
+/** Uses a four-corner rounded rect for efficient top-corner clipping. */
+internal class TopRoundedSurfaceShape(
+    private val radius: Dp,
+) : Shape {
+    override fun createOutline(
+        size: Size,
+        layoutDirection: LayoutDirection,
+        density: Density,
+    ): Outline {
+        val r = with(density) { radius.toPx() }
+        return Outline.Rounded(RoundRect(Rect(0f, 0f, size.width, size.height + r * 2f), CornerRadius(r)))
     }
 }
 

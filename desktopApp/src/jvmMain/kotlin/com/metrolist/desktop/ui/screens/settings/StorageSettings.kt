@@ -26,6 +26,7 @@ import coil3.compose.LocalPlatformContext
 import com.metrolist.desktop.storage.DownloadManager
 import com.metrolist.desktop.storage.SongCacheManager
 import com.metrolist.desktop.utils.DesktopImageLoader
+import com.metrolist.desktop.utils.pickDesktopDirectory
 import com.metrolist.shared.api.musicvideo.MusicVideoResolver
 import com.metrolist.shared.generated.resources.Res
 import com.metrolist.shared.generated.resources.animated_artwork_cache
@@ -95,35 +96,8 @@ import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.getString
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.koinInject
-import java.awt.EventQueue
 import java.io.File
-import java.util.concurrent.atomic.AtomicReference
-import javax.swing.JFileChooser
 import kotlin.math.roundToInt
-
-private fun selectDownloadDirectory(
-    title: String,
-    initialDirectory: File?,
-): File? {
-    val selected = AtomicReference<File?>()
-    val showChooser = {
-        val chooser =
-            JFileChooser().apply {
-                fileSelectionMode = JFileChooser.DIRECTORIES_ONLY
-                dialogTitle = title
-                initialDirectory?.takeIf(File::isDirectory)?.let { currentDirectory = it }
-            }
-        if (chooser.showOpenDialog(null) == JFileChooser.APPROVE_OPTION) {
-            selected.set(chooser.selectedFile)
-        }
-    }
-    if (EventQueue.isDispatchThread()) {
-        showChooser()
-    } else {
-        EventQueue.invokeAndWait(showChooser)
-    }
-    return selected.get()
-}
 
 private data class StorageUsage(
     val downloads: Long,
@@ -440,17 +414,21 @@ fun StorageSettingsScreen(
                     isLast = Settings.shared.customDownloadPath.isBlank(),
                     enabled = !busy && usage != null,
                     onClick = {
-                        val directory =
-                            try {
-                                selectDownloadDirectory(selectTitle, usage?.directory?.let(::File))
-                            } catch (_: Exception) {
-                                failureMessage = Res.string.error_unknown
-                                null
+                        scope.launch {
+                            val directory =
+                                try {
+                                    pickDesktopDirectory(selectTitle, usage?.directory?.let(::File))
+                                } catch (e: CancellationException) {
+                                    throw e
+                                } catch (_: Exception) {
+                                    failureMessage = Res.string.error_unknown
+                                    null
+                                }
+                            directory?.let {
+                                perform(
+                                    Res.string.download_folder_unavailable,
+                                ) { withContext(Dispatchers.IO) { DownloadManager.changeDownloadDirectory(it) } }
                             }
-                        directory?.let {
-                            perform(
-                                Res.string.download_folder_unavailable,
-                            ) { withContext(Dispatchers.IO) { DownloadManager.changeDownloadDirectory(it) } }
                         }
                     },
                     subtitle = stringResource(Res.string.settings_download_folder_summary),

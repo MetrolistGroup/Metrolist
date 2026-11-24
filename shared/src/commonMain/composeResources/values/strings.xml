@@ -37,6 +37,8 @@
     <!-- Home -->
     <!-- Translators: Home-screen destination that opens listening history. -->
     <string name="history">Listening history</string>
+
+    <string name="recently_played">Recently played</string>
     <!-- Translators: Label for mood and genres in the Home and browse screens. -->
     <string name="mood_and_genres">Moods and genres</string>
     <!-- Translators: Label for footer greeting in the Home. -->
@@ -196,8 +198,10 @@
     <string name="delete">Delete</string>
     <!-- Translators: Imperative action label for remove from queue in the desktop player and playback queue. -->
     <string name="remove_from_queue">Remove from queue</string>
-    <!-- Translators: Imperative action label for online in the search. -->
+    <!-- Translators: Button in the manual lyrics search dialog that opens a web search for the song's lyrics. -->
     <string name="search_online">Search online</string>
+    <!-- Translators: Short form of Search online, used when the full label does not fit beside Cancel and Search in the manual lyrics search dialog. Keep it to one short word if possible. -->
+    <string name="search_online_short">Online</string>
 
     <!-- Sort menu -->
     <!-- Translators: Label for sort by create date in the Home and browse screens and Library. -->
@@ -242,6 +246,8 @@
     <string name="lyrics_youtube_captions">YouTube Captions</string>
     <!-- Translators: Title of the manual lyrics search dialog. -->
     <string name="search_lyrics">Search lyrics</string>
+    <!-- Translators: Web search query sent by Search online in the manual lyrics search dialog. %1$s is the artist; %2$s is the song title. Translate "lyrics" and reorder the parts as a search in your language would read. -->
+    <string name="lyrics_search_online_query">%1$s %2$s lyrics</string>
     <!-- Translators: Imperative action label for select songs in the media item menus. -->
     <string name="select_songs">Select songs</string>
 
@@ -1144,6 +1150,10 @@
     <string name="appearance_swipe_song_gesture_playlists">Swipe song gesture in playlists</string>
     <!-- Translators: Supporting text beneath the swipe song gesture playlists option in the Appearance settings. -->
     <string name="appearance_swipe_song_gesture_playlists_description">Swipe on a song to remove it from a playlist</string>
+    <!-- Translators: Option or section label for swipe song gesture in queue in the Appearance settings. -->
+    <string name="appearance_swipe_song_gesture_queue">Swipe song gesture in queue</string>
+    <!-- Translators: Supporting text beneath the swipe song gesture in queue option in the Appearance settings. The swipe moves toward the start edge (left in LTR layouts, right in RTL layouts). -->
+    <string name="appearance_swipe_song_gesture_queue_description">Swipe a song toward the start edge to remove it from the queue even when locked</string>
     <!-- Translators: Option or section label for enable haptic feedback in the Appearance settings. -->
     <string name="appearance_enable_haptic_feedback">Haptic feedback</string>
     <!-- Translators: Supporting text beneath the enable haptic feedback option in the Appearance settings. -->
@@ -1411,6 +1421,10 @@
     <string name="foreign_import_title">Import from another app</string>
     <!-- Translators: Supporting text beneath the import-from-another-app option in the Backup & Restore. App names are product names. -->
     <string name="foreign_import_desc">Import likes, playlists and listening history from an InnerTune, OuterTune, ViMusic, RiMusic, Kreate, SimpMusic or Prism backup. The app keeps your current library.</string>
+    <string name="legacy_recovery_export_title">Export old library</string>
+    <string name="legacy_recovery_export_desc">Save the library that could not be migrated from version 13 as a backup file. Restore that file to try the migration again.</string>
+    <string name="legacy_recovery_export_success">Old library exported</string>
+    <string name="legacy_recovery_export_failed">Could not export the old library</string>
     <!-- Translators: Result message after importing another app's backup. %1$d songs, %2$d newly liked songs, %3$d playlists, %4$d history plays. -->
     <string name="foreign_import_success">Imported %1$d songs, %2$d likes, %3$d playlists and %4$d plays</string>
     <!-- Translators: Error shown when the selected file is not a backup from a supported music app. -->
@@ -1478,6 +1492,40 @@
     <string name="listenbrainz_connect_title">Connect ListenBrainz</string>
     <!-- Translators: Option or section label for user token in the ListenBrainz settings. -->
     <string name="listenbrainz_user_token">User token</string>
+    <!-- Translators: Section heading for lyrics already saved from lyrics providers, in the lyrics source settings. -->
+    <string name="fetched_lyrics">Fetched lyrics</string>
+    <!-- Translators: Action that deletes lyrics saved from lyrics providers. -->
+    <string name="clear_fetched_lyrics">Clear fetched lyrics</string>
+    <!-- Translators: Supporting text for the clear fetched lyrics action. -->
+    <string name="clear_fetched_lyrics_description">Fetch lyrics again from your current providers. Your own lyrics, lyrics you picked for a song and lyric offsets stay.</string>
+    <!-- Translators: Confirmation message before clearing fetched lyrics. -->
+    <string name="clear_fetched_lyrics_confirm">Delete all lyrics fetched from providers? They are fetched again the next time each song plays.</string>
+    <!-- Translators: Setting title on the Android updates screen for how downloaded updates are installed. -->
+    <string name="updates_install_method">Install updates with</string>
+    <!-- Translators: Supporting text for the update install method setting. -->
+    <string name="updates_install_method_desc">Root and Shizuku install updates without a prompt.</string>
+    <!-- Translators: Update install method that uses the standard Android package installer. -->
+    <string name="updates_install_method_system">Android package installer</string>
+    <!-- Translators: Update install method that uses root (superuser) access. -->
+    <string name="updates_install_method_root">Root</string>
+    <!-- Translators: Update install method that uses the Shizuku app; Shizuku is a product name. -->
+    <string name="updates_install_method_shizuku">Shizuku</string>
+    <!-- Translators: Message shown when root access was not granted for installing updates. -->
+    <string name="updates_root_unavailable">Root access was denied or is not available</string>
+    <!-- Translators: Message shown when the Shizuku app is not running or not installed. -->
+    <string name="updates_shizuku_unavailable">Shizuku is not running</string>
+    <!-- Translators: Message shown when Shizuku permission was not granted to Metrolist. -->
+    <string name="updates_shizuku_denied">Shizuku permission was denied</string>
+    <!-- Translators: Switch on the Android updates screen that installs updates in the background. -->
+    <string name="updates_auto_install">Install updates automatically</string>
+    <!-- Translators: Supporting text for the automatic update install switch. -->
+    <string name="updates_auto_install_desc">Download and install updates while nothing is playing. Needs root, Shizuku, or Android 12 and newer with permission to install apps.</string>
+    <!-- Translators: Label for the optional ListenBrainz-compatible server address field in the connect dialog. -->
+    <string name="listenbrainz_server_url">Server URL</string>
+    <!-- Translators: Help text under the ListenBrainz server address field. -->
+    <string name="listenbrainz_server_url_description">Leave empty for ListenBrainz. For a compatible server such as Koito, enter its API address.</string>
+    <!-- Translators: Error shown when the ListenBrainz server address is not a web address. -->
+    <string name="listenbrainz_invalid_server_url">Enter an http or https address</string>
     <string name="scrobble_create_account">Create account</string>
     <!-- Translators: Message explaining database incompatible in the Backup & Restore. %1$d is the backup database version; %2$d is the newest supported database version. -->
     <string name="restore_database_incompatible">This backup uses database version %1$d, but this app supports up to version %2$d. Update Metrolist and try again.</string>
@@ -1526,6 +1574,10 @@
     <string name="hide_podcasts">Hide podcasts</string>
     <!-- Translators: Supporting text beneath the hide podcasts option in the settings. -->
     <string name="hide_podcasts_desc">Hide podcasts and episodes from browsing, search, and playback</string>
+    <!-- Translators: Imperative action label for hiding playlist recommendations in the settings. -->
+    <string name="hide_playlist_recommendations">Hide playlist recommendations</string>
+    <!-- Translators: Supporting text beneath the hide playlist recommendations option in the settings. -->
+    <string name="hide_playlist_recommendations_desc">Hide recommended songs shown below playlists</string>
     <!-- Translators: Imperative action label for hide short songs in the settings. -->
     <string name="hide_short_songs">Hide short songs</string>
     <!-- Translators: Supporting text beneath the hide short songs option in the settings. -->
@@ -1986,7 +2038,9 @@
     <!-- Translators: Label for album no songs in the album screen. -->
     <string name="album_no_songs">No songs in this album</string>
     <!-- Translators: Label for album type with year; retained for translation compatibility but not currently referenced by app code. %1$s is the release year. -->
-    <!-- Translators: Label for already in playlist name in the multiple app screens. %1$s is the playlist name. -->
+    <!-- Translators: Shown under a playlist in the Add to playlist dialog when the selected songs are already in that playlist. The playlist name is shown just above it. -->
+    <string name="already_in_playlist">Already there</string>
+    <!-- Translators: Label for already in playlist name; retained for translation compatibility but not currently referenced by app code. %1$s is the playlist name. -->
     <string name="already_in_playlist_name">Already in %1$s</string>
     <!-- Translators: Option or section label for animated gradient in the settings. -->
     <string name="animated_gradient">Animated gradient</string>
@@ -2446,6 +2500,7 @@
     <string name="recommended">Recommended</string>
     <!-- Translators: Imperative action label for refresh in the Home screen. -->
     <string name="refresh">Refresh</string>
+    <string name="no_new_playlist_suggestions">No new playlist suggestions</string>
     <!-- Translators: Progress or status message for refreshing in the Home screen. -->
     <string name="refreshing">Refreshing</string>
     <!-- Translators: Imperative action label for remove in the playlist screen and downloaded and cached songs. -->
@@ -2687,6 +2742,12 @@
     <!-- Translators: Imperative action label for view all; retained for translation compatibility but not currently referenced by app code. -->
     <!-- Translators: Label for YouTube music in the multiple app screens. -->
     <string name="youtube_music" translatable="false">YouTube Music</string>
+    <!-- Translators: Name of the song.link (Odesli) link service; not translated. -->
+    <string name="song_link" translatable="false">song.link</string>
+    <!-- Translators: Setting title for which link format is used when sharing or copying a song. -->
+    <string name="song_share_link">Song links</string>
+    <!-- Translators: Supporting text for the song link format setting. -->
+    <string name="song_share_link_description">song.link opens a page with the song on other music services. Links with a timestamp and podcast episodes always use YouTube Music.</string>
     <!-- Translators: Label for you in the Android app. -->
     <string name="you">You</string>
 
@@ -2929,7 +2990,7 @@
     <!-- Translators: Player setting for the original Metrolist shuffle behavior. -->
     <string name="legacy_shuffle">Legacy shuffle</string>
     <!-- Translators: Turning this setting off selects the KMP shuffle behavior. -->
-    <string name="legacy_shuffle_desc">Shuffle all songs, including played songs, with the current song first. Turn off for KMP shuffle. KMP keeps played songs in place and shuffles upcoming songs.</string>
+    <string name="legacy_shuffle_desc">Legacy shuffle puts the current song first and also shuffles played songs. Turn it off to shuffle only upcoming songs. Entries marked as auto-mix or recommendations keep their order in both modes.</string>
     <!-- Translators: Heading for persistent shuffle in the settings. -->
     <string name="persistent_shuffle_title">Persistent shuffle</string>
     <!-- Translators: Supporting text beneath the persistent shuffle option in the settings. -->
@@ -2968,7 +3029,10 @@
     <string name="views">Views</string>
     <!-- Translators: Label for likes in the song details. -->
     <string name="likes">Likes</string>
-    <!-- Translators: Label for dislikes; retained for translation compatibility but not currently referenced by app code. -->
+    <!-- Translators: Label for the date YouTube lists for the video upload in the song details. -->
+    <string name="upload_date">Upload date</string>
+    <!-- Translators: Label for the estimated dislike count in the song details. -->
+    <string name="dislikes">Dislikes (estimated by Return YouTube Dislike)</string>
     <!-- Translators: Imperative action label for subscribe in the artist screen and media item menus. -->
     <string name="subscribe">Subscribe</string>
     <!-- Translators: Label for subscribed in the artist screen. -->
@@ -2991,6 +3055,8 @@
     <string name="pause_music_when_media_is_muted">Pause when media is muted</string>
     <!-- Translators: Supporting text beneath the pause when media is muted option in the settings. -->
     <string name="pause_music_when_media_is_muted_desc">Pause playback when the device media volume is muted. The app resumes playback when the volume is restored.</string>
+    <string name="resume_on_bluetooth_connect">Resume on Bluetooth connect</string>
+    <string name="resume_on_bluetooth_connect_desc">Resume paused playback when a Bluetooth audio device connects while the playback service is running.</string>
     <!-- Translators: Option or section label for keep screen on when player is expanded in the settings. -->
     <string name="keep_screen_on">Keep screen on</string>
     <string name="keep_screen_on_both">%1$s + %2$s</string>
@@ -3131,6 +3197,20 @@
     <string name="turntable_widget_description">Circular artwork widget with playback controls</string>
     <!-- Translators: Label for music player in the Android home-screen widget. -->
     <string name="widget_music_player">Music player</string>
+    <!-- Translators: Label for the expressive pill-and-controls widget in the Android home-screen widget picker. -->
+    <string name="widget_expressive_player">Expressive player</string>
+    <!-- Translators: Supporting text beneath the expressive pill-and-controls widget in the Android home-screen widget picker. -->
+    <string name="widget_expressive_description">Pill artwork with scalloped playback controls</string>
+    <!-- Translators: Track duration with hours in a home-screen widget. Arguments are hours, two-digit minutes, and two-digit seconds. -->
+    <string name="widget_duration_hours">%1$s:%2$s:%3$s</string>
+    <!-- Translators: Track duration without hours in a home-screen widget. Arguments are minutes and two-digit seconds. -->
+    <string name="widget_duration_minutes">%1$s:%2$s</string>
+    <!-- Translators: Elapsed time and total duration in a home-screen widget. Both arguments are formatted times. -->
+    <string name="widget_time_pair">%1$s / %2$s</string>
+    <!-- Translators: Song title and artist announced for widget artwork. -->
+    <string name="widget_track_description">%1$s, %2$s</string>
+    <!-- Translators: Accessibility label for a playlist widget's play button. -->
+    <string name="widget_play_item">Play %1$s</string>
     <!-- Translators: Label for turntable in the Android home-screen widget. -->
     <string name="widget_turntable">Turntable</string>
     <!-- Translators: Label for the music recognizer option in the Android home-screen widget picker. -->
@@ -4291,11 +4371,6 @@
     <!-- Translators: Label for logged in in the Discord integration. -->
     <string name="discord_logged_in">Logged in</string>
     <!-- Translators: Message explaining app ID help; retained for translation compatibility but not currently referenced by app code. -->
-    <!-- Translators: Label for available variables; retained for translation compatibility but not currently referenced by app code. -->
-    <!-- Translators: Label for available variables body in the Discord integration. -->
-    <string name="discord_available_variables_body" translatable="false">{song.name}  •  {artist.name}  •  {album.name}  •  {video.id}</string>
-    <!-- Translators: Label for available URL variables body in the Discord integration. -->
-    <string name="discord_available_url_variables_body" translatable="false">{song.url}  •  {artist.url}  •  {album.url}</string>
     <!-- Translators: Label for account section in the Discord integration. -->
     <!-- Translators: Option or section label for basic settings in the integration settings. -->
     <!-- Translators: Supporting text beneath the Last.fm option; retained for translation compatibility but not currently referenced by app code. -->
@@ -5006,6 +5081,10 @@
     <string name="cast_description">Play music on your TV, Chromecast or Sonos speakers using the same Wi-Fi</string>
     <!-- Translators: Short heading and switch label for TV and speaker playback in the Player settings. -->
     <string name="settings_cast_title">Cast</string>
+    <!-- Translators: Slider label in the Player settings for how much the receiver volume changes per volume button press while casting. -->
+    <string name="cast_volume_step">Cast volume step</string>
+    <!-- Translators: Description of the cast volume step slider in the Player settings. -->
+    <string name="cast_volume_step_description">How much each press of the phone volume buttons changes the speaker or TV volume while casting</string>
 
     <!-- Statistics chart units and legend. -->
     <string name="statistics_chart_listens">Listens</string>
@@ -5488,7 +5567,7 @@
     <string name="settings_canvas_playback_summary">Play short clips or the full music video behind the player</string>
     <string name="settings_normalization_summary">Balance volume between songs to avoid large changes</string>
     <string name="settings_loudness_target_summary">Set the target loudness when audio normalization is on</string>
-    <string name="settings_stop_on_close_summary">Stop playback when Metrolist is swiped out of recent apps</string>
+    <string name="settings_stop_on_close_summary">Stop playback when Metrolist is swiped out of recent apps. On Android TV, playback also pauses when you leave the app.</string>
     <string name="settings_screen_awake_summary">Choose whether the player or lyrics keep the display awake</string>
     <string name="settings_translation_mode_summary">Translate words or transcribe pronunciation into the target script</string>
     <string name="settings_translation_provider_summary">Choose the service that translates lyrics</string>
@@ -5561,4 +5640,50 @@
     <string name="ai_setup_key_limits">Review key limits</string>
     <string name="lyrics_share_square_image">Square image</string>
     <string name="lyrics_share_story_image">Story image</string>
+    <string name="discord_presence_listening_to">Listening to</string>
+    <string name="discord_presence_competing_in">Competing in</string>
+    <string name="discord_preview_edit_hint">Tap a line on the preview to edit it</string>
+    <string name="discord_time_left">%1$s left</string>
+    <string name="discord_position_duration">%1$s / %2$s</string>
+    <!-- Raw template tokens are not translated: the same text is inserted into the template. -->
+    <string name="discord_token_song_name" translatable="false">{song.name}</string>
+    <string name="discord_token_artist_name" translatable="false">{artist.name}</string>
+    <string name="discord_token_album_name" translatable="false">{album.name}</string>
+    <string name="discord_token_video_id" translatable="false">{video.id}</string>
+    <string name="discord_token_song_url" translatable="false">{song.url}</string>
+    <string name="discord_token_artist_url" translatable="false">{artist.url}</string>
+    <string name="discord_token_album_url" translatable="false">{album.url}</string>
+    <string name="discord_example_song_title" translatable="false">Never Gonna Give You Up</string>
+    <string name="discord_example_artist_name" translatable="false">Rick Astley</string>
+    <string name="discord_example_album_name" translatable="false">Whenever You Need Somebody</string>
+    <string name="wrapped">Metrolist Wrapped</string>
+    <string name="wrapped_cover_heading">You pressed play.</string>
+    <string name="wrapped_time_heading">Time well spent</string>
+    <string name="wrapped_history_scope">Saved Metrolist and YouTube history, plus Last.fm when connected and loaded. The recent YouTube feed may omit older plays.</string>
+    <string name="wrapped_year">Your %1$s Wrapped</string>
+    <string name="wrapped_chapter">%1$s of %2$s</string>
+    <string name="wrapped_summary">Your year in music</string>
+    <string name="wrapped_empty">There are no saved plays for this year yet. Listen to music or sync your YouTube history to build your Wrapped.</string>
+    <string name="wrapped_measured_time">Measured listening time</string>
+    <string name="wrapped_time_coverage">Based on %1$s plays with recorded durations, out of %2$s combined plays. Imported durations may be incomplete.</string>
+    <string name="wrapped_merge_note">Includes saved Metrolist and YouTube history, plus Last.fm when connected and loaded. Uniquely matched artist and title pairs use the largest daily count. Unmatched Last.fm songs add plays; ambiguous matches are excluded. This can undercount separate plays. Listening time includes recorded durations only.</string>
+    <string name="wrapped_share_summary">Share your summary</string>
+    <string name="wrapped_soundtrack">Soundtrack</string>
+    <string name="wrapped_lastfm_loading">Loading this year of Last.fm history…</string>
+    <string name="wrapped_share_history_note">Saved history; older YouTube plays may be missing. Daily overlap may undercount.</string>
+    <string name="wrapped_share_sync_failed">YouTube refresh failed.</string>
+    <string name="wrapped_share_lastfm_loading">Last.fm history is still loading.</string>
+    <string name="wrapped_share_lastfm_failed">Last.fm refresh failed; saved results may be used.</string>
+    <string name="wrapped_share_lastfm_included">Last.fm included; ambiguous matches are excluded.</string>
+    <string name="wrapped_lastfm_failed">Last.fm could not refresh. This recap uses the last complete result from this visit, if available.</string>
+    <string name="wrapped_lastfm_coverage">%1$s Last.fm scrobbles included; %2$s ambiguous scrobbles excluded. Metadata differences can leave some overlap undetected.</string>
+    <string name="wrapped_sync_failed">YouTube history could not refresh. This recap uses history already saved on this device.</string>
+    <string name="wrapped_top_song">Your top song</string>
+    <string name="wrapped_top_artist">Your top artist</string>
+    <string name="wrapped_top_album">Your top album</string>
+    <string name="wrapped_artist_mix">Your artist mix</string>
+    <string name="wrapped_minutes_listened">minutes listened</string>
+    <string name="wrapped_home_title">Your %1$s Wrapped is here</string>
+    <string name="wrapped_home_body">See your year in music and share it.</string>
+    <string name="wrapped_home_card_dismissed">You can find your %1$s Wrapped in Statistics until December 31.</string>
 </resources>

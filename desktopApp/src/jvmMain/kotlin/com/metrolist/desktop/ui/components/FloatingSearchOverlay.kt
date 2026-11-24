@@ -56,6 +56,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.isCtrlPressed
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
@@ -70,12 +71,14 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
+import com.metrolist.desktop.deviceconnect.DesktopDeviceConnect
 import com.metrolist.desktop.state.app.UiState
 import com.metrolist.desktop.state.content.ArtistState
 import com.metrolist.desktop.state.content.BrowseState
 import com.metrolist.desktop.state.content.PlaylistAlbumState
 import com.metrolist.desktop.state.content.SearchState
 import com.metrolist.desktop.state.playback.PlayerState
+import com.metrolist.desktop.utils.WaylandScale
 import com.metrolist.shared.generated.resources.Res
 import com.metrolist.shared.generated.resources.clear
 import com.metrolist.shared.generated.resources.close_search
@@ -86,9 +89,12 @@ import com.metrolist.shared.generated.resources.search_music
 import com.metrolist.shared.model.AlbumItem
 import com.metrolist.shared.model.ArtistItem
 import com.metrolist.shared.model.BrowseItem
+import com.metrolist.shared.model.EpisodeItem
 import com.metrolist.shared.model.PlaylistItem
 import com.metrolist.shared.model.PodcastItem
 import com.metrolist.shared.model.SongItem
+import com.metrolist.shared.model.toSongItem
+import com.metrolist.shared.settings.BlockedContent
 import com.metrolist.shared.ui.icons.MetrolistIcons
 import com.metrolist.shared.ui.navigation.blockInput
 import com.metrolist.shared.ui.navigation.rememberNavigationMotion
@@ -196,6 +202,13 @@ fun FloatingSearchOverlay(
         }
     }
 
+    fun playEpisodeSuggestion(item: EpisodeItem) {
+        val song = item.toSongItem()
+        if (!song.isUnavailable && !BlockedContent.isBlocked(song)) {
+            PlayerState.playTrack(song)
+        }
+    }
+
     val performSubmitSearch = {
         if (selectedIndex in querySuggestions.indices) {
             val (finalQuery, _) = querySuggestions[selectedIndex]
@@ -209,6 +222,10 @@ fun FloatingSearchOverlay(
             when (val item = recommendedItems[itemIndex]) {
                 is SongItem -> {
                     PlayerState.playTrack(item, listOf(item))
+                }
+
+                is EpisodeItem -> {
+                    playEpisodeSuggestion(item)
                 }
 
                 is BrowseItem -> {
@@ -235,8 +252,6 @@ fun FloatingSearchOverlay(
                     if (PlayerState.isExpanded) PlayerState.exitExpanded()
                     PlaylistAlbumState.fetchAlbumData(item.id)
                 }
-
-                else -> {}
             }
             animateDismiss()
         } else {
@@ -291,6 +306,15 @@ fun FloatingSearchOverlay(
                         .fillMaxWidth()
                         .focusGroup()
                         .onPreviewKeyEvent { event ->
+                            // Native Wayland has no global AWT dispatcher, and this overlay sits outside the shortcut layer.
+                            if (WaylandScale.isNativeWaylandActive() && event.type == KeyEventType.KeyDown && event.isCtrlPressed &&
+                                (event.key == Key.K || event.key == Key.F) &&
+                                DesktopDeviceConnect.manager.state.value.pairingRequests
+                                    .none { it.requiresApproval }
+                            ) {
+                                animateDismiss()
+                                return@onPreviewKeyEvent true
+                            }
                             if (event.type == KeyEventType.KeyDown && (queryFocused || event.key == Key.Escape)) {
                                 when (event.key) {
                                     Key.Escape -> {
@@ -499,6 +523,10 @@ fun FloatingSearchOverlay(
                                                     PlayerState.playTrack(item, listOf(item))
                                                 }
 
+                                                is EpisodeItem -> {
+                                                    playEpisodeSuggestion(item)
+                                                }
+
                                                 is BrowseItem -> {
                                                     if (PlayerState.isExpanded) PlayerState.exitExpanded()
                                                     BrowseState.fetchBrowseData(item.id, item.params, item.title)
@@ -523,8 +551,6 @@ fun FloatingSearchOverlay(
                                                     if (PlayerState.isExpanded) PlayerState.exitExpanded()
                                                     PlaylistAlbumState.fetchAlbumData(item.id)
                                                 }
-
-                                                else -> {}
                                             }
                                             animateDismiss()
                                         }

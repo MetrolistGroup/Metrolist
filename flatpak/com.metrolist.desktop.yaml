@@ -13,6 +13,7 @@ build-options:
 finish-args:
   - --share=network
   - --share=ipc
+  - --socket=wayland
   - --socket=x11
   - --socket=pulseaudio
   - --device=dri
@@ -72,7 +73,16 @@ modules:
         cat > /app/bin/com.metrolist.desktop <<'LAUNCHER'
         #!/bin/sh
         export SKIKO_WAYLAND="${SKIKO_WAYLAND:-1}"
-        export GDK_BACKEND="${GDK_BACKEND:-x11}"
+        if [ -n "${WAYLAND_DISPLAY:-}" ] || [ -S "${XDG_RUNTIME_DIR:-}/wayland-0" ]; then has_wayland=1; else has_wayland=0; fi
+        if [ -z "${GDK_BACKEND:-}" ]; then
+            if [ "$has_wayland" = "1" ] && { [ "${METROLIST_USE_WAYLAND:-0}" = "1" ] || [ "${METROLIST_USE_WAKEFIELD:-0}" = "1" ]; }; then
+                export GDK_BACKEND=wayland
+            elif [ -n "${DISPLAY:-}" ]; then
+                export GDK_BACKEND=x11
+            elif [ "$has_wayland" = "1" ]; then
+                export GDK_BACKEND=wayland
+            fi
+        fi
         export _JAVA_AWT_WM_NONREPARENTING="${_JAVA_AWT_WM_NONREPARENTING:-1}"
         export MALLOC_ARENA_MAX="${MALLOC_ARENA_MAX:-4}"
         export WEBKIT_DISABLE_DMABUF_RENDERER=1

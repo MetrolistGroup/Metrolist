@@ -329,6 +329,15 @@ kotlin {
                 implementation(libs.sharesheet)
                 implementation(libs.windowstaskbar)
                 implementation(libs.mediacontrols)
+                // KMP's dependency handler takes exclusions only with string notation.
+                implementation(
+                    libs.decorated.window.tao
+                        .get()
+                        .toString(),
+                ) {
+                    exclude(group = "dev.nucleusframework", module = "nucleus.angle-natives")
+                    exclude(group = "org.jetbrains.compose.desktop")
+                }
             }
         }
 
@@ -418,7 +427,7 @@ val syncExternalResources =
 val desktopJavaLauncher =
     extensions.getByType<JavaToolchainService>().launcherFor {
         languageVersion.set(JavaLanguageVersion.of(25))
-        vendor.set(jdkVendor)
+        jdkVendor?.let(vendor::set)
     }
 
 tasks.withType<JavaExec>().configureEach {
@@ -464,10 +473,23 @@ tasks.withType<JavaExec>().configureEach {
         }
 
         environment("LC_NUMERIC", "C")
-        environment(
-            "GDK_BACKEND",
-            providers.environmentVariable("GDK_BACKEND").orNull ?: "x11",
-        )
+        val hasDisplay = !providers.environmentVariable("DISPLAY").orNull.isNullOrBlank()
+        val runtimeDir = providers.environmentVariable("XDG_RUNTIME_DIR").orNull
+        val hasWaylandDisplay =
+            !providers.environmentVariable("WAYLAND_DISPLAY").orNull.isNullOrBlank() ||
+                (!runtimeDir.isNullOrBlank() && File(runtimeDir, "wayland-0").exists())
+        val wantsWayland =
+            providers.environmentVariable("METROLIST_USE_WAYLAND").orNull == "1" ||
+                providers.environmentVariable("METROLIST_USE_WAKEFIELD").orNull == "1"
+        val gdkBackend =
+            providers.environmentVariable("GDK_BACKEND").orNull
+                ?: when {
+                    wantsWayland && hasWaylandDisplay -> "wayland"
+                    hasDisplay -> "x11"
+                    hasWaylandDisplay -> "wayland"
+                    else -> "x11"
+                }
+        environment("GDK_BACKEND", gdkBackend)
         environment("_JAVA_AWT_WM_NONREPARENTING", "1")
         environment(
             "SKIKO_WAYLAND",

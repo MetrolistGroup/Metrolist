@@ -296,6 +296,7 @@ internal fun DesktopLyricsContent(
                 title = track.title,
                 artist = track.artists.joinToString { it.name },
                 artworkUrl = PlayerState.currentArtworkUrl,
+                isLocal = track.isLocal,
                 exportLabel = saveTitle,
                 onExport = { saveImage(it, saveTitle, filename) },
                 onShareText = AppState::copyToClipboard,

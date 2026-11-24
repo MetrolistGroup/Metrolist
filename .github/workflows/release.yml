@@ -474,6 +474,43 @@ jobs:
           python3 scripts/propose_distribution.py "$PACKAGE_KIND"
           --generated distribution --repository "$PACKAGING_REPOSITORY" --version "$APP_VERSION"
 
+  nix:
+    name: Pin the Nix flake
+    needs: [prepare, distribution]
+    runs-on: blacksmith-2vcpu-ubuntu-2604
+    timeout-minutes: 5
+    continue-on-error: true
+    permissions:
+      contents: write
+    steps:
+      - name: Check out main
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: main
+
+      - name: Download distribution recipes
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          name: distribution-recipes
+          path: distribution
+
+      # `nix run github:MetrolistGroup/Metrolist` reads this pin from main.
+      - name: Commit the release pin
+        env:
+          APP_VERSION: ${{ needs.prepare.outputs.version }}
+        run: |
+          set -euo pipefail
+          cp distribution/nix/packaging/release.json packaging/release.json
+          if git diff --quiet -- packaging/release.json; then exit 0; fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "chore(nix): pin the stable $APP_VERSION packages [skip ci]" -- packaging/release.json
+          for _ in 1 2 3; do
+            git pull --rebase --quiet origin main && git push origin HEAD:main && exit 0
+            sleep 10
+          done
+          exit 1
+
   winget:
     name: Submit to WinGet
     needs: [prepare, publish]
@@ -495,6 +532,7 @@ jobs:
           release-tag: ${{ github.ref_name }}
           installers-regex: 'metrolist-installer-windows-x64-.*\.exe$'
           token: ${{ secrets.WINGET_TOKEN }}
+          fork-user: MetrolistGroup
 
   flatpark:
     name: Notify flatpark
@@ -510,22 +548,24 @@ jobs:
           app-id: com.metrolist.desktop
           tag: ${{ github.ref_name }}
 
+  # Each package repository keeps its update logic in a reusable workflow and pushes with its own deploy key.
   homebrew:
     name: Update the Homebrew tap
     needs: publish
-    runs-on: blacksmith-2vcpu-ubuntu-2604
-    timeout-minutes: 5
-    continue-on-error: true
-    permissions: {}
-    env:
-      HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
-    steps:
-      # The tap also polls every four hours; this only makes the update immediate.
-      - name: Dispatch the tap update
-        if: env.HOMEBREW_TAP_TOKEN != ''
-        env:
-          GH_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
-        run: gh api repos/MetrolistGroup/homebrew-tap/dispatches -f event_type=metrolist-release
+    permissions:
+      contents: read
+    uses: MetrolistGroup/homebrew-tap/.github/workflows/update.yml@main
+    secrets:
+      DEPLOY_KEY: ${{ secrets.HOMEBREW_TAP_DEPLOY_KEY }}
+
+  scoop:
+    name: Update the Scoop bucket
+    needs: publish
+    permissions:
+      contents: read
+    uses: MetrolistGroup/scoop-bucket/.github/workflows/update.yml@main
+    secrets:
+      DEPLOY_KEY: ${{ secrets.SCOOP_BUCKET_DEPLOY_KEY }}
 
   finalize-sentry:
     name: Finalize Sentry releases

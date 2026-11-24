@@ -95,7 +95,6 @@ import com.metrolist.android.utils.startActivitySafely
 import com.metrolist.android.viewmodels.LibraryViewModel
 import com.metrolist.android.viewmodels.loadOrderedCachedSongs
 import com.metrolist.shared.api.playlistSongs
-import com.metrolist.shared.constants.ThumbnailCornerRadius
 import com.metrolist.shared.db.MusicDatabase
 import com.metrolist.shared.db.entities.toSongItem
 import com.metrolist.shared.db.isHistoryPlaylistId
@@ -161,6 +160,7 @@ import com.metrolist.shared.ui.screens.rememberLibrarySearchScrollState
 import com.metrolist.shared.ui.theme.gridCellShape
 import com.metrolist.shared.ui.tv.tvFocusHighlight
 import com.metrolist.shared.utils.ShareUrls
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.first
@@ -314,7 +314,15 @@ fun LibraryScreen(
         action: (List<SongItem>) -> Unit,
     ) {
         scope.launch {
-            val songs = runCatching { loadSongs(item) }.getOrDefault(emptyList())
+            val songs =
+                try {
+                    loadSongs(item)
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (_: Exception) {
+                    Toast.makeText(context, errorOccurredText, Toast.LENGTH_SHORT).show()
+                    return@launch
+                }
             if (songs.isNotEmpty()) action(songs)
         }
     }
@@ -323,8 +331,10 @@ fun LibraryScreen(
         item: YTItem,
         playNext: Boolean,
     ) {
-        withSongs(item) { songs ->
-            playerConnection?.addToQueue(songs, playNext)
+        when {
+            item is PlaylistItem && !item.isLocal -> playerConnection?.queuePlaylist(item.id, playNext)
+            item is AlbumItem -> playerConnection?.queueAlbum(item.id, playNext)
+            else -> withSongs(item) { songs -> playerConnection?.addToQueue(songs, playNext) }
         }
     }
 
@@ -550,7 +560,7 @@ fun LibraryScreen(
                                     Settings.shared.swipeToSong &&
                                     ((item is SongItem && !item.isUnavailable && !isGridView) || searchQuery.isNotBlank()) &&
                                     !isGuestPlaybackLocked,
-                            shape = if (isGridView) gridCellShape() else RoundedCornerShape(ThumbnailCornerRadius),
+                            shape = gridCellShape(),
                             content = content,
                         )
                     } else {

@@ -15,8 +15,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Density
-import androidx.compose.ui.window.WindowScope
 import com.metrolist.desktop.utils.WaylandScale
+import com.metrolist.desktop.window.DesktopWindowScope
 import com.metrolist.shared.settings.DensityScale
 import com.metrolist.shared.settings.Settings
 import com.metrolist.shared.utils.OsUtil
@@ -30,17 +30,19 @@ import java.beans.PropertyChangeListener
 import kotlin.time.Duration.Companion.milliseconds
 
 @Composable
-fun WindowScope.DesktopDensityProvider(content: @Composable () -> Unit) {
+fun DesktopWindowScope.DesktopDensityProvider(content: @Composable () -> Unit) {
     val userScale = DensityScale.fromValue(Settings.shared.densityScaleFactor).value
     val systemDensity = LocalDensity.current
-    if (!OsUtil.isLinux || !WaylandScale.isWayland() || Settings.shared.disableWaylandScaleFix) {
+    val window = awtWindow
+    if (window == null || !OsUtil.isLinux || !WaylandScale.isWayland() || Settings.shared.disableWaylandScaleFix ||
+        WaylandScale.isNativeWaylandActive()
+    ) {
         CompositionLocalProvider(LocalDensity provides Density(systemDensity.density * userScale, systemDensity.fontScale)) {
             content()
         }
         return
     }
 
-    val window = window
     var scale by remember { mutableStateOf(WaylandScale.getWindowScale(window.x, window.y, window.width, window.height)) }
 
     var visible by remember { mutableStateOf(window.isVisible && (window !is Frame || window.extendedState and Frame.ICONIFIED == 0)) }

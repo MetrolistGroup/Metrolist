@@ -17,6 +17,7 @@ object DiscordDefaults {
 
     const val STATE_TEMPLATE = "{artist.name}"
     const val DETAILS_TEMPLATE = "{song.name}"
+    const val ALBUM_TEMPLATE = "{album.name}"
 
     const val DISCORD_OAUTH_AUTHORIZE = "https://discord.com/oauth2/authorize"
     const val DISCORD_OAUTH_TOKEN = "https://discord.com/api/v10/oauth2/token"

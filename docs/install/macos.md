@@ -21,11 +21,12 @@ The [Metrolist tap](https://github.com/MetrolistGroup/homebrew-tap) installs the
 ```sh
 brew trust metrolistgroup/tap
 brew install --cask metrolistgroup/tap/metrolist
+brew install metrolistgroup/tap/metrolist
 ```
 
 Homebrew only installs from trusted taps, so `brew trust` is needed once.
 
-Update with `brew upgrade --cask metrolist`. The first launch still needs Open Anyway as in step 4. `brew uninstall --zap --cask metrolist` also deletes settings, the library database and downloads, so export a backup first.
+The cask installs Metrolist.app. The formula adds a `metrolist` command that launches the installed app. Update the cask with `brew upgrade --cask metrolist`, or the formula with `brew upgrade metrolist`. The first launch still needs Open Anyway as in step 4. `brew uninstall --zap --cask metrolist` also deletes settings, the library database and downloads, so export a backup first.
 
 ## Nix
 

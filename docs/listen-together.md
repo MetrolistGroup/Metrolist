@@ -29,7 +29,7 @@ Encode on `Dispatchers.Default` in send order, capturing negotiated compression.
 
 ## Queue and recovery
 
-Retain the committed queue and station metadata until room audio preparation succeeds. Prepare remote queues paused. Guests resume after synchronization; host imports explicitly start playback. Failed or canceled loads preserve committed state. Recovery stays paused even if the host sends play. Empty sync snapshots cancel pending loads and pause without discarding the committed queue.
+Retain the committed queue and station metadata until room audio preparation succeeds. Prepare remote queues paused. Guests resume after synchronization; host imports explicitly start playback. Failed or canceled loads preserve committed state. Recovery stays paused even if the host sends play. Empty sync snapshots cancel pending loads and pause without discarding the loaded track. A confirmed idle room with an empty queue clears upcoming entries and, when no track is loaded, the saved Android queue.
 
 Read the player's queue snapshot and current occurrence for publication. Serialize server updates with host publication and preserve unpublished host edits. Preserve duplicate occurrences, canonical upcoming order and empty replacements. Consume legacy host queue acknowledgements once.
 
@@ -53,7 +53,7 @@ Settings and server management require the switch but not a username. Creating o
 
 ## Invitation links
 
-Room invitations use `https://metrolist.cc/listen?code=<code>` or `https://metrolist.cc/party?r=<code>`. Media share and copy actions use `https://music.youtube.com` through `ShareUrls`. Loopback and Workers preview hosts do not open media or room invitations.
+Room invitations use `https://metrolist.cc/listen?code=<code>` or `https://metrolist.cc/party?r=<code>`. Media share and copy actions use `https://music.youtube.com` through `ShareUrls`. With **Song links** set to song.link in Content settings, song shares use `https://song.link/y/<videoId>`; timestamped links, podcast episodes and Show in YouTube Music keep YouTube Music URLs. Loopback and Workers preview hosts do not open media or room invitations.
 
 Android video start positions are read from the normalized media target, including timestamps inside Metrolist `/open?url=` wrappers. A wrapper-level timestamp does not override the target. Direct Metrolist `/watch` links retain `#t=` fragments.
 

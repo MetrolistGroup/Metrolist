@@ -13,6 +13,17 @@ Use Windows 10 or later on x64. Choose the stable installer when available, or t
 
 Keep the extracted runtime and helper files with the executable. A portable ZIP does not register an installed application or Start Menu entry.
 
+## Scoop
+
+The [Metrolist bucket](https://github.com/MetrolistGroup/scoop-bucket) installs the portable ZIP for x64 or ARM64 and follows stable releases:
+
+```powershell
+scoop bucket add metrolist https://github.com/MetrolistGroup/scoop-bucket
+scoop install metrolist/metrolist
+```
+
+Scoop adds a Start Menu shortcut. Update with `scoop update metrolist` and remove with `scoop uninstall metrolist`. The in-app updater does not install over a Scoop copy.
+
 ## Update and uninstall
 
 Back up first. Registered installations can use the stable installer update in settings. Portable installations replace their extracted directory after quitting. See [desktop updates](../desktop.md#updates-and-restore).

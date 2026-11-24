@@ -31,12 +31,14 @@ import com.metrolist.shared.storage.DownloadedPlaylists
 import com.metrolist.shared.storage.trackedDownloadPlaylistId
 import com.metrolist.shared.youtube.extraction.models.toContentHints
 import com.metrolist.shared.youtube.playback.PlaybackResource
+import io.ktor.client.plugins.HttpRequestTimeoutException
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -265,19 +267,18 @@ class SongDownloadManager(
                 }
                 showAggregateNotification(force = true)
                 transferStarted = true
-                downloadWithResourceRefresh(
-                    resolve = { refresh -> resolve(song, refresh) },
-                    isCancelled = { task.control.isCancelled },
-                ) { resource ->
-                    audioCacheManager.downloadSong(
-                        song = song,
-                        resource = resource,
-                        control = task.control,
-                    ) { downloadedBytes, totalBytes ->
-                        task.downloadedBytes = downloadedBytes
-                        task.totalBytes = totalBytes
-                        publishProgress(task)
-                        showAggregateNotification()
+                val onProgress: (Long, Long?) -> Unit = { downloadedBytes, totalBytes ->
+                    task.downloadedBytes = downloadedBytes
+                    task.totalBytes = totalBytes
+                    publishProgress(task)
+                    showAggregateNotification()
+                }
+                if (!downloadFromCache(song, task.control, onProgress)) {
+                    downloadWithResourceRefresh(
+                        resolve = { refresh -> resolve(song, refresh) },
+                        isCancelled = { task.control.isCancelled },
+                    ) { resource ->
+                        audioCacheManager.downloadSong(song = song, resource = resource, control = task.control, onProgress = onProgress)
                     }
                 }
                 synchronized(queueLock) {
@@ -443,6 +444,22 @@ class SongDownloadManager(
             NotificationManagerCompat.from(context).cancel(PAUSED_NOTIFICATION_ID)
         }
     }
+
+    // A complete cache entry needs no stream, so it downloads offline too; a failed copy falls back to downloading.
+    private suspend fun downloadFromCache(
+        song: SongItem,
+        control: AudioDownloadControl,
+        onProgress: (Long, Long?) -> Unit,
+    ): Boolean =
+        try {
+            audioCacheManager.downloadCachedSong(song, control, onProgress)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            if (control.isCancelled) throw e
+            Timber.tag(TAG).w(e, "cached audio could not be saved as a download songId=%s", song.id)
+            false
+        }
 
     private suspend fun resolvePlaybackResource(
         song: SongItem,
@@ -811,7 +828,14 @@ internal fun downloadFailureCode(error: Throwable): DownloadFailureCode {
 
         causes.any { it is SecurityException } -> DownloadFailureCode.STORAGE_ACCESS
 
-        causes.any { it is SocketException || it is SocketTimeoutException || it is UnknownHostException } -> DownloadFailureCode.NETWORK
+        causes.any {
+            it is SocketException || it is SocketTimeoutException || it is UnknownHostException ||
+                it is HttpRequestTimeoutException ||
+                (
+                    it is StreamResolveException && it.reason == StreamResolveException.Reason.NETWORK &&
+                        it.cause is TimeoutCancellationException
+                )
+        } -> DownloadFailureCode.NETWORK
 
         causes.any {
             it is IncompleteAudioDownloadException || it is SabrProtocolException ||

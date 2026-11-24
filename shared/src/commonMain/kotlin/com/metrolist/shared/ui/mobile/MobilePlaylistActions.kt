@@ -40,6 +40,7 @@ import androidx.compose.ui.unit.dp
 import com.metrolist.shared.auth.AuthManager
 import com.metrolist.shared.db.MusicDatabase
 import com.metrolist.shared.db.preserveKnownPlaylistEditability
+import com.metrolist.shared.db.readOnlyPlaylistDetails
 import com.metrolist.shared.db.selectablePlaylistDetails
 import com.metrolist.shared.db.syncRemotePlaylists
 import com.metrolist.shared.generated.resources.Res
@@ -98,6 +99,26 @@ internal fun MobilePlaylistActions(
             songIds,
         ).collect { membership = it }
     }
+    // Starts empty and loads separately so saved online playlists never delay the sheet or the selectable highlights.
+    val savedPlaylists by database.dao().playlistsByCreateDateAsc().collectAsState(initial = emptyList())
+    val readOnlyPlaylists =
+        remember(savedPlaylists, signedIn, hiddenVersion, Settings.shared.hiddenLibraryPlaylistsJson) {
+            savedPlaylists.readOnlyPlaylistDetails(signedIn, HiddenLibraryItems.keys())
+        }
+    var readOnlyPlaytimes by remember(readOnlyPlaylists) { mutableStateOf(emptyMap<String, Long?>()) }
+    LaunchedEffect(database, readOnlyPlaylists) {
+        readOnlyPlaytimes =
+            database.dao().playlistLibraryStats(readOnlyPlaylists.map { it.id }).associate { it.playlistId to it.playtime }
+    }
+    var readOnlyMembership by remember(songIds, readOnlyPlaylists) { mutableStateOf(emptySet<String>()) }
+    LaunchedEffect(database, songIds, readOnlyPlaylists) {
+        storedPlaylistMembership(
+            database,
+            GlobalYouTubeRepository.instance,
+            readOnlyPlaylists.map { it.playlist },
+            songIds,
+        ).collect { readOnlyMembership = it }
+    }
     LaunchedEffect(workflow.song != null, signedIn) {
         if (workflow.song != null && signedIn && GlobalYouTubeRepository.instance.canManagePlaylists()) {
             try {
@@ -138,8 +159,8 @@ internal fun MobilePlaylistActions(
             // Full height from the first frame, so playlists that load or sync later cannot leave the sheet half open.
             PlaylistChooser(
                 playlists = editablePlaylists,
-                playtimes = playtimes,
-                membership = membership,
+                playtimes = playtimes + readOnlyPlaytimes,
+                membership = membership + readOnlyMembership,
                 onDismiss = { workflow.dismissSong() },
                 onChoosePlaylist = { workflow.togglePlaylist(it.playlist) },
                 selectedIds = workflow.selectedPlaylists.mapTo(mutableSetOf()) { it.id },
@@ -151,6 +172,7 @@ internal fun MobilePlaylistActions(
                 failed = workflow.failed,
                 sheet = true,
                 modifier = Modifier.fillMaxHeight(),
+                readOnlyPlaylists = readOnlyPlaylists,
             )
         }
     }

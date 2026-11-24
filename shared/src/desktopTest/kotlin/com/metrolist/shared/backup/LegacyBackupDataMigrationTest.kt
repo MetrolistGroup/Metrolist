@@ -14,7 +14,10 @@ class LegacyBackupDataMigrationTest {
             val connection = JdbcSQLiteDriver().open(":memory:")
             try {
                 listOf(
-                    "CREATE TABLE song (id TEXT PRIMARY KEY, lyricsOffset INTEGER NOT NULL DEFAULT 0)",
+                    "CREATE TABLE song (id TEXT PRIMARY KEY, lyricsOffset INTEGER NOT NULL DEFAULT 0, " +
+                        "isLocal INTEGER NOT NULL DEFAULT 0, customArtist TEXT)",
+                    "CREATE TABLE artist (id TEXT PRIMARY KEY, name TEXT NOT NULL, isLocal INTEGER NOT NULL DEFAULT 0)",
+                    "CREATE TABLE song_artist_map (songId TEXT NOT NULL, artistId TEXT NOT NULL, position INTEGER NOT NULL)",
                     "CREATE TABLE lyrics (id TEXT PRIMARY KEY, offsetMs INTEGER NOT NULL DEFAULT 0)",
                     "CREATE TABLE speed_dial (id TEXT PRIMARY KEY, type TEXT NOT NULL)",
                     "CREATE TABLE playlist (id TEXT PRIMARY KEY, name TEXT NOT NULL, browseId TEXT, isEditable INTEGER NOT NULL, isLocal INTEGER NOT NULL, remoteSongCount INTEGER NOT NULL, thumbnailUrl TEXT)",
@@ -23,7 +26,7 @@ class LegacyBackupDataMigrationTest {
                     "CREATE TABLE event (id INTEGER PRIMARY KEY, source TEXT NOT NULL, playTime INTEGER NOT NULL, playTimeKnown INTEGER NOT NULL)",
                     "INSERT INTO event VALUES (1, 'LOCAL', 30000, 1)",
                     "INSERT INTO event VALUES (2, 'YOUTUBE', 240000, 1)",
-                    "INSERT INTO song VALUES ('song', 425)",
+                    "INSERT INTO song (id, lyricsOffset) VALUES ('song', 425)",
                     "INSERT INTO lyrics VALUES ('song', ${if (version < 45) 0 else 425})",
                     "INSERT INTO speed_dial VALUES ('MPSPpodcast', '${if (version < 45) "PLAYLIST" else "PODCAST"}')",
                     "INSERT INTO playlist VALUES ('LP12345678', 'Playlist', NULL, 0, 0, 0, NULL)",

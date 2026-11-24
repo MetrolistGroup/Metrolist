@@ -40,6 +40,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.metrolist.shared.db.MusicDatabase
 import com.metrolist.shared.generated.resources.Res
 import com.metrolist.shared.generated.resources.add
 import com.metrolist.shared.generated.resources.add_a_song
@@ -55,6 +56,7 @@ import com.metrolist.shared.model.SongItem
 import com.metrolist.shared.settings.Settings
 import com.metrolist.shared.settings.displayName
 import com.metrolist.shared.state.GlobalYouTubeRepository
+import com.metrolist.shared.ui.components.AddSongSources
 import com.metrolist.shared.ui.components.AlertDialog
 import com.metrolist.shared.ui.components.ContainedLoadingIndicator
 import com.metrolist.shared.ui.components.PopupContent
@@ -66,13 +68,16 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
+import org.koin.compose.koinInject
 
 @Composable
 fun AddSongDialog(
+    isLocalPlaylist: Boolean,
     existingSongIds: Set<String>,
     onDismiss: () -> Unit,
     onAddSong: (SongItem, Boolean) -> Unit,
 ) {
+    val database = koinInject<MusicDatabase>()
     var query by remember { mutableStateOf("") }
     var isSearching by remember { mutableStateOf(false) }
     var results by remember { mutableStateOf<List<SongItem>>(emptyList()) }
@@ -85,75 +90,78 @@ fun AddSongDialog(
         title = { Text(stringResource(Res.string.add_a_song)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(MdSpacing.sm)) {
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(MdSpacing.xs),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    OutlinedTextField(
-                        value = query,
-                        onValueChange = { query = it },
-                        modifier = Modifier.weight(1f),
-                        placeholder = { Text(stringResource(Res.string.search_songs)) },
-                        leadingIcon = {
-                            Icon(
-                                imageVector = MetrolistIcons.Default.Search,
-                                contentDescription = null,
-                            )
-                        },
-                        trailingIcon = {
-                            if (query.isNotEmpty()) {
-                                IconButton(onClick = { query = "" }, shapes = IconButtonDefaults.shapes()) {
-                                    Icon(
-                                        imageVector = MetrolistIcons.Default.Clear,
-                                        contentDescription = stringResource(Res.string.clear_search),
-                                    )
-                                }
-                            }
-                        },
-                        singleLine = true,
-                    )
-                    Button(
-                        onClick = {
-                            if (query.isBlank()) return@Button
-                            val submittedQuery = query
-                            searchJob?.cancel()
-                            searchJob =
-                                scope.launch {
-                                    isSearching = true
-                                    val found =
-                                        GlobalYouTubeRepository.instance
-                                            .searchFiltered(
-                                                submittedQuery,
-                                                SearchFilter.SONG,
-                                                recordSearchHistory = !Settings.shared.pauseSearchHistory,
-                                            ).items
-                                            .filterIsInstance<SongItem>()
-                                    ensureActive()
-                                    results = found
-                                    isSearching = false
-                                }
-                        },
-                        shapes = ButtonDefaults.shapes(),
+                val searchContent: @Composable () -> Unit = {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(MdSpacing.xs),
+                        verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Text(stringResource(Res.string.search))
+                        OutlinedTextField(
+                            value = query,
+                            onValueChange = { query = it },
+                            modifier = Modifier.weight(1f),
+                            placeholder = { Text(stringResource(Res.string.search_songs)) },
+                            leadingIcon = {
+                                Icon(
+                                    imageVector = MetrolistIcons.Default.Search,
+                                    contentDescription = null,
+                                )
+                            },
+                            trailingIcon = {
+                                if (query.isNotEmpty()) {
+                                    IconButton(onClick = { query = "" }, shapes = IconButtonDefaults.shapes()) {
+                                        Icon(
+                                            imageVector = MetrolistIcons.Default.Clear,
+                                            contentDescription = stringResource(Res.string.clear_search),
+                                        )
+                                    }
+                                }
+                            },
+                            singleLine = true,
+                        )
+                        Button(
+                            onClick = {
+                                if (query.isBlank()) return@Button
+                                val submittedQuery = query
+                                searchJob?.cancel()
+                                searchJob =
+                                    scope.launch {
+                                        isSearching = true
+                                        val found =
+                                            GlobalYouTubeRepository.instance
+                                                .searchFiltered(
+                                                    submittedQuery,
+                                                    SearchFilter.SONG,
+                                                    recordSearchHistory = !Settings.shared.pauseSearchHistory,
+                                                ).items
+                                                .filterIsInstance<SongItem>()
+                                        ensureActive()
+                                        results = found
+                                        isSearching = false
+                                    }
+                            },
+                            shapes = ButtonDefaults.shapes(),
+                        ) {
+                            Text(stringResource(Res.string.search))
+                        }
+                    }
+                    if (isSearching) {
+                        Box(
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .padding(MdSpacing.md),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            ContainedLoadingIndicator()
+                        }
                     }
                 }
-                if (isSearching) {
-                    Box(
-                        modifier =
-                            Modifier
-                                .fillMaxWidth()
-                                .padding(MdSpacing.md),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        ContainedLoadingIndicator()
-                    }
-                } else if (results.isNotEmpty()) {
+                AddSongSources(database, isLocalPlaylist, if (isSearching) emptyList() else results, searchContent) { songs ->
                     DragScrollableColumn(
                         modifier = Modifier.heightIn(max = 400.dp),
                         verticalArrangement = Arrangement.spacedBy(MdSpacing.xxs),
                     ) {
-                        itemsIndexed(results, key = { index, song -> "add_${song.id}_$index" }) { _, song ->
+                        itemsIndexed(songs, key = { index, song -> "add_${song.id}_$index" }) { _, song ->
                             AddSongResultRow(
                                 song = song,
                                 isDuplicate = song.id in existingSongIds,

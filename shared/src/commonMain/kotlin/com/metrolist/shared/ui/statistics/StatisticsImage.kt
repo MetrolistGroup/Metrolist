@@ -7,6 +7,7 @@ import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Typography
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Canvas
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
@@ -17,6 +18,7 @@ import androidx.compose.ui.graphics.drawOutline
 import androidx.compose.ui.graphics.drawscope.CanvasDrawScope
 import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.graphics.drawscope.translate
+import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextMeasurer
 import androidx.compose.ui.text.TextStyle
@@ -31,6 +33,40 @@ import com.metrolist.shared.ui.screens.StatisticsItem
 import com.metrolist.shared.ui.screens.StatisticsUiState
 import kotlin.math.roundToInt
 
+/** Colors for a ranking section card: its container, titles, ranks and secondary text. */
+internal data class StatisticsImageSection(
+    val container: Color,
+    val content: Color,
+    val accent: Color,
+    val muted: Color,
+)
+
+/** Colors for the exported image; [glow] adds soft radial light behind the content when set. */
+internal data class StatisticsImageColors(
+    val background: Color,
+    val glow: Color?,
+    val content: Color,
+    val muted: Color,
+    val accent: Color,
+    val heroContainer: Color,
+    val heroContent: Color,
+    val sections: List<StatisticsImageSection>,
+    val artworkPlaceholder: Color,
+)
+
+internal fun ColorScheme.statisticsImageColors() =
+    StatisticsImageColors(
+        background = surface,
+        glow = null,
+        content = onSurface,
+        muted = onSurfaceVariant,
+        accent = primary,
+        heroContainer = primaryContainer,
+        heroContent = onPrimaryContainer,
+        sections = listOf(StatisticsImageSection(surfaceContainer, onSurface, primary, onSurfaceVariant)),
+        artworkPlaceholder = secondaryContainer,
+    )
+
 internal fun StatisticsUiState.canExportStatistics(): Boolean = hasLoaded && !isLoading && errorMessage == null && totalPlays > 0
 
 internal fun renderStatisticsImage(
@@ -44,13 +80,15 @@ internal fun renderStatisticsImage(
     timeLabel: String,
     sections: List<Pair<String, List<StatisticsItem>>>,
     artwork: Map<String, ImageBitmap>,
-    artworkShapes: Map<String, Shape>,
-    colors: ColorScheme,
+    artworkShapes: List<List<Shape>>,
+    colors: StatisticsImageColors,
     typography: Typography,
     heroShape: Shape,
     sectionShapes: List<Shape>,
     textMeasurer: TextMeasurer,
     layoutDirection: LayoutDirection,
+    logo: Painter? = null,
+    footer: String = "",
 ): ImageBitmap {
     val width = 1080
     val padding = 48f
@@ -65,7 +103,7 @@ internal fun renderStatisticsImage(
     fun measure(
         text: String,
         style: TextStyle,
-        color: Color = colors.onSurface,
+        color: Color = colors.content,
         maxWidth: Int = contentWidth,
         lines: Int = 1,
     ) = textMeasurer.measure(
@@ -78,27 +116,35 @@ internal fun renderStatisticsImage(
         layoutDirection = layoutDirection,
     )
 
-    val branding = measure(appName, typography.labelLarge, colors.primary)
+    // With a logo, the app name becomes a large lockup beside it instead of a small label.
+    val branding = measure(appName, if (logo != null) typography.headlineMediumEmphasized else typography.labelLarge, colors.accent)
+    val logoSize = if (logo != null) (branding.size.height * 1.5f).roundToInt() else 0
+    val brandingHeight = maxOf(branding.size.height, logoSize)
     val heading = measure(title, typography.headlineLargeEmphasized, lines = 2)
-    val range = measure(period, typography.titleMedium, colors.primary, lines = 2)
-    val description = measure(summary, typography.bodyMedium, colors.onSurfaceVariant, lines = 3)
+    val range = measure(period, typography.titleMedium, colors.accent, lines = 2)
+    val description = summary.takeIf { it.isNotBlank() }?.let { measure(it, typography.bodyMedium, colors.muted, lines = Int.MAX_VALUE) }
+    val footerText = footer.takeIf { it.isNotBlank() }?.let { measure(it, typography.bodySmall, colors.muted, lines = Int.MAX_VALUE) }
     val metricWidth = (contentWidth - inset * 3).toInt() / 2
     val metrics =
         listOf(
-            measure(plays, typography.displayLargeEmphasized, colors.onPrimaryContainer, metricWidth, 2) to
-                measure(playsLabel, typography.labelLarge, colors.onPrimaryContainer, metricWidth, 2),
-            measure(duration, typography.displaySmallEmphasized, colors.onPrimaryContainer, metricWidth, 2) to
-                measure(timeLabel, typography.labelLarge, colors.onPrimaryContainer, metricWidth, 2),
+            measure(plays, typography.displayLargeEmphasized, colors.heroContent, metricWidth, 2) to
+                measure(playsLabel, typography.titleMediumEmphasized, colors.heroContent, metricWidth, 2),
+            measure(duration, typography.displaySmallEmphasized, colors.heroContent, metricWidth, 2) to
+                measure(timeLabel, typography.titleMediumEmphasized, colors.heroContent, metricWidth, 2),
         )
-    val metricHeight = metrics.maxOf { (value, label) -> value.size.height + label.size.height } + inset * 2
-    val labels = sections.map { (label, _) -> measure(label, typography.titleLargeEmphasized, colors.primary) }
+    // Labels share one baseline under the taller value, so differently sized figures still line up.
+    val valueHeight = metrics.maxOf { (value, _) -> value.size.height }
+    val metricHeight = valueHeight + metrics.maxOf { (_, label) -> label.size.height } + inset * 2
+    val sectionColors = sections.indices.map { colors.sections[it % colors.sections.size] }
+    val labels = sections.mapIndexed { index, (label, _) -> measure(label, typography.titleLargeEmphasized, sectionColors[index].accent) }
     val rankings =
-        sections.map { (_, items) ->
+        sections.mapIndexed { sectionIndex, (_, items) ->
+            val section = sectionColors[sectionIndex]
             items.take(3).mapIndexed { index, item ->
                 Triple(
-                    measure((index + 1).toString(), typography.headlineSmallEmphasized, colors.primary, rankWidth),
-                    measure(item.title, typography.titleLargeEmphasized, maxWidth = textWidth, lines = 2),
-                    measure(item.subtitle, typography.bodyMedium, colors.onSurfaceVariant, textWidth),
+                    measure((index + 1).toString(), typography.headlineSmallEmphasized, section.accent, rankWidth),
+                    measure(item.title, typography.titleLargeEmphasized, section.content, textWidth, 2),
+                    measure(item.subtitle, typography.bodyMedium, section.muted, textWidth),
                 )
             }
         }
@@ -110,11 +156,20 @@ internal fun renderStatisticsImage(
         labels.mapIndexed { index, label ->
             inset * 2 + label.size.height + gap + rowHeights[index].sum() + gap * (rowHeights[index].size - 1).coerceAtLeast(0)
         }
-    val headerHeight = branding.size.height + heading.size.height + range.size.height + description.size.height + gap * 4 + metricHeight
-    val height = (padding * 2 + headerHeight + sectionHeights.sum() + gap * sections.size).roundToInt()
+    val headerHeight =
+        brandingHeight + heading.size.height + range.size.height + (description?.let { it.size.height + gap } ?: 0f).toInt() +
+            gap * 3 + metricHeight
+    val height = (padding * 2 + headerHeight + sectionHeights.sum() + gap * sections.size + (footerText?.size?.height ?: 0)).roundToInt()
     val bitmap = ImageBitmap(width, height)
     CanvasDrawScope().draw(density, layoutDirection, Canvas(bitmap), Size(width.toFloat(), height.toFloat())) {
-        drawRect(colors.surface)
+        drawRect(colors.background)
+        colors.glow?.let { glow ->
+            val lights = listOf(Offset(width * 0.85f, height * 0.08f) to 0.55f, Offset(width * 0.1f, height * 0.55f) to 0.4f)
+            lights.forEach { (center, alpha) ->
+                val radius = width * 0.9f
+                drawCircle(Brush.radialGradient(listOf(glow.copy(alpha = alpha), glow.copy(alpha = 0f)), center, radius), radius, center)
+            }
+        }
         val rtl = layoutDirection == LayoutDirection.Rtl
 
         fun x(
@@ -130,17 +185,26 @@ internal fun renderStatisticsImage(
             drawText(text, topLeft = Offset(x(start, text.size.width), top))
         }
         var y = padding
-        for (text in listOf(branding, heading, range, description)) {
+        if (logo != null) {
+            translate(x(padding, logoSize), y + (brandingHeight - logoSize) / 2f) {
+                with(logo) { draw(Size(logoSize.toFloat(), logoSize.toFloat())) }
+            }
+            textAt(branding, padding + logoSize + 20f, y + (brandingHeight - branding.size.height) / 2f)
+        } else {
+            textAt(branding, padding, y)
+        }
+        y += brandingHeight + gap
+        for (text in listOfNotNull(heading, range, description)) {
             textAt(text, padding, y)
             y += text.size.height + gap
         }
         translate(padding, y) {
-            drawOutline(heroShape.createOutline(Size(contentWidth.toFloat(), metricHeight), layoutDirection, this), colors.primaryContainer)
+            drawOutline(heroShape.createOutline(Size(contentWidth.toFloat(), metricHeight), layoutDirection, this), colors.heroContainer)
         }
         metrics.forEachIndexed { index, (value, label) ->
             val start = padding + inset + index * (metricWidth + inset)
-            textAt(value, start, y + inset)
-            textAt(label, start, y + inset + value.size.height)
+            textAt(value, start, y + inset + valueHeight - value.size.height)
+            textAt(label, start, y + inset + valueHeight)
         }
         y += metricHeight + gap
         sections.forEachIndexed { sectionIndex, (_, items) ->
@@ -151,7 +215,7 @@ internal fun renderStatisticsImage(
                         layoutDirection,
                         this,
                     ),
-                    colors.surfaceContainer,
+                    sectionColors[sectionIndex].container,
                 )
             }
             y += inset
@@ -164,14 +228,14 @@ internal fun renderStatisticsImage(
                 textAt(rank, padding + inset, y + (rowHeight - rank.size.height) / 2f)
                 translate(x(imageStart, artworkSize), imageTop) {
                     val outline =
-                        artworkShapes.getValue(items[index].id).createOutline(
+                        artworkShapes[sectionIndex][index].createOutline(
                             Size(artworkSize.toFloat(), artworkSize.toFloat()),
                             layoutDirection,
                             this,
                         )
                     val path = Path().apply { addOutline(outline) }
                     clipPath(path) {
-                        drawRect(colors.secondaryContainer)
+                        drawRect(colors.artworkPlaceholder)
                         artwork[items[index].thumbnailUrl]?.let { image ->
                             val crop = minOf(image.width, image.height)
                             drawImage(
@@ -191,6 +255,7 @@ internal fun renderStatisticsImage(
             }
             y += inset
         }
+        footerText?.let { textAt(it, padding, y) }
     }
     return bitmap
 }

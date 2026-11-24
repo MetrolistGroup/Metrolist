@@ -12,6 +12,7 @@ import com.metrolist.shared.api.YouTubeRepository
 import com.metrolist.shared.db.MusicDatabase
 import com.metrolist.shared.db.distinctPlaylistItems
 import com.metrolist.shared.db.preserveKnownPlaylistEditability
+import com.metrolist.shared.db.readOnlyPlaylistItems
 import com.metrolist.shared.db.selectablePlaylistItems
 import com.metrolist.shared.model.PlaylistItem
 import com.metrolist.shared.model.SongItem
@@ -53,7 +54,16 @@ internal class DesktopPlaybackLibrary(
             }
         publishLocal(local)
         if (!signedIn) {
-            local
+            // Saved online playlists follow as read-only entries that only show membership.
+            local +
+                withContext(Dispatchers.IO) {
+                    val dao = database().dao()
+                    val saved = dao.playlistsByCreateDateAsc().first()
+                    val playtimes = dao.playlistLibraryStats(saved.map { it.id }).associate { it.playlistId to it.playtime }
+                    saved
+                        .readOnlyPlaylistItems(signedIn, playtimes = playtimes)
+                        .filterNot { LibraryDeletionTracker.isDeleted(it) }
+                }
         } else {
             val result = repository().getUserPlaylistsResult()
             local +
@@ -75,6 +85,13 @@ internal class DesktopPlaybackLibrary(
                 .mapTo(mutableSetOf()) { it.song.id }
         } else {
             repository().playlistSongIds(playlistId)
+        }
+    },
+    private val playlistContainsSong: suspend (String, String) -> Boolean = { playlistId, songId ->
+        if (playlistId.startsWith("LP")) {
+            database().dao().checkInPlaylist(playlistId, songId) > 0
+        } else {
+            repository().playlistContainsSong(playlistId, songId)
         }
     },
     private val addLocalBatch: (suspend (String, List<SongItem>) -> PlaylistAddBatchResult)? = { playlistId, songs ->
@@ -171,13 +188,24 @@ internal class DesktopPlaybackLibrary(
                                 async {
                                     val contains =
                                         try {
-                                            permits.withPermit { playlistSongIds(playlist.id).containsAll(selectedIds) }
+                                            permits.withPermit {
+                                                // A single song needs no full membership list; remote lookups stop at the first match.
+                                                val single = selectedIds.singleOrNull()
+                                                if (single != null) {
+                                                    playlistContainsSong(playlist.id, single)
+                                                } else {
+                                                    playlistSongIds(playlist.id).containsAll(selectedIds)
+                                                }
+                                            }
                                         } catch (e: CancellationException) {
                                             throw e
                                         } catch (_: Exception) {
                                             false
                                         }
-                                    if (contains) playlist.id.removePrefix("VL") else null
+                                    val id = playlist.id.removePrefix("VL")
+                                    // Publish each match as it arrives so slow lookups never hold back the others.
+                                    if (contains && isCurrent()) userPlaylistMembership = userPlaylistMembership + id
+                                    if (contains) id else null
                                 }
                             }.awaitAll()
                             .filterNotNull()

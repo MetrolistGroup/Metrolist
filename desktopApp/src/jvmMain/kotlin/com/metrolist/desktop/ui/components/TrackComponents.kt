@@ -70,7 +70,6 @@ import com.metrolist.desktop.state.playback.PlayerState
 import com.metrolist.desktop.storage.DownloadState
 import com.metrolist.shared.constants.ListItemHeight
 import com.metrolist.shared.constants.ListThumbnailSize
-import com.metrolist.shared.constants.ThumbnailCornerRadius
 import com.metrolist.shared.generated.resources.Res
 import com.metrolist.shared.generated.resources.artist
 import com.metrolist.shared.generated.resources.browse
@@ -112,6 +111,7 @@ import com.metrolist.shared.ui.icons.SongStatusIcons
 import com.metrolist.shared.ui.menu.cursorContextMenu
 import com.metrolist.shared.ui.menu.rememberCursorContextMenuState
 import com.metrolist.shared.ui.navigation.navigationPopupSource
+import com.metrolist.shared.ui.theme.gridCellShape
 import com.metrolist.shared.ui.utils.artistArtworkShape
 import com.metrolist.shared.utils.formatDuration
 import org.jetbrains.compose.resources.stringResource
@@ -281,7 +281,7 @@ fun YTListItem(
     val shape =
         animatedCurrentSongArtworkShape(
             isCurrentTrack,
-            if (item is ArtistItem) artistArtworkShape(item.id) else RoundedCornerShape(ThumbnailCornerRadius),
+            if (item is ArtistItem) artistArtworkShape(item.id) else gridCellShape(),
         )
     val colors = animateCurrentSongColors(isCurrentTrack, colorScheme)
     val contentColor = colors.content

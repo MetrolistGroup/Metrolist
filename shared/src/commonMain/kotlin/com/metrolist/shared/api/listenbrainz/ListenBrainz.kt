@@ -4,6 +4,7 @@ import com.metrolist.shared.api.ScrobbleApiException
 import com.metrolist.shared.api.ScrobbleFailureDisposition
 import com.metrolist.shared.api.parseRetryAfter
 import com.metrolist.shared.api.scrobbleStatusDisposition
+import com.metrolist.shared.settings.Settings
 import io.ktor.client.HttpClient
 import io.ktor.client.request.get
 import io.ktor.client.request.header
@@ -12,6 +13,8 @@ import io.ktor.client.request.setBody
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.ContentType
 import io.ktor.http.HttpHeaders
+import io.ktor.http.URLProtocol
+import io.ktor.http.Url
 import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
@@ -27,17 +30,30 @@ data class ListenBrainzUser(
 )
 
 object ListenBrainz {
-    private const val API_ROOT = "https://api.listenbrainz.org/1"
+    const val DEFAULT_API_ROOT = "https://api.listenbrainz.org/1"
     private val json = Json { ignoreUnknownKeys = true }
+
+    /** Returns the API root for [input], [DEFAULT_API_ROOT] when blank, or null when it is not an http(s) URL. */
+    fun normalizeApiRoot(input: String): String? {
+        val trimmed = input.trim().trimEnd('/')
+        if (trimmed.isEmpty()) return DEFAULT_API_ROOT
+        val url = runCatching { Url(trimmed) }.getOrNull() ?: return null
+        if (url.protocol != URLProtocol.HTTPS && url.protocol != URLProtocol.HTTP) return null
+        if (url.host.isBlank() || !trimmed.startsWith("${url.protocol.name}://", ignoreCase = true)) return null
+        return trimmed
+    }
+
+    private fun apiRoot(): String = normalizeApiRoot(Settings.shared.listenBrainzApiUrl) ?: DEFAULT_API_ROOT
 
     suspend fun validateToken(
         httpClient: HttpClient,
         token: String,
+        apiRoot: String = apiRoot(),
     ): Result<ListenBrainzUser> =
         catchingApi {
             check(token.isNotBlank()) { "ListenBrainz token is empty" }
             val response =
-                httpClient.get("$API_ROOT/validate-token") {
+                httpClient.get("$apiRoot/validate-token") {
                     header(HttpHeaders.Authorization, "Token $token")
                 }
             val body = parseResponse(response.status.value, response.bodyAsText())
@@ -99,7 +115,7 @@ object ListenBrainz {
                     put("track_metadata", metadata)
                 }
             val response =
-                httpClient.post("$API_ROOT/submit-listens") {
+                httpClient.post("${apiRoot()}/submit-listens") {
                     header(HttpHeaders.Authorization, "Token $token")
                     header(HttpHeaders.ContentType, ContentType.Application.Json)
                     setBody(

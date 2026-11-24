@@ -8,6 +8,7 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
+import process_tree
 import run
 
 
@@ -46,6 +47,18 @@ class ExperimentTest(unittest.TestCase):
         self.assertGreaterEqual(sample["rss_kib"], sample["pss_kib"])
         self.assertGreater(sample["pss_kib"], 0)
         self.assertGreaterEqual(sample["cpu_seconds"], 0)
+        # The tree must cover the root process; recomputing the total would mirror sample().
+        self.assertIn(os.getpid(), [entry["pid"] for entry in sample["tree"]["processes"]])
+        self.assertGreater(sample["tree"]["total"]["pss_kib"], 0)
+
+    def test_tree_cpu_counts_new_and_reused_processes(self):
+        def tree(time, *processes):
+            return {"time": time, "total": {"pss_kib": 1024},
+                    "processes": [{"pid": pid, "start_ticks": start, "cpu_seconds": cpu} for pid, start, cpu in processes]}
+        # A helper launched between samples counts from zero; a reused PID with a new start time does too.
+        samples = [tree(0, (1, 5, 1.0)), tree(1, (1, 5, 1.2), (2, 9, 0.8)), tree(2, (2, 50, 0.1))]
+        summary = process_tree.summarize(samples)[""]
+        self.assertEqual(summary["cpu_percent_one_core"], 55.0)
 
     def test_native_command_uses_package_home_and_same_heap(self):
         with tempfile.TemporaryDirectory(prefix="r6 native ") as directory:

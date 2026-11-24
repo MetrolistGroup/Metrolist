@@ -9,7 +9,6 @@
 package com.metrolist.shared.ui.settings
 
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
@@ -19,12 +18,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.text.input.TextObfuscationMode
-import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
@@ -50,13 +46,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.autofill.ContentType
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.contentType
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.metrolist.shared.api.lastfm.LastFM
@@ -69,7 +61,6 @@ import com.metrolist.shared.discord.DiscordAuthSession
 import com.metrolist.shared.discord.DiscordDefaults
 import com.metrolist.shared.discord.DiscordErrorInfo
 import com.metrolist.shared.discord.DiscordPlaybackUpdate
-import com.metrolist.shared.discord.DiscordPresence
 import com.metrolist.shared.discord.DiscordRpcManager
 import com.metrolist.shared.discord.DiscordUser
 import com.metrolist.shared.discord.discordPlaybackTimestamps
@@ -84,14 +75,12 @@ import com.metrolist.shared.settings.Settings
 import com.metrolist.shared.state.GlobalYouTube
 import com.metrolist.shared.ui.components.AlertDialog
 import com.metrolist.shared.ui.components.PopupContent
-import com.metrolist.shared.ui.components.images.AsyncImage
 import com.metrolist.shared.ui.icons.MetrolistIcons
 import com.metrolist.shared.ui.icons.MetrolistIconsBrand
 import com.metrolist.shared.ui.mobile.MobileListenTogetherScreen
 import com.metrolist.shared.ui.navigation.NavigationBackHandler
 import com.metrolist.shared.ui.playback.wholeSecondPosition
 import com.metrolist.shared.utils.MetrolistClock
-import com.metrolist.shared.utils.formatDuration
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.pluralStringResource
@@ -174,6 +163,7 @@ fun SharedIntegrationsScreen(
         return
     }
 
+    val discordPresenceStrings = rememberDiscordPresenceStrings()
     val settingsHost =
         SharedSettingsHost(
             platform = host.platform,
@@ -187,6 +177,12 @@ fun SharedIntegrationsScreen(
                 when (page) {
                     SettingsPageId.LISTEN_TOGETHER -> host.onOpenListenTogether?.invoke() ?: run { showListenTogether = true }
                     else -> Unit
+                }
+            },
+            refreshablePages = setOf(SettingsPageId.DISCORD),
+            onPageRefresh = { pageId ->
+                if (pageId == SettingsPageId.DISCORD) {
+                    refreshDiscordPresence(host, discordPresenceStrings)
                 }
             },
         )
@@ -271,9 +267,13 @@ private fun buildIntegrationsRegistry(
             SettingsChoice("3", stringResource(Res.string.discord_activity_watching)),
             SettingsChoice("5", stringResource(Res.string.discord_activity_competing)),
         )
-    val refreshSuccess = stringResource(Res.string.discord_refresh_queued)
-    val refreshRateLimited = stringResource(Res.string.discord_refresh_rate_limited)
-    val refreshError = stringResource(Res.string.discord_refresh_error)
+    val presenceStrings = rememberDiscordPresenceStrings()
+    var discordEditMode by remember { mutableStateOf(false) }
+    var discordEditTarget by remember { mutableStateOf<DiscordEditTarget?>(null) }
+    var confirmDiscordLogout by remember { mutableStateOf(false) }
+    val discordPreviewPlayback = host.playback?.takeIf { it.isPlaying } ?: discordExamplePlayback()
+    val discordTemplateContext =
+        DiscordTemplateContext(discordPreviewPlayback, presenceStrings.unknownArtist, presenceStrings.unknownAlbum)
 
     fun notifyDiscordChanged() {
         DiscordRpcManager.notifySettingsChanged()
@@ -316,18 +316,14 @@ private fun buildIntegrationsRegistry(
                 }
             }
             if (discordLoggedIn) {
-                action(
-                    id = "discordLogout",
-                    title = discordUsername.ifBlank { stringResource(Res.string.discord_logged_in) },
-                    description = discordStatus,
-                    valueLabel = stringResource(Res.string.discord_logout),
-                    confirmationMessage = stringResource(Res.string.account_logout_confirm),
-                ) {
-                    DiscordRpcManager.logout()
-                    settings.discordUsername = ""
-                    settings.discordName = ""
-                    settings.discordAvatar = ""
-                    onAccountsChanged()
+                custom("discordAccountRow", discordUsername.ifBlank { stringResource(Res.string.discord_logged_in) }) {
+                    DiscordAccountRow(
+                        username = discordUsername.ifBlank { stringResource(Res.string.discord_logged_in) },
+                        status = discordStatus,
+                        avatarUrl = currentUser?.avatar ?: settings.discordAvatar.takeIf { it.isNotBlank() },
+                        enabled = settings.enableDiscordIntegration,
+                        onLogout = { confirmDiscordLogout = true },
+                    )
                 }
             } else {
                 action(
@@ -349,68 +345,39 @@ private fun buildIntegrationsRegistry(
             description = stringResource(Res.string.discord_presence_status_warning),
             enabled = discordSettingsEnabled,
         ) {
-            host.playback?.takeIf { settings.enableDiscordIntegration }?.let { playback ->
+            if (settings.enableDiscordIntegration) {
                 custom("discordPreview", stringResource(Res.string.discord_rich_presence)) {
                     val position =
-                        host.playbackPosition?.let { source ->
+                        host.playbackPosition?.takeIf { host.playback?.isPlaying == true }?.let { source ->
                             remember(source) { source.wholeSecondPosition() }.collectAsState(source.value).value
-                        } ?: playback.positionMs
-                    val previewPlayback = playback.copy(positionMs = position)
-                    DiscordPresencePreview(
+                        } ?: discordPreviewPlayback.positionMs
+                    val previewPlayback = discordPreviewPlayback.copy(positionMs = position)
+                    DiscordPresenceCard(
                         activity =
                             buildDiscordActivity(
                                 previewPlayback,
                                 settings,
-                                unknownArtist = stringResource(Res.string.unknown_artist),
-                                unknownAlbum = stringResource(Res.string.discord_unknown_album),
-                                button1Default = stringResource(Res.string.discord_button1_text_default),
-                                button2Default = stringResource(Res.string.discord_button2_text_default),
+                                unknownArtist = presenceStrings.unknownArtist,
+                                unknownAlbum = presenceStrings.unknownAlbum,
+                                button1Default = presenceStrings.button1Default,
+                                button2Default = presenceStrings.button2Default,
                             ),
                         playback = previewPlayback,
-                        onOpenUrl = host.onOpenUrl,
                         enabled = discordSettingsEnabled,
+                        editMode = discordEditMode,
+                        onToggleEditMode = { discordEditMode = it },
+                        onOpenUrl = host.onOpenUrl,
+                        onEditField = { target -> discordEditTarget = target },
                     )
                 }
             }
-            val unknownArtist = stringResource(Res.string.unknown_artist)
-            val unknownAlbum = stringResource(Res.string.discord_unknown_album)
-            val button1Default = stringResource(Res.string.discord_button1_text_default)
-            val button2Default = stringResource(Res.string.discord_button2_text_default)
             action(
                 id = "refreshPresence",
                 title = stringResource(Res.string.discord_refresh_rpc),
                 description = stringResource(Res.string.discord_refresh_rpc_description),
                 enabled = discordLoggedIn && settings.enableDiscordIntegration && host.playback != null,
             ) {
-                val playback = host.playback?.copy(positionMs = host.currentPositionMs())
-                val result =
-                    if (playback == null) {
-                        DiscordRpcManager.RefreshResult.NotReady
-                    } else {
-                        DiscordRpcManager.refreshPresence(
-                            buildDiscordActivity(
-                                playback,
-                                settings,
-                                unknownArtist = unknownArtist,
-                                unknownAlbum = unknownAlbum,
-                                button1Default = button1Default,
-                                button2Default = button2Default,
-                            ),
-                            playback.song.id,
-                            playback.isPlaying,
-                        )
-                    }
-                host.onMessage(
-                    when (result) {
-                        DiscordRpcManager.RefreshResult.Queued -> refreshSuccess
-
-                        DiscordRpcManager.RefreshResult.RateLimited -> refreshRateLimited
-
-                        DiscordRpcManager.RefreshResult.NotReady,
-                        DiscordRpcManager.RefreshResult.Error,
-                        -> refreshError
-                    },
-                )
+                refreshDiscordPresence(host, presenceStrings)
             }
         }
         group("discordAdvanced", stringResource(Res.string.advanced), enabled = discordSettingsEnabled) {
@@ -421,6 +388,8 @@ private fun buildIntegrationsRegistry(
                 description = stringResource(Res.string.settings_discord_advanced_summary),
             ) {
                 settings.discordAdvancedMode = it
+                // Edit mode edits templates, which only apply while advanced mode is on.
+                if (!it) discordEditMode = false
                 notifyDiscordChanged()
             }
             if (settings.discordAdvancedMode || showAllDiscordSettings) {
@@ -435,33 +404,57 @@ private fun buildIntegrationsRegistry(
                     settings.discordActivityType = it
                     notifyDiscordChanged()
                 }
-                text(
-                    id = "discordActivityName",
-                    title = stringResource(Res.string.discord_activity_name),
-                    value = settings.discordActivityName,
-                    placeholder = stringResource(Res.string.discord_listen_to_metrolist),
-                    description = stringResource(Res.string.settings_discord_activity_name_summary),
-                ) {
-                    settings.discordActivityName = it
-                    notifyDiscordChanged()
+                custom("discordActivityNameEditor", stringResource(Res.string.discord_activity_name)) {
+                    DiscordTemplateEditorRow(
+                        title = stringResource(Res.string.discord_activity_name),
+                        rendered =
+                            discordTemplateContext.renderDiscordTemplate(
+                                DiscordEditTarget.ACTIVITY_NAME,
+                                settings.discordActivityName,
+                                presenceStrings.button1Default,
+                                presenceStrings.button2Default,
+                            ),
+                        enabled = discordSettingsEnabled,
+                    ) { discordEditTarget = DiscordEditTarget.ACTIVITY_NAME }
                 }
-                text(
-                    id = "discordStateTemplate",
-                    title = stringResource(Res.string.discord_state),
-                    description = stringResource(Res.string.discord_available_variables_body),
-                    value = settings.discordStateTemplate,
-                ) {
-                    settings.discordStateTemplate = it
-                    notifyDiscordChanged()
+                custom("discordStateEditor", stringResource(Res.string.discord_state)) {
+                    DiscordTemplateEditorRow(
+                        title = stringResource(Res.string.discord_state),
+                        rendered =
+                            discordTemplateContext.renderDiscordTemplate(
+                                DiscordEditTarget.STATE,
+                                settings.discordStateTemplate,
+                                presenceStrings.button1Default,
+                                presenceStrings.button2Default,
+                            ),
+                        enabled = discordSettingsEnabled,
+                    ) { discordEditTarget = DiscordEditTarget.STATE }
                 }
-                text(
-                    id = "discordDetailsTemplate",
-                    title = stringResource(Res.string.details),
-                    description = stringResource(Res.string.discord_available_variables_body),
-                    value = settings.discordDetailsTemplate,
-                ) {
-                    settings.discordDetailsTemplate = it
-                    notifyDiscordChanged()
+                custom("discordDetailsEditor", stringResource(Res.string.details)) {
+                    DiscordTemplateEditorRow(
+                        title = stringResource(Res.string.details),
+                        rendered =
+                            discordTemplateContext.renderDiscordTemplate(
+                                DiscordEditTarget.DETAILS,
+                                settings.discordDetailsTemplate,
+                                presenceStrings.button1Default,
+                                presenceStrings.button2Default,
+                            ),
+                        enabled = discordSettingsEnabled,
+                    ) { discordEditTarget = DiscordEditTarget.DETAILS }
+                }
+                custom("discordAlbumEditor", stringResource(Res.string.album)) {
+                    DiscordTemplateEditorRow(
+                        title = stringResource(Res.string.album),
+                        rendered =
+                            discordTemplateContext.renderDiscordTemplate(
+                                DiscordEditTarget.ALBUM,
+                                settings.discordAlbumTemplate,
+                                presenceStrings.button1Default,
+                                presenceStrings.button2Default,
+                            ),
+                        enabled = discordSettingsEnabled,
+                    ) { discordEditTarget = DiscordEditTarget.ALBUM }
                 }
                 switch(
                     id = "discordButton1Enabled",
@@ -473,18 +466,19 @@ private fun buildIntegrationsRegistry(
                     notifyDiscordChanged()
                 }
                 if (settings.discordButton1Enabled || showAllDiscordSettings) {
-                    text("discordButton1Text", stringResource(Res.string.discord_button1_label), value = settings.discordButton1Text) {
-                        settings.discordButton1Text = it
-                        notifyDiscordChanged()
-                    }
-                    text(
-                        id = "discordButton1Url",
-                        title = stringResource(Res.string.discord_button1_url),
-                        description = stringResource(Res.string.discord_available_url_variables_body),
-                        value = settings.discordButton1Url,
-                    ) {
-                        settings.discordButton1Url = it
-                        notifyDiscordChanged()
+                    custom("discordButton1Editor", stringResource(Res.string.discord_button_1)) {
+                        DiscordTemplateEditorRow(
+                            title = stringResource(Res.string.discord_button_1),
+                            // The helper resolves a cleared custom label to the localized default.
+                            rendered =
+                                discordTemplateContext.renderDiscordTemplate(
+                                    DiscordEditTarget.BUTTON1,
+                                    settings.discordButton1Text,
+                                    presenceStrings.button1Default,
+                                    presenceStrings.button2Default,
+                                ),
+                            enabled = discordSettingsEnabled,
+                        ) { discordEditTarget = DiscordEditTarget.BUTTON1 }
                     }
                 }
 
@@ -498,21 +492,62 @@ private fun buildIntegrationsRegistry(
                     notifyDiscordChanged()
                 }
                 if (settings.discordButton2Enabled || showAllDiscordSettings) {
-                    text("discordButton2Text", stringResource(Res.string.discord_button2_label), value = settings.discordButton2Text) {
-                        settings.discordButton2Text = it
-                        notifyDiscordChanged()
-                    }
-                    text(
-                        id = "discordButton2Url",
-                        title = stringResource(Res.string.discord_button2_url),
-                        description = stringResource(Res.string.discord_available_url_variables_body),
-                        value = settings.discordButton2Url,
-                    ) {
-                        settings.discordButton2Url = it
-                        notifyDiscordChanged()
+                    custom("discordButton2Editor", stringResource(Res.string.discord_button_2)) {
+                        DiscordTemplateEditorRow(
+                            title = stringResource(Res.string.discord_button_2),
+                            // The helper resolves a cleared custom label to the localized default.
+                            rendered =
+                                discordTemplateContext.renderDiscordTemplate(
+                                    DiscordEditTarget.BUTTON2,
+                                    settings.discordButton2Text,
+                                    presenceStrings.button1Default,
+                                    presenceStrings.button2Default,
+                                ),
+                            enabled = discordSettingsEnabled,
+                        ) { discordEditTarget = DiscordEditTarget.BUTTON2 }
                     }
                 }
             }
+        }
+        discordEditTarget?.let { target ->
+            DiscordTemplateEditorDialog(
+                target = target,
+                settings = settings,
+                context = discordTemplateContext,
+                button1Default = presenceStrings.button1Default,
+                button2Default = presenceStrings.button2Default,
+                onDismiss = { discordEditTarget = null },
+                onSaved = {
+                    settings.discordAdvancedMode = true
+                    notifyDiscordChanged()
+                },
+            )
+        }
+        if (confirmDiscordLogout && discordLoggedIn) {
+            AlertDialog(
+                onDismissRequest = { confirmDiscordLogout = false },
+                title = { Text(stringResource(Res.string.discord_logout)) },
+                text = { Text(stringResource(Res.string.account_logout_confirm)) },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            confirmDiscordLogout = false
+                            discordEditMode = false
+                            DiscordRpcManager.logout()
+                            settings.discordUsername = ""
+                            settings.discordName = ""
+                            settings.discordAvatar = ""
+                            onAccountsChanged()
+                        },
+                        shapes = ButtonDefaults.shapes(),
+                    ) { Text(stringResource(Res.string.discord_logout)) }
+                },
+                dismissButton = {
+                    TextButton(onClick = { confirmDiscordLogout = false }, shapes = ButtonDefaults.shapes()) {
+                        Text(stringResource(Res.string.cancel))
+                    }
+                },
+            )
         }
     }
 
@@ -780,6 +815,7 @@ internal fun buildDiscordActivity(
         activityName = settings.discordActivityName,
         stateTemplate = settings.discordStateTemplate,
         detailsTemplate = settings.discordDetailsTemplate,
+        albumTemplate = settings.discordAlbumTemplate,
         btn1Enabled = settings.discordButton1Enabled,
         btn1Label = resolveDiscordButtonLabel(settings.discordButton1Text, DiscordDefaults.BUTTON1_LABEL, button1Default),
         btn1Url = settings.discordButton1Url,
@@ -793,6 +829,65 @@ internal fun buildDiscordActivity(
 }
 
 private fun Long?.orEmptyDuration(): Long = this ?: 0
+
+/** Strings the Discord presence preview, editors and refresh action share. */
+private data class DiscordPresenceStrings(
+    val unknownArtist: String,
+    val unknownAlbum: String,
+    val button1Default: String,
+    val button2Default: String,
+    val refreshQueued: String,
+    val refreshRateLimited: String,
+    val refreshError: String,
+)
+
+@Composable
+private fun rememberDiscordPresenceStrings(): DiscordPresenceStrings =
+    DiscordPresenceStrings(
+        unknownArtist = stringResource(Res.string.unknown_artist),
+        unknownAlbum = stringResource(Res.string.discord_unknown_album),
+        button1Default = stringResource(Res.string.discord_button1_text_default),
+        button2Default = stringResource(Res.string.discord_button2_text_default),
+        refreshQueued = stringResource(Res.string.discord_refresh_queued),
+        refreshRateLimited = stringResource(Res.string.discord_refresh_rate_limited),
+        refreshError = stringResource(Res.string.discord_refresh_error),
+    )
+
+private fun refreshDiscordPresence(
+    host: SharedIntegrationsHost,
+    strings: DiscordPresenceStrings,
+): DiscordRpcManager.RefreshResult {
+    val playback = host.playback?.copy(positionMs = host.currentPositionMs())
+    val result =
+        if (playback == null) {
+            DiscordRpcManager.RefreshResult.NotReady
+        } else {
+            DiscordRpcManager.refreshPresence(
+                buildDiscordActivity(
+                    playback,
+                    Settings.shared,
+                    unknownArtist = strings.unknownArtist,
+                    unknownAlbum = strings.unknownAlbum,
+                    button1Default = strings.button1Default,
+                    button2Default = strings.button2Default,
+                ),
+                playback.song.id,
+                playback.isPlaying,
+            )
+        }
+    host.onMessage(
+        when (result) {
+            DiscordRpcManager.RefreshResult.Queued -> strings.refreshQueued
+
+            DiscordRpcManager.RefreshResult.RateLimited -> strings.refreshRateLimited
+
+            DiscordRpcManager.RefreshResult.NotReady,
+            DiscordRpcManager.RefreshResult.Error,
+            -> strings.refreshError
+        },
+    )
+    return result
+}
 
 @Composable
 private fun DiscordErrorPanel(
@@ -840,79 +935,6 @@ private fun discordErrorMessage(type: String): String =
     )
 
 @Composable
-private fun DiscordPresencePreview(
-    activity: DiscordActivity,
-    playback: IntegrationPlaybackState,
-    onOpenUrl: (String) -> Unit,
-    enabled: Boolean,
-) {
-    Column(
-        modifier = Modifier.fillMaxWidth().padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Box {
-                AsyncImage(
-                    url = playback.artworkUrl ?: activity.largeImage,
-                    contentDescription = null,
-                    shape = RoundedCornerShape(12.dp),
-                    modifier = Modifier.size(96.dp),
-                )
-                Icon(
-                    MetrolistIconsBrand.Discord,
-                    contentDescription = null,
-                    tint = Color.White,
-                    modifier =
-                        Modifier
-                            .align(Alignment.BottomEnd)
-                            .size(30.dp)
-                            .clip(CircleShape)
-                            .padding(5.dp),
-                )
-            }
-            Spacer(Modifier.width(16.dp))
-            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                Text(
-                    activity.name.orEmpty(),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                activity.details?.let { Text(it, maxLines = 1, overflow = TextOverflow.Ellipsis) }
-                Text(
-                    activity.state,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                if (playback.durationMs > 0) {
-                    Text(
-                        "${formatDuration(playback.positionMs)} /\u00a0${formatDuration(playback.durationMs)}",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-            }
-        }
-        val configuredButtons =
-            listOfNotNull(
-                activity.button1Label?.let { label -> activity.button1Url?.let { label to it } },
-                activity.button2Label?.let { label -> activity.button2Url?.let { label to it } },
-            ).filter { (label, url) -> label.isNotEmpty() && url.isNotEmpty() }
-        val buttons = DiscordPresence.validatedButtons(configuredButtons)
-        buttons.forEach { (label, url) ->
-            Button(onClick = {
-                onOpenUrl(url)
-            }, enabled = enabled, modifier = Modifier.fillMaxWidth(), shapes = ButtonDefaults.shapes()) { Text(label) }
-        }
-        if (buttons != configuredButtons) {
-            Text(stringResource(Res.string.discord_preview_buttons_adjusted), style = MaterialTheme.typography.bodySmall)
-        }
-    }
-}
-
-@Composable
 private fun ScrobbleLoginDialog(
     provider: ScrobbleLoginProvider,
     onOpenUrl: (String) -> Unit,
@@ -923,6 +945,7 @@ private fun ScrobbleLoginDialog(
     var username by remember(provider) { mutableStateOf("") }
     val credentialState = remember(provider) { TextFieldState("") }
     val credential = credentialState.text.toString()
+    var serverUrl by remember(provider) { mutableStateOf(Settings.shared.listenBrainzApiUrl) }
     var connecting by remember(provider) { mutableStateOf(false) }
     var error by remember(provider) { mutableStateOf<String?>(null) }
     val isLastFm = provider == ScrobbleLoginProvider.LAST_FM
@@ -931,6 +954,7 @@ private fun ScrobbleLoginDialog(
     val lastFmServiceError = stringResource(Res.string.lastfm_service_error)
     val invalidLastFmSession = stringResource(Res.string.lastfm_login_session_invalid)
     val listenBrainzFailed = stringResource(Res.string.listenbrainz_connect_failed)
+    val invalidServerUrl = stringResource(Res.string.listenbrainz_invalid_server_url)
 
     AlertDialog(
         onDismissRequest = { if (!connecting) onDismiss() },
@@ -969,6 +993,16 @@ private fun ScrobbleLoginDialog(
                     textObfuscationMode = TextObfuscationMode.Hidden,
                 )
                 if (!isLastFm) {
+                    OutlinedTextField(
+                        value = serverUrl,
+                        onValueChange = { serverUrl = it },
+                        keyboardOptions = KeyboardOptions(autoCorrectEnabled = false, keyboardType = KeyboardType.Uri),
+                        label = { Text(stringResource(Res.string.listenbrainz_server_url)) },
+                        placeholder = { Text(ListenBrainz.DEFAULT_API_ROOT) },
+                        supportingText = { Text(stringResource(Res.string.listenbrainz_server_url_description)) },
+                        singleLine = true,
+                        enabled = !connecting,
+                    )
                     TextButton(onClick = { onOpenUrl("https://listenbrainz.org/settings/") }, shapes = ButtonDefaults.shapes()) {
                         Text(stringResource(Res.string.listenbrainz_user_token))
                         Spacer(Modifier.width(8.dp))
@@ -1021,14 +1055,19 @@ private fun ScrobbleLoginDialog(
                                         }
                                 }
                         } else {
-                            ListenBrainz
-                                .validateToken(GlobalYouTube.client, credential.trim())
-                                .onSuccess { user ->
-                                    ScrobbleSessions.connectListenBrainz(user.username, credential.trim())
-                                    onConnected()
-                                }.onFailure {
-                                    error = listenBrainzFailed
-                                }
+                            val apiRoot = ListenBrainz.normalizeApiRoot(serverUrl)
+                            if (apiRoot == null) {
+                                error = invalidServerUrl
+                            } else {
+                                ListenBrainz
+                                    .validateToken(GlobalYouTube.client, credential.trim(), apiRoot)
+                                    .onSuccess { user ->
+                                        ScrobbleSessions.connectListenBrainz(user.username, credential.trim(), apiRoot)
+                                        onConnected()
+                                    }.onFailure {
+                                        error = listenBrainzFailed
+                                    }
+                            }
                         }
                         connecting = false
                     }

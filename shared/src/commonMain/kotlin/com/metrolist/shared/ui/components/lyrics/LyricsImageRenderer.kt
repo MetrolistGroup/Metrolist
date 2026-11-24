@@ -116,6 +116,10 @@ internal fun renderLyricsImage(
     val width = layout.lyricsWidth * scale
     val lyricsTop = layout.lyricsTop * scale
     val lyricsHeight = layout.lyricsHeight * scale
+    val backgroundColor = if (story) storyBackgroundColor else style.backgroundColor
+    val cardColor = if (story) storyCardColor else style.backgroundColor
+    val textColor = if (story) storyTextColor else style.textColor
+    val secondaryColor = if (story) storySecondaryColor else style.secondaryColor
     val lyricsInsetX = if (story) 18f * contentScale * scale else 0f
     val lyricsInsetY = if (story) 12f * contentScale * scale else 0f
     val textWidth = width - 2 * lyricsInsetX
@@ -123,7 +127,7 @@ internal fun renderLyricsImage(
     val textLeft = padding + lyricsInsetX
     val textStyle =
         TextStyle(
-            color = if (story) storyTextColor else style.textColor,
+            color = textColor,
             fontWeight = FontWeight.Bold,
             textAlign = style.alignment,
         )
@@ -160,9 +164,14 @@ internal fun renderLyricsImage(
         } else {
             layout.footerTop
         }
-    val cardBottom = if (story) footerTop + 34f * contentScale else 0f
+    val cardBottom = if (story) footerTop + layout.footerHeight else 0f
     val cardHeight = if (story) cardBottom - layout.cardTop else 0f
-    val verticalOffset = if (story) ((340f * 16f / 9f - cardHeight) / 2f) - layout.cardTop else 0f
+    val verticalOffset =
+        if (story) {
+            maxOf(0f, ((layout.canvasHeight - cardHeight) / 2f) - layout.cardTop)
+        } else {
+            0f
+        }
     val verticalOffsetPx = verticalOffset * scale
     val textTop =
         lyricsTop + lyricsInsetY + verticalOffsetPx +
@@ -174,7 +183,7 @@ internal fun renderLyricsImage(
                 addRoundRect(RoundRect(0f, 0f, size.width, size.height, CornerRadius(if (story) 0f else 20 * scale)))
             }
         clipPath(path) {
-            drawRect(if (story) storyBackgroundColor else style.backgroundColor)
+            drawRect(backgroundColor)
             if (!story) {
                 when (style.background) {
                     LyricsImageBackground.SOLID -> {}
@@ -196,7 +205,7 @@ internal fun renderLyricsImage(
                 val cardTop = (layout.cardTop + verticalOffset) * scale
                 val cardHeightPx = cardHeight * scale
                 drawRoundRect(
-                    storyCardColor,
+                    cardColor,
                     topLeft = Offset(padding, cardTop),
                     size = Size(width, cardHeightPx),
                     cornerRadius = CornerRadius(28f * scale),
@@ -285,16 +294,16 @@ internal fun renderLyricsImage(
                 title,
                 headerX,
                 layout.titleTop + verticalOffset,
-                20f * contentScale,
-                if (story) storyTextColor else style.textColor,
+                (if (story) 20f else 18f) * contentScale,
+                textColor,
                 headerWidth,
             )
             label(
                 artist,
                 headerX,
                 layout.artistTop + verticalOffset,
-                16f * contentScale,
-                if (story) storySecondaryColor else style.secondaryColor,
+                (if (story) 16f else 14f) * contentScale,
+                secondaryColor,
                 headerWidth,
             )
             val textX =
@@ -311,7 +320,7 @@ internal fun renderLyricsImage(
             }
             val footerScale = scale * contentScale
             drawCircle(
-                if (story) storySecondaryColor else style.secondaryColor,
+                secondaryColor,
                 radius = (if (story) 10 else 22) * footerScale,
                 center =
                     Offset(
@@ -326,7 +335,7 @@ internal fun renderLyricsImage(
                 with(logo) {
                     draw(
                         Size((if (story) 20 else 38) * footerScale, (if (story) 20 else 38) * footerScale),
-                        colorFilter = ColorFilter.tint(if (story) storyCardColor else style.backgroundColor),
+                        colorFilter = ColorFilter.tint(if (story) cardColor else style.backgroundColor),
                     )
                 }
             }
@@ -335,7 +344,7 @@ internal fun renderLyricsImage(
                 layout.padding + (if (story) 44f else 52f) * contentScale,
                 footerTop + verticalOffset + (if (story) 8f else 13f) * contentScale,
                 (if (story) 12f else 14f) * contentScale,
-                if (story) storySecondaryColor else style.secondaryColor,
+                secondaryColor,
                 layout.lyricsWidth - (if (story) 62f else 52f) * contentScale,
             )
             if (story && shareUrl != null) {
@@ -344,7 +353,7 @@ internal fun renderLyricsImage(
                     layout.padding + 44f * contentScale,
                     footerTop + verticalOffset + 20f * contentScale,
                     7f * contentScale,
-                    storySecondaryColor,
+                    secondaryColor,
                     layout.lyricsWidth - 62f * contentScale,
                     shrinkToFit = true,
                 )

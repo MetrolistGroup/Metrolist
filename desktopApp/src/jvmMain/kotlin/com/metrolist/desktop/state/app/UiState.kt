@@ -102,6 +102,7 @@ object UiState {
     var showStorageSettings by mutableStateOf(false)
     var showAboutSettings by mutableStateOf(false)
     var showLogViewer by mutableStateOf(false)
+    var showCrashLogs by mutableStateOf(false)
     var showShortcutsDialog by mutableStateOf(false)
 
     var showIntegrationsSettings by mutableStateOf(false)

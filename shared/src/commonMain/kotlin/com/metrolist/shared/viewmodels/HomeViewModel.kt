@@ -28,10 +28,12 @@ import com.metrolist.shared.model.YTItem
 import com.metrolist.shared.model.artworkExplicitness
 import com.metrolist.shared.model.canonicalHomeItemId
 import com.metrolist.shared.model.filterPodcastChips
+import com.metrolist.shared.model.heardInShortsItemIds
 import com.metrolist.shared.model.isLibrarySection
 import com.metrolist.shared.model.isNonMusicalVideo
 import com.metrolist.shared.model.isPodcast
 import com.metrolist.shared.model.isPodcastChip
+import com.metrolist.shared.model.isQuickPicksSection
 import com.metrolist.shared.model.mergeAndDeduplicateHomeSections
 import com.metrolist.shared.model.toSongItem
 import com.metrolist.shared.model.withoutRegionalCharts
@@ -100,6 +102,7 @@ internal fun HomeViewModel.HomeUiState.startupSnapshot(): HomeViewModel.HomeUiSt
         sections = sections.ifEmpty { uncategorizedHomeSections(data.orEmpty()) }.bounded(),
         // A continuation from the full feed would skip shelves omitted from this startup snapshot.
         continuation = null,
+        requestedHomeContinuations = emptySet(),
         trending = trending.take(HOME_SNAPSHOT_ITEMS),
         albumCharts = albumCharts.take(HOME_SNAPSHOT_ITEMS),
         quickPicks = quickPicks.take(HOME_SNAPSHOT_ITEMS),
@@ -159,6 +162,7 @@ internal fun HomeViewModel.HomeUiState.primaryHomeContentLoaded(
         isAllContentPending = selectedChip == null,
         chips = chips,
         continuation = null,
+        requestedHomeContinuations = emptySet(),
     )
 
 internal fun List<ArtistTiny>.withFallbackMetadata(fallback: List<ArtistTiny>): List<ArtistTiny> {
@@ -813,7 +817,7 @@ class HomeViewModel(
                                         ).copy(
                                             trending = chartSections.flatMap { it.items.filterIsInstance<SongItem>() },
                                             albumCharts = chartSections.flatMap { it.items.filterIsInstance<AlbumItem>() },
-                                            quickPicks = findSectionSongs(hydratedPrimarySections, "FEmusic_quickpicks"),
+                                            quickPicks = findQuickPickSongs(hydratedPrimarySections),
                                             keepListening = findSectionSongs(hydratedPrimarySections, "FEmusic_listen_again"),
                                             forgottenFavorites =
                                                 findSectionSongs(hydratedPrimarySections, "FEmusic_forgotten_favorites"),
@@ -897,16 +901,18 @@ class HomeViewModel(
                         val userPlaylistIds = userPlaylists.map { it.id.removePrefix("VL") }.toSet()
                         val sections = mergeAndDeduplicateHomeSections(rawCombined, userPlaylistIds)
 
-                        val apiQuickPicks = findSectionSongs(sections, "FEmusic_quickpicks")
+                        val heardInShortsIds = sections.heardInShortsItemIds()
+                        val apiQuickPicks = findQuickPickSongs(sections)
                         val apiKeepListening = findSectionSongs(sections, "FEmusic_listen_again")
                         val apiForgottenFavorites = findSectionSongs(sections, "FEmusic_forgotten_favorites")
 
                         val quickPicks =
                             if (Settings.shared.classicRecommendations && !isFiltered) {
-                                classicQuickPicks(localQuickPicks, localForgottenFavorites).ifEmpty { apiQuickPicks }
+                                classicQuickPicks(localQuickPicks, localForgottenFavorites, heardInShortsIds).ifEmpty { apiQuickPicks }
                             } else {
                                 personalizedSection(apiQuickPicks, localQuickPicks, isFiltered)
-                            }.distinctBy(::canonicalHomeItemId)
+                            }.filterNot { canonicalHomeItemId(it) in heardInShortsIds }
+                                .distinctBy(::canonicalHomeItemId)
                         val keepListening =
                             personalizedSection(
                                 apiKeepListening,
@@ -935,10 +941,10 @@ class HomeViewModel(
                                 emptyList()
                             } else {
                                 speedDialRecommendations(
-                                    quickPicks = findSectionSongs(speedDialSections, "FEmusic_quickpicks"),
+                                    quickPicks = findQuickPickSongs(speedDialSections),
                                     otherShelves =
                                         speedDialSections
-                                            .filterNot { it.browseId?.startsWith("FEmusic_quickpicks") == true }
+                                            .filterNot(HomeSection::isQuickPicksSection)
                                             .map { it.items },
                                     localFallback = localKeepListening + localQuickPicks,
                                     excludedPlaylistIds = userPlaylistIds,
@@ -974,6 +980,7 @@ class HomeViewModel(
                                 isLoadingMore = loadingMoods,
                                 chips = homeChipsForSelection(homePageData.chips, _uiState.value.selectedChip),
                                 continuation = homePageData.continuation,
+                                requestedHomeContinuations = emptySet(),
                                 trending =
                                     findSectionsByBrowseId(sections, "FEmusic_charts")
                                         .flatMap { it.items.filterIsInstance<SongItem>() }
@@ -1185,7 +1192,7 @@ class HomeViewModel(
                         val currentState = _uiState.value
                         val merged =
                             (cachedSelectedChipContent?.takeIf { it.selectedChip == currentState.selectedChip } ?: currentState)
-                                .withMergedSections(hydratedNewSections, nextContinuation)
+                                .withMergedSections(hydratedNewSections, nextContinuation, consumedContinuation = continuation)
                         cachedSelectedChipContent = merged
                         merged.selectedChip?.let { chip ->
                             chipContentCache =
@@ -1193,7 +1200,12 @@ class HomeViewModel(
                         }
                         _uiState.value = merged.withoutBlockedContent().copy(isLoadingMore = true)
                     } else {
-                        val merged = (cachedAllContent ?: _uiState.value).withMergedSections(hydratedNewSections, nextContinuation)
+                        val merged =
+                            (cachedAllContent ?: _uiState.value).withMergedSections(
+                                hydratedNewSections,
+                                nextContinuation,
+                                consumedContinuation = continuation,
+                            )
                         cacheAllContentState(merged)
                         _uiState.value = merged.withoutBlockedContent().copy(isLoadingMore = true)
                         appendMissingMainFeedMoods(generation)
@@ -1223,7 +1235,16 @@ class HomeViewModel(
                     if (state.homePaginationKey == null) return@launch
                     val page = checkNotNull(chipFeedPager.loadNext(state)) { "An appended Home chip request is still in progress" }
                     if (generation != contentLoadGeneration) return@launch
-                    val merged = (cachedAllContent ?: _uiState.value).copy(chipFeeds = page.chipFeeds, usedHomeChips = page.usedHomeChips)
+                    val baseState = cachedAllContent ?: _uiState.value
+                    val heardInShortsIds =
+                        (baseState.data.orEmpty() + baseState.sections + page.chipFeeds.flatMap { it.sections })
+                            .heardInShortsItemIds()
+                    val merged =
+                        baseState.copy(
+                            chipFeeds = page.chipFeeds,
+                            usedHomeChips = page.usedHomeChips,
+                            quickPicks = baseState.quickPicks.filterNot { canonicalHomeItemId(it) in heardInShortsIds },
+                        )
                     cacheAllContentState(merged)
                     _uiState.value = merged.withoutBlockedContent().copy(isLoadingMore = true)
                 } catch (error: CancellationException) {
@@ -1269,7 +1290,12 @@ class HomeViewModel(
                     val pageMetadata = loadLocalSongMetadata(newSections)
                     if (generation != contentLoadGeneration || _uiState.value.continuation != continuation) return@launch
                     val hydratedNewSections = newSections.withLocalSongMetadata(pageMetadata)
-                    val merged = (cachedAllContent ?: _uiState.value).withMergedSections(hydratedNewSections, nextContinuation)
+                    val merged =
+                        (cachedAllContent ?: _uiState.value).withMergedSections(
+                            hydratedNewSections,
+                            nextContinuation,
+                            consumedContinuation = continuation,
+                        )
                     cacheAllContentState(merged)
                     _uiState.value = merged.withoutBlockedContent().copy(isLoadingMore = true)
                     appendMissingMainFeedMoods(generation)
@@ -1323,8 +1349,11 @@ class HomeViewModel(
         val isFiltered = isFilteredHome(selectedChip?.params, selectedChip?.browseId ?: "FEmusic_home")
         // A restored startup snapshot keeps quickPicks separately and may lack
         // the API shelf; fall back to the current picks so they are not lost.
+        val dataSections = state.data.orEmpty()
+        val heardInShortsIds = (dataSections + state.sections + state.chipFeeds.flatMap { it.sections }).heardInShortsItemIds()
         val apiQuickPicks =
-            findSectionSongs(state.data.orEmpty(), "FEmusic_quickpicks").ifEmpty { state.quickPicks }
+            findQuickPickSongs(dataSections)
+                .ifEmpty { state.quickPicks.filterNot { canonicalHomeItemId(it) in heardInShortsIds } }
         val localQuickPicks =
             database
                 .dao()
@@ -1339,14 +1368,21 @@ class HomeViewModel(
                 .map { it.toSongItem() }
         val quickPicks =
             if (Settings.shared.classicRecommendations && !isFiltered) {
-                classicQuickPicks(localQuickPicks, localForgottenFavorites).ifEmpty { apiQuickPicks }
+                classicQuickPicks(localQuickPicks, localForgottenFavorites, heardInShortsIds).ifEmpty { apiQuickPicks }
             } else {
                 personalizedSection(apiQuickPicks, localQuickPicks, isFiltered)
-            }.distinctBy(::canonicalHomeItemId)
+            }.filterNot { canonicalHomeItemId(it) in heardInShortsIds }
+                .distinctBy(::canonicalHomeItemId)
         val filteredQuickPicks = BlockedContent.filterSongs(quickPicks, BlockedContent.snapshot())
+        var publishedQuickPicks = filteredQuickPicks
         _uiState.update { current ->
             if (current.selectedChip == selectedChip) {
-                current.copy(quickPicks = filteredQuickPicks)
+                val currentExcludedIds =
+                    (current.data.orEmpty() + current.sections + current.chipFeeds.flatMap { it.sections })
+                        .heardInShortsItemIds()
+                publishedQuickPicks =
+                    filteredQuickPicks.filterNot { canonicalHomeItemId(it) in currentExcludedIds }
+                current.copy(quickPicks = publishedQuickPicks)
             } else {
                 current
             }
@@ -1354,7 +1390,7 @@ class HomeViewModel(
         // Mirror the rebuild into the caches and the persisted snapshot so
         // pagination and chip round trips keep the rebuilt picks.
         val updated = _uiState.value
-        if (updated.selectedChip != selectedChip || updated.quickPicks != filteredQuickPicks) return
+        if (updated.selectedChip != selectedChip || updated.quickPicks != publishedQuickPicks) return
         if (isFiltered) {
             cachedSelectedChipContent = updated
             updated.selectedChip?.let { chip -> cacheChipContent(chip, updated) }
@@ -1372,14 +1408,18 @@ class HomeViewModel(
         localForgottenFavorites: List<SongItem>,
     ) {
         val cached = cachedAllContent ?: return
+        val dataSections = cached.data.orEmpty()
+        val heardInShortsIds = (dataSections + cached.sections + cached.chipFeeds.flatMap { it.sections }).heardInShortsItemIds()
         val apiQuickPicks =
-            findSectionSongs(cached.data.orEmpty(), "FEmusic_quickpicks").ifEmpty { cached.quickPicks }
+            findQuickPickSongs(dataSections)
+                .ifEmpty { cached.quickPicks.filterNot { canonicalHomeItemId(it) in heardInShortsIds } }
         val quickPicks =
             if (Settings.shared.classicRecommendations) {
-                classicQuickPicks(localQuickPicks, localForgottenFavorites).ifEmpty { apiQuickPicks }
+                classicQuickPicks(localQuickPicks, localForgottenFavorites, heardInShortsIds).ifEmpty { apiQuickPicks }
             } else {
                 personalizedSection(apiQuickPicks, localQuickPicks, isFiltered = false)
-            }.distinctBy(::canonicalHomeItemId)
+            }.filterNot { canonicalHomeItemId(it) in heardInShortsIds }
+                .distinctBy(::canonicalHomeItemId)
         cachedAllContent =
             cached.copy(quickPicks = BlockedContent.filterSongs(quickPicks, BlockedContent.snapshot()))
     }
@@ -1387,20 +1427,24 @@ class HomeViewModel(
     private fun HomeUiState.withMergedSections(
         newSections: List<HomeSection>,
         nextContinuation: String?,
+        consumedContinuation: String? = null,
     ): HomeUiState {
+        val requested = consumedContinuation?.let { requestedHomeContinuations + it } ?: requestedHomeContinuations
         val userPlaylistIds = userPlaylists.map { it.id.removePrefix("VL") }.toSet()
         val allSections =
             mergeAndDeduplicateHomeSections(
                 data.orEmpty() + newSections.withoutRegionalCharts(AuthManager().isLoggedIn).withoutNonMusicalVideos(),
                 userPlaylistIds,
             )
-        val apiQuickPicks = findSectionSongs(allSections, "FEmusic_quickpicks")
+        val heardInShortsIds = allSections.heardInShortsItemIds()
+        val apiQuickPicks = findQuickPickSongs(allSections)
         val apiKeepListening = findSectionSongs(allSections, "FEmusic_listen_again")
         val apiForgottenFavorites = findSectionSongs(allSections, "FEmusic_forgotten_favorites")
         return copy(
             data = allSections,
             isLoadingMore = false,
-            continuation = nextContinuation,
+            continuation = nextContinuation?.takeUnless(requested::contains),
+            requestedHomeContinuations = requested,
             sections = uncategorizedHomeSections(allSections),
             similarRecommendations = findSimilarRecommendations(allSections),
             trending =
@@ -1416,7 +1460,8 @@ class HomeViewModel(
                     apiQuickPicks.ifEmpty { quickPicks }
                 } else {
                     preferredQuickPicks(apiQuickPicks, quickPicks)
-                }.distinctBy(::canonicalHomeItemId),
+                }.filterNot { canonicalHomeItemId(it) in heardInShortsIds }
+                    .distinctBy(::canonicalHomeItemId),
             newReleases = newReleasesFrom(allSections).distinctBy(::canonicalHomeItemId),
             keepListening = apiKeepListening.ifEmpty { keepListening }.distinctBy(::canonicalHomeItemId),
             forgottenFavorites = apiForgottenFavorites.ifEmpty { forgottenFavorites }.distinctBy(::canonicalHomeItemId),
@@ -1802,7 +1847,8 @@ class HomeViewModel(
 
     private fun HomeUiState.normalizeCachedSections(): HomeUiState {
         val cachedSections = data ?: return this
-        val apiQuickPicks = findSectionSongs(cachedSections, "FEmusic_quickpicks")
+        val heardInShortsIds = (cachedSections + sections).heardInShortsItemIds()
+        val apiQuickPicks = findQuickPickSongs(cachedSections)
         val apiKeepListening = findSectionSongs(cachedSections, "FEmusic_listen_again")
         val apiForgottenFavorites = findSectionSongs(cachedSections, "FEmusic_forgotten_favorites")
         return copy(
@@ -1815,7 +1861,9 @@ class HomeViewModel(
                     .flatMap { it.items.filterIsInstance<AlbumItem>() }
                     .distinctBy { it.id }
                     .ifEmpty { albumCharts },
-            quickPicks = preferredQuickPicks(apiQuickPicks, quickPicks),
+            quickPicks =
+                preferredQuickPicks(apiQuickPicks, quickPicks)
+                    .filterNot { canonicalHomeItemId(it) in heardInShortsIds },
             newReleases = newReleasesFrom(cachedSections).ifEmpty { newReleases },
             keepListening = apiKeepListening.ifEmpty { keepListening },
             forgottenFavorites = apiForgottenFavorites.ifEmpty { forgottenFavorites },
@@ -1888,6 +1936,14 @@ class HomeViewModel(
             speedDialItems = buildSpeedDialItems(pinned, recommendations),
             speedDialPinnedIds = pinned.map { it.id },
         )
+
+    private fun findQuickPickSongs(sections: List<HomeSection>): List<SongItem> {
+        val excludedIds = sections.heardInShortsItemIds()
+        return sections
+            .filter(HomeSection::isQuickPicksSection)
+            .flatMap { section -> section.items.filterIsInstance<SongItem>() }
+            .filterNot { canonicalHomeItemId(it) in excludedIds }
+    }
 
     private fun findSectionSongs(
         sections: List<HomeSection>,
@@ -1975,6 +2031,7 @@ class HomeViewModel(
         val similarRecommendations: List<SimilarRecommendation> = emptyList(),
         val userPlaylists: List<UserPlaylist> = emptyList(),
         val sections: List<HomeSection> = emptyList(),
+        @Transient val requestedHomeContinuations: Set<String> = emptySet(),
     ) {
         fun loadedHomeSongs(): List<SongItem> =
             buildList {
@@ -2085,6 +2142,7 @@ internal fun homeContentForAllSelection(
             podcasts = emptyList(),
             similarRecommendations = emptyList(),
             continuation = null,
+            requestedHomeContinuations = emptySet(),
             sections = emptyList(),
             chipFeeds = emptyList(),
             selectedChip = null,
@@ -2436,7 +2494,7 @@ fun uncategorizedHomeSections(sections: List<HomeSection>): List<HomeSection> =
                     section.items.filterNot { it is BrowseItem }
                 }
 
-                section.browseId?.startsWith("FEmusic_quickpicks") == true ||
+                section.isQuickPicksSection() ||
                     section.browseId?.startsWith("FEmusic_listen_again") == true ||
                     section.browseId?.startsWith("FEmusic_forgotten_favorites") == true -> {
                     section.items.filterNot { it is SongItem }
@@ -2551,6 +2609,7 @@ internal fun HomeViewModel.HomeUiState.withoutHiddenHomeItems(filter: HomeConten
 internal fun classicQuickPicks(
     localQuickPicks: List<SongItem>,
     localForgottenFavorites: List<SongItem>,
+    excludedIds: Set<String> = emptySet(),
 ): List<SongItem> =
     // Filter before sampling so rejected rows do not consume the quota. Home
     // shelves always strip non-musical videos, so the local pool does too.
@@ -2558,7 +2617,7 @@ internal fun classicQuickPicks(
         .filterSongs(
             (localQuickPicks + localForgottenFavorites.take(8)).distinctBy { it.id },
             BlockedContent.snapshot(),
-        ).filterNot { it.isNonMusicalVideo }
+        ).filterNot { it.isNonMusicalVideo || canonicalHomeItemId(it) in excludedIds }
         .shuffled()
         .take(20)
 

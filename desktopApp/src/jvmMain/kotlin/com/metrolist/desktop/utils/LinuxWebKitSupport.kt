@@ -33,6 +33,17 @@ internal fun isLinuxWebKitAvailable(
     loadLibrary: (String) -> Unit = { linuxWebKitLibraries.computeIfAbsent(it, NativeLibrary::getInstance) },
 ): Boolean {
     if (!osName.lowercase().contains("linux")) return true
+    // wry reparents WebKitGTK through X11 window handles, which are absent under native Wayland.
+    if (WaylandScale.isNativeWaylandActive()) return false
+    return isWebKitGtkLibraryAvailable(librarySearchPaths, ldconfigOutput, loadLibrary)
+}
+
+/** Whether WebKitGTK 4.1 loads, regardless of how a view would be embedded. */
+internal fun isWebKitGtkLibraryAvailable(
+    librarySearchPaths: List<File> = linuxWebKitLibrarySearchPaths(),
+    ldconfigOutput: () -> String? = { readLdconfigCache() },
+    loadLibrary: (String) -> Unit = { linuxWebKitLibraries.computeIfAbsent(it, NativeLibrary::getInstance) },
+): Boolean {
     val hasWebKit = librarySearchPaths.any { File(it, LINUX_WEBKIT_SONAME).isFile }
     val hasJavaScriptCore = librarySearchPaths.any { File(it, LINUX_JAVASCRIPTCORE_SONAME).isFile }
     if (!hasWebKit || !hasJavaScriptCore) {

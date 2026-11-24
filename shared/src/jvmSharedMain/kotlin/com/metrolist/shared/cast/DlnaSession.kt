@@ -121,13 +121,14 @@ internal class DlnaSession(
         lastPlayingTrackUri = null
         stopRequested = false
         val mimeType = requireNotNull(media.resource.mimeType).substringBefore(';').trim()
-        val duration = formatDlnaTime(media.durationMs)
+        // Sonos reports 0:00:00 for a zero duration and then never ends the track, so the attribute is omitted when unknown.
+        val durationAttribute = if (media.durationMs > 0L) " duration=\"${formatDlnaTime(media.durationMs)}\"" else ""
         val didl =
             """<DIDL-Lite xmlns="urn:schemas-upnp-org:metadata-1-0/DIDL-Lite/" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:upnp="urn:schemas-upnp-org:metadata-1-0/upnp/"><item id="0" parentID="0" restricted="1"><dc:title>${xmlEscape(
                 media.title,
             )}</dc:title><upnp:class>object.item.audioItem.musicTrack</upnp:class><res protocolInfo="http-get:*:${xmlEscape(
                 mimeType,
-            )}:*" duration="$duration">${xmlEscape(mediaUrl)}</res></item></DIDL-Lite>"""
+            )}:*"$durationAttribute>${xmlEscape(mediaUrl)}</res></item></DIDL-Lite>"""
         val setUriResult =
             runCatching {
                 soap(
@@ -276,6 +277,8 @@ internal class DlnaSession(
             val durationMs = position.text("TrackDuration")?.let(::parseDlnaTime)?.takeIf { it > 0L } ?: current.durationMs
             val trackUri = position.text("TrackURI")
             val transportState = transport.text("CurrentTransportState")
+            val transportStatus = transport.text("CurrentTransportStatus")
+            val transportOk = transportStatus.equals("OK", ignoreCase = true)
             val volume = readVolume(logFailure = false) ?: current.volume
             val isPlaying = transportState == "PLAYING" || transportState == "TRANSITIONING"
             val isBuffering = transportState == "TRANSITIONING"
@@ -319,6 +322,9 @@ internal class DlnaSession(
                 lastPlayingPositionMs = positionMs
                 lastPlayingTrackUri = trackUri
             }
+            val endedWithoutDuration =
+                durationMs <= 0L && wasPlaying && transportState == "STOPPED" &&
+                    (lastPlayingPositionMs ?: 0L) > 0L && transportOk
             _state.value =
                 CastSessionState(
                     connected = true,
@@ -337,7 +343,7 @@ internal class DlnaSession(
                                     durationMs,
                                     lastPlayingPositionMs = lastPlayingPositionMs ?: positionMs,
                                     pollIntervalMs = pollIntervalMs,
-                                ) || restarted
+                                ) || endedWithoutDuration || restarted
                         ),
                     mediaGeneration = pollGeneration,
                 )

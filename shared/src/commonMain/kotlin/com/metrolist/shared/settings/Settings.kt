@@ -40,6 +40,7 @@ import com.metrolist.shared.constants.AudioTrackPlaybackParamsKey
 import com.metrolist.shared.constants.AutoBackupEnabledKey
 import com.metrolist.shared.constants.AutoBackupFrequencyKey
 import com.metrolist.shared.constants.AutoBackupLastSuccessEpochKey
+import com.metrolist.shared.constants.AutoInstallUpdatesKey
 import com.metrolist.shared.constants.AutoPureBlackKey
 import com.metrolist.shared.constants.BlockAiSlopArtistsKey
 import com.metrolist.shared.constants.BlockedArtistsUndoHintShownKey
@@ -52,6 +53,7 @@ import com.metrolist.shared.constants.CanvasCacheSizeKey
 import com.metrolist.shared.constants.CanvasContentOrderKey
 import com.metrolist.shared.constants.CanvasEnabledSourcesKey
 import com.metrolist.shared.constants.CastEnabledKey
+import com.metrolist.shared.constants.CastVolumeStepKey
 import com.metrolist.shared.constants.ClassicRecommendationsKey
 import com.metrolist.shared.constants.CollectionCoversKey
 import com.metrolist.shared.constants.DatabaseLikesRecoveryVersionKey
@@ -68,6 +70,7 @@ import com.metrolist.shared.constants.DevtoolsBenchmarkClientsKey
 import com.metrolist.shared.constants.DevtoolsPlaybackClientKey
 import com.metrolist.shared.constants.DevtoolsUnlockedKey
 import com.metrolist.shared.constants.DisableAnimatedArtworkOnMobileDataKey
+import com.metrolist.shared.constants.DiscordAlbumTemplateKey
 import com.metrolist.shared.constants.DiscordPendingAuthSessionKey
 import com.metrolist.shared.constants.DownloadQueueJsonKey
 import com.metrolist.shared.constants.DownloadedCollectionSortDirectionKey
@@ -94,6 +97,7 @@ import com.metrolist.shared.constants.HiddenHomeItemsJsonKey
 import com.metrolist.shared.constants.HiddenHomeUndoHintShownKey
 import com.metrolist.shared.constants.HiddenLibraryUndoHintShownKey
 import com.metrolist.shared.constants.HideNonMusicalVideosKey
+import com.metrolist.shared.constants.HidePlaylistRecommendationsKey
 import com.metrolist.shared.constants.HideRecentSearchesKey
 import com.metrolist.shared.constants.HideShortSongsKey
 import com.metrolist.shared.constants.HistoryPlaylistsEnabledKey
@@ -121,6 +125,7 @@ import com.metrolist.shared.constants.LikedSongsCustomOrdersJsonKey
 import com.metrolist.shared.constants.LikedSongsOrderAccountKey
 import com.metrolist.shared.constants.LikedSongsOrderCustomizedKey
 import com.metrolist.shared.constants.LikedSongsRecencyJsonKey
+import com.metrolist.shared.constants.ListenBrainzApiUrlKey
 import com.metrolist.shared.constants.ListenTogetherEnabledKey
 import com.metrolist.shared.constants.ListenTogetherServerMetadataKey
 import com.metrolist.shared.constants.LoudnessLevelKey
@@ -159,6 +164,7 @@ import com.metrolist.shared.constants.PreferWordSyncedLyricsKey
 import com.metrolist.shared.constants.PromptContinuePlaybackKey
 import com.metrolist.shared.constants.QueuedYouTubeHistoryJsonKey
 import com.metrolist.shared.constants.RecentPlayedSearchSongsJsonKey
+import com.metrolist.shared.constants.ResumeOnBluetoothConnectKey
 import com.metrolist.shared.constants.SeekDurationSecondsKey
 import com.metrolist.shared.constants.SentryEnabledKey
 import com.metrolist.shared.constants.ShowBottomNavHomeKey
@@ -182,20 +188,24 @@ import com.metrolist.shared.constants.SleepTimerDefaultFinishCurrentSongKey
 import com.metrolist.shared.constants.SleepTimerDefaultMinutesKey
 import com.metrolist.shared.constants.SliderTrackThicknessDpKey
 import com.metrolist.shared.constants.SlimNavBarKey
+import com.metrolist.shared.constants.SongShareLinkKey
 import com.metrolist.shared.constants.SpeedDialArtworkRefreshTimesKey
 import com.metrolist.shared.constants.SpeedDialSurprisePinnedKey
 import com.metrolist.shared.constants.SponsorBlockEnabledKey
 import com.metrolist.shared.constants.SupportPromptDismissedKey
 import com.metrolist.shared.constants.SupportPromptLaunchThresholdKey
 import com.metrolist.shared.constants.SupportPromptLaunchesKey
+import com.metrolist.shared.constants.SwipeToRemoveFromQueueKey
 import com.metrolist.shared.constants.SwipeToRemoveSongKey
 import com.metrolist.shared.constants.SwipeToSongKey
 import com.metrolist.shared.constants.TempoPitchPresetsJsonKey
 import com.metrolist.shared.constants.TokenLoginWarningDismissedKey
+import com.metrolist.shared.constants.UpdateInstallMethodKey
 import com.metrolist.shared.constants.UseLegacyShuffleKey
 import com.metrolist.shared.constants.VarispeedKey
 import com.metrolist.shared.constants.VideoViewerVisibleKey
 import com.metrolist.shared.constants.VoiceSearchEnabledKey
+import com.metrolist.shared.constants.WrappedCardDismissedYearKey
 import com.metrolist.shared.constants.YouTubeCanvasModeKey
 import com.metrolist.shared.constants.YouTubeCanvasQualityKey
 import com.metrolist.shared.model.CollectionSort
@@ -319,6 +329,7 @@ class Settings(
     var hideVideoSongs by preference(false)
     var hideNonMusicalVideos by preference(HideNonMusicalVideosKey, false)
     var hidePodcasts by preference(false)
+    var hidePlaylistRecommendations by preference(HidePlaylistRecommendationsKey, false)
     var hideShortSongs by preference(HideShortSongsKey, false)
     var minimumSongDurationSeconds by preference(MinimumSongDurationSecondsKey, 30)
     var blockAiSlopArtists by preference(BlockAiSlopArtistsKey, true)
@@ -369,6 +380,7 @@ class Settings(
     var miniPlayerBackgroundStyle by preference("DEFAULT")
     var playerThumbnailStyle by preference(PlayerThumbnailStyle.COMPACT)
     var castEnabled by preference(CastEnabledKey, true)
+    var castVolumeStep by preference(CastVolumeStepKey, 5)
     var showPlayerCastButton by preference(ShowPlayerCastButtonKey, true)
     var showPlayerVideoButton by preference(ShowPlayerVideoButtonKey, true)
 
@@ -464,6 +476,7 @@ class Settings(
     var seekExtraSeconds by preference(false)
     var seekDurationSeconds by preference(SeekDurationSecondsKey, 10)
     var pauseOnMute by preference(PauseOnMuteKey, false)
+    var resumeOnBluetoothConnect by preference(ResumeOnBluetoothConnectKey, false)
     var stopMusicOnTaskClear by preference(true)
     var githubNTransformEnabled by preference(GitHubNTransformEnabledKey, false)
     var githubNTransformConfigUrl by preference(
@@ -607,6 +620,10 @@ class Settings(
     var checkForUpdates by preference(true)
     var updateNotifications by preference(true)
     var updateChannel by preference("")
+
+    /** Android only: name of the update install method (SYSTEM, ROOT or SHIZUKU). */
+    var updateInstallMethod by preference(UpdateInstallMethodKey, "SYSTEM")
+    var autoInstallUpdates by preference(AutoInstallUpdatesKey, false)
     var installedNightlyDigest by preference("")
     var lastUpdateCheckTimestamp by preference(0L)
     var lastUpdateCheckAttemptTimestamp by preference(0L)
@@ -629,6 +646,7 @@ class Settings(
     var discordActivityName by preference("")
     var discordStateTemplate by preference("{artist.name}")
     var discordDetailsTemplate by preference("{song.name}")
+    var discordAlbumTemplate by preference(DiscordAlbumTemplateKey, "{album.name}")
     var discordButton1Enabled by preference(true)
     var discordButton1Text by preference("Listen on YouTube Music")
     var discordButton1Url by preference("{song.url}")
@@ -667,6 +685,8 @@ class Settings(
     var listenBrainzUsername by preference("")
     var listenBrainzEnabled by preference(false)
     var listenBrainzUseNowPlaying by preference(true)
+    var listenBrainzApiUrl by preference(ListenBrainzApiUrlKey, "")
+    var songShareLink by preference(SongShareLinkKey, SongShareLink.YOUTUBE_MUSIC.name)
     var pendingScrobblesJson by preference("[]")
     var corruptPendingScrobblesJson by preference("")
     var systemInDarkTheme by preference(false)
@@ -691,6 +711,7 @@ class Settings(
     var swipeSensitivity by preference(73f)
     var swipeToSong by preference(SwipeToSongKey, false)
     var swipeToRemoveSong by preference(SwipeToRemoveSongKey, false)
+    var swipeToRemoveFromQueue by preference(SwipeToRemoveFromQueueKey, false)
     var autoLoadMore by preference(true)
     var classicRecommendations by preference(ClassicRecommendationsKey, false)
     var disableLoadMoreWhenRepeatAll by preference(false)
@@ -834,6 +855,9 @@ class Settings(
         runCatching { Json.decodeFromString<Map<String, Boolean>>(libraryViewsByFilterJson) }.getOrDefault(emptyMap())
 
     var gridItemSize by preference(GridItemSizeKey, GridItemSize.BIG)
+
+    /** The year whose Wrapped Home card was dismissed or finished; the card returns next December. */
+    var wrappedCardDismissedYear by preference(WrappedCardDismissedYearKey, 0)
     private var storedLibraryGridColumns by preference(LibraryGridColumnsKey, 3)
     var libraryGridColumns: Int
         get() = storedLibraryGridColumns.coerceIn(LibraryGridColumnsRange)
@@ -1301,13 +1325,12 @@ class Settings(
     fun shouldShowHomeSection(
         sectionKey: String,
         legacyTitle: String = sectionKey,
+        legacyKey: String? = null,
     ): Boolean {
         val current = getHomeSectionVisibilityMap()
         current[sectionKey]?.let { return it }
-        val legacy = current[legacyTitle] ?: return true
-        if (sectionKey != legacyTitle) {
-            homeSectionVisibility = Json.encodeToString(current + (sectionKey to legacy))
-        }
+        val legacy = legacyKey?.let(current::get) ?: current[legacyTitle] ?: return true
+        homeSectionVisibility = Json.encodeToString(current + (sectionKey to legacy))
         return legacy
     }
 
@@ -1456,7 +1479,6 @@ internal val retiredPortableSettingTypes =
         "lastFmArtistAvatarsJson" to SettingType.STRING,
         "enableMusicVideos" to SettingType.BOOLEAN,
         "autoPlayMusicVideos" to SettingType.BOOLEAN,
-        "resumeOnBluetoothConnect" to SettingType.BOOLEAN,
         "pureBlack" to SettingType.BOOLEAN,
         "desktopSidebarExpanded" to SettingType.BOOLEAN,
         "discordRpcActivityType" to SettingType.STRING,

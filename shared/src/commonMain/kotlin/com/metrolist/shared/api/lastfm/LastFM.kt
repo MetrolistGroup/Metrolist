@@ -5,7 +5,7 @@ import com.metrolist.shared.api.ScrobbleFailureDisposition
 import com.metrolist.shared.api.parseRetryAfter
 import com.metrolist.shared.api.scrobbleStatusDisposition
 import com.metrolist.shared.network.readTextLimited
-import com.metrolist.shared.state.GlobalInnerTube
+import com.metrolist.shared.state.GlobalYouTube
 import com.metrolist.shared.utils.md5Hex
 import com.metrolist.shared.youtube.logging.YtLogger
 import io.ktor.client.HttpClient
@@ -20,6 +20,7 @@ import io.ktor.http.Parameters
 import io.ktor.http.decodeURLQueryComponent
 import io.ktor.http.encodeURLParameter
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.delay
 import kotlinx.io.IOException
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -121,6 +122,14 @@ data class LastFmTrackDate(
     val uts: String = "",
 )
 
+data class LastFmListen(
+    val title: String,
+    val artist: String,
+    val album: String?,
+    val timestampMs: Long,
+    val thumbnail: String?,
+)
+
 @Serializable
 data class LastFmNowPlayingAttr(
     val nowplaying: String = "",
@@ -128,7 +137,7 @@ data class LastFmNowPlayingAttr(
 
 fun LastFmRecentTrack.artistName(): String? =
     when (val artistJson = artist) {
-        is JsonObject -> artistJson["#text"]?.jsonPrimitive?.contentOrNull
+        is JsonObject -> (artistJson["#text"] ?: artistJson["name"])?.jsonPrimitive?.contentOrNull
         is JsonPrimitive -> artistJson.contentOrNull
         else -> null
     }
@@ -431,6 +440,91 @@ object LastFM {
                 ?: throw Exception("No recent tracks found")
         }
 
+    private const val HISTORY_PAGE_SIZE = 200
+    private const val MAX_HISTORY_SCROBBLES = 250_000
+    private const val MAX_HISTORY_RESPONSE_BYTES = 64 * 1_024 * 1_024
+
+    suspend fun getListeningHistory(
+        httpClient: HttpClient,
+        user: String,
+        sinceMs: Long,
+        untilMs: Long,
+    ): Result<List<LastFmListen>> =
+        catchingApi {
+            check(apiKeyConfigured() && user.isNotBlank() && sinceMs <= untilMs)
+            val listens = mutableListOf<LastFmListen>()
+            var page = 1
+            var remainingBytes = MAX_HISTORY_RESPONSE_BYTES
+            var expectedTotal: Int? = null
+            var pages: Int
+            do {
+                val response =
+                    httpClient.prepareGet("https://ws.audioscrobbler.com/2.0/") {
+                        parameter("method", "user.getRecentTracks")
+                        parameter("user", user)
+                        parameter("api_key", apiKey)
+                        parameter("format", "json")
+                        parameter("limit", HISTORY_PAGE_SIZE)
+                        parameter("page", page)
+                        parameter("from", sinceMs / 1000 - 1)
+                        parameter("to", untilMs / 1000 + 1)
+                    }
+                check(remainingBytes > 0) { "Last.fm history exceeds the response size limit" }
+                val limited = response.readTextLimited(minOf(MAX_SCRAPED_HTML_BYTES, remainingBytes))
+                val body = checkNotNull(limited.body) { "Last.fm history exceeds the response size limit" }
+                remainingBytes -= body.encodeToByteArray().size
+                check(remainingBytes >= 0) { "Last.fm history exceeds the response size limit" }
+                val payload = validateResponse(limited.status.value, body, limited.headers[HttpHeaders.RetryAfter])
+                val recent = checkNotNull(payload.jsonObject["recenttracks"] as? JsonObject)
+                val attr = checkNotNull(recent["@attr"] as? JsonObject)
+                check(attr["page"]?.jsonPrimitive?.intOrNull == page)
+                // Bound what the service can make us download and keep: a year of very heavy listening fits well inside.
+                val total = checkNotNull(attr["total"]?.jsonPrimitive?.intOrNull).also { check(it in 0..MAX_HISTORY_SCROBBLES) }
+                pages =
+                    checkNotNull(attr["totalPages"]?.jsonPrimitive?.intOrNull).also {
+                        check(it in 0..(total + HISTORY_PAGE_SIZE - 1) / HISTORY_PAGE_SIZE)
+                    }
+                check(expectedTotal == null || expectedTotal == total) { "Last.fm history changed during pagination" }
+                expectedTotal = total
+                val tracks =
+                    when (val tracks = recent["track"]) {
+                        is JsonArray -> {
+                            tracks.toList()
+                        }
+
+                        is JsonObject -> {
+                            listOf(tracks)
+                        }
+
+                        else -> {
+                            check(total == 0)
+                            emptyList()
+                        }
+                    }
+                // One extra entry is allowed for the now-playing track that Last.fm prepends to the first page.
+                check(tracks.size <= HISTORY_PAGE_SIZE + 1)
+                for (element in tracks) {
+                    val track = json.decodeFromJsonElement<LastFmRecentTrack>(element)
+                    if (track.attr?.nowplaying == "true") continue
+                    val seconds = checkNotNull(track.date?.uts?.toLongOrNull())
+                    check(seconds in 0..Long.MAX_VALUE / 1000)
+                    val timestamp = seconds * 1000
+                    val artist = checkNotNull(track.artistName()).trim()
+                    check(track.name.isNotBlank() && artist.isNotEmpty())
+                    val album =
+                        (track.album as? JsonObject)?.get("#text")?.jsonPrimitive?.contentOrNull
+                            ?: (track.album as? JsonPrimitive)?.contentOrNull
+                    listens += LastFmListen(track.name, artist, album?.takeIf(String::isNotBlank), timestamp, track.image.largest())
+                    check(listens.size <= total)
+                }
+                check(total == 0 || tracks.isNotEmpty()) { "Last.fm history page is empty" }
+                page++
+                if (page <= pages) delay(250)
+            } while (page <= pages)
+            check(listens.size == expectedTotal) { "Last.fm history is incomplete" }
+            listens.filter { it.timestampMs in sinceMs..untilMs }
+        }
+
     suspend fun getRecentTrack(
         httpClient: HttpClient,
         user: String,
@@ -496,7 +590,7 @@ object LastFM {
     var renderedPageLoader: (suspend (String) -> String?)? = null
 
     /** The content language as Last.fm's ISO 639 alpha-2 code. */
-    fun contentLanguage(): String = primaryLanguage(GlobalInnerTube.instance.locale.hl)
+    fun contentLanguage(): String = primaryLanguage(GlobalYouTube.contentLocale.hl)
 
     internal fun primaryLanguage(tag: String): String = tag.substringBefore('-').substringBefore('_').lowercase()
 

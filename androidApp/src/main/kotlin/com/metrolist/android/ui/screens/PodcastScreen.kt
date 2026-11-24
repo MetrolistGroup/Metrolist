@@ -164,7 +164,7 @@ fun PodcastScreen(
                     Intent.createChooser(
                         Intent(Intent.ACTION_SEND).apply {
                             type = "text/plain"
-                            putExtra(Intent.EXTRA_TEXT, ShareUrls.song(episode.id))
+                            putExtra(Intent.EXTRA_TEXT, ShareUrls.youtubeMusicSong(episode.id))
                         },
                         null,
                     ),

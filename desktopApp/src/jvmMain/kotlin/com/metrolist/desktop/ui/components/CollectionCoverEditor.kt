@@ -6,7 +6,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import com.metrolist.desktop.utils.playlistCoverFilenameFilter
+import com.metrolist.desktop.utils.pickDesktopFile
+import com.metrolist.desktop.utils.playlistCoverExtensions
 import com.metrolist.desktop.utils.readPlaylistCover
 import com.metrolist.shared.generated.resources.Res
 import com.metrolist.shared.generated.resources.edit_playlist_cover
@@ -17,8 +18,6 @@ import com.metrolist.shared.utils.XdgUtils
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
-import java.awt.FileDialog
-import java.awt.Frame
 import java.io.File
 
 @Composable
@@ -54,11 +53,18 @@ fun CollectionCoverEditor(
         busy = busy,
         failed = failed,
         onChoose = {
-            val dialog = FileDialog(null as Frame?, title, FileDialog.LOAD).apply { filenameFilter = playlistCoverFilenameFilter }
-            dialog.isVisible = true
-            val chosen = dialog.directory?.let { dir -> dialog.file?.let { File(dir, it) } }
-            dialog.dispose()
-            if (chosen != null) save(chosen)
+            scope.launch {
+                val file =
+                    try {
+                        pickDesktopFile(title, playlistCoverExtensions.toList())
+                    } catch (error: CancellationException) {
+                        throw error
+                    } catch (_: Exception) {
+                        failed = true
+                        return@launch
+                    }
+                file?.let(::save)
+            }
         },
         onRemove = { save(null) },
         onDismiss = onDismiss,

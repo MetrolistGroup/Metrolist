@@ -20,8 +20,10 @@ internal fun canvasPlaybackSources(
     cachedAvailable: Boolean,
     preparingClips: Boolean = false,
 ): Pair<CanvasPlaybackSource, CanvasPlaybackSource?> {
+    // Keep SABR canvas at t=0; mid-video seeks under pending attestation return no media.
+    val liveClips = if (resource?.hasSabrVideo == true) emptyList() else clips
     if (!CanvasCache.isCachedUrl(url) && !isPreparedCanvasUrl(url)) {
-        return CanvasPlaybackSource(url, cacheKey.takeUnless { preparingClips }, clips) to null
+        return CanvasPlaybackSource(url, cacheKey.takeUnless { preparingClips }, liveClips) to null
     }
     val originalUrl =
         resource
@@ -29,7 +31,7 @@ internal fun canvasPlaybackSources(
                 if (it.hasSabrVideo) "metrolist://sabr-video/${it.videoId}" else it.videoUrl
             }?.takeUnless { CanvasCache.isCachedUrl(it) || it.isBlank() }
     // Prepared clips use a separate timeline and cache key from full-video streams.
-    val recovery = originalUrl?.let { CanvasPlaybackSource(it, null, clips) }
+    val recovery = originalUrl?.let { CanvasPlaybackSource(it, null, liveClips) }
     if (CanvasCache.isCachedUrl(url) && !cachedAvailable && recovery != null) return recovery to null
     return CanvasPlaybackSource(url, cacheKey.takeUnless { isPreparedCanvasUrl(url) }, emptyList()) to recovery
 }

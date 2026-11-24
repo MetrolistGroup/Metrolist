@@ -28,6 +28,7 @@ import com.metrolist.shared.api.YouTubeResponseParser.parseIntegerCount
 import com.metrolist.shared.api.YouTubeResponseParser.parseItem
 import com.metrolist.shared.api.YouTubeResponseParser.parseUploadedSongItems
 import com.metrolist.shared.api.YouTubeResponseParser.parseUploadedSongRenderer
+import com.metrolist.shared.api.YouTubeResponseParser.playlistSuggestionReloadToken
 import com.metrolist.shared.api.YouTubeResponseParser.primitiveText
 import com.metrolist.shared.api.YouTubeResponseParser.runText
 import com.metrolist.shared.api.YouTubeResponseParser.sectionListRenderer
@@ -89,6 +90,7 @@ import com.metrolist.shared.playlist.PlaylistChanges
 import com.metrolist.shared.settings.BlockedContent
 import com.metrolist.shared.settings.Settings
 import com.metrolist.shared.state.SongLikeState
+import com.metrolist.shared.state.youTubeLanguage
 import com.metrolist.shared.utils.Logger
 import com.metrolist.shared.viewmodels.LIBRARY_REFRESH_TTL_MILLIS
 import com.metrolist.shared.youtube.logging.YtLogger
@@ -192,6 +194,7 @@ data class SongWatchInformation(
     val subscriberCount: String? = null,
     val likeCount: Long? = null,
     val viewCount: Long? = null,
+    val uploadDate: String? = null,
     val description: String? = null,
 )
 
@@ -272,6 +275,21 @@ fun Map<String, List<YTItem>>.playlistSuggestions(): List<SongItem> {
         .flatMap { (_, items) -> items.asSequence().filterIsInstance<SongItem>() }
         .filterNot { it.id in playlistSongIds }
         .distinctBy { it.id }
+        .toList()
+}
+
+private const val PLAYLIST_RECOMMENDATION_BATCH_SIZE = 6
+
+fun playlistRecommendationBatch(
+    candidates: List<SongItem>,
+    playlistSongs: List<SongItem>,
+    shownIds: Set<String> = emptySet(),
+): List<SongItem> {
+    val excluded = playlistSongs.mapTo(shownIds.toMutableSet()) { it.id }
+    return candidates
+        .asSequence()
+        .filter { !it.isUnavailable && excluded.add(it.id) }
+        .take(PLAYLIST_RECOMMENDATION_BATCH_SIZE)
         .toList()
 }
 
@@ -638,6 +656,7 @@ class YouTubeRepository(
         params: String? = null,
         requestSession: InnerTube.SessionSnapshot = innerTube.sessionSnapshot(),
         includeRecommendations: Boolean = true,
+        missingContentsIsEmpty: Boolean = false,
     ): PaginationResult<YTItem> {
         val voteRevision = SongLikeState.voteObservationRevision()
         requireCurrentSession(requestSession)
@@ -645,6 +664,7 @@ class YouTubeRepository(
             readAccountBrowse(requestSession, browseId, voteRevision = voteRevision) {
                 innerTube.browse(YouTubeClient.WEB_REMIX, browseId = browseId, params = params, setLogin = true)
             }
+        if (firstResponse.contents == null && missingContentsIsEmpty) return PaginationResult(emptyList(), complete = true)
         check(firstResponse.contents != null) { "Missing library contents: $browseId" }
         val first = parseBrowseResponse(firstResponse, includeRecommendations = includeRecommendations)
         requireCurrentSession(requestSession)
@@ -918,7 +938,7 @@ class YouTubeRepository(
             }
             check(httpResponse.status.isSuccess()) { "Playlist browse failed with HTTP ${httpResponse.status.value}" }
             val response = httpResponse.browseResponseWithVotes(innerTube, requestSession, voteRevision)
-            val parsed = parseBrowseResponse(response)
+            val parsed = parseBrowseResponse(response, classifyPlaylistSuggestions = true)
             val sections = YouTubePlaylistParser.parsePlaylistSections(response, parsed, playlistId)
 
             requireCurrentSession(requestSession)
@@ -953,11 +973,82 @@ class YouTubeRepository(
         }
     }
 
+    class PlaylistSuggestions internal constructor(
+        val songs: List<SongItem>,
+        internal val reloadToken: String?,
+        internal val session: InnerTube.SessionSnapshot,
+        internal val browseId: String,
+    ) {
+        val canReload: Boolean get() = reloadToken != null
+    }
+
+    suspend fun getPlaylistSuggestions(
+        playlistId: String,
+        previous: PlaylistSuggestions? = null,
+    ): PlaylistSuggestions? {
+        val session = previous?.session ?: innerTube.sessionSnapshot()
+        val browseId = playlistId.toPlaylistBrowseId()
+        requireCurrentSession(session)
+        if (previous != null && previous.browseId != browseId) return null
+
+        suspend fun browse(token: String? = null) =
+            readAccountBrowse(session, browseId, continuation = token != null) {
+                innerTube.browse(YouTubeClient.WEB_REMIX, browseId = browseId, continuation = token, setLogin = true)
+            }
+
+        fun JsonObject.isSuggestionShelf(): Boolean =
+            playlistSuggestionReloadToken() != null || this["title"].asObject().runText()?.contains("suggest", ignoreCase = true) == true
+
+        fun BrowseResponse.suggestionShelf(knownBranch: Boolean): JsonObject? {
+            val continuation = continuationContents ?: return null
+            val shelves =
+                listOfNotNull(continuation.musicShelfContinuation) +
+                    continuation.sectionListContinuation.findAllObjects("musicShelfRenderer")
+            return shelves.firstOrNull { it.isSuggestionShelf() }
+                ?: shelves.singleOrNull()?.takeIf { knownBranch && it["title"].asObject().runText().isNullOrBlank() }
+        }
+
+        val shelf =
+            if (previous == null) {
+                val initial = browse()
+                val secondary =
+                    initial.contents
+                        ?.twoColumnBrowseResultsRenderer
+                        ?.get("secondaryContents")
+                        .asObject()
+                        ?.get("sectionListRenderer")
+                        .asObject()
+                val branch =
+                    parseBrowseResponse(initial, classifyPlaylistSuggestions = true).continuationBranches.firstOrNull {
+                        it.sectionTitle?.contains("suggest", ignoreCase = true) == true
+                    }
+                val sectionList = secondary ?: initial.sectionListRenderer()
+                val token = branch?.token ?: sectionList?.get("continuations").findContinuationToken()
+                val inlineShelf =
+                    sectionList
+                        .findAllObjects("musicShelfRenderer")
+                        .firstOrNull { it.isSuggestionShelf() && !(it["contents"] ?: it["items"]).asArray().isNullOrEmpty() }
+                inlineShelf ?: token?.let { browse(it).suggestionShelf(knownBranch = branch != null) }
+            } else {
+                browse(previous.reloadToken ?: return null).suggestionShelf(knownBranch = true)
+            } ?: return null
+        val songs = (shelf["contents"] ?: shelf["items"]).asArray().orEmpty().mapNotNull { parseItem(it.asObject()) as? SongItem }
+        val reloadToken = shelf.playlistSuggestionReloadToken()
+        requireCurrentSession(session)
+        return PlaylistSuggestions(BlockedContent.filterSongs(songs), reloadToken, session, browseId)
+    }
+
     suspend fun completePlaylistPage(
         initial: PlaylistPage,
         applyContentFilters: Boolean = true,
     ): PlaylistPage {
         if (!initial.hasMore) return initial.also { rememberPlaylistMembership(it, applyContentFilters) }
+        // Mix continuations keep generating songs and never end, so the loaded pages are the whole mix.
+        val header = initial.sections["header"]?.filterIsInstance<PlaylistItem>()?.firstOrNull()
+        if (header?.id?.isMixPlaylistId() == true) {
+            requireCurrentSession(initial.session)
+            return initial.copy(pending = emptyList())
+        }
         val sections = linkedMapOf<String, MutableList<YTItem>>()
         var last = initial
         playlistPages(initial, applyContentFilters).collect { page ->
@@ -1053,7 +1144,11 @@ class YouTubeRepository(
         requireCurrentSession(page.session)
         if (!response.status.isSuccess()) Logger.w(TAG, "Playlist continuation failed HTTP ${response.status.value}")
         check(response.status.isSuccess()) { "Playlist continuation failed with HTTP ${response.status.value}" }
-        val parsed = parseBrowseResponse(response.browseResponseWithVotes(innerTube, page.session, voteRevision))
+        val parsed =
+            parseBrowseResponse(
+                response.browseResponseWithVotes(innerTube, page.session, voteRevision),
+                classifyPlaylistSuggestions = true,
+            )
         val sections = linkedMapOf<String, MutableList<YTItem>>()
         parsed.sections.forEach { (title, items) ->
             val inheritedTitle = if (title == "Continuation") branch.sectionTitle ?: title else title
@@ -1271,7 +1366,8 @@ class YouTubeRepository(
 
     suspend fun getSavedEpisodesForSync(): List<EpisodeItem> {
         require(innerTube.hasSapCookieAuth()) { "YouTube Music sign-in is required" }
-        val result = getAllBrowseItems("VLSE", includeRecommendations = false)
+        // YouTube omits contents for an empty Episodes for later list.
+        val result = getAllBrowseItems("VLSE", includeRecommendations = false, missingContentsIsEmpty = true)
         check(result.complete) { "Saved episode pagination ended before the final page" }
         return result.items
             .mapNotNull { item ->
@@ -1393,11 +1489,12 @@ class YouTubeRepository(
     ): AlbumPage? {
         val database = databaseProvider()
 
-        suspend fun loadLocal(): AlbumPage? =
+        suspend fun loadLocal(requireComplete: Boolean = false): AlbumPage? =
             database
-                ?.loadOfflineAlbum(albumId, offlineSongAvailabilityProvider()?.songIds())
+                ?.loadOfflineAlbum(albumId, offlineSongAvailabilityProvider()?.songIds(), requireComplete)
                 ?.let { if (applyContentFilters) BlockedContent.filterAlbumPage(it) else it }
         if (!PlaybackNetworkStateStore.current.connected) return loadLocal()
+        loadLocal(requireComplete = true)?.let { return it }
         var stage = "browse"
         return try {
             val requestSession = innerTube.sessionSnapshot()
@@ -1439,6 +1536,8 @@ class YouTubeRepository(
                 } else {
                     getPlaylistPlaybackPage(albumItem.playlistId ?: return loadLocal()).copy(album = albumItem)
                 }
+            // A failed playlist request falls back to downloaded tracks; storing them would replace the full album.
+            if (playlistTracks.isOffline) return loadLocal()
             // An album's playlist comes back empty when the account cannot play most of it; the browse shelf still lists every track.
             val shelfSongs =
                 if (playlistTracks.songs.isEmpty() && !playlistTracks.hasMore) secondaryContents.albumShelfSongs() else emptyList()
@@ -1470,7 +1569,7 @@ class YouTubeRepository(
                     artistAlbums = artistAlbums,
                     description = albumHeader.description,
                 )
-            database?.storeAlbumPage(page)
+            database?.storeAlbumPage(page, hasHeaderMetadata = true)
             if (applyContentFilters) BlockedContent.filterAlbumPage(page) else page
         } catch (e: CancellationException) {
             throw e
@@ -1755,7 +1854,7 @@ class YouTubeRepository(
     ): SongWatchInformation? {
         val session = innerTube.sessionSnapshot()
         val requestTube = innerTube.createIsolatedSession(true)
-        requestTube.locale = requestTube.locale.copy(hl = languageTag)
+        requestTube.locale = requestTube.locale.copy(hl = youTubeLanguage(languageTag))
         return try {
             val response =
                 requestTube.next(YouTubeClient.WEB, videoId = videoId).bodyLimited<JsonObject>(PLAYER_NEXT_RESPONSE_LIMIT)
@@ -1767,6 +1866,15 @@ class YouTubeRepository(
                     ?.get("videoOwnerRenderer")
                     .asObject()
             val likeEntity = response.findFirstObject("likeCountEntity")
+            // WEB now sends an unset likeCountEntity; the exact count is only in the like button's accessibility text.
+            val likeButton =
+                response
+                    .findFirstObject("segmentedLikeDislikeButtonViewModel")
+                    ?.get("likeButtonViewModel")
+                    .asObject()
+                    ?.findFirstObject("defaultButtonViewModel")
+                    ?.get("buttonViewModel")
+                    .asObject()
             val viewEntity = response.findFirstObject("viewCountEntity")
 
             SongWatchInformation(
@@ -1786,10 +1894,17 @@ class YouTubeRepository(
                     likeEntity?.longValue("likeCountIfIndifferentNumber")
                         ?: likeEntity?.longValue("likeCountIfLikedNumber")
                         ?: likeEntity?.get("expandedLikeCountIfIndifferent").textContent().parseIntegerCount()
-                        ?: likeEntity?.get("expandedLikeCountIfLiked").textContent().parseIntegerCount(),
+                        ?: likeEntity?.get("expandedLikeCountIfLiked").textContent().parseIntegerCount()
+                        ?: likeButton?.get("accessibilityText").primitiveText().parseIntegerCount(),
                 viewCount =
                     viewEntity?.longValue("viewCountNumber")
                         ?: viewEntity?.get("unlabeledViewCountValue").textContent().parseIntegerCount(),
+                uploadDate =
+                    response
+                        .findFirstObject("videoPrimaryInfoRenderer")
+                        ?.get("dateText")
+                        .textContent()
+                        ?.takeIf { it.isNotBlank() },
                 description =
                     secondaryInfo
                         ?.get("attributedDescription")
@@ -1805,7 +1920,8 @@ class YouTubeRepository(
             ).also { requireCurrentSession(session) }
         } catch (e: CancellationException) {
             throw e
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            YtLogger.w(TAG, "getSongWatchInformation failed type=${e::class.simpleName ?: "unknown"}")
             null
         } finally {
             requestTube.close()

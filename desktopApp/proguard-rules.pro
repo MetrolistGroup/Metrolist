@@ -15,6 +15,7 @@
 -keep class * implements com.sun.jna.Library { *; }
 -keep class io.github.kdroidfilter.** { *; }
 -keep class dev.nucleusframework.** { *; }
+-keep interface dev.nucleusframework.** { *; }
 -keep interface io.github.kdroidfilter.** { *; }
 -keep class uniffi.** { *; }
 -keep interface uniffi.** { *; }
@@ -40,19 +41,23 @@
     public static ** valueOf(java.lang.String);
 }
 
-# Compose internals used by the custom window hit-test bridge.
+# Compose internals used by the custom window hit-test bridge and Tao scene host.
 -keep class androidx.compose.ui.node.HitTestResult { *; }
 -keep class androidx.compose.ui.node.PointerInputModifierNode { *; }
+-keep class androidx.compose.ui.node.TaoLayerTreeAccess { *; }
+-keep class androidx.compose.ui.platform.TaoGraphicsResourceCacheAccess { *; }
 -keep class androidx.compose.ui.scene.CanvasLayersComposeSceneImpl { *; }
 -keep class androidx.compose.ui.scene.CanvasLayersComposeSceneImpl$AttachedComposeSceneLayer { *; }
 -keep class androidx.compose.ui.scene.CopiedList { *; }
 -keep class androidx.compose.ui.scene.PlatformLayersComposeSceneImpl { *; }
+-keep class androidx.compose.ui.scene.TaoComposeSceneContextAccess { *; }
 
 # ServiceLoader providers.
 -keep class coil3.network.okhttp.internal.OkHttpNetworkFetcherServiceLoaderTarget { *; }
 -keep class io.ktor.client.engine.cio.CIOEngineContainer { *; }
 -keep class io.ktor.client.engine.okhttp.OkHttpEngineContainer { *; }
 -keep class io.ktor.serialization.kotlinx.json.KotlinxSerializationJsonExtensionProvider { *; }
+-keep class kotlinx.coroutines.internal.MainDispatcherFactory
 -keep class kotlinx.coroutines.swing.SwingDispatcherFactory { *; }
 -keep class org.freedesktop.dbus.transport.jre.NativeTransportProvider { *; }
 -keep class org.slf4j.simple.SimpleServiceProvider { *; }
@@ -73,5 +78,7 @@
 -dontwarn io.github.kdroidfilter.**
 -dontwarn uniffi.**
 -dontwarn com.charleskorn.kaml.**
+-dontwarn org.jetbrains.compose.devtools.**
+-dontwarn org.jetbrains.compose.reload.**
 
 -keepattributes Exceptions,InnerClasses,Signature,EnclosingMethod,*Annotation*

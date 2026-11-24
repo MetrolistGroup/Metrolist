@@ -93,6 +93,14 @@ class CsvPlaylist(
                 cell.clear()
                 closedQuote = false
             }
+
+            fun endRow() {
+                endCell()
+                // Expose the same first nonblank row to header detection, preview and track mapping.
+                if (rows.isNotEmpty() || row.any(String::isNotBlank)) rows += row
+                row = mutableListOf()
+            }
+
             while (index < input.length) {
                 val char = input[index]
                 when {
@@ -113,9 +121,7 @@ class CsvPlaylist(
                     }
 
                     char == '\r' || char == '\n' -> {
-                        endCell()
-                        rows += row
-                        row = mutableListOf()
+                        endRow()
                         if (char == '\r' && input.getOrNull(index + 1) == '\n') index++
                     }
 
@@ -135,8 +141,7 @@ class CsvPlaylist(
             }
             if (quoted) throw ImportException(ImportErrorKey.FileReadFailed)
             if (cell.isNotEmpty() || row.isNotEmpty() || closedQuote) {
-                endCell()
-                rows += row
+                endRow()
             }
             return CsvPlaylist(rows)
         }

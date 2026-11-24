@@ -32,12 +32,12 @@ internal fun AmazonMusicLoginDialog(
         signInHint = stringResource(Res.string.import_amazon_music_session_sign_in),
         onDismissRequest = onDismissRequest,
         extractCredentials = { state ->
-            val url = state.lastLoadedUrl.orEmpty()
+            val url = state.currentUrl.orEmpty()
             if (runCatching { Url(url).host }.getOrNull() != host) {
                 null
             } else {
                 val cookies =
-                    state.cookieManager.getCookies(musicUrl)
+                    state.cookies(musicUrl)
                 val cookieHeader = cookies.joinToString("; ") { "${it.name}=${it.value}" }
                 AmazonMusicImportManager.extractSessionCookie(cookieHeader)
             }

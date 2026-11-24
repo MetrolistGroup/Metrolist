@@ -22,6 +22,8 @@ Android and desktop downloaded collections can filter by a library playlist befo
 
 Remote playlist download refreshes store every page of unfiltered membership. Offline playlist pages read those stored entries. Failed and offline refreshes keep the previous membership.
 
+Album browses store the album description and other editions with the tracks. An album opens from storage without a network request once the last save loaded every track page, every stored track is available offline and that header metadata is cached. Downloaded tracks returned after a failed playlist request are not saved over the album. Albums saved before version 68 of the database refresh once to fill it.
+
 ## Android v13 recovery
 
 v13.7.0 stored downloads in `files/download` with no eviction and streamed audio in `files/exoplayer` with the configured LRU limit. Both caches used `StandaloneDatabaseProvider` and `databases/exoplayer_internal.db`. `MediaItemExt` and `DownloadUtil` used the song ID as the custom cache key. The download index can also map a custom key back to its request ID. Recovery uses that mapping rather than guessing IDs from suffixes or URLs.
@@ -42,7 +44,7 @@ Storage screens count indexed audio once. Clearing the song cache removes indexe
 
 Android shared-folder exports remux WebM/Opus to tagged Ogg Opus and AAC to tagged M4A without re-encoding. New exports embed the retained PNG artwork when it is available, along with title, artist and album tags. Conversion or tagging failure must not publish raw source files. Private storage keeps the original representation. Shared-cache migrations retain originals until replacement files and format metadata commit.
 
-Desktop downloads transcode to tagged AAC/M4A before publication. Temporary JavaCPP tag strings, rational values and frame views are released at their call sites; partially initialized encoders and metadata dictionaries also have cleanup owners.
+Desktop downloads stream-copy Opus to tagged Ogg Opus and AAC to tagged M4A. Other codecs or failed copies fall back to AAC/M4A transcoding. Temporary JavaCPP tag strings, rational values and frame views are released at their call sites; partially initialized encoders and metadata dictionaries also have cleanup owners.
 
 SABR downloads and incomplete playback captures use validated transfers. Tokenless downloads renew sessions after 45 seconds of media and resume at a segment boundary. Renewal must preserve the encoded representation. Reject gaps, changed bytes and incomplete transfers; see [SABR constraints](innertube.md#sabr).
 

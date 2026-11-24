@@ -5,6 +5,7 @@ import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.DropdownMenuGroup
@@ -19,6 +20,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.focus.FocusRequester
@@ -29,6 +31,7 @@ import androidx.compose.ui.layout.layout
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import com.metrolist.shared.ui.components.Scrollbar
 import com.metrolist.shared.ui.haptics.HapticEvent
 import com.metrolist.shared.ui.haptics.rememberMetrolistHaptics
 import com.metrolist.shared.ui.icons.MetrolistIcons
@@ -59,55 +62,66 @@ fun <T> BoxScope.ExpressiveSelectionMenu(
         },
     ) {
         DropdownMenuPopup(expanded = expanded, onDismissRequest = onDismissRequest) {
-            DropdownMenuGroup(
-                shapes = MenuDefaults.groupShape(0, 1),
-                modifier = Modifier.heightIn(max = 480.dp).verticalScrollWithDrag(rememberScrollState()),
-            ) {
-                options.forEachIndexed { index, option ->
-                    val shapes = groupedMenuItemShapes(index, options.size)
-                    val onClick = {
-                        haptic.perform(HapticEvent.PRESS)
-                        onOptionSelected(option)
-                        onDismissRequest()
+            val scrollState = rememberScrollState()
+            Box {
+                DropdownMenuGroup(
+                    shapes = MenuDefaults.groupShape(0, 1),
+                    modifier = Modifier.heightIn(max = 480.dp).verticalScrollWithDrag(scrollState),
+                ) {
+                    options.forEachIndexed { index, option ->
+                        val shapes = groupedMenuItemShapes(index, options.size)
+                        val onClick = {
+                            haptic.perform(HapticEvent.PRESS)
+                            onOptionSelected(option)
+                            onDismissRequest()
+                        }
+                        val text: @Composable () -> Unit = { Text(optionLabel(option)) }
+                        val leadingIcon: (@Composable () -> Unit)? = optionIcon?.let { { it(option) } }
+                        val supportingText: (@Composable () -> Unit)? = optionSupportingText?.invoke(option)?.let { { Text(it) } }
+                        val focusRequester = remember { FocusRequester() }
+                        val initiallyFocused = if (selectedOption == null) index == 0 else option == selectedOption
+                        if (initiallyFocused) RequestTvFocus(focusRequester)
+                        val itemModifier =
+                            Modifier.focusRequester(focusRequester).tvFocusHighlight(
+                                shape = if (option == selectedOption) shapes.selectedShape else shapes.shape,
+                                scale = 1f,
+                            )
+                        if (selectedOption == null) {
+                            DropdownMenuItem(
+                                onClick = onClick,
+                                text = text,
+                                shape = shapes.shape,
+                                modifier = itemModifier,
+                                leadingIcon = leadingIcon,
+                                supportingText = supportingText,
+                                enabled = optionEnabled(option),
+                            )
+                        } else {
+                            SelectableDropdownMenuItem(
+                                selected = option == selectedOption,
+                                onClick = onClick,
+                                text = text,
+                                shapes = shapes,
+                                modifier = itemModifier,
+                                leadingIcon = leadingIcon,
+                                supportingText = supportingText,
+                                enabled = optionEnabled(option),
+                                selectedLeadingIcon = {
+                                    Icon(
+                                        MetrolistIcons.Filled.Check,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(MenuDefaults.LeadingIconSize),
+                                    )
+                                },
+                            )
+                        }
                     }
-                    val text: @Composable () -> Unit = { Text(optionLabel(option)) }
-                    val leadingIcon: (@Composable () -> Unit)? = optionIcon?.let { { it(option) } }
-                    val supportingText: (@Composable () -> Unit)? = optionSupportingText?.invoke(option)?.let { { Text(it) } }
-                    val focusRequester = remember { FocusRequester() }
-                    val initiallyFocused = if (selectedOption == null) index == 0 else option == selectedOption
-                    if (initiallyFocused) RequestTvFocus(focusRequester)
-                    val itemModifier =
-                        Modifier.focusRequester(focusRequester).tvFocusHighlight(
-                            shape = if (option == selectedOption) shapes.selectedShape else shapes.shape,
-                            scale = 1f,
-                        )
-                    if (selectedOption == null) {
-                        DropdownMenuItem(
-                            onClick = onClick,
-                            text = text,
-                            shape = shapes.shape,
-                            modifier = itemModifier,
-                            leadingIcon = leadingIcon,
-                            supportingText = supportingText,
-                            enabled = optionEnabled(option),
-                        )
-                    } else {
-                        SelectableDropdownMenuItem(
-                            selected = option == selectedOption,
-                            onClick = onClick,
-                            text = text,
-                            shapes = shapes,
-                            modifier = itemModifier,
-                            leadingIcon = leadingIcon,
-                            supportingText = supportingText,
-                            enabled = optionEnabled(option),
-                            selectedLeadingIcon = {
-                                Icon(
-                                    MetrolistIcons.Filled.Check,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(MenuDefaults.LeadingIconSize),
-                                )
-                            },
+                }
+                if (scrollState.maxValue in 1 until Int.MAX_VALUE) {
+                    Box(Modifier.matchParentSize()) {
+                        Scrollbar(
+                            state = scrollState,
+                            modifier = Modifier.align(Alignment.CenterEnd).padding(vertical = 8.dp),
                         )
                     }
                 }

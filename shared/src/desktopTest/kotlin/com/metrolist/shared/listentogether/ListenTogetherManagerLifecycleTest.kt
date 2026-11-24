@@ -1019,7 +1019,6 @@ class ListenTogetherManagerLifecycleTest {
                     artists = emptyList(),
                     album = null,
                 )
-            playback.queue.value = listOf(localSong)
             val manager =
                 ListenTogetherManager(
                     codecDispatcher = Dispatchers.Unconfined,
@@ -1048,6 +1047,9 @@ class ListenTogetherManagerLifecycleTest {
                     isHost = false,
                 ),
             )
+            // Reconnecting to an idle room clears the guest queue; seed the local song afterwards so
+            // this case still checks that terminal cleanup and later queue actions leave it alone.
+            playback.queue.value = listOf(localSong)
             val codec = MessageCodec()
             manager.handleBinary(codec.encode(MessageTypes.ERROR, ErrorPayload("session_not_found", "Session expired")))
             manager.handleBinary(

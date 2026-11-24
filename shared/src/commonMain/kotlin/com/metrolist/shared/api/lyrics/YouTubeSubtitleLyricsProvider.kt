@@ -212,13 +212,21 @@ class YouTubeSubtitleLyricsProvider(
                     ?.get("captionTracks")
                     ?.jsonArray
                     .orEmpty()
-            val preferredLang = GlobalYouTube.innerTube.locale.hl
+            val preferredLang = GlobalYouTube.contentLocale.hl
+            val primaryLang = preferredLang.substringBefore('-').takeIf(String::isNotBlank)
             val track =
                 captionTracks.firstOrNull { track ->
                     track.jsonObject["languageCode"]
                         ?.jsonPrimitive
                         ?.contentOrNull
-                        ?.startsWith(preferredLang) == true &&
+                        ?.equals(preferredLang, ignoreCase = true) == true &&
+                        track.jsonObject["kind"]?.jsonPrimitive?.contentOrNull != "asr"
+                } ?: captionTracks.firstOrNull { track ->
+                    track.jsonObject["languageCode"]
+                        ?.jsonPrimitive
+                        ?.contentOrNull
+                        ?.substringBefore('-')
+                        ?.equals(primaryLang, ignoreCase = true) == true &&
                         track.jsonObject["kind"]?.jsonPrimitive?.contentOrNull != "asr"
                 } ?: captionTracks.firstOrNull { track ->
                     track.jsonObject["kind"]?.jsonPrimitive?.contentOrNull != "asr"
@@ -226,7 +234,13 @@ class YouTubeSubtitleLyricsProvider(
                     track.jsonObject["languageCode"]
                         ?.jsonPrimitive
                         ?.contentOrNull
-                        ?.startsWith(preferredLang) == true
+                        ?.equals(preferredLang, ignoreCase = true) == true
+                } ?: captionTracks.firstOrNull { track ->
+                    track.jsonObject["languageCode"]
+                        ?.jsonPrimitive
+                        ?.contentOrNull
+                        ?.substringBefore('-')
+                        ?.equals(primaryLang, ignoreCase = true) == true
                 } ?: captionTracks.firstOrNull()
 
             val baseUrl =

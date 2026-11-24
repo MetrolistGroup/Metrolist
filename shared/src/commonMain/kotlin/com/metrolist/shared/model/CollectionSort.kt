@@ -1,5 +1,7 @@
 package com.metrolist.shared.model
 
+import com.metrolist.shared.settings.ArtistNameAliases
+
 enum class CollectionSort {
     NEWEST,
     OLDEST,
@@ -64,6 +66,7 @@ fun List<SongItem>.presentCollection(
     sort: CollectionSort,
     direction: SortDirection = sort.defaultDirection,
     customOrder: List<String> = emptyList(),
+    artistAliases: Map<String, String> = if (sort == CollectionSort.ARTIST) ArtistNameAliases.aliases else emptyMap(),
     meta: (SongItem) -> CollectionMeta?,
 ): List<SongItem> {
     val normalized = query.trim()
@@ -97,11 +100,10 @@ fun List<SongItem>.presentCollection(
             }
 
             CollectionSort.ARTIST -> {
-                filtered.sortedBy {
-                    it.artists
+                filtered.sortedBy { song ->
+                    song.artists
                         .firstOrNull()
-                        ?.name
-                        ?.lowercase()
+                        ?.let { ArtistNameAliases.resolve(artistAliases, it.id, it.name).lowercase() }
                         .orEmpty()
                 }
             }
@@ -142,12 +144,14 @@ fun List<SongItem>.presentCollectionWithPlayCounts(
     customOrder: List<String> = emptyList(),
     metadata: Map<String, CollectionMeta> = emptyMap(),
     playCounts: Map<String, Int> = emptyMap(),
+    artistAliases: Map<String, String> = if (sort == CollectionSort.ARTIST) ArtistNameAliases.aliases else emptyMap(),
 ): List<SongItem> =
     presentCollection(
         query = "",
         sort = sort,
         direction = direction,
         customOrder = if (sort == CollectionSort.MANUAL) customOrder else emptyList(),
+        artistAliases = artistAliases,
     ) { song ->
         val meta = metadata[song.id]
         if (sort == CollectionSort.MOST_PLAYED) {

@@ -81,6 +81,26 @@ interface CacheDao {
     @Query("SELECT offsetMs FROM lyrics WHERE id = :id")
     suspend fun lyricsOffset(id: String): Int?
 
+    @Query(
+        """DELETE FROM lyrics WHERE offsetMs = 0 AND isUserSelected = 0 AND isLegacyProtected = 0
+        AND userLyrics IS NULL AND userLyricsDraft IS NULL AND stashedUserLyrics IS NULL AND stashedUserLyricsDraft IS NULL""",
+    )
+    suspend fun deleteFetchedLyricsRows(): Int
+
+    // Rows with a per-song offset keep it as an offset-only row, which the next fetch fills again.
+    @Query(
+        """UPDATE lyrics SET lyrics = '', provider = 'Unknown', translatedLyrics = '', translationLanguage = '',
+        translationMode = '', translationSourceHash = '', translationConfigKey = '', translationNotNeeded = 0,
+        missLookupKey = NULL, missExpiresAt = NULL
+        WHERE offsetMs != 0 AND isUserSelected = 0 AND isLegacyProtected = 0
+        AND userLyrics IS NULL AND userLyricsDraft IS NULL AND stashedUserLyrics IS NULL AND stashedUserLyricsDraft IS NULL""",
+    )
+    suspend fun resetFetchedLyricsWithOffset(): Int
+
+    /** Drops lyrics fetched from providers so they are fetched again, keeping user lyrics, picks and offsets. */
+    @Transaction
+    suspend fun clearFetchedLyrics(): Int = deleteFetchedLyricsRows() + resetFetchedLyricsWithOffset()
+
     @Query("SELECT lyricsOffset FROM song WHERE id = :id")
     suspend fun legacyLyricsOffset(id: String): Int?
 

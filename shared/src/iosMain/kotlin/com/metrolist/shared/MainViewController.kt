@@ -79,6 +79,7 @@ import com.metrolist.shared.settings.defaultOpenTabRoot
 import com.metrolist.shared.state.GlobalYouTubeRepository
 import com.metrolist.shared.state.SongLikeState
 import com.metrolist.shared.state.SongMetadataState
+import com.metrolist.shared.state.closestContentCountry
 import com.metrolist.shared.state.contentCountryCodes
 import com.metrolist.shared.storage.IosAudioDownloadManager
 import com.metrolist.shared.storage.ResizableImageDiskCache
@@ -292,7 +293,8 @@ fun MetrolistIOSApp() {
                 (NSLocale.preferredLanguages.firstOrNull() as? String)
                     ?.takeIf(String::isNotBlank)
                     ?: current.localeIdentifier
-            preferred.replace('_', '-') to current.countryCode.orEmpty()
+            val languageTag = preferred.replace('_', '-')
+            languageTag to closestContentCountry(languageTag, current.countryCode.orEmpty())
         }
 
     suspend fun closeDatabaseForRestore() {

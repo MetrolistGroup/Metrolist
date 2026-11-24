@@ -198,14 +198,6 @@ class AudioRenderer internal constructor(
                         }
                         return@synchronized OutputWriteResult(inputBytesWritten = 0)
                     }
-                    val currentVol = if (volume == 0f || !hardwareVolumeApplied) volume else 1f
-                    val boost = normalizationGain
-                    val outputData =
-                        if (currentVol != 1f || boost > 1f) {
-                            applyVolume(data, currentVol, boost)
-                        } else {
-                            data
-                        }
                     val availableBytes =
                         try {
                             line.available()
@@ -217,7 +209,7 @@ class AudioRenderer internal constructor(
                             throw error
                         }
                     val writableBytes =
-                        minOf(outputData.size - offset, availableBytes) / audioFormat.frameSize * audioFormat.frameSize
+                        minOf(data.size - offset, availableBytes) / audioFormat.frameSize * audioFormat.frameSize
                     if (writableBytes == 0) {
                         val bufferedFrames = (line.bufferSize - availableBytes).coerceAtLeast(0) / audioFormat.frameSize
                         val waitMs = (bufferedFrames * 500L / sampleRate).coerceIn(1L, 20L)
@@ -233,8 +225,13 @@ class AudioRenderer internal constructor(
                             positionClock.changeSpeed(writtenFrameCount, outputSpeed)
                             positionSpeed = outputSpeed
                         }
+                        // Scale only the span the line accepts now; waits and partial writes must not rescale the chunk.
+                        val currentVol = if (volume == 0f || !hardwareVolumeApplied) volume else 1f
+                        val boost = normalizationGain
+                        val scaled = currentVol != 1f || boost > 1f
+                        val outputData = if (scaled) applyVolume(data, offset, writableBytes, currentVol, boost) else data
                         try {
-                            line.write(outputData, offset, writableBytes)
+                            line.write(outputData, if (scaled) 0 else offset, writableBytes)
                         } catch (error: Exception) {
                             if (!line.isOpen) {
                                 reopenOutputLineIfClosed()
@@ -359,9 +356,6 @@ class AudioRenderer internal constructor(
 
     private fun writePendingReplayOutput(): Int {
         val chunk = replayOutputChunks.getOrNull(replayOutputChunkIndex) ?: return 0
-        val currentVol = if (volume == 0f || !hardwareVolumeApplied) volume else 1f
-        val boost = normalizationGain
-        val outputData = if (currentVol != 1f || boost > 1f) applyVolume(chunk, currentVol, boost) else chunk
         val availableBytes =
             try {
                 line.available()
@@ -372,11 +366,15 @@ class AudioRenderer internal constructor(
                 }
                 throw error
             }
-        val writableBytes = minOf(outputData.size - replayOutputChunkOffset, availableBytes) / audioFormat.frameSize * audioFormat.frameSize
+        val writableBytes = minOf(chunk.size - replayOutputChunkOffset, availableBytes) / audioFormat.frameSize * audioFormat.frameSize
         if (writableBytes <= 0) return 0
+        val currentVol = if (volume == 0f || !hardwareVolumeApplied) volume else 1f
+        val boost = normalizationGain
+        val scaled = currentVol != 1f || boost > 1f
+        val outputData = if (scaled) applyVolume(chunk, replayOutputChunkOffset, writableBytes, currentVol, boost) else chunk
         val writtenBytes =
             try {
-                line.write(outputData, replayOutputChunkOffset, writableBytes)
+                line.write(outputData, if (scaled) 0 else replayOutputChunkOffset, writableBytes)
             } catch (error: Exception) {
                 if (!line.isOpen) {
                     reopenOutputLineIfClosed()
@@ -450,7 +448,8 @@ class AudioRenderer internal constructor(
         }
         equalizer.processPcm16(equalizerSamples, count, outputBoostDb)
         AudioSpectrumMeter.accept(equalizerSamples, count, channelCount, sampleRate, equalizer.gainReductionDb.toFloat())
-        data.copyInto(equalizerOutput)
+        // The loop below rewrites every whole sample; only a trailing odd byte needs copying.
+        if (data.size % 2 != 0) equalizerOutput[data.size - 1] = data[data.size - 1]
         for (i in 0 until count) {
             equalizerOutput[2 * i] = equalizerSamples[i].toByte()
             equalizerOutput[2 * i + 1] = (equalizerSamples[i].toInt() shr 8).toByte()
@@ -460,20 +459,23 @@ class AudioRenderer internal constructor(
 
     private var volumeBuffer = ByteArray(0)
 
+    /** Scales [length] bytes of [data] from [offset] into a reused buffer that starts at index 0. */
     private fun applyVolume(
         data: ByteArray,
+        offset: Int,
+        length: Int,
         volume: Float,
         boost: Float,
     ): ByteArray {
-        if (volumeBuffer.size != data.size) {
-            volumeBuffer = ByteArray(data.size)
+        if (volumeBuffer.size < length) {
+            volumeBuffer = ByteArray(length)
         }
         val result = volumeBuffer
         var byteIdx = 0
-        val len = data.size - 1
+        val len = length - 1
         while (byteIdx < len) {
-            val low = data[byteIdx].toInt() and 0xFF
-            val high = data[byteIdx + 1].toInt()
+            val low = data[offset + byteIdx].toInt() and 0xFF
+            val high = data[offset + byteIdx + 1].toInt()
             val sample = (high shl 8) or low
             val scaled =
                 (

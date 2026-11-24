@@ -48,20 +48,19 @@ class UnavailablePlaylistTest {
     }
 
     @Test
-    fun capturedGreyedRowsWithoutWatchEndpointsAreUnavailableAndKeepOccurrenceIds() {
+    fun capturedGreyedPlaylistRowsWithoutUpsellRemainPlayableAndKeepOccurrenceIds() {
         for (fixture in listOf("unavailable-playlist.json", "unavailable-playlist-continuation.json")) {
             val rows = fixtureRows(fixture)
             val songs = rows.map { assertNotNull(YouTubeItemParser.parseItem(it) as? SongItem) }
             assertEquals(2, songs.size)
-            assertEquals(listOf(true, false), songs.map { it.isUnavailable })
+            assertTrue(songs.none { it.isUnavailable })
             assertNotNull(songs.first().duration)
-            val playable = songs.filterNot { it.isUnavailable }
             val queue = MusicQueue().apply { setQueue(songs) }
-            assertEquals(playable, queue.items.value)
+            assertEquals(songs, queue.items.value)
             queue.toggleShuffle()
-            assertEquals(playable.toSet(), queue.items.value.toSet())
+            assertEquals(songs.toSet(), queue.items.value.toSet())
             val downloads = IosDownloadQueue("")
-            assertEquals(playable.size, downloads.enqueue(songs, emptySet(), emptyMap(), false, 1L))
+            assertEquals(songs.size, downloads.enqueue(songs, emptySet(), emptyMap(), false, 1L))
             songs.zip(rows).forEach { (song, row) ->
                 val identity =
                     row

@@ -41,31 +41,104 @@ import kotlin.io.encoding.Base64
 import kotlin.time.Clock
 import kotlin.time.Duration.Companion.milliseconds
 
-private val artworkEditionSuffix =
-    Regex(
-        """(?:\s*[-–—]\s*(explicit|clean(?:ed)?)|\s*[\[(]\s*(explicit|clean(?:ed)?)\s*(?:\]|\)))\s*$""",
-        RegexOption.IGNORE_CASE,
-    )
+private fun artworkAlbumSuffix(
+    album: String,
+    endIndex: Int,
+): Pair<Int, String>? {
+    var end = endIndex
+    while (end > 0 && album[end - 1].isWhitespace()) end--
+    if (end == 0) return null
+    val closing = album[end - 1]
+    var start: Int
+    val label: String
+    if (closing == ')' || closing == ']') {
+        val opening = if (closing == ')') '(' else '['
+        var depth = 1
+        start = end - 2
+        while (start >= 0) {
+            when (album[start]) {
+                closing -> depth++
+                opening -> depth--
+            }
+            if (depth == 0) break
+            start--
+        }
+        if (start < 0) return null
+        var contentStart = start + 1
+        while (contentStart < end - 1 && album[contentStart].isWhitespace()) contentStart++
+        label =
+            if (contentStart < end - 1 && album[contentStart] == '+') {
+                "+"
+            } else {
+                album.substring(contentStart, end - 1).trimEnd().lowercase()
+            }
+    } else {
+        var wordStart = end
+        while (wordStart > 0 && album[wordStart - 1].isLetter()) wordStart--
+        if (wordStart == end) return null
+        label = album.substring(wordStart, end).lowercase()
+        start = wordStart
+        while (start > 0 && album[start - 1].isWhitespace()) start--
+        if (start == 0 || album[start - 1] !in "-–—") return null
+        start--
+    }
+    when (label) {
+        "+", "explicit", "clean", "cleaned", "single", "ep" -> Unit
+        else -> return null
+    }
+    while (start > 0 && album[start - 1].isWhitespace()) start--
+    return start to label
+}
+
+private fun stripReleaseSuffixes(name: String): String {
+    var end = name.length
+    while (true) {
+        val (start, label) = artworkAlbumSuffix(name, end) ?: break
+        if (label != "single" && label != "ep") break
+        end = start
+    }
+    return name.substring(0, end).trimEnd()
+}
+
+private fun stripArtworkAlbumNotes(album: String): String {
+    var end = album.length
+    val retainedSuffixes = mutableListOf<IntRange>()
+    while (true) {
+        val (start, label) = artworkAlbumSuffix(album, end) ?: break
+        if (label != "+") retainedSuffixes.add(start until end)
+        end = start
+    }
+    return buildString(album.length) {
+        append(album, 0, end)
+        for (suffix in retainedSuffixes.asReversed()) append(album, suffix.first, suffix.last + 1)
+    }.trim()
+}
 
 internal fun resolveArtworkExplicitness(
     album: String?,
     trackExplicitness: Boolean?,
 ): Boolean? {
     if (album.isNullOrBlank()) return trackExplicitness
-    val edition =
-        artworkEditionSuffix
-            .find(album)
-            ?.groupValues
-            ?.drop(1)
-            ?.firstOrNull(String::isNotBlank)
-    return when {
-        edition.equals("explicit", ignoreCase = true) -> true
-        edition != null -> false
+    val name = stripReleaseSuffixes(stripArtworkAlbumNotes(album))
+    if (name.isBlank()) return trackExplicitness
+    return when (artworkAlbumSuffix(name, name.length)?.second) {
+        "explicit" -> true
+        "clean", "cleaned" -> false
         else -> null
     }
 }
 
-internal fun stripArtworkEditionSuffix(album: String): String = album.replace(artworkEditionSuffix, "").trim()
+internal fun stripArtworkEditionSuffix(album: String): String {
+    val name = album.trim()
+    val withoutRelease = stripReleaseSuffixes(name)
+    val suffix = artworkAlbumSuffix(withoutRelease, withoutRelease.length)
+    val base =
+        when (suffix?.second) {
+            "explicit", "clean", "cleaned" -> withoutRelease.substring(0, suffix.first)
+            else -> withoutRelease
+        }
+    return (base + name.substring(withoutRelease.length)).trim()
+}
 
 internal fun matchesAppleMusicExplicitness(
     trackExplicitness: String?,
@@ -116,7 +189,7 @@ class AnimatedArtworkService internal constructor(
         private const val TAG = "AnimatedArtwork"
         private const val UA = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36"
 
-        private const val CACHE_KEY_VERSION = "v9"
+        private const val CACHE_KEY_VERSION = "v11"
         private const val CACHE_MAX_AGE_SECONDS = 30L * 24 * 60 * 60
         private const val CACHE_MISS_MAX_AGE_SECONDS = 60L
         private const val MAX_COVER_CACHE_ENTRIES = 1_000
@@ -127,6 +200,7 @@ class AnimatedArtworkService internal constructor(
         private const val MAX_HTML_RESPONSE_BYTES = 4 * 1024 * 1024
         private const val MAX_SCRIPT_RESPONSE_BYTES = 16 * 1024 * 1024
         private const val MAX_PLAYLIST_RESPONSE_BYTES = 1024 * 1024
+        private const val MAX_METADATA_CHARS = 4_096
 
         private val titleCleanupPatterns =
             listOf(
@@ -177,11 +251,16 @@ class AnimatedArtworkService internal constructor(
                     continue
                 }
                 val url = entry.url
-                if (url != null && !isTrustedArtworkUrl(url)) {
+                if (url != null && !isTrustedAnimatedArtworkUrl(url)) {
                     droppedUntrusted++
                     continue
                 }
-                cache[key] = entry.copy(tallUrl = entry.tallUrl?.takeIf { isTrustedArtworkUrl(it) })
+                cache[key] =
+                    entry.copy(
+                        tallUrl = entry.tallUrl?.takeIf(::isTrustedAnimatedArtworkUrl),
+                        previewImageUrl = entry.previewImageUrl?.takeIf(::isTrustedAnimatedArtworkUrl),
+                        tallPreviewImageUrl = entry.tallPreviewImageUrl?.takeIf(::isTrustedAnimatedArtworkUrl),
+                    )
             }
             while (cache.size > MAX_COVER_CACHE_ENTRIES) {
                 cache.minByOrNull { it.value.cachedAt }?.key?.let(cache::remove)
@@ -240,7 +319,17 @@ class AnimatedArtworkService internal constructor(
         val cachedAt = (obj["cachedAt"] as? JsonPrimitive)?.content?.toLongOrNull() ?: 0L
         if (cachedAt <= 0L) return null
         val tallUrl = (obj["tallUrl"] as? JsonPrimitive)?.takeUnless { it is JsonNull }?.content?.ifBlank { null }
-        return CacheEntry(url = url, cachedAt = cachedAt, tallUrl = tallUrl)
+        val previewImageUrl = (obj["previewImageUrl"] as? JsonPrimitive)?.takeUnless { it is JsonNull }?.content?.ifBlank { null }
+        val tallPreviewImageUrl = (obj["tallPreviewImageUrl"] as? JsonPrimitive)?.takeUnless { it is JsonNull }?.content?.ifBlank { null }
+        val squareIsTallFallback = (obj["squareIsTallFallback"] as? JsonPrimitive)?.content?.toBooleanStrictOrNull() ?: false
+        return CacheEntry(
+            url = url,
+            cachedAt = cachedAt,
+            tallUrl = tallUrl,
+            previewImageUrl = previewImageUrl,
+            tallPreviewImageUrl = tallPreviewImageUrl,
+            squareIsTallFallback = squareIsTallFallback,
+        )
     }
 
     private suspend fun saveCacheToDisk() {
@@ -249,11 +338,14 @@ class AnimatedArtworkService internal constructor(
             val map =
                 snapshot.mapValues { (_, entry) ->
                     JsonObject(
-                        mapOf(
-                            "url" to (entry.url?.let { JsonPrimitive(it) } ?: JsonNull),
-                            "tallUrl" to (entry.tallUrl?.let { JsonPrimitive(it) } ?: JsonNull),
-                            "cachedAt" to JsonPrimitive(entry.cachedAt),
-                        ),
+                        buildMap {
+                            put("url", entry.url?.let { JsonPrimitive(it) } ?: JsonNull)
+                            put("tallUrl", entry.tallUrl?.let { JsonPrimitive(it) } ?: JsonNull)
+                            put("cachedAt", JsonPrimitive(entry.cachedAt))
+                            entry.previewImageUrl?.let { put("previewImageUrl", JsonPrimitive(it)) }
+                            entry.tallPreviewImageUrl?.let { put("tallPreviewImageUrl", JsonPrimitive(it)) }
+                            if (entry.squareIsTallFallback) put("squareIsTallFallback", JsonPrimitive(true))
+                        },
                     )
                 }
             val encoded = json.encodeToString(JsonObject(map))
@@ -365,6 +457,9 @@ class AnimatedArtworkService internal constructor(
         album: String? = null,
         explicit: Boolean? = null,
     ): AnimatedCoverResult? {
+        if (title.length > MAX_METADATA_CHARS || artist.length > MAX_METADATA_CHARS || (album?.length ?: 0) > MAX_METADATA_CHARS) {
+            return null
+        }
         if (!Settings.shared.enableAnimatedCovers || !Settings.shared.isAnimatedArtworkAllowedOnNetwork()) return null
 
         cacheLoadJob.join()
@@ -382,7 +477,13 @@ class AnimatedArtworkService internal constructor(
                         val url = entry.url
                         if (url != null && isTrustedArtworkUrl(url)) {
                             YtLogger.d(TAG, "Animated artwork cache hit")
-                            return AnimatedCoverResult(url = url, tallUrl = entry.tallUrl)
+                            return AnimatedCoverResult(
+                                url = url,
+                                tallUrl = entry.tallUrl,
+                                previewImageUrl = entry.previewImageUrl,
+                                tallPreviewImageUrl = entry.tallPreviewImageUrl,
+                                squareIsTallFallback = entry.squareIsTallFallback,
+                            )
                         }
                         if (url != null) {
                             YtLogger.w(TAG, "Refusing to serve untrusted cached animated artwork URL")
@@ -396,7 +497,10 @@ class AnimatedArtworkService internal constructor(
         suspend fun cacheResult(
             value: String?,
             tallValue: String? = null,
-        ) = cacheAndSave(cacheKey, value, tallValue, generation)
+            previewImageUrl: String? = null,
+            tallPreviewImageUrl: String? = null,
+            squareIsTallFallback: Boolean = false,
+        ) = cacheAndSave(cacheKey, value, tallValue, previewImageUrl, tallPreviewImageUrl, squareIsTallFallback, generation)
 
         try {
             YtLogger.d(TAG, "Fetching animated artwork")
@@ -433,8 +537,22 @@ class AnimatedArtworkService internal constructor(
                     val tall =
                         if (motionVideo.tallUrl == motionVideo.url) Result.success(mp4Url) else resolveTallVariant(motionVideo.tallUrl)
                     val tallUrl = tall.getOrNull()
-                    if (tall.isSuccess) cacheResult(mp4Url, tallUrl)
-                    return AnimatedCoverResult(url = mp4Url, tallUrl = tallUrl)
+                    if (tall.isSuccess) {
+                        cacheResult(
+                            mp4Url,
+                            tallUrl,
+                            motionVideo.previewImageUrl,
+                            motionVideo.tallPreviewImageUrl,
+                            motionVideo.squareIsTallFallback,
+                        )
+                    }
+                    return AnimatedCoverResult(
+                        url = mp4Url,
+                        tallUrl = tallUrl,
+                        previewImageUrl = motionVideo.previewImageUrl,
+                        tallPreviewImageUrl = motionVideo.tallPreviewImageUrl,
+                        squareIsTallFallback = motionVideo.squareIsTallFallback,
+                    )
                 }
             }
 
@@ -455,6 +573,9 @@ class AnimatedArtworkService internal constructor(
         key: String,
         value: String?,
         tallValue: String?,
+        previewImageUrl: String?,
+        tallPreviewImageUrl: String?,
+        squareIsTallFallback: Boolean,
         generation: Long,
     ) {
         if (value != null && !isTrustedArtworkUrl(value)) {
@@ -464,7 +585,15 @@ class AnimatedArtworkService internal constructor(
         val saved =
             cacheMutex.withLock {
                 if (cacheGeneration != generation) return@withLock false
-                cache[key] = CacheEntry(value, currentTimeSeconds(), tallValue?.takeIf { isTrustedArtworkUrl(it) })
+                cache[key] =
+                    CacheEntry(
+                        url = value,
+                        cachedAt = currentTimeSeconds(),
+                        tallUrl = tallValue?.takeIf(::isTrustedArtworkUrl),
+                        previewImageUrl = previewImageUrl?.takeIf(::isTrustedArtworkUrl),
+                        tallPreviewImageUrl = tallPreviewImageUrl?.takeIf(::isTrustedArtworkUrl),
+                        squareIsTallFallback = squareIsTallFallback,
+                    )
                 while (cache.size > MAX_COVER_CACHE_ENTRIES) {
                     cache.minByOrNull { it.value.cachedAt }?.key?.let(cache::remove)
                 }
@@ -493,22 +622,7 @@ class AnimatedArtworkService internal constructor(
         YtLogger.d(TAG, "Animated artwork URL caches cleared")
     }
 
-    private fun isTrustedArtworkUrl(url: String): Boolean {
-        val parsed =
-            try {
-                URLBuilder().takeFrom(url)
-            } catch (_: Exception) {
-                return false
-            }
-        if (parsed.protocol.name != "https") return false
-        if (!parsed.user.isNullOrEmpty() || !parsed.password.isNullOrEmpty()) return false
-        if (parsed.port != 0 && parsed.port != 443) return false
-        val host = parsed.host.lowercase()
-        return host == "itunes.apple.com" ||
-            host.endsWith(".apple.com") ||
-            host.endsWith(".mzstatic.com") ||
-            host.endsWith(".akamaized.net")
-    }
+    private fun isTrustedArtworkUrl(url: String): Boolean = isTrustedAnimatedArtworkUrl(url)
 
     private fun buildCacheKey(
         title: String,
@@ -517,8 +631,8 @@ class AnimatedArtworkService internal constructor(
         explicit: Boolean? = null,
     ): String {
         val cleanArtist = escapeCacheComponent(artist.lowercase().trim())
-        val cleanAlbum = album?.lowercase()?.trim()
-        val rawTitleNormalized = title.trim().replace(smartQuotePattern, "'").lowercase()
+        val cleanAlbum = normalizeAlbumOrNull(album)
+        val rawTitleNormalized = normalizeTitleText(title)
         val key =
             when {
                 !cleanAlbum.isNullOrBlank() && rawTitleNormalized == cleanTitleText(title) -> {
@@ -552,19 +666,20 @@ class AnimatedArtworkService internal constructor(
     ): List<Long> {
         val cleanTitle = cleanTitleText(title)
         val cleanArtist = normalizeArtist(artist)
-        val cleanAlbum = album?.let { stripArtworkEditionSuffix(normalizeAlbum(it)) }
+        val cleanAlbum = normalizeAlbumOrNull(album)
         val isVariantTitle = isVariantTitle(title, cleanTitle)
-        val albumIsVariant = album != null && cleanTitleText(album) != cleanAlbum
 
         val seen = mutableSetOf<Long>()
         val allResults = mutableListOf<Pair<AniTunesSearchResult, String>>()
 
         fun matchingAlbums(): List<Long> {
-            if (cleanAlbum != null && !isVariantTitle) {
+            if (cleanAlbum != null) {
                 val albumMatches =
                     allResults
                         .filter { (r, _) ->
                             matchesArtist(r, cleanArtist) && (explicit == null || matchesExplicit(r, explicit, true))
+                        }.filter { (r, _) ->
+                            !isVariantTitle || matchesTitle(r, cleanTitle, title)
                         }.filter { (r, _) ->
                             val collectionName = r.collectionName
                             collectionName != null &&
@@ -572,7 +687,7 @@ class AnimatedArtworkService internal constructor(
                                     stripReleaseSuffixes(normalizeAlbum(collectionName)) != cleanTitle ||
                                         stripReleaseSuffixes(cleanAlbum) == cleanTitle
                                 ) &&
-                                albumNamesMatch(collectionName, cleanAlbum, strict = albumIsVariant)
+                                albumNamesMatch(collectionName, cleanAlbum)
                         }
                 if (albumMatches.isNotEmpty()) {
                     val exactAlbumMatches =
@@ -609,6 +724,7 @@ class AnimatedArtworkService internal constructor(
         val hasGoodMatch =
             allResults.any { (r, _) ->
                 matchesArtist(r, cleanArtist) && matchesTitle(r, cleanTitle, title) &&
+                    (cleanAlbum == null || r.collectionName?.let { albumNamesMatch(it, cleanAlbum) } == true) &&
                     (explicit == null || matchesExplicit(r, explicit, cleanAlbum != null))
             }
         if (!hasGoodMatch || allResults.size < 5) {
@@ -638,23 +754,16 @@ class AnimatedArtworkService internal constructor(
 
         val titleMatches =
             artistMatches.filter { (r, _) ->
-                if (isVariantTitle) {
-                    r.trackName.trim().replace(smartQuotePattern, "'").equals(
-                        title.trim().replace(smartQuotePattern, "'"),
-                        ignoreCase = true,
-                    )
-                } else {
-                    matchesTitle(r, cleanTitle, title)
-                }
+                matchesTitle(r, cleanTitle, title)
             }
         val selfTitledTitle =
             if (isVariantTitle) {
-                title.trim().replace(smartQuotePattern, "'").lowercase()
+                normalizeTitleText(title)
             } else {
                 cleanTitle
             }
         val selfTitledMatches = titleMatches.filter { (r, _) -> isSelfTitledRelease(r, selfTitledTitle) }
-        if (selfTitledMatches.isNotEmpty() && (cleanAlbum == null || isVariantTitle)) {
+        if (selfTitledMatches.isNotEmpty() && cleanAlbum == null) {
             YtLogger.d(TAG, "Resolved animated artwork via title match (${selfTitledMatches.size} candidates)")
             return selfTitledMatches.mapNotNull { it.first.collectionId }.distinct().take(MAX_COLLECTION_CANDIDATES)
         }
@@ -806,29 +915,33 @@ class AnimatedArtworkService internal constructor(
         cleanTitle: String,
         rawTitle: String,
     ): Boolean {
-        val resultClean = cleanTitleText(result.trackName)
-        if (resultClean == cleanTitle) return true
-        if (result.trackName.trim().equals(rawTitle.trim(), ignoreCase = true)) return true
-        return false
+        if (normalizeTrackTitle(result.trackName) == normalizeTrackTitle(rawTitle)) return true
+        return !isVariantTitle(rawTitle, cleanTitle) && cleanTitleText(result.trackName) == cleanTitle
     }
+
+    private fun normalizeTitleText(title: String): String =
+        title
+            .trim()
+            .replace(smartQuotePattern, "'")
+            .replace(Regex("""\s+"""), " ")
+            .lowercase()
+
+    private fun normalizeTrackTitle(title: String): String = normalizeTitleText(title).replace('[', '(').replace(']', ')')
 
     private fun isVariantTitle(
         rawTitle: String,
         cleanTitle: String,
     ): Boolean {
-        val rawNormalized = rawTitle.trim().replace(smartQuotePattern, "'").lowercase()
+        val rawNormalized = normalizeTitleText(rawTitle)
         return rawNormalized != cleanTitle
     }
 
     private fun albumNamesMatch(
         itunesAlbum: String,
         targetAlbum: String,
-        strict: Boolean = false,
     ): Boolean {
         val a = stripArtworkEditionSuffix(normalizeAlbum(itunesAlbum))
         val b = stripArtworkEditionSuffix(normalizeAlbum(targetAlbum))
-        if (a == b) return true
-        if (strict) return false
         return stripReleaseSuffixes(a) == stripReleaseSuffixes(b)
     }
 
@@ -838,12 +951,11 @@ class AnimatedArtworkService internal constructor(
     ): Boolean {
         val collectionName = result.collectionName ?: return false
         val base = stripReleaseSuffixes(stripArtworkEditionSuffix(normalizeAlbum(collectionName)))
-        return base == cleanTitle
+        return normalizeTrackTitle(base) == normalizeTrackTitle(cleanTitle)
     }
 
     private fun cleanTitleText(title: String): String {
-        var cleaned = title.trim()
-        cleaned = cleaned.replace(smartQuotePattern, "'")
+        var cleaned = normalizeTitleText(title)
         for (pattern in titleCleanupPatterns) {
             cleaned = cleaned.replace(pattern, "")
         }
@@ -873,27 +985,14 @@ class AnimatedArtworkService internal constructor(
             .firstOrNull()
             ?.trim() ?: artistName.trim().lowercase()
 
-    private fun normalizeAlbum(name: String): String =
-        name
-            .trim()
-            .lowercase()
-            .replace(smartQuotePattern, "'")
-            .replace(Regex("""\s+"""), " ")
+    private fun normalizeAlbumOrNull(album: String?): String? =
+        album?.let { stripArtworkEditionSuffix(normalizeAlbum(it)) }?.takeIf { stripReleaseSuffixes(it).isNotBlank() }
 
-    private fun stripReleaseSuffixes(name: String): String {
-        var stripped = name
-        listOf(
-            Regex("""\s*[-–—]\s*single\s*$"""),
-            Regex("""\s*\(\s*single\s*\)\s*$"""),
-            Regex("""\s*\[\s*single\s*]\s*$"""),
-            Regex("""\s*[-–—]\s*ep\s*$"""),
-            Regex("""\s*\(\s*ep\s*\)\s*$"""),
-            Regex("""\s*\[\s*ep\s*]\s*$"""),
-        ).forEach { regex ->
-            stripped = regex.replace(stripped, "")
-        }
-        return stripped.trim()
-    }
+    private fun normalizeAlbum(name: String): String =
+        normalizeTitleText(name)
+            .let(::stripArtworkAlbumNotes)
+            .replace('[', '(')
+            .replace(']', ')')
 
     private suspend fun getDevToken(country: String): String? {
         val storefront = country.lowercase().takeIf(String::isNotBlank) ?: return null
@@ -1129,21 +1228,53 @@ class AnimatedArtworkService internal constructor(
 
             YtLogger.d(TAG, "editorialVideo keys: ${ev.keys}")
 
-            fun videoUrl(key: String): String? =
-                (ev[key] as? JsonObject)
-                    ?.get("video")
-                    ?.jsonPrimitive
-                    ?.content
-                    ?.takeIf { it.isNotBlank() }
+            fun videoEntry(key: String): JsonObject? =
+                (ev[key] as? JsonObject)?.takeIf {
+                    (it["video"] as? JsonPrimitive)?.content?.isNotBlank() == true
+                }
 
-            val tall = listOf("motionTallVideo3x4", "motionDetailTall").firstNotNullOfOrNull { videoUrl(it) }
-            val square =
-                listOf("motionSquareVideo1x1", "motionDetailSquare").firstNotNullOfOrNull { videoUrl(it) }
-                    ?: tall
-                    ?: ev.keys.firstNotNullOfOrNull { videoUrl(it) }
+            fun videoUrl(entry: JsonObject?): String? = (entry?.get("video") as? JsonPrimitive)?.content?.takeIf { it.isNotBlank() }
+
+            fun previewUrl(
+                entry: JsonObject?,
+                targetWidth: Int,
+                targetHeight: Int,
+            ): String? {
+                val preview = entry?.get("previewFrame") as? JsonObject ?: return null
+                val template = (preview["url"] as? JsonPrimitive)?.content?.takeIf { it.isNotBlank() } ?: return null
+                val sourceWidth = (preview["width"] as? JsonPrimitive)?.content?.toIntOrNull()?.takeIf { it > 0 }
+                val sourceHeight = (preview["height"] as? JsonPrimitive)?.content?.toIntOrNull()?.takeIf { it > 0 }
+                val scale =
+                    if (sourceWidth != null && sourceHeight != null) {
+                        minOf(sourceWidth.toDouble() / targetWidth, sourceHeight.toDouble() / targetHeight).coerceAtMost(1.0)
+                    } else {
+                        1.0
+                    }
+                val resolvedWidth = (targetWidth * scale).toInt().coerceAtLeast(1)
+                val resolvedHeight = (targetHeight * scale).toInt().coerceAtLeast(1)
+                val resolved =
+                    template
+                        .replace("{w}", resolvedWidth.toString())
+                        .replace("{h}", resolvedHeight.toString())
+                        .replace("{c}", "bb")
+                        .replace("{f}", "jpg")
+                return resolved.takeIf(::isTrustedArtworkUrl)
+            }
+
+            val tallEntry = listOf("motionTallVideo3x4", "motionDetailTall").firstNotNullOfOrNull(::videoEntry)
+            val directSquareEntry = listOf("motionSquareVideo1x1", "motionDetailSquare").firstNotNullOfOrNull(::videoEntry)
+            val squareEntry =
+                directSquareEntry
+                    ?: tallEntry
+                    ?: ev.keys.firstNotNullOfOrNull(::videoEntry)
+            val square = videoUrl(squareEntry)
+            val tall = videoUrl(tallEntry)
             if (square != null) {
+                val squareIsTallFallback = directSquareEntry == null && tallEntry != null && squareEntry === tallEntry
+                val squarePreview = if (squareIsTallFallback) null else previewUrl(squareEntry, 768, 768)
+                val tallPreview = previewUrl(tallEntry, 768, 1024)
                 YtLogger.d(TAG, "Found motion video (tall variant: ${tall != null})")
-                return MotionVideos(square, tall)
+                return MotionVideos(square, tall, squarePreview, tallPreview, squareIsTallFallback)
             }
 
             YtLogger.d(TAG, "No video URLs in editorialVideo")
@@ -1260,18 +1391,7 @@ class AnimatedArtworkService internal constructor(
     private fun resolvePlaylistUrl(
         masterUrl: String,
         variant: String,
-    ): String? {
-        if (variant.startsWith("https://")) return variant
-        val match = Regex("^(https://[^/]+)(/.*)?$").find(masterUrl) ?: return null
-        val origin = match.groupValues[1]
-        if (variant.startsWith("/")) return origin + variant
-        val path =
-            match.groupValues
-                .getOrNull(2)
-                .orEmpty()
-                .substringBeforeLast('/', "")
-        return "$origin/$path/$variant".replace(Regex("(?<!:)//+"), "/")
-    }
+    ): String? = resolveAnimatedArtworkPlaylistUrl(masterUrl, variant)
 
     private fun maxDimensionForSetting(resolution: AnimatedCoverResolution): Int =
         when (resolution) {
@@ -1284,14 +1404,53 @@ class AnimatedArtworkService internal constructor(
     private fun currentTimeSeconds(): Long = (Clock.System.now().toEpochMilliseconds() / 1000)
 }
 
+internal fun isTrustedAnimatedArtworkUrl(url: String): Boolean {
+    val parsed =
+        try {
+            URLBuilder().takeFrom(url)
+        } catch (_: Exception) {
+            return false
+        }
+    if (parsed.protocol.name != "https") return false
+    if (!parsed.user.isNullOrEmpty() || !parsed.password.isNullOrEmpty()) return false
+    if (parsed.port != 0 && parsed.port != 443) return false
+    val host = parsed.host.lowercase()
+    return host == "itunes.apple.com" ||
+        host.endsWith(".apple.com") ||
+        host.endsWith(".mzstatic.com") ||
+        host.endsWith(".akamaized.net")
+}
+
+internal fun resolveAnimatedArtworkPlaylistUrl(
+    masterUrl: String,
+    variant: String,
+): String? {
+    if (variant.startsWith("https://")) return variant
+    val match = Regex("^(https://[^/]+)(/.*)?$").find(masterUrl) ?: return null
+    val origin = match.groupValues[1]
+    if (variant.startsWith("/")) return origin + variant
+    val path =
+        match.groupValues
+            .getOrNull(2)
+            .orEmpty()
+            .substringBeforeLast('/', "")
+    return "$origin/$path/$variant".replace(Regex("(?<!:)//+"), "/")
+}
+
 data class AnimatedCoverResult(
     val url: String,
     val tallUrl: String? = null,
+    val previewImageUrl: String? = null,
+    val tallPreviewImageUrl: String? = null,
+    val squareIsTallFallback: Boolean = false,
 )
 
 private class MotionVideos(
     val url: String,
     val tallUrl: String?,
+    val previewImageUrl: String?,
+    val tallPreviewImageUrl: String?,
+    val squareIsTallFallback: Boolean,
 )
 
 data class ArtistArtworkResult(
@@ -1334,6 +1493,9 @@ private data class CacheEntry(
     val url: String? = null,
     val cachedAt: Long = 0L,
     val tallUrl: String? = null,
+    val previewImageUrl: String? = null,
+    val tallPreviewImageUrl: String? = null,
+    val squareIsTallFallback: Boolean = false,
 )
 
 @Serializable
