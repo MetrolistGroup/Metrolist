@@ -102,6 +102,7 @@ internal fun HomeViewModel.HomeUiState.startupSnapshot(): HomeViewModel.HomeUiSt
         sections = sections.ifEmpty { uncategorizedHomeSections(data.orEmpty()) }.bounded(),
         // A continuation from the full feed would skip shelves omitted from this startup snapshot.
         continuation = null,
+        requestedHomeContinuations = emptySet(),
         trending = trending.take(HOME_SNAPSHOT_ITEMS),
         albumCharts = albumCharts.take(HOME_SNAPSHOT_ITEMS),
         quickPicks = quickPicks.take(HOME_SNAPSHOT_ITEMS),
@@ -161,6 +162,7 @@ internal fun HomeViewModel.HomeUiState.primaryHomeContentLoaded(
         isAllContentPending = selectedChip == null,
         chips = chips,
         continuation = null,
+        requestedHomeContinuations = emptySet(),
     )
 
 internal fun List<ArtistTiny>.withFallbackMetadata(fallback: List<ArtistTiny>): List<ArtistTiny> {
@@ -978,6 +980,7 @@ class HomeViewModel(
                                 isLoadingMore = loadingMoods,
                                 chips = homeChipsForSelection(homePageData.chips, _uiState.value.selectedChip),
                                 continuation = homePageData.continuation,
+                                requestedHomeContinuations = emptySet(),
                                 trending =
                                     findSectionsByBrowseId(sections, "FEmusic_charts")
                                         .flatMap { it.items.filterIsInstance<SongItem>() }
@@ -1189,7 +1192,7 @@ class HomeViewModel(
                         val currentState = _uiState.value
                         val merged =
                             (cachedSelectedChipContent?.takeIf { it.selectedChip == currentState.selectedChip } ?: currentState)
-                                .withMergedSections(hydratedNewSections, nextContinuation)
+                                .withMergedSections(hydratedNewSections, nextContinuation, consumedContinuation = continuation)
                         cachedSelectedChipContent = merged
                         merged.selectedChip?.let { chip ->
                             chipContentCache =
@@ -1197,7 +1200,12 @@ class HomeViewModel(
                         }
                         _uiState.value = merged.withoutBlockedContent().copy(isLoadingMore = true)
                     } else {
-                        val merged = (cachedAllContent ?: _uiState.value).withMergedSections(hydratedNewSections, nextContinuation)
+                        val merged =
+                            (cachedAllContent ?: _uiState.value).withMergedSections(
+                                hydratedNewSections,
+                                nextContinuation,
+                                consumedContinuation = continuation,
+                            )
                         cacheAllContentState(merged)
                         _uiState.value = merged.withoutBlockedContent().copy(isLoadingMore = true)
                         appendMissingMainFeedMoods(generation)
@@ -1282,7 +1290,12 @@ class HomeViewModel(
                     val pageMetadata = loadLocalSongMetadata(newSections)
                     if (generation != contentLoadGeneration || _uiState.value.continuation != continuation) return@launch
                     val hydratedNewSections = newSections.withLocalSongMetadata(pageMetadata)
-                    val merged = (cachedAllContent ?: _uiState.value).withMergedSections(hydratedNewSections, nextContinuation)
+                    val merged =
+                        (cachedAllContent ?: _uiState.value).withMergedSections(
+                            hydratedNewSections,
+                            nextContinuation,
+                            consumedContinuation = continuation,
+                        )
                     cacheAllContentState(merged)
                     _uiState.value = merged.withoutBlockedContent().copy(isLoadingMore = true)
                     appendMissingMainFeedMoods(generation)
@@ -1414,7 +1427,9 @@ class HomeViewModel(
     private fun HomeUiState.withMergedSections(
         newSections: List<HomeSection>,
         nextContinuation: String?,
+        consumedContinuation: String? = null,
     ): HomeUiState {
+        val requested = consumedContinuation?.let { requestedHomeContinuations + it } ?: requestedHomeContinuations
         val userPlaylistIds = userPlaylists.map { it.id.removePrefix("VL") }.toSet()
         val allSections =
             mergeAndDeduplicateHomeSections(
@@ -1428,7 +1443,8 @@ class HomeViewModel(
         return copy(
             data = allSections,
             isLoadingMore = false,
-            continuation = nextContinuation,
+            continuation = nextContinuation?.takeUnless(requested::contains),
+            requestedHomeContinuations = requested,
             sections = uncategorizedHomeSections(allSections),
             similarRecommendations = findSimilarRecommendations(allSections),
             trending =
@@ -2015,6 +2031,7 @@ class HomeViewModel(
         val similarRecommendations: List<SimilarRecommendation> = emptyList(),
         val userPlaylists: List<UserPlaylist> = emptyList(),
         val sections: List<HomeSection> = emptyList(),
+        @Transient val requestedHomeContinuations: Set<String> = emptySet(),
     ) {
         fun loadedHomeSongs(): List<SongItem> =
             buildList {
@@ -2125,6 +2142,7 @@ internal fun homeContentForAllSelection(
             podcasts = emptyList(),
             similarRecommendations = emptyList(),
             continuation = null,
+            requestedHomeContinuations = emptySet(),
             sections = emptyList(),
             chipFeeds = emptyList(),
             selectedChip = null,
