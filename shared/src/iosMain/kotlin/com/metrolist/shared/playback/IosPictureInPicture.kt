@@ -71,7 +71,7 @@ private object IosPictureInPictureBridge : NSObject(), AVPictureInPictureControl
                 AVPictureInPictureController(playerLayer = layer).also { pip ->
                     pip.delegate = this
                     readinessObservation =
-                        IosKeyValueObservation(pip, listOf("isPictureInPicturePossible"), scope) { retryPendingRequest() }
+                        IosKeyValueObservation(pip, listOf("pictureInPicturePossible"), scope) { retryPendingRequest() }
                 }
         }
         pendingRequest = true
@@ -85,13 +85,13 @@ private object IosPictureInPictureBridge : NSObject(), AVPictureInPictureControl
         val pip = pictureInPictureController ?: return
         if (!pip.isPictureInPicturePossible() || pip.isPictureInPictureActive()) return
         pendingRequest = false
-        surfacePlayer.pictureInPictureActive.value = true
+        surfacePlayer.setPictureInPictureActive(true)
         startTransportObservation(playbackController, surfacePlayer)
         pip.startPictureInPicture()
     }
 
     override fun pictureInPictureControllerDidStartPictureInPicture(pictureInPictureController: AVPictureInPictureController) {
-        surface?.pictureInPictureActive?.value = true
+        surface?.setPictureInPictureActive(true)
     }
 
     override fun pictureInPictureController(
@@ -99,18 +99,18 @@ private object IosPictureInPictureBridge : NSObject(), AVPictureInPictureControl
         failedToStartPictureInPictureWithError: NSError,
     ) {
         pendingRequest = false
-        surface?.pictureInPictureActive?.value = false
+        surface?.setPictureInPictureActive(false)
         stopTransportObservation()
     }
 
     override fun pictureInPictureControllerWillStopPictureInPicture(pictureInPictureController: AVPictureInPictureController) {
         pendingRequest = false
-        surface?.pictureInPictureActive?.value = false
+        surface?.setPictureInPictureActive(false)
         stopTransportObservation()
     }
 
     override fun pictureInPictureControllerDidStopPictureInPicture(pictureInPictureController: AVPictureInPictureController) {
-        surface?.pictureInPictureActive?.value = false
+        surface?.setPictureInPictureActive(false)
         stopTransportObservation()
     }
 

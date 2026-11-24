@@ -3,6 +3,7 @@ package com.metrolist.shared.playback
 import com.metrolist.shared.api.artwork.CanvasPlaybackWatchdog
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import platform.AVFoundation.AVLayerVideoGravityResizeAspect
 import platform.AVFoundation.AVLayerVideoGravityResizeAspectFill
 import platform.AVFoundation.AVPlayer
@@ -37,11 +38,14 @@ internal class IosMusicVideoSurfacePlayer(
 ) {
     internal val player = AVPlayer()
     val layer = AVPlayerLayer.playerLayerWithPlayer(player)
-    val pictureInPictureActive = MutableStateFlow(false)
+    private val _pictureInPictureActive = MutableStateFlow(false)
+    val pictureInPictureActive: StateFlow<Boolean> get() = _pictureInPictureActive
     internal var onApplicationTransportChange: ((Float) -> Unit)? = null
     private var closed = false
+    private var applicationForeground = false
     private var surfaceGeneration = 0L
     private var attachedSurfaceGeneration: Long? = null
+    private var pendingDetachGeneration: Long? = null
     private val seekLifecycle = MusicVideoSeekLifecycle()
     private val driftRetryPolicy = MusicVideoDriftRetryPolicy(SEEK_POST_SEEK_DRIFT_TOLERANCE_MS, MAX_SLOW_SEEK_CORRECTIONS)
     var driftRecoveryFailed = false
@@ -52,7 +56,7 @@ internal class IosMusicVideoSurfacePlayer(
     val positionSynchronized: Boolean
         get() = seekLifecycle.positionSynchronized
     private val foreground: Boolean
-        get() = seekLifecycle.isForeground || pictureInPictureActive.value
+        get() = applicationForeground || _pictureInPictureActive.value
     private var expectingProgress = false
     private var lastPositionMs: Long? = null
     private var renderedProgress = 0L
@@ -108,7 +112,7 @@ internal class IosMusicVideoSurfacePlayer(
         surfaceVisible: Boolean = true,
     ) {
         if (closed) return
-        if (!surfaceVisible && !pictureInPictureActive.value) {
+        if (!surfaceVisible && !_pictureInPictureActive.value) {
             expectingProgress = false
             watchdog.reset()
             cancelPendingSeek()
@@ -141,11 +145,24 @@ internal class IosMusicVideoSurfacePlayer(
     }
 
     fun setForeground(isForeground: Boolean) {
-        if (closed || seekLifecycle.isForeground == isForeground) return
+        if (closed || applicationForeground == isForeground) return
+        applicationForeground = isForeground
+        updateForegroundState()
+    }
+
+    internal fun setPictureInPictureActive(active: Boolean) {
+        if (closed || _pictureInPictureActive.value == active) return
+        _pictureInPictureActive.value = active
+        updateForegroundState()
+        if (!active) detachAfterPictureInPicture()
+    }
+
+    private fun updateForegroundState() {
         val wasForeground = seekLifecycle.isForeground
-        seekLifecycle.setForeground(isForeground)
-        if (pictureInPictureActive.value) return
-        if (!isForeground) {
+        val nowForeground = foreground
+        seekLifecycle.setForeground(nowForeground)
+        if (closed || wasForeground == nowForeground) return
+        if (!nowForeground) {
             expectingProgress = false
             watchdog.reset()
             cancelPendingSeek()
@@ -154,7 +171,7 @@ internal class IosMusicVideoSurfacePlayer(
             driftRetryPolicy.reset()
             driftRecoveryFailed = false
             pauseForApplication()
-        } else if (!wasForeground && isForeground) {
+        } else {
             userSeekPending = false
             seekCooldownStartedAt = null
             driftRetryPolicy.reset()
@@ -244,6 +261,20 @@ internal class IosMusicVideoSurfacePlayer(
 
     fun detach(surfaceGeneration: Long) {
         if (closed || attachedSurfaceGeneration != surfaceGeneration) return
+        if (_pictureInPictureActive.value) {
+            pendingDetachGeneration = surfaceGeneration
+            return
+        }
+        performDetach(surfaceGeneration)
+    }
+
+    internal fun detachAfterPictureInPicture() {
+        val generation = pendingDetachGeneration ?: return
+        pendingDetachGeneration = null
+        if (!closed && attachedSurfaceGeneration == generation) performDetach(generation)
+    }
+
+    private fun performDetach(surfaceGeneration: Long) {
         attachedSurfaceGeneration = null
         seekLifecycle.setForeground(false)
         expectingProgress = false
@@ -257,6 +288,7 @@ internal class IosMusicVideoSurfacePlayer(
     fun close() {
         if (closed) return
         attachedSurfaceGeneration = null
+        pendingDetachGeneration = null
         seekLifecycle.setForeground(false)
         expectingProgress = false
         cancelPendingSeek()
