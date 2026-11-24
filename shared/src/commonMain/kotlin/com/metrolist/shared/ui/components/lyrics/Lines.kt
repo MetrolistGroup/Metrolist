@@ -448,14 +448,23 @@ fun ActiveLyricsLineContent(
                     remember(displayText, mainStyle, textMeasurer) {
                         textMeasurer.measure(displayText, mainStyle)
                     }
-                val activeWordStart by remember(mainWords) {
+                val hasWordTiming = remember(mainWords) { mainWords?.any { !it.isBackground && !it.isLineTimed } == true }
+                val activeWordStart by remember(mainWords, hasWordTiming, entry.time, lineEndTimeMs, displayText) {
                     derivedStateOf(structuralEqualityPolicy()) {
                         val currentPosition = currentPositionProvider()
-                        mainWords
-                            ?.filterNot { it.isBackground }
-                            ?.takeWhile { currentPosition >= (it.endTime * 1000).toLong() }
-                            ?.sumOf { it.text.length + if (it.hasTrailingSpace) 1 else 0 }
-                            ?: 0
+                        if (hasWordTiming) {
+                            mainWords
+                                ?.filterNot { it.isBackground }
+                                ?.takeWhile { currentPosition >= (it.endTime * 1000).toLong() }
+                                ?.sumOf { it.text.length + if (it.hasTrailingSpace) 1 else 0 }
+                                ?: 0
+                        } else if (lineEndTimeMs != Long.MAX_VALUE && lineEndTimeMs > entry.time) {
+                            // Line-timed lyrics have no word positions, so pan through the line over its duration.
+                            val progress = (currentPosition - entry.time).toFloat() / (lineEndTimeMs - entry.time)
+                            (progress.coerceIn(0f, 1f) * displayText.length).toInt()
+                        } else {
+                            0
+                        }
                     }
                 }
                 LaunchedEffect(activeWordStart, measuredText, scrollState.maxValue) {
