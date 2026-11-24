@@ -25,9 +25,11 @@ import com.metrolist.desktop.ui.components.AlbumContextMenu
 import com.metrolist.desktop.ui.components.ArtistContextMenu
 import com.metrolist.desktop.ui.components.SongContextMenu
 import com.metrolist.desktop.utils.saveImage
+import com.metrolist.shared.api.lastfm.LastFmHistoryCache
 import com.metrolist.shared.db.HistoryAlbumStatistic
 import com.metrolist.shared.db.HistoryArtistStatistic
 import com.metrolist.shared.db.HistoryStatGroup
+import com.metrolist.shared.db.HistoryStatisticsSnapshot
 import com.metrolist.shared.db.MusicDatabase
 import com.metrolist.shared.generated.resources.Res
 import com.metrolist.shared.generated.resources.statistics_load_failed
@@ -112,27 +114,36 @@ fun StatsScreen() {
         var refreshArtistLookups = false
         try {
             val (sinceMs, untilMs) = period.epochRange(dateRange, mode = mode)
-            val snapshot = withContext(Dispatchers.IO) { HistoryRepository.getStatisticsSnapshot(sinceMs, untilMs) }
-            val songs = snapshot.songs
-            val artists = snapshot.artists
-            val albums = snapshot.albums
-            val totals = snapshot.totals
-            topSongs = songs
-            songItems = snapshot.songItems.associateBy { it.id }
-            topArtists = artists
-            refreshArtistLookups = true
-            artistFallbacks =
-                topArtists.associate { artist ->
-                    artist.name to snapshot.songs.firstOrNull { it.artists.contains(artist.name) }?.thumbnailUrl
-                }
-            topAlbums = albums
-            artistCount = artists.size
-            albumCount = albums.size
-            totalScrobbles = totals.playCount
-            totalTimeMs = totals.playTimeMs
-            dailyStats = snapshot.daily.associate { it.bucket to it.playCount }
-            hourlyStats = snapshot.hourly.associate { it.bucket.toInt() to it.playCount }
-            hasLoaded = true
+
+            fun show(snapshot: HistoryStatisticsSnapshot) {
+                val songs = snapshot.songs
+                val artists = snapshot.artists
+                val albums = snapshot.albums
+                val totals = snapshot.totals
+                topSongs = songs
+                songItems = snapshot.songItems.associateBy { it.id }
+                topArtists = artists
+                artistFallbacks =
+                    topArtists.associate { artist ->
+                        artist.name to snapshot.songs.firstOrNull { it.artists.contains(artist.name) }?.thumbnailUrl
+                    }
+                topAlbums = albums
+                artistCount = artists.size
+                albumCount = albums.size
+                totalScrobbles = totals.playCount
+                totalTimeMs = totals.playTimeMs
+                dailyStats = snapshot.daily.associate { it.bucket to it.playCount }
+                hourlyStats = snapshot.hourly.associate { it.bucket.toInt() to it.playCount }
+                hasLoaded = true
+                isLoading = false
+                artistLookupGeneration++
+            }
+            show(withContext(Dispatchers.IO) { HistoryRepository.getStatisticsSnapshot(sinceMs, untilMs) })
+            // Last.fm can take a while for long periods, so local numbers show first.
+            val lastFm = LastFmHistoryCache.listens(sinceMs, untilMs)
+            if (lastFm.isNotEmpty()) {
+                show(withContext(Dispatchers.IO) { HistoryRepository.getStatisticsSnapshot(sinceMs, untilMs, lastFm) })
+            }
         } catch (error: CancellationException) {
             throw error
         } catch (error: Exception) {

@@ -14,10 +14,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.metrolist.shared.api.lastfm.LastFmHistoryCache
 import com.metrolist.shared.db.HistoryStatisticsSnapshot
 import com.metrolist.shared.db.MusicDatabase
 import com.metrolist.shared.db.historyChanges
 import com.metrolist.shared.db.historySong
+import com.metrolist.shared.db.historyStatisticsSnapshot
 import com.metrolist.shared.db.mobileHistoryStatisticsSnapshot
 import com.metrolist.shared.db.statisticsSongs
 import com.metrolist.shared.generated.resources.Res
@@ -39,7 +41,6 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
-import kotlin.time.Clock
 
 @Composable
 internal fun MobileStatisticsScreen(
@@ -72,7 +73,14 @@ internal fun MobileStatisticsScreen(
             isLoading = true
             loadFailed = false
             try {
-                snapshot = database.loadMobileStatistics(period, dateRange = dateRange, mode = mode)
+                val range = period.epochRange(dateRange, mode = mode)
+                snapshot = database.mobileHistoryStatisticsSnapshot(range.first, range.second)
+                isLoading = false
+                // Last.fm can take a while for long periods, so local numbers show first.
+                val lastFm = LastFmHistoryCache.listens(range.first, range.second)
+                if (lastFm.isNotEmpty()) {
+                    snapshot = database.historyStatisticsSnapshot(range.first, range.second, catalogArtistIds = true, lastFm = lastFm)
+                }
             } catch (error: CancellationException) {
                 throw error
             } catch (error: Exception) {
@@ -252,14 +260,4 @@ internal fun MobileStatisticsScreen(
         bottomContentPadding = bottomContentPadding,
         modifier = modifier,
     )
-}
-
-internal suspend fun MusicDatabase.loadMobileStatistics(
-    period: StatisticsPeriod,
-    clock: Clock = Clock.System,
-    dateRange: StatisticsDateRange? = null,
-    mode: StatisticsPeriodMode = StatisticsPeriodMode.CONTINUOUS,
-): HistoryStatisticsSnapshot {
-    val range = period.epochRange(dateRange, clock, mode = mode)
-    return mobileHistoryStatisticsSnapshot(range.first, range.second)
 }

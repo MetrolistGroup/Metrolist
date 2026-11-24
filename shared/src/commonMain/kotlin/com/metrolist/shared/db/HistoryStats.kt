@@ -443,7 +443,8 @@ suspend fun MusicDatabase.historyStatisticsSnapshot(
     untilMs: Long,
     catalogArtistIds: Boolean = false,
     localTime: Boolean = true,
-): HistoryStatisticsSnapshot = statisticsSnapshot(sinceMs, untilMs, catalogArtistIds, localTime, mergeSourcesByDay = false)
+    lastFm: List<LastFmListen> = emptyList(),
+): HistoryStatisticsSnapshot = statisticsSnapshot(sinceMs, untilMs, catalogArtistIds, localTime, mergeSourcesByDay = false, lastFm = lastFm)
 
 suspend fun MusicDatabase.wrappedStatisticsSnapshot(
     sinceMs: Long,
