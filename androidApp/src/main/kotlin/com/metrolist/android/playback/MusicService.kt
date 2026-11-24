@@ -2262,10 +2262,11 @@ class MusicService :
         sessionId: Long,
         request: QueuePlaybackRequest,
     ) {
+        val available = audioCacheManager.cachedSongIds(player.songQueue.value.mapTo(mutableSetOf()) { it.id })
+        // Read the queue after the lookup suspends, so a queue move meanwhile cannot shift the chosen index.
         val songs = player.songQueue.value
         val currentIndex = player.currentMediaItemIndex.value
         val repeatAll = _repeatMode.value == Player.REPEAT_MODE_ALL
-        val available = audioCacheManager.cachedSongIds(songs.mapTo(mutableSetOf()) { it.id })
         val isPlayable: suspend (SongItem) -> Boolean = { song ->
             song.isLocal || song.id.startsWith("local_") || song.id in available
         }
