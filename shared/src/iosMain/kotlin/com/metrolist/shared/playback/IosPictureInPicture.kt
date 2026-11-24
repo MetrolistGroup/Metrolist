@@ -5,8 +5,10 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import platform.AVFoundation.AVPlayer
 import platform.AVFoundation.AVPlayerLayer
@@ -151,16 +153,25 @@ private object IosPictureInPictureBridge : NSObject(), AVPictureInPictureControl
             }
         syncJob =
             scope.launch {
-                playbackController.state.collect { state ->
-                    val positionMap = state.videoPositionMap
-                    val targetPositionMs = positionMap?.mapPosition(state.positionMs) ?: state.positionMs
-                    val positionMapped = positionMap?.containsSourcePosition(state.positionMs) ?: true
-                    surfacePlayer.synchronize(
-                        targetPositionMs,
-                        state.isPlaying && !state.isLoading && state.isVideoModeActive && positionMapped,
-                        state.playbackSpeed,
-                        surfaceVisible = true,
-                    )
+                launch {
+                    playbackController.state.collect { state ->
+                        val positionMap = state.videoPositionMap
+                        val targetPositionMs = positionMap?.mapPosition(state.positionMs) ?: state.positionMs
+                        val positionMapped = positionMap?.containsSourcePosition(state.positionMs) ?: true
+                        surfacePlayer.synchronize(
+                            targetPositionMs,
+                            state.isPlaying && !state.isLoading && state.isVideoModeActive && positionMapped,
+                            state.playbackSpeed,
+                            surfaceVisible = true,
+                        )
+                    }
+                }
+                while (isActive) {
+                    if (surfacePlayer.hasFailed() || surfacePlayer.driftRecoveryFailed) {
+                        playbackController.reportVideoPlaybackFailure()
+                        break
+                    }
+                    delay(250)
                 }
             }
     }
@@ -216,13 +227,11 @@ private object IosPictureInPictureBridge : NSObject(), AVPictureInPictureControl
         if (jumpMs < SEEK_JUMP_TOLERANCE_MS) return
         val sourcePositionMs =
             snapshot.videoPositionMap?.reversed()?.mapPosition(surfacePositionMs) ?: surfacePositionMs
+        val sourceTargetMs = sourcePositionMs.coerceAtLeast(0L)
         forwardingSeek = true
-        playbackController.seekTo(sourcePositionMs.coerceAtLeast(0L))
+        playbackController.seekTo(sourceTargetMs)
         scope.launch {
-            playbackController.state.first {
-                val currentSurfacePositionMs = it.videoPositionMap?.mapPosition(it.positionMs) ?: it.positionMs
-                abs(currentSurfacePositionMs - surfacePositionMs) <= SEEK_TOLERANCE_MS
-            }
+            playbackController.state.first { abs(it.positionMs - sourceTargetMs) <= SEEK_TOLERANCE_MS }
             forwardingSeek = false
         }
     }
