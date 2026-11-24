@@ -298,10 +298,9 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import org.jetbrains.compose.resources.LocalComposeEnvironment
 import org.jetbrains.compose.resources.PluralStringResource
+import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.getPluralString
-import org.jetbrains.compose.resources.getString
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 import org.koin.mp.KoinPlatform
@@ -355,10 +354,17 @@ fun MobileApp(
     LaunchedEffect(snackbarHostState) {
         PlaybackSnackbarEvents.messages.collect { snackbarHostState.showSnackbar(it) }
     }
-    val resourceEnvironment = LocalComposeEnvironment.current
-    LaunchedEffect(snackbarHostState, resourceEnvironment) {
+    var resourceSnackbar by remember { mutableStateOf<Pair<Long, StringResource>?>(null) }
+    LaunchedEffect(snackbarHostState) {
+        var sequence = 0L
         PlaybackSnackbarEvents.resourceMessages.collect { resource ->
-            snackbarHostState.showSnackbar(getString(resourceEnvironment, resource))
+            resourceSnackbar = ++sequence to resource
+        }
+    }
+    resourceSnackbar?.let { (sequence, resource) ->
+        val message = stringResource(resource)
+        LaunchedEffect(snackbarHostState, sequence, message) {
+            snackbarHostState.showSnackbar(message)
         }
     }
     val onSwipeFeedback: (String) -> Unit = { message ->

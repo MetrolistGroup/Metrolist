@@ -303,6 +303,8 @@ class MusicPlayer internal constructor(
     private var isQueueTransitionPending = false
     internal val queueTransitionPending: Boolean
         get() = isQueueTransitionPending
+    internal val crossfadeTransitionPending: Boolean
+        get() = crossfadeStartMs != null || crossfadeAwaitingIncoming
     private var resourceReloadGeneration = 0L
     private var isResourceReloadSeekPending = false
     private var audioProcessingReady = true

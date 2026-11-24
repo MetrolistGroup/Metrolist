@@ -509,7 +509,8 @@ internal class IosPlaybackController(
                 enabled = snapshotFlow { Settings.shared.sponsorBlockEnabled },
                 canSeek = {
                     Settings.shared.sponsorBlockEnabled && !guestLocked &&
-                        !player.queueTransitionPending && pendingPlayback.value == null
+                        !player.queueTransitionPending && !player.crossfadeTransitionPending &&
+                        pendingPlayback.value == null
                 },
                 seekTo = { position -> seekToAutomatic(position) },
                 onSkipped = { PlaybackSnackbarEvents.emit(Res.string.sponsorblock_skipped) },
