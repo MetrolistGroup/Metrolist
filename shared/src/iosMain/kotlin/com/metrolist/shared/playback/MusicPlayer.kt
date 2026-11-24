@@ -301,6 +301,8 @@ class MusicPlayer internal constructor(
     private var didEmitEof = false
     private var pendingEofPlaybackInstanceId: Long? = null
     private var isQueueTransitionPending = false
+    internal val queueTransitionPending: Boolean
+        get() = isQueueTransitionPending
     private var resourceReloadGeneration = 0L
     private var isResourceReloadSeekPending = false
     private var audioProcessingReady = true

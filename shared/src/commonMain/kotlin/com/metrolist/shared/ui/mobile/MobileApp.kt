@@ -298,6 +298,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.jetbrains.compose.resources.LocalComposeEnvironment
 import org.jetbrains.compose.resources.PluralStringResource
 import org.jetbrains.compose.resources.getPluralString
 import org.jetbrains.compose.resources.getString
@@ -354,9 +355,10 @@ fun MobileApp(
     LaunchedEffect(snackbarHostState) {
         PlaybackSnackbarEvents.messages.collect { snackbarHostState.showSnackbar(it) }
     }
-    LaunchedEffect(snackbarHostState) {
+    val resourceEnvironment = LocalComposeEnvironment.current
+    LaunchedEffect(snackbarHostState, resourceEnvironment) {
         PlaybackSnackbarEvents.resourceMessages.collect { resource ->
-            snackbarHostState.showSnackbar(getString(resource))
+            snackbarHostState.showSnackbar(getString(resourceEnvironment, resource))
         }
     }
     val onSwipeFeedback: (String) -> Unit = { message ->
