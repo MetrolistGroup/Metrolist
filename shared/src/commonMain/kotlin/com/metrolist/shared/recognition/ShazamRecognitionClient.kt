@@ -30,7 +30,11 @@ import kotlinx.serialization.json.put
 import org.jetbrains.compose.resources.getString
 import kotlin.random.Random
 import kotlin.time.Clock
+import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.minutes
+import kotlin.time.TimeMark
+import kotlin.time.TimeSource
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
@@ -40,7 +44,7 @@ object ShazamRecognitionClient {
     private val json = Json { ignoreUnknownKeys = true }
     private val client by lazy { createHttpClient() }
     private val mutex = Mutex()
-    private var lastRequestAt = 0L
+    private var lastRequestAt: TimeMark? = null
     private val cache = RecognitionResultCache()
 
     private val userAgents =
@@ -55,18 +59,17 @@ object ShazamRecognitionClient {
         signature: String,
         sampleDurationMs: Long,
     ): Result<RecognitionResult> {
-        cache.get(signature, Clock.System.now().toEpochMilliseconds())?.let { return Result.success(it) }
-
-        mutex.withLock {
-            val elapsed = Clock.System.now().toEpochMilliseconds() - lastRequestAt
-            if (elapsed < MIN_REQUEST_INTERVAL_MS) delay((MIN_REQUEST_INTERVAL_MS - elapsed).milliseconds)
-            lastRequestAt = Clock.System.now().toEpochMilliseconds()
-        }
+        cache.get(signature)?.let { return Result.success(it) }
 
         repeat(3) { attempt ->
+            mutex.withLock {
+                val remaining = lastRequestAt?.let { MIN_REQUEST_INTERVAL_MS.milliseconds - it.elapsedNow() } ?: Duration.ZERO
+                if (remaining > Duration.ZERO) delay(remaining)
+                lastRequestAt = TimeSource.Monotonic.markNow()
+            }
             try {
                 val result = performRecognition(signature, sampleDurationMs)
-                cache.put(signature, result, Clock.System.now().toEpochMilliseconds())
+                cache.put(signature, result)
                 return Result.success(result)
             } catch (e: CancellationException) {
                 throw e
@@ -240,25 +243,32 @@ object ShazamRecognitionClient {
 }
 
 private class RecognitionResultCache {
-    private val entries = mutableMapOf<String, Pair<Long, RecognitionResult>>()
+    private val mutex = Mutex()
+    private val entries = LinkedHashMap<String, Pair<TimeMark, RecognitionResult>>()
 
-    fun get(
-        signature: String,
-        now: Long,
-    ): RecognitionResult? {
-        val (createdAt, result) = entries[signature] ?: return null
-        if (now - createdAt >= 5 * 60 * 1000L) {
-            entries.remove(signature)
-            return null
+    suspend fun get(signature: String): RecognitionResult? =
+        mutex.withLock {
+            val entry = entries[signature] ?: return@withLock null
+            if (entry.first.elapsedNow() >= 5.minutes) {
+                entries.remove(signature)
+                null
+            } else {
+                entry.second
+            }
         }
-        return result
-    }
 
-    fun put(
+    suspend fun put(
         signature: String,
         result: RecognitionResult,
-        now: Long,
-    ) {
-        entries[signature] = now to result
+    ) = mutex.withLock {
+        entries.entries.removeAll { entry -> entry.value.first.elapsedNow() >= 5.minutes }
+        entries[signature] = TimeSource.Monotonic.markNow() to result
+        while (entries.size > MAX_ENTRIES) {
+            entries.remove(entries.keys.first())
+        }
+    }
+
+    private companion object {
+        const val MAX_ENTRIES = 32
     }
 }

@@ -19,6 +19,7 @@ import com.metrolist.shared.generated.resources.recognition_no_match_try_clearer
 import com.metrolist.shared.model.SearchFilter
 import com.metrolist.shared.model.SongItem
 import com.metrolist.shared.recognition.NoRecognitionMatchException
+import com.metrolist.shared.recognition.RecognitionAudio
 import com.metrolist.shared.recognition.RecognitionResult
 import com.metrolist.shared.recognition.RecognitionStatus
 import com.metrolist.shared.recognition.RecognitionUserException
@@ -53,7 +54,7 @@ import kotlin.time.Clock
 object MusicRecognitionService : KoinComponent {
     private const val LOG_TAG = "MusicRecognition"
     private const val INPUT_SAMPLE_RATE = 44_100
-    private const val RECORDING_DURATION_MS = com.metrolist.shared.recognition.RecognitionAudio.RECORDING_DURATION_MS
+    private const val RECORDING_DURATION_MS = RecognitionAudio.RECORDING_DURATION_MS
     private val _status = MutableStateFlow<RecognitionStatus>(RecognitionStatus.Ready)
     val status: StateFlow<RecognitionStatus> = _status.asStateFlow()
     private val _audioLevel = MutableStateFlow(0f)
@@ -104,14 +105,14 @@ object MusicRecognitionService : KoinComponent {
                     return@withContext RecognitionStatus.Ready.also { _status.value = it }
                 }
                 _status.value = RecognitionStatus.Processing
-                val resampled = com.metrolist.shared.recognition.RecognitionAudio.resample16BitMono(
+                val resampled = RecognitionAudio.resample16BitMono(
                     audio,
                     INPUT_SAMPLE_RATE,
-                    com.metrolist.shared.recognition.RecognitionAudio.FINGERPRINT_SAMPLE_RATE,
+                    RecognitionAudio.FINGERPRINT_SAMPLE_RATE,
                 )
                 val signature = ShazamSignatureGenerator.fromI16(resampled)
                 val sampleDurationMs =
-                    (resampled.size / 2) * 1000L / com.metrolist.shared.recognition.RecognitionAudio.FINGERPRINT_SAMPLE_RATE
+                    (resampled.size / 2) * 1000L / RecognitionAudio.FINGERPRINT_SAMPLE_RATE
                 val result = ShazamRecognitionClient.recognize(signature, sampleDurationMs).getOrThrow()
                 if (cancelRequested) {
                     return@withContext RecognitionStatus.Ready.also { _status.value = it }

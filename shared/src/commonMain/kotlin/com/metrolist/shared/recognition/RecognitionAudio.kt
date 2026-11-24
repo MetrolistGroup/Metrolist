@@ -10,10 +10,11 @@ object RecognitionAudio {
         outputRate: Int,
     ): ByteArray {
         if (inputRate == outputRate) return input
-        val inputSamples = ShortArray(input.size / 2) { index ->
-            val offset = index * 2
-            ((input[offset].toInt() and 0xff) or (input[offset + 1].toInt() shl 8)).toShort()
-        }
+        val inputSamples =
+            ShortArray(input.size / 2) { index ->
+                val offset = index * 2
+                ((input[offset].toInt() and 0xff) or (input[offset + 1].toInt() shl 8)).toShort()
+            }
         val ratio = outputRate.toDouble() / inputRate.toDouble()
         val outputSamples = ShortArray((inputSamples.size * ratio).toInt())
         for (index in outputSamples.indices) {

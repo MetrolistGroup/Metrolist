@@ -60,7 +60,7 @@ final class IosRecognitionManager {
 
         Task.detached {
             guard let videoId = try? await Self.resolveVideoId(for: result), !videoId.isEmpty else { return }
-            let trackId = result.trackId.isEmpty ? "\(result.title):\(result.artist)" : result.trackId
+            let trackId = history.trackId
             try? await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
                 IosRecognitionBridge.shared.updateRecognitionVideoId(trackId: trackId, youtubeVideoId: videoId) { error in
                     if let error {
@@ -110,30 +110,30 @@ final class IosRecognitionManager {
         let previousCategory = session.category
         let previousMode = session.mode
         let previousOptions = session.categoryOptions
-        try session.setCategory(.playAndRecord, mode: .measurement, options: [.duckOthers, .defaultToSpeaker])
-        try session.setActive(true, options: [])
+        var didActivate = false
         defer {
-            try? session.setActive(false, options: [.notifyOthersOnDeactivation])
+            if didActivate {
+                try? session.setActive(false, options: [.notifyOthersOnDeactivation])
+            }
             try? session.setCategory(previousCategory, mode: previousMode, options: previousOptions)
         }
-
-        let inputFormat = session.inputFormat(format: .standard)
-        let sampleRate = inputFormat.sampleRate > 0 ? inputFormat.sampleRate : 44_100
-        let format = AVAudioFormat(commonFormat: .pcmFormatInt16, sampleRate: sampleRate, channels: 1, interleaved: true)
-            ?? AVAudioFormat(commonFormat: .pcmFormatInt16, sampleRate: 44_100, channels: 1, interleaved: true)!
+        try session.setCategory(.playAndRecord, mode: .measurement, options: [.duckOthers, .defaultToSpeaker])
+        try session.setActive(true, options: [])
+        didActivate = true
 
         let engine = AVAudioEngine()
         let input = engine.inputNode
+        let inputFormat = input.inputFormat(forBus: 0)
+        let sampleRate = inputFormat.sampleRate > 0 ? inputFormat.sampleRate : 44_100
         let bufferSize: AVAudioFrameCount = 4096
         var collected = Data()
         let maxBytes = Int(sampleRate * 2 * Double(RecognitionAudio.shared.RECORDING_DURATION_MS) / 1000.0)
 
-        input.installTap(onBus: 0, bufferSize: bufferSize, format: format) { buffer, _ in
-            guard let channelData = buffer.int16ChannelData else { return }
-            let frameCount = Int(buffer.frameLength)
-            let byteCount = frameCount * MemoryLayout<Int16>.size
-            let bytes = Data(bytes: channelData[0], count: byteCount)
-            collected.append(bytes)
+        input.installTap(onBus: 0, bufferSize: bufferSize, format: inputFormat) { buffer, _ in
+            let samples = Self.monoInt16Data(buffer)
+            if !samples.isEmpty {
+                collected.append(samples)
+            }
             if collected.count > maxBytes {
                 collected = collected.prefix(maxBytes)
             }
@@ -168,6 +168,55 @@ final class IosRecognitionManager {
         return collected
     }
 
+    private static func monoInt16Data(_ buffer: AVAudioPCMBuffer) -> Data {
+        let frames = Int(buffer.frameLength)
+        let channels = Int(buffer.format.channelCount)
+        guard frames > 0, channels > 0 else { return Data() }
+        var samples = [Int16]()
+        samples.reserveCapacity(frames)
+        switch buffer.format.commonFormat {
+        case .pcmFormatInt16:
+            guard let data = buffer.int16ChannelData else { return Data() }
+            for frame in 0..<frames {
+                var sum = 0
+                for channel in 0..<channels {
+                    sum += Int(data[channel][frame])
+                }
+                samples.append(Int16(clamping: sum / channels))
+            }
+        case .pcmFormatInt32:
+            guard let data = buffer.int32ChannelData else { return Data() }
+            for frame in 0..<frames {
+                var sum = 0
+                for channel in 0..<channels {
+                    sum += Int(data[channel][frame])
+                }
+                samples.append(Int16(clamping: sum / channels / 65536))
+            }
+        case .pcmFormatFloat32:
+            guard let data = buffer.floatChannelData else { return Data() }
+            for frame in 0..<frames {
+                var sum: Float = 0
+                for channel in 0..<channels {
+                    sum += data[channel][frame]
+                }
+                samples.append(Int16((max(-1, min(1, sum / Float(channels))) * 32767).rounded()))
+            }
+        case .pcmFormatFloat64:
+            guard let data = buffer.float64ChannelData else { return Data() }
+            for frame in 0..<frames {
+                var sum: Double = 0
+                for channel in 0..<channels {
+                    sum += data[channel][frame]
+                }
+                samples.append(Int16((max(-1, min(1, sum / Double(channels))) * 32767).rounded()))
+            }
+        default:
+            return Data()
+        }
+        return samples.withUnsafeBytes { Data($0) }
+    }
+
     private func notify(result: RecognitionResult, entryPoint: RecognitionEntryPoint) {
         let payload = RecognitionPayload(result: result, recognizedAtEpochMillis: Int64(Date().timeIntervalSince1970 * 1000))
         NotificationCenter.default.post(
@@ -189,11 +238,11 @@ enum RecognitionManagerError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .alreadyRunning:
-            return nil
+            return "Recognition is already in progress."
         case .microphonePermissionDenied:
-            return nil
+            return "Microphone access is required to recognize music."
         case .failed:
-            return nil
+            return "Recognition failed. Please try again."
         }
     }
 }

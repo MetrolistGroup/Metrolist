@@ -13,6 +13,7 @@ import org.koin.mp.KoinPlatform
 import kotlin.time.Clock
 
 object IosRecognitionBridge {
+    @Throws(Exception::class)
     suspend fun recognize(
         signature: String,
         sampleDurationMs: Long,
@@ -41,10 +42,12 @@ object IosRecognitionBridge {
             liked = result.youtubeVideoId?.let { SongLikeState.isLiked(it) } == true,
         )
 
+    @Throws(Exception::class)
     suspend fun saveRecognitionHistory(history: RecognitionHistory) {
         KoinPlatform.getKoin().get<DatabaseDao>().insert(history)
     }
 
+    @Throws(Exception::class)
     suspend fun updateRecognitionVideoId(
         trackId: String,
         youtubeVideoId: String,

@@ -134,6 +134,8 @@ private func handleRecognitionURL(_ url: URL) -> Bool {
 private struct AppHostView: View {
     @State private var statusBarHidden = false
     @State private var sentryEnabled = UserDefaults.standard.bool(forKey: "sentryEnabled")
+    @State private var recognitionConfirmation = false
+    @State private var recognitionMessage: String?
 
     var body: some View {
         ComposeView()
@@ -158,10 +160,40 @@ private struct AppHostView: View {
                 MainViewControllerKt.handleOpenUrl(url: url.absoluteString)
             }
             .onReceive(NotificationCenter.default.publisher(for: .metrolistRecognitionRequested)) { _ in
-                Task { @MainActor in
-                    _ = try? await IosRecognitionManager.shared.recognize(from: .url)
-                }
+                recognitionConfirmation = true
             }
+            .alert("Recognize Music?", isPresented: $recognitionConfirmation) {
+                Button("Recognize") {
+                    Task { @MainActor in
+                        await runRecognition()
+                    }
+                }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("Record a few seconds of audio to identify the song playing nearby?")
+            }
+            .alert("Recognition", isPresented: Binding(
+                get: { recognitionMessage != nil },
+                set: { presented in
+                    if !presented {
+                        recognitionMessage = nil
+                    }
+                }
+            )) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text(recognitionMessage ?? "")
+            }
+    }
+
+    @MainActor
+    private func runRecognition() async {
+        do {
+            let result = try await IosRecognitionManager.shared.recognize(from: .url)
+            recognitionMessage = "\(result.title) - \(result.artist)"
+        } catch {
+            recognitionMessage = error.localizedDescription
+        }
     }
 
     private func syncSentryConsent() {
