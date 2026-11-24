@@ -175,6 +175,7 @@ import com.metrolist.shared.model.YTItem
 import com.metrolist.shared.model.isAvailableOffline
 import com.metrolist.shared.model.toSongItem
 import com.metrolist.shared.playback.LocalPlayerSession
+import com.metrolist.shared.playback.PlaybackSnackbarEvents
 import com.metrolist.shared.playlist.PlaylistPartiallyUpdatedException
 import com.metrolist.shared.playlist.deleteStoredPlaylist
 import com.metrolist.shared.playlist.renameStoredPlaylist
@@ -350,7 +351,7 @@ fun MobileApp(
     UnavailableSongSnackbar(snackbarHostState)
     ListenTogetherGlobalEvents(listenTogetherManager) { snackbarHostState.showSnackbar(it) }
     LaunchedEffect(snackbarHostState) {
-        com.metrolist.shared.playback.PlaybackSnackbarEvents.messages.collect { snackbarHostState.showSnackbar(it) }
+        PlaybackSnackbarEvents.messages.collect { snackbarHostState.showSnackbar(it) }
     }
     val onSwipeFeedback: (String) -> Unit = { message ->
         snackbarHostState.currentSnackbarData?.dismiss()

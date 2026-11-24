@@ -94,14 +94,12 @@ internal fun SettingsUiRegistryBuilder.registerPlaybackSettings(host: SharedSett
                 settings.audioQuality = it
                 host.onSettingChanged(SettingsChangeEffect.AUDIO, null)
             }
-            if (host.platform != SettingsPlatform.IOS) {
-                switch(
-                    id = "sponsorBlockEnabled",
-                    title = stringResource(Res.string.sponsorblock_podcasts),
-                    description = stringResource(Res.string.sponsorblock_podcasts_description),
-                    checked = settings.sponsorBlockEnabled,
-                ) { settings.sponsorBlockEnabled = it }
-            }
+            switch(
+                id = "sponsorBlockEnabled",
+                title = stringResource(Res.string.sponsorblock_podcasts),
+                description = stringResource(Res.string.sponsorblock_podcasts_description),
+                checked = settings.sponsorBlockEnabled,
+            ) { settings.sponsorBlockEnabled = it }
             switch(
                 id = "skipSilence",
                 title = stringResource(Res.string.skip_silence),

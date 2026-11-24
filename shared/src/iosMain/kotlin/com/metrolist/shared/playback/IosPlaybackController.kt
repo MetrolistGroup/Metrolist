@@ -12,6 +12,8 @@ import com.metrolist.shared.db.entities.RelatedSongMap
 import com.metrolist.shared.db.upsertHistorySong
 import com.metrolist.shared.db.withDatabaseTransaction
 import com.metrolist.shared.deviceconnect.DcScrobbleSession
+import com.metrolist.shared.generated.resources.Res
+import com.metrolist.shared.generated.resources.sponsorblock_skipped
 import com.metrolist.shared.listentogether.ListenTogetherManager
 import com.metrolist.shared.listentogether.listenTogetherControls
 import com.metrolist.shared.model.RadioQueueChip
@@ -25,12 +27,8 @@ import com.metrolist.shared.model.isNonMusicalVideo
 import com.metrolist.shared.model.isPodcast
 import com.metrolist.shared.model.isVideoSong
 import com.metrolist.shared.model.selectRadioQueueChip
-import com.metrolist.shared.generated.resources.Res
-import com.metrolist.shared.generated.resources.sponsorblock_skipped
-import com.metrolist.shared.playback.PlaybackSnackbarEvents
-import com.metrolist.shared.playback.sponsorblock.observeSponsorBlockSkipping
-import org.jetbrains.compose.resources.getString
 import com.metrolist.shared.playback.QUEUE_SOURCE_AUTO_MIX
+import com.metrolist.shared.playback.sponsorblock.observeSponsorBlockSkipping
 import com.metrolist.shared.scrobble.ScrobbleManager
 import com.metrolist.shared.settings.Settings
 import com.metrolist.shared.state.GlobalYouTubeRepository
@@ -90,6 +88,7 @@ import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.longOrNull
+import org.jetbrains.compose.resources.getString
 import platform.Foundation.NSNotificationCenter
 import platform.Foundation.NSOperationQueue
 import platform.UIKit.UIApplication
@@ -513,7 +512,7 @@ internal class IosPlaybackController(
                 seekTo = { position -> seekTo(position) },
                 onSkipped = {
                     scope.launch {
-                        PlaybackSnackbarEvents.emit(getString(com.metrolist.shared.generated.resources.Res.string.sponsorblock_skipped))
+                        PlaybackSnackbarEvents.emit(getString(Res.string.sponsorblock_skipped))
                     }
                 },
             )
