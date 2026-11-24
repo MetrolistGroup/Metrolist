@@ -45,6 +45,9 @@ data class HistoryStatGroup(
     val measuredPlayCount: Int = 0,
 )
 
+/** Last.fm-only rows have no local song to play or open. */
+val HistoryStatGroup.isPlayable: Boolean get() = !songId.startsWith("lastfm:")
+
 data class HistoryArtistCredit(
     val songId: String,
     val id: String,

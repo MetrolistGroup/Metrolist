@@ -31,6 +31,7 @@ import com.metrolist.shared.db.HistoryArtistStatistic
 import com.metrolist.shared.db.HistoryStatGroup
 import com.metrolist.shared.db.HistoryStatisticsSnapshot
 import com.metrolist.shared.db.MusicDatabase
+import com.metrolist.shared.db.isPlayable
 import com.metrolist.shared.generated.resources.Res
 import com.metrolist.shared.generated.resources.statistics_load_failed
 import com.metrolist.shared.generated.resources.statistics_save_image
@@ -206,6 +207,7 @@ fun StatsScreen() {
                             rankedTitle = "${index + 1}. ${item.title}",
                             subtitle = statisticsPlayCountDuration(item.playCount, item.playTimeMs),
                             thumbnailUrl = item.thumbnailUrl,
+                            isClickable = item.isPlayable,
                         )
                     },
                 albums =
@@ -268,7 +270,8 @@ fun StatsScreen() {
                 }
             }
         },
-        onItemMenu = { item ->
+        onItemMenu = menu@{ item ->
+            if (item.id.startsWith("track:") && !item.isClickable) return@menu
             menuJob?.cancel()
             menuJob =
                 scope.launch {

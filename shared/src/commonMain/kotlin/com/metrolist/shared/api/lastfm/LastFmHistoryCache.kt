@@ -6,6 +6,7 @@ import com.metrolist.shared.utils.Logger
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlin.time.Clock
 
 /** Keeps the connected account's scrobbles in memory so statistics period changes only fetch what is missing. */
 object LastFmHistoryCache {
@@ -14,6 +15,7 @@ object LastFmHistoryCache {
     private var sinceMs = Long.MAX_VALUE
     private var untilMs = Long.MIN_VALUE
     private var listens: List<LastFmListen> = emptyList()
+    private var refreshedAtMs = Long.MIN_VALUE
 
     /** Returns an empty list when Last.fm is not connected or the history cannot be loaded. */
     suspend fun listens(
@@ -26,15 +28,20 @@ object LastFmHistoryCache {
             } ?: return emptyList()
         return mutex.withLock {
             try {
+                val now = Clock.System.now().toEpochMilliseconds()
                 if (connected != user || sinceMs < this.sinceMs) {
                     user = null
                     listens = fetch(connected, sinceMs, untilMs)
                     user = connected
                     this.sinceMs = sinceMs
-                    this.untilMs = untilMs
-                } else if (untilMs > this.untilMs) {
-                    listens = listens + fetch(connected, this.untilMs + 1, untilMs)
-                    this.untilMs = untilMs
+                    this.untilMs = minOf(untilMs, now)
+                    refreshedAtMs = now
+                } else if (untilMs > this.untilMs && now - refreshedAtMs >= REFRESH_INTERVAL_MS) {
+                    // Last.fm accepts scrobbles up to two weeks late, so replace that window instead of only appending.
+                    val from = maxOf(this.sinceMs, this.untilMs - LATE_SCROBBLE_WINDOW_MS)
+                    listens = listens.filter { it.timestampMs < from } + fetch(connected, from, untilMs)
+                    this.untilMs = minOf(untilMs, now)
+                    refreshedAtMs = now
                 }
                 listens.filter { it.timestampMs in sinceMs..untilMs }
             } catch (error: CancellationException) {
@@ -53,4 +60,6 @@ object LastFmHistoryCache {
     ) = LastFM.getListeningHistory(GlobalYouTube.client, user, sinceMs, untilMs).getOrThrow()
 
     private const val TAG = "LastFmHistoryCache"
+    private const val REFRESH_INTERVAL_MS = 5 * 60_000L
+    private const val LATE_SCROBBLE_WINDOW_MS = 14 * 24 * 60 * 60_000L
 }
