@@ -151,17 +151,18 @@ object PendingPlaylistAdds {
             }
         }
         if (removals.isNotEmpty()) repository.removePlaylistSongs(remoteId, removals).getOrThrow()
-        // Removing remote copies of a song lowers the copies its queued duplicates still wait for by the same number.
+        // Removing remote copies of a song lowers the copies its queued adds still wait for by the same number. An add that
+        // waits for none after that had its own copy removed as well, so it goes instead of sending the song again.
         val removedCopies = removals.groupingBy { it.second }.eachCount()
         synchronized(lock) {
             write(
-                read().filterNot { it.id in cancelled }.map { entry ->
+                read().filterNot { it.id in cancelled }.mapNotNull { entry ->
                     val target = entry.expectedCount
                     val removed = removedCopies[entry.songId]
-                    if (entry.playlistId != playlistId || target == null || removed == null) {
-                        entry
-                    } else {
-                        entry.copy(expectedCount = (target - removed).coerceAtLeast(1))
+                    when {
+                        entry.playlistId != playlistId || target == null || removed == null -> entry
+                        target > removed -> entry.copy(expectedCount = target - removed)
+                        else -> null
                     }
                 },
             )
