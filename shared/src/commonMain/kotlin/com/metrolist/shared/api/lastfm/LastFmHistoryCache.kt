@@ -36,7 +36,10 @@ object LastFmHistoryCache {
                     this.sinceMs = sinceMs
                     this.untilMs = minOf(untilMs, now)
                     refreshedAtMs = now
-                } else if (untilMs > this.untilMs && now - refreshedAtMs >= REFRESH_INTERVAL_MS) {
+                } else if (untilMs > this.untilMs &&
+                    (this.untilMs < refreshedAtMs - REFRESH_INTERVAL_MS || now - refreshedAtMs >= REFRESH_INTERVAL_MS)
+                ) {
+                    // Throttle only caches that reached their last refresh time; older uncovered ranges are always fetched.
                     // Last.fm accepts scrobbles up to two weeks late, so replace that window instead of only appending.
                     val from = maxOf(this.sinceMs, this.untilMs - LATE_SCROBBLE_WINDOW_MS)
                     listens = listens.filter { it.timestampMs < from } + fetch(connected, from, untilMs)
