@@ -6,6 +6,8 @@ import com.metrolist.shared.model.SearchFilter
 import com.metrolist.shared.model.SongItem
 import com.metrolist.shared.state.GlobalYouTubeRepository
 import com.metrolist.shared.state.SongLikeState
+import com.metrolist.shared.utils.Logger
+import kotlinx.coroutines.CancellationException
 import kotlinx.datetime.Instant
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
@@ -44,7 +46,14 @@ object IosRecognitionBridge {
 
     @Throws(Exception::class)
     suspend fun saveRecognitionHistory(history: RecognitionHistory) {
-        KoinPlatform.getKoin().get<DatabaseDao>().insert(history)
+        try {
+            KoinPlatform.getKoin().get<DatabaseDao>().insert(history)
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: Exception) {
+            // A failed history insert must not hide a valid match from the caller.
+            Logger.w("IosRecognitionBridge", "Failed to save recognized song type=${error::class.simpleName}", error)
+        }
     }
 
     @Throws(Exception::class)
@@ -58,6 +67,8 @@ object IosRecognitionBridge {
     }
 
     suspend fun resolveYoutubeVideoId(result: RecognitionResult): String? {
+        // Shazam's own video ID is authoritative; a search result must not replace it.
+        result.youtubeVideoId?.takeIf { it.isNotBlank() }?.let { return it }
         val query = listOf(result.title, result.artist).filter { it.isNotBlank() }.joinToString(" ")
         if (query.isBlank()) return null
         return try {
