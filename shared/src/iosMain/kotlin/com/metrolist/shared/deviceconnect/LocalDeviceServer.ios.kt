@@ -20,6 +20,9 @@ import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.suspendCancellableCoroutine
+import platform.Network.NW_PARAMETERS_DEFAULT_CONFIGURATION
+import platform.Network.NW_PARAMETERS_DISABLE_PROTOCOL
 import platform.Network.nw_connection_cancel
 import platform.Network.nw_connection_copy_endpoint
 import platform.Network.nw_connection_receive_message
@@ -73,6 +76,8 @@ import platform.darwin.dispatch_semaphore_wait
 import platform.darwin.dispatch_time
 import platform.posix.uint8_tVar
 import kotlin.concurrent.Volatile
+import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
 import platform.posix.free as freeCString
 
 actual class LocalDeviceServer {
@@ -100,7 +105,11 @@ actual class LocalDeviceServer {
                         if (generation == currentGeneration) onFailure(error)
                     },
             )
-        val params = nw_parameters_create_secure_tcp(null, null)
+        val params =
+            nw_parameters_create_secure_tcp(
+                NW_PARAMETERS_DISABLE_PROTOCOL,
+                NW_PARAMETERS_DEFAULT_CONFIGURATION,
+            )
         if (params == null) {
             scope.cancel()
             return 0
@@ -187,6 +196,8 @@ private class IosDeviceChannel(
     private val connection: nw_connection_t,
     private val queue: dispatch_queue_t,
 ) : DeviceChannel {
+    private val lock = SynchronizedObject()
+
     override val remoteHost: String? =
         nw_connection_copy_endpoint(connection)
             ?.let { endpoint ->
@@ -222,7 +233,19 @@ private class IosDeviceChannel(
         val context = nw_content_context_create("dc")
         val metadata = nw_ws_create_metadata(nw_ws_opcode_text)
         nw_content_context_set_metadata_for_protocol(context, metadata)
-        nw_connection_send(connection, data, context, true) { _ -> }
+        suspendCancellableCoroutine<Unit> { continuation ->
+            nw_connection_send(connection, data, context, true) { error ->
+                when {
+                    error != null && continuation.isActive -> {
+                        continuation.resumeWithException(IllegalStateException("Device Connect send failed"))
+                    }
+
+                    continuation.isActive -> {
+                        continuation.resume(Unit)
+                    }
+                }
+            }
+        }
     }
 
     override suspend fun close() {
@@ -231,7 +254,7 @@ private class IosDeviceChannel(
 
     private fun ensureStarted() {
         if (started) return
-        synchronized(this) {
+        synchronized(lock) {
             if (started) return
             started = true
             nw_connection_set_queue(connection, queue)

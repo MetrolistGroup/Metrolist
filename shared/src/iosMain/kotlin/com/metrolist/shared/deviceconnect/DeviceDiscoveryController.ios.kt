@@ -138,12 +138,21 @@ actual class DeviceDiscoveryController actual constructor(
         }
 
         if (added != null && addedKey != null) {
-            val shouldResolve =
+            val (staleDevice, shouldResolve) =
                 synchronized(lock) {
-                    discovering &&
-                        !devicesByService.containsKey(addedKey) &&
-                        !resolversByService.containsKey(addedKey)
+                    val cached = devicesByService[addedKey]
+                    val stale = cached?.takeIf { !it.matches(added) }
+                    if (stale != null) {
+                        resolversByService.remove(addedKey)?.first?.stop()
+                        devicesByService.remove(addedKey)
+                    }
+                    stale to (
+                        discovering &&
+                            (cached == null || stale != null) &&
+                            !resolversByService.containsKey(addedKey)
+                    )
                 }
+            staleDevice?.let(onLost)
             if (shouldResolve) resolve(added, onFound)
         }
     }
@@ -251,6 +260,11 @@ private data class BonjourService(
     val deviceType: DeviceConnectDeviceType,
 )
 
+private fun DiscoveredDevice.matches(service: BonjourService): Boolean =
+    deviceId == service.deviceId &&
+        deviceName == service.deviceName &&
+        deviceType == service.deviceType
+
 private fun bonjourService(result: nw_browse_result_t?): BonjourService? {
     val browseResult = result ?: return null
     val endpoint = nw_browse_result_copy_endpoint(browseResult) ?: return null
@@ -300,7 +314,9 @@ private fun resolvedAddress(service: NSNetService): Pair<String, Int>? {
                     null
                 }
             } ?: continue
-        if (isDeviceConnectLanHost(host)) return host to port
+        if (isDeviceConnectLanHost(host) && !host.startsWith("fe80:", ignoreCase = true)) {
+            return host to port
+        }
     }
     return null
 }
