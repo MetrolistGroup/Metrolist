@@ -21,6 +21,7 @@ import com.metrolist.shared.model.RepeatMode
 import com.metrolist.shared.model.SongItem
 import com.metrolist.shared.model.buildRadioQueueRecommendations
 import com.metrolist.shared.model.canSwitchToMusicVideo
+import com.metrolist.shared.model.isNonMusicalVideo
 import com.metrolist.shared.model.isPodcast
 import com.metrolist.shared.model.isVideoSong
 import com.metrolist.shared.model.selectRadioQueueChip
@@ -1773,10 +1774,10 @@ internal class IosPlaybackController(
             logIosPlaybackError("Failed to record local play for ${song.id}", error)
             Logger.w("IosPlaybackController", "Failed to record local play id=${song.id}")
         }
-        if (Settings.shared.classicRecommendations) recordRelatedSongs(song.id)
+        if (Settings.shared.useLocalHomeRecommendations) recordRelatedSongs(song.id)
     }
 
-    /** Stores the songs YouTube relates to [songId], feeding the classic local Quick picks. */
+    /** Stores the songs YouTube relates to [songId] for history-based Quick picks. */
     private suspend fun recordRelatedSongs(songId: String) {
         // Local files have no YouTube watch id, so their relations cannot be fetched.
         if (songId.startsWith("local_")) return
@@ -1786,7 +1787,7 @@ internal class IosPlaybackController(
             val related =
                 repository()
                     .startRadio(songId)
-                    .filter { it.id.isNotBlank() && it.id != songId }
+                    .filter { it.id.isNotBlank() && it.id != songId && !it.isNonMusicalVideo && !it.isPodcast }
                     .distinctBy { it.id }
                     .take(RELATED_SONGS_LIMIT)
             if (related.isEmpty()) return
