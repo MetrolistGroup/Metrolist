@@ -36,7 +36,7 @@ desugaring = "2.1.5"
 slf4jSimple = "2.1.0-alpha1"
 sqliteJdbc = "3.54.1.0"
 timber = "5.0.1"
-materialKolor = "5.0.1"
+materialKolor = "6.0.0"
 kotlinxSerialization = "1.13.0"
 kotlinxCoroutines = "1.11.0"
 kotlinxDatetime = "0.8.0"
@@ -101,7 +101,7 @@ material3 = { module = "org.jetbrains.compose.material3:material3", version.ref 
 material3-adaptive = { module = "org.jetbrains.compose.material3.adaptive:adaptive", version.ref = "composeMaterial3Adaptive" }
 material3-adaptive-layout = { module = "org.jetbrains.compose.material3.adaptive:adaptive-layout", version.ref = "composeMaterial3Adaptive" }
 material3-adaptive-navigation-suite = { module = "org.jetbrains.compose.material3:material3-adaptive-navigation-suite", version.ref = "composeMaterial3" }
-materialKolor = { module = "com.materialkolor:material-kolor", version.ref = "materialKolor" }
+materialKolor = { module = "com.materialkolor:material-kolor-material3", version.ref = "materialKolor" }
 coil = { module = "io.coil-kt.coil3:coil-compose", version.ref = "coil" }
 coil-network-okhttp = { module = "io.coil-kt.coil3:coil-network-okhttp", version.ref = "coil" }
 shimmer = { module = "com.valentinilk.shimmer:compose-shimmer", version.ref = "shimmer" }

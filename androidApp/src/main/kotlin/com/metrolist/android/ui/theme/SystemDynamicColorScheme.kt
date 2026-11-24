@@ -14,8 +14,8 @@ import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.ui.graphics.Color
-import com.materialkolor.dynamicColorScheme
 import com.materialkolor.dynamiccolor.ColorSpec
+import com.materialkolor.material3.dynamicColorScheme
 import com.metrolist.shared.ui.theme.orIfIllegible
 
 /** Samsung system roles can be stale; use wallpaper tonal palettes instead of Android 14+ roles. */
@@ -25,8 +25,10 @@ internal fun systemDynamicColorScheme(
     darkTheme: Boolean,
 ): ColorScheme {
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE && Build.MANUFACTURER.equals("samsung", ignoreCase = true)) {
+        val primary = Color(context.getColor(android.R.color.system_accent1_500))
         return dynamicColorScheme(
-            primary = Color(context.getColor(android.R.color.system_accent1_500)),
+            seedColor = primary,
+            primary = primary,
             secondary = Color(context.getColor(android.R.color.system_accent2_500)),
             tertiary = Color(context.getColor(android.R.color.system_accent3_500)),
             neutral = Color(context.getColor(android.R.color.system_neutral1_500)),
