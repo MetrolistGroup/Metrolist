@@ -1,6 +1,7 @@
 package com.metrolist.shared.playback
 
 import androidx.compose.runtime.snapshotFlow
+import com.metrolist.shared.equalizer.AmbientNoiseCanceller
 import com.metrolist.shared.equalizer.AudioSpectrumMeter
 import com.metrolist.shared.equalizer.EqualizerProfiles
 import com.metrolist.shared.equalizer.MAX_AUDIO_BOOST_DB
@@ -76,6 +77,7 @@ internal class IosAudioTapState(
     var supportsFloat32 = false
     var samples = FloatArray(0)
     var equalizer: ParametricEqualizer? = null
+    var noiseCanceller: AmbientNoiseCanceller? = null
     var pitchUnit: IosPitchAudioUnit? = null
 
     fun process(sampleCount: Int) {
@@ -86,6 +88,7 @@ internal class IosAudioTapState(
         val gain = normalizationGain.value
         for (index in 0 until sampleCount) samples[index] *= gain
         eq.processPcmFloat(samples, sampleCount, gainDb)
+        noiseCanceller?.processPcmFloat(samples, sampleCount)
         AudioSpectrumMeter.accept(samples, sampleCount, channelCount, sampleRate, eq.gainReductionDb.toFloat())
     }
 
@@ -213,6 +216,7 @@ private fun prepareIosAudioTap(
     state.supportsFloat32 = format.mBitsPerChannel == 32u && format.mFormatFlags and kAudioFormatFlagIsFloat != 0u
     state.samples = FloatArray(frames * channels)
     state.equalizer = ParametricEqualizer(state.sampleRate, channels)
+    state.noiseCanceller = AmbientNoiseCanceller(state.sampleRate, channels)
     val details =
         mapOf(
             "tapSampleRate" to format.mSampleRate.toString(),
@@ -250,6 +254,7 @@ private fun unprepareIosAudioTap(tap: MTAudioProcessingTapRef?) {
     state.maxFrames = 0
     state.samples = FloatArray(0)
     state.equalizer = null
+    state.noiseCanceller = null
 }
 
 @OptIn(ExperimentalForeignApi::class)

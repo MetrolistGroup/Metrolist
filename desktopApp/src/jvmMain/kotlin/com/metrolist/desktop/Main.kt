@@ -177,6 +177,7 @@ import com.metrolist.shared.db.DatabaseDowngradeException
 import com.metrolist.shared.db.MusicDatabase
 import com.metrolist.shared.discord.DiscordRpcManager
 import com.metrolist.shared.discord.observeDiscordInitialization
+import com.metrolist.shared.equalizer.NoiseCancellation
 import com.metrolist.shared.generated.resources.Res
 import com.metrolist.shared.generated.resources.action_login
 import com.metrolist.shared.generated.resources.action_not_now
@@ -196,6 +197,7 @@ import com.metrolist.shared.generated.resources.technical_information
 import com.metrolist.shared.generated.resources.window_title_now_playing
 import com.metrolist.shared.generated.resources.youtube_session_expired_message
 import com.metrolist.shared.generated.resources.youtube_session_expired_title
+import com.metrolist.shared.playback.DesktopNoiseMicrophone
 import com.metrolist.shared.scrobble.ScrobbleSessions
 import com.metrolist.shared.settings.AppLayout
 import com.metrolist.shared.settings.LibraryFilterType
@@ -928,6 +930,7 @@ private fun runDesktopApp(args: Array<String>) {
     installGracefulShutdownSignals()
     DesktopBackupRestoreManager
         .applyPendingRestore(Settings.shared)
+    NoiseCancellation.register(DesktopNoiseMicrophone)
     val settings = Settings.shared
     desktopRenderApiOverride(
         choice = settings.desktopRenderBackend,

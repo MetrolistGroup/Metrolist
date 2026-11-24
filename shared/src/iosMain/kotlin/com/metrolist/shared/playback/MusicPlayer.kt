@@ -71,7 +71,6 @@ import okio.ByteString.Companion.encodeUtf8
 import org.jetbrains.skia.Image
 import org.jetbrains.skia.impl.use
 import platform.AVFAudio.AVAudioSession
-import platform.AVFAudio.AVAudioSessionCategoryPlayback
 import platform.AVFAudio.AVAudioSessionInterruptionNotification
 import platform.AVFAudio.AVAudioSessionInterruptionOptionKey
 import platform.AVFAudio.AVAudioSessionInterruptionOptionShouldResume
@@ -651,11 +650,8 @@ class MusicPlayer internal constructor(
 
     private fun configureAudioSession(activate: Boolean = true) {
         runCatching {
-            val session = AVAudioSession.sharedInstance()
-            // Reapplying the category to an active session can reconfigure the audio route on resume.
-            if (session.category != AVAudioSessionCategoryPlayback) {
-                session.setCategory(AVAudioSessionCategoryPlayback, error = null)
-            }
+            // Keep the microphone route available while noise reduction is capturing.
+            configureIosAudioSession(activate = false)
             if (activate) {
                 activateAudioSession()
                 logAudioSession("iOS audio session activated")

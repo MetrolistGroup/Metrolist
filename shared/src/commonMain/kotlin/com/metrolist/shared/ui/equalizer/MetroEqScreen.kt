@@ -206,6 +206,7 @@ fun MetroEqScreen(
             } else {
                 ProfilesPage(
                     error = importError,
+                    isAudioProcessingAvailable = isAudioProcessingAvailable,
                     onImportFile = pickFile,
                     onSearchAutoEq =
                         if (allowAutoEqSearch) {
@@ -222,6 +223,7 @@ fun MetroEqScreen(
 @Composable
 private fun ProfilesPage(
     error: StringResource?,
+    isAudioProcessingAvailable: Boolean,
     onImportFile: (() -> Unit)?,
     onSearchAutoEq: (() -> Unit)?,
 ) {
@@ -369,6 +371,9 @@ private fun ProfilesPage(
         }
         EqualizerGraph(activeProfile, meter.sampleRate, meter.levels)
         PreampControl(meter.gainReductionDb)
+        if (isAudioProcessingAvailable) {
+            NoiseCancellationControl()
+        }
         Surface(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
             shape = RoundedCornerShape(20.dp),

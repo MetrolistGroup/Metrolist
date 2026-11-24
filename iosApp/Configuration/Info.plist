@@ -67,6 +67,8 @@
         <string>UIInterfaceOrientationLandscapeLeft</string>
         <string>UIInterfaceOrientationLandscapeRight</string>
     </array>
+    <key>NSMicrophoneUsageDescription</key>
+    <string>Metrolist uses the microphone only while noise reduction is enabled in MetroEQ. Microphone audio is processed on this device and is not stored or sent anywhere.</string>
     <key>NSAppTransportSecurity</key>
     <dict>
         <key>NSAllowsArbitraryLoads</key>

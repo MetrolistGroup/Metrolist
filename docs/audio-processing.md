@@ -30,6 +30,14 @@ Android Bluetooth recovery observes the actual AudioTrack route and available ou
 
 The shared 18-band meter captures PCM only while the MetroEQ page requests it. Analysis runs outside the audio callback. Hiding the page stops capture and clears display state. Preserve stereo energy when combining channels.
 
+## Noise reduction
+
+MetroEQ's optional noise reduction is a feed-forward phase inversion. `NoiseCancellation` owns one platform `NoiseMicrophone` and an in-process reference ring; captured samples go only to `AmbientNoiseCanceller` instances in the audio pipelines, never to the network, logs or storage. Each pipeline owns its canceller so filter state and reader cursors stay isolated across players. The canceller limits the reference to the voice band, inverts it, ramps it and adds it to the music PCM after EQ.
+
+Android registers `AndroidNoiseMicrophone` at startup and requests `RECORD_AUDIO` through the activity launcher; permission results and resume refresh the state. Active cancellation disables audio offload because the PCM processor must run. Desktop registers `DesktopNoiseMicrophone` using a local `TargetDataLine`. iOS registers `IosNoiseMicrophone` at startup with an `AVAudioEngine` input tap and requests record permission from MetroEQ. Players keep the PlayAndRecord session category while capture runs, then restore playback.
+
+This is maximum-effort reduction without an error microphone: it partially attenuates ambient sound that is coherent at the microphone and at the ear. Effectiveness depends on microphone position and headphone fit, and it cannot make a noisy environment silent. Strength defaults to maximum and can be lowered if the added signal distorts.
+
 ## Verification
 
 Run affected [platform checks](checks.md#platform-checks). Check audible output on each affected route with effects on and off, speed/pitch changes, silence skipping, crossfade and interruption. iOS HLS needs a separate check for its unavailable-processing state. Backend tests cannot verify offload, Bluetooth output or tap installation on devices.

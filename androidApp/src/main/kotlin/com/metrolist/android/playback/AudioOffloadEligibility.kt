@@ -10,6 +10,7 @@ internal data class AudioOffloadEligibility(
     val pitch: Float,
     val crossfade: Boolean,
     val meterActive: Boolean,
+    val noiseCancellationActive: Boolean,
     val audioResourceAvailable: Boolean,
     val outputFailed: Boolean = false,
 ) {
@@ -20,5 +21,5 @@ internal data class AudioOffloadEligibility(
                 normalizationGain == 1f &&
                 !skipSilence &&
                 speed == 1f && pitch == 1f &&
-                !crossfade && !meterActive
+                !crossfade && !meterActive && !noiseCancellationActive
 }

@@ -35,6 +35,7 @@ import com.metrolist.android.locale.AppLocale
 import com.metrolist.android.onboarding.LegacyInstallMigration
 import com.metrolist.android.onboarding.OnboardingManager
 import com.metrolist.android.onboarding.shouldApplyTvContinuePlaybackDefault
+import com.metrolist.android.playback.AndroidNoiseMicrophone
 import com.metrolist.android.playback.AudioCacheManager
 import com.metrolist.android.playback.DownloadService
 import com.metrolist.android.playback.MusicService
@@ -67,6 +68,7 @@ import com.metrolist.shared.discord.DiscordRpcManager
 import com.metrolist.shared.discord.DiscordTokenStore
 import com.metrolist.shared.discord.observeDiscordInitialization
 import com.metrolist.shared.equalizer.EqualizerProfiles
+import com.metrolist.shared.equalizer.NoiseCancellation
 import com.metrolist.shared.listentogether.network.isAllowedListenTogetherServerUrl
 import com.metrolist.shared.settings.BlockedContent
 import com.metrolist.shared.settings.Settings
@@ -171,6 +173,7 @@ class App :
         val processName = currentProcessName()
         if (processName == packageName) {
             Settings.shared.hasCanvasToggle = true
+            NoiseCancellation.register(AndroidNoiseMicrophone)
             recovery.run { initializeMainProcess() }
             return
         }

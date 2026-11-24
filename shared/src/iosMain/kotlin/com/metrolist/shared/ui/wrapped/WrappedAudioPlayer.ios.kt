@@ -3,6 +3,7 @@
 package com.metrolist.shared.ui.wrapped
 
 import com.metrolist.shared.playback.IosKeyValueObservation
+import com.metrolist.shared.playback.configureIosAudioSession
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
@@ -11,7 +12,6 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.withTimeoutOrNull
 import platform.AVFAudio.AVAudioSession
-import platform.AVFAudio.AVAudioSessionCategoryPlayback
 import platform.AVFAudio.AVAudioSessionInterruptionNotification
 import platform.AVFAudio.AVAudioSessionInterruptionTypeBegan
 import platform.AVFAudio.AVAudioSessionInterruptionTypeKey
@@ -109,9 +109,8 @@ private class IosWrappedAudioPlayer(
                 }
             }
         player.replaceCurrentItemWithPlayerItem(item)
-        val session = AVAudioSession.sharedInstance()
-        if (session.category != AVAudioSessionCategoryPlayback) check(session.setCategory(AVAudioSessionCategoryPlayback, error = null))
-        check(session.setActive(true, error = null))
+        configureIosAudioSession()
+        check(AVAudioSession.sharedInstance().setActive(true, error = null))
         sample()
         check(
             withTimeoutOrNull(120_000) {

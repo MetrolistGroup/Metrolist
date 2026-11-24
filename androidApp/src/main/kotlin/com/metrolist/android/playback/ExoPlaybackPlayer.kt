@@ -56,6 +56,7 @@ import com.metrolist.shared.deviceconnect.DcLocalPlaybackState
 import com.metrolist.shared.deviceconnect.DeviceConnectControllerClock
 import com.metrolist.shared.equalizer.AudioSpectrumMeter
 import com.metrolist.shared.equalizer.EqualizerProfiles
+import com.metrolist.shared.equalizer.NoiseCancellation
 import com.metrolist.shared.model.SongItem
 import com.metrolist.shared.model.isLive
 import com.metrolist.shared.playback.MusicQueue
@@ -979,6 +980,7 @@ class ExoPlaybackPlayer(
                     Settings.shared.audioNormalization to Settings.shared.loudnessLevel,
                 )
             }.combine(AudioSpectrumMeter.hasConsumers) { _, _ -> Unit }
+                .combine(NoiseCancellation.status) { _, _ -> Unit }
                 .collect { applyAudioPreferences() }
         }
         attachPlayerListeners(exo)
@@ -2102,6 +2104,7 @@ class ExoPlaybackPlayer(
                     pitch = parameters.pitch,
                     crossfade = Settings.shared.crossfadeEnabled,
                     meterActive = AudioSpectrumMeter.hasConsumers.value,
+                    noiseCancellationActive = NoiseCancellation.isActive,
                     audioResourceAvailable = resource != null,
                     outputFailed = offloadFailed,
                 ).canOffload

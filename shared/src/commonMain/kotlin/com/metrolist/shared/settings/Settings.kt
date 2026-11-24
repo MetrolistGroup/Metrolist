@@ -141,6 +141,8 @@ import com.metrolist.shared.constants.MinimumSongDurationSecondsKey
 import com.metrolist.shared.constants.MusicVideoCacheJsonKey
 import com.metrolist.shared.constants.MusicVideoPlaybackEnabledKey
 import com.metrolist.shared.constants.MusicVideoQualityKey
+import com.metrolist.shared.constants.NoiseCancellationEnabledKey
+import com.metrolist.shared.constants.NoiseCancellationStrengthKey
 import com.metrolist.shared.constants.PauseOnMuteKey
 import com.metrolist.shared.constants.PendingContinuePlaybackKey
 import com.metrolist.shared.constants.PendingRemoteLibraryRemovalKeysJsonKey
@@ -413,6 +415,8 @@ class Settings(
     var equalizerActiveProfileId by preference(EqualizerActiveProfileIdKey, "")
     var equalizerEnabled by preference(EqualizerEnabledKey, false)
     var audioBoostDb by preference(AudioBoostDbKey, 0f)
+    var noiseCancellationEnabled by preference(NoiseCancellationEnabledKey, false)
+    var noiseCancellationStrength by preference(NoiseCancellationStrengthKey, 1f)
     var playerType by preference(PlayerType.MODERN)
     var miniPlayerType by preference(MiniPlayerType.EXPRESSIVE)
     var useRoundedRectPlayButton by preference(false)

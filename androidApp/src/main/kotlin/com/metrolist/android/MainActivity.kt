@@ -10,6 +10,7 @@ import android.os.Trace
 import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -51,6 +52,7 @@ import com.metrolist.android.listentogether.AndroidListenTogetherManager
 import com.metrolist.android.locale.AppLocale
 import com.metrolist.android.onboarding.OnboardingDestination
 import com.metrolist.android.onboarding.OnboardingScreen
+import com.metrolist.android.playback.AndroidNoiseMicrophone
 import com.metrolist.android.playback.PlayerConnection
 import com.metrolist.android.playback.playbackAudioQuality
 import com.metrolist.android.playback.prefetchIncomingAudio
@@ -64,6 +66,7 @@ import com.metrolist.android.ui.toIncomingDestination
 import com.metrolist.android.utils.CrashHandler
 import com.metrolist.android.utils.isAndroidTv
 import com.metrolist.innertubex.extraction.TokenProvider
+import com.metrolist.shared.equalizer.NoiseCancellation
 import com.metrolist.shared.model.SongItem
 import com.metrolist.shared.settings.LibraryFilterType
 import com.metrolist.shared.settings.Settings
@@ -129,6 +132,10 @@ class MainActivity : ComponentActivity() {
     private var incomingPlaybackSong: Deferred<SongItem>? = null
     private val isInPipModeState = mutableStateOf(false)
     private val navigationRestoration: NavigationRestorationViewModel by viewModels()
+    private val noisePermissionLauncher =
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) {
+            NoiseCancellation.refreshPermission()
+        }
     private lateinit var startupPresentation: StartupPresentation
     private var startupTraceOpen = false
 
@@ -162,10 +169,17 @@ class MainActivity : ComponentActivity() {
             recovery.capture(error)
         }
         super.onCreate(savedInstanceState)
+        AndroidNoiseMicrophone.attach(noisePermissionLauncher)
+        NoiseCancellation.refreshPermission()
         lifecycleScope.launch {
             recovery.report.collect { id -> if (id != null) showStartupRecovery() }
         }
         recovery.run { initializeActivity(savedInstanceState) }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        NoiseCancellation.refreshPermission()
     }
 
     override fun onWindowFocusChanged(hasFocus: Boolean) {

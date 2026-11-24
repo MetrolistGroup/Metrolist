@@ -5,6 +5,7 @@ import androidx.media3.common.C
 import androidx.media3.common.audio.AudioProcessor
 import androidx.media3.common.audio.BaseAudioProcessor
 import androidx.media3.common.util.UnstableApi
+import com.metrolist.shared.equalizer.AmbientNoiseCanceller
 import com.metrolist.shared.equalizer.AudioSpectrumMeter
 import com.metrolist.shared.equalizer.EqualizerConfiguration
 import com.metrolist.shared.equalizer.EqualizerProfile
@@ -23,6 +24,7 @@ internal class EqualizerAudioProcessor(
         this({ EqualizerConfiguration(activeProfile(), outputBoostDb().toDouble()) })
 
     private var equalizer: ParametricEqualizer? = null
+    private var noiseCanceller: AmbientNoiseCanceller? = null
     private var samples = ShortArray(0)
 
     @Volatile private var configuredFormat = AudioProcessor.AudioFormat.NOT_SET
@@ -41,6 +43,7 @@ internal class EqualizerAudioProcessor(
         configuredFormat = inputAudioFormat
         if (inputAudioFormat.encoding != C.ENCODING_PCM_16BIT) return AudioProcessor.AudioFormat.NOT_SET
         equalizer = ParametricEqualizer(inputAudioFormat.sampleRate, inputAudioFormat.channelCount)
+        noiseCanceller = AmbientNoiseCanceller(inputAudioFormat.sampleRate, inputAudioFormat.channelCount)
         return inputAudioFormat
     }
 
@@ -60,6 +63,7 @@ internal class EqualizerAudioProcessor(
         if (eq != null) {
             eq.processPcm16(samples, count, boostDb)
         }
+        noiseCanceller?.processPcm16(samples, count)
         gainReductionDb = eq?.gainReductionDb?.toFloat() ?: 0f
         AudioSpectrumMeter.accept(
             samples,
@@ -75,10 +79,12 @@ internal class EqualizerAudioProcessor(
 
     override fun onFlush(streamMetadata: AudioProcessor.StreamMetadata) {
         equalizer?.reset()
+        noiseCanceller?.reset()
     }
 
     override fun onReset() {
         equalizer = null
+        noiseCanceller = null
         configuredFormat = AudioProcessor.AudioFormat.NOT_SET
         gainReductionDb = 0f
     }

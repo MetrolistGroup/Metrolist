@@ -1,5 +1,6 @@
 package com.metrolist.shared.playback.ffmpeg
 
+import com.metrolist.shared.equalizer.AmbientNoiseCanceller
 import com.metrolist.shared.equalizer.AudioSpectrumMeter
 import com.metrolist.shared.equalizer.EqualizerConfiguration
 import com.metrolist.shared.equalizer.EqualizerProfile
@@ -95,6 +96,7 @@ class AudioRenderer internal constructor(
     private var closed = false
     private var tempoProcessor: AudioTempoProcessor? = null
     private val equalizer = ParametricEqualizer(sampleRate, channelCount)
+    private val noiseCanceller = AmbientNoiseCanceller(sampleRate, channelCount)
     private val positionClock = AudioPositionClock(audioFormat.sampleRate)
     private val silenceSkipper = PcmSilenceSkipper(sampleRate, channelCount)
 
@@ -447,6 +449,7 @@ class AudioRenderer internal constructor(
             equalizerSamples[i] = ((data[2 * i].toInt() and 0xff) or (data[2 * i + 1].toInt() shl 8)).toShort()
         }
         equalizer.processPcm16(equalizerSamples, count, outputBoostDb)
+        noiseCanceller.processPcm16(equalizerSamples, count)
         AudioSpectrumMeter.accept(equalizerSamples, count, channelCount, sampleRate, equalizer.gainReductionDb.toFloat())
         // The loop below rewrites every whole sample; only a trailing odd byte needs copying.
         if (data.size % 2 != 0) equalizerOutput[data.size - 1] = data[data.size - 1]
@@ -507,6 +510,7 @@ class AudioRenderer internal constructor(
             positionSpeed = playbackSpeed
             positionClock.reset(mediaMs, lineFrame, playbackSpeed)
             silenceSkipper.reset()
+            noiseCanceller.reset()
             hasWrittenAudio = false
         }
     }
@@ -558,6 +562,7 @@ class AudioRenderer internal constructor(
             tempoProcessor?.close()
             tempoProcessor = null
             equalizer.reset()
+            noiseCanceller.reset()
             silenceSkipper.reset()
             if (line.isOpen) {
                 line.flush()
