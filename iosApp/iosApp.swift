@@ -3,6 +3,7 @@
  * Licensed under GPL-3.0 | See git history for contributors
  */
 
+import AppIntents
 import AVFoundation
 import BackgroundTasks
 import Combine
@@ -119,6 +120,17 @@ private final class AutomaticBackupAppDelegate: NSObject, UIApplicationDelegate 
     }
 }
 
+private func handleRecognitionURL(_ url: URL) -> Bool {
+    guard url.scheme?.lowercased() == "metrolist" else { return false }
+    let host = url.host?.lowercased() ?? ""
+    let path = url.path.lowercased()
+    if host == "recognize" || path == "/recognize" {
+        NotificationCenter.default.post(name: .metrolistRecognitionRequested, object: nil)
+        return true
+    }
+    return false
+}
+
 private struct AppHostView: View {
     @State private var statusBarHidden = false
     @State private var sentryEnabled = UserDefaults.standard.bool(forKey: "sentryEnabled")
@@ -137,11 +149,18 @@ private struct AppHostView: View {
                 statusBarHidden = (notification.object as? NSNumber)?.boolValue ?? false
             }
             .onOpenURL { url in
+                if handleRecognitionURL(url) { return }
                 MainViewControllerKt.handleOpenUrl(url: url.absoluteString)
             }
             .onContinueUserActivity(NSUserActivityTypeBrowsingWeb) { activity in
                 guard let url = activity.webpageURL else { return }
+                if handleRecognitionURL(url) { return }
                 MainViewControllerKt.handleOpenUrl(url: url.absoluteString)
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .metrolistRecognitionRequested)) { _ in
+                Task { @MainActor in
+                    _ = try? await IosRecognitionManager.shared.recognize(from: .url)
+                }
             }
     }
 

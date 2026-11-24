@@ -18,8 +18,11 @@ import com.metrolist.shared.generated.resources.recognition_network_error
 import com.metrolist.shared.generated.resources.recognition_no_match_try_clearer_section
 import com.metrolist.shared.model.SearchFilter
 import com.metrolist.shared.model.SongItem
+import com.metrolist.shared.recognition.NoRecognitionMatchException
 import com.metrolist.shared.recognition.RecognitionResult
 import com.metrolist.shared.recognition.RecognitionStatus
+import com.metrolist.shared.recognition.RecognitionUserException
+import com.metrolist.shared.recognition.ShazamRecognitionClient
 import com.metrolist.shared.recognition.ShazamSignatureGenerator
 import com.metrolist.shared.state.GlobalYouTubeRepository
 import com.metrolist.shared.state.SongLikeState
@@ -50,8 +53,7 @@ import kotlin.time.Clock
 object MusicRecognitionService : KoinComponent {
     private const val LOG_TAG = "MusicRecognition"
     private const val INPUT_SAMPLE_RATE = 44_100
-    private const val FINGERPRINT_SAMPLE_RATE = 16_000
-    private const val RECORDING_DURATION_MS = 12_000L
+    private const val RECORDING_DURATION_MS = com.metrolist.shared.recognition.RecognitionAudio.RECORDING_DURATION_MS
     private val _status = MutableStateFlow<RecognitionStatus>(RecognitionStatus.Ready)
     val status: StateFlow<RecognitionStatus> = _status.asStateFlow()
     private val _audioLevel = MutableStateFlow(0f)
@@ -102,9 +104,14 @@ object MusicRecognitionService : KoinComponent {
                     return@withContext RecognitionStatus.Ready.also { _status.value = it }
                 }
                 _status.value = RecognitionStatus.Processing
-                val resampled = resample16BitMono(audio, INPUT_SAMPLE_RATE, FINGERPRINT_SAMPLE_RATE)
+                val resampled = com.metrolist.shared.recognition.RecognitionAudio.resample16BitMono(
+                    audio,
+                    INPUT_SAMPLE_RATE,
+                    com.metrolist.shared.recognition.RecognitionAudio.FINGERPRINT_SAMPLE_RATE,
+                )
                 val signature = ShazamSignatureGenerator.fromI16(resampled)
-                val sampleDurationMs = (resampled.size / 2) * 1000L / FINGERPRINT_SAMPLE_RATE
+                val sampleDurationMs =
+                    (resampled.size / 2) * 1000L / com.metrolist.shared.recognition.RecognitionAudio.FINGERPRINT_SAMPLE_RATE
                 val result = ShazamRecognitionClient.recognize(signature, sampleDurationMs).getOrThrow()
                 if (cancelRequested) {
                     return@withContext RecognitionStatus.Ready.also { _status.value = it }
@@ -242,33 +249,4 @@ object MusicRecognitionService : KoinComponent {
         }
     }
 
-    private fun resample16BitMono(
-        input: ByteArray,
-        inputRate: Int,
-        outputRate: Int,
-    ): ByteArray {
-        if (inputRate == outputRate) return input
-        val inputSamples = ShortArray(input.size / 2)
-        ByteBuffer
-            .wrap(input)
-            .order(ByteOrder.LITTLE_ENDIAN)
-            .asShortBuffer()
-            .get(inputSamples)
-        val ratio = outputRate.toDouble() / inputRate.toDouble()
-        val outputSamples = ShortArray((inputSamples.size * ratio).toInt())
-        for (index in outputSamples.indices) {
-            val source = index / ratio
-            val base = source.toInt().coerceIn(0, inputSamples.lastIndex)
-            val next = (base + 1).coerceAtMost(inputSamples.lastIndex)
-            val fraction = source - base
-            outputSamples[index] = (inputSamples[base] * (1.0 - fraction) + inputSamples[next] * fraction).toInt().toShort()
-        }
-        return ByteArray(outputSamples.size * 2).also {
-            ByteBuffer
-                .wrap(it)
-                .order(ByteOrder.LITTLE_ENDIAN)
-                .asShortBuffer()
-                .put(outputSamples)
-        }
-    }
 }
