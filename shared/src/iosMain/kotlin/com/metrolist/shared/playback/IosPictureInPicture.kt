@@ -155,6 +155,16 @@ private object IosPictureInPictureBridge : NSObject(), AVPictureInPictureControl
             scope.launch {
                 launch {
                     playbackController.state.collect { state ->
+                        val surfacePositionMs = surfacePlayer.player.positionMs()
+                        val previousSurfacePositionMs = lastSurfacePositionMs
+                        if (forwardingSeek ||
+                            (
+                                previousSurfacePositionMs != null &&
+                                    abs(surfacePositionMs - previousSurfacePositionMs) >= SEEK_JUMP_TOLERANCE_MS
+                            )
+                        ) {
+                            return@collect
+                        }
                         val positionMap = state.videoPositionMap
                         val targetPositionMs = positionMap?.mapPosition(state.positionMs) ?: state.positionMs
                         val positionMapped = positionMap?.containsSourcePosition(state.positionMs) ?: true
@@ -167,6 +177,7 @@ private object IosPictureInPictureBridge : NSObject(), AVPictureInPictureControl
                     }
                 }
                 while (isActive) {
+                    if (playbackController.pictureInPictureSurface() !== surfacePlayer) break
                     if (surfacePlayer.hasFailed() || surfacePlayer.driftRecoveryFailed) {
                         playbackController.reportVideoPlaybackFailure()
                         break
