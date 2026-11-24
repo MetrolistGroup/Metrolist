@@ -324,10 +324,12 @@ class HomeViewModel(
             ) { useLocal, quickPicks, forgottenFavorites ->
                 if (useLocal) quickPicks to forgottenFavorites else null
             }.distinctUntilChanged()
-                .combine(_uiState.map { it.canRebuildQuickPicks() }.distinctUntilChanged()) { _, ready -> ready }
                 .drop(1)
-                .collectLatest { ready ->
-                    if (ready) rebuildQuickPicks()
+                .collectLatest {
+                    // Keep this change pending when a new load or chip selection supersedes a rebuild.
+                    do {
+                        _uiState.first { it.canRebuildQuickPicks() }
+                    } while (!rebuildQuickPicks())
                 }
         }
         scope.launch {
@@ -1340,10 +1342,10 @@ class HomeViewModel(
     private fun HomeUiState.canRebuildQuickPicks(): Boolean =
         !isLoading && !isRefreshing && !isRevalidating && !isContentLoading && !isAllContentPending && !isLoadingMore
 
-    private suspend fun rebuildQuickPicks() {
+    private suspend fun rebuildQuickPicks(): Boolean {
         val generation = contentLoadGeneration
         val state = _uiState.value
-        if (!state.canRebuildQuickPicks()) return
+        if (!state.canRebuildQuickPicks()) return false
         val selectedChip = state.selectedChip
         val isFiltered = isFilteredHome(selectedChip?.params, selectedChip?.browseId ?: "FEmusic_home")
         // A restored startup snapshot keeps quickPicks separately and may lack
@@ -1392,7 +1394,7 @@ class HomeViewModel(
         if (generation != contentLoadGeneration || !updated.canRebuildQuickPicks() ||
             updated.selectedChip != selectedChip || updated.quickPicks != publishedQuickPicks
         ) {
-            return
+            return false
         }
         if (isFiltered) {
             cachedSelectedChipContent = updated
@@ -1402,6 +1404,7 @@ class HomeViewModel(
             cacheAllContentState(updated)
         }
         saveLastHomePage(updated)
+        return true
     }
 
     // The mode change applies to the cached All feed too; rebuild its picks so
