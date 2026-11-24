@@ -653,8 +653,13 @@ fun YTGridItem(
                 color = MaterialTheme.colorScheme.onSurface,
                 style = if (largeText) MaterialTheme.typography.titleMedium else MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.Medium,
-                maxLines = 1,
-                softWrap = false,
+                maxLines =
+                    if ((item is SongItem || item is EpisodeItem) && Settings.shared.multilineSongTitles) {
+                        3
+                    } else {
+                        1
+                    },
+                softWrap = !((item is SongItem || item is EpisodeItem) && Settings.shared.multilineSongTitles),
                 overflow = TextOverflow.Ellipsis,
                 textAlign = TextAlign.Start,
                 modifier = Modifier.fillMaxWidth(),

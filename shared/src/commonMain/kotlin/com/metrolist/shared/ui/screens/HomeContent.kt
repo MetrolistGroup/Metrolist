@@ -1021,6 +1021,11 @@ private fun HomeGallery(
         with(LocalDensity.current) {
             MaterialTheme.typography.bodyMedium.lineHeight.toDp() * 3 +
                 MaterialTheme.typography.bodySmall.lineHeight.toDp() +
+                if (shelf.items.any { it is EpisodeItem }) {
+                    MaterialTheme.typography.labelSmall.lineHeight.toDp()
+                } else {
+                    0.dp
+                } +
                 16.dp
         }
     val effectiveRowHeight =

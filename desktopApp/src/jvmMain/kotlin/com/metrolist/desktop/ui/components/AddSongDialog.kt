@@ -235,7 +235,7 @@ private fun AddSongResultRow(
             Column(Modifier.weight(1f)) {
                 Text(
                     song.title,
-                    maxLines = 1,
+                    maxLines = if (Settings.shared.multilineSongTitles) 3 else 1,
                     overflow = TextOverflow.Ellipsis,
                     style = MaterialTheme.typography.titleMedium,
                 )

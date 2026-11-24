@@ -41,6 +41,7 @@ import com.metrolist.shared.generated.resources.Res
 import com.metrolist.shared.generated.resources.delete
 import com.metrolist.shared.generated.resources.edit
 import com.metrolist.shared.generated.resources.more_options
+import com.metrolist.shared.settings.Settings
 import com.metrolist.shared.ui.components.images.AsyncImage
 import com.metrolist.shared.ui.icons.MetrolistIcons
 import com.metrolist.shared.ui.menu.groupedMenuItemShapes
@@ -138,7 +139,7 @@ fun HistoryEntryRow(
                     title,
                     style = MaterialTheme.typography.titleSmall,
                     color = MaterialTheme.colorScheme.onSurface,
-                    maxLines = 1,
+                    maxLines = if (Settings.shared.multilineSongTitles) 3 else 1,
                     overflow = TextOverflow.Ellipsis,
                 )
                 Text(
