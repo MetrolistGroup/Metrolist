@@ -255,7 +255,9 @@ fun PlaylistScreen(
     val isEditablePlaylist =
         playlistInfo?.canEdit == true &&
             playlistInfo?.id !in setOf("liked", "downloaded", "LP_LIKED", "LP_DOWNLOADED")
-    val showRecommendations = isEditablePlaylist && !isLoading && page?.hasMore != true && page?.isOffline != true
+    val hideRecommendations = Settings.shared.hidePlaylistRecommendations
+    val showRecommendations =
+        !hideRecommendations && isEditablePlaylist && !isLoading && page?.hasMore != true && page?.isOffline != true
     var remoteSuggestions by remember(playlistId) { mutableStateOf<YouTubeRepository.PlaylistSuggestions?>(null) }
     var refreshedSuggestions by remember(playlistId) { mutableStateOf<List<SongItem>?>(null) }
     var shownSuggestionIds by remember(playlistId) { mutableStateOf(emptySet<String>()) }
@@ -266,6 +268,7 @@ fun PlaylistScreen(
     val suggestionCandidates = remoteSuggestions?.songs.orEmpty() + suggestions
     val displayedSuggestions =
         when {
+            hideRecommendations -> emptyList()
             showRecommendations -> playlistRecommendationBatch(refreshedSuggestions ?: suggestionCandidates, durationSongs)
             !isEditablePlaylist -> suggestions
             else -> emptyList()

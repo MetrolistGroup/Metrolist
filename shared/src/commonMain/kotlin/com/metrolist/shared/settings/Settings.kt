@@ -97,6 +97,7 @@ import com.metrolist.shared.constants.HiddenHomeItemsJsonKey
 import com.metrolist.shared.constants.HiddenHomeUndoHintShownKey
 import com.metrolist.shared.constants.HiddenLibraryUndoHintShownKey
 import com.metrolist.shared.constants.HideNonMusicalVideosKey
+import com.metrolist.shared.constants.HidePlaylistRecommendationsKey
 import com.metrolist.shared.constants.HideRecentSearchesKey
 import com.metrolist.shared.constants.HideShortSongsKey
 import com.metrolist.shared.constants.HistoryPlaylistsEnabledKey
@@ -327,6 +328,7 @@ class Settings(
     var hideVideoSongs by preference(false)
     var hideNonMusicalVideos by preference(HideNonMusicalVideosKey, false)
     var hidePodcasts by preference(false)
+    var hidePlaylistRecommendations by preference(HidePlaylistRecommendationsKey, false)
     var hideShortSongs by preference(HideShortSongsKey, false)
     var minimumSongDurationSeconds by preference(MinimumSongDurationSecondsKey, 30)
     var blockAiSlopArtists by preference(BlockAiSlopArtistsKey, true)

@@ -204,6 +204,14 @@ internal fun SettingsUiRegistryBuilder.registerContentSettings(host: SharedSetti
                 BlockedContent.contentFiltersChanged()
                 host.onSettingChanged(SettingsChangeEffect.CONTENT, null)
             }
+            switch(
+                id = "hidePlaylistRecommendations",
+                title = stringResource(Res.string.hide_playlist_recommendations),
+                description = stringResource(Res.string.hide_playlist_recommendations_desc),
+                checked = settings.hidePlaylistRecommendations,
+            ) {
+                settings.hidePlaylistRecommendations = it
+            }
         }
         val artistIconSourceChoices = host.hostChoices[SettingsHostChoice.ARTIST_ICON_SOURCE].orEmpty()
         val artistBannerSourceChoices = host.hostChoices[SettingsHostChoice.ARTIST_BANNER_SOURCE].orEmpty()
