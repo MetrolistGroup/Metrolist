@@ -1,5 +1,6 @@
 package com.metrolist.shared.playlist
 
+import androidx.compose.runtime.snapshotFlow
 import com.metrolist.shared.api.PlaylistNotFoundException
 import com.metrolist.shared.api.YouTubeRepository
 import com.metrolist.shared.auth.YouTubeSyncState
@@ -22,12 +23,13 @@ import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import kotlin.random.Random
 import kotlin.time.Clock
 import kotlin.time.Duration.Companion.minutes
 
@@ -75,17 +77,44 @@ object PendingPlaylistAdds {
         playlistId: String,
         songId: String,
         allowDuplicate: Boolean,
-    ) {
-        synchronized(lock) {
-            val entries = read()
-            val id = (entries.maxOfOrNull { it.id } ?: 0L) + 1L
-            write(entries + PendingPlaylistAdd(id, currentLibraryAccountKey(), playlistId, songId, allowDuplicate))
-        }
+    ): Long {
+        val id =
+            synchronized(lock) {
+                val entries = read()
+                // A random ID is never reissued, so a sync pass that still holds a cleared entry cannot touch a new one.
+                val id = generateSequence { Random.nextLong(1L, Long.MAX_VALUE) }.first { candidate -> entries.none { it.id == candidate } }
+                write(entries + PendingPlaylistAdd(id, currentLibraryAccountKey(), playlistId, songId, allowDuplicate))
+                id
+            }
         additions.update { it + 1L }
+        return id
     }
 
-    internal fun songIds(playlistId: String): Set<String> =
-        synchronized(lock) { read() }.filter { it.playlistId == playlistId }.mapTo(mutableSetOf()) { it.songId }
+    internal fun cancel(id: Long) = remove(id)
+
+    // Drops a queued add that was never sent, so removing the song from the playlist needs no YouTube item ID.
+    internal fun cancelUnsent(
+        playlistId: String,
+        songId: String,
+    ): Boolean =
+        synchronized(lock) {
+            val entries = read()
+            val unsent = entries.lastOrNull { it.playlistId == playlistId && it.songId == songId && it.expectedCount == null }
+            if (unsent != null) write(entries - unsent)
+            unsent != null
+        }
+
+    // Copies of each song the local playlist keeps beyond those YouTube lists until their queued adds are confirmed.
+    internal fun unconfirmedCopies(
+        playlistId: String,
+        remoteCounts: Map<String, Int>,
+    ): Map<String, Int> =
+        synchronized(lock) { read() }
+            .filter { entry ->
+                val copies = remoteCounts[entry.songId] ?: 0
+                entry.playlistId == playlistId && (entry.expectedCount?.let { copies < it } ?: (entry.allowDuplicate || copies == 0))
+            }.groupingBy { it.songId }
+            .eachCount()
 
     fun clear() {
         synchronized(lock) { write(emptyList()) }
@@ -96,7 +125,9 @@ object PendingPlaylistAdds {
         coroutineScope {
             val wake = Channel<Unit>(Channel.CONFLATED)
             launch {
-                combine(additions, PlaybackNetworkStateStore.state) { _, _ -> }.drop(1).collect { wake.trySend(Unit) }
+                // Switching back to an account with queued adds must wake the loop as well.
+                combine(additions, PlaybackNetworkStateStore.state, snapshotFlow { currentLibraryAccountKey() }) { _, _, _ -> }
+                    .collect { wake.trySend(Unit) }
             }
             while (true) {
                 val waiting =
@@ -110,7 +141,7 @@ object PendingPlaylistAdds {
                         YtLogger.w(TAG, "Pending playlist sync failed type=${error::class.simpleName}")
                         true
                     }
-                // A new addition or connection retries at once; songs YouTube has not confirmed retry every minute.
+                // A new addition, connection or account retries at once; unconfirmed songs retry every minute.
                 if (waiting) {
                     withTimeoutOrNull(RETRY_INTERVAL) { wake.receive() }
                 } else {
@@ -137,22 +168,42 @@ object PendingPlaylistAdds {
                 entries.forEach { remove(it.id) }
                 continue
             }
-            // A song taken out of the local playlist again before it reached YouTube needs no send.
-            val active = mutableListOf<PendingPlaylistAdd>()
-            for (entry in entries) {
-                if (dao.checkInPlaylist(playlistId, entry.songId) > 0) active += entry else remove(entry.id)
-            }
+            // Checked under the add lock, so an add whose local row is not committed yet is never taken for removed.
+            val active =
+                playlistAddMutex.withLock {
+                    entries.filter { entry ->
+                        val listedLocally = dao.checkInPlaylist(playlistId, entry.songId) > 0
+                        if (!listedLocally) remove(entry.id)
+                        listedLocally
+                    }
+                }
             if (active.isEmpty()) continue
-            val listed = remoteSongCounts(repository, remoteId) ?: return true
+            val listed = remoteSongCounts(repository, remoteId)
+            if (listed == null) {
+                // A playlist YouTube cannot list waits on its own, so it does not hold back the other playlists.
+                if (!PlaybackNetworkStateStore.current.connected) return true
+                active.forEach { postpone(it.id) }
+                continue
+            }
+            // Each queued copy of a song needs its own target, including adds postponed or sent in an earlier pass.
+            val reserved =
+                queued
+                    .filter { it.playlistId == playlistId && it.expectedCount != null }
+                    .groupBy { it.songId }
+                    .mapValuesTo(mutableMapOf()) { (_, adds) -> adds.maxOf { checkNotNull(it.expectedCount) } }
             val sent = mutableListOf<Pair<PendingPlaylistAdd, Int>>()
             for (entry in active) {
                 val copies = listed[entry.songId] ?: 0
-                val expected = entry.expectedCount ?: if (entry.allowDuplicate) copies + 1 else 1
+                val expected =
+                    entry.expectedCount ?: if (entry.allowDuplicate) maxOf(copies, reserved[entry.songId] ?: 0) + 1 else 1
+                reserved[entry.songId] = maxOf(reserved[entry.songId] ?: 0, expected)
                 // YouTube already lists the copies this add needs, from before or from an earlier send.
                 if (copies >= expected) {
                     remove(entry.id)
                     continue
                 }
+                // Only the account that queued the add may send it.
+                if (currentLibraryAccountKey() != entry.accountKey) return true
                 // Recorded before sending, so a lost response, a failed read-back or a later failure cannot send it twice.
                 if (entry.expectedCount == null) markExpected(entry.id, expected)
                 val failure =
@@ -185,7 +236,12 @@ object PendingPlaylistAdds {
             }
             if (sent.isEmpty()) continue
             // Reading the playlist back verifies the adds; one YouTube lists too few copies of is sent again later.
-            val verified = remoteSongCounts(repository, remoteId) ?: return true
+            val verified = remoteSongCounts(repository, remoteId)
+            if (verified == null) {
+                if (!PlaybackNetworkStateStore.current.connected) return true
+                sent.forEach { (entry, _) -> postpone(entry.id) }
+                continue
+            }
             sent.forEach { (entry, expected) -> if ((verified[entry.songId] ?: 0) >= expected) remove(entry.id) else postpone(entry.id) }
             PlaylistChanges.notifyChanged(remoteId)
         }

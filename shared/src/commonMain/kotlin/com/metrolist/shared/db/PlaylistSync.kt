@@ -105,25 +105,6 @@ suspend fun MusicDatabase.cacheRemotePlaylist(
             .playlistSongs(existing?.id ?: requestedId)
             .first()
             .map { it.map }
-    // Songs added while YouTube was unreachable stay listed until their pending add reaches it.
-    val pendingSongIds = PendingPlaylistAdds.songIds(existing?.id ?: requestedId) - songs.mapTo(mutableSetOf()) { it.id }
-    val pendingMappings = existingMappings.filter { it.songId in pendingSongIds }
-    val entity =
-        (existing ?: PlaylistEntity(id = requestedId, name = playlist.title, bookmarkedAt = null)).copy(
-            name = playlist.title,
-            browseId = (existing?.browseId ?: requestedId).removePrefix("VL"),
-            thumbnailUrl = playlist.thumbnail.takeUnless { it == playlist.customThumbnail } ?: existing?.thumbnailUrl,
-            isEditable = playlist.canEdit,
-            remoteSongCount = songs.size + pendingMappings.size,
-            description = playlist.description,
-            playEndpointParams = playlist.playEndpointParams,
-            radioEndpointParams = playlist.radioEndpointParams,
-            remoteHeader = playlist,
-            lastUpdateTime = Clock.System.now().toLocalDateTime(TimeZone.UTC),
-            isAutoSync = true,
-        )
-    dao.upsert(entity)
-    dao.clearPlaylist(entity.id)
     val existingById = existingMappings.associateBy { it.id }
     val existingBySetVideoId = existingMappings.mapNotNull { m -> m.setVideoId?.let { it to m } }.toMap()
     val matches = mutableMapOf<Int, PlaylistSongMap>()
@@ -144,6 +125,34 @@ suspend fun MusicDatabase.cacheRemotePlaylist(
             }
         }
     }
+    // Local copies of songs whose queued adds YouTube has not confirmed yet stay listed until it does.
+    val matchedIds = matches.values.mapTo(mutableSetOf()) { it.id }
+    val unconfirmed =
+        PendingPlaylistAdds.unconfirmedCopies(existing?.id ?: requestedId, songs.groupingBy { it.id }.eachCount()).toMutableMap()
+    val pendingMappings = mutableListOf<PlaylistSongMap>()
+    for (mapping in existingMappings) {
+        val left = unconfirmed[mapping.songId] ?: 0
+        if (left > 0 && mapping.id !in matchedIds) {
+            pendingMappings += mapping
+            unconfirmed[mapping.songId] = left - 1
+        }
+    }
+    val entity =
+        (existing ?: PlaylistEntity(id = requestedId, name = playlist.title, bookmarkedAt = null)).copy(
+            name = playlist.title,
+            browseId = (existing?.browseId ?: requestedId).removePrefix("VL"),
+            thumbnailUrl = playlist.thumbnail.takeUnless { it == playlist.customThumbnail } ?: existing?.thumbnailUrl,
+            isEditable = playlist.canEdit,
+            remoteSongCount = songs.size + pendingMappings.size,
+            description = playlist.description,
+            playEndpointParams = playlist.playEndpointParams,
+            radioEndpointParams = playlist.radioEndpointParams,
+            remoteHeader = playlist,
+            lastUpdateTime = Clock.System.now().toLocalDateTime(TimeZone.UTC),
+            isAutoSync = true,
+        )
+    dao.upsert(entity)
+    dao.clearPlaylist(entity.id)
     songs.forEachIndexed { index, song ->
         dao.upsertHistorySong(song)
         val existingMapping = matches[index]
