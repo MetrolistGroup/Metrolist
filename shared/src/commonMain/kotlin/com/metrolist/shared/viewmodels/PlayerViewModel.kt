@@ -1256,6 +1256,11 @@ class PlayerViewModel(
         _uiState.value = _uiState.value.copy(queueCollapseRequestId = _uiState.value.queueCollapseRequestId + 1)
     }
 
+    fun requestPlayerOverlayDismiss() {
+        _uiState.value =
+            _uiState.value.copy(overlayDismissRequestId = _uiState.value.overlayDismissRequestId + 1)
+    }
+
     fun setSubtitleActive(active: Boolean) {
         _uiState.value = _uiState.value.copy(isSubtitleActive = active)
     }
@@ -2111,6 +2116,7 @@ class PlayerViewModel(
         val isFullscreen: Boolean = false,
         val isQueueVisible: Boolean = false,
         val queueCollapseRequestId: Long = 0L,
+        val overlayDismissRequestId: Long = 0L,
         val isVideoAvailable: Boolean = false,
         val isSubtitleActive: Boolean = false,
         val mvVideoId: String? = null,

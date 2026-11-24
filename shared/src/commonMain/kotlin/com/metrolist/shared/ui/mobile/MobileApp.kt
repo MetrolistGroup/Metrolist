@@ -469,6 +469,7 @@ fun MobileApp(
         latestPictureInPictureRestoreRegistration {
             playerViewModel.setLyricsVisible(false)
             playerViewModel.requestQueueSheetCollapse()
+            playerViewModel.requestPlayerOverlayDismiss()
             if (routeStack.lastOrNull()?.route == MobileRoute.Wrapped) routeStack.removeAt(routeStack.lastIndex)
             setPlayerVisible(true)
         }

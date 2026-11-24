@@ -586,6 +586,14 @@ fun PlayerScreen(
     var showPlayerMenu by remember { mutableStateOf(false) }
     var showSongDetails by remember { mutableStateOf(false) }
     var showSleepTimerDialog by remember { mutableStateOf(false) }
+    val overlayDismissRequestId = uiState.overlayDismissRequestId
+    LaunchedEffect(overlayDismissRequestId) {
+        if (overlayDismissRequestId > 0L) {
+            showPlayerMenu = false
+            showSongDetails = false
+            showSleepTimerDialog = false
+        }
+    }
     var showLyricsMenu by remember { mutableStateOf(false) }
     var showLyricsOffsetEditor by rememberSaveable(currentSong?.id) { mutableStateOf(false) }
     val hapticManager = rememberMetrolistHaptics()

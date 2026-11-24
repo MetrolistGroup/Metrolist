@@ -91,6 +91,13 @@ private object IosPictureInPictureBridge : NSObject(), AVPictureInPictureControl
         val playbackController = controller ?: return
         val surfacePlayer = surface ?: return
         val pip = pictureInPictureController ?: return
+        // A queued tap predates the current player state; do not start PiP if playback or the
+        // registered video surface changed while the layer was becoming available.
+        val state = playbackController.state.value
+        if (!state.isPlaying || !state.isVideoModeActive || playbackController.pictureInPictureSurface() !== surfacePlayer) {
+            pendingRequest = false
+            return
+        }
         if (!pip.isPictureInPicturePossible() || pip.isPictureInPictureActive()) return
         pendingRequest = false
         surfacePlayer.setPictureInPictureActive(true)
@@ -167,6 +174,14 @@ private object IosPictureInPictureBridge : NSObject(), AVPictureInPictureControl
                         }
                         val positionMap = state.videoPositionMap
                         val positionMapped = positionMap?.containsSourcePosition(state.positionMs) ?: true
+                        val playing = state.isPlaying && !state.isLoading && state.isVideoModeActive
+                        if (positionMap?.isPastLastSegment(state.positionMs) == true) {
+                            // The mapped video is at EOF and AVKit would only offer replay. Hold its
+                            // transport just before the end so Pause still reaches the audible outro.
+                            val transportPositionMs = surfacePlayer.synchronizePastVideoEnd(playing, state.playbackSpeed)
+                            if (transportPositionMs != null) lastSurfacePositionMs = transportPositionMs
+                            return@collect
+                        }
                         // An unmapped audio-side gap has no video target; let the retained player free-run
                         // so its transport stays actionable while the audible track keeps playing.
                         val targetPositionMs =
@@ -175,16 +190,11 @@ private object IosPictureInPictureBridge : NSObject(), AVPictureInPictureControl
                             } else {
                                 surfacePositionMs
                             }
-                        val playing = state.isPlaying && !state.isLoading && state.isVideoModeActive
-                        // A mapped target past its last segment has reached video EOF; progress cannot resume,
-                        // so the watchdog must not treat the remaining audio-only tail as a stall.
-                        val shouldExpectProgress = playing && positionMap?.isPastLastSegment(state.positionMs) != true
                         surfacePlayer.synchronize(
                             targetPositionMs,
                             playing,
                             state.playbackSpeed,
                             surfaceVisible = true,
-                            shouldExpectProgress = shouldExpectProgress,
                         )
                     }
                 }

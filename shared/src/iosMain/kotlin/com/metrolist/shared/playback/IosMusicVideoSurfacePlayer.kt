@@ -17,6 +17,7 @@ import platform.AVFoundation.AVURLAsset
 import platform.AVFoundation.cancelPendingSeeks
 import platform.AVFoundation.currentItem
 import platform.AVFoundation.currentTime
+import platform.AVFoundation.duration
 import platform.AVFoundation.muted
 import platform.AVFoundation.pause
 import platform.AVFoundation.rate
@@ -70,6 +71,7 @@ internal class IosMusicVideoSurfacePlayer(
     private var endObserver: Any? = null
     private var didFail = false
     private var didEnd = false
+    private var pastEndSeekPending = false
 
     init {
         player.muted = true
@@ -168,6 +170,34 @@ internal class IosMusicVideoSurfacePlayer(
         } else if (!playing && player.rate != 0f) {
             pauseForApplication()
         }
+    }
+
+    internal fun synchronizePastVideoEnd(
+        playing: Boolean,
+        playbackSpeed: Float,
+    ): Long? {
+        if (closed) return null
+        expectingProgress = false
+        watchdog.reset()
+        if (!playing) {
+            pauseForApplication()
+            return null
+        }
+        val durationSeconds = player.currentItem?.let { CMTimeGetSeconds(it.duration) } ?: return null
+        if (!durationSeconds.isFinite() || durationSeconds <= 0.0) return null
+        val holdPositionMs = (durationSeconds * 1000.0 - OUTRO_TRANSPORT_MARGIN_MS).toLong().coerceAtLeast(0L)
+        val positionMs = (CMTimeGetSeconds(player.currentTime()) * 1000.0).toLong().coerceAtLeast(0L)
+        if (positionMs >= holdPositionMs && !pastEndSeekPending) {
+            pastEndSeekPending = true
+            clearAutomaticStop()
+            val target = CMTimeMakeWithSeconds(holdPositionMs / 1000.0, 600)
+            val zero = CMTimeMakeWithSeconds(0.0, 600)
+            player.seekToTime(target, toleranceBefore = zero, toleranceAfter = zero) { _ ->
+                pastEndSeekPending = false
+            }
+        }
+        if (player.rate != playbackSpeed) setRateForApplication(playbackSpeed)
+        return holdPositionMs
     }
 
     fun setForeground(isForeground: Boolean) {
@@ -316,6 +346,7 @@ internal class IosMusicVideoSurfacePlayer(
         if (closed) return
         attachedSurfaceGeneration = null
         pendingDetachGeneration = null
+        pastEndSeekPending = false
         seekLifecycle.setForeground(false)
         expectingProgress = false
         cancelPendingSeek()
@@ -349,6 +380,7 @@ internal class IosMusicVideoSurfacePlayer(
         const val SEEK_USER_TARGET_CHANGE_TOLERANCE_MS = 1_500L
         const val SEEK_RETRY_COOLDOWN_MS = 2_000L
         const val MAX_SLOW_SEEK_CORRECTIONS = 2
+        const val OUTRO_TRANSPORT_MARGIN_MS = 2_000L
     }
 
     private fun cancelPendingSeek() {
