@@ -244,12 +244,12 @@ class ParametricEqualizer(
         return if (sample < 0.0) -compressed else compressed
     }
 
-    /** Continuous at full scale: valid PCM is unchanged and isolated overshoot is absorbed. */
+    /** Continuous and monotonic at full scale: valid PCM is unchanged and overshoot saturates upward. */
     private fun saturateOvershoot(sample: Double): Double {
         val magnitude = abs(sample)
         if (magnitude <= 1.0) return sample
         val headroom = 1.0 - LIMITER_CEILING
-        val compressed = LIMITER_CEILING + headroom * exp(-(magnitude - 1.0) / headroom)
+        val compressed = 1.0 + headroom * (1.0 - exp(-(magnitude - 1.0) / headroom))
         return if (sample < 0.0) -compressed else compressed
     }
 
