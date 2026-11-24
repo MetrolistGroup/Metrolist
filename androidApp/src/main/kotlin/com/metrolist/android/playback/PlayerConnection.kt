@@ -262,7 +262,9 @@ class PlayerConnection(
 
     private val _bufferedPosition = MutableStateFlow(0L)
     override val bufferedPosition: StateFlow<Long> = _bufferedPosition.asStateFlow()
-    private var storedSongFraction = 0f
+
+    // Kept with the resource it describes, so a new track never shows the stored share of the previous one.
+    private var storedSong: Pair<PlaybackResource, Float>? = null
 
     private val _duration = MutableStateFlow(0L)
     override val duration: StateFlow<Long> = _duration.asStateFlow()
@@ -645,10 +647,10 @@ class PlayerConnection(
                             cacheableAudioResource(resource)?.let(DirectPlaybackCache::coverage)?.map { if (it >= 1f) 1f else 0f }
                                 ?: flowOf(0f)
                         }
-                    }
+                    }.map { fraction -> resource?.let { it to fraction } }
                 }.distinctUntilChanged()
                 .collect {
-                    storedSongFraction = it
+                    storedSong = it
                     updateProgress()
                 }
         }
@@ -701,7 +703,7 @@ class PlayerConnection(
 
                     // In audio mode the buffered track shows how far the song plays without the network: the player's buffer,
                     // or all of it once the song is stored.
-                    else -> maxOf(buffered, storedSongFraction)
+                    else -> maxOf(buffered, storedSong?.takeIf { it.first === _currentPlaybackResource.value }?.second ?: 0f)
                 }
         } else {
             _progress.value = 0f
