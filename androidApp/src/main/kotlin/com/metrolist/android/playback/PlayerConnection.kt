@@ -7,6 +7,7 @@ import android.content.ServiceConnection
 import android.os.Build
 import android.os.IBinder
 import android.widget.Toast
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.media3.common.Player
 import com.metrolist.android.R
@@ -35,6 +36,7 @@ import com.metrolist.shared.playback.PlayerSession
 import com.metrolist.shared.playback.QUEUE_SOURCE_ADDED_MANUALLY
 import com.metrolist.shared.playback.QueueRemoval
 import com.metrolist.shared.playback.SleepTimerState
+import com.metrolist.shared.playback.ffmpeg.DirectPlaybackCache
 import com.metrolist.shared.playback.isRecommendationGeneratedQueueSource
 import com.metrolist.shared.playback.isRecommendedQueueSource
 import com.metrolist.shared.playback.shouldPlayAfterSongChange
@@ -58,6 +60,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.dropWhile
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
@@ -259,6 +262,7 @@ class PlayerConnection(
 
     private val _bufferedPosition = MutableStateFlow(0L)
     override val bufferedPosition: StateFlow<Long> = _bufferedPosition.asStateFlow()
+    private var storedSongFraction = 0f
 
     private val _duration = MutableStateFlow(0L)
     override val duration: StateFlow<Long> = _duration.asStateFlow()
@@ -516,6 +520,7 @@ class PlayerConnection(
             }
     }
 
+    @OptIn(ExperimentalCoroutinesApi::class)
     private fun observeService(service: MusicService) {
         val scope = checkNotNull(observationScope)
         val player = service.player
@@ -622,6 +627,22 @@ class PlayerConnection(
                 updateProgress()
             }
         }
+        // While whole songs are cached during playback, the buffered track shows how much of the song is stored.
+        scope.launch {
+            combine(snapshotFlow { Settings.shared.cacheWholeSongWhilePlaying }, player.currentPlaybackResource) { enabled, resource ->
+                resource?.takeIf { enabled }
+            }.distinctUntilChanged()
+                .flatMapLatest { resource ->
+                    when {
+                        resource == null -> flowOf(0f)
+                        resource.profileId == CACHED_AUDIO_PROFILE_ID -> flowOf(1f)
+                        else -> cacheableAudioResource(resource)?.let(DirectPlaybackCache::coverage) ?: flowOf(0f)
+                    }
+                }.collect {
+                    storedSongFraction = it
+                    updateProgress()
+                }
+        }
         scope.launch {
             player.loadError.collect { _loadError.value = it }
         }
@@ -665,7 +686,7 @@ class PlayerConnection(
                 if (inVideoMode) {
                     (_bufferedPosition.value.toFloat() / dur.toFloat()).coerceIn(0f, 1f)
                 } else {
-                    0f
+                    storedSongFraction
                 }
         } else {
             _progress.value = 0f

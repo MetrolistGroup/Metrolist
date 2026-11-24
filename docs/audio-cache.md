@@ -12,6 +12,8 @@ Readers hold leases. Clearing a cache removes future lookup without deleting byt
 
 Pre-cache resolves upcoming tracks without taking playback ownership. Preserve queue occurrence identity, cancellation and the configured storage limit. A track change or reordered queue must not publish an obsolete next-track result.
 
+Android's **Cache whole song while playing** setting fetches the missing ranges of the current direct-stream capture once playback runs, so the song reaches the song cache before it ends. It stops on a track change, while offline and when clearing the cache discards the capture. Seek bar styles that draw a buffered track, which excludes Default, and the Vintage mini player then show the stored share of the song, or all of it for cached and downloaded audio. Muxed video files and SABR streams are unchanged.
+
 ## Downloads
 
 Restore download queues before accepting mutations or draining work. Retain completed files when a later transfer or metadata write fails. Preserve existing destinations during replacement and migration. Reconcile missing files without replacing complete remote playlist membership with an offline snapshot.

@@ -5,8 +5,13 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -108,6 +113,16 @@ object DirectPlaybackCache {
             find(resource)?.copyTo(destination) == true
         }
 
+    // Fetches only the ranges playback has not read yet, without waiting for the track to end.
+    suspend fun complete(
+        resource: PlaybackResource,
+        httpClient: OkHttpClient = directMediaHttpClient,
+        awaitReady: suspend () -> Unit = {},
+    ): Boolean = resource.isDirectFile && find(resource)?.complete(resource, httpClient, awaitReady) == true
+
+    // Share of the track's bytes captured so far, or null when no capture exists for the resource.
+    fun coverage(resource: PlaybackResource): Flow<Float>? = find(resource)?.coverage()
+
     @Synchronized
     private fun find(resource: PlaybackResource): Capture? = resource.contentLengthBytes?.let { captures[keyOf(resource)] }
 
@@ -117,6 +132,7 @@ object DirectPlaybackCache {
         private val onDiscard: (Capture) -> Unit = {},
     ) {
         private val changes = MutableStateFlow(0L)
+        private val fills = Mutex()
         private val ranges = mutableListOf<LongRange>()
         private var file: File? = null
         private var output: RandomAccessFile? = null
@@ -275,9 +291,31 @@ object DirectPlaybackCache {
             return fillGaps(resource, httpClient)
         }
 
+        internal suspend fun complete(
+            resource: PlaybackResource,
+            httpClient: OkHttpClient,
+            awaitReady: suspend () -> Unit,
+        ): Boolean = isComplete || fillGaps(resource, httpClient, awaitReady)
+
+        internal fun coverage(): Flow<Float> =
+            changes
+                .map {
+                    synchronized(this) {
+                        if (discarded) 0f else ranges.sumOf { it.last - it.first + 1L }.toFloat() / size
+                    }
+                }.distinctUntilChanged()
+
+        // One fill at a time, so a caller that waited finds the ranges already fetched.
         private suspend fun fillGaps(
             resource: PlaybackResource,
             httpClient: OkHttpClient,
+            awaitReady: suspend () -> Unit = {},
+        ): Boolean = fills.withLock { fillMissingRanges(resource, httpClient, awaitReady) }
+
+        private suspend fun fillMissingRanges(
+            resource: PlaybackResource,
+            httpClient: OkHttpClient,
+            awaitReady: suspend () -> Unit,
         ): Boolean {
             val gaps =
                 synchronized(this) {
@@ -292,8 +330,8 @@ object DirectPlaybackCache {
             try {
                 for (gap in gaps) {
                     currentCoroutineContext().ensureActive()
-                    if (!fetchRange(resource, gap.first, gap.last, httpClient)) {
-                        return false
+                    if (!fetchRange(resource, gap.first, gap.last, httpClient, awaitReady)) {
+                        return isComplete
                     }
                 }
                 return isComplete
@@ -313,6 +351,7 @@ object DirectPlaybackCache {
             start: Long,
             end: Long,
             httpClient: OkHttpClient,
+            awaitReady: suspend () -> Unit,
         ): Boolean =
             withContext(Dispatchers.IO) {
                 val request =
@@ -337,6 +376,9 @@ object DirectPlaybackCache {
                         var current = start
                         while (current <= end) {
                             currentCoroutineContext().ensureActive()
+                            awaitReady()
+                            // Playback can complete the capture meanwhile, and clearing the cache discards it.
+                            if (synchronized(this@Capture) { complete || discarded }) break
                             val toRead = minOf(buffer.size.toLong(), end - current + 1L).toInt()
                             val count = stream.read(buffer, 0, toRead)
                             if (count < 0) break
