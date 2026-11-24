@@ -60,7 +60,6 @@ import com.metrolist.shared.constants.DatabaseLikesRecoveryVersionKey
 import com.metrolist.shared.constants.DefaultOpenTabKey
 import com.metrolist.shared.constants.DeletedPlaylistIdsJsonKey
 import com.metrolist.shared.constants.DensityScaleKey
-import com.metrolist.shared.constants.DesktopCustomFontNameKey
 import com.metrolist.shared.constants.DesktopRenderBackendKey
 import com.metrolist.shared.constants.DesktopStoppedDownloadIdsJsonKey
 import com.metrolist.shared.constants.DesktopWindowPlacementKey
@@ -352,7 +351,6 @@ class Settings(
     var androidCustomFontFile by preference(AndroidCustomFontFileKey, "")
     var androidCustomFontName by preference(AndroidCustomFontNameKey, "")
     var androidActiveFontId by preference(AndroidActiveFontIdKey, "")
-    var desktopCustomFontName by preference(DesktopCustomFontNameKey, "")
     var iosCustomFontFile by preference(IosCustomFontFileKey, "")
     var iosCustomFontName by preference(IosCustomFontNameKey, "")
     var iosCustomFontRevision by preference(IosCustomFontRevisionKey, 0L)
@@ -1402,7 +1400,6 @@ class Settings(
                     IosOnboardingCompleteKey,
                     SentryEnabledKey,
                     IosCustomFontFileKey,
-                    DesktopCustomFontNameKey,
                     CollectionCoversKey,
                     IosCustomFontNameKey,
                     IosCustomFontRevisionKey,

@@ -13,6 +13,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.platform.Font
 import com.metrolist.shared.network.sharedOkHttpClient
 import com.metrolist.shared.settings.FontOption
+import com.metrolist.shared.settings.Settings
 import com.metrolist.shared.utils.XdgUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -106,7 +107,11 @@ object DesktopFontManager {
 
     fun installedOptions(): Set<FontOption> = downloadableOptions.filterTo(mutableSetOf(), ::isDownloaded)
 
-    fun hasCustomFont(): Boolean = isDownloaded(FontOption.CUSTOM)
+    /** Family name of the imported font, or null when none is installed. */
+    fun customFontName(): String? =
+        File(fontDirectory(FontOption.CUSTOM), REGULAR_FILE)
+            .takeIf(File::isFile)
+            ?.let { runCatching { validateFont(it) }.getOrNull() }
 
     fun loadFontFamily(option: FontOption): FontFamily? {
         if (!isDownloaded(option)) return null
@@ -169,7 +174,7 @@ object DesktopFontManager {
             }
         }
 
-    /** Copies a user-selected font into app storage and returns its family name. */
+    /** Copies a user-selected font into app storage, activates it and returns its family name. */
     suspend fun importCustom(source: File): Result<String> =
         withContext(Dispatchers.IO) {
             runCatching {
@@ -184,6 +189,8 @@ object DesktopFontManager {
                     }
                     val familyName = validateFont(font).ifBlank { source.nameWithoutExtension }
                     activate(fontDirectory(option), staging, backupDirectory(option))
+                    // Activate here so a cancelled settings scope cannot leave the import installed but unused.
+                    Settings.shared.appFont = option
                     revision++
                     familyName
                 } finally {

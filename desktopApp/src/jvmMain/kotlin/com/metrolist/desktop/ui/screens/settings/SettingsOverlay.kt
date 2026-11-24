@@ -192,7 +192,7 @@ fun SettingsOverlay(colorScheme: ColorScheme) {
     var installedFontOptions by remember { mutableStateOf<Set<FontOption>?>(null) }
     var downloadingFont by remember { mutableStateOf<FontOption?>(null) }
     var failedFontDownload by remember { mutableStateOf<FontOption?>(null) }
-    var hasCustomFont by remember { mutableStateOf(false) }
+    var customFontName by remember { mutableStateOf<String?>(null) }
     var failedFontImport by remember { mutableStateOf(false) }
     val chooseFontTitle = stringResource(Res.string.app_font_choose)
     val fontLabels =
@@ -239,11 +239,7 @@ fun SettingsOverlay(colorScheme: ColorScheme) {
                             try {
                                 pickDesktopFile(chooseFontTitle, listOf("ttf", "otf"))?.let { file ->
                                     DesktopFontManager.importCustom(file).fold(
-                                        onSuccess = { name ->
-                                            Settings.shared.desktopCustomFontName = name
-                                            Settings.shared.appFont = FontOption.CUSTOM
-                                            hasCustomFont = true
-                                        },
+                                        onSuccess = { customFontName = it },
                                         onFailure = { failedFontImport = true },
                                     )
                                 }
@@ -253,10 +249,10 @@ fun SettingsOverlay(colorScheme: ColorScheme) {
                         }
                     },
                 ),
-                if (hasCustomFont) {
+                customFontName?.let { name ->
                     SettingsHostAction(
                         id = FontOption.CUSTOM.name,
-                        title = Settings.shared.desktopCustomFontName,
+                        title = name,
                         description =
                             if (Settings.shared.appFont == FontOption.CUSTOM) {
                                 stringResource(Res.string.app_font_active)
@@ -266,8 +262,6 @@ fun SettingsOverlay(colorScheme: ColorScheme) {
                         enabled = downloadingFont == null,
                         onClick = { Settings.shared.appFont = FontOption.CUSTOM },
                     )
-                } else {
-                    null
                 },
             )
     val fontDownloadActions =
@@ -337,7 +331,7 @@ fun SettingsOverlay(colorScheme: ColorScheme) {
         UiState.openDevtoolsSettingsRequested = false
         UiState.openPlaylistImportRequested = false
         withContext(Dispatchers.IO) {
-            hasCustomFont = DesktopFontManager.hasCustomFont()
+            customFontName = DesktopFontManager.customFontName()
             installedFontOptions = DesktopFontManager.installedOptions()
         }
     }
