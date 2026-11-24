@@ -53,6 +53,7 @@ import com.metrolist.shared.constants.CanvasCacheSizeKey
 import com.metrolist.shared.constants.CanvasContentOrderKey
 import com.metrolist.shared.constants.CanvasEnabledSourcesKey
 import com.metrolist.shared.constants.CastEnabledKey
+import com.metrolist.shared.constants.CastVolumeStepKey
 import com.metrolist.shared.constants.ClassicRecommendationsKey
 import com.metrolist.shared.constants.CollectionCoversKey
 import com.metrolist.shared.constants.DatabaseLikesRecoveryVersionKey
@@ -376,6 +377,7 @@ class Settings(
     var miniPlayerBackgroundStyle by preference("DEFAULT")
     var playerThumbnailStyle by preference(PlayerThumbnailStyle.COMPACT)
     var castEnabled by preference(CastEnabledKey, true)
+    var castVolumeStep by preference(CastVolumeStepKey, 5)
     var showPlayerCastButton by preference(ShowPlayerCastButtonKey, true)
     var showPlayerVideoButton by preference(ShowPlayerVideoButtonKey, true)
 

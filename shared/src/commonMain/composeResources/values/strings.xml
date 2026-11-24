@@ -5066,6 +5066,10 @@
     <string name="cast_description">Play music on your TV, Chromecast or Sonos speakers using the same Wi-Fi</string>
     <!-- Translators: Short heading and switch label for TV and speaker playback in the Player settings. -->
     <string name="settings_cast_title">Cast</string>
+    <!-- Translators: Slider label in the Player settings for how much the receiver volume changes per volume button press while casting. -->
+    <string name="cast_volume_step">Cast volume step</string>
+    <!-- Translators: Description of the cast volume step slider in the Player settings. -->
+    <string name="cast_volume_step_description">How much each press of the phone volume buttons changes the speaker or TV volume while casting</string>
 
     <!-- Statistics chart units and legend. -->
     <string name="statistics_chart_listens">Listens</string>

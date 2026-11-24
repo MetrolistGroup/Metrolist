@@ -67,6 +67,19 @@ internal fun SettingsUiRegistryBuilder.registerPlaybackSettings(host: SharedSett
                 ) {
                     settings.castEnabled = it
                 }
+                if (host.platform == SettingsPlatform.ANDROID) {
+                    inlineSlider(
+                        id = "castVolumeStep",
+                        title = stringResource(Res.string.cast_volume_step),
+                        description = stringResource(Res.string.cast_volume_step_description),
+                        valueLabel = "${settings.castVolumeStep}${stringResource(Res.string.percent_symbol)}",
+                        value = settings.castVolumeStep.toFloat(),
+                        defaultValue = settings.defaultValue(settings::castVolumeStep).toFloat(),
+                        range = 1f..10f,
+                        steps = 8,
+                        enabled = settings.castEnabled,
+                    ) { settings.castVolumeStep = it.roundToInt() }
+                }
             }
         }
         group("audio", stringResource(Res.string.general)) {

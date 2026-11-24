@@ -24,6 +24,7 @@ val SleepTimerDefaultFinishCurrentSongKey = "sleepTimerDefaultFinishCurrentSong"
 val SleepTimerDefaultFadeOutKey = "sleepTimerDefaultFadeOut"
 
 val CastEnabledKey = "castEnabled"
+val CastVolumeStepKey = "castVolumeStep"
 val ShowPlayerCastButtonKey = "showPlayerCastButton"
 val ShowPlayerVideoButtonKey = "showPlayerVideoButton"
 
