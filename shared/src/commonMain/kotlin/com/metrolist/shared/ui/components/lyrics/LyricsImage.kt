@@ -99,17 +99,29 @@ internal data class LyricsImageLayout(
     val contentScale: Float,
     val story: Boolean = false,
 ) {
-    val padding = 28f * contentScale
-    val artworkSize = 64f * contentScale
-    val artworkX = if (story) padding + 18f * contentScale else padding
-    val cardTop = if (story) 30f else 0f
-    val artworkTop = if (story) maxOf(48f * contentScale, cardTop + 8f * contentScale) else padding
-    val titleTop = if (story) 58f * contentScale else 34f * contentScale
-    val artistTop = if (story) 84f * contentScale else 63f * contentScale
-    val lyricsTop = if (story) 138f * contentScale else 110f * contentScale
-    val footerTop = if (story) 544f else 340f - 72f * contentScale
+    val canvasHeight = if (story) 340f * 16f / 9f else 340f
+    val padding = (if (story) 28f else 24f) * contentScale
+    val artworkSize = (if (story) 64f else 56f) * contentScale
+    val artworkX = padding + (if (story) 18f else 16f) * contentScale
+    val cardTop = if (story) 30f else 18f
+    val artworkTop =
+        if (story) {
+            maxOf(48f * contentScale, cardTop + 8f * contentScale)
+        } else {
+            maxOf(30f * contentScale, cardTop + 8f * contentScale)
+        }
+    val titleTop = if (story) 58f * contentScale else artworkTop + 6f * contentScale
+    val artistTop = if (story) 84f * contentScale else titleTop + 22f * contentScale
+    val lyricsTop = if (story) 138f * contentScale else artworkTop + artworkSize + 14f * contentScale
+    val footerHeight = 34f * contentScale
+    val footerTop =
+        if (story) {
+            544f
+        } else {
+            minOf(canvasHeight - 72f * contentScale, canvasHeight - cardTop - footerHeight)
+        }
     val lyricsWidth = 340f - 2f * padding
-    val lyricsHeight = footerTop - (if (story) 10f else 12f * contentScale) - lyricsTop
+    val lyricsHeight = footerTop - 10f * contentScale - lyricsTop
 }
 
 internal fun lyricsImageLayout(
