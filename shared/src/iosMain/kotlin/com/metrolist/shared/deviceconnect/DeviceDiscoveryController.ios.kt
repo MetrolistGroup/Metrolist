@@ -36,6 +36,7 @@ import platform.posix.uint8_tVar
 
 private const val BONJOUR_LOCAL_DOMAIN = "local."
 private const val BONJOUR_RESOLVE_TIMEOUT_SECONDS = 5.0
+private const val BONJOUR_RESOLVE_MAX_ATTEMPTS = 3
 
 actual class DeviceDiscoveryController actual constructor(
     context: Any,
@@ -47,7 +48,7 @@ actual class DeviceDiscoveryController actual constructor(
     private var browser: nw_browser_t? = null
     private var discovering = false
     private val devicesByService = mutableMapOf<String, DiscoveredDevice>()
-    private val resolversByService = mutableMapOf<String, Pair<NSNetService, BonjourResolverDelegate>>()
+    private val resolversByService = mutableMapOf<String, ActiveResolver>()
 
     actual fun registerService(
         deviceId: String,
@@ -131,7 +132,7 @@ actual class DeviceDiscoveryController actual constructor(
         if (removed != null && removedKey != null && removedKey != addedKey) {
             val lost =
                 synchronized(lock) {
-                    resolversByService.remove(removedKey)?.first?.stop()
+                    resolversByService.remove(removedKey)?.let(::stopResolver)
                     devicesByService.remove(removedKey)
                 }
             lost?.let(onLost)
@@ -143,7 +144,7 @@ actual class DeviceDiscoveryController actual constructor(
                     val cached = devicesByService[addedKey]
                     val stale = cached?.takeIf { !it.matches(added) }
                     if (stale != null) {
-                        resolversByService.remove(addedKey)?.first?.stop()
+                        resolversByService.remove(addedKey)?.let(::stopResolver)
                         devicesByService.remove(addedKey)
                     }
                     stale to (
@@ -160,18 +161,23 @@ actual class DeviceDiscoveryController actual constructor(
     private fun resolve(
         service: BonjourService,
         onFound: (DiscoveredDevice) -> Unit,
+        attempt: Int = 1,
     ) {
         val netService = NSNetService(service.domain, service.type, service.serviceName)
         val delegate =
             BonjourResolverDelegate(service) { resolver, resolved ->
-                finishResolution(service.serviceName, resolver, resolved, onFound)
+                finishResolution(service.serviceName, resolver, resolved, attempt, onFound)
             }
         val accepted =
             synchronized(lock) {
-                if (!discovering || devicesByService.containsKey(service.serviceName)) {
+                if (
+                    !discovering ||
+                    devicesByService.containsKey(service.serviceName) ||
+                    resolversByService.containsKey(service.serviceName)
+                ) {
                     false
                 } else {
-                    resolversByService[service.serviceName] = netService to delegate
+                    resolversByService[service.serviceName] = ActiveResolver(service, netService, delegate, attempt)
                     true
                 }
             }
@@ -181,29 +187,64 @@ actual class DeviceDiscoveryController actual constructor(
         netService.resolveWithTimeout(BONJOUR_RESOLVE_TIMEOUT_SECONDS)
     }
 
+    private fun stopResolver(resolver: ActiveResolver) {
+        resolver.netService.delegate = null
+        resolver.netService.stop()
+    }
+
     private fun finishResolution(
         serviceName: String,
         netService: NSNetService,
         device: DiscoveredDevice?,
+        attempt: Int,
         onFound: (DiscoveredDevice) -> Unit,
     ) {
-        val shouldNotify =
+        val result =
             synchronized(lock) {
                 val owner = resolversByService[serviceName]
-                if (owner != null && owner.first === netService) {
-                    resolversByService.remove(serviceName)
-                    owner.first.stop()
-                    if (device != null && discovering && !devicesByService.containsKey(serviceName)) {
+                if (owner == null || owner.netService !== netService || owner.attempt != attempt) {
+                    return@synchronized null
+                }
+                resolversByService.remove(serviceName)
+                stopResolver(owner)
+                when {
+                    device != null &&
+                        discovering &&
+                        !devicesByService.containsKey(serviceName) -> {
                         devicesByService[serviceName] = device
-                        true
-                    } else {
-                        false
+                        ResolutionResult.Found(device)
                     }
-                } else {
-                    false
+
+                    device == null &&
+                        discovering &&
+                        !devicesByService.containsKey(serviceName) &&
+                        attempt < BONJOUR_RESOLVE_MAX_ATTEMPTS -> {
+                        ResolutionResult.Retry(owner.service, attempt + 1)
+                    }
+
+                    else -> {
+                        ResolutionResult.Failed
+                    }
                 }
             }
-        if (shouldNotify && device != null) onFound(device)
+        when (result) {
+            is ResolutionResult.Found -> {
+                onFound(result.device)
+            }
+
+            is ResolutionResult.Retry -> {
+                resolve(result.service, onFound, result.attempt)
+            }
+
+            ResolutionResult.Failed -> {
+                onError("iOS Bonjour resolution failed for $serviceName.", null)
+                onFailure()
+            }
+
+            null -> {
+                Unit
+            }
+        }
     }
 
     private inner class BonjourResolverDelegate(
@@ -239,16 +280,36 @@ actual class DeviceDiscoveryController actual constructor(
         }
     }
 
+    private data class ActiveResolver(
+        val service: BonjourService,
+        val netService: NSNetService,
+        val delegate: BonjourResolverDelegate,
+        val attempt: Int,
+    )
+
+    private sealed interface ResolutionResult {
+        data class Found(
+            val device: DiscoveredDevice,
+        ) : ResolutionResult
+
+        data class Retry(
+            val service: BonjourService,
+            val attempt: Int,
+        ) : ResolutionResult
+
+        data object Failed : ResolutionResult
+    }
+
     actual suspend fun stopDiscovery() {
         val (activeBrowser, activeResolvers) =
             synchronized(lock) {
                 discovering = false
                 devicesByService.clear()
-                val resolvers = resolversByService.values.map { it.first }
+                val resolvers = resolversByService.values.toList()
                 resolversByService.clear()
                 (browser to resolvers).also { browser = null }
             }
-        activeResolvers.forEach { it.stop() }
+        activeResolvers.forEach(::stopResolver)
         activeBrowser?.let { nw_browser_cancel(it) }
     }
 
@@ -295,18 +356,14 @@ private fun bonjourService(result: nw_browse_result_t?): BonjourService? {
 
 private fun resolvedAddress(service: NSNetService): Pair<String, Int>? {
     val port = service.port.toInt().takeIf { it in 1..65535 } ?: return null
-    for (value in service.addresses.orEmpty()) {
-        val data = value as? NSData ?: continue
-        val bytes = data.bytes?.reinterpret<uint8_tVar>()?.readBytes(data.length.toInt()) ?: continue
-        if (bytes.size < 8) continue
-        val host =
+    val hosts =
+        service.addresses.orEmpty().mapNotNull { value ->
+            val data = value as? NSData ?: return@mapNotNull null
+            val bytes = data.bytes?.reinterpret<uint8_tVar>()?.readBytes(data.length.toInt()) ?: return@mapNotNull null
+            if (bytes.size < 8) return@mapNotNull null
             when (byteValue(bytes, 1)) {
                 2 -> {
-                    if (bytes.size >= 8) {
-                        listOf(4, 5, 6, 7).joinToString(".") { byteValue(bytes, it).toString() }
-                    } else {
-                        null
-                    }
+                    listOf(4, 5, 6, 7).joinToString(".") { byteValue(bytes, it).toString() }
                 }
 
                 30 -> {
@@ -333,12 +390,9 @@ private fun resolvedAddress(service: NSNetService): Pair<String, Int>? {
                 else -> {
                     null
                 }
-            } ?: continue
-        if (isDeviceConnectLanHost(host)) {
-            return host to port
+            }
         }
-    }
-    return null
+    return selectDeviceConnectHost(hosts)?.let { it to port }
 }
 
 private fun byteValue(
