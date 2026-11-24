@@ -23,10 +23,12 @@ internal object IosAesGcm {
         val iv = DeviceCrypto.secureRandomBytes(GCM_IV_LEN)
         val ciphertext = ByteArray(plaintext.size)
         val tag = ByteArray(GCM_TAG_LEN)
+        val inputBuffer = if (plaintext.isEmpty()) byteArrayOf(0) else plaintext
+        val outputBuffer = if (ciphertext.isEmpty()) byteArrayOf(0) else ciphertext
         val status =
             key.usePinned { keyPinned ->
-                plaintext.usePinned { plainPinned ->
-                    ciphertext.usePinned { cipherPinned ->
+                inputBuffer.usePinned { plainPinned ->
+                    outputBuffer.usePinned { cipherPinned ->
                         associatedData.usePinned { aadPinned ->
                             iv.usePinned { ivPinned ->
                                 tag.usePinned { tagPinned ->
@@ -38,9 +40,9 @@ internal object IosAesGcm {
                                         ivLen = iv.size.convert(),
                                         aData = if (associatedData.isEmpty()) null else aadPinned.addressOf(0),
                                         aDataLen = associatedData.size.convert(),
-                                        dataIn = if (plaintext.isEmpty()) null else plainPinned.addressOf(0),
+                                        dataIn = plainPinned.addressOf(0),
                                         dataInLength = plaintext.size.convert(),
-                                        dataOut = if (ciphertext.isEmpty()) null else cipherPinned.addressOf(0),
+                                        dataOut = cipherPinned.addressOf(0),
                                         tag = tagPinned.addressOf(0),
                                         tagLength = GCM_TAG_LEN.convert(),
                                     )
@@ -65,10 +67,12 @@ internal object IosAesGcm {
         val tag = data.copyOfRange(data.size - GCM_TAG_LEN, data.size)
         val ciphertext = data.copyOfRange(GCM_IV_LEN, data.size - GCM_TAG_LEN)
         val plaintext = ByteArray(ciphertext.size)
+        val inputBuffer = if (ciphertext.isEmpty()) byteArrayOf(0) else ciphertext
+        val outputBuffer = if (plaintext.isEmpty()) byteArrayOf(0) else plaintext
         val status =
             key.usePinned { keyPinned ->
-                ciphertext.usePinned { cipherPinned ->
-                    plaintext.usePinned { plainPinned ->
+                inputBuffer.usePinned { cipherPinned ->
+                    outputBuffer.usePinned { plainPinned ->
                         associatedData.usePinned { aadPinned ->
                             iv.usePinned { ivPinned ->
                                 tag.usePinned { tagPinned ->
@@ -80,9 +84,9 @@ internal object IosAesGcm {
                                         ivLen = iv.size.convert(),
                                         aData = if (associatedData.isEmpty()) null else aadPinned.addressOf(0),
                                         aDataLen = associatedData.size.convert(),
-                                        dataIn = if (ciphertext.isEmpty()) null else cipherPinned.addressOf(0),
+                                        dataIn = cipherPinned.addressOf(0),
                                         dataInLength = ciphertext.size.convert(),
-                                        dataOut = if (plaintext.isEmpty()) null else plainPinned.addressOf(0),
+                                        dataOut = plainPinned.addressOf(0),
                                         tag = tagPinned.addressOf(0),
                                         tagLength = GCM_TAG_LEN.convert(),
                                     )
@@ -93,6 +97,6 @@ internal object IosAesGcm {
                 }
             }
         check(status == kCCSuccess) { "AES-GCM decrypt failed: $status" }
-        return plaintext
+        return plaintext.copyOf(ciphertext.size)
     }
 }

@@ -282,7 +282,7 @@ actual object DeviceCrypto {
                 attrs.set(kSecAttrKeyType, kSecAttrKeyTypeECSECPrimeRandom)
                 attrs.set(kSecAttrKeyClass, keyClass)
                 attrs.set(kSecAttrKeySizeInBits, keySize)
-                val data = bytes.toCFData()
+                val data = bytes.toCFData() ?: error("Failed to allocate EC key data")
                 try {
                     val error = alloc<CFErrorRefVar>()
                     SecKeyCreateWithData(data, attrs, error.ptr)
@@ -383,4 +383,9 @@ private fun mutableCfDictionary(): CFMutableDictionaryRef =
     CFDictionaryCreateMutable(null, 4, null, null) ?: error("Failed to create CFDictionary")
 
 @OptIn(ExperimentalForeignApi::class)
-private fun CFErrorRef?.cfErrorMessage(): String = if (this == null) "unknown error" else "CFError(${CFErrorGetCode(this)})"
+private fun CFErrorRef?.cfErrorMessage(): String {
+    if (this == null) return "unknown error"
+    val message = "CFError(${CFErrorGetCode(this)})"
+    CFRelease(this)
+    return message
+}
