@@ -61,7 +61,9 @@ object HomeShelfBuilder {
                         (shelf.params == null || it.params == shelf.params)
                 }
         }
-        val heardInShortsIds = (state.data.orEmpty() + state.sections).heardInShortsItemIds()
+        val heardInShortsIds =
+            (state.data.orEmpty() + state.sections + state.chipFeeds.flatMap { it.sections })
+                .heardInShortsItemIds()
         return buildList {
             val seenItemKeys = mutableSetOf<String>()
             val seenShelfTitles = mutableSetOf<String>()
@@ -163,6 +165,7 @@ object HomeShelfBuilder {
                             style = HomeShelfStyle.SONG_GRID,
                             headerAction = HomeShelfHeaderAction.PLAY_ALL,
                             rows = 4,
+                            excludedItemIds = heardInShortsIds,
                         ),
                     )
                 }
@@ -356,7 +359,18 @@ object HomeShelfBuilder {
                         if (uniqueItems.isNotEmpty()) {
                             if (existingIndex >= 0) {
                                 val existing = get(existingIndex)
-                                set(existingIndex, existing.copy(items = existing.items + uniqueItems))
+                                set(
+                                    existingIndex,
+                                    existing.copy(
+                                        items = existing.items + uniqueItems,
+                                        excludedItemIds =
+                                            if (isQuickPicksSection) {
+                                                existing.excludedItemIds + heardInShortsIds
+                                            } else {
+                                                existing.excludedItemIds
+                                            },
+                                    ),
+                                )
                                 return@run
                             }
                             seenShelfTitles.add(sectionTitleKey)
@@ -366,6 +380,7 @@ object HomeShelfBuilder {
                                     text = text,
                                     userPlaylistIds = userPlaylistIds,
                                     items = uniqueItems,
+                                    excludedItemIds = if (isQuickPicksSection) heardInShortsIds else emptySet(),
                                 ),
                             )
                         }
@@ -442,7 +457,6 @@ object HomeShelfBuilder {
         }.filterRenderable(pageWidth)
             .filter { isVisible(it.visibilityKey, it.title, it.legacyVisibilityKey) } +
             state.chipFeeds.flatMapIndexed { feedIndex, feed ->
-                val feedHeardInShortsIds = heardInShortsIds + feed.sections.heardInShortsItemIds()
                 feed.sections
                     .filter { it.items.isNotEmpty() && isVisible(it.visibilityKey, it.title, it.legacyVisibilityKey) }
                     .mapNotNull { section ->
@@ -450,18 +464,19 @@ object HomeShelfBuilder {
                             section.isQuickPicksSection() || section.title.equals(text.quickPicks, ignoreCase = true)
                         val items =
                             if (isQuickPicksSection) {
-                                section.items.filterNot { canonicalHomeItemId(it) in feedHeardInShortsIds }
+                                section.items.filterNot { canonicalHomeItemId(it) in heardInShortsIds }
                             } else {
                                 section.items
                             }
-                        if (items.isEmpty()) null else section to items
-                    }.mapIndexed { index, (section, items) ->
+                        if (items.isEmpty()) null else Triple(section, items, isQuickPicksSection)
+                    }.mapIndexed { index, (section, items, isQuickPicksSection) ->
                         val shelf =
                             section.toHomeShelf(
                                 key = "chip_${feedIndex}_$index",
                                 text = text,
                                 userPlaylistIds = state.userPlaylists.mapTo(mutableSetOf()) { it.id.removePrefix("VL") },
                                 items = items,
+                                excludedItemIds = if (isQuickPicksSection) heardInShortsIds else emptySet(),
                             )
                         shelf.copy(
                             chipTitle = feed.chip.title.takeIf { index == 0 },
@@ -535,6 +550,7 @@ private fun HomeSection.toHomeShelf(
     text: HomeContentText,
     userPlaylistIds: Set<String>,
     items: List<YTItem> = this.items,
+    excludedItemIds: Set<String> = emptySet(),
 ): HomeShelf {
     val section = this
     val isShuffleShelf =
@@ -609,5 +625,6 @@ private fun HomeSection.toHomeShelf(
         headerTitle = if (isSimilar) section.title.removePrefix("${text.similarTo} ") else null,
         thumbnail = section.thumbnail,
         headerArtistId = section.headerBrowseId?.takeIf { it.startsWith("UC") },
+        excludedItemIds = excludedItemIds,
     )
 }

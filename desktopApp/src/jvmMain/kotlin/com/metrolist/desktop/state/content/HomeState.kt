@@ -168,7 +168,18 @@ internal fun HomeViewModel.HomeUiState.forDesktopDiscovery(): HomeViewModel.Home
             }.filter { it.items.isNotEmpty() }
 
     val discovery = filterDiscovery(mergeAndDeduplicateHomeSections(data.orEmpty() + discoverySections, userPlaylistIds))
-    val heardInShortsIds = discovery.heardInShortsItemIds()
+    val filteredChipFeeds =
+        chipFeeds.map { feed ->
+            feed.copy(
+                sections =
+                    if (feed.chip.browseId?.startsWith("FEmusic_library") == true) {
+                        emptyList()
+                    } else {
+                        filterDiscovery(feed.sections)
+                    },
+            )
+        }
+    val heardInShortsIds = (discovery + filteredChipFeeds.flatMap { it.sections }).heardInShortsItemIds()
 
     fun items(prefix: String): List<YTItem> = discovery.filter { it.browseId?.startsWith(prefix) == true }.flatMap(HomeSection::items)
 
@@ -177,17 +188,7 @@ internal fun HomeViewModel.HomeUiState.forDesktopDiscovery(): HomeViewModel.Home
         discoverySections = discovery,
         chips = chips.filterNot { it.browseId?.startsWith("FEmusic_library") == true },
         selectedChip = selectedChip?.takeUnless { it.browseId?.startsWith("FEmusic_library") == true },
-        chipFeeds =
-            chipFeeds.map { feed ->
-                feed.copy(
-                    sections =
-                        if (feed.chip.browseId?.startsWith("FEmusic_library") == true) {
-                            emptyList()
-                        } else {
-                            filterDiscovery(feed.sections)
-                        },
-                )
-            },
+        chipFeeds = filteredChipFeeds,
         speedDialItems = speedDialItems.filterNot { it.id.startsWith("FEmusic_library") && it.id !in speedDialPinnedIds },
         quickPicks =
             discovery

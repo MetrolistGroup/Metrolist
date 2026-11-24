@@ -265,6 +265,7 @@ data class HomeSection(
     val headerBrowseId: String? = null,
     val numItemsPerColumn: Int? = null,
     val isResponsiveList: Boolean = false,
+    val excludedItemIds: Set<String> = emptySet(),
 )
 
 @Serializable

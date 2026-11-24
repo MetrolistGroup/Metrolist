@@ -1227,7 +1227,16 @@ class HomeViewModel(
                     if (state.homePaginationKey == null) return@launch
                     val page = checkNotNull(chipFeedPager.loadNext(state)) { "An appended Home chip request is still in progress" }
                     if (generation != contentLoadGeneration) return@launch
-                    val merged = (cachedAllContent ?: _uiState.value).copy(chipFeeds = page.chipFeeds, usedHomeChips = page.usedHomeChips)
+                    val baseState = cachedAllContent ?: _uiState.value
+                    val heardInShortsIds =
+                        (baseState.data.orEmpty() + baseState.sections + page.chipFeeds.flatMap { it.sections })
+                            .heardInShortsItemIds()
+                    val merged =
+                        baseState.copy(
+                            chipFeeds = page.chipFeeds,
+                            usedHomeChips = page.usedHomeChips,
+                            quickPicks = baseState.quickPicks.filterNot { canonicalHomeItemId(it) in heardInShortsIds },
+                        )
                     cacheAllContentState(merged)
                     _uiState.value = merged.withoutBlockedContent().copy(isLoadingMore = true)
                 } catch (error: CancellationException) {
@@ -1328,7 +1337,7 @@ class HomeViewModel(
         // A restored startup snapshot keeps quickPicks separately and may lack
         // the API shelf; fall back to the current picks so they are not lost.
         val dataSections = state.data.orEmpty()
-        val heardInShortsIds = (dataSections + state.sections).heardInShortsItemIds()
+        val heardInShortsIds = (dataSections + state.sections + state.chipFeeds.flatMap { it.sections }).heardInShortsItemIds()
         val apiQuickPicks =
             findQuickPickSongs(dataSections)
                 .ifEmpty { state.quickPicks.filterNot { canonicalHomeItemId(it) in heardInShortsIds } }
@@ -1352,9 +1361,15 @@ class HomeViewModel(
             }.filterNot { canonicalHomeItemId(it) in heardInShortsIds }
                 .distinctBy(::canonicalHomeItemId)
         val filteredQuickPicks = BlockedContent.filterSongs(quickPicks, BlockedContent.snapshot())
+        var publishedQuickPicks = filteredQuickPicks
         _uiState.update { current ->
             if (current.selectedChip == selectedChip) {
-                current.copy(quickPicks = filteredQuickPicks)
+                val currentExcludedIds =
+                    (current.data.orEmpty() + current.sections + current.chipFeeds.flatMap { it.sections })
+                        .heardInShortsItemIds()
+                publishedQuickPicks =
+                    filteredQuickPicks.filterNot { canonicalHomeItemId(it) in currentExcludedIds }
+                current.copy(quickPicks = publishedQuickPicks)
             } else {
                 current
             }
@@ -1362,7 +1377,7 @@ class HomeViewModel(
         // Mirror the rebuild into the caches and the persisted snapshot so
         // pagination and chip round trips keep the rebuilt picks.
         val updated = _uiState.value
-        if (updated.selectedChip != selectedChip || updated.quickPicks != filteredQuickPicks) return
+        if (updated.selectedChip != selectedChip || updated.quickPicks != publishedQuickPicks) return
         if (isFiltered) {
             cachedSelectedChipContent = updated
             updated.selectedChip?.let { chip -> cacheChipContent(chip, updated) }
@@ -1381,7 +1396,7 @@ class HomeViewModel(
     ) {
         val cached = cachedAllContent ?: return
         val dataSections = cached.data.orEmpty()
-        val heardInShortsIds = (dataSections + cached.sections).heardInShortsItemIds()
+        val heardInShortsIds = (dataSections + cached.sections + cached.chipFeeds.flatMap { it.sections }).heardInShortsItemIds()
         val apiQuickPicks =
             findQuickPickSongs(dataSections)
                 .ifEmpty { cached.quickPicks.filterNot { canonicalHomeItemId(it) in heardInShortsIds } }

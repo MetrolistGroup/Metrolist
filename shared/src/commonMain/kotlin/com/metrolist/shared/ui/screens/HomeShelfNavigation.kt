@@ -25,5 +25,6 @@ fun HomeShelf.toHomeSection(): HomeSection {
         params = params,
         continuation = continuation,
         isPersonal = isPersonal,
+        excludedItemIds = excludedItemIds,
     )
 }
