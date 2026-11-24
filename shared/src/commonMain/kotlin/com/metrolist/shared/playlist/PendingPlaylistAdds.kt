@@ -47,8 +47,8 @@ internal data class PendingPlaylistAdd(
 )
 
 /**
- * Songs added to a YouTube playlist while YouTube could not be reached. The local playlist already lists them. Each
- * entry stays queued until YouTube accepts the add or lists the song in the playlist.
+ * Songs added to a saved YouTube playlist. The local playlist lists them at once, and each entry stays queued until a
+ * read of the playlist from YouTube lists the song.
  */
 object PendingPlaylistAdds {
     private const val TAG = "PendingPlaylistAdds"
@@ -131,48 +131,67 @@ object PendingPlaylistAdds {
         if (queued.isEmpty()) return false
         if (!PlaybackNetworkStateStore.current.connected || !repository.canManagePlaylists()) return true
         val dao = database.dao()
-        for (entry in queued) {
-            if (entry.nextAttemptAtMs > nowMs()) continue
-            val remoteId = dao.findPlaylistEntity(entry.playlistId)?.let { remotePlaylistId(it, entry.playlistId) }
-            // The playlist was deleted or made local, or the song was removed from it again.
-            if (remoteId == null || dao.checkInPlaylist(entry.playlistId, entry.songId) == 0) {
-                remove(entry.id)
+        val due = queued.filter { it.nextAttemptAtMs <= nowMs() }
+        for ((playlistId, entries) in due.groupBy { it.playlistId }) {
+            val remoteId = dao.findPlaylistEntity(playlistId)?.let { remotePlaylistId(it, playlistId) }
+            // The playlist was deleted or made local, so nothing is left to send.
+            if (remoteId == null) {
+                entries.forEach { remove(it.id) }
                 continue
             }
-            val present =
-                try {
-                    // The offline fallback would answer from the local playlist, which already lists the song.
-                    !entry.allowDuplicate && repository.playlistContainsSong(remoteId, entry.songId, allowOfflineFallback = false)
-                } catch (error: CancellationException) {
-                    throw error
-                } catch (error: PlaylistNotFoundException) {
+            val sent = mutableListOf<PendingPlaylistAdd>()
+            for (entry in entries) {
+                // The song was taken out of the local playlist again before it reached YouTube.
+                if (dao.checkInPlaylist(playlistId, entry.songId) == 0) {
                     remove(entry.id)
                     continue
-                } catch (error: Exception) {
-                    YtLogger.w(TAG, "Pending playlist add check failed type=${error::class.simpleName}")
-                    return true
                 }
-            if (!present) {
                 val failure =
-                    repository
-                        .addToPlaylist(
-                            remoteId,
-                            entry.songId,
-                            allowDuplicate = true,
-                            notifyChange = false,
-                        ).exceptionOrNull()
-                if (failure is PlaylistNotFoundException) {
-                    remove(entry.id)
-                    continue
-                }
-                if (failure != null) {
-                    YtLogger.w(TAG, "Pending playlist add failed type=${failure::class.simpleName}")
-                    if (failure.meansYouTubeUnreachable() || !PlaybackNetworkStateStore.current.connected) return true
-                    postpone(entry.id)
-                    continue
+                    try {
+                        // The offline fallback would answer from the local playlist, which already lists the song.
+                        if (!entry.allowDuplicate &&
+                            repository.playlistContainsSong(remoteId, entry.songId, allowOfflineFallback = false)
+                        ) {
+                            null
+                        } else {
+                            repository.addToPlaylist(remoteId, entry.songId, allowDuplicate = true, notifyChange = false).exceptionOrNull()
+                        }
+                    } catch (error: CancellationException) {
+                        throw error
+                    } catch (error: Exception) {
+                        error
+                    }
+                when {
+                    failure == null -> {
+                        sent += entry
+                    }
+
+                    failure is PlaylistNotFoundException -> {
+                        remove(entry.id)
+                    }
+
+                    failure.meansYouTubeUnreachable() || !PlaybackNetworkStateStore.current.connected -> {
+                        return true
+                    }
+
+                    else -> {
+                        YtLogger.w(TAG, "Pending playlist add failed type=${failure::class.simpleName}")
+                        postpone(entry.id)
+                    }
                 }
             }
-            remove(entry.id)
+            if (sent.isEmpty()) continue
+            // Reading the playlist back from YouTube verifies the adds; a song it does not list is sent again later.
+            val listed =
+                try {
+                    repository.playlistSongIds(remoteId, allowOfflineFallback = false, refresh = true)
+                } catch (error: CancellationException) {
+                    throw error
+                } catch (error: Exception) {
+                    YtLogger.w(TAG, "Pending playlist add verification failed type=${error::class.simpleName}")
+                    return true
+                }
+            sent.forEach { if (it.songId in listed) remove(it.id) else postpone(it.id) }
             PlaylistChanges.notifyChanged(remoteId)
         }
         val remaining = synchronized(lock) { read() }.filter { it.accountKey == accountKey }
