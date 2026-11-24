@@ -59,10 +59,12 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.dropWhile
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
@@ -625,16 +627,27 @@ class PlayerConnection(
                 updateProgress()
             }
         }
-        // The stored share of the stream lets the buffered track run ahead of the player's own buffer.
+        // A stored song can play to its end offline, so its buffered track runs past the player's own buffer.
         scope.launch {
             player.currentPlaybackResource
                 .flatMapLatest { resource ->
                     when {
-                        resource == null -> flowOf(0f)
-                        resource.profileId == CACHED_AUDIO_PROFILE_ID -> flowOf(1f)
-                        else -> cacheableAudioResource(resource)?.let(DirectPlaybackCache::coverage) ?: flowOf(0f)
+                        resource == null -> {
+                            flowOf(0f)
+                        }
+
+                        resource.profileId == CACHED_AUDIO_PROFILE_ID -> {
+                            flowOf(1f)
+                        }
+
+                        // A partial capture is neither contiguous nor measured in playback time, so only a complete one counts.
+                        else -> {
+                            cacheableAudioResource(resource)?.let(DirectPlaybackCache::coverage)?.map { if (it >= 1f) 1f else 0f }
+                                ?: flowOf(0f)
+                        }
                     }
-                }.collect {
+                }.distinctUntilChanged()
+                .collect {
                     storedSongFraction = it
                     updateProgress()
                 }
@@ -679,8 +692,8 @@ class PlayerConnection(
             _progress.value = (_currentPosition.value.toFloat() / dur.toFloat()).coerceIn(0f, 1f)
             val inVideoMode = _isVideoModeActive.value || _isVideoViewerVisible.value
             val buffered = (_bufferedPosition.value.toFloat() / dur.toFloat()).coerceIn(0f, 1f)
-            // In audio mode the buffered track shows everything playable without the network: the player's buffer or
-            // the stored share of the song, whichever reaches further.
+            // In audio mode the buffered track shows how far the song plays without the network: the player's buffer, or
+            // all of it once the song is stored.
             _bufferedProgress.value = if (inVideoMode) buffered else maxOf(buffered, storedSongFraction)
         } else {
             _progress.value = 0f
