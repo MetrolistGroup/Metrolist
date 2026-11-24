@@ -90,11 +90,15 @@ internal class AndroidQueueCoordinator(
     private var radioQueuePlaylistId: String? = null
     private var radioQueueParams: String? = null
     private var isRadioQueue = false
+
+    @Volatile
     private var isExplicitRadioQueue = false
     val explicitRadioQueue: Boolean get() = isExplicitRadioQueue
     private val queuedSongIds = linkedSetOf<String>()
     private val recommendationHistory = RadioRecommendationHistory()
     private val queueSessionLock = Any()
+
+    @Volatile
     var isFiniteQueue = false
         private set
     private var recommendationRequestGeneration = 0L
@@ -116,8 +120,10 @@ internal class AndroidQueueCoordinator(
         private set
     private val pendingRestorePosition = PendingQueueRestorePosition()
     private var remoteLoadGeneration = 0L
+
     @Volatile
     var recommendationLockedSessionId: Long? = null
+
     @Volatile
     private var radioSeedLockedSessionId: Long? = null
     val recommendationsLocked: Boolean get() = recommendationLockedSessionId == queueSessionId
@@ -304,6 +310,12 @@ internal class AndroidQueueCoordinator(
         synchronized(queueSessionLock) {
             isRadioQueue = explicitRadio
             isExplicitRadioQueue = explicitRadio
+        }
+    }
+
+    fun setFiniteQueue(finite: Boolean) {
+        synchronized(queueSessionLock) {
+            isFiniteQueue = finite
         }
     }
 

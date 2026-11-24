@@ -276,16 +276,16 @@ internal class AndroidDeviceConnectPlayback(
                         playback.title,
                         playback.finite,
                     )
-                    queue.setExplicitRadioQueue(playback.explicitRadioQueue)
-                    queue.setTitle(playback.title)
-                    repeatMode.value = playback.repeatMode.toPlayerRepeatMode()
                     if (player.queueSnapshots.value != playback.queue) player.restoreQueue(playback.queue)
                     shuffleModeEnabled.value = playback.queue.isShuffled
                     syncTargetLoaded = false
                 }
                 if (playback != null) {
+                    queue.setFiniteQueue(playback.finite)
                     queue.setExplicitRadioQueue(playback.explicitRadioQueue)
                     queue.applyRemoteRecommendationLock(playback.recommendationsLocked)
+                    queue.setTitle(playback.title)
+                    repeatMode.value = playback.repeatMode.toPlayerRepeatMode()
                 }
                 controllerPlayback = playback
                 player.setControllerPlayback(playback)

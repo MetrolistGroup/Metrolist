@@ -2280,6 +2280,11 @@ object PlayerState {
         playbackPosition.value = state.positionMs.coerceAtLeast(0L)
         playbackDuration.value = (queue.currentItem()?.duration ?: 0L) * 1000L
         progress = if (playbackDuration.value > 0) playbackPosition.value.toFloat() / playbackDuration.value else 0f
+        val restoredSeed = queue.items.value.singleOrNull()
+        if (state.explicitRadioQueue && restoredSeed != null) {
+            deviceRadioBootstrapPending = true
+            startPendingExplicitRadioBootstrap(restoredSeed, syncSession.sessionId)
+        }
     }
 
     private fun queueChanged() {
@@ -2443,28 +2448,7 @@ object PlayerState {
         )
         if (!deviceConnect.isFollowing) {
             if (deviceRadioBootstrapPending) {
-                if (deviceRadioBootstrapJob?.isActive == true) return@withContext
-                val generation = playbackTransitionGeneration
-                val requestGeneration = explicitRadioRequestGeneration
-                deviceRadioBootstrapJob =
-                    scope.launch {
-                        try {
-                            val songs = freshRadioRecommendations(track.id, generation)
-                            if (requestGeneration == explicitRadioRequestGeneration && deviceRadioBootstrapPending &&
-                                syncSession.sessionId == snapshot.sessionId && queue.items.value
-                                    .singleOrNull()
-                                    ?.id == track.id &&
-                                syncSession.explicitRadioQueue && !deviceConnect.isFollowing
-                            ) {
-                                deviceRadioBootstrapPending = false
-                                appendRadioRecommendations(songs, generation)
-                            }
-                        } catch (error: CancellationException) {
-                            throw error
-                        } catch (error: Exception) {
-                            Logger.w("PlayerState", "Failed to start remote radio (${error::class.simpleName})")
-                        }
-                    }
+                startPendingExplicitRadioBootstrap(track, snapshot.sessionId)
             } else {
                 maybePrefetchRecommendationsForCurrentQueue(track)
             }
@@ -4115,6 +4099,37 @@ object PlayerState {
             recommendationHistory.remember(additions)
             queueChanged()
         }
+    }
+
+    private fun startPendingExplicitRadioBootstrap(
+        seed: SongItem,
+        expectedSessionId: String?,
+    ) {
+        if (deviceRadioBootstrapJob?.isActive == true) return
+        val generation = playbackTransitionGeneration
+        val requestGeneration = explicitRadioRequestGeneration
+        deviceRadioBootstrapJob =
+            scope.launch {
+                try {
+                    val songs = freshRadioRecommendations(seed.id, generation)
+                    if (requestGeneration == explicitRadioRequestGeneration &&
+                        deviceRadioBootstrapPending &&
+                        syncSession.sessionId == expectedSessionId &&
+                        queue.items.value
+                            .singleOrNull()
+                            ?.id == seed.id &&
+                        syncSession.explicitRadioQueue &&
+                        !deviceConnect.isFollowing
+                    ) {
+                        deviceRadioBootstrapPending = false
+                        appendRadioRecommendations(songs, generation)
+                    }
+                } catch (error: CancellationException) {
+                    throw error
+                } catch (error: Exception) {
+                    Logger.w("PlayerState", "Failed to start remote radio (${error::class.simpleName})")
+                }
+            }
     }
 
     fun playFromId(videoId: String) {
