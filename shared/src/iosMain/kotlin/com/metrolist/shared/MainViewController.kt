@@ -318,6 +318,9 @@ fun MetrolistIOSApp() {
 
     suspend fun reopenDatabaseAfterRestore() {
         MetrolistPlatform.reopenDatabaseAfterRestore()
+        if (defaultOpenTabRoot(Settings.shared.defaultOpenTab) == "LIBRARY") {
+            Settings.shared.libraryFilter = LibraryFilterType.DEFAULT
+        }
         databaseGeneration++
         sessionClosed = false
         pendingMobileDispose = null
