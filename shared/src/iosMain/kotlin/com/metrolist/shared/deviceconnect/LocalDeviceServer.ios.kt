@@ -273,7 +273,7 @@ private class IosDeviceChannel(
         onClosed: () -> Unit,
     ) {
         nw_connection_receive_message(connection) { data, context, _, error ->
-            if (error != null || data == null) {
+            if (error != null) {
                 onClosed()
                 return@nw_connection_receive_message
             }
@@ -287,7 +287,8 @@ private class IosDeviceChannel(
                 }
 
                 nw_ws_opcode_text -> {
-                    if (!onText(data.toByteArray().decodeToString())) {
+                    val text = data?.toByteArray()?.decodeToString().orEmpty()
+                    if (!onText(text)) {
                         return@nw_connection_receive_message
                     }
                 }
