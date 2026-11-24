@@ -25,6 +25,7 @@ import com.metrolist.shared.generated.resources.*
 import com.metrolist.shared.settings.AiSlopBlocklist
 import com.metrolist.shared.settings.BlockedContent
 import com.metrolist.shared.settings.Settings
+import com.metrolist.shared.settings.updateDefaultOpenTab
 import com.metrolist.shared.ui.icons.MetrolistIcons
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
@@ -200,6 +201,9 @@ internal fun SettingsUiRegistryBuilder.registerContentSettings(host: SharedSetti
                 checked = settings.hidePodcasts,
             ) {
                 settings.hidePodcasts = it
+                if (it && settings.defaultOpenTab == "PODCASTS") {
+                    settings.updateDefaultOpenTab("LIBRARY")
+                }
                 BlockedContent.contentFiltersChanged()
                 host.onSettingChanged(SettingsChangeEffect.CONTENT, null)
             }

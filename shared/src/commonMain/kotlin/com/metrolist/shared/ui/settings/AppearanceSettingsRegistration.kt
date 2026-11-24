@@ -425,7 +425,9 @@ internal fun SettingsUiRegistryBuilder.registerAppearanceSettings(host: SharedSe
                             add(SettingsChoice("ARTISTS", stringResource(Res.string.artists)))
                             add(SettingsChoice("ALBUMS", stringResource(Res.string.albums)))
                             add(SettingsChoice("PLAYLISTS", stringResource(Res.string.playlists)))
-                            add(SettingsChoice("PODCASTS", stringResource(Res.string.podcasts)))
+                            if (!settings.hidePodcasts) {
+                                add(SettingsChoice("PODCASTS", stringResource(Res.string.podcasts)))
+                            }
                         }
                         if (isEmpty()) add(SettingsChoice("MYSTERIOUS", stringResource(Res.string.mysterious_fourth_tab)))
                     }
@@ -435,6 +437,7 @@ internal fun SettingsUiRegistryBuilder.registerAppearanceSettings(host: SharedSe
                         settings.showBottomNavHome,
                         settings.showBottomNavSearch,
                         settings.showBottomNavLibrary,
+                        settings.hidePodcasts,
                     )
                 choice(
                     id = "defaultOpenTab",
