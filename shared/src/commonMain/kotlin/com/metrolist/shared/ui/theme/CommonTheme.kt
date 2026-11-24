@@ -25,8 +25,8 @@ import coil3.compose.LocalPlatformContext
 import coil3.request.ImageRequest
 import coil3.request.SuccessResult
 import com.materialkolor.PaletteStyle
-import com.materialkolor.dynamicColorScheme
 import com.materialkolor.dynamiccolor.ColorSpec
+import com.materialkolor.material3.dynamicColorScheme
 import com.materialkolor.score.Score
 import com.metrolist.shared.settings.Settings
 import com.metrolist.shared.settings.ThemePaletteStyle

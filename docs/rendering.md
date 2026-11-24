@@ -111,6 +111,8 @@ Player lyric captions have a separate alignment setting, centered by default. Th
 
 ## Themes
 
+Generated palettes use MaterialKolor 6's upstream color engine, which corrects Expressive primary and on-primary colors for warm and pale seeds. Tonal spot, Vibrant, Expressive and Neutral use `SPEC_2025`; the other bundled styles resolve to `SPEC_2021` upstream. The 2026 specification applies to CMF, a separate palette that requires a second seed color. The selected palette style and accessibility contrast still apply to artwork, custom colors and Samsung wallpaper palettes. Other Android system palettes use the platform's color roles.
+
 Android publishes system dark mode to shared settings before palette resolution. Check Auto mode after a system theme change. Player action groups use Screen blending over non-solid dark backgrounds and SrcOver in light mode or over solid backgrounds. Filled player controls pair surface-variant containers with on-surface-variant icons, including over artwork in light mode.
 
 Android status-bar icons follow the full player's foreground contrast while the player is visible. Collapsing the player, entering picture-in-picture or pausing the activity releases its override, so the app theme and artist header control the icons again.

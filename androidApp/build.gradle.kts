@@ -302,7 +302,6 @@ android {
             isMinifyEnabled = true
             isShrinkResources = true
             ndk.debugSymbolLevel = "FULL"
-            optimization.keepRules { ignoreFrom("com.materialkolor:material-kolor-android:5.0.1") }
             manifestPlaceholders["appLabel"] = "Metrolist"
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
