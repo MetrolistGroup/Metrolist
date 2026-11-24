@@ -1,5 +1,6 @@
 package com.metrolist.desktop.history
 
+import com.metrolist.shared.api.lastfm.LastFmListen
 import com.metrolist.shared.db.HistoryCursor
 import com.metrolist.shared.db.HistoryStatGroup
 import com.metrolist.shared.db.MusicDatabase
@@ -276,9 +277,10 @@ object HistoryRepository {
     suspend fun getStatisticsSnapshot(
         sinceMs: Long,
         untilMs: Long,
+        lastFm: List<LastFmListen> = emptyList(),
     ) = run {
         initialize()
-        database.historyStatisticsSnapshot(sinceMs, untilMs)
+        database.historyStatisticsSnapshot(sinceMs, untilMs, lastFm = lastFm)
     }
 
     suspend fun getHistoryTotals(

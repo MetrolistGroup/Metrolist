@@ -27,6 +27,7 @@ import com.metrolist.shared.db.HistoryAlbumStatistic
 import com.metrolist.shared.db.HistoryArtistStatistic
 import com.metrolist.shared.db.HistoryStatGroup
 import com.metrolist.shared.db.MusicDatabase
+import com.metrolist.shared.db.isPlayable
 import com.metrolist.shared.generated.resources.Res
 import com.metrolist.shared.generated.resources.share
 import com.metrolist.shared.generated.resources.statistics_load_failed
@@ -200,6 +201,7 @@ private fun HistoryStatGroup.toStatisticsItem(index: Int) =
         rankedTitle = "${index + 1}. $title",
         subtitle = statisticsPlayCountDuration(playCount, playTimeMs),
         thumbnailUrl = thumbnailUrl,
+        isClickable = isPlayable,
     )
 
 @Composable
@@ -312,7 +314,8 @@ private fun rememberStatisticsItemMenu(
             else -> {}
         }
     }
-    return { item ->
+    return menu@{ item ->
+        if (item.id.startsWith("track:") && !item.isClickable) return@menu
         menuJob?.cancel()
         menuJob =
             scope.launch {

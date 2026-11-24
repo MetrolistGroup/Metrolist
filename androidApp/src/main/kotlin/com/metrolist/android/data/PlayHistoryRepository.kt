@@ -2,6 +2,7 @@ package com.metrolist.android.data
 
 import androidx.room3.useReaderConnection
 import androidx.sqlite.SQLiteStatement
+import com.metrolist.shared.api.lastfm.LastFmListen
 import com.metrolist.shared.db.HISTORY_SNAPSHOT_ARTIST_MATCH_SQL
 import com.metrolist.shared.db.HistoryCursor
 import com.metrolist.shared.db.HistoryStatGroup
@@ -204,7 +205,8 @@ class PlayHistoryRepository(
     suspend fun getStatisticsSnapshot(
         sinceMs: Long,
         untilMs: Long,
-    ) = database.historyStatisticsSnapshot(sinceMs, untilMs, catalogArtistIds = true)
+        lastFm: List<LastFmListen> = emptyList(),
+    ) = database.historyStatisticsSnapshot(sinceMs, untilMs, catalogArtistIds = true, lastFm = lastFm)
 
     suspend fun getHistoryTotals(
         sinceMs: Long,

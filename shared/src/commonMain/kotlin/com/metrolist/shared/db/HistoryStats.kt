@@ -45,6 +45,9 @@ data class HistoryStatGroup(
     val measuredPlayCount: Int = 0,
 )
 
+/** Last.fm-only rows have no local song to play or open. */
+val HistoryStatGroup.isPlayable: Boolean get() = !songId.startsWith("lastfm:")
+
 data class HistoryArtistCredit(
     val songId: String,
     val id: String,
@@ -426,6 +429,26 @@ private suspend fun MusicDatabase.timeBuckets(
     }
 }
 
+/** Adds Last.fm plays to day buckets keyed like the SQL `strftime('%Y-%m-%d')` buckets. */
+private fun List<HistoryBucket>.withPlays(
+    playTimes: List<Long>,
+    localTime: Boolean,
+): List<HistoryBucket> {
+    if (playTimes.isEmpty()) return this
+    val zone = if (localTime) TimeZone.currentSystemDefault() else TimeZone.UTC
+    val counts = associate { it.bucket to it.playCount }.toMutableMap()
+    for (time in playTimes) {
+        val key =
+            Instant
+                .fromEpochMilliseconds(time)
+                .toLocalDateTime(zone)
+                .date
+                .toString()
+        counts[key] = (counts[key] ?: 0) + 1
+    }
+    return counts.entries.sortedBy { it.key }.map { HistoryBucket(it.key, it.value) }
+}
+
 data class HistoryStatisticsSnapshot(
     val songs: List<HistoryStatGroup>,
     val artists: List<HistoryArtistStatistic>,
@@ -443,7 +466,8 @@ suspend fun MusicDatabase.historyStatisticsSnapshot(
     untilMs: Long,
     catalogArtistIds: Boolean = false,
     localTime: Boolean = true,
-): HistoryStatisticsSnapshot = statisticsSnapshot(sinceMs, untilMs, catalogArtistIds, localTime, mergeSourcesByDay = false)
+    lastFm: List<LastFmListen> = emptyList(),
+): HistoryStatisticsSnapshot = statisticsSnapshot(sinceMs, untilMs, catalogArtistIds, localTime, mergeSourcesByDay = false, lastFm = lastFm)
 
 suspend fun MusicDatabase.wrappedStatisticsSnapshot(
     sinceMs: Long,
@@ -505,8 +529,17 @@ private suspend fun MusicDatabase.statisticsSnapshot(
                 artistStatistics(groups, metadata),
                 albumStatistics(groups, metadata.groupBy({ it.songId }, { it.name }), catalogArtistIds),
                 HistoryTotals(groups.sumOf { it.playCount }, groups.sumOf { it.playTimeMs }),
-                if (mergeSourcesByDay) emptyList() else timeBuckets(sinceMs, untilMs, false, localTime, catalogArtistIds),
-                if (mergeSourcesByDay) emptyList() else timeBuckets(sinceMs, untilMs, true, localTime, catalogArtistIds),
+                if (mergeSourcesByDay) {
+                    emptyList()
+                } else {
+                    timeBuckets(sinceMs, untilMs, false, localTime, catalogArtistIds).withPlays(merged.addedPlayTimes, localTime)
+                },
+                if (mergeSourcesByDay) {
+                    emptyList()
+                } else {
+                    // Hourly stays local: merged plays are matched per day, so their hour cannot be told apart from a local play's.
+                    timeBuckets(sinceMs, untilMs, true, localTime, catalogArtistIds)
+                },
                 songItems = statisticsSongs(songs.filterNot { it.songId.startsWith("lastfm:") }.take(500)).distinctBy { it.id },
                 lastFmPlays = merged.included,
                 lastFmAmbiguousPlays = merged.ambiguous,
@@ -523,6 +556,7 @@ private data class LastFmMerge(
     val groups: List<HistoryStatGroup>,
     val included: Int,
     val ambiguous: Int,
+    val addedPlayTimes: List<Long> = emptyList(),
 )
 
 private fun mergeLastFmHistory(
@@ -572,6 +606,7 @@ private fun mergeLastFmHistory(
     val dailyCounts = stored.groupBy { it.songId to day(it.lastPlayedAt) }.mapValues { (_, groups) -> groups.sumOf { it.playCount } }
     var included = 0
     var ambiguous = 0
+    val addedPlayTimes = mutableListOf<Long>()
     for ((identity, tracks) in listens.groupBy { key(it.title, it.artist) }) {
         if (identity in excluded || identity.second in blockedArtists) continue
         val matches = candidates[identity].orEmpty().distinctBy { it.songId }
@@ -603,7 +638,9 @@ private fun mergeLastFmHistory(
         for ((date, plays) in tracks.groupBy { day(it.timestampMs) }) {
             val extra = (plays.size - (dailyCounts[template.songId to date] ?: 0)).coerceAtLeast(0)
             if (extra > 0) {
-                for ((album, albumPlays) in plays.sortedByDescending { it.timestampMs }.take(extra).groupBy { it.album }) {
+                val added = plays.sortedByDescending { it.timestampMs }.take(extra)
+                addedPlayTimes += added.map { it.timestampMs }
+                for ((album, albumPlays) in added.groupBy { it.album }) {
                     val latest = albumPlays.maxBy { it.timestampMs }
                     result +=
                         template.copy(
@@ -622,7 +659,7 @@ private fun mergeLastFmHistory(
             }
         }
     }
-    return LastFmMerge(result.sortedByDescending { it.lastPlayedAt }, included, ambiguous)
+    return LastFmMerge(result.sortedByDescending { it.lastPlayedAt }, included, ambiguous, addedPlayTimes)
 }
 
 fun MusicDatabase.historyChanges(includeSongMetadata: Boolean = true): Flow<Unit> =
