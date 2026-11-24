@@ -1186,7 +1186,7 @@ internal class IosPlaybackController(
         notifyPictureInPictureSurfaceChanged()
     }
 
-    internal fun pictureInPicturePlayerLayer(): Any? =
+    internal fun pictureInPicturePlayerLayer(): platform.AVFoundation.AVPlayerLayer? =
         pipSurfacePlayer?.takeIf { pipSurfaceUrl == videoPlaybackResource.value?.videoUrl }?.layer
 
     private fun notifyPictureInPictureSurfaceChanged() {
