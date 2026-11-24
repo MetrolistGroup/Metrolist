@@ -30,7 +30,7 @@ actual class DeviceDiscoveryController actual constructor(
     private val onClosed: () -> Unit,
     private val onFailure: () -> Unit,
 ) {
-    private val lock = Lock()
+    private val lock = object {}
     private var browser: nw_browser_t? = null
     private var discovering = false
     private val devicesByService = mutableMapOf<String, DiscoveredDevice>()

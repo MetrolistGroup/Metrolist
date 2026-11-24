@@ -65,7 +65,7 @@ import kotlinx.cinterop.set
 import platform.posix.uint8_tVar
 
 actual class LocalDeviceServer {
-    private val lock = Lock()
+    private val lock = object {}
     private var listener: nw_listener_t? = null
     private var serverScope: CoroutineScope? = null
 
