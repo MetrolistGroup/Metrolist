@@ -208,28 +208,27 @@ class ParametricEqualizer(
                 val x = processingBuffer[i] * outputGain
                 processingBuffer[i] = x
                 rawPeak = maxOf(rawPeak, abs(x))
-                saturatedPeak = maxOf(saturatedPeak, abs(softClip(x)))
+                saturatedPeak =
+                    maxOf(saturatedPeak, abs(if (identityConfig) saturateOvershoot(x) else softClip(x)))
             }
-            // Decide per frame so a buffer boundary cannot change protection for nearby valid peaks.
-            val identityPcm = identityConfig && rawPeak <= 1.0
             // A rolling overload fraction spans waveform cycles, so periodic peaks drive limiting without counting isolated transients.
-            val overloadTarget = if (!identityPcm && rawPeak > LIMITER_CEILING) 1.0 else 0.0
+            val overloadTarget =
+                if (rawPeak > 1.0 || (!identityConfig && rawPeak > LIMITER_CEILING)) 1.0 else 0.0
             sustainedOverloadRatio += (overloadTarget - sustainedOverloadRatio) * sustainedOverloadAlpha
-            val peak = if (sustainedOverloadRatio >= SUSTAINED_OVERLOAD_RATIO) rawPeak else saturatedPeak
-            // Identity PCM cannot start a new reduction, but an existing release must still finish.
+            val sustained = sustainedOverloadRatio >= SUSTAINED_OVERLOAD_RATIO
+            val peak = if (sustained) rawPeak else saturatedPeak
+            // Unity EQ absorbs isolated overshoot continuously. Only sustained overload or a release
+            // already in progress changes the gain applied to valid PCM.
             val gain =
-                if (identityPcm) {
+                if (identityConfig && !sustained) {
                     limiterGain(LIMITER_CEILING, allowAttack = false)
                 } else {
                     limiterGain(peak, allowAttack = true)
                 }
             lastGain = gain
-            if (identityPcm) {
-                if (gain != 1.0) for (i in frameStart until frameEnd) processingBuffer[i] *= gain
-            } else {
-                // Apply one continuous transfer to every sample. Gating the knee on the frame peak
-                // makes identical samples jump backward as a boosted waveform crosses full scale.
-                for (i in frameStart until frameEnd) processingBuffer[i] = softClip(processingBuffer[i] * gain)
+            for (i in frameStart until frameEnd) {
+                val x = processingBuffer[i] * gain
+                processingBuffer[i] = if (identityConfig) saturateOvershoot(x) else softClip(x)
             }
             frameStart = frameEnd
         }
@@ -242,6 +241,15 @@ class ParametricEqualizer(
         val diff = magnitude - SOFT_CLIP_THRESHOLD
         val range = 1.0 - SOFT_CLIP_THRESHOLD
         val compressed = SOFT_CLIP_THRESHOLD + range * tanh(diff / range)
+        return if (sample < 0.0) -compressed else compressed
+    }
+
+    /** Continuous at full scale: valid PCM is unchanged and isolated overshoot is absorbed. */
+    private fun saturateOvershoot(sample: Double): Double {
+        val magnitude = abs(sample)
+        if (magnitude <= 1.0) return sample
+        val headroom = 1.0 - LIMITER_CEILING
+        val compressed = LIMITER_CEILING + headroom * exp(-(magnitude - 1.0) / headroom)
         return if (sample < 0.0) -compressed else compressed
     }
 
