@@ -16,7 +16,6 @@ import androidx.compose.animation.core.LinearOutSlowInEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -24,7 +23,6 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -38,7 +36,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.structuralEqualityPolicy
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -60,7 +57,6 @@ import androidx.compose.ui.text.TextMeasurer
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.LineHeightStyle
-import androidx.compose.ui.text.style.ResolvedTextDirection
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.text.style.TextMotion
@@ -297,7 +293,7 @@ fun ActiveLyricsLineContent(
     alignment: TextAlign = LyricsUtils.textAlignment(Settings.shared.lyricsTextPosition),
     maxLines: Int = Int.MAX_VALUE,
     fillWidth: Boolean = true,
-    singleLine: Boolean = false,
+    mainLineOnly: Boolean = false,
     useFixedTone: Boolean = true,
 ) {
     val currentPositionProvider by rememberUpdatedState(positionProvider)
@@ -343,9 +339,9 @@ fun ActiveLyricsLineContent(
     val displayedSecondary = prep.displayedSecondary
     val density = LocalDensity.current
     val reservedHeight =
-        remember(prep, density, singleLine) {
+        remember(prep, density, mainLineOnly) {
             with(density) {
-                if (singleLine) {
+                if (mainLineOnly) {
                     prep.mainStyle.fontSize.toDp() * 1.2f
                 } else {
                     prep.mainStyle.fontSize.toDp() * 1.2f +
@@ -421,7 +417,7 @@ fun ActiveLyricsLineContent(
                 .heightIn(min = reservedHeight),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        if (!singleLine && isWordAnimationEnabled && mainWords != null) {
+        if (!mainLineOnly && isWordAnimationEnabled && mainWords != null) {
             WordLevelLyrics(
                 mainText = displayText,
                 words = mainWords,
@@ -443,92 +439,32 @@ fun ActiveLyricsLineContent(
                 showSyllableRomanization = showSyllableRomanization,
             )
         } else {
-            if (singleLine) {
-                val scrollState = rememberScrollState()
-                val measuredText =
-                    remember(displayText, mainStyle, textMeasurer) {
-                        textMeasurer.measure(displayText, mainStyle)
-                    }
-                val hasWordTiming = remember(mainWords) { mainWords?.any { !it.isBackground && !it.isLineTimed } == true }
-                val activeWordStart by remember(mainWords, hasWordTiming, entry.time, lineEndTimeMs, displayText) {
-                    derivedStateOf(structuralEqualityPolicy()) {
-                        val currentPosition = currentPositionProvider()
-                        if (hasWordTiming) {
-                            mainWords
-                                ?.filterNot { it.isBackground }
-                                ?.takeWhile { currentPosition >= (it.endTime * 1000).toLong() }
-                                ?.sumOf { it.text.length + if (it.hasTrailingSpace) 1 else 0 }
-                                ?: 0
-                        } else if (lineEndTimeMs != Long.MAX_VALUE && lineEndTimeMs > entry.time) {
-                            // Line-timed lyrics have no word positions, so pan through the line over its duration.
-                            val progress = (currentPosition - entry.time).toFloat() / (lineEndTimeMs - entry.time)
-                            (progress.coerceIn(0f, 1f) * displayText.length).toInt()
-                        } else {
-                            0
-                        }
-                    }
-                }
-                val isRtlText = measuredText.getParagraphDirection(0) == ResolvedTextDirection.Rtl
-                // Offset 0 must show the text's start edge, whatever the layout direction mirrors.
-                val reverseScrolling = isRtlText != (LocalLayoutDirection.current == LayoutDirection.Rtl)
-                LaunchedEffect(activeWordStart, measuredText, scrollState.maxValue) {
-                    if (activeWordStart < displayText.length) {
-                        val box = measuredText.getBoundingBox(activeWordStart)
-                        val wordOffset = if (isRtlText) measuredText.size.width - box.right else box.left
-                        scrollState.animateScrollTo(wordOffset.toInt().coerceIn(0, scrollState.maxValue))
-                    }
-                }
-                val isJoining = remember(displayText) { isJoiningScript(displayText) }
-                if (isJoining) {
-                    AlphaSafeText(
-                        text = displayText,
-                        style = mainStyle,
-                        color = color,
-                        textAlign = TextAlign.Start,
-                        maxLines = 1,
-                        softWrap = false,
-                        overflow = TextOverflow.Clip,
-                        modifier = Modifier.horizontalScroll(scrollState, reverseScrolling = reverseScrolling),
-                    )
-                } else {
-                    Text(
-                        text = displayText,
-                        style = mainStyle.copy(color = color),
-                        textAlign = TextAlign.Start,
-                        maxLines = 1,
-                        softWrap = false,
-                        overflow = TextOverflow.Clip,
-                        modifier = Modifier.horizontalScroll(scrollState, reverseScrolling = reverseScrolling),
-                    )
-                }
+            val isJoining = remember(displayText) { isJoiningScript(displayText) }
+            if (isJoining) {
+                AlphaSafeText(
+                    text = displayText,
+                    style = mainStyle,
+                    color = color,
+                    textAlign = alignment,
+                    maxLines = maxLines,
+                    softWrap = true,
+                    overflow = TextOverflow.Clip,
+                    modifier = Modifier.fillMaxWidth(),
+                )
             } else {
-                val isJoining = remember(displayText) { isJoiningScript(displayText) }
-                if (isJoining) {
-                    AlphaSafeText(
-                        text = displayText,
-                        style = mainStyle,
-                        color = color,
-                        textAlign = alignment,
-                        maxLines = maxLines,
-                        softWrap = true,
-                        overflow = TextOverflow.Clip,
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                } else {
-                    Text(
-                        text = displayText,
-                        style = mainStyle.copy(color = color),
-                        textAlign = alignment,
-                        maxLines = maxLines,
-                        softWrap = true,
-                        overflow = TextOverflow.Clip,
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                }
+                Text(
+                    text = displayText,
+                    style = mainStyle.copy(color = color),
+                    textAlign = alignment,
+                    maxLines = maxLines,
+                    softWrap = true,
+                    overflow = TextOverflow.Clip,
+                    modifier = Modifier.fillMaxWidth(),
+                )
             }
         }
 
-        if (!singleLine && displayedSecondary != null) {
+        if (!mainLineOnly && displayedSecondary != null) {
             val displayedSecondaryStyle = prep.displayedSecondaryStyle ?: secondaryStyle
             val secondaryColor = color.copy(alpha = color.alpha * 0.8f)
             Box(modifier = Modifier.fillMaxWidth().padding(top = 4.dp)) {
@@ -572,7 +508,7 @@ fun ActiveLyricsLineContent(
             }
         }
 
-        if (!singleLine) {
+        if (!mainLineOnly) {
             translation?.let { translation ->
                 val transStyle = prep.translationStyle ?: secondaryStyle
                 val transColor = textColor.copy(alpha = if (isActive) 0.7f else 0.3f)
