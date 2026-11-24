@@ -324,14 +324,10 @@ class HomeViewModel(
             ) { useLocal, quickPicks, forgottenFavorites ->
                 if (useLocal) quickPicks to forgottenFavorites else null
             }.distinctUntilChanged()
+                .combine(_uiState.map { it.canRebuildQuickPicks() }.distinctUntilChanged()) { _, ready -> ready }
                 .drop(1)
-                .collectLatest {
-                    // Let active loads finish before publishing the latest history or mode.
-                    _uiState.first { state ->
-                        !state.isLoading && !state.isRefreshing && !state.isRevalidating &&
-                            !state.isContentLoading && !state.isLoadingMore
-                    }
-                    rebuildQuickPicks()
+                .collectLatest { ready ->
+                    if (ready) rebuildQuickPicks()
                 }
         }
         scope.launch {
@@ -1341,13 +1337,13 @@ class HomeViewModel(
         saveLastHomePage(merged)
     }
 
+    private fun HomeUiState.canRebuildQuickPicks(): Boolean =
+        !isLoading && !isRefreshing && !isRevalidating && !isContentLoading && !isAllContentPending && !isLoadingMore
+
     private suspend fun rebuildQuickPicks() {
+        val generation = contentLoadGeneration
         val state = _uiState.value
-        if (state.isLoading || state.isRefreshing || state.isRevalidating ||
-            state.isContentLoading || state.isLoadingMore
-        ) {
-            return
-        }
+        if (!state.canRebuildQuickPicks()) return
         val selectedChip = state.selectedChip
         val isFiltered = isFilteredHome(selectedChip?.params, selectedChip?.browseId ?: "FEmusic_home")
         // A restored startup snapshot keeps quickPicks separately and may lack
@@ -1379,7 +1375,7 @@ class HomeViewModel(
         val filteredQuickPicks = BlockedContent.filterSongs(quickPicks, BlockedContent.snapshot())
         var publishedQuickPicks = filteredQuickPicks
         _uiState.update { current ->
-            if (current.selectedChip == selectedChip) {
+            if (generation == contentLoadGeneration && current.canRebuildQuickPicks() && current.selectedChip == selectedChip) {
                 val currentExcludedIds =
                     (current.data.orEmpty() + current.sections + current.chipFeeds.flatMap { it.sections })
                         .heardInShortsItemIds()
@@ -1393,7 +1389,11 @@ class HomeViewModel(
         // Mirror the rebuild into the caches and the persisted snapshot so
         // pagination and chip round trips keep the rebuilt picks.
         val updated = _uiState.value
-        if (updated.selectedChip != selectedChip || updated.quickPicks != publishedQuickPicks) return
+        if (generation != contentLoadGeneration || !updated.canRebuildQuickPicks() ||
+            updated.selectedChip != selectedChip || updated.quickPicks != publishedQuickPicks
+        ) {
+            return
+        }
         if (isFiltered) {
             cachedSelectedChipContent = updated
             updated.selectedChip?.let { chip -> cacheChipContent(chip, updated) }
@@ -2613,16 +2613,19 @@ internal fun classicQuickPicks(
     localQuickPicks: List<SongItem>,
     localForgottenFavorites: List<SongItem>,
     excludedIds: Set<String> = emptySet(),
-): List<SongItem> =
-    // Filter before sampling so rejected rows do not consume the quota. Home
-    // shelves always strip non-musical videos, so the local pool does too.
-    BlockedContent
-        .filterSongs(
-            (localQuickPicks + localForgottenFavorites.take(8)).distinctBy { it.id },
-            BlockedContent.snapshot(),
-        ).filterNot { it.isNonMusicalVideo || canonicalHomeItemId(it) in excludedIds }
+): List<SongItem> {
+    val blocked = BlockedContent.snapshot()
+
+    fun music(songs: List<SongItem>): List<SongItem> =
+        BlockedContent
+            .filterSongs(songs, blocked)
+            .filterNot { it.isPodcast || it.isNonMusicalVideo || canonicalHomeItemId(it) in excludedIds }
+
+    return (music(localQuickPicks) + music(localForgottenFavorites).take(8))
+        .distinctBy { it.id }
         .shuffled()
         .take(20)
+}
 
 private fun preferredQuickPicks(
     apiQuickPicks: List<SongItem>,
