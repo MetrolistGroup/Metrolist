@@ -2486,6 +2486,7 @@
     <string name="recommended">Recommended</string>
     <!-- Translators: Imperative action label for refresh in the Home screen. -->
     <string name="refresh">Refresh</string>
+    <string name="no_new_playlist_suggestions">No new playlist suggestions</string>
     <!-- Translators: Progress or status message for refreshing in the Home screen. -->
     <string name="refreshing">Refreshing</string>
     <!-- Translators: Imperative action label for remove in the playlist screen and downloaded and cached songs. -->
