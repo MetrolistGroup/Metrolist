@@ -327,7 +327,6 @@ class HomeViewModel(
             ) { useLocal, quickPicks, forgottenFavorites ->
                 if (useLocal) quickPicks to forgottenFavorites else null
             }.distinctUntilChanged()
-                .drop(1)
                 .collectLatest {
                     // Keep this change pending when a new load or chip selection supersedes a rebuild.
                     do {
