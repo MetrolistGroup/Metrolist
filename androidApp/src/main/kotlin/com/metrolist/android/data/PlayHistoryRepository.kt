@@ -30,6 +30,8 @@ import com.metrolist.shared.db.withDatabaseTransaction
 import com.metrolist.shared.model.HistorySortMode
 import com.metrolist.shared.model.SongItem
 import com.metrolist.shared.model.SortDirection
+import com.metrolist.shared.model.isNonMusicalVideo
+import com.metrolist.shared.model.isPodcast
 import com.metrolist.shared.settings.BlockedContent
 import com.metrolist.shared.settings.Settings
 import com.metrolist.shared.state.GlobalYouTubeRepository
@@ -325,12 +327,12 @@ class PlayHistoryRepository(
             song.artists.size,
         )
         // Keep the optional network fetch out of the ordered history writes.
-        if (Settings.shared.classicRecommendations) {
+        if (Settings.shared.useLocalHomeRecommendations) {
             relatedSongsScope.launch { recordRelatedSongs(song.id) }
         }
     }
 
-    /** Stores the songs YouTube relates to [songId], feeding the classic local Quick picks. */
+    /** Stores the songs YouTube relates to [songId] for history-based Quick picks. */
     private suspend fun recordRelatedSongs(songId: String) {
         // Local files have no YouTube watch id, so their relations cannot be fetched.
         if (songId.startsWith("local_")) return
@@ -339,7 +341,7 @@ class PlayHistoryRepository(
             val related =
                 GlobalYouTubeRepository.instance
                     .startRadio(songId)
-                    .filter { it.id.isNotBlank() && it.id != songId }
+                    .filter { it.id.isNotBlank() && it.id != songId && !it.isNonMusicalVideo && !it.isPodcast }
                     .distinctBy { it.id }
                     .take(RELATED_SONGS_LIMIT)
             if (related.isEmpty()) return

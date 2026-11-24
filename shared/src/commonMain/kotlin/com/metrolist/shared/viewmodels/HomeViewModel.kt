@@ -317,16 +317,19 @@ class HomeViewModel(
         AuthManager().restorePersistedSession()
         val restoreGeneration = contentLoadGeneration
         scope.launch {
-            snapshotFlow { Settings.shared.classicRecommendations }
+            combine(
+                snapshotFlow { Settings.shared.useLocalHomeRecommendations },
+                database.dao().quickPicks(),
+                database.dao().forgottenFavorites(),
+            ) { useLocal, quickPicks, forgottenFavorites ->
+                if (useLocal) quickPicks to forgottenFavorites else null
+            }.distinctUntilChanged()
                 .drop(1)
-                .collect {
-                    // A load started before this change may still publish Quick picks
-                    // selected with the old value; wait for it to settle first.
-                    withTimeoutOrNull(10_000) {
-                        _uiState.first { state ->
-                            !state.isLoading && !state.isRefreshing && !state.isRevalidating &&
-                                !state.isContentLoading && !state.isLoadingMore
-                        }
+                .collectLatest {
+                    // Let active loads finish before publishing the latest history or mode.
+                    _uiState.first { state ->
+                        !state.isLoading && !state.isRefreshing && !state.isRevalidating &&
+                            !state.isContentLoading && !state.isLoadingMore
                     }
                     rebuildQuickPicks()
                 }
@@ -907,7 +910,7 @@ class HomeViewModel(
                         val apiForgottenFavorites = findSectionSongs(sections, "FEmusic_forgotten_favorites")
 
                         val quickPicks =
-                            if (Settings.shared.classicRecommendations && !isFiltered) {
+                            if (Settings.shared.useLocalHomeRecommendations && !isFiltered) {
                                 classicQuickPicks(localQuickPicks, localForgottenFavorites, heardInShortsIds).ifEmpty { apiQuickPicks }
                             } else {
                                 personalizedSection(apiQuickPicks, localQuickPicks, isFiltered)
@@ -1367,7 +1370,7 @@ class HomeViewModel(
                 .first()
                 .map { it.toSongItem() }
         val quickPicks =
-            if (Settings.shared.classicRecommendations && !isFiltered) {
+            if (Settings.shared.useLocalHomeRecommendations && !isFiltered) {
                 classicQuickPicks(localQuickPicks, localForgottenFavorites, heardInShortsIds).ifEmpty { apiQuickPicks }
             } else {
                 personalizedSection(apiQuickPicks, localQuickPicks, isFiltered)
@@ -1414,7 +1417,7 @@ class HomeViewModel(
             findQuickPickSongs(dataSections)
                 .ifEmpty { cached.quickPicks.filterNot { canonicalHomeItemId(it) in heardInShortsIds } }
         val quickPicks =
-            if (Settings.shared.classicRecommendations) {
+            if (Settings.shared.useLocalHomeRecommendations) {
                 classicQuickPicks(localQuickPicks, localForgottenFavorites, heardInShortsIds).ifEmpty { apiQuickPicks }
             } else {
                 personalizedSection(apiQuickPicks, localQuickPicks, isFiltered = false)
@@ -2625,7 +2628,7 @@ private fun preferredQuickPicks(
     apiQuickPicks: List<SongItem>,
     current: List<SongItem>,
 ): List<SongItem> =
-    if (Settings.shared.classicRecommendations) {
+    if (Settings.shared.useLocalHomeRecommendations) {
         current.ifEmpty { apiQuickPicks }
     } else {
         apiQuickPicks.ifEmpty { current }
