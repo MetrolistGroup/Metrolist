@@ -33,6 +33,43 @@ fun HomeSection.isLibrarySection(userPlaylistIds: Set<String> = emptySet()): Boo
 fun List<HomeSection>.withoutRegionalCharts(signedIn: Boolean): List<HomeSection> =
     if (signedIn) filterNot { it.browseId?.startsWith("FEmusic_charts") == true } else this
 
+fun HomeSection.isHeardInShortsSection(): Boolean {
+    if (browseId?.startsWith("FEmusic_similar") == true || headerBrowseId?.startsWith("UC") == true) {
+        return false
+    }
+    val normalizedBrowseId = browseId?.trim()?.removePrefix("VL")
+    if (normalizedBrowseId != null &&
+        (normalizedBrowseId.equals("SS", ignoreCase = true) || normalizedBrowseId.contains("shorts", ignoreCase = true))
+    ) {
+        return true
+    }
+    if (!hasTitle || items.none { it is SongItem }) return false
+    // shortcut: Match the "Heard in Shorts" shelf by title because YouTube Music omits a browseId on it; prefer browseId if YouTube adds one.
+    return title.containsHeardInShortsToken()
+}
+
+fun HomeSection.isQuickPicksSection(): Boolean = browseId?.startsWith("FEmusic_quickpicks") == true && !isHeardInShortsSection()
+
+fun List<HomeSection>.heardInShortsItemIds(): Set<String> =
+    filter(HomeSection::isHeardInShortsSection)
+        .flatMap(HomeSection::items)
+        .mapTo(mutableSetOf(), ::canonicalHomeItemId)
+
+private fun Char.isLatinLetterOrDigit(): Boolean = code < 0x0250 && isLetterOrDigit()
+
+private fun String.containsHeardInShortsToken(): Boolean {
+    val lower = lowercase()
+    var start = lower.indexOf("shorts")
+    while (start >= 0) {
+        val beforeOk = start == 0 || !lower[start - 1].isLatinLetterOrDigit()
+        val end = start + "shorts".length
+        val afterOk = end == lower.length || !lower[end].isLatinLetterOrDigit()
+        if (beforeOk && afterOk) return true
+        start = lower.indexOf("shorts", start + 1)
+    }
+    return "ショート" in this || "쇼츠" in this || "शॉर्ट्स" in this
+}
+
 fun canonicalHomeItemId(item: YTItem): String {
     if (item is PlaylistItem) BuiltinPlaylist.fromId(item.id)?.let { return it.id }
     if (item is BrowseItem && !item.params.isNullOrBlank()) {

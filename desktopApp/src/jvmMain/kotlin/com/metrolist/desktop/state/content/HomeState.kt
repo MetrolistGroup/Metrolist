@@ -27,7 +27,10 @@ import com.metrolist.shared.model.PlaylistItem
 import com.metrolist.shared.model.PodcastItem
 import com.metrolist.shared.model.SongItem
 import com.metrolist.shared.model.YTItem
+import com.metrolist.shared.model.canonicalHomeItemId
+import com.metrolist.shared.model.heardInShortsItemIds
 import com.metrolist.shared.model.isDesktopHomeDiscoverySection
+import com.metrolist.shared.model.isQuickPicksSection
 import com.metrolist.shared.model.mergeAndDeduplicateHomeSections
 import com.metrolist.shared.viewmodels.HomeViewModel
 import com.metrolist.shared.viewmodels.uncategorizedHomeSections
@@ -165,6 +168,7 @@ internal fun HomeViewModel.HomeUiState.forDesktopDiscovery(): HomeViewModel.Home
             }.filter { it.items.isNotEmpty() }
 
     val discovery = filterDiscovery(mergeAndDeduplicateHomeSections(data.orEmpty() + discoverySections, userPlaylistIds))
+    val heardInShortsIds = discovery.heardInShortsItemIds()
 
     fun items(prefix: String): List<YTItem> = discovery.filter { it.browseId?.startsWith(prefix) == true }.flatMap(HomeSection::items)
 
@@ -185,7 +189,13 @@ internal fun HomeViewModel.HomeUiState.forDesktopDiscovery(): HomeViewModel.Home
                 )
             },
         speedDialItems = speedDialItems.filterNot { it.id.startsWith("FEmusic_library") && it.id !in speedDialPinnedIds },
-        quickPicks = items("FEmusic_quickpicks").filterIsInstance<SongItem>().distinctBy(SongItem::id),
+        quickPicks =
+            discovery
+                .filter(HomeSection::isQuickPicksSection)
+                .flatMap(HomeSection::items)
+                .filterIsInstance<SongItem>()
+                .filterNot { canonicalHomeItemId(it) in heardInShortsIds }
+                .distinctBy(SongItem::id),
         forgottenFavorites = items("FEmusic_forgotten_favorites").filterIsInstance<SongItem>().distinctBy(SongItem::id),
         trending = items("FEmusic_charts").filterIsInstance<SongItem>().distinctBy(SongItem::id),
         albumCharts = items("FEmusic_charts").filterIsInstance<AlbumItem>().distinctBy(AlbumItem::id),

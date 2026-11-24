@@ -9,8 +9,10 @@ import com.metrolist.shared.model.PodcastItem
 import com.metrolist.shared.model.SongItem
 import com.metrolist.shared.model.YTItem
 import com.metrolist.shared.model.canonicalHomeItemId
+import com.metrolist.shared.model.heardInShortsItemIds
 import com.metrolist.shared.model.isLibrarySection
 import com.metrolist.shared.model.isPodcast
+import com.metrolist.shared.model.isQuickPicksSection
 import com.metrolist.shared.settings.Settings
 import com.metrolist.shared.viewmodels.HomeViewModel.HomeUiState
 
@@ -37,7 +39,7 @@ object HomeShelfBuilder {
                 val candidates =
                     sourceSections.filter { section ->
                         section.hasTitle &&
-                            (section.browseId?.startsWith("FEmusic_quickpicks") == true || section.title == shelf.title) &&
+                            (section.isQuickPicksSection() || section.title == shelf.title) &&
                             section.items.mapTo(mutableSetOf(), ::canonicalHomeItemId).containsAll(itemIds)
                     }
                 return candidates.firstOrNull { it.title == shelf.title } ?: candidates.firstOrNull()
@@ -59,6 +61,7 @@ object HomeShelfBuilder {
                         (shelf.params == null || it.params == shelf.params)
                 }
         }
+        val heardInShortsIds = (state.data.orEmpty() + state.sections).heardInShortsItemIds()
         return buildList {
             val seenItemKeys = mutableSetOf<String>()
             val seenShelfTitles = mutableSetOf<String>()
@@ -149,6 +152,7 @@ object HomeShelfBuilder {
                 val uniqueQuickPicks =
                     state.quickPicks
                         .distinctBy(::canonicalHomeItemId)
+                        .filterNot { canonicalHomeItemId(it) in heardInShortsIds }
                         .filter { seenItemKeys.add(canonicalHomeItemId(it)) }
                 if (uniqueQuickPicks.isNotEmpty() && seenShelfTitles.add(text.quickPicks.trim().lowercase())) {
                     add(
@@ -335,16 +339,21 @@ object HomeShelfBuilder {
                 }.forEachIndexed { index, section ->
                     val sectionTitleKey = section.title.trim().lowercase()
                     run {
+                        val existingIndex =
+                            indexOfFirst {
+                                it.title.trim().lowercase() == sectionTitleKey && it.browseId == section.browseId &&
+                                    it.params == section.params
+                            }
+                        val isQuickPicksSection =
+                            section.isQuickPicksSection() ||
+                                section.title.equals(text.quickPicks, ignoreCase = true) ||
+                                (existingIndex >= 0 && get(existingIndex).key == "quick_picks")
                         val uniqueItems =
                             section.items
                                 .distinctBy(::canonicalHomeItemId)
+                                .filterNot { isQuickPicksSection && canonicalHomeItemId(it) in heardInShortsIds }
                                 .filter { seenItemKeys.add(canonicalHomeItemId(it)) }
                         if (uniqueItems.isNotEmpty()) {
-                            val existingIndex =
-                                indexOfFirst {
-                                    it.title.trim().lowercase() == sectionTitleKey && it.browseId == section.browseId &&
-                                        it.params == section.params
-                                }
                             if (existingIndex >= 0) {
                                 val existing = get(existingIndex)
                                 set(existingIndex, existing.copy(items = existing.items + uniqueItems))
@@ -433,14 +442,26 @@ object HomeShelfBuilder {
         }.filterRenderable(pageWidth)
             .filter { isVisible(it.visibilityKey, it.title, it.legacyVisibilityKey) } +
             state.chipFeeds.flatMapIndexed { feedIndex, feed ->
+                val feedHeardInShortsIds = heardInShortsIds + feed.sections.heardInShortsItemIds()
                 feed.sections
                     .filter { it.items.isNotEmpty() && isVisible(it.visibilityKey, it.title, it.legacyVisibilityKey) }
-                    .mapIndexed { index, section ->
+                    .mapNotNull { section ->
+                        val isQuickPicksSection =
+                            section.isQuickPicksSection() || section.title.equals(text.quickPicks, ignoreCase = true)
+                        val items =
+                            if (isQuickPicksSection) {
+                                section.items.filterNot { canonicalHomeItemId(it) in feedHeardInShortsIds }
+                            } else {
+                                section.items
+                            }
+                        if (items.isEmpty()) null else section to items
+                    }.mapIndexed { index, (section, items) ->
                         val shelf =
                             section.toHomeShelf(
                                 key = "chip_${feedIndex}_$index",
                                 text = text,
                                 userPlaylistIds = state.userPlaylists.mapTo(mutableSetOf()) { it.id.removePrefix("VL") },
+                                items = items,
                             )
                         shelf.copy(
                             chipTitle = feed.chip.title.takeIf { index == 0 },
@@ -547,7 +568,7 @@ private fun HomeSection.toHomeShelf(
 
                 section.isLibrarySection(userPlaylistIds) -> HomeShelfHeaderAction.LIBRARY
 
-                section.browseId?.startsWith("FEmusic_quickpicks") == true ||
+                section.isQuickPicksSection() ||
                     section.title.equals(text.quickPicks, ignoreCase = true) -> HomeShelfHeaderAction.PLAY_ALL
 
                 section.title.equals(
