@@ -1510,7 +1510,12 @@ private fun TrackItem(
                     color = contentColor,
                 )
                 Row(
-                    modifier = Modifier.height(18.dp),
+                    modifier =
+                        if (Settings.shared.multilineSongTitles) {
+                            Modifier.heightIn(min = 18.dp)
+                        } else {
+                            Modifier.height(18.dp)
+                        },
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     MetadataIcons(track = track)

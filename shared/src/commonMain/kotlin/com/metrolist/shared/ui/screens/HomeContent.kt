@@ -1017,9 +1017,15 @@ private fun HomeGallery(
     content: @Composable (Int, YTItem) -> Unit,
 ) {
     val pageCount = (shelf.items.size + rows - 1) / rows
+    val multilineRowHeight =
+        with(LocalDensity.current) {
+            MaterialTheme.typography.bodyMedium.lineHeight.toDp() * 3 +
+                MaterialTheme.typography.bodySmall.lineHeight.toDp() +
+                16.dp
+        }
     val effectiveRowHeight =
-        if (!isWide && Settings.shared.multilineSongTitles && shelf.items.any { it is SongItem }) {
-            rowHeight.coerceAtLeast(112.dp)
+        if (Settings.shared.multilineSongTitles && shelf.items.any { it is SongItem || it is EpisodeItem }) {
+            rowHeight.coerceAtLeast(multilineRowHeight)
         } else {
             rowHeight
         }

@@ -862,7 +862,7 @@ fun YTListItem(
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.Medium,
                 color = contentColor,
-                maxLines = if (item is SongItem && Settings.shared.multilineSongTitles) 3 else 1,
+                maxLines = if ((item is SongItem || item is EpisodeItem) && Settings.shared.multilineSongTitles) 3 else 1,
             )
 
             Row(

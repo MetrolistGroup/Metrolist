@@ -486,7 +486,12 @@ fun SpeedDialGridItem(
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.Medium,
                 color = Color.White,
-                maxLines = 1,
+                maxLines =
+                    if ((item is SongItem || item is EpisodeItem) && Settings.shared.multilineSongTitles) {
+                        3
+                    } else {
+                        1
+                    },
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.weight(1f),
             )
