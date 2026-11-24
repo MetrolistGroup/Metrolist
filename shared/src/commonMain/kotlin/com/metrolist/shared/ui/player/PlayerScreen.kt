@@ -205,6 +205,7 @@ import com.metrolist.shared.ui.components.PlayerMenuAction
 import com.metrolist.shared.ui.components.PlayerPrimaryControls
 import com.metrolist.shared.ui.components.PopupVisibility
 import com.metrolist.shared.ui.components.SleepTimerDialog
+import com.metrolist.shared.ui.components.TopRoundedSurfaceShape
 import com.metrolist.shared.ui.components.VintageAudioVideoModeSwitcher
 import com.metrolist.shared.ui.components.VintageClassicActionButtons
 import com.metrolist.shared.ui.components.VintageClassicBottomBar
@@ -2397,7 +2398,7 @@ fun PlayerScreen(
                                 Surface(
                                     modifier =
                                         Modifier.fillMaxSize().blockInput(!queueSheetState.acceptsInput),
-                                    shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
+                                    shape = TopRoundedSurfaceShape(28.dp),
                                     color = MaterialTheme.colorScheme.surfaceContainerLow,
                                 ) {
                                     Column(modifier = Modifier.fillMaxSize().sheetBackContent()) {
