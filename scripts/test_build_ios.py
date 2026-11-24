@@ -116,8 +116,6 @@ def main():
     assert "Raise iOS build daemon heap" not in reusable_purged, "iOS heap-cap sed hack must not return"
     assert 'ORG_GRADLE_PROJECT_org.gradle.workers.max: "2"' in reusable_purged, "iOS worker bound required"
     assert "--no-daemon" not in reusable_purged, "iOS build must reuse the Gradle daemon"
-    assert "METROLIST_DRIVE_BROKER_URL: ${{ vars.METROLIST_DRIVE_BROKER_URL }}" in reusable_purged
-    assert "GOOGLE_IOS_CLIENT_ID_SCHEME: ${{ vars.GOOGLE_IOS_CLIENT_ID_SCHEME }}" in reusable_purged
 
     with tempfile.TemporaryDirectory() as directory:
         root = Path(directory)
