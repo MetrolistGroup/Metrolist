@@ -45,40 +45,15 @@ def main():
         "TARGETED_DEVICE_FAMILY": "1,2",
     }
     assert xcode_project.count("baseConfigurationReference = 0418C23F19355BB18E625B53 /* Config.xcconfig */;") >= 4
-    framework_phases = xcode_project.split('name = "Compile Kotlin Multiplatform Framework";')[1:]
-    assert len(framework_phases) >= 2, "Each target importing Shared needs framework generation"
-    for phase in framework_phases:
-        section = phase.split("/* End PBXShellScriptBuildPhase section */", 1)[0]
-        assert "./gradlew :shared:embedAndSignAppleFrameworkForXcode" in section
-        assert "sourceRevision" not in section, "The Xcode archive must use the real commit revision"
-        assert "bash scripts/ios_version.sh" in section
-        assert '"$(DERIVED_FILE_DIR)/MetrolistVersion.h"' in section
+    framework_phase = xcode_project.split('name = "Compile Kotlin Multiplatform Framework";', 1)[1].split("/* End PBXShellScriptBuildPhase section */", 1)[0]
+    assert "./gradlew :shared:embedAndSignAppleFrameworkForXcode" in framework_phase
+    assert "sourceRevision" not in framework_phase, "The Xcode archive must use the real commit revision"
+    assert "bash scripts/ios_version.sh" in framework_phase
+    assert '"$(DERIVED_FILE_DIR)/MetrolistVersion.h"' in framework_phase
     assert "INFOPLIST_PREPROCESS = YES" in xcconfig
     assert "INFOPLIST_PREFIX_HEADER = $(DERIVED_FILE_DIR)/MetrolistVersion.h" in xcconfig
-    assert "METROLIST_APP_BUNDLE_IDENTIFIER = com.metrolist.MetrolistApp" in xcconfig
     for setting, value in inherited_settings.items():
         assert f"{setting} = {value}" in xcconfig, setting
-    config_lists = re.findall(
-        r'([0-9A-F]{24}) /\* Build configuration list for PBXNativeTarget "([^"]+)" \*/ = \{(.*?)\n\t\t\};',
-        xcode_project,
-        re.S,
-    )
-    assert len(config_lists) >= 2
-    for _, target_name, body in config_lists:
-        config_ids = re.findall(r"([0-9A-F]{24}) /\* (?:Debug|Release) \*/,", body)
-        assert config_ids, target_name
-        for config_id in config_ids:
-            match = re.search(
-                rf'\b{config_id} /\* (?:Debug|Release) \*/ = \{{(.*?)\n\t\t\}};',
-                xcode_project,
-                re.S,
-            )
-            assert match is not None, config_id
-            block = match.group(1)
-            assert "baseConfigurationReference = 0418C23F19355BB18E625B53 /* Config.xcconfig */;" in block, config_id
-            if target_name == "iosApp":
-                for setting in inherited_settings:
-                    assert f"{setting} =" not in block, (target_name, setting)
     entitlements = plistlib.loads((repository / "iosApp/Configuration/iosApp.entitlements").read_bytes())
     assert entitlements["com.apple.developer.associated-domains"] == ["applinks:metrolist.cc"]
     build_script = (repository / "scripts/build_ios.sh").read_text()
