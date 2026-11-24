@@ -97,7 +97,7 @@ class DesktopPlaybackController(
         queue: List<SongItem>,
         songsOnly: Boolean,
     ) {
-        if (startsLoneRadio(song, queue, songsOnly)) return PlayerState.startRadio(song)
+        if (startsLoneRadio(song, queue, songsOnly)) return PlayerState.playSongRadio(song)
         PlayerState.playTrack(song, queue.ifEmpty { listOf(song) }, songsOnly = songsOnly)
     }
 
@@ -115,7 +115,7 @@ class DesktopPlaybackController(
         songsOnly: Boolean,
     ) {
         if (explicitPlaybackGeneration != expectedGeneration) return
-        if (startsLoneRadio(song, queue, songsOnly)) return PlayerState.startRadio(song)
+        if (startsLoneRadio(song, queue, songsOnly)) return PlayerState.playSongRadio(song)
         val replacementGeneration = playbackReplacementGeneration
         PlayerState.playTrack(
             song,
