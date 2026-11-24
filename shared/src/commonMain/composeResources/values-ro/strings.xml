@@ -2695,4 +2695,6 @@
     <string name="cache_whole_song_while_playing">Stochează în cache întreaga melodie în timpul redării</string>
     <string name="cache_whole_song_while_playing_desc">Preia restul unei melodii redate în flux direct în loc de doar porțiunea imediat următoare în buffer. Utilizează mai multe date.</string>
     <string name="slider_standard_buffered">Standard cu buffer</string>
+    <string name="hide_playlist_recommendations">Ascunde recomandările pentru playlist</string>
+    <string name="hide_playlist_recommendations_desc">Ascunde melodiile recomandate afișate sub playlisturi</string>
 </resources>
