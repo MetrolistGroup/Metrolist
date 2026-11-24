@@ -2,7 +2,9 @@ package com.metrolist.shared.playback.ffmpeg
 
 import com.metrolist.shared.youtube.playback.PlaybackResource
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.Flow
@@ -10,6 +12,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
@@ -31,6 +34,7 @@ object DirectPlaybackCache {
     )
 
     private val captures = LinkedHashMap<Key, Capture>()
+    private val contentRangePattern = Regex("bytes ([0-9]+)-([0-9]+)/([0-9]+)")
     private val initializedDirectories = mutableSetOf<File>()
 
     private fun keyOf(resource: PlaybackResource): Key =
@@ -364,13 +368,40 @@ object DirectPlaybackCache {
                         .header("Range", "bytes=$start-$end")
                         .build()
                 val call = httpClient.newCall(request)
+                // Cancelling the fill must also stop a request that is blocked on the network.
+                val cancelCall =
+                    launch(start = CoroutineStart.UNDISPATCHED) {
+                        try {
+                            awaitCancellation()
+                        } finally {
+                            call.cancel()
+                        }
+                    }
                 try {
                     call.execute().use { response ->
-                        if (response.code == 200) {
-                            if (start != 0L) return@withContext false
-                        } else if (response.code != 206) {
-                            return@withContext false
-                        }
+                        // Only the requested bytes of this exact file may fill the capture.
+                        val matches =
+                            when (response.code) {
+                                206 -> {
+                                    response
+                                        .header("Content-Range")
+                                        ?.trim()
+                                        ?.let(contentRangePattern::matchEntire)
+                                        ?.groupValues
+                                        ?.let { (_, first, last, total) ->
+                                            first.toLongOrNull() == start && last.toLongOrNull() == end && total.toLongOrNull() == size
+                                        } == true
+                                }
+
+                                200 -> {
+                                    start == 0L && response.body.contentLength().let { it < 0L || it == size }
+                                }
+
+                                else -> {
+                                    false
+                                }
+                            }
+                        if (!matches) return@withContext false
                         val stream = response.body.byteStream()
                         val buffer = ByteArray(64 * 1024)
                         var current = start
@@ -391,6 +422,8 @@ object DirectPlaybackCache {
                     throw e
                 } catch (_: Exception) {
                     false
+                } finally {
+                    cancelCall.cancel()
                 }
             }
 
