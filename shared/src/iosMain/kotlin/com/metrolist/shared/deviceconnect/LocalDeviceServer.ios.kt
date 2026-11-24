@@ -55,6 +55,7 @@ import platform.Network.nw_protocol_stack_prepend_application_protocol
 import platform.Network.nw_ws_create_metadata
 import platform.Network.nw_ws_create_options
 import platform.Network.nw_ws_metadata_get_opcode
+import platform.Network.nw_ws_opcode_close
 import platform.Network.nw_ws_opcode_text
 import platform.Network.nw_ws_options_set_auto_reply_ping
 import platform.Network.nw_ws_options_set_client_request_handler
@@ -272,16 +273,23 @@ private class IosDeviceChannel(
         onClosed: () -> Unit,
     ) {
         nw_connection_receive_message(connection) { data, context, _, error ->
-            if (error != null) {
+            if (error != null || data == null) {
                 onClosed()
                 return@nw_connection_receive_message
             }
-            if (data != null) {
-                val protocolMetadata =
-                    nw_content_context_copy_protocol_metadata(context, nw_protocol_copy_ws_definition())
-                val opcode = protocolMetadata?.let { nw_ws_metadata_get_opcode(it).toInt() }
-                if (opcode == nw_ws_opcode_text.toInt() && !onText(data.toByteArray().decodeToString())) {
+            val protocolMetadata =
+                nw_content_context_copy_protocol_metadata(context, nw_protocol_copy_ws_definition())
+            val opcode = protocolMetadata?.let { nw_ws_metadata_get_opcode(it) }
+            when (opcode) {
+                nw_ws_opcode_close -> {
+                    onClosed()
                     return@nw_connection_receive_message
+                }
+
+                nw_ws_opcode_text -> {
+                    if (!onText(data.toByteArray().decodeToString())) {
+                        return@nw_connection_receive_message
+                    }
                 }
             }
             receiveLoop(onText, onClosed)
