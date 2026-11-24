@@ -6,6 +6,7 @@ import androidx.compose.runtime.setValue
 import com.metrolist.innertubex.InnerTube
 import com.metrolist.shared.playback.PendingYouTubePlaybackReportStore
 import com.metrolist.shared.playlist.LibraryDeletionTracker
+import com.metrolist.shared.playlist.PendingPlaylistAdds
 import com.metrolist.shared.settings.Settings
 import com.metrolist.shared.state.SongLikeState
 import com.metrolist.shared.youtube.logging.YtLogger
@@ -72,5 +73,6 @@ private fun clearStoredYouTubeSession() {
     runCatching { Settings.shared.pendingRemoteLibraryRemovalKeysJson = "[]" }
     runCatching { Settings.shared.deletedPlaylistIdsJson = "[]" }
     runCatching { PendingYouTubePlaybackReportStore.clear() }
+    runCatching { PendingPlaylistAdds.clear() }
     runCatching { SongLikeState.activateCurrentAccount() }
 }

@@ -148,6 +148,9 @@ class PlaylistRemovalFailedException : Exception()
 
 class PlaylistSongAlreadyPresentException : Exception()
 
+// YouTube did not answer, so only the stored copy of the playlist could be read.
+class PlaylistOnlyAvailableOfflineException : IllegalStateException("Playlist is only available offline")
+
 internal val repositoryJson =
     Json {
         ignoreUnknownKeys = true
@@ -1207,7 +1210,7 @@ class YouTubeRepository(
                 val initial = getPlaylistPageData(playlistId, applyContentFilters = false)
                 val hasHeader = initial.sections["header"]?.firstOrNull() is PlaylistItem
                 check(videoId != null || hasHeader) { "Playlist is unavailable" }
-                check(!initial.isOffline || allowOfflineFallback) { "Playlist is only available offline" }
+                if (initial.isOffline && !allowOfflineFallback) throw PlaylistOnlyAvailableOfflineException()
                 val namedIds = mutableSetOf<String>()
                 val fallbackIds = mutableSetOf<String>()
                 var complete = false

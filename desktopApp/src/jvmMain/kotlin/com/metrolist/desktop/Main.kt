@@ -196,6 +196,7 @@ import com.metrolist.shared.generated.resources.technical_information
 import com.metrolist.shared.generated.resources.window_title_now_playing
 import com.metrolist.shared.generated.resources.youtube_session_expired_message
 import com.metrolist.shared.generated.resources.youtube_session_expired_title
+import com.metrolist.shared.playlist.PendingPlaylistAdds
 import com.metrolist.shared.scrobble.ScrobbleSessions
 import com.metrolist.shared.settings.AppLayout
 import com.metrolist.shared.settings.LibraryFilterType
@@ -1048,6 +1049,7 @@ private fun runDesktopApp(args: Array<String>) {
             runBlocking { SongLikeState.recoverDatabaseLikes(database) }
             DesktopAutomaticBackupScheduler.start(applicationScope)
             SongMetadataState.bind(database, applicationScope)
+            PendingPlaylistAdds.bind(database, applicationScope)
             applicationScope.launch(Dispatchers.IO) {
                 runCatching { HistoryRepository.clearQueuedScrobbles() }
                     .onFailure { AppLogger.warning("Main", "Failed to clear legacy queued scrobbles", it) }

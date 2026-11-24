@@ -15,6 +15,7 @@ import com.metrolist.shared.model.isEditablePlaylistId
 import com.metrolist.shared.model.isSyncablePlaylistId
 import com.metrolist.shared.model.parseDisplayCount
 import com.metrolist.shared.playlist.LibraryDeletionTracker
+import com.metrolist.shared.playlist.PendingPlaylistAdds
 import com.metrolist.shared.playlist.PlaylistChanges
 import com.metrolist.shared.youtube.logging.YtLogger
 import kotlinx.coroutines.CancellationException
@@ -99,13 +100,21 @@ suspend fun MusicDatabase.cacheRemotePlaylist(
     }
     val existing = dao.findPlaylistEntity(requestedId)
     if (existing != null && existing.browseId == null) return@withDatabaseTransaction
+    val existingMappings =
+        dao
+            .playlistSongs(existing?.id ?: requestedId)
+            .first()
+            .map { it.map }
+    // Songs added while YouTube was unreachable stay listed until their pending add reaches it.
+    val pendingSongIds = PendingPlaylistAdds.songIds(existing?.id ?: requestedId) - songs.mapTo(mutableSetOf()) { it.id }
+    val pendingMappings = existingMappings.filter { it.songId in pendingSongIds }
     val entity =
         (existing ?: PlaylistEntity(id = requestedId, name = playlist.title, bookmarkedAt = null)).copy(
             name = playlist.title,
             browseId = (existing?.browseId ?: requestedId).removePrefix("VL"),
             thumbnailUrl = playlist.thumbnail.takeUnless { it == playlist.customThumbnail } ?: existing?.thumbnailUrl,
             isEditable = playlist.canEdit,
-            remoteSongCount = songs.size,
+            remoteSongCount = songs.size + pendingMappings.size,
             description = playlist.description,
             playEndpointParams = playlist.playEndpointParams,
             radioEndpointParams = playlist.radioEndpointParams,
@@ -114,12 +123,6 @@ suspend fun MusicDatabase.cacheRemotePlaylist(
             isAutoSync = true,
         )
     dao.upsert(entity)
-    val existingMappings =
-        dao
-            .playlistSongs(entity.id)
-            .first()
-            .map { it.map }
-            .toMutableList()
     dao.clearPlaylist(entity.id)
     val existingById = existingMappings.associateBy { it.id }
     val existingBySetVideoId = existingMappings.mapNotNull { m -> m.setVideoId?.let { it to m } }.toMap()
@@ -154,6 +157,7 @@ suspend fun MusicDatabase.cacheRemotePlaylist(
             ),
         )
     }
+    pendingMappings.forEachIndexed { offset, mapping -> dao.insert(mapping.copy(position = songs.size + offset)) }
 }
 
 internal suspend fun MusicDatabase.repairRemotePlaylistMembership(

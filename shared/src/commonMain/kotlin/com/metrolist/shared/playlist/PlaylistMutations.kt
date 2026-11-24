@@ -11,6 +11,7 @@ import com.metrolist.shared.model.PlaylistItem
 import com.metrolist.shared.model.SongItem
 import com.metrolist.shared.model.canEdit
 import com.metrolist.shared.playlist.LibraryDeletionTracker
+import com.metrolist.shared.youtube.playback.PlaybackNetworkStateStore
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.currentCoroutineContext
@@ -550,8 +551,19 @@ suspend fun addSongToStoredPlaylist(
             if (!allowDuplicate && database.dao().checkInPlaylist(targetLocalId, song.id) > 0) {
                 throw PlaylistSongAlreadyPresentException()
             }
-            if (remoteId != null) {
-                repository.addToPlaylist(remoteId, song.id, allowDuplicate = allowDuplicate, notifyChange = false).getOrThrow()
+            // Without a connection the song is added locally and pushed to YouTube once it can be reached.
+            var pushLater = remoteId != null && !PlaybackNetworkStateStore.current.connected
+            if (remoteId != null && !pushLater) {
+                val failure =
+                    repository
+                        .addToPlaylist(
+                            remoteId,
+                            song.id,
+                            allowDuplicate = allowDuplicate,
+                            notifyChange = false,
+                        ).exceptionOrNull()
+                if (failure != null && !failure.meansYouTubeUnreachable()) throw failure
+                pushLater = failure != null
             }
 
             database.withDatabaseTransaction {
@@ -574,6 +586,7 @@ suspend fun addSongToStoredPlaylist(
                     ),
                 )
             }
+            if (pushLater) PendingPlaylistAdds.enqueue(targetLocalId, song.id, allowDuplicate)
             PlaylistChanges.notifyChanged(remoteId ?: targetLocalId)
         }
     }
