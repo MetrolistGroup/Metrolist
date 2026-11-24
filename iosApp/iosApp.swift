@@ -95,9 +95,7 @@ private final class AutomaticBackupAppDelegate: NSObject, UIApplicationDelegate 
             ? Date(timeIntervalSinceNow: 5 * 60)
             : Date(timeIntervalSince1970: lastSuccess + interval)
         request.earliestBeginDate = earliestBeginDate
-        request.requiresNetworkConnectivity = IosAutomaticBackupBridgeKt.iosAutomaticBackupRequiresNetworkConnectivity(
-            scheduledAtEpochMillis: Int64(earliestBeginDate.timeIntervalSince1970 * 1000)
-        )
+        request.requiresNetworkConnectivity = IosAutomaticBackupBridgeKt.iosAutomaticBackupRequiresNetworkConnectivity()
         request.requiresExternalPower = false
         try? BGTaskScheduler.shared.submit(request)
     }
