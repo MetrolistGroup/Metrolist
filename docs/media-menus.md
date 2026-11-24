@@ -61,6 +61,8 @@ Collection margins are 16 dp in single-column layouts and 24 dp at the outer edg
 
 The Add to playlist chooser defaults to Library order, following the Playlists filter's sort and direction, including manual order and play time. Manual follows the saved library positions without reversing them. A saved picker sort overrides the default until the user chooses Library order.
 
+While signed out, the chooser also lists saved YouTube playlists after the selectable ones, greyed out and never selectable, so it can show which of them already contain the song. Their membership loads separately and never delays the dialog; a failed lookup shows no highlight.
+
 ## Selection mode and actions
 
 Album, playlist, auto-playlist and History selection replace the top row with `SelectionTopBar`; there is no floating bottom toolbar. Close, Select all and More stay in the header, and More opens the shared `SongSelectionMenuSheet`.
