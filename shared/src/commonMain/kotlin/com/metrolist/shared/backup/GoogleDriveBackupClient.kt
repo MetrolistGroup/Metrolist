@@ -1,5 +1,6 @@
 package com.metrolist.shared.backup
 
+import com.metrolist.shared.api.parseRetryAfter
 import com.metrolist.shared.generated.resources.Res
 import com.metrolist.shared.generated.resources.google_drive_backup_folder
 import com.metrolist.shared.network.createHttpClient
@@ -35,7 +36,7 @@ import kotlin.time.Clock
 
 class GoogleDriveBackupClient(
     brokerUrl: String,
-    private val httpClient: HttpClient = createHttpClient().config { followRedirects = false },
+    private val httpClient: HttpClient = createHttpClient(followRedirects = false),
 ) {
     private val broker = DriveTokenBrokerClient(brokerUrl, httpClient)
 
@@ -135,7 +136,8 @@ class GoogleDriveBackupClient(
                 offset = acknowledged
                 continue
             }
-            if (response.status.value in 500..599) {
+            if (response.status == HttpStatusCode.TooManyRequests || response.status.value in 500..599) {
+                if (response.status == HttpStatusCode.TooManyRequests) waitForRetry(response)
                 val progress = recoverUpload(DriveBrokerException(response.status.value))
                 progress.completed?.let { return it }
                 continue
@@ -174,10 +176,15 @@ class GoogleDriveBackupClient(
             if (response.status == HttpStatusCode.PermanentRedirect) {
                 return UploadProgress(acknowledgedOffset(response.headers[HttpHeaders.Range], archiveSize), null)
             }
-            if (response.status.value !in 500..599 || attempt++ >= MAX_UPLOAD_RETRIES) {
+            val retryableStatus = response.status == HttpStatusCode.TooManyRequests || response.status.value in 500..599
+            if (!retryableStatus || attempt++ >= MAX_UPLOAD_RETRIES) {
                 throw DriveBrokerException(response.status.value)
             }
-            delay(STATUS_PROBE_RETRY_DELAY_MILLIS * attempt)
+            if (response.status == HttpStatusCode.TooManyRequests) {
+                waitForRetry(response)
+            } else {
+                delay(STATUS_PROBE_RETRY_DELAY_MILLIS * attempt)
+            }
         }
     }
 
@@ -193,6 +200,11 @@ class GoogleDriveBackupClient(
         // token means the 401 was not an expiry, so let the caller handle the original response.
         if (refreshed == firstToken) return firstResponse
         return request(refreshed)
+    }
+
+    private suspend fun waitForRetry(response: HttpResponse) {
+        val retryAfterMillis = response.headers[HttpHeaders.RetryAfter]?.let(::parseRetryAfter) ?: return
+        if (retryAfterMillis > 0) delay(retryAfterMillis)
     }
 
     private fun acknowledgedOffset(

@@ -262,7 +262,7 @@ fun MetrolistIOSApp() {
         IosNowPlayingWidget.bind(playbackController, player, appScope)
         onDispose { IosNowPlayingWidget.unbind() }
     }
-    val listenTogetherClient = remember(appScope) { createHttpClient() }
+    val listenTogetherClient = remember(appScope) { createHttpClient(followRedirects = true) }
     val listenTogetherMessages by rememberUpdatedState(listenTogetherPresentationMessages())
     val listenTogetherManager =
         remember(playbackController, appScope, listenTogetherClient) {

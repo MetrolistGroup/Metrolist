@@ -58,10 +58,12 @@ class AutomaticBackupWorker(
         DriveAccountConnectionState.normalizeAutoBackupDestination(brokerUrl != null)
 
         val backupDestination = AutoBackupDestination.fromSetting(settings.autoBackupDestination)
+        val localDirectory = File(applicationContext.filesDir, BACKUP_DIRECTORY)
+        pruneLocalBackups(localDirectory)
         val session = settings.driveBrokerSession
         val directory =
             when (backupDestination) {
-                AutoBackupDestination.LOCAL -> File(applicationContext.filesDir, BACKUP_DIRECTORY)
+                AutoBackupDestination.LOCAL -> localDirectory
                 AutoBackupDestination.GOOGLE_DRIVE -> File(applicationContext.cacheDir, BACKUP_DIRECTORY)
             }
         val destination = File(directory, "${defaultBackupFilename(BACKUP_FILENAME_PREFIX)}.zip")
@@ -98,22 +100,8 @@ class AutomaticBackupWorker(
             }
             settings.autoBackupLastSuccessEpochMillis = System.currentTimeMillis()
             runCatching { settings.flush() }
-            if (backupDestination == AutoBackupDestination.LOCAL) {
-                val pruneResult = runCatching { pruneBackups(directory) }
-                if (pruneResult.isFailure) {
-                    WorkManager
-                        .getInstance(applicationContext)
-                        .enqueueUniqueWork(
-                            PRUNE_WORK_NAME,
-                            ExistingWorkPolicy.KEEP,
-                            OneTimeWorkRequestBuilder<AutomaticBackupWorker>()
-                                .setInputData(workDataOf(PRUNE_ONLY_KEY to true))
-                                .build(),
-                        )
-                }
-            } else {
-                clearStagedArchives(directory)
-            }
+            pruneLocalBackups(localDirectory)
+            if (backupDestination == AutoBackupDestination.GOOGLE_DRIVE) clearStagedArchives(directory)
             Result.success()
         } catch (cancellation: CancellationException) {
             throw cancellation
@@ -166,6 +154,7 @@ class AutomaticBackupWorker(
                 } catch (error: Exception) {
                     Logger.w("AutomaticBackup", "Could not retry Drive cleanup", error)
                     DriveAccountConnectionState.recordCleanupFailure()
+                    error("Drive cleanup must succeed before uploading another backup")
                 }
             }
             driveClient.uploadBackup(
@@ -176,6 +165,21 @@ class AutomaticBackupWorker(
         } finally {
             driveClient.close()
         }
+    }
+
+    private fun pruneLocalBackups(directory: File) {
+        runCatching { pruneBackups(directory) }
+            .onFailure {
+                WorkManager
+                    .getInstance(applicationContext)
+                    .enqueueUniqueWork(
+                        PRUNE_WORK_NAME,
+                        ExistingWorkPolicy.KEEP,
+                        OneTimeWorkRequestBuilder<AutomaticBackupWorker>()
+                            .setInputData(workDataOf(PRUNE_ONLY_KEY to true))
+                            .build(),
+                    )
+            }
     }
 
     private fun clearStagedArchives(directory: File) {

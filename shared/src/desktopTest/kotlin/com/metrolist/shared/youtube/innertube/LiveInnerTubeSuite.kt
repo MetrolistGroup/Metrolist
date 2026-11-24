@@ -231,7 +231,7 @@ private fun parseCookieString(cookie: String): Map<String, String> =
         }.toMap()
 
 internal suspend fun withLiveInnerTubeClient(block: suspend (HttpClient, InnerTube) -> Unit) {
-    createHttpClient().use { httpClient ->
+    createHttpClient(followRedirects = true).use { httpClient ->
         block(httpClient, LiveInnerTubeSuite.createConfiguredInnerTube(httpClient))
     }
 }

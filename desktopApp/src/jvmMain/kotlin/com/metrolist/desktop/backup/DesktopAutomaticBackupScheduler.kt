@@ -204,6 +204,7 @@ object DesktopAutomaticBackupScheduler {
                 } catch (error: Exception) {
                     AppLogger.warning("AutomaticBackup", "Could not retry Drive cleanup", error)
                     DriveAccountConnectionState.recordCleanupFailure()
+                    error("Drive cleanup must succeed before uploading another backup")
                 }
             }
             driveClient.uploadBackup(

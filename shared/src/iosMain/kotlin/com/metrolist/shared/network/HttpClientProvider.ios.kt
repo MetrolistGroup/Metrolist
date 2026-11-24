@@ -13,8 +13,9 @@ actual val sharedHttpTransportHandlesFailures = false
 
 actual fun Throwable.isHttpTransportException(): Boolean = false
 
-actual fun createHttpClient(): HttpClient =
+actual fun createHttpClient(followRedirects: Boolean): HttpClient =
     HttpClient(Darwin) {
+        this.followRedirects = followRedirects
         install(ExtractionHttpCooldown)
         install(HttpFailureLog)
         install(ContentNegotiation) {

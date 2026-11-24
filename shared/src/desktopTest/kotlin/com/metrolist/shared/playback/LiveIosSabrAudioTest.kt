@@ -26,7 +26,7 @@ class LiveIosSabrAudioTest {
         runBlocking {
             if (System.getProperty("runLiveDesktopSabrPlaybackTest") != "true") return@runBlocking
             File("/tmp/ios-sabr-fixture.mp4").writeBytes(OpusMp4Remuxer.remux(opusWebmFixture()))
-            val client = createHttpClient()
+            val client = createHttpClient(followRedirects = true)
             try {
                 withTimeout(240_000) {
                     val innerTube = InnerTube(client)

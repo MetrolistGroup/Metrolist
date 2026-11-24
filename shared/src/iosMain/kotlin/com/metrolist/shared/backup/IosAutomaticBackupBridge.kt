@@ -241,6 +241,7 @@ private suspend fun retryDriveCleanup(
     } catch (error: Exception) {
         Logger.w("AutomaticBackup", "Could not retry Drive cleanup", error)
         DriveAccountConnectionState.recordCleanupFailure()
+        error("Drive cleanup must succeed before uploading another backup")
     } finally {
         client.close()
     }

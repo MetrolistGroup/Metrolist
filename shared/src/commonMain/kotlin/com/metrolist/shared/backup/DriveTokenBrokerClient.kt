@@ -17,7 +17,7 @@ import kotlinx.serialization.Serializable
 
 class DriveTokenBrokerClient(
     brokerUrl: String,
-    private val httpClient: HttpClient = createHttpClient().config { followRedirects = false },
+    private val httpClient: HttpClient = createHttpClient(followRedirects = false),
 ) {
     private val baseUrl = brokerUrl.trimEnd('/')
 
