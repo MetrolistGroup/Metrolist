@@ -166,11 +166,18 @@ private object IosPictureInPictureBridge : NSObject(), AVPictureInPictureControl
                             return@collect
                         }
                         val positionMap = state.videoPositionMap
-                        val targetPositionMs = positionMap?.mapPosition(state.positionMs) ?: state.positionMs
                         val positionMapped = positionMap?.containsSourcePosition(state.positionMs) ?: true
+                        // An unmapped audio-side gap has no video target; let the retained player free-run
+                        // so its transport stays actionable while the audible track keeps playing.
+                        val targetPositionMs =
+                            if (positionMapped) {
+                                positionMap?.mapPosition(state.positionMs) ?: state.positionMs
+                            } else {
+                                surfacePositionMs
+                            }
                         surfacePlayer.synchronize(
                             targetPositionMs,
-                            state.isPlaying && !state.isLoading && state.isVideoModeActive && positionMapped,
+                            state.isPlaying && !state.isLoading && state.isVideoModeActive,
                             state.playbackSpeed,
                             surfaceVisible = true,
                         )
