@@ -89,6 +89,9 @@ object DesktopAutomaticBackupScheduler {
                                     } else {
                                         null
                                     }
+                                if (destination == AutoBackupDestination.GOOGLE_DRIVE) {
+                                    retryDriveCleanup(checkNotNull(brokerUrl), checkNotNull(driveSession))
+                                }
                                 try {
                                     if (destination == AutoBackupDestination.GOOGLE_DRIVE) {
                                         withContext(Dispatchers.IO) { clearStagedArchives(directory) }
@@ -188,6 +191,26 @@ object DesktopAutomaticBackupScheduler {
                 .forEach { check(it.delete()) { "Could not remove expired automatic backup" } }
         }
 
+    private suspend fun retryDriveCleanup(
+        brokerUrl: String,
+        sessionToken: String,
+    ) {
+        if (!Settings.shared.driveCleanupPending) return
+        val driveClient = GoogleDriveBackupClient(brokerUrl)
+        try {
+            driveClient.cleanupBackups(sessionToken)
+            DriveAccountConnectionState.clearCleanupFailure()
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (error: Exception) {
+            AppLogger.warning("AutomaticBackup", "Could not retry Drive cleanup", error)
+            DriveAccountConnectionState.recordCleanupFailure()
+            throw error
+        } finally {
+            driveClient.close()
+        }
+    }
+
     private suspend fun uploadBackup(
         backupFile: File,
         brokerUrl: String,
@@ -195,18 +218,6 @@ object DesktopAutomaticBackupScheduler {
     ) {
         val driveClient = GoogleDriveBackupClient(brokerUrl)
         try {
-            if (Settings.shared.driveCleanupPending) {
-                try {
-                    driveClient.cleanupBackups(sessionToken)
-                    DriveAccountConnectionState.clearCleanupFailure()
-                } catch (cancelled: CancellationException) {
-                    throw cancelled
-                } catch (error: Exception) {
-                    AppLogger.warning("AutomaticBackup", "Could not retry Drive cleanup", error)
-                    DriveAccountConnectionState.recordCleanupFailure()
-                    error("Drive cleanup must succeed before uploading another backup")
-                }
-            }
             driveClient.uploadBackup(
                 sessionToken,
                 backupFile.name,

@@ -224,7 +224,18 @@ class TokenRepository(
                 try {
                     revoke(accountToRevoke)
                 } catch (error: Exception) {
-                    if (!alreadyRevoked) abortRevocation(subject)
+                    if (!alreadyRevoked) {
+                        if (error is GoogleRevocationAmbiguousException) {
+                            // A lost response cannot prove the grant survived. Keep a finished marker so a
+                            // sign-in with earlier credentials is rejected, but leave sessions unmarked:
+                            // a retry must still call Google and reconcile the final state.
+                            runCatching { recordRemoteRevocation(subject, markSessions = false) }
+                                .exceptionOrNull()
+                                ?.let(error::addSuppressed)
+                        } else {
+                            abortRevocation(subject)
+                        }
+                    }
                     throw error
                 }
                 if (!alreadyRevoked) recordRemoteRevocation(subject, accountToRevoke != null)

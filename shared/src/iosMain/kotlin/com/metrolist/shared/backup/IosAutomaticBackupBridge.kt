@@ -54,6 +54,11 @@ fun iosAutomaticBackupIntervalMillis(): Long = AutoBackupFrequency.fromSetting(S
 
 fun iosAutomaticBackupLastSuccessEpochMillis(): Long = Settings.shared.autoBackupLastSuccessEpochMillis
 
+fun iosAutomaticBackupRequiresNetworkConnectivity(): Boolean {
+    DriveAccountConnectionState.normalizeAutoBackupDestination(iosDriveBrokerUrl() != null)
+    return AutoBackupDestination.fromSetting(Settings.shared.autoBackupDestination) == AutoBackupDestination.GOOGLE_DRIVE
+}
+
 fun notifyIosAutomaticBackupSettingsChanged() {
     NSNotificationCenter.defaultCenter.postNotificationName(AUTOMATIC_BACKUP_SETTINGS_CHANGED, `object` = null)
 }
@@ -241,7 +246,7 @@ private suspend fun retryDriveCleanup(
     } catch (error: Exception) {
         Logger.w("AutomaticBackup", "Could not retry Drive cleanup", error)
         DriveAccountConnectionState.recordCleanupFailure()
-        error("Drive cleanup must succeed before uploading another backup")
+        throw error
     } finally {
         client.close()
     }

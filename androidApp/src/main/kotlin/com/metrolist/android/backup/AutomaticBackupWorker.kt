@@ -92,6 +92,7 @@ class AutomaticBackupWorker(
                 if (AutoBackupDestination.fromSetting(settings.autoBackupDestination) != AutoBackupDestination.GOOGLE_DRIVE) {
                     return Result.success()
                 }
+                retryDriveCleanup(checkNotNull(brokerUrl), session)
                 try {
                     uploadArchive(destination, checkNotNull(brokerUrl), session)
                 } catch (cleanup: DriveCleanupException) {
@@ -138,6 +139,26 @@ class AutomaticBackupWorker(
         return ForegroundInfo(NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC)
     }
 
+    private suspend fun retryDriveCleanup(
+        brokerUrl: String,
+        session: String,
+    ) {
+        if (!Settings.shared.driveCleanupPending) return
+        val driveClient = GoogleDriveBackupClient(brokerUrl)
+        try {
+            driveClient.cleanupBackups(session)
+            DriveAccountConnectionState.clearCleanupFailure()
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (error: Exception) {
+            Logger.w("AutomaticBackup", "Could not retry Drive cleanup", error)
+            DriveAccountConnectionState.recordCleanupFailure()
+            throw error
+        } finally {
+            driveClient.close()
+        }
+    }
+
     private suspend fun uploadArchive(
         destination: File,
         brokerUrl: String,
@@ -145,18 +166,6 @@ class AutomaticBackupWorker(
     ) {
         val driveClient = GoogleDriveBackupClient(brokerUrl)
         try {
-            if (Settings.shared.driveCleanupPending) {
-                try {
-                    driveClient.cleanupBackups(session)
-                    DriveAccountConnectionState.clearCleanupFailure()
-                } catch (cancelled: CancellationException) {
-                    throw cancelled
-                } catch (error: Exception) {
-                    Logger.w("AutomaticBackup", "Could not retry Drive cleanup", error)
-                    DriveAccountConnectionState.recordCleanupFailure()
-                    error("Drive cleanup must succeed before uploading another backup")
-                }
-            }
             driveClient.uploadBackup(
                 session,
                 destination.name,

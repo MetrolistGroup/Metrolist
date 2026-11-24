@@ -74,6 +74,11 @@ sealed interface GoogleAccessTokenResult {
     data object Unavailable : GoogleAccessTokenResult
 }
 
+class GoogleRevocationAmbiguousException(
+    message: String = "Google revocation outcome is unknown",
+    cause: Throwable? = null,
+) : Exception(message, cause)
+
 class GoogleOAuth(
     private val client: HttpClient,
     private val configuration: BrokerConfiguration,
@@ -162,9 +167,17 @@ class GoogleOAuth(
 
     suspend fun revoke(refreshToken: String) {
         val response =
-            client.post("https://oauth2.googleapis.com/revoke") {
-                contentType(ContentType.Application.FormUrlEncoded)
-                setBody(Parameters.build { append("token", refreshToken) }.formUrlEncode())
+            try {
+                client.post("https://oauth2.googleapis.com/revoke") {
+                    contentType(ContentType.Application.FormUrlEncoded)
+                    setBody(Parameters.build { append("token", refreshToken) }.formUrlEncode())
+                }
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (error: Exception) {
+                // The POST may have reached Google before the connection failed. Keep the revocation
+                // marker so an older grant cannot be committed while a retry reconciles the outcome.
+                throw GoogleRevocationAmbiguousException(cause = error)
             }
         if (response.status.isSuccess()) return
         val error =

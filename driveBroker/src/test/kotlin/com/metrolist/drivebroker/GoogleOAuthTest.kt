@@ -12,7 +12,9 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.io.IOException
 
 class GoogleOAuthTest {
     @Test
@@ -87,6 +89,24 @@ class GoogleOAuthTest {
                 ).exchange(ClientPlatform.DESKTOP, "one-time-code", "https://example.com/callback", "invalid"),
             )
             assertEquals(0, requests)
+            client.close()
+        }
+
+    @Test
+    fun `treats a lost revocation response as ambiguous`() =
+        runBlocking {
+            val client =
+                HttpClient(
+                    MockEngine {
+                        throw IOException("connection lost")
+                    },
+                )
+            val error =
+                runCatching {
+                    GoogleOAuth(client, testConfiguration()).revoke("refresh-token")
+                }.exceptionOrNull()
+            assertTrue(error is GoogleRevocationAmbiguousException)
+            assertTrue((error as? GoogleRevocationAmbiguousException)?.cause is IOException)
             client.close()
         }
 

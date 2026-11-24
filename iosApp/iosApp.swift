@@ -94,7 +94,7 @@ private final class AutomaticBackupAppDelegate: NSObject, UIApplicationDelegate 
         request.earliestBeginDate = needsCleanup
             ? Date(timeIntervalSinceNow: 5 * 60)
             : Date(timeIntervalSince1970: lastSuccess + interval)
-        request.requiresNetworkConnectivity = UserDefaults.standard.string(forKey: "autoBackupDestination") == "GOOGLE_DRIVE" && !needsCleanup
+        request.requiresNetworkConnectivity = IosAutomaticBackupBridgeKt.iosAutomaticBackupRequiresNetworkConnectivity() && !needsCleanup
         request.requiresExternalPower = false
         try? BGTaskScheduler.shared.submit(request)
     }

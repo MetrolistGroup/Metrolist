@@ -1412,6 +1412,8 @@ class Settings(
                     "spotifySession",
                     LyricsOpenRouterOAuthSessionKey,
                     DiscordPendingAuthSessionKey,
+                    DriveOAuthStateKey,
+                    DriveOAuthVerifierKey,
                     DriveBrokerSessionKey,
                 )
         private val nonPortableKeys =
