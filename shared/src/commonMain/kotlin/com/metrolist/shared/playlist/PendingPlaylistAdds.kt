@@ -6,6 +6,8 @@ import com.metrolist.shared.api.PlaylistSongAlreadyPresentException
 import com.metrolist.shared.api.YouTubeRepository
 import com.metrolist.shared.auth.YouTubeSyncState
 import com.metrolist.shared.db.MusicDatabase
+import com.metrolist.shared.db.entities.PlaylistSong
+import com.metrolist.shared.model.SongItem
 import com.metrolist.shared.network.isHttpTransportException
 import com.metrolist.shared.settings.Settings
 import com.metrolist.shared.state.GlobalYouTubeRepository
@@ -98,37 +100,62 @@ object PendingPlaylistAdds {
 
     internal fun discard(id: Long) = remove(id)
 
-    // Removes copies of songs from the playlist on YouTube, each given as its item ID there and its song ID. A copy without an
-    // item ID cancels a queued add of its song instead, preferring one never sent, so an add still waiting can be undone
-    // offline. The adds are cancelled only once the removal on YouTube succeeds, so a failed removal keeps them queued. An
-    // add sent before but not confirmed yet may already be on YouTube, and then returns with the next refresh.
+    // Removes the selected songs, each with the row it matched, from the playlist on YouTube. A copy without an item ID is
+    // still queued for YouTube, so it cancels an add of its song instead, one never sent first, which also works offline.
+    // With no add of the song left, the sync confirmed it while the removal waited, so it takes a copy YouTube now lists
+    // under an item ID no other row holds, and a row YouTube lists no such copy for only goes locally. The queue changes
+    // only once the removal on YouTube succeeds, so a failed removal keeps every add queued. An add sent before but not
+    // confirmed may already be on YouTube, and then returns with the next refresh.
     internal suspend fun removeFromPlaylist(
+        database: MusicDatabase,
+        repository: YouTubeRepository,
+        remoteId: String,
         playlistId: String,
-        copies: List<Pair<String?, String>>,
-        removeFromYouTube: suspend (List<Pair<String, String>>) -> Unit,
+        selection: List<Pair<SongItem, PlaylistSong?>>,
     ) = remoteEdits.withLock {
-        val queued =
+        // Per song, an add never sent is cancelled first, then a sent one with the highest target, whose copy no other add counted.
+        val adds =
             synchronized(lock) { read() }
                 .filter { it.playlistId == playlistId }
-                .groupingBy { it.songId }
-                .eachCountTo(mutableMapOf())
-        val cancelled = mutableListOf<String>()
+                .sortedWith(compareBy<PendingPlaylistAdd> { it.expectedCount != null }.thenByDescending { it.expectedCount })
+                .groupByTo(mutableMapOf()) { it.songId }
         val removals = mutableListOf<Pair<String, String>>()
-        for ((itemId, songId) in copies) {
-            val queuedCopies = queued[songId] ?: 0
-            if (itemId == null && queuedCopies > 0) {
-                queued[songId] = queuedCopies - 1
-                cancelled += songId
-            } else {
-                removals += checkNotNull(itemId) { "Missing playlist item identifier" } to songId
+        val cancelled = mutableSetOf<Long>()
+        val confirmed = mutableListOf<String>()
+        for ((song, row) in selection) {
+            val itemId = song.playlistSetVideoId ?: row?.map?.setVideoId
+            val add = if (itemId == null) adds[song.id]?.removeFirstOrNull() else null
+            when {
+                itemId != null -> removals += itemId to song.id
+                add != null -> cancelled += add.id
+                else -> confirmed += song.id
             }
         }
-        if (removals.isNotEmpty()) removeFromYouTube(removals)
+        if (confirmed.isNotEmpty()) {
+            val removedRows = selection.mapNotNullTo(mutableSetOf()) { it.second?.map?.id }
+            // A copy another row keeps, or one this removal already names, is not the one the sync confirmed.
+            val held =
+                database
+                    .dao()
+                    .playlistSongMaps(playlistId, Int.MIN_VALUE)
+                    .filterNot { it.id in removedRows }
+                    .mapNotNullTo(mutableSetOf()) { it.setVideoId } + removals.map { it.first }
+            val unheld =
+                checkNotNull(remoteSongs(repository, remoteId)) { "Missing playlist item identifier" }
+                    .mapNotNullTo(mutableListOf()) { song -> song.playlistSetVideoId?.takeUnless(held::contains)?.let { it to song.id } }
+            for (songId in confirmed) {
+                unheld.firstOrNull { it.second == songId }?.let { item ->
+                    unheld.remove(item)
+                    removals += item
+                }
+            }
+        }
+        if (removals.isNotEmpty()) repository.removePlaylistSongs(remoteId, removals).getOrThrow()
+        // Removing remote copies of a song lowers the copies its queued duplicates still wait for by the same number.
         val removedCopies = removals.groupingBy { it.second }.eachCount()
         synchronized(lock) {
-            // Removing remote copies of a song lowers the copies its queued duplicates still wait for by the same number.
-            var entries =
-                read().map { entry ->
+            write(
+                read().filterNot { it.id in cancelled }.map { entry ->
                     val target = entry.expectedCount
                     val removed = removedCopies[entry.songId]
                     if (entry.playlistId != playlistId || target == null || removed == null) {
@@ -136,12 +163,8 @@ object PendingPlaylistAdds {
                     } else {
                         entry.copy(expectedCount = (target - removed).coerceAtLeast(1))
                     }
-                }
-            for (songId in cancelled) {
-                val matching = entries.filter { it.playlistId == playlistId && it.songId == songId }
-                (matching.lastOrNull { it.expectedCount == null } ?: matching.lastOrNull())?.let { entries = entries - it }
-            }
-            write(entries)
+                },
+            )
         }
     }
 
@@ -313,11 +336,11 @@ object PendingPlaylistAdds {
         additions.update { it + 1L }
     }
 
-    // Counts each song's copies in the playlist as YouTube lists it now, or returns null when YouTube could not be read.
-    private suspend fun remoteSongCounts(
+    // Lists the playlist's songs as YouTube lists them now, or returns null when YouTube could not be read.
+    private suspend fun remoteSongs(
         repository: YouTubeRepository,
         remoteId: String,
-    ): MutableMap<String, Int>? =
+    ): List<SongItem>? =
         try {
             val page =
                 repository.completePlaylistPage(
@@ -325,13 +348,19 @@ object PendingPlaylistAdds {
                     applyContentFilters = false,
                 )
             // The offline fallback answers from the local playlist, which already lists the queued songs.
-            if (page.isOffline) null else page.songs.groupingBy { it.id }.eachCountTo(mutableMapOf())
+            page.songs.takeUnless { page.isOffline }
         } catch (error: CancellationException) {
             throw error
         } catch (error: Exception) {
             YtLogger.w(TAG, "Pending playlist read failed type=${error::class.simpleName}")
             null
         }
+
+    // Counts each song's copies in the playlist as YouTube lists it now, or returns null when YouTube could not be read.
+    private suspend fun remoteSongCounts(
+        repository: YouTubeRepository,
+        remoteId: String,
+    ): MutableMap<String, Int>? = remoteSongs(repository, remoteId)?.groupingBy { it.id }?.eachCountTo(mutableMapOf())
 
     private fun queuedFor(accountKey: String) = synchronized(lock) { read() }.filter { it.accountKey == accountKey }
 

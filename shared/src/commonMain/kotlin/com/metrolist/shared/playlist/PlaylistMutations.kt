@@ -114,10 +114,7 @@ suspend fun removeSongsFromStoredPlaylist(
         if (remoteId != null) {
             check(repository.canManagePlaylists()) { "YouTube Music sign-in is required" }
             // A song still queued for YouTube has no item ID yet, so removing it cancels its queued add instead.
-            PendingPlaylistAdds.removeFromPlaylist(
-                localId,
-                matchedPairs.map { (song, occurrence) -> (song.playlistSetVideoId ?: occurrence?.map?.setVideoId) to song.id },
-            ) { removals -> repository.removePlaylistSongs(remoteId, removals).getOrThrow() }
+            PendingPlaylistAdds.removeFromPlaylist(database, repository, remoteId, localId, matchedPairs)
         }
 
         val matchedEntities = matchedPairs.mapNotNull { it.second }
