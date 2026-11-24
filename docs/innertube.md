@@ -35,6 +35,8 @@ App callers use `shared/src/commonMain/kotlin/com/metrolist/shared/api/YouTubeRe
 
 Artist failures retain available offline data. Without it, propagate the original error and log the response stage/status without bodies or credentials.
 
+Greyed browse rows with a title and duration remain eligible for playback, including rows whose title opens a Premium dialog. That restriction describes the browse client; the stream resolver can try other clients. Deleted and private placeholders without playable metadata stay unavailable.
+
 ## Search
 
 Spotify account imports first search with the source album in the query, then retry without it if no exact title, artist and duration match is found. This handles YouTube Music catalog entries whose album metadata differs while keeping the match checks unchanged.

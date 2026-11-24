@@ -39,7 +39,7 @@ class YouTubeItemParserTest {
     }
 
     @Test
-    fun greyedAlbumTracksWithoutWatchEndpointsAreUnavailableDespiteDuration() {
+    fun greyedAlbumTracksWithPremiumDialogsRemainPlayableWithDuration() {
         val song =
             assertIs<SongItem>(
                 YouTubeItemParser.parseItem(
@@ -56,7 +56,7 @@ class YouTubeItemParserTest {
                     ),
                 ),
             )
-        assertTrue(song.isUnavailable)
+        assertFalse(song.isUnavailable)
         assertEquals("track", song.id)
         assertEquals(128L, song.duration)
     }
