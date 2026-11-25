@@ -579,7 +579,7 @@
     <string name="playback_speed">Скорость воспроизведения</string>
     <string name="playback_speed_value" translatable="false">%1$s×</string>
     <string name="equalizer">Эквалайзер</string>
-    <string name="adjust_audio_equalizer">Настроить аудио эквалайзер</string>
+    <string name="adjust_audio_equalizer">Настроить аудиоэквалайзер</string>
     <string name="queue_current_playing">Текущий трек, играет</string>
     <string name="queue_current_paused">Текущий трек, на паузе</string>
     <string name="lyrics_timing_unsynced">Несинхронизированный</string>
@@ -630,7 +630,7 @@
     <string name="device_connect_no_devices">В сети пока не найдено устройств.</string>
     <string name="device_connect_rescan">Сканировать повторно</string>
     <string name="device_connect_account_mismatch">Другой аккаунт</string>
-    <string name="device_connect_permission_needed">Для поиска и подключения к устройствам требуется разрешение на локальную сеть.</string>
+    <string name="device_connect_permission_needed">Для поиска устройств и подключения к ним требуется разрешение на доступ к локальной сети.</string>
     <string name="device_connect_grant_permission">Предоставить разрешение</string>
     <string name="side_menu_welcome">Добро пожаловать в Metrolist</string>
     <string name="action_cannot_be_undone">Данное действие необратимо.</string>
@@ -1138,7 +1138,7 @@
     <string name="update_available_title">Доступно обновление</string>
     <string name="cast">Слушать на телевизоре и колонках</string>
     <string name="disconnect_cast">Отключить</string>
-    <string name="cast_permission_required">Доступ к локальной сети нужен для поиска устройств для трансляции.</string>
+    <string name="cast_permission_required">Доступ к локальной сети необходим для поиска устройств трансляции.</string>
     <string name="cast_no_media">Выберите песню перед трансляцией.</string>
     <string name="cast_unsupported_stream">У этой песни нет потока, совместимого с трансляцией.</string>
     <string name="cast_connection_failed">Не удалось подключиться к устройству для трансляции.</string>
@@ -1341,7 +1341,7 @@
     <string name="settings_floating_search">Плавающий поиск</string>
     <string name="settings_floating_search_description">Открыть поиск во всплывающем окне</string>
     <string name="settings_system_window_frame">Системная рамка окна</string>
-    <string name="settings_system_window_frame_description">Использует системную рамку окна вместо пользовательских декораций. Требуется перезапуск.</string>
+    <string name="settings_system_window_frame_description">Использует системную рамку окна вместо собственного оформления. Требуется перезапуск.</string>
     <string name="settings_crop_album_art">Обрезать обложку альбома</string>
     <string name="settings_crop_album_art_description">Обрезать обложку альбома под интерфейс плеера</string>
     <string name="settings_solid">Однотонный</string>
@@ -1693,7 +1693,7 @@
     <string name="playback_error_unknown_resolution">Ошибка неизвестного разрешения потока.</string>
     <string name="playback_error_unknown">Неизвестная ошибка воспроизведения.</string>
     <string name="playback_error_track_not_found">Запрошенный трек не найден.</string>
-    <string name="playback_error_unable_to_play_link">Не удалось воспроизвести запрошенную ссылку.</string>
+    <string name="playback_error_unable_to_play_link">Не удалось запустить воспроизведение по запрошенной ссылке.</string>
     <string name="could_not_download_update_manager">Не удалось скачать менеджер обновлений</string>
     <string name="update_not_published_stable">Выбранное обновление не является опубликованным стабильным релизом</string>
     <string name="error_with_message">Ошибка: %1$s</string>
@@ -2463,7 +2463,7 @@
     <string name="playback_event_log_raw_description">Постоянная диагностика воспроизведения. При сбое воспроизведения скопируйте или экспортируйте этот необработанный журнал.</string>
     <string name="playback_event_log_raw_empty">События воспроизведения пока не зарегистрированы. Воспроизведите трек, чтобы собрать диагностические данные.</string>
     <string name="audio_boost">Предусилитель</string>
-    <string name="equalizer_usage_warning">Команда Metrolist не несёт никакой ответственности за использование вами MetroEQ.</string>
+    <string name="equalizer_usage_warning">Команда Metrolist не несёт ответственности за использование MetroEQ.</string>
     <string name="playlist_cover_updated">Обновлена обложка плейлиста</string>
     <string name="playlist_cover_removed">Удалена обложка плейлиста</string>
     <string name="login">Войти</string>
@@ -2586,7 +2586,7 @@
     <string name="ai_translation_failed_privacy">ИИ-перевод заблокирован из-за настроек конфиденциальности</string>
     <string name="ai_translation_failed_key">ИИ-перевод не удался - неверный или просроченый ключ</string>
     <string name="ai_translation_failed_credit">ИИ-перевод не удался - превышен лимит аккаунта или ключа</string>
-    <string name="ai_translation_failed_rate">ИИ-перевод не удался - превышено максимальное количество запросов</string>
+    <string name="ai_translation_failed_rate">ИИ-перевод не удался: превышен лимит запросов</string>
     <string name="ai_translation_failed_daily">Достигнут ежедневный лимит бесплатных переводов. Попробуйте завтра или увеличьте баланс OpenRouter.</string>
     <string name="ai_translation_failed_minute">Достигнут лимит бесплатных переводов. Подождите немного и попробуйте ещё раз.</string>
     <string name="ai_translation_failed_busy">ИИ-перевод не удался: бесплатные модели заняты</string>
