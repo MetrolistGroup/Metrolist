@@ -234,8 +234,8 @@
     <string name="settings_clear_search_history_confirm_message">Это удалит все сохранённые поисковые запросы. Это действие необратимо.</string>
     <string name="settings_show_secret">Показать секрет</string>
     <string name="settings_hide_secret">Спрятать секрет</string>
-    <string name="block_screenshots">Заблокировать скриншоты</string>
-    <string name="block_screenshots_desc">Блокирует скриншоты и запись экрана. Скрывает контент приложения на экране Недавние и других небезопасных дисплеях.</string>
+    <string name="block_screenshots">Блокировать скриншоты</string>
+    <string name="block_screenshots_desc">Блокировать скриншоты и запись экрана. Также скрывает содержимое приложения на экране недавних приложений и других незащищённых дисплеях.</string>
     <string name="hidden_playlists">Скрытые элементы библиотеки</string>
     <string name="hidden_playlists_desc">Восстановите элементы, которые вы скрыли из вашей библиотеки</string>
     <string name="hidden_playlists_empty">Нет скрытых элементов библиотеки</string>
@@ -426,16 +426,16 @@
     <string name="sentry_reporting">Отчёты о сбоях и производительности</string>
     <string name="sentry_reporting_desc">Отправляет в Sentry сбои, ошибки, данные о производительности и сведения о воспроизведении, например информацию о треке. Удаляет учётные данные.</string>
     <string name="history_duration_desc">Минимальное время воспроизведения перед сохранением в историю</string>
-    <string name="privacy_blocklists">Черный список</string>
+    <string name="privacy_blocklists">Чёрный список</string>
     <string name="blocked_artists">Заблокированные исполнители</string>
-    <string name="blocked_artists_desc">Исполнители заблокированные из очередей, рекомендаций и статистики</string>
+    <string name="blocked_artists_desc">Исполнители, заблокированные в очередях, рекомендациях и статистике</string>
     <string name="blocked_artists_empty">Нет заблокированных исполнителей</string>
-    <string name="blocked_artists_empty_desc">Заблокируйте исполнителя из меню плеера, чтобы исключить его из воспроизведения и рекомендаций</string>
+    <string name="blocked_artists_empty_desc">Заблокируйте исполнителя через меню плеера, чтобы исключить его из воспроизведения и рекомендаций</string>
     <plurals name="blocked_artists_count">
         <item quantity="one">%1$d исполнитель заблокирован</item>
         <item quantity="few">%1$d исполнителя заблокировано</item>
-        <item quantity="many">%1$d исполнителей заблокированы</item>
-        <item quantity="other">%1$d исполнителей заблокированы</item>
+        <item quantity="many">%1$d исполнителей заблокировано</item>
+        <item quantity="other">%1$d исполнителей заблокировано</item>
     </plurals>
     <string name="android_auto_pinned_playlists">Закрепленные плейлисты для вождения</string>
     <string name="android_auto_pinned_playlists_desc">Выберите до шести плейлистов, которые будут отображаться первыми на главном экране автомобиля для запуска в одно касание. Порядок выбора сохраняется.</string>
@@ -547,8 +547,8 @@
     <string name="hide_short_songs_desc">Скрывает превью, аудио Shorts, и другие треки длительностью ниже порога</string>
     <string name="minimum_song_duration">Мин. длительность песни</string>
     <string name="minimum_song_duration_desc">Скрывает песни короче %1$d секунд</string>
-    <string name="block_ai_slop_artists">Заблокировать известных AI-сгенерированных исполнителей</string>
-    <string name="block_ai_slop_artists_desc">Скрывает каналы из списка Override92/AiSList. Он распространяется под лицензией CC BY-NC 4.0, обновляется ежедневно и остаётся доступен офлайн.</string>
+    <string name="block_ai_slop_artists">Блокировать известных ИИ-исполнителей</string>
+    <string name="block_ai_slop_artists_desc">Скрывать каналы из списка Override92/AiSList. Он распространяется под лицензией CC BY-NC 4.0, обновляется ежедневно и остаётся доступен офлайн.</string>
     <string name="listen_together_entry_subtitle">Слушайте музыку с друзьями в реальном времени.</string>
     <string name="listen_together_create_room_title">Создать комнату</string>
     <string name="listen_together_username_required">Имя пользователя обязательно</string>
@@ -792,7 +792,7 @@
     <string name="loading">Загрузка…</string>
     <string name="local">Локально</string>
     <string name="local_file">Локальный файл</string>
-    <string name="lock_queue">Закрепить очередь</string>
+    <string name="lock_queue">Заблокировать очередь</string>
     <string name="login_failed_with_error">Ошибка входа: %1$s</string>
     <string name="lyrics_romanization_as_main_description">Показывает оригинальную строку внизу. Подсветка слов остаётся только на оригинальном тексте.</string>
     <string name="lyrics_romanization_detect_cyrillic_per_line">Определять кириллицу построчно</string>
@@ -2563,7 +2563,7 @@
     <string name="restore_hidden_item_title">Показать снова?</string>
     <string name="restore_hidden_item_message">Показать "%1$s" снова?</string>
     <string name="unblock_artist_title">Разблокировать исполнителя?</string>
-    <string name="unblock_artist_message">Показывать %1$s в очередях, рекомендациях и статистике снова?</string>
+    <string name="unblock_artist_message">Снова показывать «%1$s» в очередях, рекомендациях и статистике?</string>
     <string name="bottom_sheet_pane_title">Нижняя панель</string>
     <string name="devtools_render_backend">Бэкенд отрисовки</string>
     <string name="devtools_render_backend_auto">Автоматически</string>
@@ -2797,4 +2797,10 @@
     <string name="resume_on_bluetooth_connect_desc">Возобновлять приостановленное воспроизведение при подключении аудиоустройства Bluetooth, пока работает служба воспроизведения.</string>
     <string name="cast_volume_step">Шаг громкости при трансляции</string>
     <string name="cast_volume_step_description">На сколько изменяется громкость колонки или телевизора при каждом нажатии кнопок громкости на телефоне во время трансляции</string>
+    <string name="search_online_short">Онлайн</string>
+    <string name="lyrics_search_online_query">%1$s %2$s текст песни</string>
+    <string name="appearance_swipe_song_gesture_queue">Свайп по треку в очереди</string>
+    <string name="appearance_swipe_song_gesture_queue_description">Проведите по треку влево, чтобы удалить его из очереди, даже если она заблокирована</string>
+    <string name="hide_playlist_recommendations">Скрыть рекомендации в плейлистах</string>
+    <string name="hide_playlist_recommendations_desc">Скрыть рекомендованные треки, отображаемые под плейлистами</string>
 </resources>
