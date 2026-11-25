@@ -2612,7 +2612,7 @@
     <string name="ai_setup_privacy_hint">Политика обработки данных OpenRouter не разрешает использовать эндпоинты этой модели. Проверьте параметры бесплатных моделей и провайдеров в настройках конфиденциальности OpenRouter, а затем повторите попытку.</string>
     <string name="ai_setup_key_hint">Войдите в OpenRouter заново, чтобы заменить недействительный ключ или ключ с истёкшим сроком действия, а затем повторите попытку.</string>
     <string name="ai_setup_credit_hint">Проверьте баланс счёта и лимит расходов для вашего ключа OpenRouter. У ключа OAuth может быть собственный лимит. Повторите попытку после устранения проблемы с лимитом.</string>
-    <string name="ai_setup_rate_hint">Подождите и попробуйте ещё раз или выберите другую бесплатную модель. OpenRouter ограничивает количество бесплатных запросов в минуту и в день. Смена модели может не позволить обойти ограничение, установленное для вашей учетной записи.</string>
+    <string name="ai_setup_rate_hint">Подождите и повторите попытку или выберите другую бесплатную модель. OpenRouter ограничивает количество бесплатных запросов в минуту и в день. Смена модели может не помочь обойти ограничение аккаунта.</string>
     <string name="ai_setup_daily_hint">Попробуйте завтра или пополните баланс в OpenRouter, чтобы увеличить свой бесплатный дневной лимит. Смена модели не позволит обойти этот лимит.</string>
     <string name="ai_setup_minute_hint">Дождитесь сброса поминутного лимита OpenRouter, а затем повторите попытку. Смена модели не позволит обойти этот лимит.</string>
     <string name="ai_setup_busy_hint">Доступные бесплатные модели временно заняты. Повторите попытку позже.</string>
@@ -2803,4 +2803,9 @@
     <string name="appearance_swipe_song_gesture_queue_description">Проведите по треку влево, чтобы удалить его из очереди, даже если она заблокирована</string>
     <string name="hide_playlist_recommendations">Скрыть рекомендации в плейлистах</string>
     <string name="hide_playlist_recommendations_desc">Скрыть рекомендованные треки, отображаемые под плейлистами</string>
+    <string name="metroeq_preset_commute">В дороге</string>
+    <string name="metroeq_preset_loudness">Тонкомпенсация</string>
+    <string name="metroeq_preset_pop">Поп</string>
+    <string name="metroeq_preset_electronic">Электроника</string>
+    <string name="metroeq_preset_acoustic">Акустика</string>
 </resources>
