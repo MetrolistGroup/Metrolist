@@ -19,7 +19,7 @@ To receive updates in AltStore or SideStore, add the source `https://github.com/
 
 ## Signing and entitlements
 
-The source bundle ID is `com.metrolist.MetrolistApp`. Tools may rewrite it. The Xcode project defines the app target and one app-extension target, `MetrolistRecognitionWidget`, which embeds `MetrolistRecognitionWidget.appex` for the Control Center recognition control. Signing tools must process both bundles with the same account and matching bundle IDs. No app group is required.
+The source bundle ID is `com.metrolist.MetrolistApp`. Tools may rewrite it. The Xcode project defines one app target without extensions. No app group is required.
 
 `iosApp/Configuration/iosApp.entitlements` requests Associated Domains for `applinks:metrolist.cc`. `Info.plist` declares background audio and `metrolist`/`metrolist-auth` URL schemes. A signing profile may omit Associated Domains; do not assume HTTPS invitations work after re-signing. See [invitation delivery](../listen-together.md#invitation-links).
 

@@ -114,7 +114,7 @@ object ShazamRecognitionClient {
         val resolvedGl = locale.gl
         val response =
             client.post(
-                "https://amp.shazam.com/discovery/v5/$resolvedHl/$resolvedGl/android/-/tag/${Uuid.random()}/${Uuid.random()}?sync=true&webv3=true&sampling=true&connected=&shazamapiversion=v3&sharehub=true&video=v3",
+                "https://amp.shazam.com/discovery/v5/$resolvedHl/$resolvedGl/android/-/tag/${Uuid.random().toString().uppercase()}/${Uuid.random()}?sync=true&webv3=true&sampling=true&connected=&shazamapiversion=v3&sharehub=true&video=v3",
             ) {
                 header("User-Agent", userAgents.random())
                 header("Content-Language", "${resolvedHl}_$resolvedGl")
@@ -134,7 +134,7 @@ object ShazamRecognitionClient {
             ?: throw NoRecognitionMatchException(getString(Res.string.recognition_notification_no_match))
     }
 
-    fun parseResult(responseText: String): RecognitionResult? {
+    internal fun parseResult(responseText: String): RecognitionResult? {
         val root = json.parseToJsonElement(responseText).jsonObject
         val track = root["track"]?.jsonObject ?: return null
         val sections = track["sections"]?.jsonArray.orEmpty().map { it.jsonObject }

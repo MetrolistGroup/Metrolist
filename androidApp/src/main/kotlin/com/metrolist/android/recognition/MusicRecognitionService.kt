@@ -10,22 +10,20 @@ import android.media.MediaRecorder
 import android.os.SystemClock
 import androidx.core.content.ContextCompat
 import com.metrolist.shared.db.MusicDatabase
-import com.metrolist.shared.db.entities.RecognitionHistory
 import com.metrolist.shared.generated.resources.Res
 import com.metrolist.shared.generated.resources.recognition_failed
 import com.metrolist.shared.generated.resources.recognition_microphone_permission_not_granted
 import com.metrolist.shared.generated.resources.recognition_network_error
 import com.metrolist.shared.generated.resources.recognition_no_match_try_clearer_section
-import com.metrolist.shared.model.SearchFilter
-import com.metrolist.shared.model.SongItem
 import com.metrolist.shared.recognition.NoRecognitionMatchException
 import com.metrolist.shared.recognition.RecognitionAudio
-import com.metrolist.shared.recognition.RecognitionResult
 import com.metrolist.shared.recognition.RecognitionStatus
 import com.metrolist.shared.recognition.RecognitionUserException
 import com.metrolist.shared.recognition.ShazamRecognitionClient
 import com.metrolist.shared.recognition.ShazamSignatureGenerator
-import com.metrolist.shared.state.GlobalYouTubeRepository
+import com.metrolist.shared.recognition.historyTrackId
+import com.metrolist.shared.recognition.resolveYoutubeVideoId
+import com.metrolist.shared.recognition.toRecognitionHistory
 import com.metrolist.shared.state.SongLikeState
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -38,8 +36,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.withContext
-import kotlinx.datetime.TimeZone
-import kotlinx.datetime.toLocalDateTime
 import org.jetbrains.compose.resources.getString
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
@@ -49,11 +45,11 @@ import java.io.IOException
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import kotlin.math.sqrt
-import kotlin.time.Clock
 
 object MusicRecognitionService : KoinComponent {
     private const val LOG_TAG = "MusicRecognition"
     private const val INPUT_SAMPLE_RATE = 44_100
+    private const val FINGERPRINT_SAMPLE_RATE = RecognitionAudio.FINGERPRINT_SAMPLE_RATE
     private const val RECORDING_DURATION_MS = RecognitionAudio.RECORDING_DURATION_MS
     private val _status = MutableStateFlow<RecognitionStatus>(RecognitionStatus.Ready)
     val status: StateFlow<RecognitionStatus> = _status.asStateFlow()
@@ -105,14 +101,9 @@ object MusicRecognitionService : KoinComponent {
                     return@withContext RecognitionStatus.Ready.also { _status.value = it }
                 }
                 _status.value = RecognitionStatus.Processing
-                val resampled = RecognitionAudio.resample16BitMono(
-                    audio,
-                    INPUT_SAMPLE_RATE,
-                    RecognitionAudio.FINGERPRINT_SAMPLE_RATE,
-                )
+                val resampled = RecognitionAudio.resample16BitMono(audio, INPUT_SAMPLE_RATE, FINGERPRINT_SAMPLE_RATE)
                 val signature = ShazamSignatureGenerator.fromI16(resampled)
-                val sampleDurationMs =
-                    (resampled.size / 2) * 1000L / RecognitionAudio.FINGERPRINT_SAMPLE_RATE
+                val sampleDurationMs = (resampled.size / 2) * 1000L / FINGERPRINT_SAMPLE_RATE
                 val result = ShazamRecognitionClient.recognize(signature, sampleDurationMs).getOrThrow()
                 if (cancelRequested) {
                     return@withContext RecognitionStatus.Ready.also { _status.value = it }
@@ -120,31 +111,10 @@ object MusicRecognitionService : KoinComponent {
                 currentCoroutineContext().ensureActive()
                 completeRecognition(
                     result = result,
-                    save = {
-                        database.dao().insert(
-                            RecognitionHistory(
-                                trackId = result.trackId.ifBlank { "${result.title}:${result.artist}" },
-                                title = result.title,
-                                artist = result.artist,
-                                album = result.album,
-                                coverArtUrl = result.coverArtUrl,
-                                coverArtHqUrl = result.coverArtHqUrl,
-                                genre = result.genre,
-                                releaseDate = result.releaseDate,
-                                label = result.label,
-                                shazamUrl = result.shazamUrl,
-                                appleMusicUrl = result.appleMusicUrl,
-                                spotifyUrl = result.spotifyUrl,
-                                isrc = result.isrc,
-                                youtubeVideoId = result.youtubeVideoId,
-                                recognizedAt = Clock.System.now().toLocalDateTime(TimeZone.UTC),
-                                liked = result.youtubeVideoId?.let { SongLikeState.isLiked(it) } == true,
-                            ),
-                        )
-                    },
+                    save = { database.dao().insert(result.toRecognitionHistory()) },
                     resolve = { if (session === activeSession) resolveYoutubeVideoId(result) else null },
                     updateVideoId = { videoId ->
-                        val trackId = result.trackId.ifBlank { "${result.title}:${result.artist}" }
+                        val trackId = result.historyTrackId
                         database.dao().updateRecognitionHistoryVideoId(trackId, videoId)
                         database.dao().updateRecognitionHistoryLikedByTrack(trackId, SongLikeState.isLiked(videoId))
                     },
@@ -224,30 +194,4 @@ object MusicRecognitionService : KoinComponent {
         val rms = sqrt(sumSquares / sampleCount) / 32768.0
         return (sqrt(rms) * 1.6).coerceIn(0.0, 1.0).toFloat()
     }
-
-    internal suspend fun resolveYoutubeVideoId(result: RecognitionResult): String? {
-        val query = listOf(result.title, result.artist).filter { it.isNotBlank() }.joinToString(" ")
-        if (query.isBlank()) return null
-        return try {
-            for (filter in listOf(SearchFilter.SONG, SearchFilter.VIDEO)) {
-                GlobalYouTubeRepository.instance
-                    .searchFiltered(query, filter)
-                    .items
-                    .filterIsInstance<SongItem>()
-                    .firstOrNull { it.matchesRecognition(result) }
-                    ?.let { return it.id }
-            }
-            GlobalYouTubeRepository.instance
-                .search(query, recordSearchHistory = false)
-                .filterIsInstance<SongItem>()
-                .firstOrNull { it.matchesRecognition(result) }
-                ?.id
-        } catch (error: CancellationException) {
-            throw error
-        } catch (error: Exception) {
-            Timber.tag(LOG_TAG).w(error, "Recognized song playback lookup failed")
-            null
-        }
-    }
-
 }

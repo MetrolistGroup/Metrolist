@@ -1,6 +1,4 @@
 import AppIntents
-import Foundation
-import Shared
 
 @available(iOS 16.0, *)
 struct RecognizeMusicIntent: AppIntent {
@@ -10,8 +8,7 @@ struct RecognizeMusicIntent: AppIntent {
 
     @MainActor
     func perform() async throws -> some IntentResult & ProvidesDialog {
-        let result = try await IosRecognitionManager.shared.recognize(from: .appShortcut)
-        let message = "\(result.title) - \(result.artist)"
+        let message = await IosRecognitionManager.shared.recognize()
         return .result(dialog: IntentDialog(stringLiteral: message))
     }
 }

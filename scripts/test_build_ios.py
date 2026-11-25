@@ -37,14 +37,14 @@ def main():
     xcconfig = xcconfig_path.read_text()
     inherited_settings = {
         "PRODUCT_NAME": "Metrolist",
-        "PRODUCT_BUNDLE_IDENTIFIER": "$(METROLIST_APP_BUNDLE_IDENTIFIER)",
+        "PRODUCT_BUNDLE_IDENTIFIER": "com.metrolist.MetrolistApp",
         "CODE_SIGN_ENTITLEMENTS": "Configuration/iosApp.entitlements",
         "SWIFT_VERSION": "5.9",
         "IPHONEOS_DEPLOYMENT_TARGET": "15.0",
         "SDKROOT": "iphoneos",
         "TARGETED_DEVICE_FAMILY": "1,2",
     }
-    assert xcode_project.count("baseConfigurationReference = 0418C23F19355BB18E625B53 /* Config.xcconfig */;") >= 4
+    assert xcode_project.count("baseConfigurationReference = 0418C23F19355BB18E625B53 /* Config.xcconfig */;") == 4
     framework_phase = xcode_project.split('name = "Compile Kotlin Multiplatform Framework";', 1)[1].split("/* End PBXShellScriptBuildPhase section */", 1)[0]
     assert "./gradlew :shared:embedAndSignAppleFrameworkForXcode" in framework_phase
     assert "sourceRevision" not in framework_phase, "The Xcode archive must use the real commit revision"
@@ -54,6 +54,7 @@ def main():
     assert "INFOPLIST_PREFIX_HEADER = $(DERIVED_FILE_DIR)/MetrolistVersion.h" in xcconfig
     for setting, value in inherited_settings.items():
         assert f"{setting} = {value}" in xcconfig, setting
+        assert f"{setting} =" not in xcode_project, setting
     entitlements = plistlib.loads((repository / "iosApp/Configuration/iosApp.entitlements").read_bytes())
     assert entitlements["com.apple.developer.associated-domains"] == ["applinks:metrolist.cc"]
     build_script = (repository / "scripts/build_ios.sh").read_text()
