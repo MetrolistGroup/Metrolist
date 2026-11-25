@@ -421,9 +421,11 @@ class SearchViewModel(
     }
 
     fun clearSearchHistory() {
-        // An overlapping clear would snapshot the already-hidden list, so a failed first clear could restore deleted entries.
-        if (!scope.isActive || _uiState.value.isClearingSearchHistory) return
+        if (!scope.isActive) return
+        // Reset first so a pending clear from a previous account doesn't block this one.
         resetRemoteHistoryIfSessionChanged()
+        // An overlapping clear would snapshot the already-hidden list, so a failed first clear could restore deleted entries.
+        if (_uiState.value.isClearingSearchHistory) return
         historySyncJob?.cancel()
         val session = repository.sessionSnapshot()
         val state = _uiState.value
