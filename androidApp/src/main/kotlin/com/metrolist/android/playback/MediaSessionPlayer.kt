@@ -479,24 +479,13 @@ class MediaSessionPlayer(
                 musicPlayer.wantsPlaybackState,
                 musicPlayer.playbackStateFlow,
                 musicPlayer.playbackTransitionPending,
-            ) { _, _, _, _ -> Triple(isPlaying, playbackState, playWhenReady) }
-                .distinctUntilChanged()
-                .collect { state ->
-                    val previous = publishedPlaybackState
-                    publishedPlaybackState = state
-                    listeners.forEach {
-                        if (previous?.first != state.first) it.onIsPlayingChanged(state.first)
-                        if (previous?.second != state.second) it.onPlaybackStateChanged(state.second)
-                        if (previous?.third !=
-                            state.third
-                        ) {
-                            it.onPlayWhenReadyChanged(state.third, Player.PLAY_WHEN_READY_CHANGE_REASON_USER_REQUEST)
-                        }
-                    }
-                }
+            ) { _, _, _, _ -> }
+                .collect { publishPlaybackState() }
         }
         scope.launch {
             musicPlayer.currentSong.collectLatest {
+                // Media3 may repost a stale notification if it sees cleared metadata before the stop's idle state.
+                publishPlaybackState()
                 listeners.forEach {
                     it.onMediaItemTransition(getCurrentMediaItem(), Player.MEDIA_ITEM_TRANSITION_REASON_AUTO)
                     it.onMediaMetadataChanged(getMediaMetadata())
@@ -658,6 +647,20 @@ class MediaSessionPlayer(
             onRemoteSeek(position)
         } else {
             musicPlayer.seekTo(position, source)
+        }
+    }
+
+    private fun publishPlaybackState() {
+        val state = Triple(isPlaying, playbackState, playWhenReady)
+        val previous = publishedPlaybackState
+        if (previous == state) return
+        publishedPlaybackState = state
+        listeners.forEach {
+            if (previous?.first != state.first) it.onIsPlayingChanged(state.first)
+            if (previous?.second != state.second) it.onPlaybackStateChanged(state.second)
+            if (previous?.third != state.third) {
+                it.onPlayWhenReadyChanged(state.third, Player.PLAY_WHEN_READY_CHANGE_REASON_USER_REQUEST)
+            }
         }
     }
 
