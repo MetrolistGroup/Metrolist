@@ -14,6 +14,7 @@ import com.metrolist.shared.model.SongItem
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 
 class DesktopListenTogetherPlayback : ListenTogetherPlayback {
@@ -28,9 +29,19 @@ class DesktopListenTogetherPlayback : ListenTogetherPlayback {
 
     init {
         AppState.scope.launch {
-            currentSong.collectLatest { song ->
-                if (song == null) readiness.value = PlaybackReadiness.IDLE
-            }
+            combine(currentSong, PlayerState.player.currentPlaybackResource) { song, resource -> song to resource }
+                .collectLatest { (song, resource) ->
+                    when {
+                        song == null -> {
+                            readiness.value = PlaybackReadiness.IDLE
+                        }
+
+                        // A track prepared before joining never passes through playQueueFromRemote.
+                        resource?.videoId == song.id && readiness.value == PlaybackReadiness.IDLE -> {
+                            readiness.value = PlaybackReadiness.READY
+                        }
+                    }
+                }
         }
         AppState.scope.launch {
             PlayerState.player.loadFailure.collectLatest { failure ->
