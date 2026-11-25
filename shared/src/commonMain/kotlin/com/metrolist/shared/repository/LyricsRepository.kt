@@ -298,6 +298,7 @@ class LyricsRepository(
                         preferredProviders = listOf(provider),
                     ).firstOrNull { it.timingKind != LyricsTimingKind.UNSYNCED }
                 }
+            currentCoroutineContext().ensureActive()
             synced.also {
                 previewLyrics = it
                 previewLyricsProviders = providers

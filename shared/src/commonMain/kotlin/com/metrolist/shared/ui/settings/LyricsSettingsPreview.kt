@@ -57,6 +57,7 @@ import com.metrolist.shared.ui.components.lyrics.LyricsView
 import com.metrolist.shared.ui.components.withPlaybackAnimationFrame
 import com.metrolist.shared.viewmodels.PlayerViewModel
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.StateFlow
 import org.jetbrains.compose.resources.stringResource
 import org.koin.mp.KoinPlatform
@@ -133,7 +134,9 @@ fun LyricsSettingsPreview(
         if (useCurrentLyrics) return@LaunchedEffect
         loading = true
         try {
-            result = repository.getPreviewLyrics()
+            val preview = repository.getPreviewLyrics()
+            ensureActive()
+            result = preview
         } catch (error: CancellationException) {
             throw error
         } catch (_: Exception) {
