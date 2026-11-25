@@ -1,4 +1,4 @@
-@file:OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@file:OptIn(ExperimentalMaterial3ExpressiveApi::class, ExperimentalFoundationApi::class)
 
 package com.metrolist.shared.ui.screens
 
@@ -99,6 +99,9 @@ import org.jetbrains.compose.resources.stringResource
 import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.ReorderableLazyListState
 import sh.calvin.reorderable.rememberReorderableLazyListState
+import com.metrolist.shared.model.SongGroup
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
 
 data class PlaylistContentText(
     val play: String,
@@ -158,6 +161,9 @@ fun PlaylistContent(
     isAddingSuggestion: Boolean = false,
     suggestionFooter: (@Composable () -> Unit)? = null,
     downloadedSongIds: Set<String> = emptySet(),
+    songGroups: List<SongGroup>? = null,
+    unknownGroupTitle: String = "",
+    groupByControl: (@Composable () -> Unit)? = null,
     onArtistClick: ((String) -> Unit)? = null,
     header: @Composable (() -> Unit)? = null,
     orderControls: @Composable (() -> Unit)? = null,
@@ -477,27 +483,7 @@ fun PlaylistContent(
                                         emptyContent()
                                     }
                                 } else {
-                                    Box(
-                                        modifier = Modifier.weight(1f).fillMaxWidth(),
-                                    ) {
-                                        DragScrollableColumn(
-                                            state = activeListState,
-                                            // Keep scroll input nodes attached during reorder; the drag handle consumes movement.
-                                            modifier =
-                                                Modifier
-                                                    .fillMaxSize()
-                                                    .padding(end = 16.dp)
-                                                    .desktopArrowScroll(
-                                                        activeListState,
-                                                        enabled = reorderableState?.isAnyItemDragging != true,
-                                                    ),
-                                        ) {
-                                            itemsIndexed(displayedSongs, key = {
-                                                index,
-                                                _,
-                                                ->
-                                                songKeys[index]
-                                            }, contentType = { _, _ -> "song" }) { index, song ->
+                                            val songRow: @Composable (Int, SongItem) -> Unit = { index, song ->
                                                 PlaylistSongItemRow(
                                                     song = song,
                                                     index = index,
@@ -521,6 +507,52 @@ fun PlaylistContent(
                                                     onMove = moveAndCommit,
                                                     isSelected = isTrackSelected(song),
                                                 )
+                                            }
+                                    Box(
+                                        modifier = Modifier.weight(1f).fillMaxWidth(),
+                                    ) {
+                                        DragScrollableColumn(
+                                            state = activeListState,
+                                            // Keep scroll input nodes attached during reorder; the drag handle consumes movement.
+                                            modifier =
+                                                Modifier
+                                                    .fillMaxSize()
+                                                    .padding(end = 16.dp)
+                                                    .desktopArrowScroll(
+                                                        activeListState,
+                                                        enabled = reorderableState?.isAnyItemDragging != true,
+                                                    ),
+                                        ) {
+                                            groupByControl?.let { control ->
+                                                item(key = "group_by_control") { control() }
+                                            }
+                                            if (songGroups == null || reorderMode || displayedIndices != null || songGroups.sumOf { it.songs.size } != displayedSongs.size) {
+                                                itemsIndexed(displayedSongs, key = {
+                                                    index,
+                                                    _,
+                                                    ->
+                                                    songKeys[index]
+                                                }, contentType = { _, _ -> "song" }) { index, song ->
+                                                    songRow(index, song)
+                                                }
+                                            } else {
+                                                var groupStart = 0
+                                                songGroups.forEach { group ->
+                                                    val start = groupStart
+                                                    stickyHeader(key = "group_header_$start") {
+                                                        Text(
+                                                            text = group.key ?: unknownGroupTitle,
+                                                            style = MaterialTheme.typography.titleSmall,
+                                                            color = MaterialTheme.colorScheme.primary,
+                                                            modifier = Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surface).padding(horizontal = 16.dp, vertical = 8.dp),
+                                                        )
+                                                    }
+                                                    group.songs.indices.forEach { offset ->
+                                                        val index = start + offset
+                                                        item(key = songKeys[index], contentType = "song") { songRow(index, displayedSongs[index]) }
+                                                    }
+                                                    groupStart += group.songs.size
+                                                }
                                             }
 
                                             if (paginationContent != null) {

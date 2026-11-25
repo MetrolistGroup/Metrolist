@@ -206,6 +206,11 @@ import org.jetbrains.compose.resources.pluralStringResource
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.koinInject
 import kotlin.time.Clock
+import com.metrolist.shared.model.SongGroupBy
+import com.metrolist.shared.model.groupedBy
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
+import com.metrolist.shared.ui.components.ExpressiveFilterChip
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -456,7 +461,7 @@ fun AutoPlaylistScreen(
                 emptyList()
             }
         }
-    val displayedSongs =
+    val ungroupedDisplayedSongs =
         if (currentType == "downloaded" &&
             (downloadFilterState.loading || downloadFilterState.failed || preparedDownloadFilter != downloadFilterState)
         ) {
@@ -468,6 +473,37 @@ fun AutoPlaylistScreen(
         } else {
             preparedSongs
         }
+
+    val downloadSongGroupBy = Settings.shared.downloadedSongGroupBy
+    val songGroups =
+        remember(ungroupedDisplayedSongs, downloadSongGroupBy, currentType) {
+            if (currentType == "downloaded" && downloadSongGroupBy != SongGroupBy.NONE) {
+                ungroupedDisplayedSongs.groupedBy(downloadSongGroupBy)
+            } else {
+                null
+            }
+        }
+    val displayedSongs = songGroups?.flatMap { it.songs } ?: ungroupedDisplayedSongs
+    val downloadGroupByControl: @Composable () -> Unit = {
+        Row(
+            modifier = Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Text(text = stringResource(Res.string.group_by), style = MaterialTheme.typography.labelLarge)
+            listOf(
+                SongGroupBy.NONE to Res.string.group_by_none,
+                SongGroupBy.ARTIST to Res.string.group_by_artist,
+                SongGroupBy.ALBUM to Res.string.group_by_album,
+            ).forEach { (option, label) ->
+                ExpressiveFilterChip(
+                    selected = downloadSongGroupBy == option,
+                    onClick = { Settings.shared.downloadedSongGroupBy = option },
+                    label = { Text(stringResource(label)) },
+                )
+            }
+        }
+    }
 
     suspend fun orderedCachedSongs(): List<SongItem> {
         val committed = commitPendingCachedOrder()
@@ -857,6 +893,9 @@ fun AutoPlaylistScreen(
                             null
                         },
                     songs = displayedSongs,
+                    songGroups = songGroups,
+                    unknownGroupTitle = stringResource(if (downloadSongGroupBy == SongGroupBy.ALBUM) Res.string.unknown_album else Res.string.unknown_artist),
+                    groupByControl = if (currentType == "downloaded") downloadGroupByControl else null,
                     artworkSongs = songs,
                     downloadedSongIds = downloadedSongIds,
                     text = playlistContentText(useTrackCount = currentType in setOf("podcasts", "SE")),
