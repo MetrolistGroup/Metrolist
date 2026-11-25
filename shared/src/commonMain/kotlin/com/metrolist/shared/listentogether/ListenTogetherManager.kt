@@ -1344,7 +1344,9 @@ class ListenTogetherManager(
             MessageTypes.SUGGESTION_SUBMITTED -> {
                 if (payload is SuggestionSubmittedPayload && _role.value == ListenTogetherRoomRole.GUEST) {
                     synchronized(participationLock) { outgoingSuggestions.remove(payload.trackInfo.id) }
-                    _submittedSuggestions.value += payload.suggestionId to payload.trackInfo
+                    // A resubmission after a lost decision gets a new ID; drop the stale entry for the same track.
+                    _submittedSuggestions.value = _submittedSuggestions.value.filterValues { it.id != payload.trackInfo.id } +
+                        (payload.suggestionId to payload.trackInfo)
                     emitNotice(ListenTogetherText.SUGGESTION_SUBMITTED)
                 }
             }
