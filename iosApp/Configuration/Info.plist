@@ -36,6 +36,12 @@
     <true/>
     <key>LSRequiresIPhoneOS</key>
     <true/>
+    <key>NSBonjourServices</key>
+    <array>
+        <string>_metrolist-connect._tcp.</string>
+    </array>
+    <key>NSLocalNetworkUsageDescription</key>
+    <string>Metrolist uses the local network to find nearby devices for Device Connect.</string>
 	<key>UIFileSharingEnabled</key>
 	<true/>
 	<key>LSSupportsOpeningDocumentsInPlace</key>
@@ -71,6 +77,8 @@
     <dict>
         <key>NSAllowsArbitraryLoads</key>
         <false/>
+        <key>NSAllowsLocalNetworking</key>
+        <true/>
     </dict>
     <key>NSBonjourServices</key>
     <array>
