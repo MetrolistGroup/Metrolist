@@ -22,7 +22,7 @@ data class EventWithSong(
 ) {
     // Lists avoid Room's iOS ConcurrentModificationException for single-value relations above 999 rows.
     val song: Song
-        get() = songs.first()
+        get() = songs.last()
     val snapshot: HistorySnapshot?
-        get() = snapshots.firstOrNull()
+        get() = snapshots.lastOrNull()
 }
