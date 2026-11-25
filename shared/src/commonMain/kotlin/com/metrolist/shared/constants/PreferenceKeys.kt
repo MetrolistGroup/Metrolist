@@ -37,6 +37,7 @@ val BlockedUsersUndoHintShownKey = "blockedUsersUndoHintShown"
 
 val ArtistNameAliasesJsonKey = "artistNameAliasesJson"
 val PreferWordSyncedLyricsKey = "preferWordSyncedLyrics"
+val LyricsYoutubeCaptionsEnabledKey = "lyricsYoutubeCaptionsEnabled"
 
 val EnableHapticFeedbackKey = "enableHapticFeedback"
 val AppIconKey = "appIcon"

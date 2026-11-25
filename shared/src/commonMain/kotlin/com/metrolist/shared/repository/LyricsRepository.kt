@@ -83,6 +83,7 @@ private fun configuredLyricsProviders(): List<LyricsProvider> =
     LyricsProvider.preferredProvidersForFetch(
         LyricsProvider.parseUserOrderFromStoredCsv(Settings.shared.lyricsProviderOrder),
         LyricsProvider.parseEnabledFromStoredCsv(Settings.shared.lyricsEnabledProviders),
+        Settings.shared.lyricsYoutubeCaptionsEnabled,
     )
 
 private fun providerPriority(
@@ -276,15 +277,17 @@ class LyricsRepository(
 
     private val previewLyricsMutex = Mutex()
     private var previewLyrics: LyricsProviderResult? = null
+    private var previewLyricsProviders: List<LyricsProvider>? = null
 
     internal suspend fun getPreviewLyrics(): LyricsProviderResult? =
         previewLyricsMutex.withLock {
-            previewLyrics?.let { return@withLock it }
             val providers =
                 LyricsProvider.preferredProvidersForFetch(
                     LyricsProvider.parseUserOrderFromStoredCsv(Settings.shared.lyricsProviderOrder),
                     LyricsProvider.parseEnabledFromStoredCsv(Settings.shared.lyricsEnabledProviders),
+                    Settings.shared.lyricsYoutubeCaptionsEnabled,
                 )
+            if (previewLyricsProviders == providers) previewLyrics?.let { return@withLock it }
             val synced =
                 providers.firstNotNullOfOrNull { provider ->
                     getProviderResultsFlow(
@@ -295,7 +298,11 @@ class LyricsRepository(
                         preferredProviders = listOf(provider),
                     ).firstOrNull { it.timingKind != LyricsTimingKind.UNSYNCED }
                 }
-            synced.also { previewLyrics = it }
+            currentCoroutineContext().ensureActive()
+            synced.also {
+                previewLyrics = it
+                previewLyricsProviders = providers
+            }
         }
 
     suspend fun getSongwriters(videoId: String): List<String> {
@@ -357,6 +364,7 @@ class LyricsRepository(
             LyricsProvider.preferredProvidersForFetch(
                 LyricsProvider.parseUserOrderFromStoredCsv(Settings.shared.lyricsProviderOrder),
                 LyricsProvider.parseEnabledFromStoredCsv(Settings.shared.lyricsEnabledProviders),
+                Settings.shared.lyricsYoutubeCaptionsEnabled,
             ),
         skipCache: Boolean = false,
         isVideoContext: Boolean = false,
@@ -677,7 +685,15 @@ class LyricsRepository(
                     it != LyricsProvider.AUTO
                 }.distinct()
                 .let {
-                    if (preferVideoProviders) (LyricsProvider.afterUserLyricsFallbacks + it).distinct() else it
+                    if (preferVideoProviders) {
+                        (
+                            LyricsProvider.afterUserLyricsFallbacks.filter { fallback ->
+                                fallback in it
+                            } + it
+                        ).distinct()
+                    } else {
+                        it
+                    }
                 }
         return LyricsLookupKey(videoId, title, artist, duration, album, providers, isVideoContext, Settings.shared.preferWordSyncedLyrics)
     }

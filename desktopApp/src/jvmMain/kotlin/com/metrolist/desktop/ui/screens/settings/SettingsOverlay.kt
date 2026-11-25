@@ -400,6 +400,7 @@ fun SettingsOverlay(colorScheme: ColorScheme) {
                                 PlayerState.isPlaying,
                                 Settings.shared.lyricsProviderOrder,
                                 Settings.shared.lyricsEnabledProviders,
+                                Settings.shared.lyricsYoutubeCaptionsEnabled,
                                 Settings.shared.preferWordSyncedLyrics,
                             ) {
                                 if (PlayerState.isPlaying) song?.let { LyricsState.fetchLyrics(it) }

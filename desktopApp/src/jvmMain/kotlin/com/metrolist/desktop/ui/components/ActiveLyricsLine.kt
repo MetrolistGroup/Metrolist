@@ -54,6 +54,7 @@ fun ActiveLyricsLine(modifier: Modifier = Modifier) {
         currentTrack?.id,
         Settings.shared.lyricsProviderOrder,
         Settings.shared.lyricsEnabledProviders,
+        Settings.shared.lyricsYoutubeCaptionsEnabled,
     ) {
         if (showLyricsOnPlayer && currentTrack != null) {
             LyricsState.fetchLyrics(currentTrack)

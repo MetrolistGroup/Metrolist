@@ -183,6 +183,7 @@ open class DesktopLyricsState internal constructor(
             LyricsProvider.preferredProvidersForFetch(
                 lyricsProviderOrder,
                 lyricsEnabledProviders,
+                Settings.shared.lyricsYoutubeCaptionsEnabled,
             )
         val isVideoContext = !isCustomQuery && isMvActive(song)
         val preferVideoProviders = !isCustomQuery && isLiveLyricsVideo(song.musicVideoType, song.title)

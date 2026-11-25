@@ -57,6 +57,7 @@ import com.metrolist.shared.ui.components.lyrics.LyricsView
 import com.metrolist.shared.ui.components.withPlaybackAnimationFrame
 import com.metrolist.shared.viewmodels.PlayerViewModel
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.StateFlow
 import org.jetbrains.compose.resources.stringResource
 import org.koin.mp.KoinPlatform
@@ -82,6 +83,7 @@ fun PlayerLyricsSettingsPreview(
         state.isPlaying,
         Settings.shared.lyricsProviderOrder,
         Settings.shared.lyricsEnabledProviders,
+        Settings.shared.lyricsYoutubeCaptionsEnabled,
         Settings.shared.preferWordSyncedLyrics,
     ) {
         if (state.isPlaying) state.currentSong?.let { viewModel.loadLyrics(it) }
@@ -128,11 +130,13 @@ fun LyricsSettingsPreview(
     var result by remember { mutableStateOf<LyricsProviderResult?>(null) }
     var loading by remember { mutableStateOf(true) }
     var attempt by remember { mutableIntStateOf(0) }
-    LaunchedEffect(repository, attempt, useCurrentLyrics) {
+    LaunchedEffect(repository, attempt, useCurrentLyrics, Settings.shared.lyricsYoutubeCaptionsEnabled) {
         if (useCurrentLyrics) return@LaunchedEffect
         loading = true
         try {
-            result = repository.getPreviewLyrics()
+            val preview = repository.getPreviewLyrics()
+            ensureActive()
+            result = preview
         } catch (error: CancellationException) {
             throw error
         } catch (_: Exception) {

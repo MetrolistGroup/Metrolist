@@ -138,6 +138,7 @@ import com.metrolist.shared.constants.LyricsPlusLighterKey
 import com.metrolist.shared.constants.LyricsProgressiveBlurKey
 import com.metrolist.shared.constants.LyricsShareImageStyleKey
 import com.metrolist.shared.constants.LyricsShowOriginalLyricsKey
+import com.metrolist.shared.constants.LyricsYoutubeCaptionsEnabledKey
 import com.metrolist.shared.constants.MatugenThemeKey
 import com.metrolist.shared.constants.MinimumSongDurationSecondsKey
 import com.metrolist.shared.constants.MusicVideoCacheJsonKey
@@ -503,6 +504,7 @@ class Settings(
     var lyricsAutoScroll by preference(true)
     var lyricsProviderOrder by preference(LyricsProvider.userConfigurable.joinToString(",") { it.name })
     var lyricsEnabledProviders by preference("")
+    var lyricsYoutubeCaptionsEnabled by preference(LyricsYoutubeCaptionsEnabledKey, true)
     var preferWordSyncedLyrics by preference(PreferWordSyncedLyricsKey, false)
     var canvasContentOrder by preference(CanvasContentOrderKey, "YOUTUBE_MUSIC_VIDEO,SPOTIFY_CANVAS,APPLE_MUSIC")
     var canvasEnabledSources by preference(CanvasEnabledSourcesKey, "")

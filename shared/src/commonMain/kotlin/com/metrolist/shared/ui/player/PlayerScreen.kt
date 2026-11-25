@@ -797,6 +797,7 @@ fun PlayerScreen(
         shouldFetchLyrics,
         Settings.shared.lyricsProviderOrder,
         Settings.shared.lyricsEnabledProviders,
+        Settings.shared.lyricsYoutubeCaptionsEnabled,
         Settings.shared.preferWordSyncedLyrics,
     ) {
         if (shouldLoadLyrics && currentSong != null) {
