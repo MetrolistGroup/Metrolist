@@ -379,6 +379,7 @@ object DownloadManager {
                 LyricsProvider.preferredProvidersForFetch(
                     LyricsProvider.parseUserOrderFromStoredCsv(Settings.shared.lyricsProviderOrder),
                     LyricsProvider.parseEnabledFromStoredCsv(Settings.shared.lyricsEnabledProviders),
+                    Settings.shared.lyricsYoutubeCaptionsEnabled,
                 )
             lyricsRepo.prefetchDownloadLyrics(song, preferred)
         } catch (e: CancellationException) {

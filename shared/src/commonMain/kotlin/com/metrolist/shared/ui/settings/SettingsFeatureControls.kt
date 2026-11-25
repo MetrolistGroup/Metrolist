@@ -260,6 +260,18 @@ internal fun LyricsProviderOrderSetting() {
             }
         }
     }
+    val captionsLabel = stringResource(Res.string.lyrics_youtube_captions)
+    Row(
+        modifier = Modifier.fillMaxWidth().heightIn(min = 72.dp).padding(horizontal = 16.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(captionsLabel, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge)
+        ExpressiveSwitch(
+            checked = settings.lyricsYoutubeCaptionsEnabled,
+            modifier = Modifier.semantics { contentDescription = captionsLabel },
+            onCheckedChange = { settings.lyricsYoutubeCaptionsEnabled = it },
+        )
+    }
 }
 
 @Composable

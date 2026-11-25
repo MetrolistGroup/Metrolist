@@ -538,7 +538,7 @@ enum class LyricsProvider {
                 "KuGou" -> KUGOU
                 "Paxsenix" -> PAXSENIX
                 "SimpMusic" -> SIMPMUSIC
-                "YouTubeSubtitle" -> YOUTUBESUBTITLE
+                "YouTubeSubtitle", "YouTube Subtitle" -> YOUTUBESUBTITLE
                 "YouTube Music", "YouTube" -> YOUTUBE
                 else -> null
             }
@@ -589,16 +589,18 @@ enum class LyricsProvider {
         fun preferredProvidersForFetch(
             userOrder: List<LyricsProvider>,
             enabled: Set<LyricsProvider>,
+            youtubeCaptionsEnabled: Boolean,
             preferVideoProviders: Boolean = false,
         ): List<LyricsProvider> {
             val userEnabled = userOrder.filter { it in enabled }
+            val fallbacks = afterUserLyricsFallbacks.filter { it != YOUTUBESUBTITLE || youtubeCaptionsEnabled }
             if (userEnabled.isEmpty()) {
-                return afterUserLyricsFallbacks
+                return fallbacks
             }
             if (!preferVideoProviders) {
-                return userEnabled + afterUserLyricsFallbacks
+                return userEnabled + fallbacks
             }
-            return (afterUserLyricsFallbacks + userEnabled).distinct()
+            return (fallbacks + userEnabled).distinct()
         }
     }
 }

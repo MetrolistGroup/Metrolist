@@ -127,6 +127,7 @@ class LyricsClient(
                     LyricsProvider.preferredProvidersForFetch(
                         LyricsProvider.parseUserOrderFromStoredCsv(Settings.shared.lyricsProviderOrder),
                         LyricsProvider.parseEnabledFromStoredCsv(Settings.shared.lyricsEnabledProviders),
+                        Settings.shared.lyricsYoutubeCaptionsEnabled,
                     )
                 for (candidate in providers) {
                     try {

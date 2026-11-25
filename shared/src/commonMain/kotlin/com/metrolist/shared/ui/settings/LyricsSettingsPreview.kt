@@ -82,6 +82,7 @@ fun PlayerLyricsSettingsPreview(
         state.isPlaying,
         Settings.shared.lyricsProviderOrder,
         Settings.shared.lyricsEnabledProviders,
+        Settings.shared.lyricsYoutubeCaptionsEnabled,
         Settings.shared.preferWordSyncedLyrics,
     ) {
         if (state.isPlaying) state.currentSong?.let { viewModel.loadLyrics(it) }

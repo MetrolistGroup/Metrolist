@@ -1411,7 +1411,8 @@ class PlayerViewModel(
     ) {
         val requestKey =
             "$songId\u0000$title\u0000$artist\u0000$isCustomQuery\u0000$forceAiTranslation\u0000" +
-                "${Settings.shared.lyricsProviderOrder}\u0000${Settings.shared.lyricsEnabledProviders}\u0000${Settings.shared.preferWordSyncedLyrics}"
+                "${Settings.shared.lyricsProviderOrder}\u0000${Settings.shared.lyricsEnabledProviders}\u0000" +
+                "${Settings.shared.lyricsYoutubeCaptionsEnabled}\u0000${Settings.shared.preferWordSyncedLyrics}"
         if (!skipCache && lyricsRequestKey == requestKey && (cacheOnly || !lyricsRequestCacheOnly)) return
         lyricsRequestKey = requestKey
         lyricsRequestCacheOnly = cacheOnly

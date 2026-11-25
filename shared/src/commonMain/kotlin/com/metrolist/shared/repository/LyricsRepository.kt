@@ -83,6 +83,7 @@ private fun configuredLyricsProviders(): List<LyricsProvider> =
     LyricsProvider.preferredProvidersForFetch(
         LyricsProvider.parseUserOrderFromStoredCsv(Settings.shared.lyricsProviderOrder),
         LyricsProvider.parseEnabledFromStoredCsv(Settings.shared.lyricsEnabledProviders),
+        Settings.shared.lyricsYoutubeCaptionsEnabled,
     )
 
 private fun providerPriority(
@@ -284,6 +285,7 @@ class LyricsRepository(
                 LyricsProvider.preferredProvidersForFetch(
                     LyricsProvider.parseUserOrderFromStoredCsv(Settings.shared.lyricsProviderOrder),
                     LyricsProvider.parseEnabledFromStoredCsv(Settings.shared.lyricsEnabledProviders),
+                    Settings.shared.lyricsYoutubeCaptionsEnabled,
                 )
             val synced =
                 providers.firstNotNullOfOrNull { provider ->
@@ -357,6 +359,7 @@ class LyricsRepository(
             LyricsProvider.preferredProvidersForFetch(
                 LyricsProvider.parseUserOrderFromStoredCsv(Settings.shared.lyricsProviderOrder),
                 LyricsProvider.parseEnabledFromStoredCsv(Settings.shared.lyricsEnabledProviders),
+                Settings.shared.lyricsYoutubeCaptionsEnabled,
             ),
         skipCache: Boolean = false,
         isVideoContext: Boolean = false,
@@ -677,7 +680,15 @@ class LyricsRepository(
                     it != LyricsProvider.AUTO
                 }.distinct()
                 .let {
-                    if (preferVideoProviders) (LyricsProvider.afterUserLyricsFallbacks + it).distinct() else it
+                    if (preferVideoProviders) {
+                        (
+                            LyricsProvider.afterUserLyricsFallbacks.filter { fallback ->
+                                fallback in it
+                            } + it
+                        ).distinct()
+                    } else {
+                        it
+                    }
                 }
         return LyricsLookupKey(videoId, title, artist, duration, album, providers, isVideoContext, Settings.shared.preferWordSyncedLyrics)
     }
