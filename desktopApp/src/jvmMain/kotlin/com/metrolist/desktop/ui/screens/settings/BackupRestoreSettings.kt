@@ -711,27 +711,32 @@ fun BackupRestoreSettingsScreen(colorScheme: ColorScheme) {
                             },
                             enabled = !isBusy,
                             onClick = {
+                                if (isBusy) return@Material3SettingsItem
+                                isBusy = true
                                 scope.launch {
-                                    val file =
-                                        runCatching {
-                                            pickDesktopFile(restorePickerTitle)
-                                        }.onFailure { status = getString(Res.string.could_not_open_file_picker, it.message ?: "") }
-                                            .getOrNull() ?: return@launch
-                                    isBusy = true
-                                    val result =
-                                        withContext(Dispatchers.IO) {
+                                    try {
+                                        val file =
                                             runCatching {
-                                                file.inputStream().use { input ->
-                                                    database.importForeignBackup(
-                                                        input,
-                                                        File(XdgUtils.getXdgCacheHome(), "metrolist/foreign-import"),
-                                                        JdbcSQLiteDriver(),
-                                                    )
+                                                pickDesktopFile(restorePickerTitle)
+                                            }.onFailure {
+                                                status = getString(Res.string.could_not_open_file_picker, it.message ?: "")
+                                            }.getOrNull() ?: return@launch
+                                        val result =
+                                            withContext(Dispatchers.IO) {
+                                                runCatching {
+                                                    file.inputStream().use { input ->
+                                                        database.importForeignBackup(
+                                                            input,
+                                                            File(XdgUtils.getXdgCacheHome(), "metrolist/foreign-import"),
+                                                            JdbcSQLiteDriver(),
+                                                        )
+                                                    }
                                                 }
                                             }
-                                        }
-                                    isBusy = false
-                                    status = result.foreignImportMessage()
+                                        status = result.foreignImportMessage()
+                                    } finally {
+                                        isBusy = false
+                                    }
                                 }
                             },
                         ),
