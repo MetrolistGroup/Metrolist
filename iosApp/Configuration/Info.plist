@@ -18,6 +18,8 @@
     <string>$(PRODUCT_BUNDLE_PACKAGE_TYPE)</string>
     <key>CFBundleShortVersionString</key>
     <string>METROLIST_VERSION</string>
+    <key>MetrolistWidgetAppGroupIdentifier</key>
+    <string>$(METROLIST_APP_GROUP_ID)</string>
     <key>CFBundleVersion</key>
     <string>METROLIST_VERSION</string>
     <key>CFBundleURLTypes</key>

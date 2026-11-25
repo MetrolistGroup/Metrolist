@@ -12,6 +12,7 @@ import Sentry
 import Shared
 import SwiftUI
 import UIKit
+import WidgetKit
 
 @main
 struct MetrolistApp: App {
@@ -24,6 +25,10 @@ struct MetrolistApp: App {
         }
         configureAppAudioSession()
         IosNowPlayingAnimatedArtworkBridge.shared.register(provider: IosNowPlayingAnimatedArtworkHost())
+        IosNowPlayingWidget.shared.register(reloader: WidgetTimelineReloader())
+        if #available(iOS 17.0, *) {
+            PlaybackControlIntent.handler = { IosNowPlayingWidget.shared.handle(command: $0) }
+        }
         if UserDefaults.standard.object(forKey: "iosOnboardingComplete") == nil {
             let existingDatabase = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)
                 .first?.appendingPathComponent("metrolist/metrolist.db")
@@ -116,6 +121,12 @@ private final class AutomaticBackupAppDelegate: NSObject, UIApplicationDelegate 
         IosAutomaticBackupBridgeKt.createIosAutomaticBackup { succeeded in
             complete(succeeded.boolValue)
         }
+    }
+}
+
+private final class WidgetTimelineReloader: NSObject, IosWidgetTimelineReloader {
+    func reloadTimelines() {
+        WidgetCenter.shared.reloadAllTimelines()
     }
 }
 

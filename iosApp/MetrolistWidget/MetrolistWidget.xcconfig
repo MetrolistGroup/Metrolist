@@ -1,0 +1,8 @@
+#include "../Configuration/Config.xcconfig"
+
+PRODUCT_NAME = MetrolistWidget
+PRODUCT_BUNDLE_IDENTIFIER = com.metrolist.MetrolistApp.widget
+CODE_SIGN_ENTITLEMENTS = MetrolistWidget/MetrolistWidget.entitlements
+INFOPLIST_FILE = MetrolistWidget/Info.plist
+IPHONEOS_DEPLOYMENT_TARGET = 17.0
+SKIP_INSTALL = YES
