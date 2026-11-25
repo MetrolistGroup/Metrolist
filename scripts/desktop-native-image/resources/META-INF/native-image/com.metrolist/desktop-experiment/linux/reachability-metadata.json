@@ -636,6 +636,17 @@
           ]
         }
       ]
+    },
+    {
+      "type": "org.freedesktop.dbus.interfaces.Properties",
+      "allDeclaredMethods": true
+    },
+    {
+      "type": {
+        "proxy": [
+          "org.freedesktop.dbus.interfaces.Properties"
+        ]
+      }
     }
   ]
 }
