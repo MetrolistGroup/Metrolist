@@ -72,5 +72,12 @@
         <key>NSAllowsArbitraryLoads</key>
         <false/>
     </dict>
+    <key>NSBonjourServices</key>
+    <array>
+        <string>_fcast._tcp</string>
+        <string>_googlecast._tcp</string>
+    </array>
+    <key>NSLocalNetworkUsageDescription</key>
+    <string>Metrolist uses the local network to find nearby cast devices.</string>
 </dict>
 </plist>
