@@ -5268,6 +5268,11 @@
 <string name="metroeq_preset_rock">Rock</string>
 <string name="metroeq_save_as">Save as</string>
 <string name="metroeq_preset_bass">Bass boost</string>
+    <string name="metroeq_preset_commute">Commute</string>
+    <string name="metroeq_preset_loudness">Loudness</string>
+    <string name="metroeq_preset_pop">Pop</string>
+    <string name="metroeq_preset_electronic">Electronic</string>
+    <string name="metroeq_preset_acoustic">Acoustic</string>
 <string name="metroeq_presets">Presets</string>
     <string name="cast_discovery_failed">Could not search for Cast devices. Close and reopen the device picker to try again.</string>
     <string name="listen_together_pending_approvals">Pending approvals</string>
