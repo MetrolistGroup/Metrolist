@@ -277,16 +277,17 @@ class LyricsRepository(
 
     private val previewLyricsMutex = Mutex()
     private var previewLyrics: LyricsProviderResult? = null
+    private var previewLyricsProviders: List<LyricsProvider>? = null
 
     internal suspend fun getPreviewLyrics(): LyricsProviderResult? =
         previewLyricsMutex.withLock {
-            previewLyrics?.let { return@withLock it }
             val providers =
                 LyricsProvider.preferredProvidersForFetch(
                     LyricsProvider.parseUserOrderFromStoredCsv(Settings.shared.lyricsProviderOrder),
                     LyricsProvider.parseEnabledFromStoredCsv(Settings.shared.lyricsEnabledProviders),
                     Settings.shared.lyricsYoutubeCaptionsEnabled,
                 )
+            if (previewLyricsProviders == providers) previewLyrics?.let { return@withLock it }
             val synced =
                 providers.firstNotNullOfOrNull { provider ->
                     getProviderResultsFlow(
@@ -297,7 +298,10 @@ class LyricsRepository(
                         preferredProviders = listOf(provider),
                     ).firstOrNull { it.timingKind != LyricsTimingKind.UNSYNCED }
                 }
-            synced.also { previewLyrics = it }
+            synced.also {
+                previewLyrics = it
+                previewLyricsProviders = providers
+            }
         }
 
     suspend fun getSongwriters(videoId: String): List<String> {

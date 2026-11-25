@@ -129,7 +129,7 @@ fun LyricsSettingsPreview(
     var result by remember { mutableStateOf<LyricsProviderResult?>(null) }
     var loading by remember { mutableStateOf(true) }
     var attempt by remember { mutableIntStateOf(0) }
-    LaunchedEffect(repository, attempt, useCurrentLyrics) {
+    LaunchedEffect(repository, attempt, useCurrentLyrics, Settings.shared.lyricsYoutubeCaptionsEnabled) {
         if (useCurrentLyrics) return@LaunchedEffect
         loading = true
         try {
