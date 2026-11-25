@@ -802,7 +802,7 @@
     <string name="search_songs_artists_podcasts">Rechercher sur Metrolist</string>
     <string name="account_login_with_token">Se connecter avec un jeton</string>
     <string name="token_login_title">Jeton de connexion</string>
-    <string name="token_adv_login_description">Il s'agit d'une méthode de connexion avancée. En guise d'alternative au portail web, vous pouvez saisir ou mettre à jour directement votre jeton de connexion ici.\nCela permet, par exemple, d'accélérer la connexion sur plusieurs appareils.\nVeuillez noter que tout jeton dont le format est invalide — et que l'application ne parvient donc pas à interpréter — sera rejeté.\n\nNe partagez jamais ce jeton.</string>
+    <string name="token_adv_login_description">Méthode de connexion avancée, alternative au portail web.\nVous pouvez saisir ou mettre à jour directement votre jeton de connexion ici. Tout jeton dont le format est invalide sera rejeté.\nCette méthode permet par exemple se connecter rapidement sur plusieurs appareils différents en copiant le jeton de l'un vers les autres.\n\nNe partagez jamais ce jeton.</string>
     <string name="token_login_sensitive_warning_title">Ce jeton contient des données sensibles.</string>
     <string name="account_sign_in">Se connecter</string>
     <string name="menu_sign_in">Connexion…</string>
@@ -2329,7 +2329,7 @@
     <string name="statistics_period_summary_no_time">%1$s : %2$s.</string>
     <string name="seek_seconds_addup">Avance rapide progressive</string>
     <string name="seek_seconds_addup_desc">Augmente la valeur du saut de l'avance rapide à chaque double appui</string>
-    <string name="token_login_sensitive_warning_generic">NE PARTAGEZ PAS ce jeton.</string>
+    <string name="token_login_sensitive_warning_generic">NE PARTAGEZ JAMAIS ce jeton.</string>
     <string name="legacy_shuffle">Lecture aléatoire alternative</string>
     <string name="legacy_shuffle_desc">Activé : la lecture aléatoire mélange tous les titres dont ceux déjà lus. Désactivé : seuls les titres suivants celui en cours de lecture sont mélangés. Dans les deux cas, les titres recommandés ou issus de l'auto-mix ne sont pas mélangés.</string>
     <string name="artist_subscriber_count">%1$s abonnés</string>
@@ -2666,6 +2666,6 @@
     <string name="hide_playlist_recommendations_desc">Masque les suggestions de titres en bas des playlists</string>
     <string name="already_in_playlist">Déjà dans cette playlist</string>
     <string name="share_song_to_story">Partager au format Story</string>
-    <string name="auto_download_saved_collections"></string>
-    <string name="sync_playlist"></string>
+    <string name="auto_download_saved_collections">Télécharger automatiquement les playlists et albums sauvegardés</string>
+    <string name="sync_playlist">Synchroniser la playlist</string>
 </resources>
