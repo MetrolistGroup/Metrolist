@@ -276,6 +276,7 @@ internal fun SettingsUiRegistryBuilder.registerLyricsSettings(host: SharedSettin
         val provider = preset.id
         val directProvider = isDirectLyricsTranslationProvider(provider)
         val oauthConnected = preset.supportsOAuth && settings.lyricsOpenRouterOAuthKey.isNotBlank()
+        val connectionTestState = rememberAiLyricsConnectionTestState(provider)
         val activationChoices =
             listOf(
                 SettingsChoice("Automatic", stringResource(Res.string.automatic)),
@@ -480,7 +481,7 @@ internal fun SettingsUiRegistryBuilder.registerLyricsSettings(host: SharedSettin
             if (!directProvider) {
                 group("connectionTest", stringResource(Res.string.ai_test_connection)) {
                     custom(id = "aiConnectionTest", title = stringResource(Res.string.ai_test_connection)) {
-                        AiLyricsConnectionTestSetting(preset, provider, oauthConnected)
+                        AiLyricsConnectionTestSetting(provider, oauthConnected, connectionTestState)
                     }
                 }
             }
