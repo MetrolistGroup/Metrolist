@@ -200,40 +200,44 @@ class DirectCanvasProvider(
                 ?.obj("topResultsV2")
                 ?.array("itemsV2")
                 .orEmpty()
-        for (item in items.take(10)) {
-            val track = (item as? JsonObject)?.obj("item")?.obj("data") ?: continue
-            if (track.text("__typename") != "Track") continue
-            val id = track.text("id") ?: continue
-            val artistNames =
-                track
-                    .obj("artists")
-                    ?.array("items")
-                    .orEmpty()
-                    .mapNotNull {
-                        (it as? JsonObject)?.obj("profile")?.text("name")
-                    }
-            val artists = artistNames.joinToString(", ")
-            if (!matches(
-                    title,
-                    artist,
-                    album,
-                    duration,
-                    track.text("name"),
-                    artists,
-                    track.obj("albumOfTrack")?.text("name"),
-                    track.obj("duration")?.text("totalMilliseconds")?.toLongOrNull(),
-                    primaryArtist,
-                    artistNames.firstOrNull(),
-                )
-            ) {
-                continue
-            }
-            val canvas =
-                (if (client.session.hasLoginCookie) attempt { spotifyTrackCanvas(client, id) } else null)
-                    ?: attempt { publicCanvas(id) }
-            if (trustedMedia(canvas, false)) {
-                YtLogger.d("Canvas", "Resolved Spotify Canvas")
-                return canvas
+        val attemptedTrackIds = mutableSetOf<String>()
+        for (candidateAlbum in listOf(album, null).distinct()) {
+            for (item in items.take(10)) {
+                val track = (item as? JsonObject)?.obj("item")?.obj("data") ?: continue
+                if (track.text("__typename") != "Track") continue
+                val id = track.text("id") ?: continue
+                val artistNames =
+                    track
+                        .obj("artists")
+                        ?.array("items")
+                        .orEmpty()
+                        .mapNotNull {
+                            (it as? JsonObject)?.obj("profile")?.text("name")
+                        }
+                val artists = artistNames.joinToString(", ")
+                if (!matches(
+                        title,
+                        artist,
+                        candidateAlbum,
+                        duration,
+                        track.text("name"),
+                        artists,
+                        track.obj("albumOfTrack")?.text("name"),
+                        track.obj("duration")?.text("totalMilliseconds")?.toLongOrNull(),
+                        primaryArtist,
+                        artistNames.firstOrNull(),
+                    )
+                ) {
+                    continue
+                }
+                if (!attemptedTrackIds.add(id)) continue
+                val canvas =
+                    (if (client.session.hasLoginCookie) attempt { spotifyTrackCanvas(client, id) } else null)
+                        ?: attempt { publicCanvas(id) }
+                if (trustedMedia(canvas, false)) {
+                    YtLogger.d("Canvas", "Resolved Spotify Canvas")
+                    return canvas
+                }
             }
         }
         return null
