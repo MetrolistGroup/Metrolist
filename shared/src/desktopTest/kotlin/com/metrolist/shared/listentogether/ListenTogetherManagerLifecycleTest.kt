@@ -391,7 +391,9 @@ class ListenTogetherManagerLifecycleTest {
                 assertEquals(listOf(first, second), host.pendingSuggestions.value.map { it.trackInfo })
                 assertEquals(listOf(first, second), server.suggestedTracks.value)
 
+                server.pendingSuggestionIds.value -= "first"
                 guest.handleBinary(MessageCodec().encode(MessageTypes.SUGGESTION_APPROVED, SuggestionApprovedPayload("first", first)))
+                assertEquals(setOf("second"), guest.submittedSuggestions.value.keys)
                 guest.suggestTrack(first)
                 withTimeout(5_000L.milliseconds) { server.suggestedTracks.first { it.size == 3 } }
                 assertEquals(listOf(first, second, first), server.suggestedTracks.value)
@@ -1813,6 +1815,9 @@ class ListenTogetherManagerLifecycleTest {
         private val dropFirstSuggestionAck: Boolean = false,
     ) {
         val suggestedTracks = MutableStateFlow<List<TrackInfo>>(emptyList())
+
+        /** Track IDs awaiting a host decision; the real server deduplicates only these. */
+        val pendingSuggestionIds = MutableStateFlow<Set<String>>(emptySet())
         val kickedUsers = MutableStateFlow<List<String>>(emptyList())
         val suggestionAttempts = AtomicInteger(0)
         private val activeSession = AtomicBoolean(false)
@@ -1920,20 +1925,27 @@ class ListenTogetherManagerLifecycleTest {
                         MessageTypes.SUGGEST_TRACK -> {
                             val track = (codec.decodePayload(type, envelope.payload) as SuggestTrackPayload).trackInfo
                             suggestionAttempts.incrementAndGet()
-                            if (dropFirstSuggestionAck && suggestedTracks.value.any { it.id == track.id }) {
-                                session.send(
-                                    Frame.Binary(
-                                        true,
+                            if (track.id in pendingSuggestionIds.value) {
+                                // Servers with suggestion_ack return the pending suggestion's ID; older ones report a duplicate.
+                                val reply =
+                                    if (dropFirstSuggestionAck) {
                                         codec.encode(
                                             MessageTypes.ERROR,
                                             ErrorPayload("duplicate_suggestion", "Already pending"),
                                             envelope.requestId,
-                                        ),
-                                    ),
-                                )
+                                        )
+                                    } else {
+                                        codec.encode(
+                                            MessageTypes.SUGGESTION_SUBMITTED,
+                                            SuggestionSubmittedPayload(track.id, track),
+                                            envelope.requestId,
+                                        )
+                                    }
+                                session.send(Frame.Binary(true, reply))
                                 continue
                             }
                             suggestedTracks.value += track
+                            pendingSuggestionIds.value += track.id
                             receiveSuggestion?.invoke(SuggestionReceivedPayload(track.id, "room-user", "Guest", track))
                             if (dropFirstSuggestionAck && suggestedTracks.value.size == 1) {
                                 session.close()

@@ -31,13 +31,13 @@ Encode on `Dispatchers.Default` in send order, capturing negotiated compression.
 
 Retain the committed queue and station metadata until room audio preparation succeeds. Prepare remote queues paused. Guests resume after synchronization; host imports explicitly start playback. Failed or canceled loads preserve committed state. Recovery stays paused even if the host sends play. Empty sync snapshots cancel pending loads and pause without discarding the loaded track. A confirmed idle room with an empty queue clears upcoming entries and, when no track is loaded, the saved Android queue.
 
-Read the player's queue snapshot and current occurrence for publication. Serialize server updates with host publication and preserve unpublished host edits. Preserve duplicate occurrences, canonical upcoming order and empty replacements. Consume legacy host queue acknowledgements once.
+Read the player's queue snapshot and current occurrence for publication. Hosts publish at most 1,000 upcoming tracks within metroserver's 200 KiB queue estimate, so every snapshot fits the 256 KiB envelope; later tracks stay in the host's local queue. Serialize server updates with host publication and preserve unpublished host edits. Preserve duplicate occurrences, canonical upcoming order and empty replacements. Consume legacy host queue acknowledgements once.
 
 Publish host track changes when the player's current song changes. Keep periodic timeline updates. Guests reuse matching tracks from the player queue with the host's metadata before requesting metadata for an unfamiliar track, and still wait for buffer synchronization before playing.
 
 Removing the final host track pauses guests and clears the upcoming queue. The server retains last-track metadata because `change_track` requires a track; clearing it needs an upstream action.
 
-Pending joins can be canceled and resubmitted after reconnect. Keep approval rows until acknowledgement, and failed decisions until retry. With `suggestion_ack`, retry unacknowledged guest sends after authentication; coalesce repeated taps. `duplicate_suggestion` confirms an existing pending send. Leaving clears unsent suggestions.
+Pending joins can be canceled and resubmitted after reconnect. Keep approval rows until acknowledgement, and failed decisions until retry. With `suggestion_ack`, retry unacknowledged guest sends after authentication; coalesce repeated taps. Guests can resend a submitted suggestion, and the server answers with the pending suggestion's ID, so a lost decision never blocks the track. `duplicate_suggestion` confirms an existing pending send on older servers. Leaving clears unsent suggestions.
 
 Notify hosts of automatic approvals only after confirmation. Rejection, manual decisions, leaving or host-role loss discard pending automatic feedback. Guest volume and mute are local; Sync host volume controls whether host volume overrides them.
 

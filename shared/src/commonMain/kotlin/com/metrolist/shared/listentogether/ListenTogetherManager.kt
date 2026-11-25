@@ -181,6 +181,14 @@ class ListenTogetherManager(
         }
     }
 
+    /** A sent ping and, when it reported a position, the guest timeline it described. */
+    private data class OutstandingPing(
+        val clientTime: Long,
+        val position: Long? = null,
+        val positionCapturedAt: Long = 0L,
+        val playbackGeneration: Long = 0L,
+    )
+
     private data class PendingBarrier(
         val trackId: String,
         val position: Long,
@@ -300,7 +308,7 @@ class ListenTogetherManager(
     private var sessionReconnectRejected = false
     private var pingSequence = 0L
     private var lastPongSequence = 0L
-    private val outstandingPings = LinkedHashMap<Long, Long>()
+    private val outstandingPings = LinkedHashMap<Long, OutstandingPing>()
     private val pendingHostQueues = ArrayDeque<List<TrackInfo>>()
     private var connectionGeneration = 0L
     private var authenticatedConnectionGeneration = -1L
@@ -316,12 +324,18 @@ class ListenTogetherManager(
     private var upcomingCurrentId: String? = null
     private var upcomingCurrentIndex: Int? = null
     private var upcomingTrackInfo = emptyList<TrackInfo>()
+    private var publishedQueueInput: List<TrackInfo>? = null
+    private var publishedQueue = emptyList<TrackInfo>()
     private var lastVolume: Float? = null
     private var lastTrackId: String? = null
     private var lastTrackInstanceId: Long? = null
     private var lastPlaying: Boolean? = null
     private var lastPositionBucket: Long? = null
     private var driftGeneration = 0L
+
+    // The newest change_track revision; readiness acknowledges it even when the host restarts the
+    // same track while it is still loading.
+    private var latestTrackRevision = 0L
 
     @Volatile
     private var serverFeatures: Set<String> = emptySet()
@@ -647,10 +661,9 @@ class ListenTogetherManager(
 
     fun suggestTrack(track: TrackInfo) {
         if (_role.value != ListenTogetherRoomRole.GUEST || !_isInRoom.value) return
-        synchronized(participationLock) {
-            if (_submittedSuggestions.value.values.any { it.id == track.id }) return
-            outgoingSuggestions.getOrPut(track.id) { PendingSuggestion(track) }
-        }
+        // The server deduplicates pending suggestions and returns the existing ID, so a decision lost
+        // in transit never blocks suggesting the track again.
+        synchronized(participationLock) { outgoingSuggestions.getOrPut(track.id) { PendingSuggestion(track) } }
         sendPendingSuggestions()
     }
 
@@ -977,9 +990,11 @@ class ListenTogetherManager(
             val instanceId = playback.playbackInstanceId()
             val playing = playback.playing.value
             val position = playback.currentPositionMs()
+            // Sends below can wait on delivery, so the server must age the position from when it was read.
+            val capturedAt = serverClock.serverTimeNow()
             val observedSequence = nextHostSequence()
             val positionBucket = position / 3_000L
-            val upcoming = currentUpcomingTrackInfo()
+            val upcoming = publishedUpcomingTrackInfo()
             val previousTrackId = lastTrackId ?: _roomState.value?.currentTrack?.id
             _roomState.value =
                 _roomState.value?.copy(
@@ -993,7 +1008,13 @@ class ListenTogetherManager(
                 )
             if (trackId == null && previousTrackId != null) {
                 if (sendPlaybackAction(
-                        PlaybackActionPayload(PlaybackActions.PAUSE, previousTrackId, position, hostSequence = observedSequence),
+                        PlaybackActionPayload(
+                            PlaybackActions.PAUSE,
+                            previousTrackId,
+                            position,
+                            hostSequence = observedSequence,
+                            capturedAtServerTime = capturedAt,
+                        ),
                     )
                 ) {
                     lastTrackId = null
@@ -1017,6 +1038,7 @@ class ListenTogetherManager(
                             queue = upcoming,
                             queueTitle = playback.currentQueueTitle(),
                             replaceQueue = true,
+                            capturedAtServerTime = capturedAt,
                         ),
                     )
                 ) {
@@ -1042,17 +1064,37 @@ class ListenTogetherManager(
                             trackId,
                             position,
                             hostSequence = observedSequence,
+                            capturedAtServerTime = capturedAt,
                         ),
                     )
                 ) {
                     lastPlaying = playing
                 }
             } else if (trackId != null && playing && lastPositionBucket != positionBucket) {
-                if (sendPlaybackAction(PlaybackActionPayload(PlaybackActions.PLAY, trackId, position, hostSequence = observedSequence))) {
+                if (
+                    sendPlaybackAction(
+                        PlaybackActionPayload(
+                            PlaybackActions.PLAY,
+                            trackId,
+                            position,
+                            hostSequence = observedSequence,
+                            capturedAtServerTime = capturedAt,
+                        ),
+                    )
+                ) {
                     lastPositionBucket = positionBucket
                 }
             }
         }
+
+    private fun publishedUpcomingTrackInfo(): List<TrackInfo> {
+        val upcoming = currentUpcomingTrackInfo()
+        if (upcoming !== publishedQueueInput) {
+            publishedQueueInput = upcoming
+            publishedQueue = publishableQueue(upcoming)
+        }
+        return publishedQueue
+    }
 
     private fun currentUpcomingTrackInfo(): List<TrackInfo> {
         val snapshot = playback.currentQueueSnapshot()
@@ -1072,7 +1114,7 @@ class ListenTogetherManager(
         return upcomingTrackInfo
     }
 
-    private suspend fun sendQueueSnapshot(queue: List<TrackInfo> = currentUpcomingTrackInfo()) {
+    private suspend fun sendQueueSnapshot(queue: List<TrackInfo> = publishedUpcomingTrackInfo()) {
         val title = playback.currentQueueTitle()
         if (queue == lastQueueSnapshot && title == lastQueueTitle) return
         if (
@@ -1108,11 +1150,22 @@ class ListenTogetherManager(
     }
 
     private fun pingPayload(): PingPayload {
-        val ping = PingPayload(monotonicClockMs(), ++pingSequence)
+        val ping = buildPingPayload()
         synchronized(participationLock) {
-            outstandingPings[ping.sequence] = ping.clientTime
+            outstandingPings[ping.sequence] =
+                OutstandingPing(
+                    ping.clientTime,
+                    ping.position.takeIf { ping.hasPosition },
+                    ping.positionCapturedAtServerTime,
+                    playbackGeneration,
+                )
             if (outstandingPings.size > MAX_TRACKED_REQUESTS) outstandingPings.remove(outstandingPings.keys.first())
         }
+        return ping
+    }
+
+    private fun buildPingPayload(): PingPayload {
+        val ping = PingPayload(monotonicClockMs(), ++pingSequence)
         val state = _roomState.value
         if (_role.value != ListenTogetherRoomRole.GUEST || !_isInRoom.value || state == null) return ping
         val withCanary =
@@ -1291,7 +1344,9 @@ class ListenTogetherManager(
             MessageTypes.SUGGESTION_SUBMITTED -> {
                 if (payload is SuggestionSubmittedPayload && _role.value == ListenTogetherRoomRole.GUEST) {
                     synchronized(participationLock) { outgoingSuggestions.remove(payload.trackInfo.id) }
-                    _submittedSuggestions.value += payload.suggestionId to payload.trackInfo
+                    // A resubmission after a lost decision gets a new ID; drop the stale entry for the same track.
+                    _submittedSuggestions.value = _submittedSuggestions.value.filterValues { it.id != payload.trackInfo.id } +
+                        (payload.suggestionId to payload.trackInfo)
                     emitNotice(ListenTogetherText.SUGGESTION_SUBMITTED)
                 }
             }
@@ -1648,6 +1703,7 @@ class ListenTogetherManager(
 
             PlaybackActions.CHANGE_TRACK -> {
                 payload.trackInfo?.let { track ->
+                    latestTrackRevision = payload.revision
                     if (
                         (track.id == playback.currentSong.value?.id && playback.readiness.value != PlaybackReadiness.FAILED) ||
                         track.id == loadingTrackId
@@ -1663,7 +1719,6 @@ class ListenTogetherManager(
                         playing = false,
                         effectiveAtServerTime = payload.serverTime,
                         barrier = true,
-                        trackRevision = payload.revision,
                     )
                 }
             }
@@ -1723,13 +1778,14 @@ class ListenTogetherManager(
 
     private fun handlePong(payload: PongPayload) {
         if (payload.sequence <= lastPongSequence) return
-        if (synchronized(participationLock) { outstandingPings[payload.sequence] } != payload.clientTime) return
+        val ping = synchronized(participationLock) { outstandingPings[payload.sequence] }
+        if (ping?.clientTime != payload.clientTime) return
         val previousSampleCount = serverClock.sampleCount()
         val firstSample = serverClock.recordSample(payload.clientTime, payload.serverReceiveTime, payload.serverSendTime)
         if (serverClock.sampleCount() == previousSampleCount) return
         lastPongSequence = payload.sequence
         synchronized(participationLock) { outstandingPings.keys.removeAll { it <= payload.sequence } }
-        if (payload.driftValid) correctReportedDrift(payload.driftMs)
+        if (payload.driftValid) correctReportedDrift(ping, payload.driftMs)
         if (
             firstSample &&
             _isInRoom.value &&
@@ -1740,15 +1796,26 @@ class ListenTogetherManager(
         }
     }
 
-    private fun correctReportedDrift(driftMs: Long) {
+    private fun correctReportedDrift(
+        ping: OutstandingPing,
+        driftMs: Long,
+    ) {
+        val position = ping.position ?: return
         val state = _roomState.value ?: return
         if (_role.value != ListenTogetherRoomRole.GUEST || !_isInRoom.value || !state.isPlaying) return
-        if (loadingTrackId != null || pendingBarrier != null || !hasLoadedRoomTrack || driftJob?.isActive == true) return
-        val generation = playbackGeneration
+        if (loadingTrackId != null || pendingBarrier != null || !hasLoadedRoomTrack) return
+        val generation = ping.playbackGeneration
+
+        // A host action after the ping (a seek can arrive before its pong) starts a newer timeline.
+        fun current() =
+            generation == playbackGeneration &&
+                ping.positionCapturedAt >= (_roomState.value?.lastUpdate ?: Long.MAX_VALUE)
+        if (ping.positionCapturedAt <= 0L || !current()) return
+        // Anchor the host timeline at the ping's capture time; local corrections made while the pong
+        // was in flight must not be applied twice.
         scope.launch {
-            val serverNow = serverClock.serverTimeNow() ?: return@launch
-            if (generation != playbackGeneration || loadingTrackId != null) return@launch
-            syncPosition(playback.currentPositionMs() - driftMs, serverNow, true)
+            if (!current() || loadingTrackId != null) return@launch
+            syncPosition(position - driftMs, ping.positionCapturedAt, true)
         }
     }
 
@@ -1780,43 +1847,51 @@ class ListenTogetherManager(
     }
 
     private suspend fun syncHostReconnectedPlayback(roomState: RoomState) {
-        val song = playback.currentSong.value
-        val trackId = song?.id
-        val roomTrackId = roomState.currentTrack?.id
-        if (trackId != null && trackId == roomTrackId) {
-            val playing = playback.playing.value
-            val position = playback.currentPositionMs()
-            val positionBucket = position / 3_000L
-            val upcoming = currentUpcomingTrackInfo()
-            val volume = playback.volume.value
-            lastTrackId = trackId
-            lastTrackInstanceId = playback.playbackInstanceId()
-            lastPlaying = playing
-            lastPositionBucket = positionBucket
-            lastQueueSnapshot = roomState.queue
-            lastVolume = roomState.volume
-            _roomState.value =
-                _roomState.value?.copy(
-                    currentTrack = song.toTrackInfo(),
-                    isPlaying = playing,
-                    position = position,
-                    lastUpdate = serverClock.serverTimeNow() ?: wallClockMs(),
-                    volume = volume,
-                    queue = upcoming,
-                    queueTitle = playback.currentQueueTitle(),
+        val resumed =
+            hostPublicationMutex.withLock {
+                val song = playback.currentSong.value
+                val trackId = song?.id
+                if (trackId == null || trackId != roomState.currentTrack?.id) {
+                    resetHostObservation()
+                    return@withLock false
+                }
+                val playing = playback.playing.value
+                val position = playback.currentPositionMs()
+                val capturedAt = serverClock.serverTimeNow()
+                val positionBucket = position / 3_000L
+                val upcoming = publishedUpcomingTrackInfo()
+                val volume = playback.volume.value
+                lastTrackId = trackId
+                lastTrackInstanceId = playback.playbackInstanceId()
+                lastPlaying = playing
+                lastPositionBucket = positionBucket
+                lastQueueSnapshot = roomState.queue
+                lastVolume = roomState.volume
+                _roomState.value =
+                    _roomState.value?.copy(
+                        currentTrack = song.toTrackInfo(),
+                        isPlaying = playing,
+                        position = position,
+                        lastUpdate = capturedAt ?: wallClockMs(),
+                        volume = volume,
+                        queue = upcoming,
+                        queueTitle = playback.currentQueueTitle(),
+                    )
+                sendPlaybackAction(
+                    PlaybackActionPayload(
+                        action = if (playing) PlaybackActions.PLAY else PlaybackActions.PAUSE,
+                        trackId = trackId,
+                        position = position,
+                        hostSequence = nextHostSequence(),
+                        capturedAtServerTime = capturedAt,
+                    ),
                 )
-            sendPlaybackAction(
-                PlaybackActionPayload(
-                    action = if (playing) PlaybackActions.PLAY else PlaybackActions.PAUSE,
-                    trackId = trackId,
-                    position = position,
-                    hostSequence = nextHostSequence(),
-                ),
-            )
-            sendQueueSnapshot(upcoming)
-        } else {
-            resetHostObservation()
-        }
+                sendQueueSnapshot(upcoming)
+                true
+            }
+        // The host observer started before authentication and skipped publishing, and a paused
+        // player emits nothing new, so publish a track change made while disconnected now.
+        if (!resumed) publishHostPlayback()
     }
 
     private fun updateConnected(
@@ -1880,7 +1955,6 @@ class ListenTogetherManager(
         playing: Boolean,
         effectiveAtServerTime: Long?,
         barrier: Boolean,
-        trackRevision: Long = 0L,
     ) {
         remotePlaybackJob?.cancel()
         cancelSameTrackChange()
@@ -1922,7 +1996,11 @@ class ListenTogetherManager(
                     if (barrier) {
                         pendingBarrier = PendingBarrier(track.id, latestPosition, latestTime, latestPlaying, generation)
                         playback.seekToFromRemote(adjustedPosition(latestPosition, latestTime, latestPlaying))
-                        send(MessageTypes.BUFFER_READY, BufferReadyPayload(track.id, trackRevision))
+                        // Restarts of this track that arrive during a send skip their own acknowledgement.
+                        do {
+                            val revision = latestTrackRevision
+                            if (!send(MessageTypes.BUFFER_READY, BufferReadyPayload(track.id, revision))) break
+                        } while (latestTrackRevision != revision && generation == playbackGeneration)
                         loadingTrackId = null
                         loadingQueue = null
                         applyPendingCanonicalQueue()
@@ -1961,6 +2039,8 @@ class ListenTogetherManager(
         val playing = roomState?.isPlaying ?: false
         if (pending != null) {
             pendingBarrier = pending.copy(position = position, effectiveAtServerTime = effectiveAtServerTime, playing = playing)
+            // The server waits for readiness at the new revision; an earlier acknowledgement no longer counts.
+            if (pending.ready) scope.launch { send(MessageTypes.BUFFER_READY, BufferReadyPayload(track.id, latestTrackRevision)) }
             return
         }
 
@@ -2011,7 +2091,7 @@ class ListenTogetherManager(
                             ?: return@launch
                     pendingBarrier = readyPending.copy(ready = true)
                     playback.setPlayingFromRemote(false)
-                    send(MessageTypes.BUFFER_READY, BufferReadyPayload(track.id, payload.revision))
+                    send(MessageTypes.BUFFER_READY, BufferReadyPayload(track.id, latestTrackRevision))
                     startBarrierTimeout(track.id)
                 } finally {
                     if (sameTrackChangeJob === coroutineContext[Job]) sameTrackChangeJob = null
@@ -2178,7 +2258,9 @@ class ListenTogetherManager(
         effectiveAt: Long,
         correction: DriftCorrection.Soft,
     ) {
-        if (driftJob?.isActive == true) return
+        // A newer anchor or direction replaces the running correction; the old job's cleanup sees the
+        // generation change and leaves the new speed alone.
+        driftJob?.cancel()
         val generation = ++driftGeneration
         driftJob =
             scope.launch {
@@ -2369,7 +2451,10 @@ class ListenTogetherManager(
                 if (pendingHostQueues.size > MAX_TRACKED_REQUESTS) pendingHostQueues.removeFirst()
             }
         }
-        return send(MessageTypes.PLAYBACK_ACTION, payload.copy(capturedAtServerTime = serverClock.serverTimeNow()))
+        return send(
+            MessageTypes.PLAYBACK_ACTION,
+            payload.copy(capturedAtServerTime = payload.capturedAtServerTime ?: serverClock.serverTimeNow()),
+        )
     }
 
     private fun launchSend(
