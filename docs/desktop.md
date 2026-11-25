@@ -242,7 +242,7 @@ Windows protects credentials with DPAPI. macOS uses AES-GCM with a Keychain key.
 
 Linux reads and writes Secret Service through libsecret. Missing tools, locked collections, timeouts and failed reads leave recovery pending. They do not imply sign-out. The account menu explains that a running, unlocked keyring and the package providing `secret-tool` are needed instead of showing an indefinite loading indicator. Recovery retries automatically without restart. macOS shows an unlock message while its Keychain is unavailable.
 
-Linux records pending mutations in owner-only `secrets.properties` before acknowledging them. The journal keeps values and deletion markers through restart. Keyring I/O stays outside the settings lock. Remove the journal only after writing and reading back matching values. Truncated writes and unreadable duplicates must leave it intact.
+Linux records pending mutations in owner-only `secrets.properties` before acknowledging them. The journal keeps values and deletion markers through restart. Keyring I/O stays outside the settings lock. Remove the journal only after writing and reading back matching values. Truncated writes and unreadable duplicates must leave it intact. Store the keyring payload as one prefixed Base64 line, because some Secret Service providers keep only the first line of a secret. Unprefixed multi-line items from older builds are still read.
 
 Select the newest readable matching keyring item. Unlock a locked match if it could outrank that item. A clear marker prevents an old duplicate from restoring cleared data. Do not overwrite unread entries or log credential values.
 
