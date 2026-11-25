@@ -1837,7 +1837,7 @@
     <string name="device_connect_device_type_ios">iOS</string>
     <string name="device_connect_device_type_and_model">%1$s · %2$s</string>
     <string name="device_connect_available">Доступно</string>
-    <string name="settings_disable_wayland_fix_description">Выключает автоматическое определение масштабирования для сессий Wayland. Требуется перезапуск.</string>
+    <string name="settings_disable_wayland_fix_description">Отключает автоматическое определение масштаба для сессий Wayland. Требуется перезапуск.</string>
     <string name="device_connect_signed_out_pairing">Вы вышли из аккаунта. Сравните код сопряжения на обоих устройствах перед подтверждением.</string>
     <string name="device_connect_paired">Сопряжено</string>
     <string name="shortcut_toggle_device_connect">Переключить панель Device Connect</string>
@@ -2051,7 +2051,7 @@
     <string name="settings_android_auto_overview">Плейлисты в автомобиле и список для быстрого добавления</string>
     <string name="settings_about_overview">Участники проекта, ссылки сообщества и лицензии</string>
     <string name="settings_supported_links_overview">Выберите, какие ссылки YouTube открывать в Metrolist</string>
-    <string name="settings_equalizer_overview">Звуковые предустановки, полосы частот и профили</string>
+    <string name="settings_equalizer_overview">Звуковые пресеты, полосы частот и профили</string>
     <string name="settings_fonts_overview">Выбор и импорт шрифтов</string>
     <string name="settings_artwork_overview">Анимированные обложки, источники изображений и качество видео</string>
     <string name="settings_mini_player_overview">Компоновка, обложки и кнопки воспроизведения</string>
@@ -2206,12 +2206,12 @@
         <item quantity="many">%1$d профилей</item>
         <item quantity="other">%1$d профилей</item>
     </plurals>
-    <string name="eq_disabled">Отключен</string>
+    <string name="eq_disabled">Отключён</string>
     <string name="no_profiles">Профилей эквалайзера нет</string>
     <string name="import_profile">Импортировать профиль</string>
     <string name="edit_in_metroeq">Изменить в MetroEQ</string>
     <string name="system_equalizer">Системный эквалайзер</string>
-    <string name="eq_wizard">Мастер настройки AutoEQ</string>
+    <string name="eq_wizard">Мастер AutoEQ</string>
     <string name="import_from_file">Импортировать из файла</string>
     <string name="wizard_no_models">Моделей не найдено</string>
     <string name="wizard_multiple_variants">Доступно несколько вариантов</string>
@@ -2378,7 +2378,7 @@
     <string name="varispeed">Изменение скорости и тона(Varispeed)</string>
     <string name="varispeed_description">Связать высоту тона со скоростью воспроизведения для эффекта ускорения и замедления, как на магнитофонной ленте</string>
     <string name="audio_track_playback_params">Аппаратная обработка звука</string>
-    <string name="audio_track_playback_params_description">Использовать AudioTrack от Android для скорости воспроизведения. При изменении высоты тона приложение автоматически переходит на программную обработку. Требуется перезапуск приложения.</string>
+    <string name="audio_track_playback_params_description">Использовать Android AudioTrack для регулировки скорости воспроизведения. При изменении высоты тона приложение автоматически переходит на программную обработку. Требуется перезапуск приложения.</string>
     <string name="share_lyrics">Поделиться текстом песни</string>
     <string name="share_as_text">Поделиться в текстовом формате</string>
     <string name="customize_colors">Настройка цветов</string>
@@ -2473,7 +2473,7 @@
     <string name="import_youtube_playlist">Импортировать плейлист из YouTube</string>
     <string name="scrobble_login_failed">Не удалось войти</string>
     <string name="together">Вместе</string>
-    <string name="equalizer_create_custom">Создать пользовательский эквалайзер</string>
+    <string name="equalizer_create_custom">Создать свой эквалайзер</string>
     <string name="equalizer_band_gain">%1$s Гц · %2$s дБ</string>
     <string name="api_key">Ключ API</string>
     <string name="credits">Благодарности</string>
@@ -2522,10 +2522,10 @@
     <string name="import_status_matching_tracks">Сопоставляем трек %1$d из %2$d: %3$s…</string>
     <string name="canvas">Заставка Canvas</string>
     <string name="library_grid_columns">Столбцы библиотеки</string>
-    <string name="metroeq_profiles">Сохраненные профили</string>
+    <string name="metroeq_profiles">Сохранённые профили</string>
     <string name="metroeq_preset_treble">Усиление высоких частот</string>
-    <string name="metroeq_preset_flat">Плоский</string>
-    <string name="metroeq_unsaved_changes">Несохраненные изменения</string>
+    <string name="metroeq_preset_flat">Ровный</string>
+    <string name="metroeq_unsaved_changes">Несохранённые изменения</string>
     <string name="metroeq_preset_v_shape">V-образный</string>
     <string name="metroeq_profile_name">Название профиля</string>
     <string name="metroeq_custom_profile">Пользовательский профиль</string>
@@ -2808,4 +2808,5 @@
     <string name="metroeq_preset_pop">Поп</string>
     <string name="metroeq_preset_electronic">Электроника</string>
     <string name="metroeq_preset_acoustic">Акустика</string>
+    <string name="webview_runtime_unavailable">Не удалось запустить встроенный браузер. Установите или восстановите Microsoft Edge WebView2 Runtime, а затем перезапустите Metrolist.</string>
 </resources>
