@@ -8,6 +8,9 @@ import com.sun.jna.platform.win32.Advapi32Util
 import com.sun.jna.platform.win32.WinReg
 import java.awt.Desktop
 import java.io.File
+import java.nio.file.Files
+import java.nio.file.StandardCopyOption.ATOMIC_MOVE
+import java.nio.file.StandardCopyOption.REPLACE_EXISTING
 import java.util.concurrent.TimeUnit
 
 internal fun registerDesktopDiscordCallback(displayName: String): Boolean =
@@ -41,7 +44,13 @@ internal fun registerDesktopDiscordCallback(displayName: String): Boolean =
                     ) ?: return@runCatching false
                 val desktopFile = File(XdgUtils.getXdgDataHome(), "applications/$DISCORD_DESKTOP_FILE")
                 desktopFile.parentFile.mkdirs()
-                desktopFile.writeText(linuxDiscordDesktopEntry(executable.absolutePath, displayName))
+                val temporary = Files.createTempFile(desktopFile.parentFile.toPath(), ".discord-auth-", ".tmp")
+                try {
+                    Files.writeString(temporary, linuxDiscordDesktopEntry(executable.absolutePath, displayName))
+                    Files.move(temporary, desktopFile.toPath(), ATOMIC_MOVE, REPLACE_EXISTING)
+                } finally {
+                    Files.deleteIfExists(temporary)
+                }
                 // A package desktop entry can still point to a moved or deleted AppImage.
                 val query = listOf("xdg-mime", "query", "default", DISCORD_MIME_TYPE)
                 runRegistrationCommand(linuxDiscordRegistrationCommand()) != null &&
