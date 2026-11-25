@@ -13,10 +13,22 @@ import platform.darwin.NSObject
 import platform.darwin.dispatch_async
 import platform.darwin.dispatch_get_main_queue
 
+// Kotlin/Native cannot mix an Objective-C superclass with a Kotlin interface, so the delegate is a separate object.
+internal class IosNetServiceCastDiscovery : MdnsCastDiscovery {
+    private val browser = NetServiceCastBrowser()
+
+    override fun start(
+        onDeviceFound: (CastDevice) -> Unit,
+        onDeviceLost: (String) -> Unit,
+        onError: (CastError) -> Unit,
+    ) = browser.start(onDeviceFound, onDeviceLost, onError)
+
+    override fun stop() = browser.stop()
+}
+
 // All state lives on the main queue, where browsers and services created there deliver their callbacks.
-internal class IosNetServiceCastDiscovery :
+private class NetServiceCastBrowser :
     NSObject(),
-    MdnsCastDiscovery,
     NSNetServiceBrowserDelegateProtocol,
     NSNetServiceDelegateProtocol {
     private var onDeviceFound: ((CastDevice) -> Unit)? = null
@@ -25,7 +37,7 @@ internal class IosNetServiceCastDiscovery :
     private val browsers = mutableMapOf<NSNetServiceBrowser, CastProtocol>()
     private val services = mutableMapOf<String, Pair<CastProtocol, NSNetService>>()
 
-    override fun start(
+    fun start(
         onDeviceFound: (CastDevice) -> Unit,
         onDeviceLost: (String) -> Unit,
         onError: (CastError) -> Unit,
@@ -40,7 +52,7 @@ internal class IosNetServiceCastDiscovery :
         }
     }
 
-    override fun stop() {
+    fun stop() {
         dispatch_async(dispatch_get_main_queue()) { stopNow() }
     }
 
@@ -106,9 +118,15 @@ internal class IosNetServiceCastDiscovery :
         browser: NSNetServiceBrowser,
         didNotSearch: Map<Any?, *>,
     ) {
-        if (browser !in browsers) return
+        // Retire only the failed browser so the other protocol keeps discovering.
+        val protocol = browsers.remove(browser) ?: return
+        browser.delegate = null
+        val lost = services.filterValues { it.first == protocol }.keys
+        lost.forEach { id -> services.remove(id)?.let { release(it.second) } }
+        val reportLost = onDeviceLost
         val report = onError
-        stopNow()
+        if (browsers.isEmpty()) stopNow()
+        lost.forEach { reportLost?.invoke(it) }
         report?.invoke(CastError.DISCOVERY_FAILED)
     }
 
