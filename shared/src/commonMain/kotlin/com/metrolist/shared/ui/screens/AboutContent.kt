@@ -148,14 +148,6 @@ object AboutContributors {
     val leads: List<AboutContributor> =
         listOf(
             AboutContributor(
-                name = "Lamp",
-                role = AboutContributorRole.DESKTOP_LEAD,
-                githubHandle = "l6t9",
-                websiteUrl = "https://lampu.dev",
-                sponsorUrl = "https://github.com/sponsors/l6t9",
-                avatarShape = AboutAvatarShape.COOKIE_9_SIDED,
-            ),
-            AboutContributor(
                 name = "Nyx",
                 role = AboutContributorRole.ANDROID_LEAD,
                 githubHandle = "nyxiereal",
@@ -163,10 +155,6 @@ object AboutContributors {
                 sponsorUrl = "https://github.com/sponsors/nyxiereal",
                 avatarShape = AboutAvatarShape.COOKIE_9_SIDED,
             ),
-        ).sortedBy { it.name.lowercase() }
-
-    val collaborators: List<AboutContributor> =
-        listOf(
             AboutContributor(
                 name = "Adriel O'Connel",
                 role = AboutContributorRole.MULTIPLATFORM_DEVELOPMENT,
@@ -174,6 +162,18 @@ object AboutContributors {
                 sponsorUrl = "https://github.com/sponsors/adrielGGmotion",
                 avatarShape = AboutAvatarShape.COOKIE_4_SIDED,
                 favoriteSongVideoId = "m2zUrruKjDQ",
+            ),
+        )
+
+    val collaborators: List<AboutContributor> =
+        listOf(
+            AboutContributor(
+                name = "Lamp",
+                role = AboutContributorRole.DESKTOP_DEVELOPMENT,
+                githubHandle = "l6t9",
+                websiteUrl = "https://lampu.dev",
+                sponsorUrl = "https://github.com/sponsors/l6t9",
+                avatarShape = AboutAvatarShape.COOKIE_9_SIDED,
             ),
             AboutContributor(
                 name = "Show",
