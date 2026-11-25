@@ -19,11 +19,11 @@ To receive updates in AltStore or SideStore, add the source `https://github.com/
 
 ## Signing and entitlements
 
-The source bundle ID is `com.metrolist.MetrolistApp`. Tools may rewrite it. The Xcode project defines one app target without extensions. No app group is required.
+The source bundle ID is `com.metrolist.MetrolistApp`. Tools may rewrite it. The Xcode project defines the app and a WidgetKit extension. Both use the app group `group.com.metrolist.MetrolistApp` to share playback state. Re-sign both binaries with the same app group.
 
 `iosApp/Configuration/iosApp.entitlements` requests Associated Domains for `applinks:metrolist.cc`. `Info.plist` declares background audio and `metrolist`/`metrolist-auth` URL schemes. A signing profile may omit Associated Domains; do not assume HTTPS invitations work after re-signing. See [invitation delivery](../listen-together.md#invitation-links).
 
-For provisioning errors, record the entitlement named by the tool. Do not add app groups or remove frameworks to bypass signing failures.
+For provisioning errors, record the entitlement named by the tool. Use a signing profile that includes the app group entitlement; do not remove the widget, app group or frameworks to bypass signing failures.
 
 ## Verify, update and uninstall
 

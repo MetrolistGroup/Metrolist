@@ -107,6 +107,7 @@ import com.metrolist.shared.utils.ArtworkSizingInterceptor
 import com.metrolist.shared.utils.Logger
 import com.metrolist.shared.utils.formatHistoryMonth
 import com.metrolist.shared.utils.isCrashReportingAvailable
+import com.metrolist.shared.widget.IosNowPlayingWidget
 import com.metrolist.shared.youtube.playback.IosPageBoundTokenHost
 import com.metrolist.shared.youtube.playback.IosPlaybackNetworkMonitor
 import com.metrolist.shared.youtube.playback.StreamResolver
@@ -221,6 +222,10 @@ fun MetrolistIOSApp() {
             )
         }
     IosDiscordPresenceEffect(playbackController.state, player.playbackSpeed)
+    DisposableEffect(playbackController, player, appScope) {
+        IosNowPlayingWidget.bind(playbackController, player, appScope)
+        onDispose { IosNowPlayingWidget.unbind() }
+    }
     val listenTogetherClient = remember(appScope) { createHttpClient() }
     val listenTogetherMessages by rememberUpdatedState(listenTogetherPresentationMessages())
     val listenTogetherManager =

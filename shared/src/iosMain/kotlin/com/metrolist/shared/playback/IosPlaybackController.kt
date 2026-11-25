@@ -134,7 +134,7 @@ internal class IosPlaybackController(
     override val wrappedSoundtrackAllowed = wrappedSharedPlayback.map { !it }
     override val playbackCommandGeneration: Long get() = player.playbackCommands.value
     override val playbackCommands = player.playbackCommands
-    private val guestLocked: Boolean get() = listenTogether?.isGuestPlaybackLocked == true
+    internal val guestLocked: Boolean get() = listenTogether?.isGuestPlaybackLocked == true
     private val inListenTogether: Boolean get() = listenTogether?.isInRoom?.value == true
 
     internal fun bindListenTogether(manager: ListenTogetherManager) {
