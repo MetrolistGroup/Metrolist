@@ -36,6 +36,9 @@ internal fun registerDesktopDiscordCallback(displayName: String): Boolean =
 
             OsUtil.isLinux -> {
                 if (!System.getenv("FLATPAK_ID").isNullOrBlank()) return@runCatching true
+                val query = listOf("xdg-mime", "query", "default", DISCORD_MIME_TYPE)
+                // Flatpak cannot restore its host association after another install replaces it.
+                if (runRegistrationCommand(query)?.trim() == "com.metrolist.desktop.desktop") return@runCatching false
                 val executable =
                     linuxDiscordLauncher(
                         appImage = System.getenv("APPIMAGE"),
@@ -52,7 +55,6 @@ internal fun registerDesktopDiscordCallback(displayName: String): Boolean =
                     Files.deleteIfExists(temporary)
                 }
                 // A package desktop entry can still point to a moved or deleted AppImage.
-                val query = listOf("xdg-mime", "query", "default", DISCORD_MIME_TYPE)
                 runRegistrationCommand(linuxDiscordRegistrationCommand()) != null &&
                     runRegistrationCommand(query)?.trim() == DISCORD_DESKTOP_FILE
             }

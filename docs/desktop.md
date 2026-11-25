@@ -84,7 +84,7 @@ Desktop Discord login opens the default browser with a PKCE authorization URL an
 
 Windows registers `metrolist-auth` under `HKCU\Software\Classes` for the running packaged executable, including portable ZIPs. The macOS bundle declares the scheme beside `metrolist`. AppImage, Arch, Nix and Flatpak desktop entries advertise `x-scheme-handler/metrolist-auth`. Linux login refreshes a hidden per-user callback entry for the running install and verifies its `xdg-mime` association. It replaces the entry atomically so failed writes preserve the previous handler. An existing package association may point to a moved or deleted AppImage, so its desktop-entry name alone does not establish that callbacks work. AppImage registration uses the persistent AppImage path; native Linux packages use the launcher wrapper. Nix sets `METROLIST_LAUNCHER` to its outer package wrapper so callbacks retain the FHS environment and libraries. Installed Flatpak uses its exported desktop entry.
 
-The embedded login is used when registration fails, when a macOS launch lacks a bundle or open-URI support, or when an unpackaged JVM launch has no native launcher. Linux registration requires working `xdg-mime` and writable user application data. Browser launch failure keeps the waiting dialog available for retry.
+The embedded login is used when registration fails, when a macOS launch lacks a bundle or open-URI support, or when an unpackaged JVM launch has no native launcher. When Flatpak owns the Linux callback association, other installs use embedded sign-in and leave that association intact. Linux registration requires working `xdg-mime` and writable user application data. Browser launch failure keeps the waiting dialog available for retry.
 
 ## Matugen colors
 
