@@ -10,6 +10,9 @@
 		48D55D6E3B0150F6A3E5DBD2 /* iosApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E06ED7E670B5D21A160DA9E /* iosApp.swift */; };
 		9FE61069A71042D393E7AA0B /* Sentry in Frameworks */ = {isa = PBXBuildFile; productRef = 9FE61069A71042D393E7AA0C /* Sentry */; };
 		A6A0F9B42F3D4A2B91B6C814 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 1E6D6B4964F047A8A6DC43F5 /* Assets.xcassets */; };
+		7E7FB69B305E4C19AFBB7EE7 /* IosRecognitionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F51392BC43894AA3944056A2 /* IosRecognitionManager.swift */; };
+		655E9612DCB443F0B7A804BA /* RecognizeMusicIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = CBA04558B61540FEB2AAA9B7 /* RecognizeMusicIntent.swift */; };
+		B1C2D3E4F5061728394A5B87 /* MetrolistShortcuts.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1C2D3E4F5061728394A5B86 /* MetrolistShortcuts.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -18,6 +21,9 @@
 		0418C23F19355BB18E625B53 /* Config.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Configuration/Config.xcconfig; sourceTree = "<group>"; };
 		B0FD6575DF35547EA4A7F264 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Configuration/Info.plist; sourceTree = "<group>"; };
 		1E6D6B4964F047A8A6DC43F5 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		F51392BC43894AA3944056A2 /* IosRecognitionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IosRecognitionManager.swift; sourceTree = "<group>"; };
+		CBA04558B61540FEB2AAA9B7 /* RecognizeMusicIntent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecognizeMusicIntent.swift; sourceTree = "<group>"; };
+		B1C2D3E4F5061728394A5B86 /* MetrolistShortcuts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MetrolistShortcuts.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -44,6 +50,7 @@
 			isa = PBXGroup;
 			children = (
 				5E06ED7E670B5D21A160DA9E /* iosApp.swift */,
+				9E78821C3D0A46F99CCA1319 /* Recognition */,
 				1E6D6B4964F047A8A6DC43F5 /* Assets.xcassets */,
 				A2402BE361735165BE944747 /* Configuration */,
 			);
@@ -63,6 +70,16 @@
 				C2DBF4EF9D605889B54F6416 /* Metrolist.app */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		9E78821C3D0A46F99CCA1319 /* Recognition */ = {
+			isa = PBXGroup;
+			children = (
+				F51392BC43894AA3944056A2 /* IosRecognitionManager.swift */,
+				CBA04558B61540FEB2AAA9B7 /* RecognizeMusicIntent.swift */,
+				B1C2D3E4F5061728394A5B86 /* MetrolistShortcuts.swift */,
+			);
+			path = Recognition;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -164,6 +181,9 @@
 			buildActionMask = 2147483647;
 			files = (
 				48D55D6E3B0150F6A3E5DBD2 /* iosApp.swift in Sources */,
+				7E7FB69B305E4C19AFBB7EE7 /* IosRecognitionManager.swift in Sources */,
+				655E9612DCB443F0B7A804BA /* RecognizeMusicIntent.swift in Sources */,
+				B1C2D3E4F5061728394A5B87 /* MetrolistShortcuts.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
