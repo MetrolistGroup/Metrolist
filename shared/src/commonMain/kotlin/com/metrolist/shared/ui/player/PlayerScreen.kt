@@ -905,7 +905,7 @@ fun PlayerScreen(
                 rememberBottomSheetState(
                     dismissedBound = 0.dp,
                     collapsedBound = queuePeekHeight,
-                    expandedBound = maxHeight,
+                    expandedBound = if (useLandscapeLayout) maxHeight else maxHeight - queueSheetTopPadding,
                     initialAnchor = COLLAPSED_ANCHOR,
                     isDismissible = false,
                 )
@@ -2320,7 +2320,7 @@ fun PlayerScreen(
                                 state = queueSheetState,
                                 backHandlerEnabled = isPlayerBackHandlerEnabled,
                                 predictiveBack = true,
-                                modifier = Modifier.fillMaxSize(),
+                                modifier = Modifier.fillMaxSize().padding(top = queueSheetTopPadding),
                                 isDraggableWhenCollapsed = true,
                                 collapsedContentAlpha = { progress -> (1f - progress * 5f).coerceIn(0f, 1f) },
                                 contentAlpha = { progress -> ((progress - 0.2f) * 4f).coerceIn(0f, 1f) },
@@ -2402,20 +2402,6 @@ fun PlayerScreen(
                                     color = MaterialTheme.colorScheme.surfaceContainerLow,
                                 ) {
                                     Column(modifier = Modifier.fillMaxSize().sheetBackContent()) {
-                                        Spacer(
-                                            modifier =
-                                                Modifier.layout { _, constraints ->
-                                                    val height =
-                                                        (
-                                                            queueSheetTopPadding.toPx() *
-                                                                queueSheetState.progress.coerceIn(
-                                                                    0f,
-                                                                    1f,
-                                                                )
-                                                        ).toInt()
-                                                    layout(constraints.minWidth, height) {}
-                                                },
-                                        )
                                         QueueSheetDragHandle(
                                             modifier =
                                                 Modifier
