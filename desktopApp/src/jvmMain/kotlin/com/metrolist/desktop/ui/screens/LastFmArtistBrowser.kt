@@ -73,6 +73,7 @@ internal fun LastFmArtistBrowserHost(browser: LastFmArtistBrowser) {
                 incognito = true,
                 focused = false,
                 allowNavigation = ::isLastFmArtistUrl,
+                reportFailure = false,
             )
         LaunchedEffect(request) {
             while (true) {
