@@ -195,6 +195,7 @@ private fun DesktopPageBoundTokenSession(
             state = state,
             navigator = navigator,
             modifier = Modifier.fillMaxSize(),
+            reportFailure = false,
         )
     }
 }

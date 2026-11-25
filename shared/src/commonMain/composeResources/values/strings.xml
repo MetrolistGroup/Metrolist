@@ -3571,6 +3571,8 @@
     <string name="spotify_login_unavailable">Spotify sign-in unavailable</string>
     <!-- Translators: Message explaining WebView not writable in the Spotify playlist import. -->
     <string name="spotify_webview_not_writable">Spotify sign-in cannot start because its WebView profile is not writable.</string>
+    <!-- Translators: Error message shown when the Windows embedded browser (Microsoft Edge WebView2) cannot start. Keep the product name "Microsoft Edge WebView2 Runtime" untranslated. -->
+    <string name="webview_runtime_unavailable">The embedded browser could not start. Install or repair Microsoft Edge WebView2 Runtime, then restart Metrolist.</string>
     <!-- Translators: Error message about session read in the Spotify playlist import. -->
     <string name="spotify_session_read_failed">Could not read the Spotify session.</string>
     <!-- Translators: Imperative action label for session sign in in the Spotify playlist import. -->

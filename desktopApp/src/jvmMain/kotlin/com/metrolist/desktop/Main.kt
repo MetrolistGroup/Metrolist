@@ -154,7 +154,6 @@ import com.metrolist.desktop.utils.desktopRenderApiOverride
 import com.metrolist.desktop.utils.isDesktopPlatformSupported
 import com.metrolist.desktop.utils.isOmarchy
 import com.metrolist.desktop.utils.openStopOmarchy
-import com.metrolist.desktop.web.DesktopWebViewError
 import com.metrolist.desktop.window.DesktopWindow
 import com.metrolist.desktop.window.DesktopWindowScope
 import com.metrolist.desktop.window.IconResources
@@ -419,7 +418,6 @@ private fun DesktopWindowScope.AppContent(
         ) {
             LastFmArtistBrowserHost(lastFmBrowser)
             DesktopPageBoundTokenHost(GlobalContext.get().get<DesktopPageBoundTokenRuntime>())
-            DesktopWebViewError()
             if (UiState.showIntegrationsSettings) {
                 IntegrationsOverlay(colorScheme)
             }

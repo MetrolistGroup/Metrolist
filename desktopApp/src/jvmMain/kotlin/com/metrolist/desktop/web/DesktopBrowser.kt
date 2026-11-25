@@ -63,6 +63,7 @@ internal fun rememberDesktopBrowser(
     focused: Boolean = true,
     backgroundColor: Color? = null,
     allowNavigation: ((String) -> Boolean)? = null,
+    reportFailure: Boolean = true,
 ): DesktopBrowser {
     val currentAllowNavigation by rememberUpdatedState(allowNavigation)
     val navigationFilter: ((String) -> Boolean)? = allowNavigation?.let { { url -> currentAllowNavigation?.invoke(url) != false } }
@@ -120,7 +121,8 @@ internal fun rememberDesktopBrowser(
             override fun loadUrl(url: String) = navigator.loadUrl(url)
 
             @Composable
-            override fun Content(modifier: Modifier) = DesktopWebView(state = state, navigator = navigator, modifier = modifier)
+            override fun Content(modifier: Modifier) =
+                DesktopWebView(state = state, navigator = navigator, modifier = modifier, reportFailure = reportFailure)
         }
     }
 }

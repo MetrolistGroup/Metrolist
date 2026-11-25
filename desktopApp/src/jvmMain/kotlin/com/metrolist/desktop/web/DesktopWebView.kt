@@ -16,7 +16,7 @@ import androidx.compose.ui.Modifier
 import com.metrolist.shared.generated.resources.Res
 import com.metrolist.shared.generated.resources.close
 import com.metrolist.shared.generated.resources.error_title
-import com.metrolist.shared.generated.resources.error_unknown
+import com.metrolist.shared.generated.resources.webview_runtime_unavailable
 import com.metrolist.shared.ui.components.AlertDialog
 import com.metrolist.shared.ui.components.PopupVisibility
 import io.github.kdroidfilter.webview.web.WebView
@@ -29,20 +29,23 @@ internal fun DesktopWebView(
     state: WebViewState,
     navigator: WebViewNavigator,
     modifier: Modifier = Modifier,
+    reportFailure: Boolean = true,
 ) {
     val failure by DesktopWebViewAvailability.shared.creationFailure.collectAsState()
-    if (failure == null) WebView(state = state, navigator = navigator, modifier = modifier)
+    when {
+        failure == null -> WebView(state = state, navigator = navigator, modifier = modifier)
+        reportFailure -> DesktopWebViewError()
+    }
 }
 
 @Composable
-internal fun DesktopWebViewError() {
-    val failure by DesktopWebViewAvailability.shared.creationFailure.collectAsState()
+private fun DesktopWebViewError() {
     var dismissed by remember { mutableStateOf(false) }
-    PopupVisibility(visible = failure != null && !dismissed) {
+    PopupVisibility(visible = !dismissed) {
         AlertDialog(
             onDismissRequest = { dismissed = true },
             title = { Text(stringResource(Res.string.error_title)) },
-            text = { Text(failure?.message ?: stringResource(Res.string.error_unknown)) },
+            text = { Text(stringResource(Res.string.webview_runtime_unavailable)) },
             confirmButton = {
                 TextButton(onClick = { dismissed = true }, shapes = ButtonDefaults.shapes()) {
                     Text(stringResource(Res.string.close))
