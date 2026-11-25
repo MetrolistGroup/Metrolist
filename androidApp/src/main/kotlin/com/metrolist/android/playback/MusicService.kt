@@ -38,6 +38,7 @@ import androidx.media3.session.DefaultMediaNotificationProvider
 import androidx.media3.session.LibraryResult
 import androidx.media3.session.MediaConstants
 import androidx.media3.session.MediaLibraryService
+import androidx.media3.session.MediaNotification
 import androidx.media3.session.MediaSession
 import androidx.media3.session.SessionCommand
 import androidx.media3.session.SessionError
@@ -277,6 +278,7 @@ class MusicService :
     private val binder = MusicBinder()
     private val serviceScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
     private val taskRemoved = MutableStateFlow(false)
+    private var playbackServiceRequired: StateFlow<Boolean>? = null
     private val listenTogetherForegroundRequired = MutableStateFlow(false)
     private val roomForegroundOwner = RoomForegroundOwner()
     private val mainHandler = Handler(Looper.getMainLooper())
@@ -713,12 +715,10 @@ class MusicService :
                 ) { requested, loading, cast, devices, room ->
                     requested || loading || cast.isConnected || room ||
                         devices.peers.any { it.state == DeviceConnectManager.PeerState.CONNECTED }
-                }
+                }.stateIn(this)
+            playbackServiceRequired = playbackRequired
             observePlaybackServiceLifetime(taskRemoved, playbackRequired, snapshotFlow { Settings.shared.stopMusicOnTaskClear }) {
-                saveFinalPlaybackState()?.join()
-                isRunning = false
-                running.value = false
-                pauseAllPlayersAndStopSelf()
+                stopPlaybackService()
             }
         }
         serviceScope.launch {
@@ -735,6 +735,13 @@ class MusicService :
                     }
                 }
         }
+    }
+
+    private suspend fun stopPlaybackService() {
+        saveFinalPlaybackState()?.join()
+        isRunning = false
+        running.value = false
+        pauseAllPlayersAndStopSelf()
     }
 
     private fun shouldPauseLocalPlaybackInBackground(): Boolean =
@@ -3285,6 +3292,25 @@ class MusicService :
     }
 
     private inner class AutomotiveSessionCallback : MediaLibrarySession.Callback {
+        override fun onMediaButtonEvent(
+            session: MediaSession,
+            controllerInfo: MediaSession.ControllerInfo,
+            intent: Intent,
+        ): Boolean {
+            // Media3 stops the player on dismissal, which closes it and resets the position; ending the service keeps both for restore.
+            if (intent.getBooleanExtra(MediaNotification.NOTIFICATION_DISMISSED_EVENT_KEY, false) &&
+                playbackServiceRequired?.value == false &&
+                !ProcessLifecycleOwner
+                    .get()
+                    .lifecycle.currentState
+                    .isAtLeast(Lifecycle.State.STARTED)
+            ) {
+                serviceScope.launch { stopPlaybackService() }
+                return true
+            }
+            return super.onMediaButtonEvent(session, controllerInfo, intent)
+        }
+
         override fun onConnectAsync(
             session: MediaSession,
             controller: MediaSession.ControllerInfo,
