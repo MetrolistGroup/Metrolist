@@ -2,7 +2,7 @@ package com.metrolist.shared.settings
 
 import com.metrolist.shared.ui.navigation.Screen
 
-private val libraryStartupTabs = setOf("LIBRARY", "SONGS", "TRACKS", "FAVORITES", "ARTISTS", "ALBUMS", "PLAYLISTS")
+private val libraryStartupTabs = setOf("LIBRARY", "SONGS", "TRACKS", "FAVORITES", "DOWNLOADS", "ARTISTS", "ALBUMS", "PLAYLISTS", "PODCASTS")
 
 fun defaultOpenTabRoot(current: String): String =
     when (current) {
@@ -15,6 +15,10 @@ fun defaultOpenTabScreen(current: String): Screen =
     when (current) {
         "FAVORITES" -> {
             Screen.AutoPlaylist("liked")
+        }
+
+        "DOWNLOADS" -> {
+            Screen.AutoPlaylist("downloaded")
         }
 
         "MYSTERIOUS" -> {
@@ -35,8 +39,9 @@ fun normalizeDefaultOpenTab(
     showHome: Boolean,
     showSearch: Boolean,
     showLibrary: Boolean,
+    hidePodcasts: Boolean = false,
 ): String {
-    val tab = current.takeUnless { it == "SONGS" } ?: "LIBRARY"
+    val tab = current.takeUnless { it == "SONGS" || (it == "PODCASTS" && hidePodcasts) } ?: "LIBRARY"
     val currentCategory =
         when (tab) {
             "HOME" -> 0
@@ -88,13 +93,13 @@ fun Settings.desktopDefaultOpenTabs(): List<String> {
     return buildList {
         if (NavigationId.HOME in visibleIds) add("HOME")
         add("SEARCH")
-        if (NavigationId.LIBRARY in visibleIds) addAll(libraryStartupTabs - "SONGS")
+        if (NavigationId.LIBRARY in visibleIds) addAll(libraryStartupTabs.filterNot { it == "SONGS" || (it == "PODCASTS" && hidePodcasts) })
     }
 }
 
 fun Settings.desktopDefaultOpenTab(): String {
     val tabs = desktopDefaultOpenTabs()
-    val current = defaultOpenTab.takeUnless { it == "SONGS" } ?: "LIBRARY"
+    val current = defaultOpenTab.takeUnless { it == "SONGS" || (it == "PODCASTS" && hidePodcasts) } ?: "LIBRARY"
     return current.takeIf { it in tabs } ?: tabs.first()
 }
 
@@ -106,6 +111,7 @@ fun Settings.initialLibraryFilter(): LibraryFilterType =
                 "ARTISTS" -> LibraryFilterType.ARTISTS
                 "ALBUMS" -> LibraryFilterType.ALBUMS
                 "PLAYLISTS" -> LibraryFilterType.PLAYLISTS
+                "PODCASTS" -> if (hidePodcasts) LibraryFilterType.ALL else LibraryFilterType.PODCASTS
                 else -> LibraryFilterType.ALL
             }
         }

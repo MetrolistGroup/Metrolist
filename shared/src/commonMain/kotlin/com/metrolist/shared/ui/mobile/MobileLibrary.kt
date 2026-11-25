@@ -209,6 +209,7 @@ internal fun MobileLibrary(
                         "ARTISTS" -> LibraryFilter.ARTISTS
                         "ALBUMS" -> LibraryFilter.ALBUMS
                         "PLAYLISTS" -> LibraryFilter.PLAYLISTS
+                        "PODCASTS" -> if (Settings.shared.hidePodcasts) null else LibraryFilter.PODCASTS
                         else -> null
                     }
                 }

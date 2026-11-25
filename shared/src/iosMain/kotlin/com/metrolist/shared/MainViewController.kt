@@ -73,7 +73,9 @@ import com.metrolist.shared.playlist.removeStoredPlaylistCover
 import com.metrolist.shared.playlist.setStoredPlaylistCover
 import com.metrolist.shared.playlist.storeIosPlaylistCover
 import com.metrolist.shared.playlist.uploadStoredPlaylistCover
+import com.metrolist.shared.settings.LibraryFilterType
 import com.metrolist.shared.settings.Settings
+import com.metrolist.shared.settings.defaultOpenTabRoot
 import com.metrolist.shared.state.GlobalYouTubeRepository
 import com.metrolist.shared.state.SongLikeState
 import com.metrolist.shared.state.SongMetadataState
@@ -169,6 +171,11 @@ fun handleOpenUrl(url: String) {
 @Composable
 fun MetrolistIOSApp() {
     val scope = rememberCoroutineScope()
+    remember {
+        if (defaultOpenTabRoot(Settings.shared.defaultOpenTab) == "LIBRARY") {
+            Settings.shared.libraryFilter = LibraryFilterType.DEFAULT
+        }
+    }
     val presenter = LocalUIViewController.current
     DisposableEffect(Unit) {
         val networkMonitor = IosPlaybackNetworkMonitor()
@@ -313,6 +320,9 @@ fun MetrolistIOSApp() {
 
     suspend fun reopenDatabaseAfterRestore() {
         MetrolistPlatform.reopenDatabaseAfterRestore()
+        if (defaultOpenTabRoot(Settings.shared.defaultOpenTab) == "LIBRARY") {
+            Settings.shared.libraryFilter = LibraryFilterType.DEFAULT
+        }
         databaseGeneration++
         sessionClosed = false
         pendingMobileDispose = null
@@ -386,6 +396,9 @@ fun MetrolistIOSApp() {
                     if (sessionClosed) reopenDatabaseAfterRestore()
                     if (databaseGeneration == generationBeforeRestore && result.isSuccess) {
                         MetrolistPlatform.refreshRestoredSettings()
+                        if (defaultOpenTabRoot(Settings.shared.defaultOpenTab) == "LIBRARY") {
+                            Settings.shared.libraryFilter = LibraryFilterType.DEFAULT
+                        }
                         appGeneration++
                     }
                     backupFailure = result.exceptionOrNull()
