@@ -39,6 +39,7 @@ import kotlinx.serialization.json.jsonPrimitive
 
 internal class YouTubeBrowseOperations(
     private val innerTube: InnerTube,
+    private val onAuthenticationRejected: suspend (InnerTube.SessionSnapshot) -> Unit,
 ) {
     private companion object {
         const val TAG = "YouTubeRepository"
@@ -68,6 +69,7 @@ internal class YouTubeBrowseOperations(
                     revision,
                     setLogin || session.useLoginForBrowse,
                     allowVisitorBootstrap = true,
+                    onAuthenticationRejected = onAuthenticationRejected,
                 )
             val sectionList = response.sectionListRenderer()
 
@@ -126,6 +128,12 @@ internal class YouTubeBrowseOperations(
                     .mapNotNull { item ->
                         if (item.params == null && item.id.isBlank()) null else Chip(item.title, item.params, item.id)
                     }
+            YtLogger.w(
+                TAG,
+                "Home browse status=${httpResponse.status.value} loginRequested=${setLogin || session.useLoginForBrowse} " +
+                    "hasCookieAuth=${innerTube.hasSapCookieAuth(session)} regionOverride=${session.regionOverrideActive} " +
+                    "hasVisitorData=${!session.visitorData.isNullOrBlank()} sections=${sections.size} chips=${chips.size}",
+            )
             return@withContext HomePageData(
                 chips = (chips + categoryChips).distinctBy { it.title to it.params },
                 sections = BlockedContent.filterSections(sections.filterNot { it.isCategoryComponent }),
@@ -154,7 +162,14 @@ internal class YouTubeBrowseOperations(
                         setLogin = setLogin,
                     )
                 check(httpResponse.status.isSuccess()) { "Browse failed with HTTP ${httpResponse.status.value}" }
-                val response = httpResponse.browseResponseWithVotes(innerTube, session, revision, setLogin || session.useLoginForBrowse)
+                val response =
+                    httpResponse.browseResponseWithVotes(
+                        innerTube,
+                        session,
+                        revision,
+                        setLogin || session.useLoginForBrowse,
+                        onAuthenticationRejected = onAuthenticationRejected,
+                    )
 
                 val contents = response.contents
                 val primarySectionList =
@@ -325,7 +340,13 @@ internal class YouTubeBrowseOperations(
         val revision = SongLikeState.voteObservationRevision()
         val response = innerTube.browse(YouTubeClient.WEB_REMIX, continuation = token, setLogin = setLogin)
         check(response.status.isSuccess()) { "Browse continuation failed with HTTP ${response.status.value}" }
-        return response.browseResponseWithVotes(innerTube, session, revision, setLogin || session.useLoginForBrowse)
+        return response.browseResponseWithVotes(
+            innerTube,
+            session,
+            revision,
+            setLogin || session.useLoginForBrowse,
+            onAuthenticationRejected = onAuthenticationRejected,
+        )
     }
 
     suspend fun getHomeSectionsContinuation(

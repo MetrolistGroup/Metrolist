@@ -1,6 +1,7 @@
 package com.metrolist.shared.api
 
 import com.metrolist.innertubex.InnerTube
+import com.metrolist.shared.auth.YouTubeSyncState
 import com.metrolist.shared.model.AlbumItem
 import com.metrolist.shared.model.ArtistItem
 import com.metrolist.shared.model.BrowseItem
@@ -149,6 +150,7 @@ class HomePageParsingTest {
     @AfterTest
     fun tearDown() {
         Settings.replaceSharedForTest(null)
+        YouTubeSyncState.clear()
     }
 
     @Test
@@ -196,6 +198,61 @@ class HomePageParsingTest {
 
             assertNotNull(engine.requestHistory.single().headers[HttpHeaders.Authorization])
             Unit
+        }
+
+    @Test
+    fun signedOutHomeResponsesNeverReplaceAuthenticatedContentOrDiscardAWorkingSession() =
+        runBlocking {
+            for (continuation in listOf(false, true)) {
+                for (accountStatus in listOf(HttpStatusCode.OK, HttpStatusCode.ServiceUnavailable)) {
+                    val client =
+                        HttpClient(
+                            MockEngine { request ->
+                                val accountMenu = request.url.encodedPath.endsWith("account_menu")
+                                respond(
+                                    if (accountMenu) {
+                                        """{"activeAccountHeaderRenderer":{"accountName":{"runs":[{"text":"Account"}]}}}"""
+                                    } else {
+                                        SIGNED_OUT_HOME_RESPONSE
+                                    },
+                                    status = if (accountMenu) accountStatus else HttpStatusCode.OK,
+                                    headers = headersOf(HttpHeaders.ContentType, "application/json"),
+                                )
+                            },
+                        ) { install(ContentNegotiation) { json(Json { ignoreUnknownKeys = true }) } }
+                    val innerTube = InnerTube(client).apply { replaceSession("SAPISID=session", "visitor", "sync", "0", true) }
+                    val repository = YouTubeRepository(innerTube)
+                    val session = innerTube.sessionSnapshot()
+                    try {
+                        assertFailsWith<YouTubeSessionExpiredException> {
+                            if (continuation) repository.getHomeSectionsContinuation("next") else repository.getHomePageData()
+                        }
+                        assertEquals(session, innerTube.sessionSnapshot())
+                        assertEquals(if (accountStatus == HttpStatusCode.OK) "Account" else null, repository.lastAccountInfo?.name)
+                    } finally {
+                        innerTube.close()
+                        client.close()
+                    }
+                }
+            }
+        }
+
+    @Test
+    fun intentionallyAnonymousHomeStillAcceptsSignedOutResponses() =
+        runBlocking {
+            val client =
+                HttpClient(
+                    MockEngine { respond(SIGNED_OUT_HOME_RESPONSE, headers = headersOf(HttpHeaders.ContentType, "application/json")) },
+                ) { install(ContentNegotiation) { json(Json { ignoreUnknownKeys = true }) } }
+            val innerTube = InnerTube(client).apply { replaceSession("SAPISID=session", "visitor", "sync", "0", false) }
+            try {
+                val page = YouTubeRepository(innerTube).getHomePageData()
+                assertTrue(page.sections.isEmpty())
+                assertTrue(innerTube.hasSapCookieAuth())
+            } finally {
+                innerTube.close()
+                client.close()
+            }
         }
 
     @Test
@@ -678,6 +735,12 @@ class HomePageParsingTest {
     }
 
     private companion object {
+        const val SIGNED_OUT_HOME_RESPONSE =
+            """{"responseContext":{"serviceTrackingParams":[
+              {"service":"GFEEDBACK","params":[{"key":"logged_in","value":"0"}]},
+              {"service":"CSI","params":[{"key":"yt_li","value":"0"}]}
+            ]}}"""
+
         fun libraryAlbumShelves(endpointInTitle: Boolean): String {
             val endpoint = """{"browseEndpoint":{"browseId":"FEmusic_library_landing","params":"library-params"}}"""
             val titleEndpoint = if (endpointInTitle) """, "navigationEndpoint":$endpoint""" else ""

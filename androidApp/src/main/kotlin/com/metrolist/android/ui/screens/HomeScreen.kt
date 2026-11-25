@@ -325,7 +325,7 @@ fun HomeScreen(
                         }
                     }
 
-                    !isOffline && !uiState.error.isNullOrBlank() -> {
+                    !isOffline && uiState.error != null -> {
                         item {
                             Column(
                                 modifier = Modifier.padding(16.dp),

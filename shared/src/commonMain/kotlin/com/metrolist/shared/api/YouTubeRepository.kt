@@ -529,7 +529,11 @@ class YouTubeRepository(
             }
         }
 
-    private val browseOperations = YouTubeBrowseOperations(innerTube)
+    private val browseOperations =
+        YouTubeBrowseOperations(innerTube) { session ->
+            requireCurrentSession(session)
+            getAccountInfo()
+        }
 
     suspend fun getHomePageData(
         params: String? = null,
@@ -2888,11 +2892,20 @@ internal fun String.toPlaylistBrowseId(): String =
 
 internal fun String?.isAlbumBrowseId(): Boolean = this != null && (startsWith("MPREb") || startsWith("FEmusic_release_detail"))
 
-internal fun JsonObject.isYouTubeLoggedOut(): Boolean =
-    this["responseContext"]
-        .asObject()
-        ?.get("mainAppWebResponseContext")
+internal fun JsonObject.isYouTubeLoggedOut(): Boolean {
+    val context = this["responseContext"].asObject() ?: return false
+    context["mainAppWebResponseContext"]
         .asObject()
         ?.get("loggedOut")
         ?.jsonPrimitive
-        ?.booleanOrNull == true
+        ?.booleanOrNull
+        ?.let { return it }
+    return context["serviceTrackingParams"].asArray().orEmpty().any { service ->
+        service.asObject()?.let { tracking ->
+            tracking["service"].primitiveText() == "GFEEDBACK" &&
+                tracking["params"].asArray().orEmpty().any { param ->
+                    param.asObject()?.let { it["key"].primitiveText() == "logged_in" && it["value"].primitiveText() == "0" } == true
+                }
+        } == true
+    }
+}
