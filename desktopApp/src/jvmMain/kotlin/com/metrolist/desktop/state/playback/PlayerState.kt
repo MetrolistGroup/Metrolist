@@ -546,6 +546,7 @@ object PlayerState {
 
     @Volatile private var deviceRadioBootstrapJob: Job? = null
     private var deviceRadioBootstrapPending = false
+    private var deviceRadioBootstrapGeneration = -1L
     private var controllerPlayback: DcLocalPlaybackState? = null
     private val deviceConnectPlayback =
         object : DeviceConnectPlaybackPort {
@@ -606,6 +607,7 @@ object PlayerState {
                     }
                     localRepeatMode = RepeatMode.valueOf(playback.repeatMode.name)
                     syncSession.applyPlayback(playback)
+                    persistPlaybackState()
                     syncSession.setReady(false)
                     desiredPlayback.value = playback.playing
                     val track = playback.queue.displayedItems.getOrNull(playback.queue.currentIndex)
@@ -1902,6 +1904,7 @@ object PlayerState {
                 if (it) video.resume() else video.pause()
                 DiscordRpcState.updateDiscordRpc()
                 persistPlaybackState()
+                if (it) rearmPendingExplicitRadioBootstrap()
             }
         }
 
@@ -4105,8 +4108,10 @@ object PlayerState {
         seed: SongItem,
         expectedSessionId: String?,
     ) {
-        if (deviceRadioBootstrapJob?.isActive == true) return
         val generation = playbackTransitionGeneration
+        if (deviceRadioBootstrapJob?.isActive == true && deviceRadioBootstrapGeneration == generation) return
+        deviceRadioBootstrapJob?.cancel()
+        deviceRadioBootstrapGeneration = generation
         val requestGeneration = explicitRadioRequestGeneration
         deviceRadioBootstrapJob =
             scope.launch {
@@ -4130,6 +4135,16 @@ object PlayerState {
                     Logger.w("PlayerState", "Failed to start remote radio (${error::class.simpleName})")
                 }
             }
+    }
+
+    private fun rearmPendingExplicitRadioBootstrap() {
+        if (!deviceRadioBootstrapPending || !syncSession.explicitRadioQueue || deviceConnect.isFollowing) return
+        if (deviceRadioBootstrapJob?.isActive == true && deviceRadioBootstrapGeneration == playbackTransitionGeneration) return
+        val seed =
+            queue.items.value
+                .singleOrNull()
+                ?.takeIf { it.id == currentTrack?.id } ?: return
+        startPendingExplicitRadioBootstrap(seed, syncSession.sessionId)
     }
 
     fun playFromId(videoId: String) {
