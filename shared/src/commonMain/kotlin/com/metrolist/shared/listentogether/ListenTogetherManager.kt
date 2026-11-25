@@ -1803,7 +1803,7 @@ class ListenTogetherManager(
         val position = ping.position ?: return
         val state = _roomState.value ?: return
         if (_role.value != ListenTogetherRoomRole.GUEST || !_isInRoom.value || !state.isPlaying) return
-        if (loadingTrackId != null || pendingBarrier != null || !hasLoadedRoomTrack || driftJob?.isActive == true) return
+        if (loadingTrackId != null || pendingBarrier != null || !hasLoadedRoomTrack) return
         val generation = ping.playbackGeneration
 
         // A host action after the ping (a seek can arrive before its pong) starts a newer timeline.
