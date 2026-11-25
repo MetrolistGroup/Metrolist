@@ -119,7 +119,12 @@ fun MiniplayerWindow() {
     if (!PlayerState.showMiniplayer) return
 
     val isFocusMode = PlayerState.miniplayerFocusMode
-    val windowSize = if (isFocusMode) DpSize(300.dp, 300.dp) else DpSize(420.dp, 160.dp)
+    val windowSize =
+        when {
+            isFocusMode -> DpSize(300.dp, 300.dp)
+            Settings.shared.showLyricsOnPlayer -> DpSize(420.dp, 240.dp)
+            else -> DpSize(420.dp, 160.dp)
+        }
     val windowState =
         remember {
             WindowState(
@@ -335,6 +340,15 @@ private fun StandardMiniplayer(
 
                             PlaybackControls(colorScheme)
                         }
+                    }
+                }
+
+                if (Settings.shared.showLyricsOnPlayer) {
+                    Box(
+                        modifier = Modifier.fillMaxWidth().weight(1f),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        ActiveLyricsLine(inMiniplayer = true)
                     }
                 }
 
