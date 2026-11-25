@@ -960,7 +960,7 @@ class HomeViewModel(
                                             .map { it.items },
                                     localFallback = localKeepListening + localQuickPicks,
                                     excludedPlaylistIds = userPlaylistIds,
-                                )
+                                ).let { if (isRefresh) it.shuffled() else it }
                             }
                         val speedDialItems =
                             buildSpeedDialItems(
