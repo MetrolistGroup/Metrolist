@@ -402,6 +402,8 @@ fun LibraryContent(
             haptics.perform(HapticEvent.DRAG_SNAP)
             onManualOrderChange(reorderOrder)
         }
+        val sizedGrid = isGridView && useGridItemSize && pinchColumns == 0
+        val gridGap = if (isGridView) (14 - (if (pinchColumns > 0) pinchColumns else gridColumns) * 2).dp else 8.dp
         val currentLayout =
             LibraryLayout(
                 isGridView,
@@ -414,6 +416,8 @@ fun LibraryContent(
                 } else {
                     GridCells.Adaptive((360f / gridColumns).dp)
                 },
+                horizontalGap = if (sizedGrid) GridTileSpacing else gridGap,
+                verticalGap = if (sizedGrid) GridRowSpacing else gridGap,
             )
         val retainedScrollState = scrollState
         val motionScheme = MaterialTheme.motionScheme
@@ -438,10 +442,6 @@ fun LibraryContent(
                             LazyGridState(retainedScrollState.firstVisibleItemIndex, retainedScrollState.firstVisibleItemScrollOffset)
                         }
                     }
-                val sizedGrid = isGridView && useGridItemSize && pinchColumns == 0
-                val gridGap = if (isGridView) (14 - (if (pinchColumns > 0) pinchColumns else gridColumns) * 2).dp else 8.dp
-                val horizontalGap = if (sizedGrid) GridTileSpacing else gridGap
-                val verticalGap = if (sizedGrid) GridRowSpacing else gridGap
                 key(layout) {
                     val reorderState =
                         rememberReorderableLazyGridState(
@@ -473,8 +473,8 @@ fun LibraryContent(
                                 end = 16.dp,
                                 bottom = bottomPadding + extraBottomPadding,
                             ),
-                        horizontalArrangement = Arrangement.spacedBy(horizontalGap),
-                        verticalArrangement = Arrangement.spacedBy(verticalGap),
+                        horizontalArrangement = Arrangement.spacedBy(layout.horizontalGap),
+                        verticalArrangement = Arrangement.spacedBy(layout.verticalGap),
                     ) {
                         item(key = "library_header", contentType = "header", span = { GridItemSpan(maxLineSpan) }) {
                             LibraryHeader(
@@ -1065,6 +1065,8 @@ private fun LibraryItem(
 private data class LibraryLayout(
     val isGrid: Boolean,
     val columns: GridCells,
+    val horizontalGap: Dp,
+    val verticalGap: Dp,
 )
 
 private val YTItem.libraryReorderKey: String
