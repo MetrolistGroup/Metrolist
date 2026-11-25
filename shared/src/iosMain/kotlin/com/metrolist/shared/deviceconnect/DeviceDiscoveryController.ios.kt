@@ -34,6 +34,7 @@ import platform.Network.nw_browser_t
 import platform.Network.nw_endpoint_get_bonjour_service_domain
 import platform.Network.nw_endpoint_get_bonjour_service_name
 import platform.Network.nw_endpoint_get_bonjour_service_type
+import platform.Network.nw_endpoint_t
 import platform.Network.nw_error_get_error_code
 import platform.Network.nw_txt_record_access_key
 import platform.Network.nw_txt_record_t
@@ -44,6 +45,9 @@ import platform.posix.sockaddr
 
 private const val BONJOUR_RESOLVE_TIMEOUT_SECONDS = 5.0
 private const val BONJOUR_RESOLVE_MAX_ATTEMPTS = 3
+
+// kDNSServiceErr_PolicyDenied (TN3179); Kotlin/Native does not expose it.
+private const val DNS_SERVICE_ERR_POLICY_DENIED = -65570
 
 // All state lives on the main queue, where NWBrowser and NSNetService deliver their callbacks.
 actual class DeviceDiscoveryController actual constructor(
@@ -86,8 +90,10 @@ actual class DeviceDiscoveryController actual constructor(
             browser = created
             nw_browser_set_queue(created, dispatch_get_main_queue())
             nw_browser_set_state_changed_handler(created) { state, error ->
-                // A waiting browser with an error has no usable path or lacks local network permission.
-                if (browser === created && (state == nw_browser_state_failed || (state == nw_browser_state_waiting && error != null))) {
+                // Other waiting errors clear on their own once a network path returns.
+                val denied =
+                    state == nw_browser_state_waiting && error != null && nw_error_get_error_code(error) == DNS_SERVICE_ERR_POLICY_DENIED
+                if (browser === created && (state == nw_browser_state_failed || denied)) {
                     fail("iOS Bonjour discovery unavailable (error ${error?.let(::nw_error_get_error_code)}).")
                 }
             }
@@ -206,12 +212,16 @@ private data class BonjourService(
     val deviceType: DeviceConnectDeviceType,
 )
 
-private fun serviceName(result: nw_browse_result_t): String? =
-    nw_endpoint_get_bonjour_service_name(nw_browse_result_copy_endpoint(result))?.toKString()?.takeIf { it.isNotBlank() }
+// Added results have no old side and removed results have no new side; the native copy calls need nonnull.
+private fun endpointServiceName(endpoint: nw_endpoint_t): String? =
+    nw_endpoint_get_bonjour_service_name(endpoint)?.toKString()?.takeIf { it.isNotBlank() }
+
+private fun serviceName(result: nw_browse_result_t): String? = result?.let { endpointServiceName(nw_browse_result_copy_endpoint(it)) }
 
 private fun bonjourService(result: nw_browse_result_t): BonjourService? {
+    if (result == null) return null
     val endpoint = nw_browse_result_copy_endpoint(result) ?: return null
-    val serviceName = serviceName(result) ?: return null
+    val serviceName = endpointServiceName(endpoint) ?: return null
     val type = nw_endpoint_get_bonjour_service_type(endpoint)?.toKString()?.takeIf { it.isNotBlank() } ?: return null
     val domain = nw_endpoint_get_bonjour_service_domain(endpoint)?.toKString()?.takeIf { it.isNotBlank() } ?: "local."
     val txt = nw_browse_result_copy_txt_record_object(result)
