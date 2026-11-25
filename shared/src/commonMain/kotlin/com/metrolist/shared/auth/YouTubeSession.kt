@@ -59,6 +59,8 @@ private fun clearStoredYouTubeSession() {
             "innerTubeCookie" to "",
             "visitorData" to "",
             "dataSyncId" to "",
+            "delegatedSessionId" to "",
+            "delegatedSessionDataSyncId" to "",
             "innerTubeAuthUser" to "0",
             "accountName" to "",
             "accountEmail" to "",

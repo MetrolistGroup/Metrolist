@@ -1,10 +1,12 @@
 package com.metrolist.shared.settings
 
+import com.metrolist.innertubex.models.response.AccountsListResponse
 import com.metrolist.shared.auth.AuthManager
 import com.metrolist.shared.auth.invalidateYouTubeSession
 import com.metrolist.shared.state.GlobalInnerTube
 import com.metrolist.shared.state.GlobalYouTube
 import com.metrolist.shared.utils.LogBridge
+import com.russhwolf.settings.MapSettings
 import kotlinx.coroutines.runBlocking
 import java.io.File
 import java.util.Properties
@@ -468,6 +470,55 @@ class LinuxCredentialRecoveryTest {
                 )
                 Settings.replaceSharedForTest(null)
                 root.deleteRecursively()
+            }
+        }
+
+    @Test
+    fun storedBrandSessionLearnsItsPageWithoutSigningInAgain() =
+        runBlocking {
+            val previous = GlobalInnerTube.instance.sessionSnapshot()
+            val personal = AccountsListResponse.Account("Personal", null, null, null, false, null, "", "||personal-user")
+            val brand = AccountsListResponse.Account("Brand", null, null, null, true, null, "brand-page", null)
+            try {
+                Settings.replaceSharedForTest(Settings(MapSettings()))
+                Settings.shared.applyStringBatch(
+                    mapOf("innerTubeCookie" to "SAPISID=stored", "dataSyncId" to "brand-page", "innerTubeAuthUser" to "1"),
+                )
+                AuthManager().restorePersistedSession()
+                assertNull(GlobalInnerTube.instance.sessionSnapshot().delegatedSessionId)
+
+                AuthManager().resolveDelegatedSession { emptyList() }
+                assertNull(GlobalInnerTube.instance.sessionSnapshot().delegatedSessionId)
+
+                AuthManager().resolveDelegatedSession { listOf(personal, brand) }
+                val session = GlobalInnerTube.instance.sessionSnapshot()
+                assertEquals("brand-page", session.delegatedSessionId)
+                assertEquals("SAPISID=stored", session.cookie)
+                assertEquals("1", session.authUser)
+
+                AuthManager().restorePersistedSession()
+                assertEquals("brand-page", GlobalInnerTube.instance.sessionSnapshot().delegatedSessionId)
+
+                Settings.shared.dataSyncId = "personal-user"
+                AuthManager().restorePersistedSession()
+                assertNull(GlobalInnerTube.instance.sessionSnapshot().delegatedSessionId)
+                AuthManager().resolveDelegatedSession { listOf(personal, brand) }
+                AuthManager().restorePersistedSession()
+                assertNull(GlobalInnerTube.instance.sessionSnapshot().delegatedSessionId)
+
+                invalidateYouTubeSession(GlobalInnerTube.instance)
+                assertEquals("", Settings.shared.delegatedSessionId)
+                assertEquals("", Settings.shared.delegatedSessionDataSyncId)
+            } finally {
+                GlobalInnerTube.instance.replaceSession(
+                    previous.cookie,
+                    previous.visitorData,
+                    previous.dataSyncId,
+                    previous.authUser,
+                    previous.useLoginForBrowse,
+                    previous.delegatedSessionId,
+                )
+                Settings.replaceSharedForTest(null)
             }
         }
 

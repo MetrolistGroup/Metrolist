@@ -68,7 +68,14 @@ internal class YouTubePlaylistEdits(
     ) {
         val session = innerTube.sessionSnapshot()
         val requestTube = innerTube.createIsolatedSession(true)
-        requestTube.replaceSession(session.cookie, session.visitorData, session.dataSyncId, session.authUser, session.useLoginForBrowse)
+        requestTube.replaceSession(
+            session.cookie,
+            session.visitorData,
+            session.dataSyncId,
+            session.authUser,
+            session.useLoginForBrowse,
+            session.delegatedSessionId,
+        )
         try {
             require(innerTube.hasSapCookieAuth(session))
             val id = playlistId.removePrefix("VL")

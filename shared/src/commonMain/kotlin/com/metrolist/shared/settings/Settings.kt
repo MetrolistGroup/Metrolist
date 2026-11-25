@@ -310,6 +310,10 @@ class Settings(
     var supportPromptLaunchThreshold by preference(SupportPromptLaunchThresholdKey, 0)
     var visitorData by preference("")
     var dataSyncId by preference("")
+
+    // Brand-account page id, valid only while delegatedSessionDataSyncId equals dataSyncId; blank for a personal account.
+    var delegatedSessionId by preference("")
+    var delegatedSessionDataSyncId by preference("")
     var innerTubeAuthUser by preference("0")
     var accountName by preference("")
     var accountEmail by preference("")

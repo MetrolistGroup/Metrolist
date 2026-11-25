@@ -123,6 +123,7 @@ object AuthState {
                         Settings.shared.accountEmail = info.email.orEmpty()
                         Settings.shared.accountChannelHandle = info.channelHandle.orEmpty()
                         Settings.shared.accountThumbnail = info.thumbnailUrl ?: ""
+                        AuthManager().resolveDelegatedSession()
                     }
                 } catch (error: CancellationException) {
                     throw error

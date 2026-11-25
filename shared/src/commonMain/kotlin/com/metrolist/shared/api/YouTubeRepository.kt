@@ -1720,7 +1720,14 @@ class YouTubeRepository(
     ): T {
         requireCurrentSession(session)
         val requestTube = innerTube.createIsolatedSession(true)
-        requestTube.replaceSession(session.cookie, session.visitorData, session.dataSyncId, session.authUser, session.useLoginForBrowse)
+        requestTube.replaceSession(
+            session.cookie,
+            session.visitorData,
+            session.dataSyncId,
+            session.authUser,
+            session.useLoginForBrowse,
+            session.delegatedSessionId,
+        )
         try {
             return block(YouTubeSearchOperations(requestTube)).also { requireCurrentSession(session) }
         } finally {

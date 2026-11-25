@@ -34,6 +34,11 @@ internal fun supportedYouTubeAuthCredential(cookie: String): String? {
 
 fun hasSupportedYouTubeAuthCookie(cookie: String): Boolean = supportedYouTubeAuthCredential(cookie) != null
 
+internal fun storedDelegatedSessionId(dataSyncId: String?): String? =
+    Settings.shared.delegatedSessionId.takeIf {
+        it.isNotBlank() && !dataSyncId.isNullOrBlank() && Settings.shared.delegatedSessionDataSyncId == dataSyncId
+    }
+
 class AuthManager {
     val cookieMap: Map<String, String>
         get() = parseCookieString(Settings.shared.innerTubeCookie)
@@ -103,7 +108,7 @@ class AuthManager {
         validateAndSaveCredentials(cookie, visitorData, dataSyncId, authUser) {
             candidateRepository(cookie, visitorData, dataSyncId, authUser)
                 .getAccountInfo(publishExpiredSessionNotice = false)
-        }
+        }.also { saved -> if (saved) resolveDelegatedSession() }
 
     internal suspend fun validateAndSaveCredentials(
         cookie: String,
@@ -181,6 +186,38 @@ class AuthManager {
         }
     }
 
+    suspend fun resolveDelegatedSession() =
+        resolveDelegatedSession { GlobalYouTubeRepository.instance.getAccountsList(publishExpiredSessionNotice = false) }
+
+    // The stored dataSyncId alone cannot tell a brand page from a personal account, so the account list decides once per identity.
+    internal suspend fun resolveDelegatedSession(fetchAccounts: suspend () -> List<AccountsListResponse.Account>) {
+        val cookie = Settings.shared.innerTubeCookie
+        val dataSyncId = Settings.shared.dataSyncId
+        val authUser = Settings.shared.innerTubeAuthUser
+        if (!hasSupportedYouTubeAuthCookie(cookie) || dataSyncId.isBlank() || Settings.shared.delegatedSessionDataSyncId == dataSyncId) {
+            return
+        }
+        val delegatedSessionId = delegatedSessionIdFor(dataSyncId, fetchAccounts()) ?: return
+        currentCoroutineContext().ensureActive()
+        if (Settings.shared.credentialsPending ||
+            cookie != Settings.shared.innerTubeCookie ||
+            dataSyncId != Settings.shared.dataSyncId ||
+            authUser != Settings.shared.innerTubeAuthUser
+        ) {
+            return
+        }
+        Settings.shared.applyStringBatch(
+            mapOf(
+                "delegatedSessionId" to delegatedSessionId,
+                "delegatedSessionDataSyncId" to dataSyncId,
+            ),
+        )
+        YtLogger.w("YouTubeAuth", "Delegated session resolved brand=${delegatedSessionId.isNotEmpty()}")
+        if (delegatedSessionId.isNotEmpty()) {
+            syncToInnerTube(cookie, Settings.shared.visitorData, dataSyncId, authUser, useLoginForBrowse = true)
+        }
+    }
+
     fun restorePersistedSession() {
         syncToInnerTube(
             cookie = Settings.shared.innerTubeCookie,
@@ -236,6 +273,7 @@ class AuthManager {
 
             if (cookie.isNotBlank()) {
                 fetchAndSaveAccountInfo()
+                resolveDelegatedSession()
                 SongLikeState.refreshLikesFromRemoteAsync()
             }
         }
@@ -279,6 +317,7 @@ class AuthManager {
             dataSyncId = dataSyncId.takeIf { it.isNotEmpty() },
             authUser = authUser,
             useLoginForBrowse = useLoginForBrowse,
+            delegatedSessionId = storedDelegatedSessionId(dataSyncId),
         )
     }
 

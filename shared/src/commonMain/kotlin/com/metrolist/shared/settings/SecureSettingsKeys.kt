@@ -10,6 +10,8 @@ internal val secureSettingsKeys =
         "innerTubeCookie",
         "visitorData",
         "dataSyncId",
+        "delegatedSessionId",
+        "delegatedSessionDataSyncId",
         "innerTubeAuthUser",
         "lastFmSession",
         "listenBrainzToken",
