@@ -363,7 +363,7 @@ fun SongListItem(
                 style = MaterialTheme.typography.bodyLarge,
                 fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.Medium,
                 color = contentColor,
-                maxLines = if (Settings.shared.multilineSongTitles) 3 else 1,
+                maxLines = if (!effectiveSong.isPodcast && Settings.shared.multilineSongTitles) 3 else 1,
             )
 
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -653,13 +653,8 @@ fun YTGridItem(
                 color = MaterialTheme.colorScheme.onSurface,
                 style = if (largeText) MaterialTheme.typography.titleMedium else MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.Medium,
-                maxLines =
-                    if ((item is SongItem || item is EpisodeItem) && Settings.shared.multilineSongTitles) {
-                        3
-                    } else {
-                        1
-                    },
-                softWrap = !((item is SongItem || item is EpisodeItem) && Settings.shared.multilineSongTitles),
+                maxLines = if (item is SongItem && !item.isPodcast && Settings.shared.multilineSongTitles) 3 else 1,
+                softWrap = item is SongItem && !item.isPodcast && Settings.shared.multilineSongTitles,
                 overflow = TextOverflow.Ellipsis,
                 textAlign = TextAlign.Start,
                 modifier = Modifier.fillMaxWidth(),
@@ -867,7 +862,7 @@ fun YTListItem(
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.Medium,
                 color = contentColor,
-                maxLines = if ((item is SongItem || item is EpisodeItem) && Settings.shared.multilineSongTitles) 3 else 1,
+                maxLines = if (item is SongItem && !item.isPodcast && Settings.shared.multilineSongTitles) 3 else 1,
             )
 
             Row(
