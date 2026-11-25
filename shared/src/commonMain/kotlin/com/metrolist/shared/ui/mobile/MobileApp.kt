@@ -1110,7 +1110,7 @@ fun MobileApp(
                                                 onLoadMore = homeViewModel::loadMoreSections,
                                                 modifier = Modifier.fillMaxSize(),
                                                 header = {
-                                                    if (!homeState.error.isNullOrBlank()) {
+                                                    if (homeState.error != null) {
                                                         item(key = "home_error") {
                                                             Column(
                                                                 Modifier.fillMaxWidth().padding(24.dp),

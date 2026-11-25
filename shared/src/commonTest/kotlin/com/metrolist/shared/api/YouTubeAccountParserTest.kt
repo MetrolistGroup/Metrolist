@@ -4,10 +4,36 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 class YouTubeAccountParserTest {
     private val json = Json
+
+    @Test
+    fun musicResponsesReportAuthenticationWithoutMainAppWebContext() {
+        // Reduced from signed-in and signed-out WEB_REMIX Home responses captured on 2026-11-25.
+        for ((value, loggedOut) in listOf("0" to true, "1" to false)) {
+            val response =
+                json
+                    .parseToJsonElement(
+                        """{"responseContext":{"serviceTrackingParams":[
+                      {"service":"GFEEDBACK","params":[{"key":"logged_in","value":"$value"}]},
+                      {"service":"CSI","params":[{"key":"yt_li","value":"$value"}]}
+                    ]}}""",
+                    ).jsonObject
+            assertEquals(loggedOut, response.isYouTubeLoggedOut())
+        }
+        assertFalse(json.parseToJsonElement("""{"responseContext":{}}""").jsonObject.isYouTubeLoggedOut())
+        assertFalse(json.parseToJsonElement("""{"responseContext":{"serviceTrackingParams":[null]}}""").jsonObject.isYouTubeLoggedOut())
+        assertTrue(
+            json
+                .parseToJsonElement("""{"responseContext":{"mainAppWebResponseContext":{"loggedOut":true}}}""")
+                .jsonObject
+                .isYouTubeLoggedOut(),
+        )
+    }
 
     @Test
     fun blankOptionalTokensDoNotMergeDifferentChannels() {
