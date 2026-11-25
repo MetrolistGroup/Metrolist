@@ -16,7 +16,13 @@ data class EventWithSong(
         parentColumns = ["songId"],
         entityColumns = ["id"],
     )
-    val song: Song,
+    val songs: List<Song>,
     @Relation(parentColumns = ["id"], entityColumns = ["eventId"])
-    val snapshot: HistorySnapshot? = null,
-)
+    val snapshots: List<HistorySnapshot> = emptyList(),
+) {
+    // Lists avoid Room's iOS ConcurrentModificationException for single-value relations above 999 rows.
+    val song: Song
+        get() = songs.last()
+    val snapshot: HistorySnapshot?
+        get() = snapshots.lastOrNull()
+}
