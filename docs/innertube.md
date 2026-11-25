@@ -59,7 +59,7 @@ Mobile API library shelves show saved music albums while podcast shelves remain 
 
 Home cache identity respects account, locale and browse policy. Visitor publication must pass InnerTubeX's session compatibility check before accepting an in-flight response.
 
-Authenticated Home and shelf requests reject signed-out responses before publishing or caching their content. YouTube Music can report this through `responseContext.serviceTrackingParams`, with `GFEEDBACK`'s `logged_in` set to `0`, without the older `mainAppWebResponseContext.loggedOut` field. A rejected response rechecks the account menu. A working account or an unavailable account check retains the session; only confirmed account rejection uses the existing session-expiry handling. Intentionally anonymous browsing still accepts signed-out feeds.
+Authenticated Home, playlist and shelf requests reject signed-out responses before publishing or caching their content. YouTube Music can report this through `responseContext.serviceTrackingParams`, with `GFEEDBACK`'s `logged_in` set to `0`, without the older `mainAppWebResponseContext.loggedOut` field. A rejected response rechecks the account menu. The shared account-browse reader uses the same verification policy. A working account or an unavailable account check retains the session; only confirmed account rejection uses the existing session-expiry handling. Intentionally anonymous browsing still accepts signed-out feeds.
 
 Home diagnostics record HTTP status, whether login was requested, credential and visitor presence, region override and shelf counts. They omit credentials and content. A generic feed alone does not establish that YouTube treated a request as signed out.
 

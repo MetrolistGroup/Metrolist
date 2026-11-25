@@ -120,7 +120,7 @@ internal suspend fun HttpResponse.browseResponseWithVotes(
     revision: Long,
     authenticated: Boolean = true,
     allowVisitorBootstrap: Boolean = false,
-    onAuthenticationRejected: suspend (InnerTube.SessionSnapshot) -> Unit = {},
+    onAuthenticationRejected: suspend (InnerTube.SessionSnapshot) -> Unit,
 ): BrowseResponse =
     withContext(responseDecodeDispatcher) {
         val raw = bodyLimited<JsonObject>(FEED_RESPONSE_LIMIT)

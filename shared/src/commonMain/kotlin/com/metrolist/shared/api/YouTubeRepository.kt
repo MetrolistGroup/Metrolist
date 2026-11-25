@@ -512,7 +512,7 @@ class YouTubeRepository(
                 val raw = response.bodyLimited<JsonObject>(FEED_RESPONSE_LIMIT)
                 requireCurrentSession(session)
                 if (innerTube.hasSapCookieAuth(session) && raw.isYouTubeLoggedOut()) {
-                    invalidateExpiredSession(session)
+                    recheckRejectedAuthentication(session)
                     throw YouTubeSessionExpiredException()
                 }
                 if (innerTube.hasSapCookieAuth(session)) reconcileSongVotes(raw, voteRevision)
@@ -529,11 +529,12 @@ class YouTubeRepository(
             }
         }
 
-    private val browseOperations =
-        YouTubeBrowseOperations(innerTube) { session ->
-            requireCurrentSession(session)
-            getAccountInfo()
-        }
+    private suspend fun recheckRejectedAuthentication(session: InnerTube.SessionSnapshot) {
+        requireCurrentSession(session)
+        getAccountInfo()
+    }
+
+    private val browseOperations = YouTubeBrowseOperations(innerTube, ::recheckRejectedAuthentication)
 
     suspend fun getHomePageData(
         params: String? = null,
@@ -941,7 +942,13 @@ class YouTubeRepository(
                 throw PlaylistNotFoundException(playlistId)
             }
             check(httpResponse.status.isSuccess()) { "Playlist browse failed with HTTP ${httpResponse.status.value}" }
-            val response = httpResponse.browseResponseWithVotes(innerTube, requestSession, voteRevision)
+            val response =
+                httpResponse.browseResponseWithVotes(
+                    innerTube,
+                    requestSession,
+                    voteRevision,
+                    onAuthenticationRejected = ::recheckRejectedAuthentication,
+                )
             val parsed = parseBrowseResponse(response, classifyPlaylistSuggestions = true)
             val sections = YouTubePlaylistParser.parsePlaylistSections(response, parsed, playlistId)
 
@@ -1150,7 +1157,12 @@ class YouTubeRepository(
         check(response.status.isSuccess()) { "Playlist continuation failed with HTTP ${response.status.value}" }
         val parsed =
             parseBrowseResponse(
-                response.browseResponseWithVotes(innerTube, page.session, voteRevision),
+                response.browseResponseWithVotes(
+                    innerTube,
+                    page.session,
+                    voteRevision,
+                    onAuthenticationRejected = ::recheckRejectedAuthentication,
+                ),
                 classifyPlaylistSuggestions = true,
             )
         val sections = linkedMapOf<String, MutableList<YTItem>>()

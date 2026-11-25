@@ -201,9 +201,26 @@ class HomePageParsingTest {
         }
 
     @Test
-    fun signedOutHomeResponsesNeverReplaceAuthenticatedContentOrDiscardAWorkingSession() =
+    fun signedOutBrowseResponsesRecheckAccountWithoutDiscardingAWorkingSession() =
         runBlocking {
-            for (continuation in listOf(false, true)) {
+            val requests: List<suspend (YouTubeRepository, InnerTube.SessionSnapshot) -> Unit> =
+                listOf(
+                    { repository, _ -> repository.getHomePageData() },
+                    { repository, _ -> repository.getHomeSectionsContinuation("next") },
+                    { repository, _ -> repository.getPlaylistPageData("PLtest") },
+                    { repository, _ -> repository.getLibraryUploadSongsResult().getOrThrow() },
+                    { repository, session ->
+                        repository.continuePlaylistPage(
+                            PlaylistPage(
+                                sections = emptyMap(),
+                                pending = listOf(ContinuationBranch("next")),
+                                seen = emptySet(),
+                                session = session,
+                            ),
+                        )
+                    },
+                )
+            for (request in requests) {
                 for (accountStatus in listOf(HttpStatusCode.OK, HttpStatusCode.ServiceUnavailable)) {
                     val client =
                         HttpClient(
@@ -220,12 +237,16 @@ class HomePageParsingTest {
                                 )
                             },
                         ) { install(ContentNegotiation) { json(Json { ignoreUnknownKeys = true }) } }
-                    val innerTube = InnerTube(client).apply { replaceSession("SAPISID=session", "visitor", "sync", "0", true) }
+                    val innerTube =
+                        InnerTube(
+                            client,
+                            retryDelay = {},
+                        ).apply { replaceSession("SAPISID=session", "visitor", "sync", "0", true) }
                     val repository = YouTubeRepository(innerTube)
                     val session = innerTube.sessionSnapshot()
                     try {
                         assertFailsWith<YouTubeSessionExpiredException> {
-                            if (continuation) repository.getHomeSectionsContinuation("next") else repository.getHomePageData()
+                            request(repository, session)
                         }
                         assertEquals(session, innerTube.sessionSnapshot())
                         assertEquals(if (accountStatus == HttpStatusCode.OK) "Account" else null, repository.lastAccountInfo?.name)
