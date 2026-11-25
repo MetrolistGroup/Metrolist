@@ -8,6 +8,9 @@ import com.sun.jna.platform.win32.Advapi32Util
 import com.sun.jna.platform.win32.WinReg
 import java.awt.Desktop
 import java.io.File
+import java.nio.file.Files
+import java.nio.file.StandardCopyOption.ATOMIC_MOVE
+import java.nio.file.StandardCopyOption.REPLACE_EXISTING
 import java.util.concurrent.TimeUnit
 
 internal fun registerDesktopDiscordCallback(displayName: String): Boolean =
@@ -34,14 +37,24 @@ internal fun registerDesktopDiscordCallback(displayName: String): Boolean =
             OsUtil.isLinux -> {
                 if (!System.getenv("FLATPAK_ID").isNullOrBlank()) return@runCatching true
                 val query = listOf("xdg-mime", "query", "default", DISCORD_MIME_TYPE)
-                val packagedHandler = runRegistrationCommand(query)?.trim()
-                if (packagedHandler in setOf("metrolist.desktop", "Metrolist.desktop", "com.metrolist.desktop.desktop")) {
-                    return@runCatching true
-                }
-                val executable = linuxDiscordLauncher(System.getenv("APPIMAGE"), launcher) ?: return@runCatching false
+                // Flatpak cannot restore its host association after another install replaces it.
+                if (runRegistrationCommand(query)?.trim() == "com.metrolist.desktop.desktop") return@runCatching false
+                val executable =
+                    linuxDiscordLauncher(
+                        appImage = System.getenv("APPIMAGE"),
+                        launcher = launcher,
+                        packageLauncher = System.getenv("METROLIST_LAUNCHER"),
+                    ) ?: return@runCatching false
                 val desktopFile = File(XdgUtils.getXdgDataHome(), "applications/$DISCORD_DESKTOP_FILE")
                 desktopFile.parentFile.mkdirs()
-                desktopFile.writeText(linuxDiscordDesktopEntry(executable.absolutePath, displayName))
+                val temporary = Files.createTempFile(desktopFile.parentFile.toPath(), ".discord-auth-", ".tmp")
+                try {
+                    Files.writeString(temporary, linuxDiscordDesktopEntry(executable.absolutePath, displayName))
+                    Files.move(temporary, desktopFile.toPath(), ATOMIC_MOVE, REPLACE_EXISTING)
+                } finally {
+                    Files.deleteIfExists(temporary)
+                }
+                // A package desktop entry can still point to a moved or deleted AppImage.
                 runRegistrationCommand(linuxDiscordRegistrationCommand()) != null &&
                     runRegistrationCommand(query)?.trim() == DISCORD_DESKTOP_FILE
             }
@@ -55,15 +68,17 @@ internal fun registerDesktopDiscordCallback(displayName: String): Boolean =
 internal fun linuxDiscordLauncher(
     appImage: String?,
     launcher: String?,
+    packageLauncher: String? = null,
 ): File? {
-    val executable = (appImage?.takeIf(String::isNotBlank) ?: launcher)?.let(::File) ?: return null
+    val preferredLauncher = packageLauncher?.takeIf(String::isNotBlank) ?: appImage?.takeIf(String::isNotBlank)
+    val executable = (preferredLauncher ?: launcher)?.let(::File) ?: return null
     if (!executable.isAbsolute || !executable.isFile || !executable.canExecute() ||
         executable.name in setOf("java", "java.exe", "javaw.exe")
     ) {
         return null
     }
     val wrapper = File(executable.parentFile, "Metrolist")
-    return if (appImage.isNullOrBlank() && executable.name == "Metrolist.bin" && wrapper.canExecute()) wrapper else executable
+    return if (preferredLauncher == null && executable.name == "Metrolist.bin" && wrapper.canExecute()) wrapper else executable
 }
 
 internal fun linuxDiscordDesktopEntry(
