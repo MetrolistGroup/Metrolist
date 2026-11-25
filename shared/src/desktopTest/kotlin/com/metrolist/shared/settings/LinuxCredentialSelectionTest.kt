@@ -16,6 +16,14 @@ class LinuxCredentialSelectionTest {
     }
 
     @Test
+    fun storedPayloadSurvivesProvidersThatKeepOnlyTheFirstLine() {
+        val payload = "#Metrolist desktop secrets\ninnerTubeCookie=SAPISID=saved\nlastFmSession=saved-lastfm\n"
+        val firstLineOnly = encodeLinuxCredentialPayload(payload).substringBefore('\n')
+        assertEquals(payload, parseLinuxCredentialRecord(firstLineOnly, 1, "/login/1")?.payload)
+        assertEquals(payload, parseLinuxCredentialRecord(payload, 1, "/login/1")?.payload)
+    }
+
+    @Test
     fun populatedDuplicatesUseModificationTimeAndStablePathInsteadOfSearchOrder() {
         val old = LinuxCredentialRecord("innerTubeCookie=SAPISID=old", 1, "/login/3")
         val current = LinuxCredentialRecord("innerTubeCookie=SAPISID=current", 2, "/login/2")
