@@ -7,11 +7,17 @@ import com.metrolist.shared.db.entities.SongEntity
 import com.metrolist.shared.db.getDatabaseBuilder
 import com.metrolist.shared.settings.Settings
 import com.russhwolf.settings.MapSettings
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.datetime.LocalDateTime
+import java.io.ByteArrayInputStream
 import java.io.File
+import java.io.InputStream
 import java.nio.file.Files
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
 import kotlin.test.AfterTest
@@ -287,6 +293,42 @@ class PrismBackupImportTest {
         }
 
     @Test
+    fun concurrentImportsDoNotDeleteEachOthersStagingFiles() =
+        runBlocking {
+            val bytes = archive(sourceDatabase(), emptyMap()).readBytes()
+            val inputStarted = CountDownLatch(1)
+            val continueInput = CountDownLatch(1)
+            val firstDatabaseDir = directory.resolve("first-destination").apply { mkdirs() }
+            val secondDatabaseDir = directory.resolve("second-destination").apply { mkdirs() }
+            val firstDatabase = getDatabaseBuilder(firstDatabaseDir.resolve("metrolist.db")).build()
+            val secondDatabase = getDatabaseBuilder(secondDatabaseDir.resolve("metrolist.db")).build()
+
+            try {
+                val firstImport =
+                    async(Dispatchers.IO) {
+                        firstDatabase.importForeignBackup(
+                            BlockingInputStream(bytes, 16, inputStarted, continueInput),
+                            staging(),
+                            driver,
+                        )
+                    }
+                assertTrue(inputStarted.await(10, TimeUnit.SECONDS))
+                val secondImport =
+                    async(Dispatchers.IO) {
+                        secondDatabase.importForeignBackup(ByteArrayInputStream(bytes), staging(), driver)
+                    }
+
+                assertEquals(2, secondImport.await().songs)
+                continueInput.countDown()
+                assertEquals(2, firstImport.await().songs)
+            } finally {
+                continueInput.countDown()
+                firstDatabase.close()
+                secondDatabase.close()
+            }
+        }
+
+    @Test
     fun corruptCompanionFailsBeforeMergingAndCleansStaging() =
         runBlocking {
             val archive = archive(sourceDatabase(), mapOf("files/library/prism.json" to "{broken"))
@@ -457,4 +499,21 @@ class PrismBackupImportTest {
         .playlistSongs(playlistId)
         .first()
         .map { it.song.id }
+
+    private class BlockingInputStream(
+        private val bytes: ByteArray,
+        private val blockAfterBytes: Int,
+        private val started: CountDownLatch,
+        private val proceed: CountDownLatch,
+    ) : InputStream() {
+        private var position = 0
+
+        override fun read(): Int {
+            if (position == blockAfterBytes) {
+                started.countDown()
+                check(proceed.await(10, TimeUnit.SECONDS))
+            }
+            return if (position == bytes.size) -1 else bytes[position++].toInt() and 0xff
+        }
+    }
 }

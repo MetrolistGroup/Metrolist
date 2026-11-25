@@ -440,13 +440,14 @@ fun BackupRestoreSettingsScreen(colorScheme: ColorScheme) {
         destination: PlaylistImportManager.Destination,
         ignoreDuplicate: Boolean = false,
     ) {
+        if (isBusy) return
+        isBusy = true
         val targetTitle = customPlaylistTitle.ifBlank { data.title }
         val statusId = PlaylistImportStatusManager.startImport(targetTitle, data.source)
         val job =
             AppState.scope.launch(Dispatchers.Default) {
                 try {
                     if (PlaylistImportStatusManager.activeImport.value?.id != statusId) return@launch
-                    isBusy = true
                     if (!ignoreDuplicate) {
                         val dup = UnifiedPlaylistImporter.checkForDuplicate(database, targetTitle, destination)
                         if (dup != null) {
@@ -1300,6 +1301,7 @@ fun BackupRestoreSettingsScreen(colorScheme: ColorScheme) {
             },
             confirmButton = {
                 Button(
+                    enabled = !isBusy,
                     onClick = {
                         val destination =
                             selectedDestinationPlaylist?.let(PlaylistImportManager.Destination::EXISTING)

@@ -23,18 +23,29 @@ suspend fun MusicDatabase.importForeignBackup(
     driver: SQLiteDriver,
 ): ForeignImportSummary {
     stagingDirectory.deleteRecursively()
-    check(stagingDirectory.mkdirs()) { "Could not create import staging directory" }
+    val importDirectory = createImportStagingDirectory(stagingDirectory)
     try {
         val library =
-            stageForeignDatabases(input, stagingDirectory).firstNotNullOfOrNull { candidate ->
+            stageForeignDatabases(input, importDirectory).firstNotNullOfOrNull { candidate ->
                 driver.open(candidate.path).use { connection ->
                     connection.takeIf { it.detectForeignLibraryFamily() != null }?.readForeignLibrary()
                 }
             } ?: throw UnsupportedForeignLibraryException()
-        return importForeignLibrary(library.withPrismArchive(stagingDirectory))
+        return importForeignLibrary(library.withPrismArchive(importDirectory))
     } finally {
-        stagingDirectory.deleteRecursively()
+        importDirectory.deleteRecursively()
     }
+}
+
+private fun createImportStagingDirectory(stagingDirectory: File): File {
+    val parent = checkNotNull(stagingDirectory.absoluteFile.parentFile)
+    check(parent.mkdirs() || parent.isDirectory) { "Could not create import staging directory" }
+    repeat(10) {
+        val candidate = File.createTempFile("${stagingDirectory.name}-", ".tmp", parent)
+        check(candidate.delete()) { "Could not create import staging directory" }
+        if (candidate.mkdir()) return candidate
+    }
+    error("Could not create a unique import staging directory")
 }
 
 internal fun stageForeignDatabases(
