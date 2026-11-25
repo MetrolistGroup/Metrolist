@@ -422,7 +422,10 @@ class SearchViewModel(
 
     fun clearSearchHistory() {
         if (!scope.isActive) return
+        // Reset first so a pending clear from a previous account doesn't block this one.
         resetRemoteHistoryIfSessionChanged()
+        // An overlapping clear would snapshot the already-hidden list, so a failed first clear could restore deleted entries.
+        if (_uiState.value.isClearingSearchHistory) return
         historySyncJob?.cancel()
         val session = repository.sessionSnapshot()
         val state = _uiState.value
@@ -432,7 +435,11 @@ class SearchViewModel(
             (state.searchHistory + localSearchHistory).distinct().associateWith { query ->
                 searchHistoryRevisions.getOrPut(query) { ++nextSearchHistoryRevision }
             }
-        _uiState.update { it.copy(pendingSearchHistoryClears = it.pendingSearchHistoryClears + 1) }
+        val newlyRemovedQueries = revisions.keys.map(String::lowercase).toSet() - removedRemoteSearchQueries
+        removedRemoteSearchQueries.addAll(newlyRemovedQueries)
+        _uiState.update {
+            it.copy(searchHistory = emptyList(), pendingSearchHistoryClears = it.pendingSearchHistoryClears + 1)
+        }
         historyMutationJob =
             scope
                 .launch {
@@ -447,7 +454,20 @@ class SearchViewModel(
                         } catch (e: CancellationException) {
                             throw e
                         } catch (_: Exception) {
-                            _uiState.update { it.copy(historyMutationFailures = it.historyMutationFailures + 1) }
+                            if (repository.sessionSnapshot() != session) return@withLock
+                            val unchangedQueries = revisions.filter { (query, revision) -> searchHistoryRevisions[query] == revision }.keys
+                            removedRemoteSearchQueries.removeAll(
+                                newlyRemovedQueries.intersect(unchangedQueries.map(String::lowercase).toSet()),
+                            )
+                            _uiState.update { current ->
+                                current.copy(
+                                    searchHistory =
+                                        (current.searchHistory + state.searchHistory.filter(unchangedQueries::contains))
+                                            .distinctBy(String::lowercase)
+                                            .take(10),
+                                    historyMutationFailures = current.historyMutationFailures + 1,
+                                )
+                            }
                         }
                     }
                 }.also { job ->
