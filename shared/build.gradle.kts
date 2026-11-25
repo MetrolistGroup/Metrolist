@@ -326,7 +326,7 @@ kotlin {
         getByName("commonMain") {
             dependencies {
                 implementation("com.github.nyxiereal.glyphmind:glyphmind:0.1.0")
-                api("com.github.MetrolistGroup.innertubex:innertubex:$innerTubeXVersion")
+                api("com.github.Nerzouille.innertubex:innertubex:$innerTubeXVersion")
                 api(libs.runtime)
                 api(libs.foundation)
                 api(libs.androidx.navigationevent.compose)

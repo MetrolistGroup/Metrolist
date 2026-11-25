@@ -39,6 +39,7 @@ dependencyResolutionManagement {
             content {
                 includeGroup("com.github.nyxiereal.glyphmind")
                 includeGroup("com.github.MetrolistGroup.innertubex")
+                includeGroup("com.github.Nerzouille.innertubex")
                 includeGroup("com.github.MetrolistGroup.quackjs")
             }
         }
