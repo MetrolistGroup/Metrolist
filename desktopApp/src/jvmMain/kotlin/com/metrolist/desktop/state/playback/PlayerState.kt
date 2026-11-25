@@ -4119,6 +4119,7 @@ object PlayerState {
                     val songs = freshRadioRecommendations(seed.id, generation)
                     if (requestGeneration == explicitRadioRequestGeneration &&
                         deviceRadioBootstrapPending &&
+                        isCurrentPlaybackTransition(generation) &&
                         syncSession.sessionId == expectedSessionId &&
                         queue.items.value
                             .singleOrNull()

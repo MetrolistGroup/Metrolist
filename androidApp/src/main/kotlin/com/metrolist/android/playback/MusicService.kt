@@ -327,6 +327,9 @@ class MusicService :
                     ),
                 )
             ) {
+                pendingRadioJob?.cancel()
+                pendingRadioJob = null
+                queueCoordinator.releaseRadioSeedLock()
                 queueCoordinator.replaceQueueSession(songs, startIndex, queueTitle, finite = true, playlistPage = playlistPage) {
                     when {
                         intent.selectedSongOnly -> queueCoordinator.lockRecommendationsForSelectedSong()
@@ -3615,9 +3618,6 @@ class MusicService :
         ): ListenableFuture<MediaSession.MediaItemsWithStartPosition> =
             serviceScope.future {
                 (application as App).startup.await()
-                pendingRadioJob?.cancel()
-                pendingRadioJob = null
-                queueCoordinator.releaseRadioSeedLock()
                 if (!canResolveMediaSessionItems(
                         canBrowse = canBrowseLibrary(session, controller),
                         isAssistant = isAssistantController(controller),
