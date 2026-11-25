@@ -212,12 +212,14 @@ private class IosDeviceChannel(
     ) {
         nw_connection_receive_message(connection) { data, context, isComplete, error ->
             if (error != null) return@nw_connection_receive_message onClosed()
+            // A TCP EOF without a close frame arrives with no context.
+            if (context == null) return@nw_connection_receive_message onClosed()
             val metadata = nw_content_context_copy_protocol_metadata(context, nw_protocol_copy_ws_definition())
             when (metadata?.let { nw_ws_metadata_get_opcode(it) }) {
                 nw_ws_opcode_close -> return@nw_connection_receive_message onClosed()
                 nw_ws_opcode_text -> if (!onText(data.toByteArray().decodeToString())) return@nw_connection_receive_message
             }
-            if (isComplete && (context == null || nw_content_context_get_is_final(context))) {
+            if (isComplete && nw_content_context_get_is_final(context)) {
                 return@nw_connection_receive_message onClosed()
             }
             receiveLoop(onText, onClosed)
