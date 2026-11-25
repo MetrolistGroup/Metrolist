@@ -104,6 +104,8 @@ internal class AndroidQueueCoordinator(
     private var recommendationRequestGeneration = 0L
     var recommendationBootstrapJob: Job? = null
         private set
+
+    @Volatile private var pendingRadioBootstrapSeedId: String? = null
     private var autoLoadMoreJob: Job? = null
     private val _playlistPage = MutableStateFlow<PlaylistPage?>(null)
     val playlistPageState = _playlistPage.asStateFlow()
@@ -280,6 +282,7 @@ internal class AndroidQueueCoordinator(
         }
         recommendationBootstrapJob?.cancel()
         recommendationBootstrapJob = null
+        pendingRadioBootstrapSeedId = null
         playlistPageJob?.cancel()
         playlistPageJob = null
         playlistPage = null
@@ -571,6 +574,7 @@ internal class AndroidQueueCoordinator(
         seedSongId: String,
         allowRepeatMode: Boolean = isExplicitRadioQueue,
     ) {
+        if (isExplicitRadioQueue) pendingRadioBootstrapSeedId = seedSongId
         if (!PlaybackNetworkStateStore.current.connected) return
         if (!canBootstrapRecommendations()) return
         if (AndroidDeviceConnect.manager.remote.isFollowing || AndroidListenTogetherManager.isGuestPlaybackLocked) return
@@ -626,6 +630,12 @@ internal class AndroidQueueCoordinator(
                     Timber.tag(TAG).e("Failed to load Mix recommendations type=%s", e::class.simpleName)
                 }
             }
+    }
+
+    fun retryPendingRadioBootstrap() {
+        val seed = pendingRadioBootstrapSeedId ?: return
+        if (recommendationBootstrapJob?.isActive == true) return
+        bootstrapRecommendations(seed)
     }
 
     // Continuations belong to the recommendations mode that fetched them.
@@ -789,6 +799,7 @@ internal class AndroidQueueCoordinator(
         queuedSongIds.clear()
         queuedSongIds.addAll(player.songQueue.value.map(SongItem::id))
         isFiniteQueue = false
+        pendingRadioBootstrapSeedId = null
         onSave()
 
         return additions.isNotEmpty()

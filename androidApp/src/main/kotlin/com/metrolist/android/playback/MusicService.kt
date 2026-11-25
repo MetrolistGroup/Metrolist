@@ -1148,6 +1148,7 @@ class MusicService :
                 if (isPlaying) {
                     Settings.shared.pendingContinuePlayback = false
                     pauseOnMute.cancelResume()
+                    queueCoordinator.retryPendingRadioBootstrap()
                 }
                 if (Settings.shared.enableDiscordIntegration) syncDiscordState()
             }
@@ -1177,7 +1178,10 @@ class MusicService :
 
         serviceScope.launch {
             PlaybackNetworkStateStore.state.collect { network ->
-                if (network.connected) player.invalidateActiveStreamForNetworkChange()
+                if (network.connected) {
+                    player.invalidateActiveStreamForNetworkChange()
+                    queueCoordinator.retryPendingRadioBootstrap()
+                }
             }
         }
 
