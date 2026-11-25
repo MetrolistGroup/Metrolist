@@ -2749,4 +2749,9 @@
     <string name="appearance_swipe_song_gesture_queue_description">Fai scorrere un brano verso il bordo iniziale per rimuoverlo dalla coda anche quando la coda è bloccata</string>
     <string name="hide_playlist_recommendations">Nascondi consigli playlist</string>
     <string name="hide_playlist_recommendations_desc">Nascondi i brani consigliati mostrati sotto le playlist</string>
+    <string name="metroeq_preset_commute">Spostamenti</string>
+    <string name="metroeq_preset_loudness">Loudness</string>
+    <string name="metroeq_preset_pop">Pop</string>
+    <string name="metroeq_preset_electronic">Elettronica</string>
+    <string name="metroeq_preset_acoustic">Acustica</string>
 </resources>
