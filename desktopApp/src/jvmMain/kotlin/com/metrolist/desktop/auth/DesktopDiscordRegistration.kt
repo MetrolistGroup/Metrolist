@@ -33,7 +33,12 @@ internal fun registerDesktopDiscordCallback(displayName: String): Boolean =
 
             OsUtil.isLinux -> {
                 if (!System.getenv("FLATPAK_ID").isNullOrBlank()) return@runCatching true
-                val executable = linuxDiscordLauncher(System.getenv("APPIMAGE"), launcher) ?: return@runCatching false
+                val executable =
+                    linuxDiscordLauncher(
+                        appImage = System.getenv("APPIMAGE"),
+                        launcher = launcher,
+                        packageLauncher = System.getenv("METROLIST_LAUNCHER"),
+                    ) ?: return@runCatching false
                 val desktopFile = File(XdgUtils.getXdgDataHome(), "applications/$DISCORD_DESKTOP_FILE")
                 desktopFile.parentFile.mkdirs()
                 desktopFile.writeText(linuxDiscordDesktopEntry(executable.absolutePath, displayName))
@@ -52,15 +57,17 @@ internal fun registerDesktopDiscordCallback(displayName: String): Boolean =
 internal fun linuxDiscordLauncher(
     appImage: String?,
     launcher: String?,
+    packageLauncher: String? = null,
 ): File? {
-    val executable = (appImage?.takeIf(String::isNotBlank) ?: launcher)?.let(::File) ?: return null
+    val preferredLauncher = packageLauncher?.takeIf(String::isNotBlank) ?: appImage?.takeIf(String::isNotBlank)
+    val executable = (preferredLauncher ?: launcher)?.let(::File) ?: return null
     if (!executable.isAbsolute || !executable.isFile || !executable.canExecute() ||
         executable.name in setOf("java", "java.exe", "javaw.exe")
     ) {
         return null
     }
     val wrapper = File(executable.parentFile, "Metrolist")
-    return if (appImage.isNullOrBlank() && executable.name == "Metrolist.bin" && wrapper.canExecute()) wrapper else executable
+    return if (preferredLauncher == null && executable.name == "Metrolist.bin" && wrapper.canExecute()) wrapper else executable
 }
 
 internal fun linuxDiscordDesktopEntry(
