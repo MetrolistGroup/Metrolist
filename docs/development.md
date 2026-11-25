@@ -2,7 +2,9 @@
 
 ## Set up a checkout
 
-Use Eclipse Temurin 25, including for the IDE's Gradle JVM. The build requires the `ADOPTIUM` vendor. Java and Kotlin bytecode target 21; the desktop runtime is Java 25. For a custom JDK location, set Gradle's `org.gradle.java.installations.paths`.
+Use Eclipse Temurin 25.0.5.1+2 or a newer Java 25 update, including for the IDE's Gradle JVM. The build requires the `ADOPTIUM` vendor. Java and Kotlin bytecode target 21; the desktop runtime is Java 25. For a custom JDK location, set Gradle's `org.gradle.java.installations.paths`.
+
+Gradle and desktop packaging reject Java 25 builds older than 25.0.5.1 because of [CVE-2026-114938](https://adoptium.net/news/2026/11/temurin-november-2026-cspu-java4shell/). Upgrade an installed older JDK before building. Daemon provisioning downloads and `scripts/deps.sh` install the patched release; CI checks for the latest Java 25 update instead of accepting an older runner cache entry.
 
 JVM tests and desktop launchers enable native access for Skiko, JNA, SQLite and Conscrypt. They allow the Unsafe memory access that protobuf and DataStore use on Java 25.
 

@@ -14,6 +14,7 @@ import zipfile
 from serialization_metadata import generate
 from package import macos_minimum_version
 from verify_linux_audio import verify_linux_audio
+from toolchain import require_patched
 
 ROOT = Path(__file__).resolve().parents[2]
 METADATA = Path(__file__).parent / 'resources/META-INF/native-image/com.metrolist/desktop-experiment'
@@ -279,6 +280,7 @@ def main():
     parser.add_argument('--inside-scope', action='store_true', help=argparse.SUPPRESS)
     args = parser.parse_args()
     args.work = args.work.resolve(); args.graalvm = args.graalvm.resolve()
+    require_patched(args.graalvm)
     args.work.mkdir(parents=True, exist_ok=True)
     (args.work / 'builder-time.json').unlink(missing_ok=True)
     (args.work / 'build.log').write_text('')

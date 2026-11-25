@@ -90,6 +90,7 @@ jobs:
         with:
           distribution: temurin
           java-version: '25'
+          check-latest: true
           architecture: x64
 
       - name: Prepare CI Gradle

@@ -12,6 +12,7 @@ import subprocess
 import zipfile
 
 from verify_linux_audio import verify_linux_audio
+from toolchain import require_patched
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -211,6 +212,8 @@ def main():
     parser.add_argument('--output', type=Path, required=True)
     parser.add_argument('--graalvm', type=Path, default=Path(os.environ['GRAALVM_HOME']) if os.environ.get('GRAALVM_HOME') else None)
     args = parser.parse_args()
+    if args.graalvm and args.platform == 'macos-arm64':
+        require_patched(args.graalvm.resolve())
     # Same precedence as Gradle: an ORG_GRADLE_PROJECT_ override beats gradle.properties.
     version = os.environ.get('ORG_GRADLE_PROJECT_appVersion') or next(line.split('=',1)[1] for line in (ROOT/'gradle.properties').read_text().splitlines() if line.startswith('appVersion='))
     output = package(args.image.resolve(), args.platform, args.output.resolve(), version, args.graalvm.resolve() if args.graalvm else None)

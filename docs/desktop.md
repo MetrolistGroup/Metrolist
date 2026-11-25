@@ -202,6 +202,8 @@ make flatpak-bundle
 
 `desktopApp/build.gradle.kts` defines launcher options. Packaging generates a Java 25 base CDS archive with the target jlinked VM, without running the app. [AutoCreateSharedArchive](https://docs.oracle.com/en/java/javase/25/docs/specs/man/java.html#creating-dynamic-cds-archive-file-with--xxautocreatesharedarchive) saves an optional `appcds-<bundle-id>.jsa` dynamic archive on normal exit and reuses it on later launches.
 
+The packaging JDK must be Java 25.0.5.1 or a newer Java 25 update, including when supplied through `metrolist.desktop.javaHome`. This fixes [CVE-2026-114938](https://adoptium.net/news/2026/11/temurin-november-2026-cspu-java4shell/) in the bundled runtime. The existing C1 launcher setting also blocks the affected C2 intrinsic, but does not replace the runtime update.
+
 JVM packages include `jdk.accessibility` so Windows can load Java Access Bridge when assistive technology is enabled. Native-image builds use the full GraalVM JDK and the existing AWT AccessBridge metadata rather than a jlink module list.
 
 | OS | CDS cache |
