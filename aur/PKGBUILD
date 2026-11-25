@@ -7,7 +7,7 @@ arch=('x86_64')
 url='https://github.com/MetrolistGroup/Metrolist'
 license=('GPL-3.0-only')
 depends=('alsa-lib' 'dbus' 'fontconfig' 'gtk3' 'hicolor-icon-theme' 'libglvnd' 'libsecret' 'libxi' 'libxrender' 'libxtst' 'webkit2gtk-4.1')
-makedepends=('git' 'jdk21-openjdk' 'jdk25-temurin')
+makedepends=('git' 'jdk21-openjdk>=21.0.13.1' 'jdk25-temurin>=25.0.5.1')
 provides=('metrolist')
 conflicts=('metrolist')
 options=('!strip' '!debug')

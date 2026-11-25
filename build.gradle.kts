@@ -18,6 +18,11 @@ plugins {
     alias(libs.plugins.sentry.jvm) apply false
 }
 
+val minimumJavaVersion = Runtime.Version.parse("25.0.5.1")
+require(Runtime.version().feature() == 25 && Runtime.version() >= minimumJavaVersion) {
+    "Java $minimumJavaVersion or a newer Java 25 update is required to fix CVE-2026-114938. Update the Gradle JVM."
+}
+
 tasks.register<Delete>("clean") {
     delete(rootProject.layout.buildDirectory)
 }

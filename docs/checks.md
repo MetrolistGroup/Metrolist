@@ -264,7 +264,6 @@ python3 -m unittest discover -s scripts -p 'test_collect_android_apks.py'
 python3 scripts/test_generate_android_strings.py
 
 # Not run in CI
-python3 scripts/test_deps.py
 python3 scripts/test_find_unused_strings.py
 ```
 

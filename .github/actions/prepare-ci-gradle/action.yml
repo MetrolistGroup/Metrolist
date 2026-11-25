@@ -50,6 +50,7 @@ runs:
       with:
         distribution: ${{ inputs.java-distribution }}
         java-version: '25'
+        check-latest: true
         architecture: ${{ inputs.java-architecture }}
 
     - name: Set up Gradle

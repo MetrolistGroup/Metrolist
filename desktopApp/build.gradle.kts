@@ -726,17 +726,25 @@ compose.desktop {
 
         mainClass = "com.metrolist.desktop.MainKt"
         javaHome =
-            providers.gradleProperty("metrolist.desktop.javaHome").orNull?.let { home ->
+            (
+                providers.gradleProperty("metrolist.desktop.javaHome").orNull?.let { home ->
+                    val release = Properties().apply { file("$home/release").inputStream().use(::load) }
+                    val architecture = release.getProperty("OS_ARCH").trim('"')
+                    val expectedArchitectures = if (isArm64) setOf("aarch64", "arm64") else setOf("x86_64", "amd64")
+                    require(architecture in expectedArchitectures) {
+                        "Packaging JDK architecture $architecture does not match $targetArchitecture"
+                    }
+                    home
+                } ?: desktopJavaLauncher
+                    .get()
+                    .metadata.installationPath.asFile.absolutePath
+            ).also { home ->
                 val release = Properties().apply { file("$home/release").inputStream().use(::load) }
-                val architecture = release.getProperty("OS_ARCH").trim('"')
-                val expectedArchitectures = if (isArm64) setOf("aarch64", "arm64") else setOf("x86_64", "amd64")
-                require(architecture in expectedArchitectures) {
-                    "Packaging JDK architecture $architecture does not match $targetArchitecture"
+                val javaVersion = Runtime.Version.parse(release.getProperty("JAVA_VERSION").trim('"'))
+                require(javaVersion.feature() == 25 && javaVersion >= Runtime.Version.parse("25.0.5.1")) {
+                    "Packaging requires Java 25.0.5.1 or a newer Java 25 update to fix CVE-2026-114938; found $javaVersion."
                 }
-                home
-            } ?: desktopJavaLauncher
-                .get()
-                .metadata.installationPath.asFile.absolutePath
+            }
         jvmArgs +=
             listOf(
                 "--enable-native-access=ALL-UNNAMED",

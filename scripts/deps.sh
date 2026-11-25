@@ -20,7 +20,9 @@ case "$(uname -s)" in
     *)                     printf '%s\n' "Unsupported OS: $(uname -s)" >&2; exit 1 ;;
 esac
 
-if ! command -v java &>/dev/null || ! java -version 2>&1 | head -n1 | grep -qE 'version "25[."]'; then
+java_version="$(java -version 2>&1 | sed -n '1s/.*version "\([^"]*\)".*/\1/p')"
+if [[ ! "$java_version" =~ ^25\.0\.([0-9]+)(\.([0-9]+))?(\+.*)?$ ]] ||
+    (( BASH_REMATCH[1] < 5 || (BASH_REMATCH[1] == 5 && ${BASH_REMATCH[3]:-0} < 1) )); then
     if [ ! -f "$HOME/.sdkman/bin/sdkman-init.sh" ]; then
         printf '%s\n' "Installing SDKMAN..."
         curl -s "https://get.sdkman.io" | bash
@@ -29,9 +31,9 @@ if ! command -v java &>/dev/null || ! java -version 2>&1 | head -n1 | grep -qE '
     export SDKMAN_DIR="${SDKMAN_DIR:-$HOME/.sdkman}"
     # shellcheck source=/dev/null
     source "$HOME/.sdkman/bin/sdkman-init.sh"
-    sdk install java 25.0.5-tem
-    sdk use java 25.0.5-tem
-    sdk default java 25.0.5-tem
+    sdk install java 25.0.5.1+2-tem
+    sdk use java 25.0.5.1+2-tem
+    sdk default java 25.0.5.1+2-tem
 fi
 
 ANDROID_HOME="${ANDROID_HOME:-$HOME/android-sdk}"
