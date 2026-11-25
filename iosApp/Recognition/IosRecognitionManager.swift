@@ -25,7 +25,7 @@ final class IosRecognitionManager {
             return (try? await IosRecognition.shared.microphoneDeniedMessage()) ?? ""
         }
         let (audio, sampleRate) = (try? await recordAudio()) ?? (Data(), 0)
-        return (try? await IosRecognition.shared.recognize(pcm: audio as NSData, inputRate: Int32(sampleRate))) ?? ""
+        return (try? await IosRecognition.shared.recognize(pcm: audio, inputRate: Int32(sampleRate))) ?? ""
     }
 
     private func requestMicrophonePermission() async -> Bool {

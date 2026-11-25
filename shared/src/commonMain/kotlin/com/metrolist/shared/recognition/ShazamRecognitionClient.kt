@@ -9,6 +9,7 @@ import com.metrolist.shared.generated.resources.recognition_too_many_requests
 import com.metrolist.shared.network.createHttpClient
 import com.metrolist.shared.state.GlobalYouTube
 import com.metrolist.shared.utils.parseYouTubeUrl
+import io.ktor.client.plugins.timeout
 import io.ktor.client.request.header
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
@@ -116,6 +117,11 @@ object ShazamRecognitionClient {
             client.post(
                 "https://amp.shazam.com/discovery/v5/$resolvedHl/$resolvedGl/android/-/tag/${Uuid.random().toString().uppercase()}/${Uuid.random()}?sync=true&webv3=true&sampling=true&connected=&shazamapiversion=v3&sharehub=true&video=v3",
             ) {
+                // Matches the old Android client: 35 s read, plus 15 s each for connect and write.
+                timeout {
+                    socketTimeoutMillis = 35_000
+                    requestTimeoutMillis = 65_000
+                }
                 header("User-Agent", userAgents.random())
                 header("Content-Language", "${resolvedHl}_$resolvedGl")
                 contentType(ContentType.Application.Json)

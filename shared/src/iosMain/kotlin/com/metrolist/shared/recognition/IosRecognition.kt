@@ -65,16 +65,16 @@ object IosRecognition {
         }
 
     private suspend fun save(result: RecognitionResult) {
-        val dao = KoinPlatform.getKoin().get<DatabaseDao>()
-        try {
-            dao.insert(result.toRecognitionHistory())
-        } catch (error: CancellationException) {
-            throw error
-        } catch (error: Exception) {
-            // A failed history insert must not hide a valid match.
-            Logger.e(LOG_TAG, "Failed to save recognized song", error)
-            return
-        }
+        val dao =
+            try {
+                KoinPlatform.getKoin().get<DatabaseDao>().also { it.insert(result.toRecognitionHistory()) }
+            } catch (error: CancellationException) {
+                throw error
+            } catch (error: Exception) {
+                // A failed history insert must not hide a valid match.
+                Logger.e(LOG_TAG, "Failed to save recognized song", error)
+                return
+            }
         if (result.youtubeVideoId != null) return
         enrichmentScope.launch {
             val videoId = resolveYoutubeVideoId(result) ?: return@launch
