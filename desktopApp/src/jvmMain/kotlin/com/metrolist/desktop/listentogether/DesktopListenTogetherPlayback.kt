@@ -40,6 +40,11 @@ class DesktopListenTogetherPlayback : ListenTogetherPlayback {
                         resource?.videoId == song.id && readiness.value == PlaybackReadiness.IDLE -> {
                             readiness.value = PlaybackReadiness.READY
                         }
+
+                        // A direct switch to another track leaves the old resource's READY behind.
+                        resource?.videoId != song.id && readiness.value == PlaybackReadiness.READY -> {
+                            readiness.value = PlaybackReadiness.IDLE
+                        }
                     }
                 }
         }
