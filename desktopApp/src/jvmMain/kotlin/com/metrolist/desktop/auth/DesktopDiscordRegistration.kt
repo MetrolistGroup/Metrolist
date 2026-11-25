@@ -33,15 +33,12 @@ internal fun registerDesktopDiscordCallback(displayName: String): Boolean =
 
             OsUtil.isLinux -> {
                 if (!System.getenv("FLATPAK_ID").isNullOrBlank()) return@runCatching true
-                val query = listOf("xdg-mime", "query", "default", DISCORD_MIME_TYPE)
-                val packagedHandler = runRegistrationCommand(query)?.trim()
-                if (packagedHandler in setOf("metrolist.desktop", "Metrolist.desktop", "com.metrolist.desktop.desktop")) {
-                    return@runCatching true
-                }
                 val executable = linuxDiscordLauncher(System.getenv("APPIMAGE"), launcher) ?: return@runCatching false
                 val desktopFile = File(XdgUtils.getXdgDataHome(), "applications/$DISCORD_DESKTOP_FILE")
                 desktopFile.parentFile.mkdirs()
                 desktopFile.writeText(linuxDiscordDesktopEntry(executable.absolutePath, displayName))
+                // A package desktop entry can still point to a moved or deleted AppImage.
+                val query = listOf("xdg-mime", "query", "default", DISCORD_MIME_TYPE)
                 runRegistrationCommand(linuxDiscordRegistrationCommand()) != null &&
                     runRegistrationCommand(query)?.trim() == DISCORD_DESKTOP_FILE
             }
