@@ -2754,4 +2754,5 @@
     <string name="metroeq_preset_pop">Pop</string>
     <string name="metroeq_preset_electronic">Elettronica</string>
     <string name="metroeq_preset_acoustic">Acustica</string>
+    <string name="webview_runtime_unavailable">Impossibile avviare il browser integrato. Installa o ripara Microsoft Edge WebView2 Runtime, poi riavvia Metrolist.</string>
 </resources>
