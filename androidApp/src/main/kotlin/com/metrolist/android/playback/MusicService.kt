@@ -737,12 +737,20 @@ class MusicService :
         }
     }
 
-    private suspend fun stopPlaybackService() {
+    private suspend fun stopPlaybackService(stillUnneeded: () -> Boolean = { true }) {
         saveFinalPlaybackState()?.join()
+        if (!stillUnneeded()) return
         isRunning = false
         running.value = false
         pauseAllPlayersAndStopSelf()
     }
+
+    private fun dismissalMayEndService(): Boolean =
+        playbackServiceRequired?.value == false &&
+            !ProcessLifecycleOwner
+                .get()
+                .lifecycle.currentState
+                .isAtLeast(Lifecycle.State.STARTED)
 
     private fun shouldPauseLocalPlaybackInBackground(): Boolean =
         isAndroidTv() &&
@@ -3298,14 +3306,9 @@ class MusicService :
             intent: Intent,
         ): Boolean {
             // Media3 stops the player on dismissal, which closes it and resets the position; ending the service keeps both for restore.
-            if (intent.getBooleanExtra(MediaNotification.NOTIFICATION_DISMISSED_EVENT_KEY, false) &&
-                playbackServiceRequired?.value == false &&
-                !ProcessLifecycleOwner
-                    .get()
-                    .lifecycle.currentState
-                    .isAtLeast(Lifecycle.State.STARTED)
-            ) {
-                serviceScope.launch { stopPlaybackService() }
+            if (intent.getBooleanExtra(MediaNotification.NOTIFICATION_DISMISSED_EVENT_KEY, false) && dismissalMayEndService()) {
+                // The save is async; reopening the app or pressing play meanwhile must keep the service.
+                serviceScope.launch { stopPlaybackService(::dismissalMayEndService) }
                 return true
             }
             return super.onMediaButtonEvent(session, controllerInfo, intent)
