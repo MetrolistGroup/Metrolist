@@ -13,6 +13,12 @@ import platform.darwin.NSObject
 import platform.darwin.dispatch_async
 import platform.darwin.dispatch_get_main_queue
 
+private const val FCAST_TYPE = "_fcast._tcp."
+private const val GOOGLE_CAST_TYPE = "_googlecast._tcp."
+private const val LOCAL_DOMAIN = "local."
+private const val FRIENDLY_NAME_KEY = "fn="
+private const val RESOLVE_TIMEOUT_SECONDS = 5.0
+
 // Kotlin/Native cannot mix an Objective-C superclass with a Kotlin interface, so the delegate is a separate object.
 internal class IosNetServiceCastDiscovery : MdnsCastDiscovery {
     private val browser = NetServiceCastBrowser()
@@ -174,12 +180,4 @@ private class NetServiceCastBrowser :
         protocol: CastProtocol,
         serviceName: String,
     ): String = "${protocol.name.lowercase()}:$serviceName"
-
-    private companion object {
-        const val FCAST_TYPE = "_fcast._tcp."
-        const val GOOGLE_CAST_TYPE = "_googlecast._tcp."
-        const val LOCAL_DOMAIN = "local."
-        const val FRIENDLY_NAME_KEY = "fn="
-        const val RESOLVE_TIMEOUT_SECONDS = 5.0
-    }
 }
