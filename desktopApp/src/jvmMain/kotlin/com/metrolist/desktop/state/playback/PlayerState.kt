@@ -1906,6 +1906,14 @@ object PlayerState {
                 if (it) rearmPendingExplicitRadioBootstrap()
             }
         }
+        scope.launch {
+            PlaybackNetworkStateStore.state
+                .map { it.connected }
+                .distinctUntilChanged()
+                .collect { connected ->
+                    if (connected && !castManager.state.value.isConnected) rearmPendingExplicitRadioBootstrap()
+                }
+        }
 
         scope.launch {
             player.currentSong.collectLatest { song ->
