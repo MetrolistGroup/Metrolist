@@ -647,6 +647,57 @@
           "org.freedesktop.dbus.interfaces.Properties"
         ]
       }
+    },
+    {
+      "type": "org.freedesktop.dbus.connections.base.GlobalHandler",
+      "allDeclaredMethods": true,
+      "allDeclaredClasses": true
+    },
+    {
+      "type": "org.freedesktop.dbus.interfaces.Peer",
+      "allDeclaredMethods": true,
+      "allDeclaredClasses": true
+    },
+    {
+      "type": "org.freedesktop.dbus.interfaces.Introspectable",
+      "allDeclaredMethods": true,
+      "allDeclaredClasses": true
+    },
+    {
+      "type": {
+        "proxy": [
+          "org.freedesktop.dbus.interfaces.DBus"
+        ]
+      }
+    },
+    {
+      "type": "org.freedesktop.dbus.exceptions.DBusExecutionException",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "java.lang.String"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "sun.awt.shell.ShellFolderManager",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    }
+  ],
+  "resources": [
+    {
+      "glob": "META-INF/services/org.freedesktop.dbus.spi.message.ISocketProvider"
+    },
+    {
+      "module": "java.desktop",
+      "glob": "javax/swing/plaf/metal/icons/ocean/*.gif"
     }
   ]
 }
