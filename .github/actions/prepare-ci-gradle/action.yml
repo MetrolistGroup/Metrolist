@@ -7,7 +7,7 @@ inputs:
     required: false
     default: ''
   java-distribution:
-    description: JDK distribution; Temurin has no Windows ARM64 JDK 25
+    description: JDK distribution; Temurin has no Windows ARM64 JDK 25, so microsoft installs the pinned Windows ARM64 build
     required: false
     default: temurin
   cache-strict-match:
@@ -45,11 +45,22 @@ runs:
         CACHE_SCOPE: ${{ inputs.cache-scope }}
       run: test -n "$CACHE_SCOPE" || { echo "cache-scope is required" >&2; exit 1; }
 
+    # setup-java's Microsoft manifest stops before 25.0.5.1, the CVE-2026-114938 fix.
+    - name: Download Microsoft JDK 25
+      if: inputs.java-distribution == 'microsoft'
+      shell: bash
+      working-directory: ${{ runner.temp }}
+      run: |
+        curl -fsSL -o microsoft-jdk.zip https://aka.ms/download-jdk/microsoft-jdk-25.0.5.1-windows-aarch64.zip
+        echo 'a0fc659c6770e2c1a59329ae7dc5d080d4cc83230a62d78f7ffc77502ac3bba8  microsoft-jdk.zip' | sha256sum -c -
+
     - name: Set up JDK 25
       uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6
       with:
-        distribution: ${{ inputs.java-distribution }}
+        distribution: ${{ inputs.java-distribution == 'microsoft' && 'jdkfile' || inputs.java-distribution }}
+        jdkFile: ${{ inputs.java-distribution == 'microsoft' && format('{0}/microsoft-jdk.zip', runner.temp) || '' }}
         java-version: '25'
+        check-latest: true
         architecture: ${{ inputs.java-architecture }}
 
     - name: Set up Gradle

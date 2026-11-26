@@ -27,21 +27,16 @@ data class LyricsProviderGroup(
 class LyricsProviderSearch(
     private val scope: CoroutineScope,
     providerOrder: String,
-    selectedProvider: LyricsProvider? = null,
     private val fetch: suspend (LyricsProvider) -> List<LyricsProviderResult>,
 ) {
     private var cancelled = false
     private val jobs = mutableMapOf<LyricsProvider, Job>()
     private val _groups =
         MutableStateFlow(
-            if (selectedProvider != null) {
-                listOf(LyricsProviderGroup(selectedProvider, expanded = true, loading = true))
-            } else {
-                (
-                    listOf(LyricsProvider.USER) + LyricsProvider.parseUserOrderFromStoredCsv(providerOrder) +
-                        LyricsProvider.afterUserLyricsFallbacks
-                ).map { LyricsProviderGroup(it, loading = true) }
-            },
+            (
+                listOf(LyricsProvider.USER) + LyricsProvider.parseUserOrderFromStoredCsv(providerOrder) +
+                    LyricsProvider.afterUserLyricsFallbacks
+            ).map { LyricsProviderGroup(it, loading = true) },
         )
     val groups = _groups.asStateFlow()
 

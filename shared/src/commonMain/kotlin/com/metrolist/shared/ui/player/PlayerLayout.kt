@@ -60,7 +60,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.ToggleButton
 import androidx.compose.material3.ToggleButtonDefaults
@@ -79,11 +78,12 @@ import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
@@ -1921,6 +1921,8 @@ internal fun ActiveLyricsLine(
                 MaterialTheme.typography.titleMedium.copy(
                     fontWeight = FontWeight.Bold,
                     textAlign = LyricsUtils.textAlignment(Settings.shared.activeLyricsTextPosition),
+                    // Keeps the boxless line readable over bright artwork.
+                    shadow = if (hasBackground) Shadow(Color.Black.copy(alpha = 0.85f), Offset(0f, 2f), blurRadius = 12f) else null,
                 )
             val reservedLineHeight = with(LocalDensity.current) { style.lineHeight.toDp() * 2 }
             val lyricsContent = @Composable {
@@ -1938,37 +1940,28 @@ internal fun ActiveLyricsLine(
                         val isActive by remember(line, displayedLineEndTime, lyricsPositionState) {
                             derivedStateOf(structuralEqualityPolicy()) { lyricsPositionState.value in line.time..displayedLineEndTime }
                         }
-                        val baseTextColor = if (hasBackground) Color.White else textColor
                         ActiveLyricsLineContent(
                             entry = line,
                             isActive = isActive,
                             positionProvider = { lyricsPositionState.value },
                             lineEndTimeMs = displayedLineEndTime,
                             isPlaying = isPlaying,
-                            textColor = resolveLyricsTextColor(baseTextColor),
+                            textColor = if (hasBackground) Color.White else resolveLyricsTextColor(textColor),
                             useFixedTone = false,
                             lyricStyle = style,
                             textMeasurer = rememberTextMeasurer(),
                             maxLines = 2,
                             alignment = LyricsUtils.textAlignment(Settings.shared.activeLyricsTextPosition),
                             fillWidth = !hasBackground,
+                            mainLineOnly = hasBackground,
                         )
                     }
                 }
             }
 
             if (hasBackground) {
-                Surface(
-                    color = lerp(MaterialTheme.colorScheme.secondaryContainer, Color.Black, 0.25f).copy(alpha = 0.88f),
-                    shape = MaterialTheme.shapes.large,
-                    modifier = Modifier.padding(horizontal = 24.dp),
-                ) {
-                    Box(
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        lyricsContent()
-                    }
+                Box(modifier = Modifier.padding(horizontal = 24.dp)) {
+                    lyricsContent()
                 }
             } else {
                 lyricsContent()

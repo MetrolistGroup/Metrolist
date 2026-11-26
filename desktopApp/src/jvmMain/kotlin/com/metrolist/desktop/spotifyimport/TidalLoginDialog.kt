@@ -19,13 +19,13 @@ internal fun TidalLoginDialog(
         signInHint = stringResource(Res.string.import_tidal_session_sign_in),
         onDismissRequest = onDismissRequest,
         extractCredentials = { state ->
-            val url = state.lastLoadedUrl.orEmpty()
+            val url = state.currentUrl.orEmpty()
             if (!url.contains("listen.tidal.com") && !url.contains("tidal.com")) {
                 null
             } else {
                 val cookies =
-                    state.cookieManager.getCookies("https://listen.tidal.com") +
-                        state.cookieManager.getCookies("https://tidal.com")
+                    state.cookies("https://listen.tidal.com") +
+                        state.cookies("https://tidal.com")
                 val cookieHeader = cookies.joinToString("; ") { "${it.name}=${it.value}" }
                 TidalImportManager.extractSessionCredentials(cookieHeader)
             }

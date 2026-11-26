@@ -16,10 +16,11 @@ import kotlinx.serialization.json.jsonPrimitive
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
+import kotlin.test.assertTrue
 
 class GreyedAlbumTest {
     @Test
-    fun albumFallsBackToItsBrowseShelfWhenItsPlaylistIsEmpty() =
+    fun albumFallsBackToItsBrowseShelfAndKeepsPremiumUpsellTracksPlayable() =
         runBlocking {
             val album = checkNotNull(javaClass.getResourceAsStream("/youtube/greyed-album.json")).bufferedReader().use { it.readText() }
             val client =
@@ -35,14 +36,14 @@ class GreyedAlbumTest {
                                         ?.jsonPrimitive
                                         ?.content
                                 }
-                        // The album's own playlist answers without contents, as YouTube does when the account cannot play most of it.
+                        // The album's playlist is empty even though its browse shelf still has track IDs and durations.
                         respond(if (browseId == ALBUM_ID) album else "{}", headers = headersOf(HttpHeaders.ContentType, "application/json"))
                     },
                 ) { install(ContentNegotiation) { json() } }
             try {
                 val page = assertNotNull(YouTubeRepository(InnerTube(client)).getAlbum(ALBUM_ID))
                 assertEquals(10, page.songs.size)
-                assertEquals(listOf("9nfVWiXY3WY"), page.songs.filterNot { it.isUnavailable }.map { it.id })
+                assertTrue(page.songs.none { it.isUnavailable })
                 assertEquals((1..10).toList(), page.songs.map { it.trackNumber })
                 assert(page.songs.all { it.artists.isNotEmpty() && it.album?.id == ALBUM_ID })
             } finally {

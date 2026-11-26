@@ -14,6 +14,7 @@ import zipfile
 from serialization_metadata import generate
 from package import macos_minimum_version
 from verify_linux_audio import verify_linux_audio
+from toolchain import require_patched
 
 ROOT = Path(__file__).resolve().parents[2]
 METADATA = Path(__file__).parent / 'resources/META-INF/native-image/com.metrolist/desktop-experiment'
@@ -154,7 +155,7 @@ def arguments(graal, work, output, target, experiment=False, agent=None, macos_v
         options += ['--add-opens=java.desktop/sun.awt=ALL-UNNAMED', '--add-opens=java.desktop/sun.awt.X11=ALL-UNNAMED']
     if not experiment:
         # Testers fall back like the JVM on a missing registration; CI smoke fails on any reported registration.
-        options += ['-R:MaxHeapSize=384m', '-R:MinHeapSize=32m', '-R:MissingRegistrationReportingMode=Warn']
+        options += ['-R:MaximumHeapSizePercent=25', '-R:MinHeapSize=32m', '-R:MissingRegistrationReportingMode=Warn']
         # The default x86-64-v3 / armv8.1-a target refuses to start on CPUs without AVX2 or on Raspberry Pi 4 class ARM.
         options += ['-march=compatibility']
         if windows:
@@ -279,6 +280,7 @@ def main():
     parser.add_argument('--inside-scope', action='store_true', help=argparse.SUPPRESS)
     args = parser.parse_args()
     args.work = args.work.resolve(); args.graalvm = args.graalvm.resolve()
+    require_patched(args.graalvm)
     args.work.mkdir(parents=True, exist_ok=True)
     (args.work / 'builder-time.json').unlink(missing_ok=True)
     (args.work / 'build.log').write_text('')

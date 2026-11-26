@@ -25,6 +25,7 @@ import androidx.compose.material3.ProgressIndicatorDefaults
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderColors
 import androidx.compose.material3.SliderDefaults
+import androidx.compose.material3.SliderState
 import androidx.compose.material3.WavyProgressIndicatorDefaults
 import androidx.compose.material3.rememberSliderState
 import androidx.compose.runtime.Composable
@@ -38,9 +39,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.MotionDurationScale
 import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.RoundRect
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.LayoutDirection
@@ -90,6 +96,40 @@ fun PlaybackProgressSlider(
     val focused by interactionSource.collectIsFocusedAsState()
     val isTv = LocalIsTv.current
     val focusColor = MaterialTheme.colorScheme.primary
+    if (style == SliderStyle.DEFAULT_BUFFERED) {
+        // The Default slider stays stock, so the buffered part only shows on this separate style.
+        val bufferedTrack: @Composable (SliderState) -> Unit = { BufferedStockTrack(it, bufferedFraction, colors, enabled) }
+        val stockModifier =
+            modifier
+                .retainPlaybackKeyFocus()
+                .fillMaxWidth()
+                .then(if (isTv && focused) Modifier.border(3.dp, focusColor, RoundedCornerShape(8.dp)) else Modifier)
+        if (!showThumb) {
+            Slider(
+                state = sliderState,
+                modifier = stockModifier,
+                enabled = enabled,
+                onValueChange = onValueChange,
+                onValueChangeFinished = onValueChangeFinished,
+                colors = colors,
+                interactionSource = interactionSource,
+                thumb = { Spacer(Modifier.size(0.dp)) },
+                track = bufferedTrack,
+            )
+        } else {
+            Slider(
+                state = sliderState,
+                modifier = stockModifier,
+                enabled = enabled,
+                onValueChange = onValueChange,
+                onValueChangeFinished = onValueChangeFinished,
+                colors = colors,
+                interactionSource = interactionSource,
+                track = bufferedTrack,
+            )
+        }
+        return
+    }
     if (style == SliderStyle.DEFAULT) {
         if (!showThumb) {
             Slider(
@@ -237,3 +277,44 @@ fun PlaybackProgressSlider(
         },
     )
 }
+
+// Shades the buffered part of the stock track's inactive segment and leaves the rest of the stock slider unchanged.
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun BufferedStockTrack(
+    state: SliderState,
+    bufferedFraction: Float,
+    colors: SliderColors,
+    enabled: Boolean,
+) {
+    val activeColor = if (enabled) colors.activeTrackColor else colors.disabledActiveTrackColor
+    SliderDefaults.Track(
+        sliderState = state,
+        modifier =
+            Modifier.drawWithContent {
+                drawContent()
+                val played = state.value.takeIf { it.isFinite() }?.coerceIn(0f, 1f) ?: 0f
+                val buffered = bufferedFraction.takeIf { it.isFinite() }?.coerceIn(0f, 1f) ?: 0f
+                val start = size.width * played + StockThumbClearance.toPx()
+                val end = size.width * buffered
+                if (end <= start) return@drawWithContent
+                val outline = Path().apply { addRoundRect(RoundRect(0f, 0f, size.width, size.height, CornerRadius(size.height / 2f))) }
+                scale(scaleX = if (layoutDirection == LayoutDirection.Rtl) -1f else 1f, scaleY = 1f) {
+                    clipPath(outline) {
+                        drawRoundRect(
+                            color = activeColor.copy(alpha = activeColor.alpha * 0.38f),
+                            topLeft = Offset(start, 0f),
+                            size = Size(end - start, size.height),
+                            cornerRadius = CornerRadius(StockTrackInsideCorner.toPx()),
+                        )
+                    }
+                }
+            },
+        enabled = enabled,
+        colors = colors,
+    )
+}
+
+// The stock track keeps half of its 4 dp thumb plus a 6 dp gap clear on each side of the thumb.
+private val StockThumbClearance = 8.dp
+private val StockTrackInsideCorner = 2.dp

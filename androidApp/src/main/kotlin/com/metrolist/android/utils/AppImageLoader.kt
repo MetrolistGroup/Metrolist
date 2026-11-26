@@ -10,15 +10,21 @@ package com.metrolist.android.utils
 import android.content.Context
 import coil3.ImageLoader
 import coil3.annotation.ExperimentalCoilApi
+import coil3.intercept.Interceptor
 import coil3.memory.MemoryCache
 import coil3.network.DeDupeConcurrentRequestStrategy
 import coil3.network.okhttp.OkHttpNetworkFetcherFactory
 import coil3.request.CachePolicy
+import coil3.request.ImageResult
+import coil3.request.SuccessResult
+import com.metrolist.android.playback.DownloadedArtwork
 import com.metrolist.shared.network.PublicArtworkDns
 import com.metrolist.shared.network.sharedOkHttpClient
 import com.metrolist.shared.settings.Settings
 import com.metrolist.shared.storage.ResizableImageDiskCache
 import com.metrolist.shared.utils.ArtworkSizingInterceptor
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import okhttp3.ResponseBody.Companion.asResponseBody
 import okio.Buffer
 import okio.ForwardingSource
@@ -49,6 +55,7 @@ fun createAppImageLoader(context: Context): ImageLoader {
         ImageLoader
             .Builder(appContext)
             .components {
+                add(DownloadedArtworkFallbackInterceptor(appContext))
                 add(ArtworkSizingInterceptor { imageLoader })
                 add(
                     OkHttpNetworkFetcherFactory(
@@ -73,6 +80,33 @@ fun createAppImageLoader(context: Context): ImageLoader {
             .memoryCachePolicy(CachePolicy.ENABLED)
             .build()
     return imageLoader
+}
+
+private class DownloadedArtworkFallbackInterceptor(
+    context: Context,
+) : Interceptor {
+    private val artwork = DownloadedArtwork(context)
+
+    override suspend fun intercept(chain: Interceptor.Chain): ImageResult {
+        val request = chain.request
+        val url = request.data as? String ?: return chain.proceed()
+        if (!url.startsWith("https://")) return chain.proceed()
+
+        val result = chain.proceed()
+        if (result is SuccessResult) return result
+        val file = withContext(Dispatchers.IO) { artwork.file(url).takeIf { it.length() > 0 } } ?: return result
+        val fallback =
+            chain
+                .withRequest(
+                    request
+                        .newBuilder()
+                        .data(file)
+                        .memoryCacheKey(null as String?)
+                        .diskCacheKey(null)
+                        .build(),
+                ).proceed()
+        return if (fallback is SuccessResult) fallback.copy(request = request) else result
+    }
 }
 
 private object ResponseSizeLimitInterceptor : OkHttpInterceptor {

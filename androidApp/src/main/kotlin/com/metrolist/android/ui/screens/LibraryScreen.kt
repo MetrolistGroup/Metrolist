@@ -95,7 +95,6 @@ import com.metrolist.android.utils.startActivitySafely
 import com.metrolist.android.viewmodels.LibraryViewModel
 import com.metrolist.android.viewmodels.loadOrderedCachedSongs
 import com.metrolist.shared.api.playlistSongs
-import com.metrolist.shared.constants.ThumbnailCornerRadius
 import com.metrolist.shared.db.MusicDatabase
 import com.metrolist.shared.db.entities.toSongItem
 import com.metrolist.shared.db.isHistoryPlaylistId
@@ -561,7 +560,7 @@ fun LibraryScreen(
                                     Settings.shared.swipeToSong &&
                                     ((item is SongItem && !item.isUnavailable && !isGridView) || searchQuery.isNotBlank()) &&
                                     !isGuestPlaybackLocked,
-                            shape = if (isGridView) gridCellShape() else RoundedCornerShape(ThumbnailCornerRadius),
+                            shape = gridCellShape(),
                             content = content,
                         )
                     } else {

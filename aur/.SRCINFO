@@ -6,8 +6,8 @@ pkgbase = metrolist-git
 	arch = x86_64
 	license = GPL-3.0-only
 	makedepends = git
-	makedepends = jdk21-openjdk
-	makedepends = jdk25-temurin
+	makedepends = jdk21-openjdk>=21.0.13.1
+	makedepends = jdk25-temurin>=25.0.5.1
 	depends = alsa-lib
 	depends = dbus
 	depends = fontconfig

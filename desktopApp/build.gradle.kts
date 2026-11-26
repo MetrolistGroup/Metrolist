@@ -86,9 +86,6 @@ compose {
 
 configurations.matching { it.name.startsWith("jvm") }.configureEach {
     exclude(group = "org.jetbrains.kotlin", module = "kotlin-reflect")
-    // Ktor's JSON converter links its OpenAPI schema model, whose YAML adapter is never used here.
-    exclude(group = "com.charleskorn.kaml")
-    exclude(group = "it.krzeminski")
 }
 
 group = "com.metrolist"
@@ -329,6 +326,15 @@ kotlin {
                 implementation(libs.sharesheet)
                 implementation(libs.windowstaskbar)
                 implementation(libs.mediacontrols)
+                // KMP's dependency handler takes exclusions only with string notation.
+                implementation(
+                    libs.decorated.window.tao
+                        .get()
+                        .toString(),
+                ) {
+                    exclude(group = "dev.nucleusframework", module = "nucleus.angle-natives")
+                    exclude(group = "org.jetbrains.compose.desktop")
+                }
             }
         }
 
@@ -418,7 +424,7 @@ val syncExternalResources =
 val desktopJavaLauncher =
     extensions.getByType<JavaToolchainService>().launcherFor {
         languageVersion.set(JavaLanguageVersion.of(25))
-        vendor.set(jdkVendor)
+        jdkVendor?.let(vendor::set)
     }
 
 tasks.withType<JavaExec>().configureEach {
@@ -464,10 +470,23 @@ tasks.withType<JavaExec>().configureEach {
         }
 
         environment("LC_NUMERIC", "C")
-        environment(
-            "GDK_BACKEND",
-            providers.environmentVariable("GDK_BACKEND").orNull ?: "x11",
-        )
+        val hasDisplay = !providers.environmentVariable("DISPLAY").orNull.isNullOrBlank()
+        val runtimeDir = providers.environmentVariable("XDG_RUNTIME_DIR").orNull
+        val hasWaylandDisplay =
+            !providers.environmentVariable("WAYLAND_DISPLAY").orNull.isNullOrBlank() ||
+                (!runtimeDir.isNullOrBlank() && File(runtimeDir, "wayland-0").exists())
+        val wantsWayland =
+            providers.environmentVariable("METROLIST_USE_WAYLAND").orNull == "1" ||
+                providers.environmentVariable("METROLIST_USE_WAKEFIELD").orNull == "1"
+        val gdkBackend =
+            providers.environmentVariable("GDK_BACKEND").orNull
+                ?: when {
+                    wantsWayland && hasWaylandDisplay -> "wayland"
+                    hasDisplay -> "x11"
+                    hasWaylandDisplay -> "wayland"
+                    else -> "x11"
+                }
+        environment("GDK_BACKEND", gdkBackend)
         environment("_JAVA_AWT_WM_NONREPARENTING", "1")
         environment(
             "SKIKO_WAYLAND",
@@ -704,17 +723,25 @@ compose.desktop {
 
         mainClass = "com.metrolist.desktop.MainKt"
         javaHome =
-            providers.gradleProperty("metrolist.desktop.javaHome").orNull?.let { home ->
+            (
+                providers.gradleProperty("metrolist.desktop.javaHome").orNull?.let { home ->
+                    val release = Properties().apply { file("$home/release").inputStream().use(::load) }
+                    val architecture = release.getProperty("OS_ARCH").trim('"')
+                    val expectedArchitectures = if (isArm64) setOf("aarch64", "arm64") else setOf("x86_64", "amd64")
+                    require(architecture in expectedArchitectures) {
+                        "Packaging JDK architecture $architecture does not match $targetArchitecture"
+                    }
+                    home
+                } ?: desktopJavaLauncher
+                    .get()
+                    .metadata.installationPath.asFile.absolutePath
+            ).also { home ->
                 val release = Properties().apply { file("$home/release").inputStream().use(::load) }
-                val architecture = release.getProperty("OS_ARCH").trim('"')
-                val expectedArchitectures = if (isArm64) setOf("aarch64", "arm64") else setOf("x86_64", "amd64")
-                require(architecture in expectedArchitectures) {
-                    "Packaging JDK architecture $architecture does not match $targetArchitecture"
+                val javaVersion = Runtime.Version.parse(release.getProperty("JAVA_VERSION").trim('"'))
+                require(javaVersion.feature() == 25 && javaVersion >= Runtime.Version.parse("25.0.5.1")) {
+                    "Packaging requires Java 25.0.5.1 or a newer Java 25 update to fix CVE-2026-114938; found $javaVersion."
                 }
-                home
-            } ?: desktopJavaLauncher
-                .get()
-                .metadata.installationPath.asFile.absolutePath
+            }
         jvmArgs +=
             listOf(
                 "--enable-native-access=ALL-UNNAMED",

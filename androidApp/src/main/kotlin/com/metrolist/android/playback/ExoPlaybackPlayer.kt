@@ -224,7 +224,7 @@ internal fun AndroidPlaybackPlayer.skipToPrevious(
             isLive = currentSong.value?.isLive == true,
         )
     ) {
-        skipToQueueItem(lastIndex, resumePlayback = resumePlayback)
+        skipToQueueItem(lastIndex, resumePlayback = resumePlayback, backward = true)
     } else {
         skipToPrevious(resumePlayback)
     }
@@ -305,13 +305,14 @@ internal enum class AndroidPlaybackPlayerRole(
 }
 
 // Users who deny the take-audio-focus app op to mix with other apps could play in v13. Media3 refuses to play
-// when the focus request fails, so skip its focus handling for them.
+// when the focus request fails, so skip its focus handling only when the configured op mode itself is denied
+// (using the raw check so MODE_FOREGROUND is not misread as MODE_IGNORED during background startup).
 internal fun appMayTakeAudioFocus(context: Context): Boolean =
     runCatching {
         val appOps = context.getSystemService(AppOpsManager::class.java) ?: return true
         val mode =
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                appOps.unsafeCheckOpNoThrow(OPSTR_TAKE_AUDIO_FOCUS, Process.myUid(), context.packageName)
+                appOps.unsafeCheckOpRawNoThrow(OPSTR_TAKE_AUDIO_FOCUS, Process.myUid(), context.packageName)
             } else {
                 @Suppress("DEPRECATION")
                 appOps.checkOpNoThrow(OPSTR_TAKE_AUDIO_FOCUS, Process.myUid(), context.packageName)
@@ -447,11 +448,12 @@ class ExoPlaybackPlayer(
                 },
             )
         silence.renderersFactory.setEnableAudioOutputPlaybackParameters(Settings.shared.audioTrackPlaybackParams)
+        val handleAudioFocus = role.handlesAudioFocus && appMayTakeAudioFocus(context)
         return ExoPlayer
             .Builder(context)
             .setRenderersFactory(silence.renderersFactory)
             .setLoadControl(createPlaybackLoadControl(bufferForPlaybackMs))
-            .setAudioAttributes(playbackAudioAttributes, role.handlesAudioFocus && appMayTakeAudioFocus(context))
+            .setAudioAttributes(playbackAudioAttributes, handleAudioFocus)
             .setWakeMode(C.WAKE_MODE_NETWORK)
             .build()
             .apply {
@@ -465,7 +467,12 @@ class ExoPlaybackPlayer(
                 PlaybackEventLog.info(
                     PlaybackEventKind.PLAYER,
                     "Android player created.",
-                    details = mapOf("playerId" to Integer.toHexString(System.identityHashCode(player)), "playerRole" to role.name),
+                    details =
+                        mapOf(
+                            "playerId" to Integer.toHexString(System.identityHashCode(player)),
+                            "playerRole" to role.name,
+                            "handleAudioFocus" to handleAudioFocus.toString(),
+                        ),
                 )
                 addListener(
                     object : Player.Listener {
@@ -1482,7 +1489,7 @@ class ExoPlaybackPlayer(
                 exo.currentPosition,
                 queue.currentIndex.value,
             )
-            request(queue.previous(), resumePlayback = resumePlayback)
+            request(queue.previous(), resumePlayback = resumePlayback, backward = true)
         }
     }
 
@@ -1490,11 +1497,12 @@ class ExoPlaybackPlayer(
         index: Int,
         positionMs: Long,
         resumePlayback: Boolean,
+        backward: Boolean,
     ) {
         if (resumePlayback && wantsPlayback && positionMs == 0L && index == queue.currentIndex.value + 1) {
             skipToNext()
         } else {
-            request(queue.skipTo(index), positionMs, resumePlayback)
+            request(queue.skipTo(index), positionMs, resumePlayback, backward)
         }
     }
 
@@ -3205,6 +3213,7 @@ class ExoPlaybackPlayer(
         song: SongItem?,
         positionMs: Long = 0L,
         resumePlayback: Boolean = true,
+        backward: Boolean = false,
     ) {
         cancelScreenOffFocusRecovery()
         song ?: return
@@ -3237,7 +3246,7 @@ class ExoPlaybackPlayer(
         _loadError.value = null
         if (stoppedInstance > 0L) playbackReporter.onPlaybackStopped(stoppedInstance, stoppedPosition)
         queuePlaybackRequestsState.tryEmit(
-            QueuePlaybackRequest(requestCounter, song, startPositionMs, resumePlayback),
+            QueuePlaybackRequest(requestCounter, song, startPositionMs, resumePlayback, backward),
         )
     }
 
@@ -4024,7 +4033,7 @@ private fun buildDirectDataSourceFactory(
                         DirectPlaybackCache.begin(
                             resource,
                             playbackCaptureDirectory(context),
-                            Settings.shared.maxSongCacheSize.let { if (it < 0) 512L * 1024 * 1024 else it * 1024L * 1024L },
+                            playbackCaptureBudgetBytes(Settings.shared.maxSongCacheSize),
                         )
                     } else {
                         null

@@ -47,7 +47,6 @@ import com.metrolist.shared.generated.resources.offset_ms
 import com.metrolist.shared.generated.resources.refetch
 import com.metrolist.shared.generated.resources.save
 import com.metrolist.shared.generated.resources.sources
-import com.metrolist.shared.model.LyricsProvider
 import com.metrolist.shared.model.LyricsProviderResult
 import com.metrolist.shared.model.SongItem
 import com.metrolist.shared.model.previewAspectRatio
@@ -77,7 +76,7 @@ fun LyricsMenu(
     lyricsUiState: LyricsUiState,
     onDismiss: () -> Unit,
     onRefetch: (customTitle: String?, customArtist: String?) -> Unit,
-    onLoadProviders: (customTitle: String?, customArtist: String?, provider: LyricsProvider?) -> Unit,
+    onLoadProviders: (customTitle: String?, customArtist: String?) -> Unit,
     onSelectProvider: (LyricsProviderResult) -> Unit,
     onShowLyricsOffset: () -> Unit,
     onLyricsChanged: () -> Unit,
@@ -88,10 +87,8 @@ fun LyricsMenu(
 
     var editorSong by remember { mutableStateOf(song.id to song.title) }
     var showEditDialog by remember { mutableStateOf(false) }
-    var showProviderDialog by remember(song.id) { mutableStateOf(false) }
-    var showSearchDialog by remember(song.id) { mutableStateOf(false) }
-    var showRefreshMenu by remember(song.id) { mutableStateOf(false) }
-    var providerDialogFromRefetch by remember(song.id) { mutableStateOf(false) }
+    var showProviderDialog by remember { mutableStateOf(false) }
+    var showSearchDialog by remember { mutableStateOf(false) }
 
     val queryTitle = lyricsUiState.queryTitle ?: song.title
     val queryArtist = lyricsUiState.queryArtist ?: song.artists.joinToString { it.name }
@@ -128,24 +125,8 @@ fun LyricsMenu(
             initialArtist = queryArtist,
             onDismiss = { showSearchDialog = false },
             onSearch = { title, artist ->
-                onLoadProviders(title, artist, null)
+                onLoadProviders(title, artist)
                 showSearchDialog = false
-                providerDialogFromRefetch = false
-                showProviderDialog = true
-            },
-        )
-    }
-
-    PopupVisibility(visible = showRefreshMenu) {
-        LyricsRefreshDialog(
-            onDismiss = { showRefreshMenu = false },
-            onAutomatic = {
-                onRefetch(queryTitle, queryArtist)
-                onDismiss()
-            },
-            onProvider = { provider ->
-                onLoadProviders(queryTitle, queryArtist, provider)
-                providerDialogFromRefetch = true
                 showProviderDialog = true
             },
         )
@@ -155,16 +136,9 @@ fun LyricsMenu(
         LyricsProviderDialog(
             search = lyricsUiState.providerSearch,
             noResultsText = stringResource(Res.string.no_provider_results_found),
-            onDismiss = {
-                showProviderDialog = false
-                if (providerDialogFromRefetch) {
-                    providerDialogFromRefetch = false
-                    showRefreshMenu = true
-                }
-            },
+            onDismiss = { showProviderDialog = false },
             onSelect = { result ->
                 onSelectProvider(result)
-                providerDialogFromRefetch = false
                 showProviderDialog = false
                 onDismiss()
             },
@@ -205,7 +179,10 @@ fun LyricsMenu(
                         PlayerMenuAction(
                             icon = MetrolistIcons.Outlined.Cached,
                             title = stringResource(Res.string.refetch),
-                            onClick = { showRefreshMenu = true },
+                            onClick = {
+                                onRefetch(queryTitle, queryArtist)
+                                onDismiss()
+                            },
                         ),
                         PlayerMenuAction(
                             icon = MetrolistIcons.Outlined.Search,

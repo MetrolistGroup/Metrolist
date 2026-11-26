@@ -246,6 +246,7 @@ internal fun DesktopLyricsContent(
                         currentSongId,
                         Settings.shared.lyricsProviderOrder,
                         Settings.shared.lyricsEnabledProviders,
+                        Settings.shared.lyricsYoutubeCaptionsEnabled,
                     ) {
                         if (currentSongId != null) {
                             PlayerState.currentTrack?.let { track ->

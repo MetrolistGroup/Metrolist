@@ -14,6 +14,7 @@ import kotlin.math.pow
 import kotlin.math.roundToInt
 import kotlin.math.sin
 import kotlin.math.sqrt
+import kotlin.math.tanh
 
 const val MIN_AUDIO_PREAMP_DB = -12.0
 const val MAX_AUDIO_BOOST_DB = 12.0
@@ -40,7 +41,10 @@ class ParametricEqualizer(
     private var preampGain = 1.0
     private var peakEnvelope = 0.0
     private var peakHoldFrames = 0
+    private var sustainedOverloadRatio = 0.0
     private val peakHoldDuration = (sampleRate * PEAK_HOLD_SECONDS).toInt()
+    private val sustainedOverloadDuration = (sampleRate * SUSTAIN_DETECTION_SECONDS).toInt().coerceAtLeast(1)
+    private val sustainedOverloadAlpha = 1.0 / sustainedOverloadDuration
     private val releaseDecay = exp(-1.0 / (sampleRate * LIMITER_RELEASE_SECONDS))
     var gainReductionDb = 0.0
         private set
@@ -78,6 +82,7 @@ class ParametricEqualizer(
                     }.toTypedArray()
             appliedBands = bands
             preampGain = 10.0.pow((profile?.preamp ?: 0.0) / 20.0)
+            sustainedOverloadRatio = 0.0
         }
         return profile != null
     }
@@ -125,27 +130,11 @@ class ParametricEqualizer(
         outputGainDb: Double = 0.0,
     ) {
         val outputGain = 10.0.pow(outputGainDb.coerceIn(MIN_AUDIO_PREAMP_DB, MAX_AUDIO_BOOST_DB) / 20.0)
-        if (activeFilters.isEmpty() && preampGain == 1.0 && outputGain == 1.0) {
-            var frameStart = 0
-            var lastGain = 1.0
-            while (frameStart < count) {
-                val frameEnd = minOf(frameStart + channelCount, count)
-                var peak = 0
-                for (i in frameStart until frameEnd) peak = maxOf(peak, abs(samples[i].toInt()))
-                val gain = limiterGain(peak / 32768.0, 1.0)
-                lastGain = gain
-                if (gain != 1.0) {
-                    for (i in frameStart until frameEnd) samples[i] = (samples[i] * gain).roundToInt().toShort()
-                }
-                frameStart = frameEnd
-            }
-            gainReductionDb = -20.0 * log10(lastGain)
-            return
-        }
+        val identityConfig = activeFilters.isEmpty() && preampGain == 1.0 && outputGain == 1.0
         if (processingBuffer.size < count) processingBuffer = DoubleArray(count)
         for (i in 0 until count) processingBuffer[i] = samples[i] / 32768.0
         filterBuffer(count)
-        limitFrames(count, outputGain)
+        limitFrames(count, outputGain, identityConfig)
         for (i in 0 until count) {
             val y = processingBuffer[i] * 32768.0
             samples[i] = y.coerceIn(-32768.0, 32767.0).roundToInt().toShort()
@@ -158,27 +147,11 @@ class ParametricEqualizer(
         outputGainDb: Double = 0.0,
     ) {
         val outputGain = 10.0.pow(outputGainDb.coerceIn(MIN_AUDIO_PREAMP_DB, MAX_AUDIO_BOOST_DB) / 20.0)
-        if (activeFilters.isEmpty() && preampGain == 1.0 && outputGain == 1.0) {
-            var frameStart = 0
-            var lastGain = 1.0
-            while (frameStart < count) {
-                val frameEnd = minOf(frameStart + channelCount, count)
-                var peak = 0.0
-                for (i in frameStart until frameEnd) peak = maxOf(peak, abs(samples[i].toDouble()))
-                val gain = limiterGain(peak, 1.0)
-                lastGain = gain
-                if (gain != 1.0 || !(peak <= 1.0)) {
-                    for (i in frameStart until frameEnd) samples[i] = (samples[i] * gain).coerceIn(-1.0, 1.0).toFloat()
-                }
-                frameStart = frameEnd
-            }
-            gainReductionDb = -20.0 * log10(lastGain)
-            return
-        }
+        val identityConfig = activeFilters.isEmpty() && preampGain == 1.0 && outputGain == 1.0
         if (processingBuffer.size < count) processingBuffer = DoubleArray(count)
         for (i in 0 until count) processingBuffer[i] = samples[i].toDouble()
         filterBuffer(count)
-        limitFrames(count, outputGain)
+        limitFrames(count, outputGain, identityConfig)
         for (i in 0 until count) {
             val y = processingBuffer[i]
             samples[i] = y.coerceIn(-1.0, 1.0).toFloat()
@@ -223,26 +196,68 @@ class ParametricEqualizer(
     private fun limitFrames(
         count: Int,
         outputGain: Double,
+        identityConfig: Boolean,
     ) {
         var frameStart = 0
-        var lastGain = outputGain
+        var lastGain = 1.0
         while (frameStart < count) {
             val frameEnd = minOf(frameStart + channelCount, count)
-            var peak = 0.0
-            for (i in frameStart until frameEnd) peak = maxOf(peak, abs(processingBuffer[i]))
-            val gain = limiterGain(peak, outputGain)
+            var rawPeak = 0.0
+            var saturatedPeak = 0.0
+            for (i in frameStart until frameEnd) {
+                val x = processingBuffer[i] * outputGain
+                processingBuffer[i] = x
+                rawPeak = maxOf(rawPeak, abs(x))
+                saturatedPeak =
+                    maxOf(saturatedPeak, abs(if (identityConfig) saturateOvershoot(x) else softClip(x)))
+            }
+            // A rolling overload fraction spans waveform cycles, so periodic peaks drive limiting without counting isolated transients.
+            val overloadTarget =
+                if (rawPeak > 1.0 || (!identityConfig && rawPeak > LIMITER_CEILING)) 1.0 else 0.0
+            sustainedOverloadRatio += (overloadTarget - sustainedOverloadRatio) * sustainedOverloadAlpha
+            val sustained = sustainedOverloadRatio >= SUSTAINED_OVERLOAD_RATIO
+            val peak = if (sustained) rawPeak else saturatedPeak
+            // Unity EQ absorbs isolated overshoot continuously. Only sustained overload or a release
+            // already in progress changes the gain applied to valid PCM.
+            val gain =
+                if (identityConfig && !sustained) {
+                    limiterGain(LIMITER_CEILING, allowAttack = false)
+                } else {
+                    limiterGain(peak, allowAttack = true)
+                }
             lastGain = gain
-            for (i in frameStart until frameEnd) processingBuffer[i] *= gain
+            for (i in frameStart until frameEnd) {
+                val x = processingBuffer[i] * gain
+                processingBuffer[i] = if (identityConfig) saturateOvershoot(x) else softClip(x)
+            }
             frameStart = frameEnd
         }
-        gainReductionDb = -20.0 * log10(lastGain / outputGain)
+        gainReductionDb = -20.0 * log10(lastGain)
+    }
+
+    private fun softClip(sample: Double): Double {
+        val magnitude = abs(sample)
+        if (magnitude <= SOFT_CLIP_THRESHOLD) return sample
+        val diff = magnitude - SOFT_CLIP_THRESHOLD
+        val range = 1.0 - SOFT_CLIP_THRESHOLD
+        val compressed = SOFT_CLIP_THRESHOLD + range * tanh(diff / range)
+        return if (sample < 0.0) -compressed else compressed
+    }
+
+    /** Continuous and monotonic at full scale: valid PCM is unchanged and overshoot saturates upward. */
+    private fun saturateOvershoot(sample: Double): Double {
+        val magnitude = abs(sample)
+        if (magnitude <= 1.0) return sample
+        val headroom = 1.0 - LIMITER_CEILING
+        val compressed = 1.0 + headroom * (1.0 - exp(-(magnitude - 1.0) / headroom))
+        return if (sample < 0.0) -compressed else compressed
     }
 
     private fun limiterGain(
         peak: Double,
-        outputGain: Double,
+        allowAttack: Boolean,
     ): Double {
-        if (peak >= peakEnvelope) {
+        if (allowAttack && peak >= peakEnvelope) {
             peakEnvelope = peak
             peakHoldFrames = peakHoldDuration
         } else if (peakHoldFrames > 0) {
@@ -251,13 +266,14 @@ class ParametricEqualizer(
             peakEnvelope = peak + (peakEnvelope - peak) * releaseDecay
         }
         // Hold the detected peak across waveform cycles instead of reshaping each sample.
-        return if (peakEnvelope > 0.0) minOf(outputGain, LIMITER_CEILING / peakEnvelope) else outputGain
+        return if (peakEnvelope > LIMITER_CEILING) LIMITER_CEILING / peakEnvelope else 1.0
     }
 
     fun reset() {
         state.forEach { it.fill(0.0) }
         peakEnvelope = 0.0
         peakHoldFrames = 0
+        sustainedOverloadRatio = 0.0
         gainReductionDb = 0.0
     }
 
@@ -304,7 +320,10 @@ class ParametricEqualizer(
 
     private companion object {
         const val LIMITER_CEILING = 0.98
-        const val PEAK_HOLD_SECONDS = 0.05
-        const val LIMITER_RELEASE_SECONDS = 0.15
+        const val SOFT_CLIP_THRESHOLD = 0.88
+        const val SUSTAIN_DETECTION_SECONDS = 0.005
+        const val SUSTAINED_OVERLOAD_RATIO = 0.1
+        const val PEAK_HOLD_SECONDS = 0.03
+        const val LIMITER_RELEASE_SECONDS = 0.10
     }
 }

@@ -28,6 +28,7 @@ import com.metrolist.shared.api.YouTubeResponseParser.parseIntegerCount
 import com.metrolist.shared.api.YouTubeResponseParser.parseItem
 import com.metrolist.shared.api.YouTubeResponseParser.parseUploadedSongItems
 import com.metrolist.shared.api.YouTubeResponseParser.parseUploadedSongRenderer
+import com.metrolist.shared.api.YouTubeResponseParser.playlistSuggestionReloadToken
 import com.metrolist.shared.api.YouTubeResponseParser.primitiveText
 import com.metrolist.shared.api.YouTubeResponseParser.runText
 import com.metrolist.shared.api.YouTubeResponseParser.sectionListRenderer
@@ -277,6 +278,21 @@ fun Map<String, List<YTItem>>.playlistSuggestions(): List<SongItem> {
         .toList()
 }
 
+private const val PLAYLIST_RECOMMENDATION_BATCH_SIZE = 6
+
+fun playlistRecommendationBatch(
+    candidates: List<SongItem>,
+    playlistSongs: List<SongItem>,
+    shownIds: Set<String> = emptySet(),
+): List<SongItem> {
+    val excluded = playlistSongs.mapTo(shownIds.toMutableSet()) { it.id }
+    return candidates
+        .asSequence()
+        .filter { !it.isUnavailable && excluded.add(it.id) }
+        .take(PLAYLIST_RECOMMENDATION_BATCH_SIZE)
+        .toList()
+}
+
 internal fun podcastLikePlaylistId(podcastId: String): String = podcastId.removePrefix("VL").removePrefix("MPSP")
 
 internal data class SearchContinuationShelf(
@@ -496,7 +512,7 @@ class YouTubeRepository(
                 val raw = response.bodyLimited<JsonObject>(FEED_RESPONSE_LIMIT)
                 requireCurrentSession(session)
                 if (innerTube.hasSapCookieAuth(session) && raw.isYouTubeLoggedOut()) {
-                    invalidateExpiredSession(session)
+                    recheckRejectedAuthentication(session)
                     throw YouTubeSessionExpiredException()
                 }
                 if (innerTube.hasSapCookieAuth(session)) reconcileSongVotes(raw, voteRevision)
@@ -513,7 +529,12 @@ class YouTubeRepository(
             }
         }
 
-    private val browseOperations = YouTubeBrowseOperations(innerTube)
+    private suspend fun recheckRejectedAuthentication(session: InnerTube.SessionSnapshot) {
+        requireCurrentSession(session)
+        getAccountInfo()
+    }
+
+    private val browseOperations = YouTubeBrowseOperations(innerTube, ::recheckRejectedAuthentication)
 
     suspend fun getHomePageData(
         params: String? = null,
@@ -921,8 +942,14 @@ class YouTubeRepository(
                 throw PlaylistNotFoundException(playlistId)
             }
             check(httpResponse.status.isSuccess()) { "Playlist browse failed with HTTP ${httpResponse.status.value}" }
-            val response = httpResponse.browseResponseWithVotes(innerTube, requestSession, voteRevision)
-            val parsed = parseBrowseResponse(response)
+            val response =
+                httpResponse.browseResponseWithVotes(
+                    innerTube,
+                    requestSession,
+                    voteRevision,
+                    onAuthenticationRejected = ::recheckRejectedAuthentication,
+                )
+            val parsed = parseBrowseResponse(response, classifyPlaylistSuggestions = true)
             val sections = YouTubePlaylistParser.parsePlaylistSections(response, parsed, playlistId)
 
             requireCurrentSession(requestSession)
@@ -955,6 +982,71 @@ class YouTubeRepository(
                 isOffline = true,
             )
         }
+    }
+
+    class PlaylistSuggestions internal constructor(
+        val songs: List<SongItem>,
+        internal val reloadToken: String?,
+        internal val session: InnerTube.SessionSnapshot,
+        internal val browseId: String,
+    ) {
+        val canReload: Boolean get() = reloadToken != null
+    }
+
+    suspend fun getPlaylistSuggestions(
+        playlistId: String,
+        previous: PlaylistSuggestions? = null,
+    ): PlaylistSuggestions? {
+        val session = previous?.session ?: innerTube.sessionSnapshot()
+        val browseId = playlistId.toPlaylistBrowseId()
+        requireCurrentSession(session)
+        if (previous != null && previous.browseId != browseId) return null
+
+        suspend fun browse(token: String? = null) =
+            readAccountBrowse(session, browseId, continuation = token != null) {
+                innerTube.browse(YouTubeClient.WEB_REMIX, browseId = browseId, continuation = token, setLogin = true)
+            }
+
+        fun JsonObject.isSuggestionShelf(): Boolean =
+            playlistSuggestionReloadToken() != null || this["title"].asObject().runText()?.contains("suggest", ignoreCase = true) == true
+
+        fun BrowseResponse.suggestionShelf(knownBranch: Boolean): JsonObject? {
+            val continuation = continuationContents ?: return null
+            val shelves =
+                listOfNotNull(continuation.musicShelfContinuation) +
+                    continuation.sectionListContinuation.findAllObjects("musicShelfRenderer")
+            return shelves.firstOrNull { it.isSuggestionShelf() }
+                ?: shelves.singleOrNull()?.takeIf { knownBranch && it["title"].asObject().runText().isNullOrBlank() }
+        }
+
+        val shelf =
+            if (previous == null) {
+                val initial = browse()
+                val secondary =
+                    initial.contents
+                        ?.twoColumnBrowseResultsRenderer
+                        ?.get("secondaryContents")
+                        .asObject()
+                        ?.get("sectionListRenderer")
+                        .asObject()
+                val branch =
+                    parseBrowseResponse(initial, classifyPlaylistSuggestions = true).continuationBranches.firstOrNull {
+                        it.sectionTitle?.contains("suggest", ignoreCase = true) == true
+                    }
+                val sectionList = secondary ?: initial.sectionListRenderer()
+                val token = branch?.token ?: sectionList?.get("continuations").findContinuationToken()
+                val inlineShelf =
+                    sectionList
+                        .findAllObjects("musicShelfRenderer")
+                        .firstOrNull { it.isSuggestionShelf() && !(it["contents"] ?: it["items"]).asArray().isNullOrEmpty() }
+                inlineShelf ?: token?.let { browse(it).suggestionShelf(knownBranch = branch != null) }
+            } else {
+                browse(previous.reloadToken ?: return null).suggestionShelf(knownBranch = true)
+            } ?: return null
+        val songs = (shelf["contents"] ?: shelf["items"]).asArray().orEmpty().mapNotNull { parseItem(it.asObject()) as? SongItem }
+        val reloadToken = shelf.playlistSuggestionReloadToken()
+        requireCurrentSession(session)
+        return PlaylistSuggestions(BlockedContent.filterSongs(songs), reloadToken, session, browseId)
     }
 
     suspend fun completePlaylistPage(
@@ -1063,7 +1155,16 @@ class YouTubeRepository(
         requireCurrentSession(page.session)
         if (!response.status.isSuccess()) Logger.w(TAG, "Playlist continuation failed HTTP ${response.status.value}")
         check(response.status.isSuccess()) { "Playlist continuation failed with HTTP ${response.status.value}" }
-        val parsed = parseBrowseResponse(response.browseResponseWithVotes(innerTube, page.session, voteRevision))
+        val parsed =
+            parseBrowseResponse(
+                response.browseResponseWithVotes(
+                    innerTube,
+                    page.session,
+                    voteRevision,
+                    onAuthenticationRejected = ::recheckRejectedAuthentication,
+                ),
+                classifyPlaylistSuggestions = true,
+            )
         val sections = linkedMapOf<String, MutableList<YTItem>>()
         parsed.sections.forEach { (title, items) ->
             val inheritedTitle = if (title == "Continuation") branch.sectionTitle ?: title else title
@@ -2803,11 +2904,20 @@ internal fun String.toPlaylistBrowseId(): String =
 
 internal fun String?.isAlbumBrowseId(): Boolean = this != null && (startsWith("MPREb") || startsWith("FEmusic_release_detail"))
 
-internal fun JsonObject.isYouTubeLoggedOut(): Boolean =
-    this["responseContext"]
-        .asObject()
-        ?.get("mainAppWebResponseContext")
+internal fun JsonObject.isYouTubeLoggedOut(): Boolean {
+    val context = this["responseContext"].asObject() ?: return false
+    context["mainAppWebResponseContext"]
         .asObject()
         ?.get("loggedOut")
         ?.jsonPrimitive
-        ?.booleanOrNull == true
+        ?.booleanOrNull
+        ?.let { return it }
+    return context["serviceTrackingParams"].asArray().orEmpty().any { service ->
+        service.asObject()?.let { tracking ->
+            tracking["service"].primitiveText() == "GFEEDBACK" &&
+                tracking["params"].asArray().orEmpty().any { param ->
+                    param.asObject()?.let { it["key"].primitiveText() == "logged_in" && it["value"].primitiveText() == "0" } == true
+                }
+        } == true
+    }
+}

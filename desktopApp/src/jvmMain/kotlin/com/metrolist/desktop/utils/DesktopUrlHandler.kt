@@ -15,6 +15,7 @@ import com.metrolist.desktop.state.content.PodcastState
 import com.metrolist.desktop.state.content.SearchState
 import com.metrolist.desktop.state.playback.ListenTogetherState
 import com.metrolist.desktop.state.playback.PlayerState
+import com.metrolist.desktop.window.runOnDesktopUiThread
 import com.metrolist.innertubex.utils.YouTubeUrlParser
 import com.metrolist.shared.settings.Settings
 import com.metrolist.shared.utils.extractListenTogetherRoomCode
@@ -22,7 +23,6 @@ import com.metrolist.shared.utils.isListenTogetherUrl
 import com.metrolist.shared.utils.parseYouTubePodcastId
 import com.metrolist.shared.utils.parseYouTubeUrl
 import java.awt.Desktop
-import java.awt.EventQueue
 import java.net.URLDecoder
 import java.nio.charset.StandardCharsets
 
@@ -76,7 +76,7 @@ object DesktopUrlHandler {
             return true
         }
 
-        EventQueue.invokeLater {
+        runOnDesktopUiThread {
             executeOpenUrl(normalized)
         }
         return true

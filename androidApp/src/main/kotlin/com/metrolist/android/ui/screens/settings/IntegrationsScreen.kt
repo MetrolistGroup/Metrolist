@@ -92,6 +92,7 @@ fun IntegrationsScreen(
                 onOpenUrl = { url -> runCatching { context.openDiscordUrl(url) } },
                 onCopyText = { label, text -> context.copyToClipboard(label, text, copiedMessage) },
                 onMessage = { Toast.makeText(context, it, Toast.LENGTH_SHORT).show() },
+                carLightsContent = { onBack -> CarLightsScreen(onNavigateBack = onBack) },
             ),
     )
 }

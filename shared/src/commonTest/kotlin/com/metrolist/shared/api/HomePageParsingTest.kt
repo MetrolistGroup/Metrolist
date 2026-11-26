@@ -1,6 +1,7 @@
 package com.metrolist.shared.api
 
 import com.metrolist.innertubex.InnerTube
+import com.metrolist.shared.auth.YouTubeSyncState
 import com.metrolist.shared.model.AlbumItem
 import com.metrolist.shared.model.ArtistItem
 import com.metrolist.shared.model.BrowseItem
@@ -8,7 +9,10 @@ import com.metrolist.shared.model.HomeSection
 import com.metrolist.shared.model.PlaylistItem
 import com.metrolist.shared.model.PodcastItem
 import com.metrolist.shared.model.SongItem
+import com.metrolist.shared.model.heardInShortsItemIds
 import com.metrolist.shared.model.isDesktopHomeDiscoverySection
+import com.metrolist.shared.model.isHeardInShortsSection
+import com.metrolist.shared.model.isQuickPicksSection
 import com.metrolist.shared.model.mergeAndDeduplicateHomeSections
 import com.metrolist.shared.settings.Settings
 import com.metrolist.shared.viewmodels.HomeViewModel.HomeUiState
@@ -146,6 +150,7 @@ class HomePageParsingTest {
     @AfterTest
     fun tearDown() {
         Settings.replaceSharedForTest(null)
+        YouTubeSyncState.clear()
     }
 
     @Test
@@ -193,6 +198,82 @@ class HomePageParsingTest {
 
             assertNotNull(engine.requestHistory.single().headers[HttpHeaders.Authorization])
             Unit
+        }
+
+    @Test
+    fun signedOutBrowseResponsesRecheckAccountWithoutDiscardingAWorkingSession() =
+        runBlocking {
+            val requests: List<suspend (YouTubeRepository, InnerTube.SessionSnapshot) -> Unit> =
+                listOf(
+                    { repository, _ -> repository.getHomePageData() },
+                    { repository, _ -> repository.getHomeSectionsContinuation("next") },
+                    { repository, _ -> repository.getPlaylistPageData("PLtest") },
+                    { repository, _ -> repository.getLibraryUploadSongsResult().getOrThrow() },
+                    { repository, session ->
+                        repository.continuePlaylistPage(
+                            PlaylistPage(
+                                sections = emptyMap(),
+                                pending = listOf(ContinuationBranch("next")),
+                                seen = emptySet(),
+                                session = session,
+                            ),
+                        )
+                    },
+                )
+            for (request in requests) {
+                for (accountStatus in listOf(HttpStatusCode.OK, HttpStatusCode.ServiceUnavailable)) {
+                    val client =
+                        HttpClient(
+                            MockEngine { request ->
+                                val accountMenu = request.url.encodedPath.endsWith("account_menu")
+                                respond(
+                                    if (accountMenu) {
+                                        """{"activeAccountHeaderRenderer":{"accountName":{"runs":[{"text":"Account"}]}}}"""
+                                    } else {
+                                        SIGNED_OUT_HOME_RESPONSE
+                                    },
+                                    status = if (accountMenu) accountStatus else HttpStatusCode.OK,
+                                    headers = headersOf(HttpHeaders.ContentType, "application/json"),
+                                )
+                            },
+                        ) { install(ContentNegotiation) { json(Json { ignoreUnknownKeys = true }) } }
+                    val innerTube =
+                        InnerTube(
+                            client,
+                            retryDelay = {},
+                        ).apply { replaceSession("SAPISID=session", "visitor", "sync", "0", true) }
+                    val repository = YouTubeRepository(innerTube)
+                    val session = innerTube.sessionSnapshot()
+                    try {
+                        assertFailsWith<YouTubeSessionExpiredException> {
+                            request(repository, session)
+                        }
+                        assertEquals(session, innerTube.sessionSnapshot())
+                        assertEquals(if (accountStatus == HttpStatusCode.OK) "Account" else null, repository.lastAccountInfo?.name)
+                    } finally {
+                        innerTube.close()
+                        client.close()
+                    }
+                }
+            }
+        }
+
+    @Test
+    fun intentionallyAnonymousHomeStillAcceptsSignedOutResponses() =
+        runBlocking {
+            val client =
+                HttpClient(
+                    MockEngine { respond(SIGNED_OUT_HOME_RESPONSE, headers = headersOf(HttpHeaders.ContentType, "application/json")) },
+                ) { install(ContentNegotiation) { json(Json { ignoreUnknownKeys = true }) } }
+            val innerTube = InnerTube(client).apply { replaceSession("SAPISID=session", "visitor", "sync", "0", false) }
+            try {
+                val page = YouTubeRepository(innerTube).getHomePageData()
+                assertTrue(page.sections.isEmpty())
+                assertTrue(innerTube.hasSapCookieAuth())
+            } finally {
+                innerTube.close()
+                client.close()
+            }
         }
 
     @Test
@@ -622,6 +703,36 @@ class HomePageParsingTest {
             assertFalse(page.sections.last().isPersonal)
         }
 
+    @Test
+    fun homeIdentifiesHeardInShortsShelvesForQuickPicksExclusion() =
+        runBlocking {
+            val (sections, _) =
+                repository(
+                    HEARD_IN_SHORTS_CONTINUATION_RESPONSE,
+                ).getHomeSectionsContinuation("page-2", loadAllPages = false)
+
+            assertEquals(
+                listOf("Quick picks", "Heard in Shorts", "Shorts에서 들은 음악", "Similar to The Shorts", "Short listens"),
+                sections.map { it.title },
+            )
+            val quickPicks = sections[0]
+            val heardInShorts = sections[1]
+            val localizedShorts = sections[2]
+            val similarArtist = sections[3]
+            val shortListens = sections[4]
+
+            assertFalse(quickPicks.isHeardInShortsSection())
+            assertTrue(heardInShorts.isHeardInShortsSection())
+            assertFalse(heardInShorts.isQuickPicksSection())
+            assertTrue(localizedShorts.isHeardInShortsSection())
+            assertFalse(localizedShorts.isQuickPicksSection())
+            assertFalse(similarArtist.isHeardInShortsSection())
+            assertFalse(shortListens.isHeardInShortsSection())
+            assertEquals(setOf("shorts-shared", "shorts-only", "shorts-ko"), sections.heardInShortsItemIds())
+            assertTrue(uncategorizedHomeSections(sections).any { it.title == "Heard in Shorts" })
+            assertTrue(uncategorizedHomeSections(sections).any { it.title == "Shorts에서 들은 음악" })
+        }
+
     private fun repository(
         response: String,
         status: HttpStatusCode = HttpStatusCode.OK,
@@ -645,6 +756,12 @@ class HomePageParsingTest {
     }
 
     private companion object {
+        const val SIGNED_OUT_HOME_RESPONSE =
+            """{"responseContext":{"serviceTrackingParams":[
+              {"service":"GFEEDBACK","params":[{"key":"logged_in","value":"0"}]},
+              {"service":"CSI","params":[{"key":"yt_li","value":"0"}]}
+            ]}}"""
+
         fun libraryAlbumShelves(endpointInTitle: Boolean): String {
             val endpoint = """{"browseEndpoint":{"browseId":"FEmusic_library_landing","params":"library-params"}}"""
             val titleEndpoint = if (endpointInTitle) """, "navigationEndpoint":$endpoint""" else ""
@@ -875,6 +992,94 @@ class HomePageParsingTest {
                   }}
                 ]}
               }}}]}}
+            }
+            """
+
+        const val HEARD_IN_SHORTS_CONTINUATION_RESPONSE =
+            """
+            {
+              "continuationContents": {"sectionListContinuation": {
+                "contents": [
+                  {"musicCarouselShelfRenderer": {
+                    "header": {"musicCarouselShelfBasicHeaderRenderer": {
+                      "title": {"runs": [{"text": "Quick picks"}]},
+                      "moreContentButton": {"buttonRenderer": {
+                        "navigationEndpoint": {"watchEndpoint": {"videoId": "pick-1"}}
+                      }}
+                    }},
+                    "numItemsPerColumn": "4",
+                    "contents": [
+                      {"musicResponsiveListItemRenderer": {
+                        "flexColumns": [{"musicResponsiveListItemFlexColumnRenderer": {"text": {"runs": [{"text": "Pick one"}]}}}],
+                        "playlistItemData": {"videoId": "pick-1"}
+                      }},
+                      {"musicResponsiveListItemRenderer": {
+                        "flexColumns": [{"musicResponsiveListItemFlexColumnRenderer": {"text": {"runs": [{"text": "Shared shorts song"}]}}}],
+                        "playlistItemData": {"videoId": "shorts-shared"}
+                      }}
+                    ]
+                  }},
+                  {"musicCarouselShelfRenderer": {
+                    "header": {"musicCarouselShelfBasicHeaderRenderer": {
+                      "title": {"runs": [{"text": "Heard in Shorts"}]},
+                      "moreContentButton": {"buttonRenderer": {
+                        "navigationEndpoint": {"watchEndpoint": {"videoId": "shorts-shared"}}
+                      }}
+                    }},
+                    "numItemsPerColumn": "4",
+                    "contents": [
+                      {"musicResponsiveListItemRenderer": {
+                        "flexColumns": [{"musicResponsiveListItemFlexColumnRenderer": {"text": {"runs": [{"text": "Shared shorts song"}]}}}],
+                        "playlistItemData": {"videoId": "shorts-shared"}
+                      }},
+                      {"musicResponsiveListItemRenderer": {
+                        "flexColumns": [{"musicResponsiveListItemFlexColumnRenderer": {"text": {"runs": [{"text": "Shorts only"}]}}}],
+                        "playlistItemData": {"videoId": "shorts-only"}
+                      }}
+                    ]
+                  }},
+                  {"musicCarouselShelfRenderer": {
+                    "header": {"musicCarouselShelfBasicHeaderRenderer": {
+                      "title": {"runs": [{"text": "Shorts에서 들은 음악"}]},
+                      "moreContentButton": {"buttonRenderer": {
+                        "navigationEndpoint": {"browseEndpoint": {"browseId": "FEmusic_quickpicks_shorts"}}
+                      }}
+                    }},
+                    "numItemsPerColumn": "4",
+                    "contents": [
+                      {"musicResponsiveListItemRenderer": {
+                        "flexColumns": [{"musicResponsiveListItemFlexColumnRenderer": {"text": {"runs": [{"text": "Korean shorts song"}]}}}],
+                        "playlistItemData": {"videoId": "shorts-ko"}
+                      }}
+                    ]
+                  }},
+                  {"musicCarouselShelfRenderer": {
+                    "header": {"musicCarouselShelfBasicHeaderRenderer": {
+                      "title": {"runs": [{
+                        "text": "Similar to The Shorts",
+                        "navigationEndpoint": {"browseEndpoint": {"browseId": "UC_the_shorts"}}
+                      }]}
+                    }},
+                    "contents": [
+                      {"musicResponsiveListItemRenderer": {
+                        "flexColumns": [{"musicResponsiveListItemFlexColumnRenderer": {"text": {"runs": [{"text": "Artist track"}]}}}],
+                        "playlistItemData": {"videoId": "artist-track"}
+                      }}
+                    ]
+                  }},
+                  {"musicCarouselShelfRenderer": {
+                    "header": {"musicCarouselShelfBasicHeaderRenderer": {
+                      "title": {"runs": [{"text": "Short listens"}]}
+                    }},
+                    "contents": [
+                      {"musicResponsiveListItemRenderer": {
+                        "flexColumns": [{"musicResponsiveListItemFlexColumnRenderer": {"text": {"runs": [{"text": "Short track"}]}}}],
+                        "playlistItemData": {"videoId": "short-track"}
+                      }}
+                    ]
+                  }}
+                ]
+              }}
             }
             """
     }

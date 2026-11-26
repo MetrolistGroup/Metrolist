@@ -39,7 +39,6 @@ private val removedPlayerSettingsKeys =
     setOf(
         "enableMusicVideos",
         "autoPlayMusicVideos",
-        "resumeOnBluetoothConnect",
     )
 
 private val removedArtworkSettingsKeys =
@@ -217,6 +216,7 @@ private val booleanKeys =
         "autoSkipNextOnError",
         "seekExtraSeconds",
         "pauseOnMute",
+        "resumeOnBluetoothConnect",
         "varispeed",
         "audioTrackPlaybackParams",
         "stopMusicOnTaskClear",

@@ -105,6 +105,7 @@ data class SharedIntegrationsHost(
     val onCopyText: (String, String) -> Unit = { _, _ -> },
     val onShareText: ((String) -> Unit)? = null,
     val onMessage: (String) -> Unit = {},
+    val carLightsContent: (@Composable (onBack: () -> Unit) -> Unit)? = null,
 )
 
 data class IntegrationPlaybackState(
@@ -172,6 +173,9 @@ fun SharedIntegrationsScreen(
             bottomContentPadding = host.bottomContentPadding,
             initialPage = host.initialPage?.takeUnless { it == SettingsPageId.LISTEN_TOGETHER },
             singlePane = true,
+            pageContent = { page, onBack, _ ->
+                if (page == SettingsPageId.CAR_LIGHTS) host.carLightsContent?.invoke(onBack)
+            },
             externalPages = setOf(SettingsPageId.LISTEN_TOGETHER),
             onOpenPage = { page ->
                 when (page) {
@@ -735,6 +739,25 @@ private fun buildIntegrationsRegistry(
                 ),
         )
     }
+    if (host.carLightsContent != null) {
+        builder.customPage(
+            SettingsPageId.CAR_LIGHTS,
+            stringResource(Res.string.car_lights_title),
+            stringResource(Res.string.settings_car_lights_overview),
+            MetrolistIcons.Outlined.DirectionsCar,
+            SettingsTone.ORANGE,
+            searchTerms =
+                listOf(
+                    stringResource(Res.string.car_lights_enable),
+                    stringResource(Res.string.car_lights_auto_connect),
+                    stringResource(Res.string.car_lights_search),
+                    stringResource(Res.string.car_lights_zone_central),
+                    stringResource(Res.string.car_lights_zone_doors),
+                    stringResource(Res.string.car_lights_zone_rear),
+                    stringResource(Res.string.car_lights_vivid),
+                ),
+        )
+    }
     builder.rootGroup(
         stringResource(Res.string.integrations),
         *listOfNotNull(
@@ -743,6 +766,7 @@ private fun buildIntegrationsRegistry(
             SettingsPageId.LISTEN_BRAINZ,
             SettingsPageId.DEVICE_CONNECT.takeIf { host.deviceConnect != null },
             SettingsPageId.LISTEN_TOGETHER.takeIf { host.listenTogetherManager != null || host.onOpenListenTogether != null },
+            SettingsPageId.CAR_LIGHTS.takeIf { host.carLightsContent != null },
         ).toTypedArray(),
     )
     return builder.build()
@@ -945,6 +969,7 @@ private fun ScrobbleLoginDialog(
     var username by remember(provider) { mutableStateOf("") }
     val credentialState = remember(provider) { TextFieldState("") }
     val credential = credentialState.text.toString()
+    var serverUrl by remember(provider) { mutableStateOf(Settings.shared.listenBrainzApiUrl) }
     var connecting by remember(provider) { mutableStateOf(false) }
     var error by remember(provider) { mutableStateOf<String?>(null) }
     val isLastFm = provider == ScrobbleLoginProvider.LAST_FM
@@ -953,6 +978,7 @@ private fun ScrobbleLoginDialog(
     val lastFmServiceError = stringResource(Res.string.lastfm_service_error)
     val invalidLastFmSession = stringResource(Res.string.lastfm_login_session_invalid)
     val listenBrainzFailed = stringResource(Res.string.listenbrainz_connect_failed)
+    val invalidServerUrl = stringResource(Res.string.listenbrainz_invalid_server_url)
 
     AlertDialog(
         onDismissRequest = { if (!connecting) onDismiss() },
@@ -991,6 +1017,16 @@ private fun ScrobbleLoginDialog(
                     textObfuscationMode = TextObfuscationMode.Hidden,
                 )
                 if (!isLastFm) {
+                    OutlinedTextField(
+                        value = serverUrl,
+                        onValueChange = { serverUrl = it },
+                        keyboardOptions = KeyboardOptions(autoCorrectEnabled = false, keyboardType = KeyboardType.Uri),
+                        label = { Text(stringResource(Res.string.listenbrainz_server_url)) },
+                        placeholder = { Text(ListenBrainz.DEFAULT_API_ROOT) },
+                        supportingText = { Text(stringResource(Res.string.listenbrainz_server_url_description)) },
+                        singleLine = true,
+                        enabled = !connecting,
+                    )
                     TextButton(onClick = { onOpenUrl("https://listenbrainz.org/settings/") }, shapes = ButtonDefaults.shapes()) {
                         Text(stringResource(Res.string.listenbrainz_user_token))
                         Spacer(Modifier.width(8.dp))
@@ -1043,14 +1079,19 @@ private fun ScrobbleLoginDialog(
                                         }
                                 }
                         } else {
-                            ListenBrainz
-                                .validateToken(GlobalYouTube.client, credential.trim())
-                                .onSuccess { user ->
-                                    ScrobbleSessions.connectListenBrainz(user.username, credential.trim())
-                                    onConnected()
-                                }.onFailure {
-                                    error = listenBrainzFailed
-                                }
+                            val apiRoot = ListenBrainz.normalizeApiRoot(serverUrl)
+                            if (apiRoot == null) {
+                                error = invalidServerUrl
+                            } else {
+                                ListenBrainz
+                                    .validateToken(GlobalYouTube.client, credential.trim(), apiRoot)
+                                    .onSuccess { user ->
+                                        ScrobbleSessions.connectListenBrainz(user.username, credential.trim(), apiRoot)
+                                        onConnected()
+                                    }.onFailure {
+                                        error = listenBrainzFailed
+                                    }
+                            }
                         }
                         connecting = false
                     }

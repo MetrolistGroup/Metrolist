@@ -11,6 +11,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import com.metrolist.shared.api.lyrics.AiProviderPresets
+import com.metrolist.shared.auth.hasSupportedYouTubeAuthCookie
 import com.metrolist.shared.backup.AutoBackupFrequency
 import com.metrolist.shared.constants.ActiveLyricsTextPositionKey
 import com.metrolist.shared.constants.AiSlopBlocklistCacheKey
@@ -41,18 +42,29 @@ import com.metrolist.shared.constants.AudioTrackPlaybackParamsKey
 import com.metrolist.shared.constants.AutoBackupEnabledKey
 import com.metrolist.shared.constants.AutoBackupFrequencyKey
 import com.metrolist.shared.constants.AutoBackupLastSuccessEpochKey
+import com.metrolist.shared.constants.AutoInstallUpdatesKey
 import com.metrolist.shared.constants.AutoPureBlackKey
 import com.metrolist.shared.constants.BlockAiSlopArtistsKey
 import com.metrolist.shared.constants.BlockedArtistsUndoHintShownKey
 import com.metrolist.shared.constants.BlockedSongsUndoHintShownKey
 import com.metrolist.shared.constants.BlockedUsersUndoHintShownKey
+import com.metrolist.shared.constants.CacheWholeSongWhilePlayingKey
 import com.metrolist.shared.constants.CachedCollectionSortDirectionKey
 import com.metrolist.shared.constants.CachedCollectionSortKey
 import com.metrolist.shared.constants.CachedSongsCustomOrderKey
 import com.metrolist.shared.constants.CanvasCacheSizeKey
 import com.metrolist.shared.constants.CanvasContentOrderKey
 import com.metrolist.shared.constants.CanvasEnabledSourcesKey
+import com.metrolist.shared.constants.CarLightsAutoConnectKey
+import com.metrolist.shared.constants.CarLightsCentralRoleKey
+import com.metrolist.shared.constants.CarLightsDeviceAddressKey
+import com.metrolist.shared.constants.CarLightsDeviceNameKey
+import com.metrolist.shared.constants.CarLightsDoorsRoleKey
+import com.metrolist.shared.constants.CarLightsEnabledKey
+import com.metrolist.shared.constants.CarLightsRearRoleKey
+import com.metrolist.shared.constants.CarLightsVividKey
 import com.metrolist.shared.constants.CastEnabledKey
+import com.metrolist.shared.constants.CastVolumeStepKey
 import com.metrolist.shared.constants.ClassicRecommendationsKey
 import com.metrolist.shared.constants.CollectionCoversKey
 import com.metrolist.shared.constants.DatabaseLikesRecoveryVersionKey
@@ -96,6 +108,7 @@ import com.metrolist.shared.constants.HiddenHomeItemsJsonKey
 import com.metrolist.shared.constants.HiddenHomeUndoHintShownKey
 import com.metrolist.shared.constants.HiddenLibraryUndoHintShownKey
 import com.metrolist.shared.constants.HideNonMusicalVideosKey
+import com.metrolist.shared.constants.HidePlaylistRecommendationsKey
 import com.metrolist.shared.constants.HideRecentSearchesKey
 import com.metrolist.shared.constants.HideShortSongsKey
 import com.metrolist.shared.constants.HistoryPlaylistsEnabledKey
@@ -123,6 +136,7 @@ import com.metrolist.shared.constants.LikedSongsCustomOrdersJsonKey
 import com.metrolist.shared.constants.LikedSongsOrderAccountKey
 import com.metrolist.shared.constants.LikedSongsOrderCustomizedKey
 import com.metrolist.shared.constants.LikedSongsRecencyJsonKey
+import com.metrolist.shared.constants.ListenBrainzApiUrlKey
 import com.metrolist.shared.constants.ListenTogetherEnabledKey
 import com.metrolist.shared.constants.ListenTogetherServerMetadataKey
 import com.metrolist.shared.constants.LoudnessLevelKey
@@ -134,6 +148,7 @@ import com.metrolist.shared.constants.LyricsPlusLighterKey
 import com.metrolist.shared.constants.LyricsProgressiveBlurKey
 import com.metrolist.shared.constants.LyricsShareImageStyleKey
 import com.metrolist.shared.constants.LyricsShowOriginalLyricsKey
+import com.metrolist.shared.constants.LyricsYoutubeCaptionsEnabledKey
 import com.metrolist.shared.constants.MatugenThemeKey
 import com.metrolist.shared.constants.MinimumSongDurationSecondsKey
 import com.metrolist.shared.constants.MusicVideoCacheJsonKey
@@ -161,6 +176,7 @@ import com.metrolist.shared.constants.PreferWordSyncedLyricsKey
 import com.metrolist.shared.constants.PromptContinuePlaybackKey
 import com.metrolist.shared.constants.QueuedYouTubeHistoryJsonKey
 import com.metrolist.shared.constants.RecentPlayedSearchSongsJsonKey
+import com.metrolist.shared.constants.ResumeOnBluetoothConnectKey
 import com.metrolist.shared.constants.SeekDurationSecondsKey
 import com.metrolist.shared.constants.SentryEnabledKey
 import com.metrolist.shared.constants.ShowBottomNavHomeKey
@@ -184,16 +200,19 @@ import com.metrolist.shared.constants.SleepTimerDefaultFinishCurrentSongKey
 import com.metrolist.shared.constants.SleepTimerDefaultMinutesKey
 import com.metrolist.shared.constants.SliderTrackThicknessDpKey
 import com.metrolist.shared.constants.SlimNavBarKey
+import com.metrolist.shared.constants.SongShareLinkKey
 import com.metrolist.shared.constants.SpeedDialArtworkRefreshTimesKey
 import com.metrolist.shared.constants.SpeedDialSurprisePinnedKey
 import com.metrolist.shared.constants.SponsorBlockEnabledKey
 import com.metrolist.shared.constants.SupportPromptDismissedKey
 import com.metrolist.shared.constants.SupportPromptLaunchThresholdKey
 import com.metrolist.shared.constants.SupportPromptLaunchesKey
+import com.metrolist.shared.constants.SwipeToRemoveFromQueueKey
 import com.metrolist.shared.constants.SwipeToRemoveSongKey
 import com.metrolist.shared.constants.SwipeToSongKey
 import com.metrolist.shared.constants.TempoPitchPresetsJsonKey
 import com.metrolist.shared.constants.TokenLoginWarningDismissedKey
+import com.metrolist.shared.constants.UpdateInstallMethodKey
 import com.metrolist.shared.constants.UseLegacyShuffleKey
 import com.metrolist.shared.constants.VarispeedKey
 import com.metrolist.shared.constants.VideoViewerVisibleKey
@@ -322,6 +341,7 @@ class Settings(
     var hideVideoSongs by preference(false)
     var hideNonMusicalVideos by preference(HideNonMusicalVideosKey, false)
     var hidePodcasts by preference(false)
+    var hidePlaylistRecommendations by preference(HidePlaylistRecommendationsKey, false)
     var hideShortSongs by preference(HideShortSongsKey, false)
     var minimumSongDurationSeconds by preference(MinimumSongDurationSecondsKey, 30)
     var blockAiSlopArtists by preference(BlockAiSlopArtistsKey, true)
@@ -372,6 +392,7 @@ class Settings(
     var miniPlayerBackgroundStyle by preference("DEFAULT")
     var playerThumbnailStyle by preference(PlayerThumbnailStyle.COMPACT)
     var castEnabled by preference(CastEnabledKey, true)
+    var castVolumeStep by preference(CastVolumeStepKey, 5)
     var showPlayerCastButton by preference(ShowPlayerCastButtonKey, true)
     var showPlayerVideoButton by preference(ShowPlayerVideoButtonKey, true)
 
@@ -460,6 +481,14 @@ class Settings(
         AndroidAutoSongPlaybackModeKey,
         AutomotiveSongPlaybackMode.QUEUE,
     )
+    var carLightsEnabled by preference(CarLightsEnabledKey, false)
+    var carLightsAutoConnect by preference(CarLightsAutoConnectKey, true)
+    var carLightsDeviceAddress by preference(CarLightsDeviceAddressKey, "")
+    var carLightsDeviceName by preference(CarLightsDeviceNameKey, "")
+    var carLightsCentralRole by preference(CarLightsCentralRoleKey, CarLightRole.PRIMARY)
+    var carLightsDoorsRole by preference(CarLightsDoorsRoleKey, CarLightRole.SECONDARY)
+    var carLightsRearRole by preference(CarLightsRearRoleKey, CarLightRole.TERTIARY)
+    var carLightsVivid by preference(CarLightsVividKey, true)
     var crossfadeEnabled by preference(false)
     var crossfadeDuration by preference(10f)
     var crossfadeGapless by preference(true)
@@ -471,6 +500,7 @@ class Settings(
     var seekExtraSeconds by preference(false)
     var seekDurationSeconds by preference(SeekDurationSecondsKey, 10)
     var pauseOnMute by preference(PauseOnMuteKey, false)
+    var resumeOnBluetoothConnect by preference(ResumeOnBluetoothConnectKey, false)
     var stopMusicOnTaskClear by preference(true)
     var githubNTransformEnabled by preference(GitHubNTransformEnabledKey, false)
     var githubNTransformConfigUrl by preference(
@@ -496,6 +526,7 @@ class Settings(
     var lyricsAutoScroll by preference(true)
     var lyricsProviderOrder by preference(LyricsProvider.userConfigurable.joinToString(",") { it.name })
     var lyricsEnabledProviders by preference("")
+    var lyricsYoutubeCaptionsEnabled by preference(LyricsYoutubeCaptionsEnabledKey, true)
     var preferWordSyncedLyrics by preference(PreferWordSyncedLyricsKey, false)
     var canvasContentOrder by preference(CanvasContentOrderKey, "YOUTUBE_MUSIC_VIDEO,SPOTIFY_CANVAS,APPLE_MUSIC")
     var canvasEnabledSources by preference(CanvasEnabledSourcesKey, "")
@@ -599,6 +630,7 @@ class Settings(
 
     var songCacheEnabled by preference(false)
     var maxSongCacheSize by preference(1024)
+    var cacheWholeSongWhilePlaying by preference(CacheWholeSongWhilePlayingKey, false)
     var maxImageCacheSize by preference(512)
     var audioCacheLocation by preference("INTERNAL")
     var downloadLocation by preference("INTERNAL")
@@ -614,6 +646,10 @@ class Settings(
     var checkForUpdates by preference(true)
     var updateNotifications by preference(true)
     var updateChannel by preference("")
+
+    /** Android only: name of the update install method (SYSTEM, ROOT or SHIZUKU). */
+    var updateInstallMethod by preference(UpdateInstallMethodKey, "SYSTEM")
+    var autoInstallUpdates by preference(AutoInstallUpdatesKey, false)
     var installedNightlyDigest by preference("")
     var lastUpdateCheckTimestamp by preference(0L)
     var lastUpdateCheckAttemptTimestamp by preference(0L)
@@ -675,6 +711,8 @@ class Settings(
     var listenBrainzUsername by preference("")
     var listenBrainzEnabled by preference(false)
     var listenBrainzUseNowPlaying by preference(true)
+    var listenBrainzApiUrl by preference(ListenBrainzApiUrlKey, "")
+    var songShareLink by preference(SongShareLinkKey, SongShareLink.YOUTUBE_MUSIC.name)
     var pendingScrobblesJson by preference("[]")
     var corruptPendingScrobblesJson by preference("")
     var systemInDarkTheme by preference(false)
@@ -699,8 +737,12 @@ class Settings(
     var swipeSensitivity by preference(73f)
     var swipeToSong by preference(SwipeToSongKey, false)
     var swipeToRemoveSong by preference(SwipeToRemoveSongKey, false)
+    var swipeToRemoveFromQueue by preference(SwipeToRemoveFromQueueKey, false)
     var autoLoadMore by preference(true)
     var classicRecommendations by preference(ClassicRecommendationsKey, false)
+    val useLocalHomeRecommendations: Boolean
+        get() = classicRecommendations || !hasSupportedYouTubeAuthCookie(innerTubeCookie)
+
     var disableLoadMoreWhenRepeatAll by preference(false)
     var preventDuplicateTracksInQueue by preference(false)
     var innerTubeCookie by preference("")
@@ -1379,6 +1421,8 @@ class Settings(
                     "aiSlopBlocklistUpdatedAt",
                     SpeedDialArtworkRefreshTimesKey,
                     "customDownloadPath",
+                    CarLightsDeviceAddressKey,
+                    CarLightsDeviceNameKey,
                     "knownUploadIdsJson",
                     "hasNewUploads",
                     "desktopOnboardingComplete",
@@ -1466,7 +1510,6 @@ internal val retiredPortableSettingTypes =
         "lastFmArtistAvatarsJson" to SettingType.STRING,
         "enableMusicVideos" to SettingType.BOOLEAN,
         "autoPlayMusicVideos" to SettingType.BOOLEAN,
-        "resumeOnBluetoothConnect" to SettingType.BOOLEAN,
         "pureBlack" to SettingType.BOOLEAN,
         "desktopSidebarExpanded" to SettingType.BOOLEAN,
         "discordRpcActivityType" to SettingType.STRING,

@@ -8,6 +8,8 @@ import com.sun.jna.NativeLibrary
 import com.sun.jna.NativeLong
 import com.sun.jna.Pointer
 import com.sun.jna.ptr.PointerByReference
+import java.nio.charset.StandardCharsets
+import java.util.Base64
 import java.util.Properties
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
@@ -74,9 +76,23 @@ internal fun parseLinuxCredentialRecord(
     path: String,
 ): LinuxCredentialRecord? =
     try {
-        payload?.let { LinuxCredentialRecord(it, modified, path) }
+        payload?.let { LinuxCredentialRecord(decodeLinuxCredentialPayload(it), modified, path) }
     } catch (_: IllegalArgumentException) {
         null
+    }
+
+// Some Secret Service providers keep only the first line of a secret, so the payload is stored as one Base64 line.
+// The '#' prefix makes builds that predate this read the record as an empty properties file instead of a bogus key.
+private const val SINGLE_LINE_PAYLOAD_PREFIX = "#metrolist-base64:"
+
+internal fun encodeLinuxCredentialPayload(payload: String): String =
+    SINGLE_LINE_PAYLOAD_PREFIX + Base64.getEncoder().encodeToString(payload.toByteArray(StandardCharsets.UTF_8))
+
+internal fun decodeLinuxCredentialPayload(stored: String): String =
+    if (stored.startsWith(SINGLE_LINE_PAYLOAD_PREFIX)) {
+        String(Base64.getDecoder().decode(stored.removePrefix(SINGLE_LINE_PAYLOAD_PREFIX).trim()), StandardCharsets.UTF_8)
+    } else {
+        stored
     }
 
 internal fun runLinuxCredentialCommand(
@@ -270,13 +286,14 @@ private object LinuxSecretServiceWriter {
                     else -> return CredentialCommandResult(1, "", "Credential items are unreadable")
                 }
             if (payload == null) return CredentialCommandResult(if (record == null) 1 else 0, record?.payload.orEmpty(), "")
+            val encoded = encodeLinuxCredentialPayload(payload)
             val saved =
                 if (record != null) {
-                    val replacement = secret.secret_value_new(payload, NativeLong(-1), "text/plain")
+                    val replacement = secret.secret_value_new(encoded, NativeLong(-1), "text/plain")
                     value = replacement
                     secret.secret_item_set_secret_sync(readable.getValue(record), replacement, cancellable, error)
                 } else {
-                    secret.secret_password_storev_sync(null, table, null, "Metrolist Desktop Secrets", payload, cancellable, error)
+                    secret.secret_password_storev_sync(null, table, null, "Metrolist Desktop Secrets", encoded, cancellable, error)
                 }
             CredentialCommandResult(if (saved != 0) 0 else 1, "", "")
         } finally {

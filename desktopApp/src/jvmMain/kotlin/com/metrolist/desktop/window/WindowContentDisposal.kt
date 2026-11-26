@@ -5,7 +5,8 @@ import androidx.compose.runtime.DisposableEffect
 import javax.swing.RootPaneContainer
 
 @Composable
-internal fun ClearWindowContentOnDispose(window: RootPaneContainer) {
+internal fun ClearWindowContentOnDispose(window: RootPaneContainer?) {
+    if (window == null) return
     DisposableEffect(window) {
         onDispose {
             // Compose leaves its disposed panel attached, so queued Swing validation can still resize it.

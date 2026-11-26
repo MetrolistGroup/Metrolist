@@ -4,6 +4,7 @@ import argparse
 import hashlib
 import json
 from pathlib import Path
+import re
 import shutil
 import tarfile
 import tempfile
@@ -11,6 +12,16 @@ import urllib.request
 import zipfile
 
 ROOT = Path(__file__).resolve().parents[2]
+
+
+def require_patched(home):
+    release = (home / 'release').read_text()
+    version = re.search(r'^JAVA_VERSION="([0-9]+(?:\.[0-9]+)*)(?:\+[^"\n]+)?"$', release, re.MULTILINE)
+    minimum = json.loads((ROOT / 'scripts/graalvm-pins.json').read_text())['version']
+    minimum_parts = tuple(map(int, minimum.split('.')))
+    version_parts = tuple(map(int, version[1].split('.'))) if version else ()
+    if not version_parts or version_parts[0] != minimum_parts[0] or version_parts < minimum_parts:
+        raise ValueError(f'Use GraalVM {minimum} or a newer Java {minimum_parts[0]} update to fix CVE-2026-114938')
 
 
 def verify(path, digest):

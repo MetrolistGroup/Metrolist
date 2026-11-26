@@ -53,21 +53,23 @@ internal fun EventWithSong.withHistoricalMetadata(): EventWithSong {
                 ?: ArtistEntity(id = "history-artist:$name", name = name, isLocal = true)
         }
     return copy(
-        song =
-            song.copy(
-                song =
-                    song.song.copy(
-                        title = snapshot.title,
-                        customTitle = null,
-                        customArtist = null,
-                        albumId = snapshot.albumId,
-                        albumName = snapshot.album,
-                        duration = snapshot.duration?.toInt() ?: -1,
-                        thumbnailUrl = snapshot.thumbnailUrl,
-                    ),
-                artists = artists,
-                artistMaps = artists.mapIndexed { index, artist -> SongArtistMap(event.songId, artist.id, index) },
-                album = song.album?.takeIf { it.id == snapshot.albumId },
+        songs =
+            listOf(
+                song.copy(
+                    song =
+                        song.song.copy(
+                            title = snapshot.title,
+                            customTitle = null,
+                            customArtist = null,
+                            albumId = snapshot.albumId,
+                            albumName = snapshot.album,
+                            duration = snapshot.duration?.toInt() ?: -1,
+                            thumbnailUrl = snapshot.thumbnailUrl,
+                        ),
+                    artists = artists,
+                    artistMaps = artists.mapIndexed { index, artist -> SongArtistMap(event.songId, artist.id, index) },
+                    albums = listOfNotNull(song.album?.takeIf { it.id == snapshot.albumId }),
+                ),
             ),
     )
 }

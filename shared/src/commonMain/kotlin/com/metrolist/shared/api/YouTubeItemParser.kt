@@ -432,6 +432,8 @@ internal object YouTubeItemParser {
     ): Boolean {
         if (renderer.string("musicItemRendererDisplayPolicy") != "MUSIC_ITEM_RENDERER_DISPLAY_POLICY_GREY_OUT") return false
         if (title.isBlank()) return true
+        // Browse restrictions belong to that client; playback may succeed with another one.
+        if ((duration ?: 0L) > 0L) return false
         val titleEndpoint =
             renderer["flexColumns"]
                 .asArray()
@@ -440,9 +442,6 @@ internal object YouTubeItemParser {
                 ?.firstOrNull()
                 .asObject()
                 ?.get("navigationEndpoint")
-        // YouTube Music's display policy can hide playable videos, even omitting their play controls.
-        // Tracks the account cannot play keep their duration too, but their title opens a Premium upsell dialog instead.
-        if ((duration ?: 0L) > 0L && titleEndpoint.asObject()?.get("showDialogCommand") == null) return false
         val endpoints =
             listOf(
                 renderer["onTap"],

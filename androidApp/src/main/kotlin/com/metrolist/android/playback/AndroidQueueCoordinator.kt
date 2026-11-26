@@ -423,6 +423,7 @@ internal class AndroidQueueCoordinator(
                     index = adjustedStartIndex,
                     title = queueTitle,
                     finite = finite ?: true,
+                    explicitRadioQueue = radioQueue,
                     enabled = shuffleEnabled,
                     preserveHistory = shuffleModeEnabled != true,
                     positionMs = startPositionMs,
@@ -598,6 +599,29 @@ internal class AndroidQueueCoordinator(
         radioQueuePlaylistId = "RDAMVM${seed.id}"
         radioQueueParams = null
         bootstrapRecommendations(seed.id, allowRepeatMode = true)
+        onSave()
+    }
+
+    // A single song starts its own radio so repeat mode or the similar-songs setting cannot leave it alone in the queue.
+    fun playSongRadio(
+        song: SongItem,
+        startPositionMs: Long,
+        startPlaying: Boolean,
+        startVideo: Boolean,
+    ) {
+        val previousSessionId = queueSessionId
+        playQueue(
+            songs = listOf(song),
+            finite = false,
+            startPositionMs = startPositionMs,
+            startPlaying = startPlaying,
+            startVideo = startVideo,
+            radioQueue = true,
+        )
+        if (queueSessionId == previousSessionId) return
+        radioQueuePlaylistId = "RDAMVM${song.id}"
+        radioQueueParams = null
+        bootstrapRecommendations(song.id, allowRepeatMode = true)
         onSave()
     }
 

@@ -2,7 +2,9 @@
 
 ## Set up a checkout
 
-Use Eclipse Temurin 25, including for the IDE's Gradle JVM. The build requires the `ADOPTIUM` vendor. Java and Kotlin bytecode target 21; the desktop runtime is Java 25. For a custom JDK location, set Gradle's `org.gradle.java.installations.paths`.
+Use Eclipse Temurin 25.0.5.1+2 or a newer Java 25 update, including for the IDE's Gradle JVM. The build requires the `ADOPTIUM` vendor. Java and Kotlin bytecode target 21; the desktop runtime is Java 25. For a custom JDK location, set Gradle's `org.gradle.java.installations.paths`.
+
+Gradle and desktop packaging reject Java 25 builds older than 25.0.5.1 because of [CVE-2026-114938](https://adoptium.net/news/2026/11/temurin-november-2026-cspu-java4shell/). Upgrade an installed older JDK before building. Daemon provisioning downloads and `scripts/deps.sh` install the patched release; CI checks for the latest Java 25 update instead of accepting an older runner cache entry.
 
 JVM tests and desktop launchers enable native access for Skiko, JNA, SQLite and Conscrypt. They allow the Unsafe memory access that protobuf and DataStore use on Java 25.
 
@@ -128,6 +130,8 @@ Android media menus follow the invoking input, not the navigation layout: mouse 
 Song and artwork carousels have no horizontal scrollbars. Only desktop Home rows show previous/next buttons. Desktop rows support Shift+wheel, horizontal touchpad scrolling, mouse dragging and keyboard navigation; unmodified vertical input scrolls the page. See [desktop scrolling](desktop.md#scrolling) for platform checks.
 
 Android selects desktop mode for desk/DeX windows and for large windows with a mouse. Touchpad-only keyboard covers keep tablets on the mobile layout. Desktop mode uses the desktop player bar when the window's smallest width reaches Material's 600 dp medium-width breakpoint. Landscape phones keep the mobile mini-player even when Android reports a pointer device.
+
+The Android manifest retains v13's audio app category and explicit `resizeableActivity="true"` on `MainActivity`. Android distinguishes declared resizing from resizing inferred from the target SDK. [Samsung recommends an explicit declaration for multi-window support](https://developer.samsung.com/samsung-dex/modify-optimizing.html). Launcher aliases inherit the target activity's resizing support. Keep these declarations when changing Android entry points.
 
 Android 15+ windows with a mouse or touchpad place search and the account menu in the transparent system caption bar at every width; narrow captions use a search icon. Touch-only floating windows keep the account menu in the app bar and place content below the caption. Home and Library count the caption inset once. The layout reserves the system-reported app-menu and window-control bounds; only interactive app controls exclude caption drag gestures.
 
@@ -331,6 +335,10 @@ Lines that share one start and have no word timing count as unsynced. Lookup kee
 
 Room stores confirmed misses with their lookup identity for seven days. Metadata, enabled providers, provider order, video context and explicit refresh trigger a new lookup. Provider failures are never saved as misses.
 
+While the shared network state reports no connection, lookup returns saved lyrics without asking providers and caches no miss. Songwriter lookups and AI translation are skipped too, except translation through an AI endpoint on localhost. A song played after the connection returns is looked up as usual.
+
+**Clear fetched lyrics** in Lyrics > Sources deletes saved provider results so the next play fetches them again. It keeps User lyrics and drafts, protected 13.x lyrics, sources picked for a song, and per-song offsets.
+
 Shared lyrics HTTP reads retry a 503 twice with 500 ms and 1 s backoff, honoring Retry-After within a five-second budget.
 
 Lyprio fetches remove a leading title-and-artist header only when the whole line matches the requested metadata, separated by a spaced hyphen, en dash or em dash in either order, and another nonblank line follows. Matching ignores case and repeated whitespace.
@@ -343,7 +351,7 @@ LyricsPlus and Zemer are not lookup providers. Stored provider settings drop the
 
 Each candidate includes cached translations and dictionary-free romanization before display. When romanization dictionary preparation is needed and nothing is displayed, plain lyrics publish first. Enrichment replaces only the displayed entries and keeps source timestamps. Cancelled requests and late enrichment cannot overwrite newer results. Songwriter lookups run independently.
 
-The shared player keeps empty results loading until the request releases its deduplication key. In the **Refetch** menu, **Automatic** bypasses the saved provider result and uses the configured lookup. Picking a provider searches only that provider and shows its candidates in the existing source picker. Empty or failed refreshes keep the displayed lyrics. Player captions request lyrics when enabled, but hidden mobile players do not. Next-song prefetch requires full lyrics or subtitles.
+The shared player keeps empty results loading until the request releases its deduplication key. Refetch bypasses the saved result; empty or failed refreshes keep the displayed lyrics. Player captions request lyrics when enabled, but hidden mobile players do not. Next-song prefetch requires full lyrics or subtitles.
 
 ### Timing
 
@@ -353,7 +361,7 @@ Activation uses scroll lookahead and per-line overlap handling unless "Highlight
 
 ### Manual search and editing
 
-Manual search opens a title and artist dialog, then a provider picker. All providers search in parallel, including disabled ones and the fixed User and YouTube sources; completed groups with results appear in settings order. Dismissing, selecting or changing tracks cancels pending requests. Custom queries omit the track's video ID, album and duration.
+Manual search opens a title and artist dialog, then a provider picker. On Android, the dialog's Search online button sends the artist and title as a localized lyrics query to the system web search app. Desktop and iOS have no system web search, so the button is hidden there. All providers search in parallel, including disabled ones and the fixed User and YouTube sources; completed groups with results appear in settings order. Dismissing, selecting or changing tracks cancels pending requests. Custom queries omit the track's video ID, album and duration.
 
 The shared full-screen editor opens the active lyrics as MLX v2 JSON behind a timestamped text field: `[mm:ss.cc] text`, or three fractional digits for millisecond sources. Word-synced lines use inline tags such as `[00:08.20] <00:08.20>word <00:08.51>tags`. `\n`, `\r`, `\\`, `\<` and `\>` are escapes. Timing buttons shift selected lines by half a second.
 
@@ -421,7 +429,7 @@ Legacy database conversion removes dangling children covered by cascading foreig
 
 ### Casting
 
-Android and desktop share the JVM cast sessions. Connecting and replacing media preserve receiver volume for Google Cast, DLNA/Sonos and FCast; only explicit adjustments send volume commands. Receiver reports supply remote volume state. Song changes replace media in the existing session. The stream proxy keeps TCP port `57643` and changes its URL token for each song. It follows googlevideo redirects to other trusted `/videoplayback` endpoints, because uncached tracks are often served from another edge. See the [Linux firewall setup](install/linux.md#sonos-and-dlna-with-firewalld) for SSDP reply and stream rules. Discovery lists each Sonos group once, at its coordinator from `ZoneGroupTopology`, because grouped, bonded and satellite speakers reject transport commands. Unreadable DLNA device descriptions are logged once per location in the playback log.
+Android and desktop share the JVM cast sessions. Connecting and replacing media preserve receiver volume for Google Cast, DLNA/Sonos and FCast; only explicit adjustments send volume commands. On Android, each volume button press changes receiver volume by the Cast volume step setting, 5 of 100 by default. Receiver reports supply remote volume state. Song changes replace media in the existing session. The stream proxy keeps TCP port `57643` and changes its URL token for each song. It follows googlevideo redirects to other trusted `/videoplayback` endpoints, because uncached tracks are often served from another edge. See the [Linux firewall setup](install/linux.md#sonos-and-dlna-with-firewalld) for SSDP reply and stream rules. Discovery lists each Sonos group once, at its coordinator from `ZoneGroupTopology`, because grouped, bonded and satellite speakers reject transport commands. Unreadable DLNA device descriptions are logged once per location in the playback log.
 
 Desktop song selection, skips, receiver EOF and Radio use one transition owner. A new selection cancels the pending job, and EOF waits while a selection resolves. Media replacement keeps the receiver connected and publishes the loaded queue occurrence. Failed resolution stops the old receiver before selecting the failed song. Disconnect cancels cast resolution and continues the selected occurrence locally. Starting Radio from the current cast song keeps its receiver position and playback intent. DLNA/Sonos completion uses the last PLAYING position and the measured poll interval when STOPPED resets RelTime. When duration is unknown, completion requires observed PLAYING progress followed by STOPPED with an explicit OK transport status. Explicit Stop requests do not advance the queue.
 
@@ -456,6 +464,8 @@ Tidal single-track URL imports read the requested track from the embed page's me
 Android Spotify and Apple Music library imports open the destination picker for one playlist. Multiple playlists import sequentially through the foreground service into separate playlists with their source names and covers. The app creates synced playlists when signed into YouTube Music and local playlists otherwise. A failed playlist does not stop the rest. The final failure report includes completed counts and failed playlist names.
 
 Last.fm and ListenBrainz login dialogs link to account registration; ListenBrainz also links to its token page.
+
+The ListenBrainz dialog takes an optional server URL for ListenBrainz-compatible servers such as Koito. Enter the API root that ends before `/submit-listens`, for example `https://koito.example/apis/listenbrainz/1`. The dialog validates the token against that server and saves the URL only after it connects; an empty field uses `https://api.listenbrainz.org/1`.
 
 Last.fm session keys only work with the API key that issued them. When Last.fm answers a scrobble or now-playing update with error 9, the account is marked as needing sign-in: Last.fm plays stay queued and are not sent, and the Last.fm settings page offers to sign in again. Signing back into the same account keeps and sends the held plays; another account still clears them.
 

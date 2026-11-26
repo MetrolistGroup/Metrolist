@@ -3,6 +3,8 @@ package com.metrolist.android.viewmodels
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.metrolist.android.data.PlayHistoryRepository
+import com.metrolist.shared.api.lastfm.LastFmHistoryCache
+import com.metrolist.shared.api.lastfm.LastFmListen
 import com.metrolist.shared.db.HistoryAlbumStatistic
 import com.metrolist.shared.db.HistoryArtistStatistic
 import com.metrolist.shared.db.HistoryStatGroup
@@ -47,9 +49,10 @@ data class StatsUiState(
 )
 
 class StatsViewModel internal constructor(
-    private val loadSnapshot: suspend (Long, Long) -> HistoryStatisticsSnapshot,
+    private val loadSnapshot: suspend (Long, Long, List<LastFmListen>) -> HistoryStatisticsSnapshot,
     private val loadRecent: suspend () -> List<PlayHistoryEntry>,
     private val loadSongs: suspend (List<HistoryStatGroup>) -> List<SongItem>,
+    private val loadLastFm: suspend (Long, Long) -> List<LastFmListen> = LastFmHistoryCache::listens,
     private val clock: Clock = Clock.System,
 ) : ViewModel() {
     constructor(
@@ -100,35 +103,11 @@ class StatsViewModel internal constructor(
                 try {
                     val (sinceMs, untilMs) = period.epochRange(dateRange, clock, mode = mode)
 
-                    val snapshot = loadSnapshot(sinceMs, untilMs)
-                    val songs = snapshot.songs
-                    val artists = snapshot.artists
-                    val albums = snapshot.albums
-                    val totals = snapshot.totals
-                    val daily = snapshot.daily.associate { it.bucket to it.playCount }
-                    val hourly = snapshot.hourly.associate { it.bucket.toInt() to it.playCount }
                     val recent = loadRecent()
-
-                    currentCoroutineContext().ensureActive()
-                    _uiState.value =
-                        StatsUiState(
-                            period = period,
-                            mode = mode,
-                            dateRange = dateRange,
-                            topSongs = songs,
-                            songItems = snapshot.songItems.associateBy { it.id },
-                            topArtists = artists,
-                            topAlbums = albums,
-                            totalScrobbles = totals.playCount,
-                            totalTimeMs = totals.playTimeMs,
-                            dailyStats = daily,
-                            hourlyStats = hourly,
-                            recentScrobbles = recent,
-                            isLoading = false,
-                            hasLoaded = true,
-                            artistCount = artists.size,
-                            albumCount = albums.size,
-                        )
+                    showSnapshot(loadSnapshot(sinceMs, untilMs, emptyList()), period, mode, dateRange, recent)
+                    // Last.fm can take a while for long periods, so local numbers show first.
+                    val lastFm = loadLastFm(sinceMs, untilMs)
+                    if (lastFm.isNotEmpty()) showSnapshot(loadSnapshot(sinceMs, untilMs, lastFm), period, mode, dateRange, recent)
                 } catch (error: CancellationException) {
                     throw error
                 } catch (error: Exception) {
@@ -137,5 +116,41 @@ class StatsViewModel internal constructor(
                     if (currentCoroutineContext().isActive) _uiState.value = _uiState.value.copy(isLoading = false)
                 }
             }
+    }
+
+    private suspend fun showSnapshot(
+        snapshot: HistoryStatisticsSnapshot,
+        period: StatsPeriod,
+        mode: StatisticsPeriodMode,
+        dateRange: StatisticsDateRange?,
+        recent: List<PlayHistoryEntry>,
+    ) {
+        val songs = snapshot.songs
+        val artists = snapshot.artists
+        val albums = snapshot.albums
+        val totals = snapshot.totals
+        val daily = snapshot.daily.associate { it.bucket to it.playCount }
+        val hourly = snapshot.hourly.associate { it.bucket.toInt() to it.playCount }
+
+        currentCoroutineContext().ensureActive()
+        _uiState.value =
+            StatsUiState(
+                period = period,
+                mode = mode,
+                dateRange = dateRange,
+                topSongs = songs,
+                songItems = snapshot.songItems.associateBy { it.id },
+                topArtists = artists,
+                topAlbums = albums,
+                totalScrobbles = totals.playCount,
+                totalTimeMs = totals.playTimeMs,
+                dailyStats = daily,
+                hourlyStats = hourly,
+                recentScrobbles = recent,
+                isLoading = false,
+                hasLoaded = true,
+                artistCount = artists.size,
+                albumCount = albums.size,
+            )
     }
 }

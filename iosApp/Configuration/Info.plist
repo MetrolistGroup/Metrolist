@@ -18,6 +18,8 @@
     <string>$(PRODUCT_BUNDLE_PACKAGE_TYPE)</string>
     <key>CFBundleShortVersionString</key>
     <string>METROLIST_VERSION</string>
+    <key>MetrolistWidgetAppGroupIdentifier</key>
+    <string>$(METROLIST_APP_GROUP_ID)</string>
     <key>CFBundleVersion</key>
     <string>METROLIST_VERSION</string>
     <key>CFBundleURLTypes</key>
@@ -36,6 +38,12 @@
     <true/>
     <key>LSRequiresIPhoneOS</key>
     <true/>
+    <key>NSBonjourServices</key>
+    <array>
+        <string>_metrolist-connect._tcp.</string>
+    </array>
+    <key>NSLocalNetworkUsageDescription</key>
+    <string>Metrolist uses the local network to find nearby devices for Device Connect.</string>
 	<key>UIFileSharingEnabled</key>
 	<true/>
 	<key>LSSupportsOpeningDocumentsInPlace</key>
@@ -67,10 +75,21 @@
         <string>UIInterfaceOrientationLandscapeLeft</string>
         <string>UIInterfaceOrientationLandscapeRight</string>
     </array>
+    <key>NSMicrophoneUsageDescription</key>
+    <string>Metrolist uses the microphone to recognize music playing nearby.</string>
     <key>NSAppTransportSecurity</key>
     <dict>
         <key>NSAllowsArbitraryLoads</key>
         <false/>
+        <key>NSAllowsLocalNetworking</key>
+        <true/>
     </dict>
+    <key>NSBonjourServices</key>
+    <array>
+        <string>_fcast._tcp</string>
+        <string>_googlecast._tcp</string>
+    </array>
+    <key>NSLocalNetworkUsageDescription</key>
+    <string>Metrolist uses the local network to find nearby cast devices.</string>
 </dict>
 </plist>

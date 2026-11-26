@@ -1411,7 +1411,8 @@ class PlayerViewModel(
     ) {
         val requestKey =
             "$songId\u0000$title\u0000$artist\u0000$isCustomQuery\u0000$forceAiTranslation\u0000" +
-                "${Settings.shared.lyricsProviderOrder}\u0000${Settings.shared.lyricsEnabledProviders}\u0000${Settings.shared.preferWordSyncedLyrics}"
+                "${Settings.shared.lyricsProviderOrder}\u0000${Settings.shared.lyricsEnabledProviders}\u0000" +
+                "${Settings.shared.lyricsYoutubeCaptionsEnabled}\u0000${Settings.shared.preferWordSyncedLyrics}"
         if (!skipCache && lyricsRequestKey == requestKey && (cacheOnly || !lyricsRequestCacheOnly)) return
         lyricsRequestKey = requestKey
         lyricsRequestCacheOnly = cacheOnly
@@ -1812,7 +1813,6 @@ class PlayerViewModel(
         album: String? = null,
         providerOrder: String = Settings.shared.lyricsProviderOrder,
         isCustomQuery: Boolean = false,
-        selectedProvider: LyricsProvider? = null,
     ) {
         _uiState.value.lyricsProviderSearch?.cancel()
         val resolvedDuration =
@@ -1826,7 +1826,7 @@ class PlayerViewModel(
                         ?.takeIf { it > 0L }
             }
         val search =
-            LyricsProviderSearch(viewModelScope, providerOrder, selectedProvider) { provider ->
+            LyricsProviderSearch(viewModelScope, providerOrder) { provider ->
                 lyricsRepository.getProviderResults(
                     videoId = songId.takeUnless { isCustomQuery && provider != LyricsProvider.USER },
                     title = title,

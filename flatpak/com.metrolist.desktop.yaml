@@ -13,6 +13,7 @@ build-options:
 finish-args:
   - --share=network
   - --share=ipc
+  - --socket=wayland
   - --socket=x11
   - --socket=pulseaudio
   - --device=dri
@@ -33,13 +34,13 @@ modules:
     sources:
       - type: archive
         only-arches: [x86_64]
-        url: https://github.com/adoptium/temurin25-binaries/releases/download/jdk-25.0.5%2B8/OpenJDK25U-jdk_x64_linux_hotspot_25.0.5_8.tar.gz
-        sha256: 68982529869257d0ee6b824ec5aa270ff8b118bb438670da0b97ebdab178d7fb
+        url: https://github.com/adoptium/temurin25-binaries/releases/download/jdk-25.0.5.1%2B2/OpenJDK25U-jdk_x64_linux_hotspot_25.0.5.1_2.tar.gz
+        sha256: 760f91b22c3efc9bd1b64ff950598231be82928cc807e30691a0e7a2995a62c0
         dest: jdk
       - type: archive
         only-arches: [aarch64]
-        url: https://github.com/adoptium/temurin25-binaries/releases/download/jdk-25.0.5%2B8/OpenJDK25U-jdk_aarch64_linux_hotspot_25.0.5_8.tar.gz
-        sha256: bb5b2ded252f21c6090cf780b0a408ad0d83bbb557e702955643557f13231880
+        url: https://github.com/adoptium/temurin25-binaries/releases/download/jdk-25.0.5.1%2B2/OpenJDK25U-jdk_aarch64_linux_hotspot_25.0.5.1_2.tar.gz
+        sha256: c37879e0d08eeb1baa69fcbb7758cd455b7b1c0ceab1e2a136ccb1713c530984
         dest: jdk
     build-commands:
       - mkdir -p /app/jdk
@@ -72,7 +73,16 @@ modules:
         cat > /app/bin/com.metrolist.desktop <<'LAUNCHER'
         #!/bin/sh
         export SKIKO_WAYLAND="${SKIKO_WAYLAND:-1}"
-        export GDK_BACKEND="${GDK_BACKEND:-x11}"
+        if [ -n "${WAYLAND_DISPLAY:-}" ] || [ -S "${XDG_RUNTIME_DIR:-}/wayland-0" ]; then has_wayland=1; else has_wayland=0; fi
+        if [ -z "${GDK_BACKEND:-}" ]; then
+            if [ "$has_wayland" = "1" ] && { [ "${METROLIST_USE_WAYLAND:-0}" = "1" ] || [ "${METROLIST_USE_WAKEFIELD:-0}" = "1" ]; }; then
+                export GDK_BACKEND=wayland
+            elif [ -n "${DISPLAY:-}" ]; then
+                export GDK_BACKEND=x11
+            elif [ "$has_wayland" = "1" ]; then
+                export GDK_BACKEND=wayland
+            fi
+        fi
         export _JAVA_AWT_WM_NONREPARENTING="${_JAVA_AWT_WM_NONREPARENTING:-1}"
         export MALLOC_ARENA_MAX="${MALLOC_ARENA_MAX:-4}"
         export WEBKIT_DISABLE_DMABUF_RENDERER=1

@@ -41,7 +41,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -213,6 +215,7 @@ import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.koinInject
 import java.awt.Toolkit
 import java.awt.datatransfer.DataFlavor
+import java.awt.datatransfer.Transferable
 import java.io.File
 import kotlin.time.Duration.Companion.milliseconds
 
@@ -313,15 +316,21 @@ private fun ProviderImportDialog(
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
                     )
+                    val clipboard = LocalClipboard.current
+                    val pasteScope = rememberCoroutineScope()
                     TextButton(
                         onClick = {
-                            val text =
-                                try {
-                                    Toolkit.getDefaultToolkit().systemClipboard.getData(DataFlavor.stringFlavor) as? String
-                                } catch (_: Exception) {
-                                    null
-                                }
-                            if (!text.isNullOrBlank()) onValueChange(text)
+                            pasteScope.launch {
+                                val text =
+                                    runCatching {
+                                        @OptIn(ExperimentalComposeUiApi::class)
+                                        val transferable =
+                                            clipboard.getClipEntry()?.nativeClipEntry as? Transferable
+                                        transferable?.getTransferData(DataFlavor.stringFlavor) as? String
+                                            ?: Toolkit.getDefaultToolkit().systemClipboard.getData(DataFlavor.stringFlavor) as? String
+                                    }.getOrNull()
+                                if (!text.isNullOrBlank()) onValueChange(text)
+                            }
                         },
                         shapes = ButtonDefaults.shapes(),
                     ) {

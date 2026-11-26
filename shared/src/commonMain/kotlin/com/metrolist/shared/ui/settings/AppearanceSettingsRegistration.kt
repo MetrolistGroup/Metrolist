@@ -238,9 +238,11 @@ internal fun SettingsUiRegistryBuilder.registerAppearanceSettings(host: SharedSe
                                     "SEARCH" -> Res.string.search
                                     "TRACKS" -> Res.string.tracks
                                     "FAVORITES" -> Res.string.favorites
+                                    "DOWNLOADS" -> Res.string.downloads
                                     "ARTISTS" -> Res.string.artists
                                     "ALBUMS" -> Res.string.albums
                                     "PLAYLISTS" -> Res.string.playlists
+                                    "PODCASTS" -> Res.string.podcasts
                                     else -> Res.string.library
                                 },
                             ),
@@ -419,9 +421,13 @@ internal fun SettingsUiRegistryBuilder.registerAppearanceSettings(host: SharedSe
                                 add(SettingsChoice("TRACKS", stringResource(Res.string.tracks)))
                                 add(SettingsChoice("FAVORITES", stringResource(Res.string.favorites)))
                             }
+                            add(SettingsChoice("DOWNLOADS", stringResource(Res.string.downloads)))
                             add(SettingsChoice("ARTISTS", stringResource(Res.string.artists)))
                             add(SettingsChoice("ALBUMS", stringResource(Res.string.albums)))
                             add(SettingsChoice("PLAYLISTS", stringResource(Res.string.playlists)))
+                            if (!settings.hidePodcasts) {
+                                add(SettingsChoice("PODCASTS", stringResource(Res.string.podcasts)))
+                            }
                         }
                         if (isEmpty()) add(SettingsChoice("MYSTERIOUS", stringResource(Res.string.mysterious_fourth_tab)))
                     }
@@ -431,6 +437,7 @@ internal fun SettingsUiRegistryBuilder.registerAppearanceSettings(host: SharedSe
                         settings.showBottomNavHome,
                         settings.showBottomNavSearch,
                         settings.showBottomNavLibrary,
+                        settings.hidePodcasts,
                     )
                 choice(
                     id = "defaultOpenTab",
@@ -518,6 +525,12 @@ internal fun SettingsUiRegistryBuilder.registerAppearanceSettings(host: SharedSe
                         checked = settings.swipeToRemoveSong,
                     ) { settings.swipeToRemoveSong = it }
                 }
+                switch(
+                    id = "swipeToRemoveFromQueue",
+                    title = stringResource(Res.string.appearance_swipe_song_gesture_queue),
+                    description = stringResource(Res.string.appearance_swipe_song_gesture_queue_description),
+                    checked = settings.swipeToRemoveFromQueue,
+                ) { settings.swipeToRemoveFromQueue = it }
             }
         }
         if (host.platform != SettingsPlatform.DESKTOP) {
@@ -718,7 +731,7 @@ internal fun SettingsUiRegistryBuilder.registerAppearanceSettings(host: SharedSe
                 }
                 inlineSlider(
                     id = "sliderThickness",
-                    enabled = selectedSliderStyle != SliderStyle.DEFAULT,
+                    enabled = !selectedSliderStyle.isStock,
                     title = stringResource(Res.string.slider_track_thickness),
                     valueLabel = settings.sliderTrackThicknessDp.roundToInt().toString(),
                     value = settings.sliderTrackThicknessDp.coerceIn(2f, 10f),

@@ -2,11 +2,13 @@
 
 ## Artwork
 
-Shared collection covers resolve through `LibraryCovers.kt`. Keep user-selected covers ahead of built-in resources. Android widgets and Android Auto use the same artwork provider for offline covers. Retained download covers use a stable identity that ignores cache-busting revisions, query strings, display sizes and video renditions, so a refetched URL keeps resolving to the PNG already on disk. Legacy keys remain readable and are included when pruning.
+Shared collection covers resolve through `LibraryCovers.kt`. Keep user-selected covers ahead of built-in resources. Android widgets and Android Auto use the same artwork provider for offline covers. Android's image loader also falls back to retained download covers when its normal request fails, including in the player and song lists. Retained download covers use a stable identity that ignores cache-busting revisions, query strings, display sizes and video renditions, so a refetched URL keeps resolving to the PNG already on disk. Legacy keys remain readable and are included when pruning.
 
 Player and collection artwork use square, centered crops. Full-player video thumbnails use the same preview source as song rows, including the thumbnail without encoded letterboxing. Dedicated video shelves, episode previews and video playback keep their wide layouts. On iOS, managed playlist-cover identifiers resolve against the current Application Support directory so container relocation does not break covers. Delete only managed files after the database change succeeds.
 
 Apple Music animated covers match versioned tracks against their full catalog titles before using the album artwork. Track and album qualifiers treat brackets and parentheses equally. Consecutive album notes beginning with `+` in trailing parentheses or brackets are ignored before matching names and detecting explicit or clean editions. Single and EP suffixes may differ across catalogs, while release labels such as Taylor's Version and Deluxe remain significant. A known album must match; only tracks without an album can fall back to a self-titled release. The updated matcher discards stored lookup results from the previous rules. Android also bypasses downloaded Apple Music covers stored before this matcher change.
+
+Spotify Canvas tries tracks from the requested album first, then other releases that pass the same title, artist and duration checks. This lets an EP or album track use a Canvas available on its single. Each Spotify track ID is queried at most once per lookup.
 
 Artwork lookups reject title, artist or album fields longer than 4,096 characters before normalization. Album suffix parsing is iterative and does not use recursive regular-expression matching.
 
@@ -111,6 +113,8 @@ Player lyric captions have a separate alignment setting, centered by default. Th
 
 ## Themes
 
+Generated palettes use MaterialKolor 6's upstream color engine, which corrects Expressive primary and on-primary colors for warm and pale seeds. Tonal spot, Vibrant, Expressive and Neutral use `SPEC_2025`; the other bundled styles resolve to `SPEC_2021` upstream. The 2026 specification applies to CMF, a separate palette that requires a second seed color. The selected palette style and accessibility contrast still apply to artwork, custom colors and Samsung wallpaper palettes. Other Android system palettes use the platform's color roles.
+
 Android publishes system dark mode to shared settings before palette resolution. Check Auto mode after a system theme change. Player action groups use Screen blending over non-solid dark backgrounds and SrcOver in light mode or over solid backgrounds. Filled player controls pair surface-variant containers with on-surface-variant icons, including over artwork in light mode.
 
 Android status-bar icons follow the full player's foreground contrast while the player is visible. Collapsing the player, entering picture-in-picture or pausing the activity releases its override, so the app theme and artist header control the icons again.
@@ -118,6 +122,8 @@ Android status-bar icons follow the full player's foreground contrast while the 
 Artwork palettes request a fixed source and decode at 128 px with a separate memory-cache key. Google artwork uses 256 px sources; YouTube video thumbnails use the bar-free `mqdefault` source. Palette requests do not reuse larger display thumbnails, so artwork load order and URL size variants cannot change the sampled colors. Animated covers do not supply palette frames.
 
 Seeds use Material's Score over exact color counts from samples of up to 128 pixels per side. Keeping the sampled colors avoids merging sparse accents into neutrals. Grayscale artwork uses Material's blue fallback. Desktop samples the current track once, independently of displayed artwork. Track changes cancel the previous palette request and keep the current colors until the next palette loads. The main window, player controls, dialogs, snackbars and detached mini player share one animated scheme. Windows accent colors apply only when a system palette is requested and no artwork seed is active; they never replace a custom or artwork seed that happens to match the default color.
+
+Car Lights take the primary, secondary and tertiary roles of the scheme the app is showing, but resolve it in `CarLights` without the UI so the lights keep following the music while the screen is off. The tracker repeats the scheme selection of `MetrolistApp` and `MetrolistTheme` from the artwork seed, the theme settings, Android's contrast setting and system configuration changes. Change both places together when theme selection changes. A configuration change also writes the system dark mode to shared settings, as `MetrolistApp` does. Vivid colors keep the hue of a role and raise its saturation, because pale Material tones show as near white on RGB LEDs.
 
 The landscape TV player keeps artwork backgrounds visible through a dark scrim behind its controls. Solid backgrounds keep their surface and content color pair. Both color changes animate with the theme motion scheme.
 

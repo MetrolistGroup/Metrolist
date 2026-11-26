@@ -39,13 +39,19 @@ data class Song(
                 entityColumns = ["albumId"],
             ),
     )
-    val album: AlbumEntity? = null,
+    val albums: List<AlbumEntity> = emptyList(),
     @Relation(
         parentColumns = ["id"],
         entityColumns = ["id"],
     )
-    val format: FormatEntity? = null,
+    val formats: List<FormatEntity> = emptyList(),
 ) : LocalItem() {
+    // Single-value relations crash on iOS above 999 rows: Room's recursiveFetchMap calls putAll while iterating the map.
+    // last matches the row Room's single-value relation kept, since it overwrote the map entry per row.
+    val album: AlbumEntity?
+        get() = albums.lastOrNull()
+    val format: FormatEntity?
+        get() = formats.lastOrNull()
     override val id: String
         get() = song.id
     override val title: String

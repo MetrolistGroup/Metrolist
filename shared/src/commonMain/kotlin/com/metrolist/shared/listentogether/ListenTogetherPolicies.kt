@@ -197,6 +197,29 @@ internal fun reconcileHostQueue(
     return retained.map { (key, track) -> if (key in publishedSet) canonicalByKey[key] ?: track else track }
 }
 
+private const val MAX_PUBLISHED_QUEUE_TRACKS = 1_000
+private const val MAX_PUBLISHED_QUEUE_BYTES = 200 * 1024
+
+/**
+ * Keeps the published upcoming queue within metroserver's queue limits so every snapshot fits the
+ * clients' 256 KiB envelope. The byte estimate matches the server's queueWireSize. Tracks past the
+ * limit stay in the host's local queue because reconcileHostQueue keeps unpublished entries.
+ */
+internal fun publishableQueue(queue: List<TrackInfo>): List<TrackInfo> {
+    var bytes = 0
+    val count =
+        queue
+            .asSequence()
+            .take(MAX_PUBLISHED_QUEUE_TRACKS)
+            .takeWhile { track ->
+                bytes += 32 +
+                    listOf(track.id, track.title, track.artist, track.album, track.thumbnail, track.suggestedBy)
+                        .sumOf { it?.encodeToByteArray()?.size ?: 0 }
+                bytes <= MAX_PUBLISHED_QUEUE_BYTES
+            }.count()
+    return if (count == queue.size) queue else queue.take(count)
+}
+
 sealed interface DriftCorrection {
     data object None : DriftCorrection
 

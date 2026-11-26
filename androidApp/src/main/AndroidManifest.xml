@@ -18,6 +18,9 @@
         android:name="android.hardware.bluetooth"
         android:required="false" />
     <uses-feature
+        android:name="android.hardware.bluetooth_le"
+        android:required="false" />
+    <uses-feature
         android:name="android.hardware.type.automotive"
         android:required="false" />
 
@@ -38,6 +41,12 @@
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30" />
     <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" android:maxSdkVersion="30" />
+    <uses-permission
+        android:name="android.permission.BLUETOOTH_SCAN"
+        android:usesPermissionFlags="neverForLocation"
+        tools:targetApi="s" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" android:maxSdkVersion="30" />
     <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission
         android:name="android.permission.WRITE_EXTERNAL_STORAGE"
@@ -47,6 +56,8 @@
     <uses-permission
         android:name="android.permission.REQUEST_INSTALL_PACKAGES"
         tools:ignore="RequestInstallPackagesPolicy" />
+    <!-- Lets updates install without a prompt once Metrolist is its own installer (Android 12+). -->
+    <uses-permission android:name="android.permission.UPDATE_PACKAGES_WITHOUT_USER_ACTION" />
 
     <queries>
         <provider android:authorities="androidx.car.app.connection" />
@@ -66,6 +77,7 @@
     <application
         tools:ignore="PictureInPictureIssue"
         android:name="com.metrolist.android.App"
+        android:appCategory="audio"
         android:banner="@mipmap/tv_banner"
         android:icon="@mipmap/ic_launcher"
         android:allowBackup="true"
@@ -103,6 +115,7 @@
             android:name="com.metrolist.android.MainActivity"
             android:exported="true"
             android:launchMode="singleTask"
+            android:resizeableActivity="true"
             android:supportsPictureInPicture="true"
             android:configChanges="screenSize|smallestScreenSize|screenLayout|orientation"
             android:windowSoftInputMode="adjustResize">
@@ -487,6 +500,14 @@
         <receiver
             android:name="com.metrolist.android.update.UpdateInstallReceiver"
             android:exported="false" />
+        <!-- Shizuku delivers its binder through this provider; the permission limits callers to the system. -->
+        <provider
+            android:name="rikka.shizuku.ShizukuProvider"
+            android:authorities="${applicationId}.shizuku"
+            android:enabled="true"
+            android:exported="true"
+            android:multiprocess="false"
+            android:permission="android.permission.INTERACT_ACROSS_USERS_FULL" />
 
         <receiver
             android:name="com.metrolist.android.widget.MusicWidgetReceiver"

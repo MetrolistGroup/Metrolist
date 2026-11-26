@@ -61,6 +61,8 @@ import com.metrolist.shared.generated.resources.Res
 import com.metrolist.shared.generated.resources.animated_artwork_cache
 import com.metrolist.shared.generated.resources.cache_size_warning_message
 import com.metrolist.shared.generated.resources.cache_size_warning_title
+import com.metrolist.shared.generated.resources.cache_whole_song_while_playing
+import com.metrolist.shared.generated.resources.cache_whole_song_while_playing_desc
 import com.metrolist.shared.generated.resources.calculating
 import com.metrolist.shared.generated.resources.change_folder
 import com.metrolist.shared.generated.resources.clear_all_downloads
@@ -201,6 +203,7 @@ fun StorageSettingsScreen(
     var animatedCoverCacheSize by remember { mutableLongStateOf(0L) }
     var musicVideoCacheEntries by remember { mutableIntStateOf(0) }
     var maxSongCacheSize by remember { mutableIntStateOf(Settings.shared.maxSongCacheSize) }
+    var cacheWholeSongWhilePlaying by remember { mutableStateOf(Settings.shared.cacheWholeSongWhilePlaying) }
     var maxImageCacheSize by remember { mutableIntStateOf(Settings.shared.maxImageCacheSize) }
     var maxAnimatedCoverCacheSize by remember { mutableIntStateOf(Settings.shared.animatedArtworkCacheSize) }
     var cacheLimitRequestId by remember { mutableIntStateOf(0) }
@@ -864,6 +867,22 @@ fun StorageSettingsScreen(
                         steps = songCacheValues.size - 1,
                         enabled = !isCalculatingSizes,
                         isFirst = true,
+                        isLast = false,
+                    )
+
+                    SettingsSubScreenItemRow(
+                        item =
+                            switchSettingsItem(
+                                title = stringResource(Res.string.cache_whole_song_while_playing),
+                                description = stringResource(Res.string.cache_whole_song_while_playing_desc),
+                                checked = cacheWholeSongWhilePlaying,
+                                onCheckedChange = { enabled ->
+                                    Settings.shared.cacheWholeSongWhilePlaying = enabled
+                                    cacheWholeSongWhilePlaying = enabled
+                                },
+                                enabled = maxSongCacheSize != 0,
+                            ),
+                        isFirst = false,
                         isLast = false,
                     )
 

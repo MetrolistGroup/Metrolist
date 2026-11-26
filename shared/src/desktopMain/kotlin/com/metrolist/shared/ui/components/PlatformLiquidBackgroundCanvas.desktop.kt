@@ -23,11 +23,14 @@ import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.LayoutDirection
 import coil3.toBitmap
 import com.metrolist.shared.ui.utils.softwareRendering
+import org.jetbrains.skia.FilterMode
 import org.jetbrains.skia.FilterTileMode
 import org.jetbrains.skia.Image
 import org.jetbrains.skia.ImageFilter
 import org.jetbrains.skia.Paint
 import org.jetbrains.skia.PaintMode
+import org.jetbrains.skia.Picture
+import org.jetbrains.skia.PictureRecorder
 import org.jetbrains.skia.Rect
 import org.jetbrains.skia.RuntimeEffect
 import org.jetbrains.skia.RuntimeShaderBuilder
@@ -369,8 +372,10 @@ private class ArtworkShaderRenderer : RememberObserver {
     private val paint = Paint()
     private val textures = mutableListOf<Pair<TextureKey, BlurredTexture>>()
     private var snapshot: Image? = null
+    private var picture: Picture? = null
     private var snapshotSource: Image? = null
-    private var snapshotKey: List<Any>? = null
+    private var snapshotPrevious: Image? = null
+    private var snapshotKey: List<Any?>? = null
     var available by mutableStateOf(builder != null)
         private set
 
@@ -456,28 +461,49 @@ private class ArtworkShaderRenderer : RememberObserver {
         if (builder == null || !available || scope.size.width <= 0f || scope.size.height <= 0f) return false
         val w = scope.size.width
         val h = scope.size.height
-        if (!softwareRendering || style == null) {
-            return drawShader(w, h, active, previous, alpha, time, style) { paint ->
-                scope.drawIntoCanvas { it.skiaCanvas.drawRect(Rect.makeWH(w, h), paint) }
+        // Window repaints such as seek bar ticks replay the last snapshot; the shader reruns only when this key changes.
+        val key = listOf(w, h, style, alpha, time, softwareRendering)
+        if (snapshotSource !== active || snapshotPrevious !== previous || snapshotKey != key) {
+            releaseSnapshot()
+            if (softwareRendering) {
+                Surface.makeRasterN32Premul(ceil(w).toInt(), ceil(h).toInt()).use { surface ->
+                    val drawn = drawShader(w, h, active, previous, alpha, time, style) { surface.canvas.drawRect(Rect.makeWH(w, h), it) }
+                    if (!drawn) return false
+                    snapshot = surface.makeImageSnapshot()
+                }
+            } else {
+                // Skia's GPU backend renders a picture shader into a texture once and reuses it by picture ID.
+                // shortcut: Skia caps that texture at 4 MP, so larger windows get a bilinear upscale of the blurred output.
+                PictureRecorder().use { recorder ->
+                    val canvas = recorder.beginRecording(Rect.makeWH(w, h))
+                    val drawn = drawShader(w, h, active, previous, alpha, time, style) { canvas.drawRect(Rect.makeWH(w, h), it) }
+                    if (!drawn) return false
+                    picture = recorder.finishRecordingAsPicture()
+                }
+            }
+            snapshotSource = active
+            snapshotPrevious = previous
+            snapshotKey = key
+        }
+        scope.drawIntoCanvas { canvas ->
+            snapshot?.let { canvas.skiaCanvas.drawImage(it, 0f, 0f) }
+            picture?.makeShader(FilterTileMode.CLAMP, FilterTileMode.CLAMP, FilterMode.LINEAR)?.use { shader ->
+                paint.shader = shader
+                canvas.skiaCanvas.drawRect(Rect.makeWH(w, h), paint)
+                paint.shader = null
             }
         }
-        // Static backdrops otherwise rerun the shader on every software repaint, such as each seek bar tick.
-        val key = listOf(w, h, style)
-        if (snapshotSource !== active || snapshotKey != key) {
-            snapshot?.close()
-            snapshot = null
-            snapshotSource = null
-            snapshotKey = null
-            Surface.makeRasterN32Premul(ceil(w).toInt(), ceil(h).toInt()).use { surface ->
-                val drawn = drawShader(w, h, active, null, 1f, time, style) { surface.canvas.drawRect(Rect.makeWH(w, h), it) }
-                if (!drawn) return false
-                snapshot = surface.makeImageSnapshot()
-                snapshotSource = active
-                snapshotKey = key
-            }
-        }
-        scope.drawIntoCanvas { it.skiaCanvas.drawImage(snapshot ?: return@drawIntoCanvas, 0f, 0f) }
         return true
+    }
+
+    private fun releaseSnapshot() {
+        snapshot?.close()
+        snapshot = null
+        picture?.close()
+        picture = null
+        snapshotSource = null
+        snapshotPrevious = null
+        snapshotKey = null
     }
 
     private inline fun drawShader(
@@ -529,10 +555,7 @@ private class ArtworkShaderRenderer : RememberObserver {
     override fun onAbandoned() = close()
 
     private fun close() {
-        snapshot?.close()
-        snapshot = null
-        snapshotSource = null
-        snapshotKey = null
+        releaseSnapshot()
         textures.forEach { it.second.close() }
         textures.clear()
         paint.close()

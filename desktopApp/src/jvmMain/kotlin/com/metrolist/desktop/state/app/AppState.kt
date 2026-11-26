@@ -7,11 +7,15 @@ package com.metrolist.desktop.state.app
 
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
+import androidx.compose.ui.ExperimentalComposeUiApi
+import androidx.compose.ui.platform.ClipEntry
+import androidx.compose.ui.platform.Clipboard
 import com.metrolist.desktop.state.content.SearchState
 import com.metrolist.desktop.update.DesktopUpdateManager
 import com.metrolist.desktop.update.GitHubDesktopRelease
 import com.metrolist.desktop.update.desktopUpdateCheckIsDue
 import com.metrolist.desktop.utils.AppLogger
+import com.metrolist.desktop.utils.WaylandScale
 import com.metrolist.shared.api.artwork.AnimatedArtworkService
 import com.metrolist.shared.api.artwork.DirectCanvasProvider
 import com.metrolist.shared.discord.DiscordRpcManager
@@ -131,7 +135,29 @@ object AppState {
         }
     }
 
+    @Volatile
+    private var activeClipboard: Clipboard? = null
+
+    internal fun bindClipboard(clipboard: Clipboard) {
+        activeClipboard = clipboard
+    }
+
+    internal fun unbindClipboard(clipboard: Clipboard) {
+        if (activeClipboard === clipboard) activeClipboard = null
+    }
+
+    @OptIn(ExperimentalComposeUiApi::class)
     fun copyToClipboard(text: String) {
+        val composeClipboard = activeClipboard
+        if (WaylandScale.isNativeWaylandActive() && composeClipboard != null) {
+            scope.launch {
+                runCatching {
+                    composeClipboard.setClipEntry(ClipEntry(StringSelection(text)))
+                    snackbarHostState.showSnackbar(getString(Res.string.copied))
+                }
+            }
+            return
+        }
         try {
             val sel = StringSelection(text)
             Toolkit.getDefaultToolkit().systemClipboard.setContents(sel, sel)

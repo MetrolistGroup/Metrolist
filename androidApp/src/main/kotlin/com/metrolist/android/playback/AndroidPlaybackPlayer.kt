@@ -194,6 +194,7 @@ interface AndroidPlaybackPlayer {
         index: Int,
         positionMs: Long = 0L,
         resumePlayback: Boolean = true,
+        backward: Boolean = false,
     )
 
     fun toggleShuffle(preserveHistory: Boolean = true): Boolean

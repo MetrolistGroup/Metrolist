@@ -13,8 +13,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -22,38 +23,114 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.metrolist.shared.api.lyrics.AiLyricsProbeResult
-import com.metrolist.shared.api.lyrics.AiProviderPreset
 import com.metrolist.shared.api.lyrics.AiProviderPresets
 import com.metrolist.shared.api.lyrics.LyricsTranslationClient
 import com.metrolist.shared.api.lyrics.lyricsTranslationTargetLanguage
 import com.metrolist.shared.generated.resources.*
 import com.metrolist.shared.settings.Settings
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
 import org.koin.mp.KoinPlatform
 
-@Composable
-internal fun AiLyricsConnectionTestSetting(
-    preset: AiProviderPreset,
-    provider: String,
-    oauthConnected: Boolean,
+@Stable
+internal class AiLyricsConnectionTestState(
+    private val scope: CoroutineScope,
+    private val client: LyricsTranslationClient,
 ) {
-    key(provider) {
-        ProviderConnectionTest(provider, oauthConnected)
+    var busy by mutableStateOf(false)
+        private set
+    var result by mutableStateOf<AiLyricsProbeResult?>(null)
+        private set
+    var error by mutableStateOf(false)
+        private set
+
+    private var probeJob: Job? = null
+    private var runToken = 0
+
+    fun failMissingCredentials() {
+        runToken++
+        probeJob?.cancel()
+        probeJob = null
+        busy = false
+        error = true
+        result = null
+    }
+
+    fun runProbe(
+        provider: String,
+        apiKey: String,
+        baseUrl: String,
+        settings: Settings,
+    ) {
+        val token = ++runToken
+        probeJob?.cancel()
+        busy = true
+        error = false
+        result = null
+        probeJob =
+            scope.launch {
+                try {
+                    val probe =
+                        client.probeLyricsAiConnection(
+                            provider = provider,
+                            targetLanguage = lyricsTranslationTargetLanguage(),
+                            translationMode = settings.lyricsAiTranslationMode,
+                            activationMode = settings.lyricsAiActivationMode,
+                            apiKey = apiKey,
+                            baseUrl = baseUrl,
+                            translationModel = settings.lyricsAiModel,
+                            systemPrompt = settings.lyricsAiSystemPrompt,
+                            deepLApiKey = settings.lyricsDeepLApiKey,
+                            deepLFormality = settings.lyricsDeepLFormality,
+                        )
+                    if (runToken != token) return@launch
+                    probe.fold(
+                        onSuccess = {
+                            result = it
+                            error = false
+                        },
+                        onFailure = {
+                            result = null
+                            error = true
+                        },
+                    )
+                } finally {
+                    if (runToken == token) {
+                        busy = false
+                        probeJob = null
+                    }
+                }
+            }
+    }
+
+    fun cancel() {
+        runToken++
+        probeJob?.cancel()
+        probeJob = null
+        busy = false
     }
 }
 
 @Composable
-private fun ProviderConnectionTest(
+internal fun rememberAiLyricsConnectionTestState(provider: String): AiLyricsConnectionTestState {
+    val scope = rememberCoroutineScope()
+    val client = remember { KoinPlatform.getKoin().get<LyricsTranslationClient>() }
+    val state = remember(provider, scope, client) { AiLyricsConnectionTestState(scope, client) }
+    DisposableEffect(state) {
+        onDispose { state.cancel() }
+    }
+    return state
+}
+
+@Composable
+internal fun AiLyricsConnectionTestSetting(
     provider: String,
     oauthConnected: Boolean,
+    state: AiLyricsConnectionTestState,
 ) {
     val settings = Settings.shared
-    val client = remember { KoinPlatform.getKoin().get<LyricsTranslationClient>() }
-    val scope = rememberCoroutineScope()
-    var busy by remember { mutableStateOf(false) }
-    var result by remember { mutableStateOf<AiLyricsProbeResult?>(null) }
-    var error by remember { mutableStateOf(false) }
     val missingCredentials = stringResource(Res.string.ai_test_missing_credentials)
     val (apiKey, baseUrl) = settings.lyricsAiCredentials(provider)
     val canRun =
@@ -71,59 +148,30 @@ private fun ProviderConnectionTest(
         TextButton(
             onClick = {
                 if (!canRun) {
-                    error = true
-                    result = null
+                    state.failMissingCredentials()
                     return@TextButton
                 }
-                busy = true
-                error = false
-                result = null
-                scope.launch {
-                    val probe =
-                        client.probeLyricsAiConnection(
-                            provider = provider,
-                            targetLanguage = lyricsTranslationTargetLanguage(),
-                            translationMode = settings.lyricsAiTranslationMode,
-                            activationMode = settings.lyricsAiActivationMode,
-                            apiKey = apiKey,
-                            baseUrl = baseUrl,
-                            translationModel = settings.lyricsAiModel,
-                            systemPrompt = settings.lyricsAiSystemPrompt,
-                            deepLApiKey = settings.lyricsDeepLApiKey,
-                            deepLFormality = settings.lyricsDeepLFormality,
-                        )
-                    busy = false
-                    probe.fold(
-                        onSuccess = {
-                            result = it
-                            error = false
-                        },
-                        onFailure = {
-                            result = null
-                            error = true
-                        },
-                    )
-                }
+                state.runProbe(provider, apiKey, baseUrl, settings)
             },
-            enabled = !busy,
+            enabled = !state.busy,
             shapes = ButtonDefaults.shapes(),
         ) {
-            Text(stringResource(if (busy) Res.string.ai_test_connection_running else Res.string.ai_test_connection))
+            Text(stringResource(if (state.busy) Res.string.ai_test_connection_running else Res.string.ai_test_connection))
         }
         when {
-            busy -> {
+            state.busy -> {
                 Text(stringResource(Res.string.ai_test_connection_running), color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
 
-            error && result == null -> {
+            state.error && state.result == null -> {
                 Text(
                     if (canRun) stringResource(Res.string.ai_test_connection_failed) else missingCredentials,
                     color = MaterialTheme.colorScheme.error,
                 )
             }
 
-            result != null -> {
-                AiLyricsProbeSummary(result!!)
+            state.result != null -> {
+                AiLyricsProbeSummary(state.result!!)
             }
         }
     }

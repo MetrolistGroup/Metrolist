@@ -209,6 +209,7 @@ internal fun MobileLibrary(
                         "ARTISTS" -> LibraryFilter.ARTISTS
                         "ALBUMS" -> LibraryFilter.ALBUMS
                         "PLAYLISTS" -> LibraryFilter.PLAYLISTS
+                        "PODCASTS" -> if (Settings.shared.hidePodcasts) null else LibraryFilter.PODCASTS
                         else -> null
                     }
                 }
@@ -727,6 +728,8 @@ internal fun MobileSongCollectionScreen(
             PopupVisibility(visible = showAddSong && localPlaylistId != null) {
                 ModalBottomSheet(onDismissRequest = { showAddSong = false }) {
                     AddSongSheetContent(
+                        database = database,
+                        isLocalPlaylist = true,
                         existingSongIds = baseSongs.mapTo(mutableSetOf()) { it.id },
                         onDismiss = { showAddSong = false },
                         onAddSong = { song, allowDuplicate ->

@@ -48,6 +48,13 @@ enum class SliderStyle {
     SQUIGGLY,
     LINEAR,
     LINEAR_WAVY,
+
+    // Last, since portable settings store the ordinal.
+    DEFAULT_BUFFERED,
+    ;
+
+    // Draws the stock Material 3 slider; DEFAULT_BUFFERED also shades the buffered part on it.
+    val isStock: Boolean get() = this == DEFAULT || this == DEFAULT_BUFFERED
 }
 
 enum class PlayerThumbnailStyle {
@@ -117,6 +124,7 @@ enum class FontOption {
     INTER,
     GOOGLE_SANS,
     MAPLE_MONO,
+    CUSTOM,
 }
 
 enum class AnimatedCoverResolution {
@@ -196,3 +204,5 @@ enum class GridItemSize {
     BIG,
     SMALL,
 }
+
+enum class SongShareLink { YOUTUBE_MUSIC, SONG_LINK }

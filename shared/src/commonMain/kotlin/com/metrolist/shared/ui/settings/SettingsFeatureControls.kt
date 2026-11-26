@@ -202,62 +202,78 @@ internal fun LyricsProviderOrderSetting() {
         settings.lyricsProviderOrder = providerOrder.toMutableList().apply { add(to, removeAt(from)) }.joinToString(",") { it.name }
     }
 
-    Column(Modifier.fillMaxWidth().padding(16.dp)) {
-        Text(stringResource(Res.string.lyrics_provider_user), style = MaterialTheme.typography.bodyLarge)
-        Text(
-            stringResource(Res.string.lyrics_provider_user_description),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-    }
-    ReorderableColumn(
-        list = providerOrder,
-        onSettle = { from, to -> move(from, to, feedback = false) },
-        onMove = { haptics.perform(HapticEvent.DRAG_SNAP) },
-        modifier = Modifier.fillMaxWidth(),
-    ) { index, provider, _ ->
-        key(provider) {
-            val label = lyricsProviderLabel(provider)
-            ReorderableItem {
-                Column(Modifier.background(MaterialTheme.colorScheme.settingsRowContainerColor())) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth().heightIn(min = 72.dp).padding(horizontal = 16.dp, vertical = 10.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        ReorderMenu(
-                            onMoveUp = if (index > 0) ({ move(index, index - 1) }) else null,
-                            onMoveDown = if (index < providerOrder.lastIndex) ({ move(index, index + 1) }) else null,
-                            onMoveToTop = if (index > 0) ({ move(index, 0) }) else null,
-                            onMoveToBottom = if (index < providerOrder.lastIndex) ({ move(index, providerOrder.lastIndex) }) else null,
-                            dragHandleModifier = Modifier.draggableHandle(onDragStarted = { haptics.perform(HapticEvent.DRAG_START) }),
-                        )
-                        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                            Text(label, style = MaterialTheme.typography.bodyLarge)
-                            Text(
-                                lyricsProviderDescription(provider),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Column(Modifier.fillMaxWidth().padding(16.dp)) {
+            Text(stringResource(Res.string.lyrics_provider_user), style = MaterialTheme.typography.bodyLarge)
+            Text(
+                stringResource(Res.string.lyrics_provider_user_description),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+        ReorderableColumn(
+            list = providerOrder,
+            onSettle = { from, to -> move(from, to, feedback = false) },
+            onMove = { haptics.perform(HapticEvent.DRAG_SNAP) },
+            modifier = Modifier.fillMaxWidth(),
+        ) { index, provider, _ ->
+            key(provider) {
+                val label = lyricsProviderLabel(provider)
+                ReorderableItem {
+                    Column(Modifier.background(MaterialTheme.colorScheme.settingsRowContainerColor())) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth().heightIn(min = 72.dp).padding(horizontal = 16.dp, vertical = 10.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            ReorderMenu(
+                                onMoveUp = if (index > 0) ({ move(index, index - 1) }) else null,
+                                onMoveDown = if (index < providerOrder.lastIndex) ({ move(index, index + 1) }) else null,
+                                onMoveToTop = if (index > 0) ({ move(index, 0) }) else null,
+                                onMoveToBottom = if (index < providerOrder.lastIndex) ({ move(index, providerOrder.lastIndex) }) else null,
+                                dragHandleModifier = Modifier.draggableHandle(onDragStarted = { haptics.perform(HapticEvent.DRAG_START) }),
+                            )
+                            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                Text(label, style = MaterialTheme.typography.bodyLarge)
+                                Text(
+                                    lyricsProviderDescription(provider),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                            ExpressiveSwitch(
+                                checked = provider in enabledProviders,
+                                modifier = Modifier.semantics { contentDescription = label },
+                                onCheckedChange = { enabled ->
+                                    val updated = if (enabled) enabledProviders + provider else enabledProviders - provider
+                                    settings.lyricsEnabledProviders =
+                                        if (updated.isEmpty()) {
+                                            "NONE"
+                                        } else {
+                                            providerOrder.filter { it in updated }.joinToString(",") { it.name }
+                                        }
+                                },
                             )
                         }
-                        ExpressiveSwitch(
-                            checked = provider in enabledProviders,
-                            modifier = Modifier.semantics { contentDescription = label },
-                            onCheckedChange = { enabled ->
-                                val updated = if (enabled) enabledProviders + provider else enabledProviders - provider
-                                settings.lyricsEnabledProviders =
-                                    if (updated.isEmpty()) {
-                                        "NONE"
-                                    } else {
-                                        providerOrder.filter { it in updated }.joinToString(",") { it.name }
-                                    }
-                            },
-                        )
-                    }
-                    if (index < providerOrder.lastIndex) {
-                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                        if (index < providerOrder.lastIndex) {
+                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                        }
                     }
                 }
             }
+        }
+        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+        val captionsLabel = stringResource(Res.string.lyrics_youtube_captions)
+        Row(
+            modifier = Modifier.fillMaxWidth().heightIn(min = 72.dp).padding(horizontal = 16.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(captionsLabel, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge)
+            ExpressiveSwitch(
+                checked = settings.lyricsYoutubeCaptionsEnabled,
+                modifier = Modifier.semantics { contentDescription = captionsLabel },
+                onCheckedChange = { settings.lyricsYoutubeCaptionsEnabled = it },
+            )
         }
     }
 }
@@ -384,6 +400,11 @@ internal fun sliderStyleChoices(): List<SettingsChoice> =
             preview = { SliderStylePreview(SliderStyle.DEFAULT) },
         ),
         SettingsChoice(
+            SliderStyle.DEFAULT_BUFFERED.name,
+            stringResource(Res.string.slider_standard_buffered),
+            preview = { SliderStylePreview(SliderStyle.DEFAULT_BUFFERED, bufferedFraction = 0.85f) },
+        ),
+        SettingsChoice(
             SliderStyle.WAVY.name,
             stringResource(Res.string.wavy),
             preview = { SliderStylePreview(SliderStyle.WAVY) },
@@ -405,6 +426,7 @@ internal fun SliderStylePreview(
     style: SliderStyle,
     modifier: Modifier = Modifier.width(72.dp),
     trackThicknessDp: Float = Settings.shared.sliderTrackThicknessDp,
+    bufferedFraction: Float = 0f,
 ) {
     val defaultColors = SliderDefaults.colors()
     val colors =
@@ -423,6 +445,7 @@ internal fun SliderStylePreview(
         style = style,
         colors = colors,
         isPlaying = true,
+        bufferedFraction = bufferedFraction,
         trackThicknessDp = trackThicknessDp,
         enabled = false,
     )

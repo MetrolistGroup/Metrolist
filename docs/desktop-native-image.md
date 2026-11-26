@@ -2,7 +2,9 @@
 
 ## Native builds
 
-The supported path keeps Serial GC, `-Os`, a 32 MiB initial heap and a 384 MiB maximum heap. It compiles with `-march=compatibility`, because GraalVM's default x86-64-v3 target exits on x64 CPUs without AVX2, FMA or BMI2 and its default ARM target excludes Raspberry Pi 4 class cores. The measurements below used the default target. GraalVM 25.0.4 downloads and SHA-256 hashes live in [graalvm-pins.json](../scripts/graalvm-pins.json). The hashes come from Oracle's adjacent `.sha256` URLs. Local Linux builds use `/mnt/work/tools/graalvm-25`; do not download or unpack a builder under RAM-backed `/tmp`.
+The supported path keeps Serial GC, `-Os` and a 32 MiB initial heap. Its maximum heap is 25% of physical RAM, using GraalVM's [`MaximumHeapSizePercent`](https://www.graalvm.org/jdk25/reference-manual/native-image/optimizations-and-performance/MemoryManagement/#serial-garbage-collector). This replaces the fixed 384 MiB ceiling that exhausted the heap in reported Windows crashes. The limit allows growth as needed; it does not reserve that much memory at startup or limit memory allocated outside the Java heap. The measurements below retain their original heap settings.
+
+It compiles with `-march=compatibility`, because GraalVM's default x86-64-v3 target exits on x64 CPUs without AVX2, FMA or BMI2 and its default ARM target excludes Raspberry Pi 4 class cores. The measurements below used the default target. GraalVM 25.0.5.1 downloads and SHA-256 hashes live in [graalvm-pins.json](../scripts/graalvm-pins.json). The URLs and hashes come from [Oracle's release metadata](https://www.oracle.com/a/tech/docs/graalvm-25.0.5.1.json). This updates the builder JVM for CVE-2026-114938. Native builder overrides must meet the pinned Java update level. Local Linux builds use `/mnt/work/tools/graalvm-25`; install the pinned builder there with `toolchain.py`, or pass its installed location through `GRAALVM_HOME` or `--graalvm`. Do not download or unpack a builder under RAM-backed `/tmp`.
 
 | Target | Build and package | CI state |
 | --- | --- | --- |
@@ -78,7 +80,11 @@ The JDK's clipboard flavor comparator resolves `java.rmi.MarshalledObject` refle
 
 ### Test and inspect
 
+Windows metadata registers the `run()` methods of the JDK 25 Direct3D graphics-device callbacks, including the display-mode lookup used after display changes. These callbacks enter Java through JNI, so ordinary Java reachability does not retain their JNI entry points. Application metadata also registers `BasicOptionPaneUI.loadActionMap(LazyActionMap)`, which Swing invokes reflectively when Compose opens its error dialog. Without it, the dialog can fail while reporting the original exception.
+
 Manual native builds run launch probes; Nightly skips them. Manual Linux builds give the packaged AppImage a private Xvfb display. Every smoke run uses an isolated profile. Native executables default to warning on a missing registration and falling back as the JVM would, because an English trace cannot see every locale's resources and a tester build must not exit for that. The smoke runner uses warning mode so every missing registration reaches the logs, and it fails on any reported registration. Exit mode would hide the cause, because its report goes through `System.out`, which the app logger buffers, and the process exits first. It runs with a French locale (`-Duser.language=fr`), so CI still fails on any missing registration, including localized JDK resources. The GUI smoke checks startup, screenshot, shutdown and logs. On Windows service runners without a desktop, the native executable instead runs a strict backend probe for AWT/Skia fonts, Java Sound providers, FFmpeg and JNA/COM initialization. Its result explicitly says GUI behavior is unverified. The smoke collector also checks redirected native stderr, so a missing-registration error there cannot count as a pass. JVM packages retain their existing unavailable-desktop handling.
+
+Linux metadata registers `org.freedesktop.dbus.interfaces.Properties` for reflection and dynamic proxy generation so D-Bus calls to the XDG Desktop Portal can open the native file dialog. Because automated smoke runs do not exercise portal dialogs, Linux native verification should also open Settings → Backup & import → File or text in an X11 session with a working XDG Desktop Portal. Confirm that the portal file picker opens, not the Swing file chooser. A native Wayland run skips the portal probe, so it does not exercise the `Properties` proxy.
 
 ```sh
 xvfb-run -a -s '-screen 0 1440x1000x24' \

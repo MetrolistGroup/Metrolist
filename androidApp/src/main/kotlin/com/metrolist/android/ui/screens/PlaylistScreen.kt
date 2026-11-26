@@ -52,6 +52,7 @@ import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -85,6 +86,9 @@ import com.metrolist.android.ui.menu.SongMenu
 import com.metrolist.android.utils.readPlaylistCover
 import com.metrolist.android.viewmodels.PlaylistViewModel
 import com.metrolist.shared.api.PlaylistRemovalFailedException
+import com.metrolist.shared.api.YouTubeRepository
+import com.metrolist.shared.api.playlistRecommendationBatch
+import com.metrolist.shared.db.MusicDatabase
 import com.metrolist.shared.db.isHistoryPlaylistId
 import com.metrolist.shared.generated.resources.Res
 import com.metrolist.shared.generated.resources.action_cannot_be_undone
@@ -105,12 +109,14 @@ import com.metrolist.shared.generated.resources.error_occurred
 import com.metrolist.shared.generated.resources.error_unknown
 import com.metrolist.shared.generated.resources.logo
 import com.metrolist.shared.generated.resources.more
+import com.metrolist.shared.generated.resources.no_new_playlist_suggestions
 import com.metrolist.shared.generated.resources.ok
 import com.metrolist.shared.generated.resources.playlist_cover_update_failed
 import com.metrolist.shared.generated.resources.playlist_name
 import com.metrolist.shared.generated.resources.playlist_update_failed
 import com.metrolist.shared.generated.resources.playlist_update_partially_failed
 import com.metrolist.shared.generated.resources.queued_songs
+import com.metrolist.shared.generated.resources.refresh
 import com.metrolist.shared.generated.resources.remove_custom_image
 import com.metrolist.shared.generated.resources.remove_from_library
 import com.metrolist.shared.generated.resources.remove_from_playlist
@@ -158,6 +164,7 @@ import com.metrolist.shared.ui.theme.uiEnhanced
 import com.metrolist.shared.ui.tv.tvFocusHighlight
 import com.metrolist.shared.utils.ArtworkPrefetchWindow
 import com.metrolist.shared.utils.ShareUrls
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -248,6 +255,43 @@ fun PlaylistScreen(
     val isEditablePlaylist =
         playlistInfo?.canEdit == true &&
             playlistInfo?.id !in setOf("liked", "downloaded", "LP_LIKED", "LP_DOWNLOADED")
+    val hideRecommendations = Settings.shared.hidePlaylistRecommendations
+    val showRecommendations =
+        !hideRecommendations && isEditablePlaylist && !isLoading && page?.hasMore != true && page?.isOffline != true
+    var remoteSuggestions by remember(playlistId) { mutableStateOf<YouTubeRepository.PlaylistSuggestions?>(null) }
+    var refreshedSuggestions by remember(playlistId) { mutableStateOf<List<SongItem>?>(null) }
+    var shownSuggestionIds by remember(playlistId) { mutableStateOf(emptySet<String>()) }
+    var refreshingSuggestions by remember(playlistId) { mutableStateOf(false) }
+    var suggestionsLoadFailed by remember(playlistId) { mutableStateOf(false) }
+    var suggestionsRetry by remember(playlistId) { mutableIntStateOf(0) }
+    val noNewSuggestions = stringResource(Res.string.no_new_playlist_suggestions)
+    val suggestionCandidates = remoteSuggestions?.songs.orEmpty() + suggestions
+    val displayedSuggestions =
+        when {
+            hideRecommendations -> emptyList()
+            showRecommendations -> playlistRecommendationBatch(refreshedSuggestions ?: suggestionCandidates, durationSongs)
+            !isEditablePlaylist -> suggestions
+            else -> emptyList()
+        }
+    val currentDisplayedSuggestions by rememberUpdatedState(displayedSuggestions)
+    LaunchedEffect(playlistId, showRecommendations, suggestionsRetry) {
+        if (showRecommendations && remoteSuggestions == null) {
+            suggestionsLoadFailed = false
+            try {
+                val result = viewModel.getPlaylistSuggestions()
+                shownSuggestionIds = shownSuggestionIds + currentDisplayedSuggestions.map { it.id }
+                remoteSuggestions = result
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Exception) {
+                suggestionsLoadFailed = true
+            } finally {
+                refreshingSuggestions = false
+            }
+        }
+    }
+    val seenSuggestionIds = shownSuggestionIds + displayedSuggestions.map { it.id }
+    val nextSuggestions = playlistRecommendationBatch(suggestionCandidates, durationSongs, seenSuggestionIds)
     val reorderMode = sortType.isReordering(Settings.shared.playlistEditLock, isEditablePlaylist, page?.hasMore == true)
     LaunchedEffect(playlistId, isEditablePlaylist, Settings.shared.playlistEditLock, sortType, page?.hasMore) {
         if (sortType.isReordering(Settings.shared.playlistEditLock, isEditablePlaylist) && page?.hasMore == true) {
@@ -701,7 +745,7 @@ fun PlaylistScreen(
                     onTrackClick = { _, index ->
                         if (index >= displayedSongs.size) {
                             val suggestionIndex = index - displayedSongs.size
-                            playerConnection?.playQueue(suggestions, suggestionIndex, suggestionsTitle)
+                            playerConnection?.playQueue(displayedSuggestions, suggestionIndex, suggestionsTitle)
                         } else if (selection.active) {
                             selection.toggle(occurrenceKey(displayedSongs[index]))
                         } else if (searchQuery.isNotBlank()) {
@@ -749,7 +793,58 @@ fun PlaylistScreen(
                     currentQueueItemId = currentSong?.originalQueueItemId,
                     currentSongOccurrenceKey = currentSong?.playlistOccurrenceIdentity(),
                     isPlaying = isPlaying,
-                    suggestions = suggestions.takeIf { searchQuery.isBlank() }.orEmpty(),
+                    suggestions = displayedSuggestions.takeIf { searchQuery.isBlank() }.orEmpty(),
+                    onAddSuggestion = if (showRecommendations) ({ song -> viewModel.addSong(song) }) else null,
+                    isAddingSuggestion = operationState.inProgressSongIds.isNotEmpty(),
+                    suggestionFooter =
+                        if (showRecommendations &&
+                            (nextSuggestions.isNotEmpty() || remoteSuggestions?.canReload == true || suggestionsLoadFailed)
+                        ) {
+                            {
+                                TextButton(
+                                    enabled = !refreshingSuggestions,
+                                    onClick = {
+                                        if (suggestionsLoadFailed && nextSuggestions.isEmpty()) {
+                                            refreshingSuggestions = true
+                                            suggestionsRetry++
+                                        } else if (nextSuggestions.isNotEmpty()) {
+                                            shownSuggestionIds = seenSuggestionIds
+                                            refreshedSuggestions = nextSuggestions
+                                        } else {
+                                            val previous = remoteSuggestions
+                                            refreshedSuggestions = displayedSuggestions
+                                            refreshingSuggestions = true
+                                            coroutineScope.launch {
+                                                try {
+                                                    val next = viewModel.getPlaylistSuggestions(previous)
+                                                    remoteSuggestions = next
+                                                    val batch =
+                                                        playlistRecommendationBatch(
+                                                            next?.songs.orEmpty(),
+                                                            durationSongs,
+                                                            seenSuggestionIds,
+                                                        )
+                                                    if (batch.isEmpty()) {
+                                                        snackbarHostState.showSnackbar(noNewSuggestions)
+                                                    } else {
+                                                        shownSuggestionIds = seenSuggestionIds
+                                                        refreshedSuggestions = batch
+                                                    }
+                                                } catch (e: CancellationException) {
+                                                    throw e
+                                                } catch (_: Exception) {
+                                                    snackbarHostState.showSnackbar(errorOccurredText)
+                                                } finally {
+                                                    refreshingSuggestions = false
+                                                }
+                                            }
+                                        }
+                                    },
+                                ) { Text(stringResource(Res.string.refresh)) }
+                            }
+                        } else {
+                            null
+                        },
                     downloadedSongIds = downloadedSongIds,
                     searchQuery = searchQuery,
                     onSearchQueryChange = { searchQuery = it },
@@ -1153,6 +1248,7 @@ fun PlaylistScreen(
 
         PopupVisibility(visible = showAddSongSheet) {
             AddSongSheet(
+                isLocalPlaylist = isLocalPlaylist,
                 existingSongIds = songs.mapTo(mutableSetOf()) { it.id },
                 onDismiss = { showAddSongSheet = false },
                 onAddSong = { song, allowDuplicate ->
@@ -1182,14 +1278,21 @@ fun PlaylistScreen(
 
 @Composable
 private fun AddSongSheet(
+    isLocalPlaylist: Boolean,
     existingSongIds: Set<String>,
     onDismiss: () -> Unit,
     onAddSong: (SongItem, Boolean) -> Unit,
 ) {
+    val database = koinInject<MusicDatabase>()
     AdaptiveModalBottomSheet(onDismissRequest = onDismiss) {
-        AddSongSheetContent(existingSongIds, onDismiss, onAddSong, songContent = { song, onClick ->
-            AddSongResultRow(song, onClick)
-        })
+        AddSongSheetContent(
+            database = database,
+            isLocalPlaylist = isLocalPlaylist,
+            existingSongIds = existingSongIds,
+            onDismiss = onDismiss,
+            onAddSong = onAddSong,
+            songContent = { song, onClick -> AddSongResultRow(song, onClick) },
+        )
     }
 }
 

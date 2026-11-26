@@ -183,6 +183,7 @@ open class DesktopLyricsState internal constructor(
             LyricsProvider.preferredProvidersForFetch(
                 lyricsProviderOrder,
                 lyricsEnabledProviders,
+                Settings.shared.lyricsYoutubeCaptionsEnabled,
             )
         val isVideoContext = !isCustomQuery && isMvActive(song)
         val preferVideoProviders = !isCustomQuery && isLiveLyricsVideo(song.musicVideoType, song.title)
@@ -437,7 +438,6 @@ open class DesktopLyricsState internal constructor(
         song: SongItem,
         customTitle: String? = null,
         customArtist: String? = null,
-        selectedProvider: LyricsProvider? = null,
     ) {
         val defaultArtist = song.artists.joinToString { it.name }
         val resolvedTitle = customTitle?.takeIf { it.isNotBlank() } ?: song.title
@@ -449,7 +449,7 @@ open class DesktopLyricsState internal constructor(
         queryTitle = resolvedTitle
         queryArtist = resolvedArtist
         providerSearch =
-            LyricsProviderSearch(scope, Settings.shared.lyricsProviderOrder, selectedProvider) { provider ->
+            LyricsProviderSearch(scope, Settings.shared.lyricsProviderOrder) { provider ->
                 lyricsRepository.getProviderResults(
                     videoId = song.id.takeUnless { isCustomQuery && provider != LyricsProvider.USER },
                     title = resolvedTitle,

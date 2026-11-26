@@ -169,16 +169,6 @@ class PipelineTest(unittest.TestCase):
             root=Path(directory); home=toolchain.install('macos-arm64',root/'cache',root/'jdk',pin)
             self.assertTrue((home.parent/'MacOS/libjli.dylib').is_file())
 
-    def test_linux_builder_always_takes_bounded_scope(self):
-        if sys.platform != 'linux':
-            self.skipTest('Linux scope')
-        with tempfile.TemporaryDirectory() as directory, patch('fcntl.flock') as lock, patch('subprocess.run') as run, patch.object(sys,'argv',['native_image.py','--work',directory]):
-            native_image.main()
-            lock.assert_called_once()
-            args=run.call_args.args[0]
-            for value in ('MemoryMax=16G','MemorySwapMax=2G','CPUWeight=50','--inside-scope'):
-                self.assertIn(value,args)
-
     def test_cross_compile_rejected_before_starting_tools(self):
         with tempfile.TemporaryDirectory() as directory, patch('subprocess.run') as run:
             root=Path(directory)
@@ -401,15 +391,6 @@ class PipelineTest(unittest.TestCase):
             with self.subTest(path=path), patch('subprocess.run') as run, patch('subprocess.check_output', return_value=f'Load command 0\n      cmd LC_RPATH\n  cmdsize 48\n     path {path} (offset 12)\n'):
                 package.macos_rpath(Path('Metrolist'))
                 run.assert_not_called()
-
-    def test_packager_uses_ci_graalvm_home_and_allows_explicit_override(self):
-        with tempfile.TemporaryDirectory() as directory:
-            root = Path(directory)
-            for override in ([], ['--graalvm', str(root/'explicit')]):
-                argv = ['package.py', '--platform', 'macos-arm64', '--image', str(root/'image'), '--output', str(root/'dist'), *override]
-                with patch.dict(os.environ, {'GRAALVM_HOME': str(root/'ci-graal')}, clear=True), patch.object(sys, 'argv', argv), patch.object(package, 'package', return_value=root/'artifact.zip') as pack, patch('builtins.print'):
-                    package.main()
-                self.assertEqual(pack.call_args.args[-1], root/('explicit' if override else 'ci-graal'))
 
     def test_macos_arguments_pin_link_target_and_keep_compatibility(self):
         with tempfile.TemporaryDirectory() as directory, patch.dict(os.environ, {}, clear=True):

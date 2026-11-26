@@ -27,6 +27,7 @@ import com.metrolist.shared.generated.resources.playlist_unavailable
 import com.metrolist.shared.model.RadioQueueChip
 import com.metrolist.shared.model.SongItem
 import com.metrolist.shared.model.isLive
+import com.metrolist.shared.model.isPodcast
 import com.metrolist.shared.playback.MusicQueue
 import com.metrolist.shared.playback.MusicQueueSnapshot
 import com.metrolist.shared.playback.MusicQueueState
@@ -35,6 +36,7 @@ import com.metrolist.shared.playback.PlayerSession
 import com.metrolist.shared.playback.QUEUE_SOURCE_ADDED_MANUALLY
 import com.metrolist.shared.playback.QueueRemoval
 import com.metrolist.shared.playback.SleepTimerState
+import com.metrolist.shared.playback.ffmpeg.DirectPlaybackCache
 import com.metrolist.shared.playback.isRecommendationGeneratedQueueSource
 import com.metrolist.shared.playback.isRecommendedQueueSource
 import com.metrolist.shared.playback.shouldPlayAfterSongChange
@@ -58,10 +60,12 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.dropWhile
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
@@ -259,6 +263,9 @@ class PlayerConnection(
 
     private val _bufferedPosition = MutableStateFlow(0L)
     override val bufferedPosition: StateFlow<Long> = _bufferedPosition.asStateFlow()
+
+    // Kept with the resource it describes, so a new track never shows the stored share of the previous one.
+    private var storedSong: Pair<PlaybackResource, Float>? = null
 
     private val _duration = MutableStateFlow(0L)
     override val duration: StateFlow<Long> = _duration.asStateFlow()
@@ -516,6 +523,7 @@ class PlayerConnection(
             }
     }
 
+    @OptIn(ExperimentalCoroutinesApi::class)
     private fun observeService(service: MusicService) {
         val scope = checkNotNull(observationScope)
         val player = service.player
@@ -622,6 +630,31 @@ class PlayerConnection(
                 updateProgress()
             }
         }
+        // A stored song can play to its end offline, so its buffered track runs past the player's own buffer.
+        scope.launch {
+            player.currentPlaybackResource
+                .flatMapLatest { resource ->
+                    when {
+                        resource == null -> {
+                            flowOf(0f)
+                        }
+
+                        resource.profileId == CACHED_AUDIO_PROFILE_ID -> {
+                            flowOf(1f)
+                        }
+
+                        // A partial capture is neither contiguous nor measured in playback time, so only a complete one counts.
+                        else -> {
+                            cacheableAudioResource(resource)?.let(DirectPlaybackCache::coverage)?.map { if (it >= 1f) 1f else 0f }
+                                ?: flowOf(0f)
+                        }
+                    }.map { fraction -> resource?.let { it to fraction } }
+                }.distinctUntilChanged()
+                .collect {
+                    storedSong = it
+                    updateProgress()
+                }
+        }
         scope.launch {
             player.loadError.collect { _loadError.value = it }
         }
@@ -661,11 +694,17 @@ class PlayerConnection(
         if (dur > 0) {
             _progress.value = (_currentPosition.value.toFloat() / dur.toFloat()).coerceIn(0f, 1f)
             val inVideoMode = _isVideoModeActive.value || _isVideoViewerVisible.value
+            val buffered = (_bufferedPosition.value.toFloat() / dur.toFloat()).coerceIn(0f, 1f)
             _bufferedProgress.value =
-                if (inVideoMode) {
-                    (_bufferedPosition.value.toFloat() / dur.toFloat()).coerceIn(0f, 1f)
-                } else {
-                    0f
+                when {
+                    inVideoMode -> buffered
+
+                    // A cast receiver streams on its own, so this phone's buffer and stored audio say nothing about it.
+                    _castState.value.isConnected -> 0f
+
+                    // In audio mode the buffered track shows how far the song plays without the network: the player's buffer,
+                    // or all of it once the song is stored.
+                    else -> maxOf(buffered, storedSong?.takeIf { it.first === _currentPlaybackResource.value }?.second ?: 0f)
                 }
         } else {
             _progress.value = 0f
@@ -690,7 +729,8 @@ class PlayerConnection(
                     DcPlaybackAction.REPLACE_QUEUE,
                     songs = listOf(song),
                     index = 0,
-                    finite = true,
+                    finite = !song.startsRadio,
+                    explicitRadioQueue = song.startsRadio,
                     positionMs = startPositionMs,
                 ),
             )
@@ -715,7 +755,14 @@ class PlayerConnection(
         startVideo: Boolean = false,
     ) {
         if (deferUntilConnected { playSongInternal(song, url, startPositionMs, startVideo) }) return
-        if (url.isBlank()) {
+        if (url.isBlank() && song.startsRadio) {
+            musicService?.playSongRadio(
+                song,
+                startPositionMs = startPositionMs,
+                startPlaying = localSongChangeStartsPlayback(),
+                startVideo = startVideo,
+            )
+        } else if (url.isBlank()) {
             musicService?.playQueue(
                 listOf(song),
                 finite = true,
@@ -727,6 +774,9 @@ class PlayerConnection(
             musicService?.player?.play(song, url, startPlaying = localSongChangeStartsPlayback())
         }
     }
+
+    // Podcast episodes and local files have no YouTube radio to follow them.
+    private val SongItem.startsRadio: Boolean get() = !isPodcast && !isLocal && !id.startsWith("local_")
 
     fun playNext(song: SongItem) {
         addToQueue(song, playNext = true)
@@ -999,7 +1049,7 @@ class PlayerConnection(
                     service.player.playbackStateFlow.value != Player.STATE_IDLE
             runWidgetPlaybackCommand(
                 needsPromotion = needsPromotion,
-                promote = service::promoteWidgetPlayback,
+                promote = service::promotePlaybackToForeground,
                 isCurrent = {
                     musicService === service && service.player.latestQueuePlaybackRequestId == requestId &&
                         service.playbackCommandGeneration == commandGeneration &&

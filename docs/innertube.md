@@ -35,6 +35,8 @@ App callers use `shared/src/commonMain/kotlin/com/metrolist/shared/api/YouTubeRe
 
 Artist failures retain available offline data. Without it, propagate the original error and log the response stage/status without bodies or credentials.
 
+Greyed browse rows with a title and duration remain eligible for playback, including rows whose title opens a Premium dialog. That restriction describes the browse client; the stream resolver can try other clients. Deleted and private placeholders without playable metadata stay unavailable.
+
 ## Search
 
 Spotify account imports first search with the source album in the query, then retry without it if no exact title, artist and duration match is found. This handles YouTube Music catalog entries whose album metadata differs while keeping the match checks unchanged.
@@ -49,7 +51,7 @@ Home projects API renderers through shared models. Preserve shelf order, header 
 
 Home shelf pages use two columns for collections and artists, full-width 16:9 cards for video shelves, and rows for songs or mixed content. They retain the shelf items while loading its continuation or browse endpoint. Android and the shared mobile host retain page loaders with their navigation entries; paging failures keep the cursor for retry. Page identity includes the feed endpoint, chip parameters and shelf identity. Shelf More endpoints take precedence over header links. Artist header links never replace shelf contents with an artist page; a filtered shelf without its own endpoint parameters or cursor shows its existing items.
 
-Quick picks reuses a source shelf's browse endpoint and continuation only when that shelf contains every displayed pick. Local recommendations that only overlap an API shelf keep their existing songs when expanded. Without an endpoint or continuation, the page ends without a network request.
+Quick picks reuses a source shelf's browse endpoint and continuation only when that shelf contains every displayed pick. Local recommendations that only overlap an API shelf keep their existing songs when expanded. Without an endpoint or continuation, the page ends without a network request. Songs present in the "Heard in Shorts" shelf are always excluded from Quick picks while remaining in the "Heard in Shorts" shelf when it is visible.
 
 Signed-in, unfiltered Home fetches only missing moods and genres from Explore after its last continuation. Existing main-feed moods skip that request. The moods shelf stays at the end of the main feed, before any separately appended feeds. No other Explore shelves enter signed-in Home.
 
@@ -57,7 +59,11 @@ Mobile API library shelves show saved music albums while podcast shelves remain 
 
 Home cache identity respects account, locale and browse policy. Visitor publication must pass InnerTubeX's session compatibility check before accepting an in-flight response.
 
-With Classic recommendations enabled, unfiltered Home Quick picks come from local listening history: songs related to recently played tracks plus a few forgotten favourites, stripped of blocked and non-musical entries before sampling. Filtered Home shelves and their continuations keep API-first selection. In unfiltered Classic mode, Home continuations retain the current Quick picks, using API picks only if the current list is empty. Restored snapshots rebuild picks for the current mode, falling back to the snapshot's saved picks when its shortened feed has no API shelf.
+Authenticated Home, playlist and shelf requests reject signed-out responses before publishing or caching their content. YouTube Music can report this through `responseContext.serviceTrackingParams`, with `GFEEDBACK`'s `logged_in` set to `0`, without the older `mainAppWebResponseContext.loggedOut` field. A rejected response rechecks the account menu. The shared account-browse reader uses the same verification policy. A working account or an unavailable account check retains the session; only confirmed account rejection uses the existing session-expiry handling. Intentionally anonymous browsing still accepts signed-out feeds.
+
+Home diagnostics record HTTP status, whether login was requested, credential and visitor presence, region override and shelf counts. They omit credentials and content. A generic feed alone does not establish that YouTube treated a request as signed out.
+
+On mobile, signed-out users and users with Classic recommendations enabled get unfiltered Home Quick picks from local listening history: songs related to recently played tracks plus a few forgotten favourites, stripped of blocked entries, non-musical videos and podcasts before sampling. Filtered Home shelves and their continuations keep API-first selection. Qualified local plays fetch related music for these picks, and new history results rebuild the shelf without a Home reload. API picks remain the fallback until local recommendations are available. When local recommendations are active, unfiltered Home continuations retain the current Quick picks, using API picks only if the current list is empty. Restored snapshots rebuild picks for the current mode, falling back to the snapshot's saved picks when its shortened feed has no API shelf. Signed-out recommendation selection does not enable Classic radio. Desktop Home keeps its API-only discovery selection.
 
 Legacy settings migration and backup imports convert `SYSTEM_DEFAULT` and lowercase `system` to `SYSTEM` for app language, content language and content country. Invalid saved content languages and countries return to the system locale before requests, including settings already migrated to v14. Language validation uses the platform locale catalog and bundled resource tags. Imports also clear v13's literal `null` visitor data without discarding valid session values. Failed restores keep their exact settings snapshot.
 

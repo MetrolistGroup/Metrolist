@@ -109,10 +109,15 @@ enum class EqualizerPreset(
     val gains: List<Double>,
 ) {
     FLAT(List(10) { 0.0 }),
+    COMMUTE(listOf(-2.0, 0.0, 2.0, 1.5, 3.0, 4.0, 3.5, 2.5, 2.0, 1.5)),
     BASS(listOf(6.0, 5.0, 4.0, 2.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0)),
     TREBLE(listOf(0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 2.0, 3.0, 4.0, 5.0)),
     VOCAL(listOf(-3.0, -2.0, -1.0, 0.0, 2.0, 3.0, 3.0, 1.0, 0.0, -1.0)),
+    POP(listOf(1.5, 3.0, 3.5, 2.0, 0.0, -0.5, 1.0, 2.5, 3.5, 2.5)),
     ROCK(listOf(4.0, 3.0, 1.0, -1.0, -2.0, -1.0, 1.0, 2.0, 3.0, 4.0)),
+    ELECTRONIC(listOf(5.0, 4.5, 2.5, 0.0, -1.0, 1.0, 1.5, 3.0, 4.5, 4.0)),
+    ACOUSTIC(listOf(2.0, 2.5, 1.5, 0.0, 1.0, 2.0, 2.5, 2.5, 2.0, 1.5)),
+    LOUDNESS(listOf(4.5, 3.5, 1.5, 0.0, -0.5, 0.0, 1.0, 2.0, 3.5, 4.5)),
     V_SHAPE(listOf(5.0, 4.0, 2.0, 0.0, -2.0, -2.0, 0.0, 2.0, 4.0, 5.0)),
     ;
 
@@ -410,7 +415,7 @@ private val filterTypes =
 fun parseParametricEq(content: String): Pair<Double, List<ParametricEqBand>>? {
     var preamp = 0.0
     val bands = mutableListOf<ParametricEqBand>()
-    for (line in content.lineSequence()) {
+    for (line in content.removePrefix("\uFEFF").lineSequence()) {
         val tokens = line.trim().split(Regex("\\s+"))
 
         fun after(key: String) =

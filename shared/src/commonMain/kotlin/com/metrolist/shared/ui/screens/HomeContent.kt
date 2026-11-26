@@ -161,6 +161,7 @@ data class HomeShelf(
     val isPersonal: Boolean = false,
     val feedChip: Chip? = null,
     val chipTitle: String? = null,
+    val excludedItemIds: Set<String> = emptySet(),
 )
 
 data class HomeContentText(

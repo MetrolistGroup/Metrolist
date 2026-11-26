@@ -10,15 +10,12 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.selection.selectable
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -27,7 +24,6 @@ import androidx.compose.material3.LinearWavyProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
@@ -38,17 +34,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.DialogProperties
 import com.metrolist.shared.generated.resources.Res
-import com.metrolist.shared.generated.resources.apply
-import com.metrolist.shared.generated.resources.automatic
 import com.metrolist.shared.generated.resources.brand_better_lyrics
 import com.metrolist.shared.generated.resources.brand_kugou
 import com.metrolist.shared.generated.resources.brand_lrclib
@@ -56,7 +48,6 @@ import com.metrolist.shared.generated.resources.brand_lrcred
 import com.metrolist.shared.generated.resources.brand_lyprio
 import com.metrolist.shared.generated.resources.brand_paxsenix
 import com.metrolist.shared.generated.resources.brand_unison
-import com.metrolist.shared.generated.resources.cancel
 import com.metrolist.shared.generated.resources.choose_lyrics
 import com.metrolist.shared.generated.resources.close
 import com.metrolist.shared.generated.resources.collapse
@@ -74,15 +65,12 @@ import com.metrolist.shared.generated.resources.lyrics_timing_line_synced
 import com.metrolist.shared.generated.resources.lyrics_timing_unsynced
 import com.metrolist.shared.generated.resources.lyrics_timing_word_synced
 import com.metrolist.shared.generated.resources.lyrics_youtube_captions
-import com.metrolist.shared.generated.resources.next
-import com.metrolist.shared.generated.resources.refetch
 import com.metrolist.shared.generated.resources.youtube_music
 import com.metrolist.shared.model.LyricsProvider
 import com.metrolist.shared.model.LyricsProviderResult
 import com.metrolist.shared.model.LyricsTimingKind
 import com.metrolist.shared.model.supportedTimingKinds
 import com.metrolist.shared.repository.LyricsProviderSearch
-import com.metrolist.shared.settings.Settings
 import com.metrolist.shared.ui.components.AlertDialog
 import com.metrolist.shared.ui.components.GroupedListItem
 import com.metrolist.shared.ui.components.loadingShimmer
@@ -100,7 +88,6 @@ fun LyricsProviderDialog(
     onSelect: (LyricsProviderResult) -> Unit,
 ) {
     DisposableEffect(search) { onDispose { search?.cancel() } }
-    var selectedResult by remember(search) { mutableStateOf<LyricsProviderResult?>(null) }
     val dismiss = {
         search?.cancel()
         onDismiss()
@@ -163,13 +150,8 @@ fun LyricsProviderDialog(
                                         Column(Modifier.padding(start = 8.dp, end = 8.dp, bottom = 8.dp)) {
                                             val results = group.results.orEmpty()
                                             results.forEachIndexed { resultIndex, result ->
-                                                LyricsResultCard(
-                                                    result = result,
-                                                    index = resultIndex,
-                                                    count = results.size,
-                                                    selected = result == selectedResult,
-                                                ) {
-                                                    selectedResult = result
+                                                LyricsResultCard(result, resultIndex, results.size) {
+                                                    search.select(result, onSelect)
                                                 }
                                             }
                                         }
@@ -195,19 +177,7 @@ fun LyricsProviderDialog(
                 ProviderLoadingRows()
             }
         },
-        dismissButton = {
-            TextButton(onClick = dismiss) {
-                Text(stringResource(Res.string.cancel))
-            }
-        },
-        confirmButton = {
-            TextButton(
-                onClick = { selectedResult?.let { search?.select(it, onSelect) } },
-                enabled = selectedResult != null && search != null,
-            ) {
-                Text(stringResource(Res.string.apply))
-            }
-        },
+        confirmButton = {},
     )
 }
 
@@ -216,65 +186,55 @@ private fun LyricsResultCard(
     result: LyricsProviderResult,
     index: Int,
     count: Int,
-    selected: Boolean = false,
     onSelect: () -> Unit,
 ) {
     var expanded by remember(result) { mutableStateOf(false) }
     GroupedListItem(index, count) {
-        Surface(
-            color =
-                if (selected) {
-                    MaterialTheme.colorScheme.secondaryContainer
-                } else {
-                    MaterialTheme.colorScheme.surfaceContainerHigh
-                },
+        Column(
+            Modifier
+                .fillMaxWidth()
+                .animateContentSize()
+                .tvFocusHighlight()
+                .clickable(onClick = onSelect)
+                .padding(12.dp),
         ) {
-            Column(
-                Modifier
-                    .fillMaxWidth()
-                    .animateContentSize()
-                    .tvFocusHighlight()
-                    .selectable(selected = selected, role = Role.RadioButton, onClick = onSelect)
-                    .padding(12.dp),
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Column(Modifier.weight(1f)) {
-                        Text(
-                            listOfNotNull(result.song.title, result.song.album, result.song.artist)
-                                .filter(String::isNotBlank)
-                                .joinToString(" - "),
-                            style = MaterialTheme.typography.titleSmall,
-                        )
-                        val timing = timingLabel(result.timingKind)
-                        Text(
-                            listOfNotNull(
-                                result.song.durationMs
-                                    ?.takeIf { it > 0 }
-                                    ?.let(::formatDuration),
-                                timing,
-                            ).joinToString(" · "),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                        if (result.providerName.contains('/')) {
-                            Text(result.providerName, style = MaterialTheme.typography.bodySmall)
-                        }
-                    }
-                    ExpandButton(expanded) { expanded = !expanded }
-                }
-                Surface(
-                    color = MaterialTheme.colorScheme.surfaceContainerLowest,
-                    shape = MaterialTheme.shapes.small,
-                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
-                ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
                     Text(
-                        result.preview,
-                        style = MaterialTheme.typography.bodySmall,
-                        maxLines = if (expanded) Int.MAX_VALUE else 5,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.padding(12.dp),
+                        listOfNotNull(result.song.title, result.song.album, result.song.artist)
+                            .filter(String::isNotBlank)
+                            .joinToString(" - "),
+                        style = MaterialTheme.typography.titleSmall,
                     )
+                    val timing = timingLabel(result.timingKind)
+                    Text(
+                        listOfNotNull(
+                            result.song.durationMs
+                                ?.takeIf { it > 0 }
+                                ?.let(::formatDuration),
+                            timing,
+                        ).joinToString(" · "),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    if (result.providerName.contains('/')) {
+                        Text(result.providerName, style = MaterialTheme.typography.bodySmall)
+                    }
                 }
+                ExpandButton(expanded) { expanded = !expanded }
+            }
+            Surface(
+                color = MaterialTheme.colorScheme.surfaceContainerLowest,
+                shape = MaterialTheme.shapes.small,
+                modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+            ) {
+                Text(
+                    result.preview,
+                    style = MaterialTheme.typography.bodySmall,
+                    maxLines = if (expanded) Int.MAX_VALUE else 5,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.padding(12.dp),
+                )
             }
         }
     }
@@ -380,136 +340,6 @@ private fun providerCapabilities(
 
             else -> {
                 Res.string.lyrics_capability_unsynced
-            }
-        },
-    )
-}
-
-@Composable
-fun LyricsRefreshDialog(
-    onDismiss: () -> Unit,
-    onAutomatic: () -> Unit,
-    onProvider: (LyricsProvider) -> Unit,
-) {
-    val providers =
-        remember {
-            LyricsProvider.parseUserOrderFromStoredCsv(Settings.shared.lyricsProviderOrder) + LyricsProvider.afterUserLyricsFallbacks
-        }
-    var selectedProvider by remember { mutableStateOf<LyricsProvider?>(null) }
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        properties = DialogProperties(usePlatformDefaultWidth = false),
-        modifier = Modifier.padding(horizontal = 16.dp),
-        title = {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    text = stringResource(Res.string.refetch),
-                    style = MaterialTheme.typography.headlineSmall,
-                )
-                IconButton(onClick = onDismiss) {
-                    Icon(
-                        imageVector = MetrolistIcons.Outlined.Close,
-                        contentDescription = stringResource(Res.string.close),
-                    )
-                }
-            }
-        },
-        text = {
-            Column(
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .heightIn(max = 420.dp)
-                        .verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(2.dp),
-            ) {
-                val isAutoSelected = selectedProvider == null
-                GroupedListItem(0, 1) {
-                    Surface(
-                        selected = isAutoSelected,
-                        modifier = Modifier.semantics { role = Role.RadioButton },
-                        color =
-                            if (isAutoSelected) {
-                                MaterialTheme.colorScheme.secondaryContainer
-                            } else {
-                                MaterialTheme.colorScheme.surfaceContainerHigh
-                            },
-                        onClick = { selectedProvider = null },
-                    ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Text(
-                                text = stringResource(Res.string.automatic),
-                                style = MaterialTheme.typography.titleSmall,
-                                color =
-                                    if (isAutoSelected) {
-                                        MaterialTheme.colorScheme.onSecondaryContainer
-                                    } else {
-                                        MaterialTheme.colorScheme.onSurface
-                                    },
-                            )
-                        }
-                    }
-                }
-                Spacer(modifier = Modifier.height(8.dp))
-                providers.forEachIndexed { index, provider ->
-                    val isSelected = selectedProvider == provider
-                    GroupedListItem(index, providers.size) {
-                        Surface(
-                            selected = isSelected,
-                            modifier = Modifier.semantics { role = Role.RadioButton },
-                            color =
-                                if (isSelected) {
-                                    MaterialTheme.colorScheme.secondaryContainer
-                                } else {
-                                    MaterialTheme.colorScheme.surfaceContainerHigh
-                                },
-                            onClick = { selectedProvider = provider },
-                        ) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                Text(
-                                    text = providerName(provider),
-                                    style = MaterialTheme.typography.titleSmall,
-                                    color =
-                                        if (isSelected) {
-                                            MaterialTheme.colorScheme.onSecondaryContainer
-                                        } else {
-                                            MaterialTheme.colorScheme.onSurface
-                                        },
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text(stringResource(Res.string.cancel))
-            }
-        },
-        confirmButton = {
-            TextButton(
-                onClick = {
-                    onDismiss()
-                    val provider = selectedProvider
-                    if (provider == null) {
-                        onAutomatic()
-                    } else {
-                        onProvider(provider)
-                    }
-                },
-            ) {
-                Text(stringResource(Res.string.next))
             }
         },
     )

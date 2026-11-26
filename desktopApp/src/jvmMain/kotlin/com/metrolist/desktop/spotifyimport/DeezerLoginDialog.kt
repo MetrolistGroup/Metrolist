@@ -20,8 +20,8 @@ internal fun DeezerLoginDialog(
         onDismissRequest = onDismissRequest,
         extractCredentials = { state ->
             val cookies =
-                state.cookieManager.getCookies(DEEZER_URL) +
-                    state.cookieManager.getCookies("https://www.deezer.com")
+                state.cookies(DEEZER_URL) +
+                    state.cookies("https://www.deezer.com")
             val cookieHeader = cookies.joinToString("; ") { "${it.name}=${it.value}" }
             DeezerImportManager.extractArl(cookieHeader)
         },

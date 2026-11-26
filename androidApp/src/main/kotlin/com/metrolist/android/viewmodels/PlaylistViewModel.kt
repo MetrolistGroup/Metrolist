@@ -609,6 +609,12 @@ class PlaylistViewModel(
                 }
             }.distinct()
 
+    suspend fun getPlaylistSuggestions(previous: YouTubeRepository.PlaylistSuggestions? = null): YouTubeRepository.PlaylistSuggestions? {
+        val playlistId = _playlistId.value ?: return null
+        val remoteId = localPlaylistFor(playlistId)?.playlist?.browseId ?: playlistId.takeUnless { it.startsWith("LP") } ?: return null
+        return repositoryProvider().getPlaylistSuggestions(remoteId, previous)
+    }
+
     fun addSong(
         song: SongItem,
         allowDuplicate: Boolean = false,

@@ -7,6 +7,9 @@
 
 package com.metrolist.android.ui.menu
 
+import android.app.SearchManager
+import android.content.ActivityNotFoundException
+import android.content.Intent
 import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
@@ -60,7 +63,6 @@ import com.metrolist.shared.generated.resources.refetch
 import com.metrolist.shared.generated.resources.save
 import com.metrolist.shared.generated.resources.sources
 import com.metrolist.shared.model.LyricsEntry
-import com.metrolist.shared.model.LyricsProvider
 import com.metrolist.shared.model.LyricsProviderResult
 import com.metrolist.shared.repository.LyricsProviderSearch
 import com.metrolist.shared.settings.Settings
@@ -73,7 +75,6 @@ import com.metrolist.shared.ui.components.lyrics.LyricsEditorScreen
 import com.metrolist.shared.ui.icons.MetrolistIcons
 import com.metrolist.shared.ui.menu.ExpressiveMediaMenuHeader
 import com.metrolist.shared.ui.menu.LyricsProviderDialog
-import com.metrolist.shared.ui.menu.LyricsRefreshDialog
 import com.metrolist.shared.ui.menu.LyricsSearchDialog
 import com.metrolist.shared.ui.theme.ComponentShapes
 import com.metrolist.shared.ui.utils.setText
@@ -96,7 +97,7 @@ fun LyricsMenu(
     providerSearch: LyricsProviderSearch? = null,
     onDismiss: () -> Unit,
     onRefetchLyrics: ((title: String?, artist: String?) -> Unit)? = null,
-    onLoadProviderResults: ((title: String?, artist: String?, provider: LyricsProvider?) -> Unit)? = null,
+    onLoadProviderResults: ((title: String?, artist: String?) -> Unit)? = null,
     onSelectProviderResult: ((LyricsProviderResult) -> Unit)? = null,
     onShowLyricsOffset: (() -> Unit)? = null,
     onManualAiTranslationChange: (Boolean) -> Unit = {},
@@ -107,13 +108,11 @@ fun LyricsMenu(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val copiedMessage = stringResource(Res.string.copied)
-    var showSearchDialog by rememberSaveable(songId) { mutableStateOf(false) }
+    var showSearchDialog by rememberSaveable { mutableStateOf(false) }
     var editorSong by remember { mutableStateOf(songId to songTitle) }
     var showEditDialog by rememberSaveable { mutableStateOf(false) }
     var editText by rememberSaveable(stateSaver = TextFieldValue.Saver) { mutableStateOf(TextFieldValue(text = rawLyrics.orEmpty())) }
-    var showProviderDialog by rememberSaveable(songId) { mutableStateOf(false) }
-    var showRefreshMenu by remember(songId) { mutableStateOf(false) }
-    var providerDialogFromRefetch by rememberSaveable(songId) { mutableStateOf(false) }
+    var showProviderDialog by rememberSaveable { mutableStateOf(false) }
 
     PopupVisibility(visible = showSearchDialog) {
         LyricsSearchDialog(
@@ -121,10 +120,17 @@ fun LyricsMenu(
             initialArtist = searchArtist,
             onDismiss = { showSearchDialog = false },
             onSearch = { title, artist ->
-                onLoadProviderResults?.invoke(title, artist, null)
+                onLoadProviderResults?.invoke(title, artist)
                 showSearchDialog = false
-                providerDialogFromRefetch = false
                 showProviderDialog = true
+            },
+            onSearchOnline = { query ->
+                try {
+                    context.startActivity(Intent(Intent.ACTION_WEB_SEARCH).putExtra(SearchManager.QUERY, query))
+                    showSearchDialog = false
+                    onDismiss()
+                } catch (_: ActivityNotFoundException) {
+                }
             },
         )
     }
@@ -151,35 +157,13 @@ fun LyricsMenu(
         )
     }
 
-    PopupVisibility(visible = showRefreshMenu) {
-        LyricsRefreshDialog(
-            onDismiss = { showRefreshMenu = false },
-            onAutomatic = {
-                onRefetchLyrics?.invoke(searchTitle, searchArtist)
-                onDismiss()
-            },
-            onProvider = { provider ->
-                onLoadProviderResults?.invoke(searchTitle, searchArtist, provider)
-                providerDialogFromRefetch = true
-                showProviderDialog = true
-            },
-        )
-    }
-
     PopupVisibility(visible = showProviderDialog) {
         LyricsProviderDialog(
             search = providerSearch,
             noResultsText = stringResource(Res.string.no_lyrics_provider_results),
-            onDismiss = {
-                showProviderDialog = false
-                if (providerDialogFromRefetch) {
-                    providerDialogFromRefetch = false
-                    showRefreshMenu = true
-                }
-            },
+            onDismiss = { showProviderDialog = false },
             onSelect = { result ->
                 onSelectProviderResult?.invoke(result)
-                providerDialogFromRefetch = false
                 showProviderDialog = false
                 onDismiss()
             },
@@ -235,12 +219,8 @@ fun LyricsMenu(
                                     icon = MetrolistIcons.Outlined.Cached,
                                     title = stringResource(Res.string.refetch),
                                     onClick = {
-                                        if (onLoadProviderResults != null) {
-                                            showRefreshMenu = true
-                                        } else {
-                                            refetch(searchTitle, searchArtist)
-                                            onDismiss()
-                                        }
+                                        refetch(searchTitle, searchArtist)
+                                        onDismiss()
                                     },
                                 )
                             },

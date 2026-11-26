@@ -61,6 +61,8 @@ Collection margins are 16 dp in single-column layouts and 24 dp at the outer edg
 
 The Add to playlist chooser defaults to Library order, following the Playlists filter's sort and direction, including manual order and play time. Manual follows the saved library positions without reversing them. A saved picker sort overrides the default until the user chooses Library order.
 
+While signed out, the chooser also lists saved YouTube playlists after the selectable ones, greyed out and never selectable, so it can show which of them already contain the song. Their membership loads separately and never delays the dialog; a failed lookup shows no highlight.
+
 ## Selection mode and actions
 
 Album, playlist, auto-playlist and History selection replace the top row with `SelectionTopBar`; there is no floating bottom toolbar. Close, Select all and More stay in the header, and More opens the shared `SongSelectionMenuSheet`.
@@ -84,6 +86,4 @@ For desktop placement, check right-click and button menus after scrolling, with 
 
 For collection headers and selection, check Liked Music, an empty playlist, a remote playlist, an editable playlist, an album, Downloads, Cache, History and Queue at phone, medium and two-pane widths, with long translations, large fonts, RTL and animations disabled.
 
-Android and iOS share selected lyrics as a 9:16 PNG story card with artwork and track metadata. The image footer includes a YouTube Music link only for remote tracks. Local tracks omit the link. Desktop keeps its square exporter. Verify both mobile share sheets, local songs and five selected lines.
-
-Mobile lyric sharing offers both a story image and the square exporter. The square format retains its background and color controls.
+Lyric sharing offers a 9:16 story image styled with the active theme colors and a 1:1 square image that keeps its saved background mode and colors. Both include artwork and track metadata; the story footer adds a YouTube Music link only for remote tracks. The dialog also offers plain-text sharing. Verify both formats, mobile share sheets, local songs and five selected lines.

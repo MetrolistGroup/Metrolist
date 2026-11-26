@@ -379,6 +379,7 @@ object DownloadManager {
                 LyricsProvider.preferredProvidersForFetch(
                     LyricsProvider.parseUserOrderFromStoredCsv(Settings.shared.lyricsProviderOrder),
                     LyricsProvider.parseEnabledFromStoredCsv(Settings.shared.lyricsEnabledProviders),
+                    Settings.shared.lyricsYoutubeCaptionsEnabled,
                 )
             lyricsRepo.prefetchDownloadLyrics(song, preferred)
         } catch (e: CancellationException) {
@@ -767,8 +768,10 @@ object DownloadManager {
         valid.forEach { download(it) }
     }
 
+    internal fun isDownloadableSong(song: SongItem): Boolean = !song.isUnavailable && !song.isLocal && isValidSongId(song.id)
+
     fun download(song: SongItem) {
-        if (song.isUnavailable || song.isLocal || !isValidSongId(song.id) || isDownloaded(song.id)) return
+        if (!isDownloadableSong(song) || isDownloaded(song.id)) return
         val job =
             scope.launch(start = CoroutineStart.LAZY) {
                 var audioPath: String? = null

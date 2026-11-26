@@ -8,18 +8,6 @@ import kotlinx.coroutines.flow.StateFlow
 import java.io.Closeable
 import java.io.InputStream
 
-interface MdnsCastDiscovery : Closeable {
-    fun start(
-        onDeviceFound: (CastDevice) -> Unit,
-        onDeviceLost: (String) -> Unit,
-        onError: (CastError) -> Unit = {},
-    )
-
-    fun stop()
-
-    override fun close() = stop()
-}
-
 data class CastMedia(
     val title: String,
     val artworkUrl: String?,

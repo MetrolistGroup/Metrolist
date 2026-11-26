@@ -10,6 +10,7 @@ import android.content.pm.PackageInfo
 import android.content.pm.PackageInstaller
 import android.content.pm.PackageManager
 import android.os.Build
+import androidx.annotation.RequiresApi
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import com.metrolist.android.BuildConfig
@@ -25,9 +26,11 @@ import com.metrolist.shared.update.ReleaseVersion
 import com.metrolist.shared.update.checkNightly
 import com.metrolist.shared.update.followsNightlyUpdates
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
@@ -39,6 +42,7 @@ import okhttp3.Request
 import org.jetbrains.compose.resources.getString
 import java.io.File
 import java.security.MessageDigest
+import java.util.concurrent.atomic.AtomicBoolean
 
 @Serializable
 data class GitHubRelease(
@@ -137,6 +141,14 @@ object AppUpdateManager {
     private val operationMutex = Mutex()
 
     @Volatile private var activeDownload: Call? = null
+    private val autoInstallRunning = AtomicBoolean(false)
+
+    @Volatile private var autoInstallFailed = false
+
+    @Volatile private var backgroundUpdateKey: String? = null
+
+    /** True for a release an automatic update downloaded. Screens must not install it on their own; only the Install button may. */
+    fun isBackgroundUpdate(release: GitHubRelease): Boolean = autoInstallRunning.get() || release.updateKey == backgroundUpdateKey
 
     val state: StateFlow<AppUpdateState> = mutableState.asStateFlow()
     val releases: StateFlow<List<GitHubRelease>> = mutableReleases.asStateFlow()
@@ -162,6 +174,12 @@ object AppUpdateManager {
         }
 
         val cached = withContext(Dispatchers.IO) { cachedAvailableRelease() }
+        // A background download or one waiting for playback to stop must survive a check that is not due.
+        when (val active = mutableState.value) {
+            is AppUpdateState.Downloading -> if (active.release.updateKey == cached?.updateKey) return cached
+            is AppUpdateState.Downloaded -> if (active.release.updateKey == cached?.updateKey && active.file.isFile) return cached
+            else -> Unit
+        }
         mutableState.value =
             if (cached == null) {
                 AppUpdateState.UpToDate(Settings.shared.lastUpdateCheckTimestamp)
@@ -373,8 +391,92 @@ object AppUpdateManager {
     }
 
     // Before Android 8 unknown sources is a global setting checked by the installer prompt itself.
-    fun canInstallPackages(context: Context): Boolean =
-        Build.VERSION.SDK_INT < Build.VERSION_CODES.O || context.packageManager.canRequestPackageInstalls()
+    fun canInstallPackages(
+        context: Context,
+        crashRecovery: Boolean = false,
+    ): Boolean =
+        installMethod(crashRecovery) != UpdateInstallMethod.SYSTEM ||
+            Build.VERSION.SDK_INT < Build.VERSION_CODES.O ||
+            context.packageManager.canRequestPackageInstalls()
+
+    fun installMethod(crashRecovery: Boolean = false): UpdateInstallMethod {
+        val method =
+            UpdateInstallMethod.entries.firstOrNull { it.name == Settings.shared.updateInstallMethod } ?: UpdateInstallMethod.SYSTEM
+        // Shizuku hands its binder only to the main process, and crash recovery runs in the :crash process.
+        return if (crashRecovery && method == UpdateInstallMethod.SHIZUKU) UpdateInstallMethod.SYSTEM else method
+    }
+
+    /** Switches the install method after the user grants root or Shizuku access, then claims Metrolist as its own installer. */
+    suspend fun selectInstallMethod(
+        context: Context,
+        method: UpdateInstallMethod,
+    ): PrivilegedAccess {
+        val access = PrivilegedInstaller.requestAccess(method)
+        if (access != PrivilegedAccess.GRANTED) return access
+        Settings.shared.updateInstallMethod = method.name
+        if (method != UpdateInstallMethod.SYSTEM) {
+            withContext(Dispatchers.IO) { PrivilegedInstaller.claimInstaller(method, context.packageName) }
+        }
+        return access
+    }
+
+    /** True when an update can install with no prompt: through root or Shizuku, or on Android 12+ when Metrolist may install apps and owns its updates. */
+    fun canInstallWithoutPrompt(context: Context): Boolean =
+        when (installMethod()) {
+            UpdateInstallMethod.ROOT -> {
+                true
+            }
+
+            UpdateInstallMethod.SHIZUKU -> {
+                PrivilegedInstaller.shizukuGranted()
+            }
+
+            UpdateInstallMethod.SYSTEM -> {
+                Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
+                    context.packageManager.canRequestPackageInstalls() &&
+                    ownsUpdates(context)
+            }
+        }
+
+    // Android 12+ skips the prompt when an app updates itself, unless Android 14+ gave update ownership to another store.
+    @RequiresApi(Build.VERSION_CODES.S)
+    private fun ownsUpdates(context: Context): Boolean =
+        Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE ||
+            runCatching {
+                context.packageManager
+                    .getInstallSourceInfo(context.packageName)
+                    .updateOwnerPackageName
+                    .let { it == null || it == context.packageName }
+            }.getOrDefault(false)
+
+    /** Downloads [release] and installs it once the user stops playback. Installing replaces the running app. */
+    suspend fun autoInstall(
+        context: Context,
+        release: GitHubRelease,
+        playbackActive: Flow<Boolean>,
+    ) {
+        // After a failed install (root revoked, Shizuku stopped) wait for the next launch instead of retrying hourly.
+        if (autoInstallFailed || !Settings.shared.autoInstallUpdates || !canInstallWithoutPrompt(context)) return
+        if (!autoInstallRunning.compareAndSet(false, true)) return
+        try {
+            backgroundUpdateKey = release.updateKey
+            try {
+                download(context, release)
+            } finally {
+                // A rebuilt nightly replaces the requested release during download; record it even if this job is cancelled.
+                (mutableState.value as? AppUpdateState.Downloaded)
+                    ?.takeIf { it.release.version == release.version }
+                    ?.let { backgroundUpdateKey = it.release.updateKey }
+            }
+            playbackActive.first { !it }
+            val downloaded = mutableState.value as? AppUpdateState.Downloaded ?: return
+            if (downloaded.installing || playbackActive.first()) return
+            if (!Settings.shared.autoInstallUpdates || !canInstallWithoutPrompt(context)) return
+            if (!install(context, downloaded)) autoInstallFailed = true
+        } finally {
+            autoInstallRunning.set(false)
+        }
+    }
 
     suspend fun install(
         context: Context,
@@ -387,6 +489,13 @@ object AppUpdateManager {
                 downloaded.file.delete()
                 mutableState.value = AppUpdateState.Available(downloaded.release)
                 return@withContext false
+            }
+            val method = installMethod(crashRecovery)
+            if (method != UpdateInstallMethod.SYSTEM) {
+                // pm usually replaces this process on success before returning.
+                val installed = PrivilegedInstaller.install(method, context.packageName, downloaded.file)
+                onInstallFinished(installed)
+                return@withContext installed
             }
             val installer = context.packageManager.packageInstaller
             var sessionId = -1
@@ -429,13 +538,20 @@ object AppUpdateManager {
 
     internal fun onInstallFinished(success: Boolean) {
         val current = mutableState.value as? AppUpdateState.Downloaded ?: return
+        if (!success) stopAutoInstallAfterFailure(current.release)
         mutableState.value =
             if (success) current.copy(installing = false) else AppUpdateState.Error(UpdateFailure.INSTALL, current.release)
     }
 
     internal fun onInstallAborted() {
         val current = mutableState.value as? AppUpdateState.Downloaded ?: return
+        stopAutoInstallAfterFailure(current.release)
         mutableState.value = current.copy(installing = false)
+    }
+
+    // The package installer reports its result after install() returns, so a later rejection or a declined prompt lands here.
+    private fun stopAutoInstallAfterFailure(release: GitHubRelease) {
+        if (release.updateKey == backgroundUpdateKey) autoInstallFailed = true
     }
 
     fun pendingReleaseForInstalledVersion(): GitHubRelease? =

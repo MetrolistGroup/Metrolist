@@ -1,9 +1,15 @@
-@file:OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@file:OptIn(ExperimentalMaterial3ExpressiveApi::class, ExperimentalSharedTransitionApi::class)
 
 package com.metrolist.shared.ui.screens
 
-import androidx.compose.animation.Crossfade
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.BoundsTransform
+import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.SharedTransitionLayout
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.calculateZoom
@@ -56,6 +62,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
@@ -395,204 +402,219 @@ fun LibraryContent(
             haptics.perform(HapticEvent.DRAG_SNAP)
             onManualOrderChange(reorderOrder)
         }
-        val currentGridView = isGridView
-        val retainedScrollState = scrollState
-        Crossfade(
-            targetState = isGridView,
-            animationSpec = MaterialTheme.motionScheme.fastEffectsSpec(),
-            label = "libraryLayout",
-        ) { isGridView ->
-            val scrollState =
-                if (isGridView == currentGridView) {
-                    retainedScrollState
+        val sizedGrid = isGridView && useGridItemSize && pinchColumns == 0
+        val gridGap = if (isGridView) (14 - (if (pinchColumns > 0) pinchColumns else gridColumns) * 2).dp else 8.dp
+        val currentLayout =
+            LibraryLayout(
+                isGridView,
+                if (!isGridView) {
+                    GridCells.Fixed(1)
+                } else if (useGridItemSize) {
+                    pinchColumns.takeIf { it > 0 }?.let { GridCells.Fixed(it) } ?: currentGridCells()
+                } else if (compactGrid) {
+                    GridCells.Fixed(gridColumns)
                 } else {
-                    remember(currentGridView, retainedScrollState) {
-                        LazyGridState(retainedScrollState.firstVisibleItemIndex, retainedScrollState.firstVisibleItemScrollOffset)
-                    }
+                    GridCells.Adaptive((360f / gridColumns).dp)
+                },
+                horizontalGap = if (sizedGrid) GridTileSpacing else gridGap,
+                verticalGap = if (sizedGrid) GridRowSpacing else gridGap,
+            )
+        val retainedScrollState = scrollState
+        val motionScheme = MaterialTheme.motionScheme
+        val artworkBounds = remember(motionScheme) { BoundsTransform { _, _ -> motionScheme.defaultSpatialSpec<Rect>() } }
+        // The pinch sits outside the transition so a gesture survives the grid it started on being replaced.
+        SharedTransitionLayout(Modifier.fillMaxSize().libraryGridPinch(isGridView && !useDesktopUi, useGridItemSize)) {
+            AnimatedContent(
+                targetState = currentLayout,
+                transitionSpec = { fadeIn(motionScheme.defaultEffectsSpec()) togetherWith fadeOut(motionScheme.fastEffectsSpec()) },
+                label = "libraryLayout",
+            ) { layout ->
+                val isGridView = layout.isGrid
+                // Covers move to their new cell on the spatial spring while the rest of each item crossfades.
+                val sharedArtwork: @Composable (String) -> Modifier = { key ->
+                    Modifier.sharedElement(rememberSharedContentState(key), this@AnimatedContent, boundsTransform = artworkBounds)
                 }
-            val sizedGrid = isGridView && useGridItemSize && pinchColumns == 0
-            val gridGap = if (isGridView) (14 - (if (pinchColumns > 0) pinchColumns else gridColumns) * 2).dp else 8.dp
-            val horizontalGap = if (sizedGrid) GridTileSpacing else gridGap
-            val verticalGap = if (sizedGrid) GridRowSpacing else gridGap
-            key(isGridView) {
-                val reorderState =
-                    rememberReorderableLazyGridState(
-                        scrollState,
-                        scrollThresholdPadding = PaddingValues(top = topPadding, bottom = bottomPadding + extraBottomPadding),
-                        scrollMoveMode = ScrollMoveMode.INSERT,
-                    ) { from, to ->
-                        if (reorderEnabled) {
-                            val fromItem = searchedItems.firstOrNull { it.libraryReorderKey == from.key }
-                            val toItem = searchedItems.firstOrNull { it.libraryReorderKey == to.key }
-                            if (fromItem != null && toItem != null) moveItem(fromItem, toItem)
+                val scrollState =
+                    if (layout == currentLayout) {
+                        retainedScrollState
+                    } else {
+                        remember(currentLayout, retainedScrollState) {
+                            LazyGridState(retainedScrollState.firstVisibleItemIndex, retainedScrollState.firstVisibleItemScrollOffset)
                         }
                     }
-                val reorderScrollConnection = remember(reorderState) { LibraryReorderScrollConnection { reorderState.isAnyItemDragging } }
-                DragScrollableGrid(
-                    columns =
-                        if (!isGridView) {
-                            GridCells.Fixed(1)
-                        } else if (useGridItemSize) {
-                            pinchColumns.takeIf { it > 0 }?.let { GridCells.Fixed(it) } ?: currentGridCells()
-                        } else if (compactGrid) {
-                            GridCells.Fixed(gridColumns)
-                        } else {
-                            GridCells.Adaptive((360f / gridColumns).dp)
-                        },
-                    state = scrollState,
-                    modifier =
-                        Modifier
-                            .fillMaxSize()
-                            .nestedScroll(reorderScrollConnection)
-                            .blockInput(isGridView != currentGridView)
-                            .desktopArrowScroll(scrollState)
-                            .libraryGridPinch(isGridView && !useDesktopUi, useGridItemSize),
-                    contentPadding =
-                        PaddingValues(
-                            top = topPadding,
-                            start = 16.dp,
-                            end = 16.dp,
-                            bottom = bottomPadding + extraBottomPadding,
-                        ),
-                    horizontalArrangement = Arrangement.spacedBy(horizontalGap),
-                    verticalArrangement = Arrangement.spacedBy(verticalGap),
-                ) {
-                    item(key = "library_header", contentType = "header", span = { GridItemSpan(maxLineSpan) }) {
-                        LibraryHeader(
-                            text = text,
-                            selectedFilter = effectiveFilter,
-                            isGridView = isGridView,
-                            sortType = effectiveSortType,
-                            isSearchOpen = isSearchOpen,
-                            onSearchToggle = toggleSearch,
-                            onFilterChange = onFilterChange,
-                            onGridViewChange = onGridViewChange,
-                        )
-                    }
-                    if (onSearchQueryChange != null) {
-                        item(key = "library_search", contentType = "search", span = { GridItemSpan(maxLineSpan) }) {
-                            ExpandableSearchBar(
-                                visible = isSearchOpen,
-                                query = searchQuery,
-                                onQueryChange = onSearchQueryChange,
-                                onClose = toggleSearch,
-                                placeholder = text.searchPlaceholder,
-                                modifier = Modifier.padding(top = 8.dp),
+                key(layout) {
+                    val reorderState =
+                        rememberReorderableLazyGridState(
+                            scrollState,
+                            scrollThresholdPadding = PaddingValues(top = topPadding, bottom = bottomPadding + extraBottomPadding),
+                            scrollMoveMode = ScrollMoveMode.INSERT,
+                        ) { from, to ->
+                            if (reorderEnabled) {
+                                val fromItem = searchedItems.firstOrNull { it.libraryReorderKey == from.key }
+                                val toItem = searchedItems.firstOrNull { it.libraryReorderKey == to.key }
+                                if (fromItem != null && toItem != null) moveItem(fromItem, toItem)
+                            }
+                        }
+                    val reorderScrollConnection =
+                        remember(reorderState) { LibraryReorderScrollConnection { reorderState.isAnyItemDragging } }
+                    DragScrollableGrid(
+                        columns = layout.columns,
+                        state = scrollState,
+                        modifier =
+                            Modifier
+                                .fillMaxSize()
+                                .nestedScroll(reorderScrollConnection)
+                                .blockInput(layout != currentLayout)
+                                .desktopArrowScroll(scrollState),
+                        contentPadding =
+                            PaddingValues(
+                                top = topPadding,
+                                start = 16.dp,
+                                end = 16.dp,
+                                bottom = bottomPadding + extraBottomPadding,
+                            ),
+                        horizontalArrangement = Arrangement.spacedBy(layout.horizontalGap),
+                        verticalArrangement = Arrangement.spacedBy(layout.verticalGap),
+                    ) {
+                        item(key = "library_header", contentType = "header", span = { GridItemSpan(maxLineSpan) }) {
+                            LibraryHeader(
+                                text = text,
+                                selectedFilter = effectiveFilter,
+                                isGridView = isGridView,
+                                sortType = effectiveSortType,
+                                isSearchOpen = isSearchOpen,
+                                onSearchToggle = toggleSearch,
+                                onFilterChange = onFilterChange,
+                                onGridViewChange = onGridViewChange,
                             )
                         }
-                    }
-                    if (!isLoading && error) {
-                        item(key = "library_error", contentType = "status", span = { GridItemSpan(maxLineSpan) }) {
-                            Column(Modifier.fillMaxWidth().padding(24.dp)) {
-                                Text(stringResource(Res.string.library_load_failed), color = MaterialTheme.colorScheme.error)
-                                onRetry?.let { retry ->
-                                    TextButton(onClick = retry, shapes = ButtonDefaults.shapes()) {
-                                        Text(stringResource(Res.string.try_again))
+                        if (onSearchQueryChange != null) {
+                            item(key = "library_search", contentType = "search", span = { GridItemSpan(maxLineSpan) }) {
+                                ExpandableSearchBar(
+                                    visible = isSearchOpen,
+                                    query = searchQuery,
+                                    onQueryChange = onSearchQueryChange,
+                                    onClose = toggleSearch,
+                                    placeholder = text.searchPlaceholder,
+                                    modifier = Modifier.padding(top = 8.dp),
+                                )
+                            }
+                        }
+                        if (!isLoading && error) {
+                            item(key = "library_error", contentType = "status", span = { GridItemSpan(maxLineSpan) }) {
+                                Column(Modifier.fillMaxWidth().padding(24.dp)) {
+                                    Text(stringResource(Res.string.library_load_failed), color = MaterialTheme.colorScheme.error)
+                                    onRetry?.let { retry ->
+                                        TextButton(onClick = retry, shapes = ButtonDefaults.shapes()) {
+                                            Text(stringResource(Res.string.try_again))
+                                        }
                                     }
                                 }
                             }
                         }
-                    }
-                    items(
-                        count = searchedAutoPlaylists.size,
-                        key = { "auto_${searchedAutoPlaylists[it].type}" },
-                        contentType = { "auto_playlist" },
-                        span = { GridItemSpan(if (isGridView) 1 else maxLineSpan) },
-                    ) { index ->
-                        val playlist = searchedAutoPlaylists[index]
-                        Box(Modifier.animateItem()) {
-                            itemContainer(
-                                HiddenLibraryItem(
-                                    HiddenLibraryItemType.AUTO,
-                                    playlist.type,
-                                    playlist.title,
-                                    subtitle = playlist.subtitle,
-                                ),
-                                null,
-                                isGridView,
-                                { onAutoPlaylistClick(playlist.type) },
-                            ) {
-                                AutoPlaylistItem(playlist, isGridView)
-                            }
-                        }
-                    }
-                    if (searchedItems.isEmpty() && searchedAutoPlaylists.isEmpty() && !error) {
-                        item(key = "library_empty", contentType = "status", span = { GridItemSpan(maxLineSpan) }) {
-                            Box(Modifier.fillMaxWidth().padding(48.dp), contentAlignment = Alignment.Center) {
-                                if (isLoading) {
-                                    Column(
-                                        modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
-                                        horizontalAlignment = Alignment.CenterHorizontally,
-                                        verticalArrangement = Arrangement.spacedBy(12.dp),
-                                    ) {
-                                        ContainedLoadingIndicator(label = text.loading)
-                                    }
-                                } else {
-                                    Text(
-                                        if (searchQuery.isNotBlank()) text.searchNoResults else text.empty,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
-                                    )
-                                }
-                            }
-                        }
-                    } else {
                         items(
-                            count = searchedItems.size,
-                            key = { index -> searchedItems[index].libraryReorderKey },
-                            contentType = { index -> searchedItems[index]::class },
+                            count = searchedAutoPlaylists.size,
+                            key = { "auto_${searchedAutoPlaylists[it].type}" },
+                            contentType = { "auto_playlist" },
                             span = { GridItemSpan(if (isGridView) 1 else maxLineSpan) },
                         ) { index ->
-                            val item = searchedItems[index]
-                            val playback by rememberItemPlayback(item.id, currentSongIdState, isPlayingState)
-
-                            fun moveTo(targetIndex: Int): (() -> Unit)? =
-                                searchedItems
-                                    .getOrNull(targetIndex)
-                                    ?.takeIf { targetIndex != index }
-                                    ?.let { { moveItem(item, it) } }
-                            ReorderableItem(reorderState, key = item.libraryReorderKey, enabled = reorderEnabled) {
-                                val dragHandleModifier =
-                                    Modifier.draggableHandle(
-                                        enabled = reorderEnabled,
-                                        onDragStarted = { haptics.perform(HapticEvent.DRAG_START) },
-                                        dragGestureDetector = if (isDesktop) DragGestureDetector.Press else DragGestureDetector.LongPress,
-                                    )
+                            val playlist = searchedAutoPlaylists[index]
+                            Box(Modifier.animateItem()) {
                                 itemContainer(
-                                    HiddenLibraryItem.from(item),
-                                    item,
+                                    HiddenLibraryItem(
+                                        HiddenLibraryItemType.AUTO,
+                                        playlist.type,
+                                        playlist.title,
+                                        subtitle = playlist.subtitle,
+                                    ),
+                                    null,
                                     isGridView,
-                                    {
-                                        dispatchLibraryItemClick(searchedItems, index, onPlaySongs, onItemClick)
-                                    },
+                                    { onAutoPlaylistClick(playlist.type) },
                                 ) {
-                                    LibraryItem(
-                                        artistLabel = text.artist,
-                                        item = item,
-                                        isGridView = isGridView,
-                                        isCurrent = item is SongItem && playback.isCurrent,
-                                        isPlaying = playback.isPlaying,
-                                        onAlbumPlay =
-                                            (item as? AlbumItem)?.let { album ->
-                                                onPlayAlbum?.let { play -> { play(album) } }
-                                            },
-                                        reorderHandle =
-                                            if (reorderEnabled && searchedItems.size > 1) {
-                                                { modifier ->
-                                                    ReorderMenu(
-                                                        onMoveUp = moveTo(index - 1),
-                                                        onMoveDown = moveTo(index + 1),
-                                                        onMoveToTop = moveTo(0),
-                                                        onMoveToBottom = moveTo(searchedItems.lastIndex),
-                                                        modifier = modifier,
-                                                        dragHandleModifier = dragHandleModifier,
-                                                        onArtwork = true,
-                                                    )
-                                                }
-                                            } else {
-                                                null
-                                            },
-                                    )
+                                    AutoPlaylistItem(playlist, isGridView, sharedArtwork("auto_${playlist.type}"))
+                                }
+                            }
+                        }
+                        if (searchedItems.isEmpty() && searchedAutoPlaylists.isEmpty() && !error) {
+                            item(key = "library_empty", contentType = "status", span = { GridItemSpan(maxLineSpan) }) {
+                                Box(Modifier.fillMaxWidth().padding(48.dp), contentAlignment = Alignment.Center) {
+                                    if (isLoading) {
+                                        Column(
+                                            modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
+                                            horizontalAlignment = Alignment.CenterHorizontally,
+                                            verticalArrangement = Arrangement.spacedBy(12.dp),
+                                        ) {
+                                            ContainedLoadingIndicator(label = text.loading)
+                                        }
+                                    } else {
+                                        Text(
+                                            if (searchQuery.isNotBlank()) text.searchNoResults else text.empty,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
+                                        )
+                                    }
+                                }
+                            }
+                        } else {
+                            items(
+                                count = searchedItems.size,
+                                key = { index -> searchedItems[index].libraryReorderKey },
+                                contentType = { index -> searchedItems[index]::class },
+                                span = { GridItemSpan(if (isGridView) 1 else maxLineSpan) },
+                            ) { index ->
+                                val item = searchedItems[index]
+                                val playback by rememberItemPlayback(item.id, currentSongIdState, isPlayingState)
+
+                                fun moveTo(targetIndex: Int): (() -> Unit)? =
+                                    searchedItems
+                                        .getOrNull(targetIndex)
+                                        ?.takeIf { targetIndex != index }
+                                        ?.let { { moveItem(item, it) } }
+                                ReorderableItem(reorderState, key = item.libraryReorderKey, enabled = reorderEnabled) {
+                                    val dragHandleModifier =
+                                        Modifier.draggableHandle(
+                                            enabled = reorderEnabled,
+                                            onDragStarted = { haptics.perform(HapticEvent.DRAG_START) },
+                                            dragGestureDetector =
+                                                if (isDesktop) DragGestureDetector.Press else DragGestureDetector.LongPress,
+                                        )
+                                    itemContainer(
+                                        HiddenLibraryItem.from(item),
+                                        item,
+                                        isGridView,
+                                        {
+                                            dispatchLibraryItemClick(searchedItems, index, onPlaySongs, onItemClick)
+                                        },
+                                    ) {
+                                        LibraryItem(
+                                            artistLabel = text.artist,
+                                            item = item,
+                                            isGridView = isGridView,
+                                            artworkModifier = sharedArtwork(item.libraryReorderKey),
+                                            isCurrent = item is SongItem && playback.isCurrent,
+                                            isPlaying = playback.isPlaying,
+                                            onAlbumPlay =
+                                                (item as? AlbumItem)?.let { album ->
+                                                    onPlayAlbum?.let { play -> { play(album) } }
+                                                },
+                                            reorderHandle =
+                                                if (reorderEnabled && searchedItems.size > 1) {
+                                                    { modifier ->
+                                                        ReorderMenu(
+                                                            onMoveUp = moveTo(index - 1),
+                                                            onMoveDown = moveTo(index + 1),
+                                                            onMoveToTop = moveTo(0),
+                                                            onMoveToBottom = moveTo(searchedItems.lastIndex),
+                                                            modifier = modifier,
+                                                            dragHandleModifier = dragHandleModifier,
+                                                            onArtwork = true,
+                                                        )
+                                                    }
+                                                } else {
+                                                    null
+                                                },
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -880,6 +902,7 @@ private fun LibrarySortType.isAvailableFor(filter: LibraryFilter?): Boolean =
 private fun AutoPlaylistItem(
     playlist: LibraryAutoPlaylist,
     isGridView: Boolean,
+    artworkModifier: Modifier,
 ) {
     if (isGridView) {
         Box(Modifier.fillMaxWidth()) {
@@ -889,6 +912,7 @@ private fun AutoPlaylistItem(
                 subtitle = playlist.subtitle,
                 thumbnail = Settings.shared.collectionCovers[playlist.type],
                 icon = playlist.icon,
+                artworkModifier = artworkModifier,
             )
             playlist.badge?.let { AutoPlaylistBadge(it, Modifier.align(Alignment.TopEnd).padding(8.dp)) }
         }
@@ -900,6 +924,7 @@ private fun AutoPlaylistItem(
                 subtitle = playlist.subtitle,
                 thumbnail = Settings.shared.collectionCovers[playlist.type],
                 icon = playlist.icon,
+                artworkModifier = artworkModifier,
             )
             playlist.badge?.let { AutoPlaylistBadge(it, Modifier.align(Alignment.CenterEnd).padding(end = 8.dp)) }
         }
@@ -933,6 +958,7 @@ private fun LibraryItem(
     artistLabel: String,
     item: YTItem,
     isGridView: Boolean,
+    artworkModifier: Modifier,
     reorderHandle: (@Composable (Modifier) -> Unit)? = null,
     onAlbumPlay: (() -> Unit)? = null,
     isCurrent: Boolean,
@@ -995,6 +1021,7 @@ private fun LibraryItem(
                 isPlaylistArtwork = item is PlaylistItem,
                 icon = null,
                 artistId = artistId,
+                artworkModifier = artworkModifier,
                 artworkOverlay = artworkOverlay,
                 artworkAspectRatio = item.thumbnailAspectRatio,
                 isCurrent = isCurrent,
@@ -1022,6 +1049,7 @@ private fun LibraryItem(
                     isPlaylistArtwork = item is PlaylistItem,
                     icon = null,
                     artistId = artistId,
+                    artworkModifier = artworkModifier,
                     artworkOverlay = artworkOverlay,
                     artworkAspectRatio = item.thumbnailAspectRatio,
                     isCurrent = isCurrent,
@@ -1033,6 +1061,13 @@ private fun LibraryItem(
         }
     }
 }
+
+private data class LibraryLayout(
+    val isGrid: Boolean,
+    val columns: GridCells,
+    val horizontalGap: Dp,
+    val verticalGap: Dp,
+)
 
 private val YTItem.libraryReorderKey: String
     get() = "${this::class.simpleName}_$id"
