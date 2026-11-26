@@ -138,7 +138,16 @@ internal suspend fun resolveAutomotiveSearchSongQueue(
 
     if (isSearchSong && mode != AutomotiveSongPlaybackMode.QUEUE) {
         return library.resolveSong(item)?.let { song ->
-            AutomotiveSongQueue(songs = listOf(song), startIndex = 0, songPlaybackMode = mode)
+            val effectiveMode =
+                if (
+                    mode == AutomotiveSongPlaybackMode.RADIO &&
+                    (song.isLocal || song.id.startsWith("local_"))
+                ) {
+                    AutomotiveSongPlaybackMode.SINGLE_SONG
+                } else {
+                    mode
+                }
+            AutomotiveSongQueue(songs = listOf(song), startIndex = 0, songPlaybackMode = effectiveMode)
         } ?: library.resolveSongQueue(item)
     }
     return library.resolveSongQueue(item)
