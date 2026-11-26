@@ -48,8 +48,6 @@ import com.metrolist.shared.ui.components.lyrics.rememberCaptionLyricsPositionSt
 @Composable
 fun ActiveLyricsLine(
     modifier: Modifier = Modifier,
-    // The miniplayer has its own window, so the main window's lyrics drawer and video overlay do not cover it.
-    // It also has no artwork behind the line, so it uses theme colors and marks instrumental gaps instead of hiding.
     inMiniplayer: Boolean = false,
 ) {
     val showLyricsOnPlayer = Settings.shared.showLyricsOnPlayer || PlayerState.isSubtitleActive
@@ -103,7 +101,6 @@ fun ActiveLyricsLine(
             LyricsUtils.getLineEndTime(it, nextLine)
         } ?: 0L
 
-    // Start and end of the instrumental gap being played, or null while a line is being sung.
     val gapRange by remember(lyrics, currentLineIndex, currentLine, nextLine, lineEndTime, lyricsPositionState) {
         derivedStateOf(structuralEqualityPolicy()) {
             val lyricsPosition = lyricsPositionState.value
