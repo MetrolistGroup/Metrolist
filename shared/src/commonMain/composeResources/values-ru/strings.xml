@@ -2809,4 +2809,7 @@
     <string name="metroeq_preset_electronic">Электроника</string>
     <string name="metroeq_preset_acoustic">Акустика</string>
     <string name="webview_runtime_unavailable">Не удалось запустить встроенный браузер. Установите или восстановите Microsoft Edge WebView2 Runtime, а затем перезапустите Metrolist.</string>
+    <string name="cache_whole_song_while_playing">Кэшировать трек целиком при воспроизведении</string>
+    <string name="cache_whole_song_while_playing_desc">При потоковом воспроизведении сразу загружает оставшуюся часть трека вместо буферизации только вперёд. Расходует больше трафика.</string>
+    <string name="slider_standard_buffered">Стандартный с буфером</string>
 </resources>
