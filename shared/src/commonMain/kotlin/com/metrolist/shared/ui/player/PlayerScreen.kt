@@ -334,15 +334,12 @@ internal fun ArtworkSwipeBox(
                     if (!enabled) return@pointerInput
                     detectHorizontalDragGestures(
                         onDragStart = {
-                            // Cancel any previous settle before moving the artwork.
+                            // Start from zero so a cancelled settle cannot bias the new drag.
                             settleGeneration += 1
                             settleJob?.cancel()
                             settleJob = null
-                            if (navigationRequested) {
-                                // The cancelled settle already skipped; restart from center to avoid a second skip.
-                                navigationRequested = false
-                                scope.launch { offset.snapTo(0f) }
-                            }
+                            navigationRequested = false
+                            scope.launch { offset.snapTo(0f) }
                             holdSide = 0
                             freezePanes = false
                         },
@@ -1967,7 +1964,7 @@ fun PlayerScreen(
                                                     // Queue entry identity, so duplicate songs in the queue still count as a track change.
                                                     trackKey =
                                                         uiState.currentSong?.id?.let { id ->
-                                                            "$id#${uiState.currentQueueIndex}#${uiState.queueEntryKeys.getOrNull(uiState.currentQueueIndex)}"
+                                                            "$id#${uiState.queueEntryKeys.getOrNull(uiState.currentQueueIndex)}"
                                                         },
                                                     onPrevious = viewModel::previous,
                                                     onNext = viewModel::next,
