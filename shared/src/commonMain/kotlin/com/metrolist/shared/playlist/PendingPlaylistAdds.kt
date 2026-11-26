@@ -14,6 +14,7 @@ import com.metrolist.shared.state.GlobalYouTubeRepository
 import com.metrolist.shared.viewmodels.currentLibraryAccountKey
 import com.metrolist.shared.youtube.logging.YtLogger
 import com.metrolist.shared.youtube.playback.PlaybackNetworkStateStore
+import kotlinx.atomicfu.atomic
 import kotlinx.atomicfu.locks.SynchronizedObject
 import kotlinx.atomicfu.locks.synchronized
 import kotlinx.coroutines.CancellationException
@@ -63,6 +64,9 @@ object PendingPlaylistAdds {
 
     private val json = Json { ignoreUnknownKeys = true }
     private val lock = SynchronizedObject()
+
+    // Counts the adds that left the queue, so a playlist snapshot fetched before one of them can be told apart.
+    private val departures = atomic(0L)
     private val additions = MutableStateFlow(0L)
     private var boundDatabase: MusicDatabase? = null
     private var syncJob: Job? = null
@@ -169,17 +173,22 @@ object PendingPlaylistAdds {
         }
     }
 
-    // Copies of each song the local playlist keeps beyond those YouTube lists until their queued adds are confirmed.
+    // Changes whenever an add leaves the queue. Read it before fetching a playlist snapshot and pass it to unconfirmedCopies.
+    internal fun queueRevision(): Long = departures.value
+
+    // Copies of each song the local playlist keeps beyond those YouTube lists until their queued adds are confirmed. Returns
+    // null when an add left the queue since [fetchedAtRevision], because a snapshot fetched before then may lack its copy.
     internal fun unconfirmedCopies(
         playlistId: String,
         remoteCounts: Map<String, Int>,
-    ): Map<String, Int> =
-        synchronized(lock) { read() }
-            .filter { entry ->
+        fetchedAtRevision: Long?,
+    ): Map<String, Int>? =
+        synchronized(lock) { read().takeIf { fetchedAtRevision == null || departures.value == fetchedAtRevision } }
+            ?.filter { entry ->
                 val copies = remoteCounts[entry.songId] ?: 0
                 entry.playlistId == playlistId && (entry.expectedCount?.let { copies < it } ?: (entry.allowDuplicate || copies == 0))
-            }.groupingBy { it.songId }
-            .eachCount()
+            }?.groupingBy { it.songId }
+            ?.eachCount()
 
     fun clear() {
         synchronized(lock) { write(emptyList()) }
@@ -404,6 +413,8 @@ object PendingPlaylistAdds {
             .getOrDefault(emptyList())
 
     private fun write(entries: List<PendingPlaylistAdd>) {
+        val kept = entries.mapTo(HashSet()) { it.id }
+        if (read().any { it.id !in kept }) departures.incrementAndGet()
         Settings.shared.pendingPlaylistAddsJson = json.encodeToString(entries)
     }
 }

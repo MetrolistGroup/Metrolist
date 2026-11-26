@@ -539,7 +539,11 @@ internal fun MobilePlaylistScreen(
         val header = complete.sections["header"]?.firstOrNull() as? PlaylistItem ?: return@LaunchedEffect
         try {
             editMutex.withLock {
-                if (!editingPrepared) withContext(Dispatchers.Default) { database.cacheRemotePlaylist(playlistId, header, complete.songs) }
+                if (!editingPrepared) {
+                    withContext(Dispatchers.Default) {
+                        database.cacheRemotePlaylist(playlistId, header, complete.songs, loader.queueRevision)
+                    }
+                }
             }
         } catch (e: CancellationException) {
             throw e
@@ -629,8 +633,11 @@ internal fun MobilePlaylistScreen(
                     try {
                         editMutex.withLock {
                             if (!editingPrepared) {
-                                val complete = cachedSections?.playlistSongs() ?: loader.complete().songs
-                                database.cacheRemotePlaylist(playlistId, playlist, complete)
+                                // Stored rows keep their mappings; fetched pages pass the queue revision from before the fetch.
+                                val storedSongs = cachedSections?.playlistSongs()
+                                val complete = storedSongs ?: loader.complete().songs
+                                val queueRevision = loader.queueRevision.takeIf { storedSongs == null }
+                                database.cacheRemotePlaylist(playlistId, playlist, complete, queueRevision)
                                 val stored = checkNotNull(database.dao().findPlaylistEntity(playlistId))
                                 reorder.update(
                                     database
