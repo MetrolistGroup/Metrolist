@@ -356,7 +356,9 @@ class MusicService :
                                         transitionPending = player.playbackTransitionPending,
                                         latestRequestId = { player.latestQueuePlaybackRequestId },
                                         isCurrentSession = { queueCoordinator.queueSessionId == sessionId },
+                                        onAbandoned = { queueCoordinator.releaseRadioSeedLock(sessionId) },
                                         playMix = {
+                                            queueCoordinator.releaseRadioSeedLock(sessionId)
                                             _repeatMode.value = Player.REPEAT_MODE_OFF
                                             playMix(it, true)
                                         },

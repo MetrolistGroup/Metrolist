@@ -547,6 +547,7 @@ object PlayerState {
     @Volatile private var deviceRadioBootstrapJob: Job? = null
     private var deviceRadioBootstrapPending = false
     private var deviceRadioBootstrapGeneration = -1L
+    private var deviceRadioBootstrapSessionId: String? = null
     private var controllerPlayback: DcLocalPlaybackState? = null
     private val deviceConnectPlayback =
         object : DeviceConnectPlaybackPort {
@@ -603,11 +604,10 @@ object PlayerState {
                     if (controllerPlayback?.queue != playback.queue) {
                         queue.restore(playback.queue)
                         shuffleEnabled = playback.queue.isShuffled
-                        queueChanged()
+                        queueChanged(persist = false)
                     }
                     localRepeatMode = RepeatMode.valueOf(playback.repeatMode.name)
                     syncSession.applyPlayback(playback)
-                    persistPlaybackState()
                     syncSession.setReady(false)
                     desiredPlayback.value = playback.playing
                     val track = playback.queue.displayedItems.getOrNull(playback.queue.currentIndex)
@@ -625,9 +625,8 @@ object PlayerState {
                 remoteVolume = playback?.volume
                 volumeState.value = volume
                 player.setControllerPlayback(playback)
-                if (playback !=
-                    null
-                ) {
+                if (playback != null) {
+                    persistPlaybackState()
                     scrobbleManager.setReportingEnabled(false, player.currentSong.value, playback.playing, playback.scrobbleSession)
                 }
             }
@@ -2290,11 +2289,11 @@ object PlayerState {
         }
     }
 
-    private fun queueChanged() {
+    private fun queueChanged(persist: Boolean = true) {
         transitions.queueChanged()
         invalidatePersistedRestore()
         radio.syncQueue()
-        persistPlaybackState()
+        if (persist) persistPlaybackState()
     }
 
     private fun invalidatePersistedRestore() {
@@ -4109,9 +4108,16 @@ object PlayerState {
         expectedSessionId: String?,
     ) {
         val generation = playbackTransitionGeneration
-        if (deviceRadioBootstrapJob?.isActive == true && deviceRadioBootstrapGeneration == generation) return
+        if (
+            deviceRadioBootstrapJob?.isActive == true &&
+            deviceRadioBootstrapGeneration == generation &&
+            deviceRadioBootstrapSessionId == expectedSessionId
+        ) {
+            return
+        }
         deviceRadioBootstrapJob?.cancel()
         deviceRadioBootstrapGeneration = generation
+        deviceRadioBootstrapSessionId = expectedSessionId
         val requestGeneration = explicitRadioRequestGeneration
         deviceRadioBootstrapJob =
             scope.launch {
@@ -4125,6 +4131,7 @@ object PlayerState {
                             .singleOrNull()
                             ?.id == seed.id &&
                         syncSession.explicitRadioQueue &&
+                        !syncSession.recommendationsLocked &&
                         !deviceConnect.isFollowing
                     ) {
                         deviceRadioBootstrapPending = false
@@ -4140,7 +4147,13 @@ object PlayerState {
 
     private fun rearmPendingExplicitRadioBootstrap() {
         if (!deviceRadioBootstrapPending || !syncSession.explicitRadioQueue || deviceConnect.isFollowing) return
-        if (deviceRadioBootstrapJob?.isActive == true && deviceRadioBootstrapGeneration == playbackTransitionGeneration) return
+        if (
+            deviceRadioBootstrapJob?.isActive == true &&
+            deviceRadioBootstrapGeneration == playbackTransitionGeneration &&
+            deviceRadioBootstrapSessionId == syncSession.sessionId
+        ) {
+            return
+        }
         val seed =
             queue.items.value
                 .singleOrNull()

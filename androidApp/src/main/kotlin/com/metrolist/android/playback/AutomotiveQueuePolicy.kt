@@ -160,6 +160,7 @@ internal fun automotivePlaybackIntent(mode: AutomotiveSongPlaybackMode?): Automo
 private data class AutomotiveRadioSeedState(
     val request: QueuePlaybackRequest,
     val currentSongId: String?,
+    val currentOriginalQueueItemId: String?,
     val playing: Boolean,
     val transitionPending: Boolean,
 )
@@ -173,11 +174,12 @@ internal suspend fun awaitAutomotiveRadioSeed(
     transitionPending: StateFlow<Boolean>,
     latestRequestId: () -> Long,
     isCurrentSession: () -> Boolean,
+    onAbandoned: () -> Unit,
     playMix: (SongItem) -> Unit,
 ) {
     var unrelatedSelection = false
     combine(requests, currentSong, isPlaying, transitionPending) { request, current, playing, pending ->
-        AutomotiveRadioSeedState(request, current?.id, playing, pending)
+        AutomotiveRadioSeedState(request, current?.id, current?.originalQueueItemId, playing, pending)
     }.first { state ->
         when {
             state.request.requestId <= initialRequestId -> {
@@ -190,13 +192,22 @@ internal suspend fun awaitAutomotiveRadioSeed(
             }
 
             else -> {
-                state.currentSongId == song.id && state.playing && !state.transitionPending
+                (
+                    state.currentSongId == song.id ||
+                        state.currentOriginalQueueItemId == (song.originalQueueItemId ?: song.id)
+                ) && state.playing && !state.transitionPending
             }
         }
     }
     // A seek or resume can supersede the seed request while it is still resolving;
     // follow the newest request instead of the one that started the wait.
-    val newest = requests.replayCache.lastOrNull()?.takeIf { it.requestId > initialRequestId } ?: return
-    if (unrelatedSelection || newest.song.id != song.id || newest.requestId != latestRequestId() || !isCurrentSession()) return
-    currentSong.value?.let(playMix)
+    val newest = requests.replayCache.lastOrNull()?.takeIf { it.requestId > initialRequestId }
+    val committed = currentSong.value
+    if (newest == null || unrelatedSelection || newest.song.id != song.id ||
+        newest.requestId != latestRequestId() || !isCurrentSession() || committed == null
+    ) {
+        onAbandoned()
+        return
+    }
+    playMix(committed)
 }

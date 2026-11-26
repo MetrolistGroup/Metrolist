@@ -38,6 +38,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -49,6 +50,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import timber.log.Timber
 import java.util.concurrent.atomic.AtomicInteger
+import kotlin.time.Duration.Companion.milliseconds
 
 internal class AndroidQueueCoordinator(
     private val context: Context,
@@ -65,6 +67,8 @@ internal class AndroidQueueCoordinator(
     companion object {
         private const val TAG = "MusicService"
         private const val MAX_RADIO_CONTINUATION_PAGES = 10
+        private const val MAX_RADIO_BOOTSTRAP_ATTEMPTS = 3
+        private const val RADIO_BOOTSTRAP_RETRY_DELAY_MS = 1_000L
     }
 
     lateinit var transitions: AndroidQueueTransitions
@@ -148,9 +152,11 @@ internal class AndroidQueueCoordinator(
         }
     }
 
-    fun releaseRadioSeedLock() {
+    fun releaseRadioSeedLock(sessionId: Long? = null) {
         synchronized(queueSessionLock) {
-            radioSeedLockedSessionId = null
+            if (sessionId == null || radioSeedLockedSessionId == sessionId) {
+                radioSeedLockedSessionId = null
+            }
         }
     }
 
@@ -583,53 +589,70 @@ internal class AndroidQueueCoordinator(
         val requestClassic = Settings.shared.classicRecommendations
         recommendationBootstrapJob?.cancel()
         recommendationBootstrapJob =
-            scope.launch {
-                try {
-                    bootstrapRadioQueue(
-                        loadPage = { continuation ->
-                            withQueueLoading {
-                                withContext(Dispatchers.IO) {
-                                    if (continuation == null) {
-                                        startCurrentRadioPage(seedSongId)
-                                    } else {
-                                        GlobalYouTubeRepository.instance.continueRadioQueue(continuation)
+            scope
+                .launch {
+                    repeat(MAX_RADIO_BOOTSTRAP_ATTEMPTS) { attempt ->
+                        try {
+                            bootstrapRadioQueue(
+                                loadPage = { continuation ->
+                                    withQueueLoading {
+                                        withContext(Dispatchers.IO) {
+                                            if (continuation == null) {
+                                                startCurrentRadioPage(seedSongId)
+                                            } else {
+                                                GlobalYouTubeRepository.instance.continueRadioQueue(continuation)
+                                            }
+                                        }
                                     }
-                                }
-                            }
-                        },
-                        isCurrent = {
-                            isCurrentRecommendationRequest(
-                                sessionId,
-                                requestGeneration,
-                                queueSessionId,
-                                recommendationRequestGeneration,
-                            ) && PlaybackNetworkStateStore.current.connected &&
-                                (allowRepeatMode || repeatMode.value == Player.REPEAT_MODE_OFF) &&
-                                canBootstrapRecommendations() &&
-                                !AndroidDeviceConnect.manager.remote.isFollowing &&
-                                !AndroidListenTogetherManager.isGuestPlaybackLocked
-                        },
-                        nextContinuation = { currentModeContinuation() },
-                        applyPage = { page, initial ->
-                            applyMixPage(
-                                firstPage = page,
-                                expectedSessionId = sessionId,
-                                expectedRequestGeneration = requestGeneration,
-                                requestClassic = requestClassic,
-                                replaceGeneratedSongs = false,
-                                generatedQueueSourceTitle = if (initial) QUEUE_SOURCE_AUTO_MIX else QUEUE_SOURCE_RECOMMENDED,
-                                playlistId = radioQueuePlaylistId ?: "RDAMVM$seedSongId",
-                                params = radioQueueParams,
-                                allowRepeatMode = allowRepeatMode,
+                                },
+                                isCurrent = {
+                                    isCurrentRecommendationRequest(
+                                        sessionId,
+                                        requestGeneration,
+                                        queueSessionId,
+                                        recommendationRequestGeneration,
+                                    ) && PlaybackNetworkStateStore.current.connected &&
+                                        (allowRepeatMode || repeatMode.value == Player.REPEAT_MODE_OFF) &&
+                                        canBootstrapRecommendations() &&
+                                        !AndroidDeviceConnect.manager.remote.isFollowing &&
+                                        !AndroidListenTogetherManager.isGuestPlaybackLocked
+                                },
+                                nextContinuation = { currentModeContinuation() },
+                                applyPage = { page, initial ->
+                                    applyMixPage(
+                                        firstPage = page,
+                                        expectedSessionId = sessionId,
+                                        expectedRequestGeneration = requestGeneration,
+                                        requestClassic = requestClassic,
+                                        replaceGeneratedSongs = false,
+                                        generatedQueueSourceTitle = if (initial) QUEUE_SOURCE_AUTO_MIX else QUEUE_SOURCE_RECOMMENDED,
+                                        playlistId = radioQueuePlaylistId ?: "RDAMVM$seedSongId",
+                                        params = radioQueueParams,
+                                        allowRepeatMode = allowRepeatMode,
+                                    )
+                                },
                             )
-                        },
-                    )
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (e: Exception) {
-                    Timber.tag(TAG).e("Failed to load Mix recommendations type=%s", e::class.simpleName)
+                        } catch (e: CancellationException) {
+                            throw e
+                        } catch (e: Exception) {
+                            Timber.tag(TAG).e("Failed to load Mix recommendations type=%s", e::class.simpleName)
+                        }
+
+                        if (!isExplicitRadioQueue || pendingRadioBootstrapSeedId != seedSongId) return@launch
+                        if (attempt == MAX_RADIO_BOOTSTRAP_ATTEMPTS - 1) return@launch
+
+                        if (!PlaybackNetworkStateStore.current.connected ||
+                            !canBootstrapRecommendations() ||
+                            (!allowRepeatMode && repeatMode.value != Player.REPEAT_MODE_OFF) ||
+                            AndroidDeviceConnect.manager.remote.isFollowing ||
+                            AndroidListenTogetherManager.isGuestPlaybackLocked
+                        ) {
+                            return@launch
+                        }
+
+                        delay((RADIO_BOOTSTRAP_RETRY_DELAY_MS * (attempt + 1)).milliseconds)
+                    }
                 }
-            }
     }
 
     fun retryPendingRadioBootstrap() {
