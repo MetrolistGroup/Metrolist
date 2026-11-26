@@ -23,6 +23,7 @@ import com.metrolist.shared.db.entities.toPlaylistItem
 import com.metrolist.shared.db.entities.toSongItem
 import com.metrolist.shared.db.loadAndCachePlaylistPage
 import com.metrolist.shared.db.refreshHistoryPlaylist
+import com.metrolist.shared.db.syncRemotePlaylists
 import com.metrolist.shared.generated.resources.Res
 import com.metrolist.shared.generated.resources.error_occurred
 import com.metrolist.shared.generated.resources.playlist_removed_from_youtube
@@ -31,6 +32,7 @@ import com.metrolist.shared.model.EpisodeItem
 import com.metrolist.shared.model.PlaylistItem
 import com.metrolist.shared.model.SongItem
 import com.metrolist.shared.model.YTItem
+import com.metrolist.shared.model.canEdit
 import com.metrolist.shared.model.moveSelection
 import com.metrolist.shared.model.preservePlaylistOccurrenceMappings
 import com.metrolist.shared.playlist.PlaylistChanges
@@ -777,12 +779,16 @@ object PlaylistAlbumState {
             val result =
                 try {
                     withContext(Dispatchers.IO) {
-                        val entity = database.dao().findPlaylistEntity(playlistId)
-                        if (entity != null || playlistId.startsWith("LP")) {
-                            addSongToStoredPlaylist(database, GlobalYouTubeRepository.instance, playlistId, song, allowDuplicate)
-                        } else {
-                            GlobalYouTubeRepository.instance.addToPlaylist(playlistId, song.id, allowDuplicate = allowDuplicate)
+                        // An editable playlist shown from YouTube is stored first, so the add goes through the queue as well.
+                        val dao = database.dao()
+                        if (!playlistId.startsWith("LP") &&
+                            (dao.findPlaylistEntity(playlistId) ?: dao.findPlaylistEntity(playlistId.removePrefix("VL"))) == null
+                        ) {
+                            (unfilteredPlaylistData["header"]?.firstOrNull() as? PlaylistItem)
+                                ?.takeIf { it.canEdit }
+                                ?.let { database.syncRemotePlaylists(listOf(it)) }
                         }
+                        addSongToStoredPlaylist(database, GlobalYouTubeRepository.instance, playlistId, song, allowDuplicate)
                     }
                 } catch (e: CancellationException) {
                     throw e

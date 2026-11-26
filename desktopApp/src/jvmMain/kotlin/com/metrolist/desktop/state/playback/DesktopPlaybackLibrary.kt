@@ -13,6 +13,7 @@ import com.metrolist.shared.db.MusicDatabase
 import com.metrolist.shared.db.distinctPlaylistItems
 import com.metrolist.shared.db.preserveKnownPlaylistEditability
 import com.metrolist.shared.db.selectablePlaylistItems
+import com.metrolist.shared.db.syncRemotePlaylists
 import com.metrolist.shared.model.PlaylistItem
 import com.metrolist.shared.model.SongItem
 import com.metrolist.shared.playlist.LibraryDeletionTracker
@@ -39,7 +40,7 @@ import kotlin.time.Duration.Companion.seconds
 
 internal class DesktopPlaybackLibrary(
     private val scope: CoroutineScope,
-    database: () -> MusicDatabase,
+    private val database: () -> MusicDatabase,
     repository: () -> YouTubeRepository = { GlobalYouTubeRepository.instance },
     private val loadPlaylists: suspend (Boolean, (List<PlaylistItem>) -> Unit) -> List<PlaylistItem> = { signedIn, publishLocal ->
         val local =
@@ -88,12 +89,7 @@ internal class DesktopPlaybackLibrary(
         addSongsToLocalPlaylist(database(), playlistId, songs)
     },
     private val addSong: suspend (String, SongItem, Boolean) -> Result<Unit> = { playlistId, song, local ->
-        val storedDatabase = database()
-        if (local || storedDatabase.dao().findPlaylistEntity(playlistId) != null) {
-            addSongToStoredPlaylist(storedDatabase, repository(), playlistId, song, allowDuplicate = !local)
-        } else {
-            repository().addToPlaylist(playlistId, song.id, allowDuplicate = true)
-        }
+        addSongToStoredPlaylist(database(), repository(), playlistId, song, allowDuplicate = !local)
     },
 ) {
     var userPlaylists by mutableStateOf<List<PlaylistItem>>(emptyList())
@@ -252,6 +248,13 @@ internal class DesktopPlaybackLibrary(
         cancelAddition = true
     }
 
+    private suspend fun storeListedPlaylist(playlistId: String) {
+        val storedDatabase = database()
+        val dao = storedDatabase.dao()
+        if ((dao.findPlaylistEntity(playlistId) ?: dao.findPlaylistEntity(playlistId.removePrefix("VL"))) != null) return
+        userPlaylists.firstOrNull { it.id == playlistId }?.let { storedDatabase.syncRemotePlaylists(listOf(it)) }
+    }
+
     fun addToPlaylist(
         playlistId: String,
         songs: List<SongItem>,
@@ -267,6 +270,8 @@ internal class DesktopPlaybackLibrary(
                 try {
                     require(songs.isNotEmpty())
                     val local = playlistId.startsWith("LP") || userPlaylists.any { it.id == playlistId && it.isLocal }
+                    // A playlist from the remote listing is stored first, so its adds go through the queue as well.
+                    if (!local) storeListedPlaylist(playlistId)
                     val existingIds =
                         if (local) {
                             null
