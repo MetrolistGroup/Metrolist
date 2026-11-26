@@ -217,13 +217,13 @@ internal fun lyricsfileToMlx(
     var hasLyrics = false
     lines.forEachIndexed { index, line ->
         val start = line.startMs ?: return@forEachIndexed
-        val lineEnd = line.endMs?.takeIf { it > start } ?: lines.getOrNull(index + 1)?.startMs?.takeIf { it > start }
+        val lineEnd = line.endMs?.takeIf { it >= start } ?: lines.getOrNull(index + 1)?.startMs?.takeIf { it > start }
         val timedWords = line.words.orEmpty().filter { !it.text.isNullOrBlank() && it.startMs != null }
         val words =
             timedWords.mapIndexed { wordIndex, word ->
                 val wordStart = word.startMs!!
                 val end =
-                    word.endMs?.takeIf { it > wordStart }
+                    word.endMs?.takeIf { it >= wordStart }
                         ?: timedWords.getOrNull(wordIndex + 1)?.startMs?.takeIf { it > wordStart }
                         ?: lineEnd?.takeIf { it > wordStart }
                         ?: (wordStart + 500L)

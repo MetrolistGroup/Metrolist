@@ -86,9 +86,6 @@ compose {
 
 configurations.matching { it.name.startsWith("jvm") }.configureEach {
     exclude(group = "org.jetbrains.kotlin", module = "kotlin-reflect")
-    // Ktor's JSON converter links its OpenAPI schema model, whose YAML adapter is never used here.
-    exclude(group = "com.charleskorn.kaml")
-    exclude(group = "it.krzeminski")
 }
 
 group = "com.metrolist"
