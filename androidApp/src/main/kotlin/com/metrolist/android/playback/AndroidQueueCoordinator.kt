@@ -211,7 +211,7 @@ internal class AndroidQueueCoordinator(
             currentPosition = remote?.positionMs ?: player.getRealtimePositionMs(),
             queueSnapshot = persistedQueue,
             playbackState = if (playing) 3 else 1,
-            repeatMode = repeatMode.value,
+            repeatMode = if (radioSeedPending) Player.REPEAT_MODE_OFF else repeatMode.value,
             shuffleModeEnabled = persistedQueue.isShuffled,
             volume = 1.0f,
             queueTitle = queueTitleState.value,
