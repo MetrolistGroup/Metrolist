@@ -214,7 +214,7 @@ class PrismBackupImportTest {
                 assertEquals(3, summary.playlists)
                 assertEquals(3, summary.plays)
                 assertEquals(3, summary.skippedSongs)
-                assertFalse(staging().exists())
+                assertTrue(staging().listFiles().orEmpty().isEmpty())
                 val liked = assertNotNull(dao.getSongById("aaaaaaaaaaa")).song
                 assertEquals("Existing title", liked.title)
                 assertEquals(150000, liked.totalPlayTime)
@@ -347,7 +347,7 @@ class PrismBackupImportTest {
             withDestination { database ->
                 assertFails { archive.inputStream().use { database.importForeignBackup(it, staging(), driver) } }
                 assertNull(database.dao().getSongById("aaaaaaaaaaa"))
-                assertFalse(staging().exists())
+                assertTrue(staging().listFiles().orEmpty().isEmpty())
             }
         }
 
@@ -365,7 +365,7 @@ class PrismBackupImportTest {
             withDestination { database ->
                 assertFails { archive.inputStream().use { database.importForeignBackup(it, staging(), driver) } }
                 assertNull(database.dao().getSongById("aaaaaaaaaaa"))
-                assertFalse(staging().exists())
+                assertTrue(staging().listFiles().orEmpty().isEmpty())
             }
         }
 
@@ -428,7 +428,7 @@ class PrismBackupImportTest {
             withDestination { database ->
                 assertFails { archive.inputStream().use { database.importForeignBackup(it, staging(), driver) } }
                 assertNull(database.dao().getSongById("aaaaaaaaaaa"))
-                assertFalse(staging().exists())
+                assertTrue(staging().listFiles().orEmpty().isEmpty())
             }
         }
 

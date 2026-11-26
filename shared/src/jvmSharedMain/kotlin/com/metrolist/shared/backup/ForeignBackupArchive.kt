@@ -42,7 +42,6 @@ suspend fun MusicDatabase.importForeignBackup(
     } finally {
         importStaging.close()
         importStaging.directory.deleteRecursively()
-        if (stagingDirectory.list()?.isEmpty() == true) stagingDirectory.delete()
     }
 }
 
