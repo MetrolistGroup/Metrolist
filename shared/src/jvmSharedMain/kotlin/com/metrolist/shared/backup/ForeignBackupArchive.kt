@@ -9,43 +9,132 @@ import androidx.sqlite.SQLiteDriver
 import com.metrolist.shared.db.MusicDatabase
 import java.io.BufferedInputStream
 import java.io.File
+import java.io.IOException
 import java.io.InputStream
 import java.io.OutputStream
+import java.io.RandomAccessFile
+import java.nio.channels.FileLock
+import java.nio.channels.OverlappingFileLockException
 import java.util.zip.ZipInputStream
 
 private val SQLITE_HEADER = "SQLite format 3\u0000".encodeToByteArray()
 
 private const val MAX_FOREIGN_ARCHIVE_ENTRIES = 4096
+private const val IMPORT_STAGING_PREFIX = "import-"
+private const val IMPORT_STAGING_SUFFIX = ".tmp"
+private const val IMPORT_STAGING_LOCK = ".active"
+private const val STALE_IMPORT_STAGING_AGE_MS = 24 * 60 * 60 * 1000L
 
 suspend fun MusicDatabase.importForeignBackup(
     input: InputStream,
     stagingDirectory: File,
     driver: SQLiteDriver,
 ): ForeignImportSummary {
-    stagingDirectory.deleteRecursively()
-    val importDirectory = createImportStagingDirectory(stagingDirectory)
+    val importStaging = createImportStagingDirectory(stagingDirectory)
     try {
         val library =
-            stageForeignDatabases(input, importDirectory).firstNotNullOfOrNull { candidate ->
+            stageForeignDatabases(input, importStaging.directory).firstNotNullOfOrNull { candidate ->
                 driver.open(candidate.path).use { connection ->
                     connection.takeIf { it.detectForeignLibraryFamily() != null }?.readForeignLibrary()
                 }
             } ?: throw UnsupportedForeignLibraryException()
-        return importForeignLibrary(library.withPrismArchive(importDirectory))
+        return importForeignLibrary(library.withPrismArchive(importStaging.directory))
     } finally {
-        importDirectory.deleteRecursively()
+        importStaging.close()
+        importStaging.directory.deleteRecursively()
+        if (stagingDirectory.list()?.isEmpty() == true) stagingDirectory.delete()
     }
 }
 
-private fun createImportStagingDirectory(stagingDirectory: File): File {
+private class ImportStagingDirectory(
+    val directory: File,
+    private val lockFile: RandomAccessFile,
+    private val lock: FileLock,
+) {
+    fun close() {
+        try {
+            lock.release()
+        } finally {
+            lockFile.close()
+        }
+    }
+}
+
+private fun createImportStagingDirectory(stagingDirectory: File): ImportStagingDirectory {
+    if (stagingDirectory.exists() && !stagingDirectory.isDirectory) {
+        check(stagingDirectory.delete()) { "Could not create import staging directory" }
+    }
+    check(stagingDirectory.mkdirs() || stagingDirectory.isDirectory) { "Could not create import staging directory" }
     val parent = checkNotNull(stagingDirectory.absoluteFile.parentFile)
-    check(parent.mkdirs() || parent.isDirectory) { "Could not create import staging directory" }
+    cleanupStaleImportStagingDirectories(stagingDirectory)
+    cleanupStaleLegacyStagingDirectories(stagingDirectory, parent)
     repeat(10) {
-        val candidate = File.createTempFile("${stagingDirectory.name}-", ".tmp", parent)
+        val candidate = File.createTempFile(IMPORT_STAGING_PREFIX, IMPORT_STAGING_SUFFIX, stagingDirectory)
         check(candidate.delete()) { "Could not create import staging directory" }
-        if (candidate.mkdir()) return candidate
+        check(candidate.mkdir()) { "Could not create import staging directory" }
+        val lockFile = RandomAccessFile(File(candidate, IMPORT_STAGING_LOCK), "rw")
+        val lock = lockFile.channel.tryLock()
+        if (lock != null) return ImportStagingDirectory(candidate, lockFile, lock)
+        lockFile.close()
+        candidate.deleteRecursively()
     }
     error("Could not create a unique import staging directory")
+}
+
+private fun cleanupStaleImportStagingDirectories(stagingDirectory: File) {
+    val cutoff = System.currentTimeMillis() - STALE_IMPORT_STAGING_AGE_MS
+    stagingDirectory.listFiles()?.forEach { candidate ->
+        if (!candidate.name.startsWith(IMPORT_STAGING_PREFIX) || !candidate.name.endsWith(IMPORT_STAGING_SUFFIX)) return@forEach
+        if (candidate.lastModified() >= cutoff) return@forEach
+        if (!candidate.isDirectory) {
+            candidate.delete()
+            return@forEach
+        }
+
+        val lockFile = File(candidate, IMPORT_STAGING_LOCK)
+        val lockHandle =
+            try {
+                RandomAccessFile(lockFile, "rw")
+            } catch (_: IOException) {
+                return@forEach
+            }
+        val lock =
+            try {
+                lockHandle.channel.tryLock()
+            } catch (_: OverlappingFileLockException) {
+                null
+            } catch (_: IOException) {
+                null
+            }
+        if (lock == null) {
+            lockHandle.close()
+            return@forEach
+        }
+        try {
+            candidate.listFiles()?.filterNot { it == lockFile }?.forEach(File::deleteRecursively)
+        } finally {
+            lock.release()
+            lockHandle.close()
+        }
+        lockFile.delete()
+        candidate.delete()
+    }
+}
+
+private fun cleanupStaleLegacyStagingDirectories(
+    stagingDirectory: File,
+    parent: File,
+) {
+    val cutoff = System.currentTimeMillis() - STALE_IMPORT_STAGING_AGE_MS
+    val legacyPrefix = "${stagingDirectory.name}-"
+    parent.listFiles()?.forEach { candidate ->
+        if (!candidate.name.startsWith(legacyPrefix) || !candidate.name.endsWith(IMPORT_STAGING_SUFFIX)) return@forEach
+        if (candidate.lastModified() < cutoff) candidate.deleteRecursively()
+    }
+    stagingDirectory.listFiles()?.forEach { candidate ->
+        if (candidate.name.startsWith(IMPORT_STAGING_PREFIX) && candidate.name.endsWith(IMPORT_STAGING_SUFFIX)) return@forEach
+        if (candidate.lastModified() < cutoff) candidate.deleteRecursively()
+    }
 }
 
 internal fun stageForeignDatabases(

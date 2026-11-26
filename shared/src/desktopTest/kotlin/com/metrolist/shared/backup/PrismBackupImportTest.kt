@@ -300,6 +300,13 @@ class PrismBackupImportTest {
             val continueInput = CountDownLatch(1)
             val firstDatabaseDir = directory.resolve("first-destination").apply { mkdirs() }
             val secondDatabaseDir = directory.resolve("second-destination").apply { mkdirs() }
+            val stagingDirectory = staging().apply { mkdirs() }
+            val staleImport = stagingDirectory.resolve("import-stale.tmp").apply { mkdirs() }
+            staleImport.resolve("source.db").writeBytes(byteArrayOf(1))
+            staleImport.setLastModified(0L)
+            val staleLegacyImport = stagingDirectory.resolveSibling("staging-stale.tmp").apply { mkdirs() }
+            staleLegacyImport.resolve("source.db").writeBytes(byteArrayOf(1))
+            staleLegacyImport.setLastModified(0L)
             val firstDatabase = getDatabaseBuilder(firstDatabaseDir.resolve("metrolist.db")).build()
             val secondDatabase = getDatabaseBuilder(secondDatabaseDir.resolve("metrolist.db")).build()
 
@@ -313,12 +320,17 @@ class PrismBackupImportTest {
                         )
                     }
                 assertTrue(inputStarted.await(10, TimeUnit.SECONDS))
+                assertFalse(staleImport.exists())
+                assertFalse(staleLegacyImport.exists())
+                val activeImport = stagingDirectory.listFiles()!!.single { it.name.startsWith("import-") }
+                activeImport.setLastModified(0L)
                 val secondImport =
                     async(Dispatchers.IO) {
                         secondDatabase.importForeignBackup(ByteArrayInputStream(bytes), staging(), driver)
                     }
 
                 assertEquals(2, secondImport.await().songs)
+                assertTrue(activeImport.exists())
                 continueInput.countDown()
                 assertEquals(2, firstImport.await().songs)
             } finally {

@@ -203,6 +203,7 @@ import com.metrolist.shared.ui.utils.DragScrollableColumn
 import com.metrolist.shared.ui.utils.verticalScrollWithDrag
 import com.metrolist.shared.utils.XdgUtils
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -445,7 +446,7 @@ fun BackupRestoreSettingsScreen(colorScheme: ColorScheme) {
         val targetTitle = customPlaylistTitle.ifBlank { data.title }
         val statusId = PlaylistImportStatusManager.startImport(targetTitle, data.source)
         val job =
-            AppState.scope.launch(Dispatchers.Default) {
+            AppState.scope.launch(Dispatchers.Default, start = CoroutineStart.ATOMIC) {
                 try {
                     if (PlaylistImportStatusManager.activeImport.value?.id != statusId) return@launch
                     if (!ignoreDuplicate) {
@@ -517,8 +518,9 @@ fun BackupRestoreSettingsScreen(colorScheme: ColorScheme) {
             return
         }
 
+        if (isBusy) return
+        isBusy = true
         AppState.scope.launch(Dispatchers.Default) {
-            isBusy = true
             val initialSource =
                 getString(
                     when (UnifiedPlaylistImporter.detectSource(trimmed)) {
@@ -1387,6 +1389,7 @@ fun BackupRestoreSettingsScreen(colorScheme: ColorScheme) {
             },
             confirmButton = {
                 TextButton(
+                    enabled = !isBusy,
                     onClick = {
                         val dest = pendingDuplicateDestination ?: return@TextButton
                         val data = pendingImportData ?: return@TextButton
