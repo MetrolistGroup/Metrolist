@@ -60,6 +60,8 @@ import com.metrolist.shared.constants.ClassicRecommendationsKey
 import com.metrolist.shared.constants.CollectionCoversKey
 import com.metrolist.shared.constants.DatabaseLikesRecoveryVersionKey
 import com.metrolist.shared.constants.DefaultOpenTabKey
+import com.metrolist.shared.constants.DelegatedSessionDataSyncIdKey
+import com.metrolist.shared.constants.DelegatedSessionIdKey
 import com.metrolist.shared.constants.DeletedPlaylistIdsJsonKey
 import com.metrolist.shared.constants.DensityScaleKey
 import com.metrolist.shared.constants.DesktopRenderBackendKey
@@ -312,8 +314,8 @@ class Settings(
     var dataSyncId by preference("")
 
     // Brand-account page id, valid only while delegatedSessionDataSyncId equals dataSyncId; blank for a personal account.
-    var delegatedSessionId by preference("")
-    var delegatedSessionDataSyncId by preference("")
+    var delegatedSessionId by preference(DelegatedSessionIdKey, "")
+    var delegatedSessionDataSyncId by preference(DelegatedSessionDataSyncIdKey, "")
     var innerTubeAuthUser by preference("0")
     var accountName by preference("")
     var accountEmail by preference("")

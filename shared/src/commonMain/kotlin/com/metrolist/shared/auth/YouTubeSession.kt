@@ -4,6 +4,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import com.metrolist.innertubex.InnerTube
+import com.metrolist.shared.constants.DelegatedSessionDataSyncIdKey
+import com.metrolist.shared.constants.DelegatedSessionIdKey
 import com.metrolist.shared.playback.PendingYouTubePlaybackReportStore
 import com.metrolist.shared.playlist.LibraryDeletionTracker
 import com.metrolist.shared.settings.Settings
@@ -59,8 +61,8 @@ private fun clearStoredYouTubeSession() {
             "innerTubeCookie" to "",
             "visitorData" to "",
             "dataSyncId" to "",
-            "delegatedSessionId" to "",
-            "delegatedSessionDataSyncId" to "",
+            DelegatedSessionIdKey to "",
+            DelegatedSessionDataSyncIdKey to "",
             "innerTubeAuthUser" to "0",
             "accountName" to "",
             "accountEmail" to "",

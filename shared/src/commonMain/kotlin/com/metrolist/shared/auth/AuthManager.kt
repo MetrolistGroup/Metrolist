@@ -6,6 +6,8 @@ import com.metrolist.innertubex.models.response.AccountsListResponse
 import com.metrolist.innertubex.utils.parseCookieString
 import com.metrolist.innertubex.utils.sanitizeCookieString
 import com.metrolist.shared.api.YouTubeRepository
+import com.metrolist.shared.constants.DelegatedSessionDataSyncIdKey
+import com.metrolist.shared.constants.DelegatedSessionIdKey
 import com.metrolist.shared.playlist.LibraryDeletionTracker
 import com.metrolist.shared.settings.Settings
 import com.metrolist.shared.state.GlobalInnerTube
@@ -14,10 +16,13 @@ import com.metrolist.shared.state.SongLikeState
 import com.metrolist.shared.utils.clearWebCookies
 import com.metrolist.shared.youtube.logging.YtLogger
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 private val supportedAuthCookieNames =
@@ -33,6 +38,9 @@ internal fun supportedYouTubeAuthCredential(cookie: String): String? {
 }
 
 fun hasSupportedYouTubeAuthCookie(cookie: String): Boolean = supportedYouTubeAuthCredential(cookie) != null
+
+// Detached so the optional account-list lookup cannot delay or fail a login whose credentials are already saved.
+private val delegatedSessionScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
 internal fun storedDelegatedSessionId(dataSyncId: String?): String? =
     Settings.shared.delegatedSessionId.takeIf {
@@ -108,7 +116,7 @@ class AuthManager {
         validateAndSaveCredentials(cookie, visitorData, dataSyncId, authUser) {
             candidateRepository(cookie, visitorData, dataSyncId, authUser)
                 .getAccountInfo(publishExpiredSessionNotice = false)
-        }.also { saved -> if (saved) resolveDelegatedSession() }
+        }.also { saved -> if (saved) delegatedSessionScope.launch { resolveDelegatedSession() } }
 
     internal suspend fun validateAndSaveCredentials(
         cookie: String,
@@ -208,8 +216,8 @@ class AuthManager {
         }
         Settings.shared.applyStringBatch(
             mapOf(
-                "delegatedSessionId" to delegatedSessionId,
-                "delegatedSessionDataSyncId" to dataSyncId,
+                DelegatedSessionIdKey to delegatedSessionId,
+                DelegatedSessionDataSyncIdKey to dataSyncId,
             ),
         )
         YtLogger.w("YouTubeAuth", "Delegated session resolved brand=${delegatedSessionId.isNotEmpty()}")
