@@ -163,6 +163,7 @@ class LrcLibLyricsProviderTest {
                 assertEquals("Line only", plainLine.text)
                 assertEquals(29_000L, plainLine.time)
                 assertEquals("Hello world", segmentLine.text)
+                assertEquals(32_000L, segmentLine.endTime)
                 assertEquals(listOf(true, false), segmentLine.words.orEmpty().map { it.hasTrailingSpace })
                 assertNull(lyricsfileToMlx(lyricsfile.replace("version: '1.0'", "version: '2.0'"), "Blinding Lights", "The Weeknd"))
             } finally {

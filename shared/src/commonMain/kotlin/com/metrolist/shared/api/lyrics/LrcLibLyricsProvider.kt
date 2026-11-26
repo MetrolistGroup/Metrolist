@@ -60,6 +60,7 @@ class LrcLibLyricsProvider(
         if (best.hasWordSync) {
             best.lyricsfile
                 ?.let { runCatching { lyricsfileToMlx(it, title, artist, sourceId = best.id.toString()) }.getOrNull() }
+                ?.takeIf(MlxParser::isMlxFormat)
                 ?.let { return it }
         }
         val synced = best.syncedLyrics?.takeIf { it.isNotBlank() }
@@ -217,9 +218,10 @@ internal fun lyricsfileToMlx(
             .sortedBy { it.startMs }
     val builder = MlxBuilder().meta("LrcLib", sourceId = sourceId).song(title = title, artist = artist)
     var hasLyrics = false
-    lines.forEachIndexed { index, line ->
-        val start = line.startMs ?: return@forEachIndexed
-        val lineEnd = line.endMs?.takeIf { it >= start } ?: lines.getOrNull(index + 1)?.startMs?.takeIf { it > start }
+    lines.forEach { line ->
+        val start = line.startMs ?: return@forEach
+        // The spec allows overlapping lines, so a missing end comes from this line's words, never the next line.
+        val lineEnd = line.endMs?.takeIf { it >= start }
         val timedWords = line.words.orEmpty().filter { !it.text.isNullOrEmpty() && it.startMs != null }
         val words = mutableListOf<MlxWord>()
         timedWords.forEachIndexed { wordIndex, word ->
@@ -246,7 +248,7 @@ internal fun lyricsfileToMlx(
             }
 
             text.isEmpty() -> {
-                return@forEachIndexed
+                return@forEach
             }
 
             lineEnd != null -> {
