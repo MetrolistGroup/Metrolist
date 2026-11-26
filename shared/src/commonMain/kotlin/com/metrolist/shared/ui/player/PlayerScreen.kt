@@ -319,6 +319,8 @@ internal fun ArtworkSwipeBox(
     // Cancel obsolete settles so older swipes cannot reset newer state.
     var settleJob by remember { mutableStateOf<Job?>(null) }
     var settleGeneration by remember { mutableIntStateOf(0) }
+    // True once a settle has already requested navigation, so its leftover offset must not seed a new drag.
+    var navigationRequested by remember { mutableStateOf(false) }
     val shownLeftUrl = if (freezePanes) frozenLeftUrl else leftPaneUrl
     val shownRightUrl = if (freezePanes) frozenRightUrl else rightPaneUrl
 
@@ -336,6 +338,11 @@ internal fun ArtworkSwipeBox(
                             settleGeneration += 1
                             settleJob?.cancel()
                             settleJob = null
+                            if (navigationRequested) {
+                                // The cancelled settle already skipped; restart from center to avoid a second skip.
+                                navigationRequested = false
+                                scope.launch { offset.snapTo(0f) }
+                            }
                             holdSide = 0
                             freezePanes = false
                         },
@@ -363,11 +370,18 @@ internal fun ArtworkSwipeBox(
                                     try {
                                         when {
                                             offset.value >= threshold && canLeftAtRelease -> {
+                                                if (leftAtRelease == null) {
+                                                    // No neighbor preview (for example restarting the first track): act, then bounce back.
+                                                    onSettleFromLeft()
+                                                    offset.animateTo(0f, returnSpec)
+                                                    return@launch
+                                                }
                                                 frozenLeftUrl = leftAtRelease
                                                 frozenRightUrl = rightAtRelease
                                                 freezePanes = true
                                                 offset.animateTo(paneWidth + paneSpacingPx, settleSpec)
                                                 if (currentTrackKey == keyAtRelease) {
+                                                    navigationRequested = true
                                                     onSettleFromLeft()
                                                     // Return to center if the track does not change.
                                                     val changed =
@@ -387,11 +401,18 @@ internal fun ArtworkSwipeBox(
                                                 }
                                             }
                                             offset.value <= -threshold && canRightAtRelease -> {
+                                                if (rightAtRelease == null) {
+                                                    // No neighbor preview (for example restarting the first track): act, then bounce back.
+                                                    onSettleFromRight()
+                                                    offset.animateTo(0f, returnSpec)
+                                                    return@launch
+                                                }
                                                 frozenLeftUrl = leftAtRelease
                                                 frozenRightUrl = rightAtRelease
                                                 freezePanes = true
                                                 offset.animateTo(-(paneWidth + paneSpacingPx), settleSpec)
                                                 if (currentTrackKey == keyAtRelease) {
+                                                    navigationRequested = true
                                                     onSettleFromRight()
                                                     val changed =
                                                         withTimeoutOrNull(ARTWORK_TRACK_CHANGE_TIMEOUT_MS) {
@@ -414,6 +435,7 @@ internal fun ArtworkSwipeBox(
                                     } finally {
                                         // Only the active settle may clear held artwork state.
                                         if (settleGeneration == generation) {
+                                            navigationRequested = false
                                             holdSide = 0
                                             freezePanes = false
                                         }
@@ -433,7 +455,7 @@ internal fun ArtworkSwipeBox(
                     contentAlignment = contentAlignment,
                     modifier =
                         Modifier
-                            .fillMaxSize()
+                            .matchParentSize()
                             .padding(horizontal = swipeEdgePadding)
                             .zIndex(if (holdSide == -1) 1f else 0f)
                             .graphicsLayer {
@@ -450,7 +472,7 @@ internal fun ArtworkSwipeBox(
                     contentAlignment = contentAlignment,
                     modifier =
                         Modifier
-                            .fillMaxSize()
+                            .matchParentSize()
                             .padding(horizontal = swipeEdgePadding)
                             .zIndex(if (holdSide == 1) 1f else 0f)
                             .graphicsLayer {

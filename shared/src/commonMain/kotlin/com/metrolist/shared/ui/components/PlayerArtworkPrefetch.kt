@@ -34,7 +34,8 @@ private fun PlayerUiState.previousQueueIndex(): Int? {
 // Navigation depends on queue position only, so tracks that share or lack artwork stay swipeable.
 internal fun PlayerUiState.hasNextTrack(): Boolean = nextQueueIndex() != null
 
-internal fun PlayerUiState.hasPreviousTrack(): Boolean = previousQueueIndex() != null
+// The first track stays swipeable without repeat because previous() restarts it once playback passes the restart point.
+internal fun PlayerUiState.hasPreviousTrack(): Boolean = currentQueueIndex in queueItems.indices
 
 // Preview URLs are best-effort; URL deduplication for prefetching lives in artworkPrefetchRequests.
 internal fun PlayerUiState.nextArtworkUrl(): String? =
