@@ -67,6 +67,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.snapshots.Snapshot
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.runtime.structuralEqualityPolicy
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
@@ -157,7 +158,7 @@ private const val LYRICS_ANCHOR_RATIO = 0.5f
 private const val MAX_PRE_CENTER_STAGGER_LINES = 4
 private const val LYRICS_TEXT_MEASURER_CACHE_SIZE = 384
 private const val PENDING_SEEK_TIMEOUT_MS = 650L
-private val LYRICS_ITEM_GAP_DP = 16.dp
+internal val LocalCompactPlayerLyrics = staticCompositionLocalOf { false }
 private val LYRICS_FADE_TOP_DP = 130.dp
 private val LYRICS_FADE_BOTTOM_DP = 160.dp
 private val LYRICS_KEEP_ALIVE_ZONE_BASE_DP = 350.dp
@@ -264,6 +265,8 @@ fun LyricsView(
     isVisible: Boolean = true,
     isLiquidBackground: Boolean = Settings.shared.playerBackgroundStyle == PlayerBackgroundStyle.LIQUID,
 ) {
+    val compactLines = LocalCompactPlayerLyrics.current
+    val itemGap = if (compactLines) 2.dp else 16.dp
     val textColor = resolveLyricsTextColor(textColor)
     val translationShimmer = rememberTranslationShimmer(translationProgress.isTranslating && isVisible)
     val shimmerColor = MaterialTheme.colorScheme.primary
@@ -688,8 +691,8 @@ fun LyricsView(
                 .focusable(enabled = isSelectionMode),
     ) {
         val viewportHeightPx = constraints.maxHeight.toFloat()
-        val fadeTop = minOf(LYRICS_FADE_TOP_DP, maxHeight / 4)
-        val fadeBottom = minOf(LYRICS_FADE_BOTTOM_DP, maxHeight / 4)
+        val fadeTop = if (compactLines) minOf(24.dp, maxHeight / 10) else minOf(LYRICS_FADE_TOP_DP, maxHeight / 4)
+        val fadeBottom = if (compactLines) minOf(32.dp, maxHeight / 10) else minOf(LYRICS_FADE_BOTTOM_DP, maxHeight / 4)
         val density = LocalDensity.current
         val activeLineGroupHeightPx by remember(lazyListState, scrollTargetState, lyricsItemIndex) {
             derivedStateOf(structuralEqualityPolicy()) {
@@ -746,7 +749,7 @@ fun LyricsView(
         val bottomPaddingDp = with(density) { (viewportHeightPx - anchorY).toDp() } + keepAliveZoneDp
         val anchorPx = anchorY.toInt()
 
-        val gapPx = with(density) { LYRICS_ITEM_GAP_DP.roundToPx() }
+        val gapPx = with(density) { itemGap.roundToPx() }
         val latestAnchorPx by rememberUpdatedState(anchorPx)
         val latestKeepAliveZonePx by rememberUpdatedState(keepAliveZonePx)
         val latestViewportHeightPx by rememberUpdatedState(viewportHeightPx)
@@ -1535,7 +1538,7 @@ fun LyricsView(
                                                     }
 
                                                 Box(
-                                                    modifier = Modifier.fillMaxWidth().padding(bottom = LYRICS_ITEM_GAP_DP),
+                                                    modifier = Modifier.fillMaxWidth().padding(bottom = itemGap),
                                                     contentAlignment = Alignment.Center,
                                                 ) {
                                                     CompositionLocalProvider(LocalLyricsAnimationVisible provides isVisible) {

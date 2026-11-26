@@ -11,8 +11,10 @@ internal enum class PlayerLayoutMode {
 internal fun playerLayoutMode(
     width: Dp,
     height: Dp,
+    useTwoPanesOnLargePortrait: Boolean = false,
+    showingLyrics: Boolean = false,
 ): PlayerLayoutMode =
-    if (width > height && width >= 600.dp && height >= 320.dp) {
+    if (width >= 600.dp && height >= 320.dp && (width > height || (useTwoPanesOnLargePortrait && !showingLyrics))) {
         PlayerLayoutMode.LANDSCAPE
     } else {
         PlayerLayoutMode.PORTRAIT

@@ -216,6 +216,7 @@ import com.metrolist.shared.ui.components.adjacentArtworkUrls
 import com.metrolist.shared.ui.components.focusOutline
 import com.metrolist.shared.ui.components.formatSleepTimerRemaining
 import com.metrolist.shared.ui.components.images.AsyncImage
+import com.metrolist.shared.ui.components.lyrics.LocalCompactPlayerLyrics
 import com.metrolist.shared.ui.components.lyrics.LyricsContrastScrim
 import com.metrolist.shared.ui.components.lyrics.LyricsOffsetEditor
 import com.metrolist.shared.ui.components.playbackMarquee
@@ -471,6 +472,7 @@ fun PlayerScreen(
     onPlayPauseFocusRequested: () -> Unit = {},
     onLyricsVisibleChange: (Boolean) -> Unit = {},
     isScreenVisible: Boolean = true,
+    useTwoPanesOnLargePortrait: Boolean = false,
 ) {
     val isPlayerContentVisible by remember(bottomSheetState) {
         derivedStateOf { bottomSheetState.value > bottomSheetState.collapsedBound && !bottomSheetState.isCollapsed }
@@ -871,7 +873,8 @@ fun PlayerScreen(
             }
         }
 
-    CompositionLocalProvider(LocalPlayerImmersiveMode provides shouldHideSystemBars) {
+    val compactLyrics = useTwoPanesOnLargePortrait && uiState.isLyricsVisible
+    CompositionLocalProvider(LocalPlayerImmersiveMode provides shouldHideSystemBars, LocalCompactPlayerLyrics provides compactLyrics) {
         BoxWithConstraints(
             modifier =
                 modifier
@@ -884,13 +887,21 @@ fun PlayerScreen(
                 if (isTv) {
                     (isLandscape || screenWidth > maxHeight) && screenWidth >= 600.dp && maxHeight >= 320.dp
                 } else {
-                    playerLayoutMode(screenWidth, maxHeight) == PlayerLayoutMode.LANDSCAPE
+                    playerLayoutMode(screenWidth, maxHeight, useTwoPanesOnLargePortrait, uiState.isLyricsVisible) ==
+                        PlayerLayoutMode.LANDSCAPE
                 }
             val useTabletLayout = isTv && useLandscapeLayout && minOf(screenWidth, maxHeight) >= 600.dp
             val compactPortraitHeight = !useLandscapeLayout && maxHeight < 560.dp
             // Short split-screen windows shrink the centred artwork to a sliver; show it beside the title as lyrics do.
             val artworkBesideTitle = !useLandscapeLayout && !isTv && !usesFullscreenThumbnail && maxHeight < ArtworkBesideTitleMaxHeight
-            val primaryControlSize = if (compactPortraitHeight) 64.dp else 72.dp
+            val primaryControlSize =
+                if (compactLyrics) {
+                    48.dp
+                } else if (compactPortraitHeight) {
+                    64.dp
+                } else {
+                    72.dp
+                }
             val showFullscreenThumbnailBackground = usesFullscreenThumbnail
             val navigationBarBottomPadding = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
             val statusBarTopPadding = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
@@ -1402,8 +1413,8 @@ fun PlayerScreen(
                                         ).windowInsetsPadding(WindowInsets.safeDrawing)
                                         .windowInsetsPadding(
                                             WindowInsets.mandatorySystemGestures.only(WindowInsetsSides.Bottom),
-                                        ).padding(horizontal = 24.dp)
-                                        .padding(top = 16.dp),
+                                        ).padding(horizontal = if (compactLyrics) 10.dp else 24.dp)
+                                        .padding(top = if (compactLyrics) 4.dp else 16.dp),
                             ) {
                                 AnimatedContent(
                                     targetState = uiState.isLyricsVisible,
@@ -1889,7 +1900,20 @@ fun PlayerScreen(
                                     )
                                 }
 
-                                Spacer(modifier = Modifier.height(if (showLyricsOffsetEditor || compactPortraitHeight) 8.dp else 24.dp))
+                                Spacer(
+                                    modifier =
+                                        Modifier.height(
+                                            if (compactLyrics) {
+                                                4.dp
+                                            } else if (showLyricsOffsetEditor ||
+                                                compactPortraitHeight
+                                            ) {
+                                                8.dp
+                                            } else {
+                                                24.dp
+                                            },
+                                        ),
+                                )
 
                                 Row(
                                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -1902,7 +1926,8 @@ fun PlayerScreen(
                                     ) {
                                         AnimatedVisibility(
                                             visible =
-                                                (usesCanvasThumbnail || uiState.isLyricsVisible || artworkBesideTitle) &&
+                                                (!compactLyrics || screenWidth >= 480.dp) &&
+                                                    (usesCanvasThumbnail || uiState.isLyricsVisible || artworkBesideTitle) &&
                                                     currentSong?.displayThumbnail != null,
                                             enter = expandHorizontally(clip = false) + fadeIn(),
                                             exit = shrinkHorizontally(clip = false) + fadeOut(),
@@ -1987,15 +2012,15 @@ fun PlayerScreen(
                                                     Text(
                                                         text = displayedSong?.title ?: stringResource(Res.string.unknown),
                                                         style =
-                                                            if (usesCanvasThumbnail) {
+                                                            if (usesCanvasThumbnail || compactLyrics) {
                                                                 MaterialTheme.typography.titleMedium
                                                             } else {
                                                                 MaterialTheme.typography.titleLarge
                                                             },
                                                         fontWeight = FontWeight.Bold,
                                                         color = textBackgroundColor,
-                                                        maxLines = 1,
-                                                        softWrap = false,
+                                                        maxLines = if (compactLyrics) 2 else 1,
+                                                        softWrap = compactLyrics,
                                                         overflow = TextOverflow.Ellipsis,
                                                         modifier =
                                                             Modifier
@@ -2016,7 +2041,7 @@ fun PlayerScreen(
                                                         onNavigateToArtist = onNavigateToArtist,
                                                         iterations = if (LocalPlayerContentActive.current) 1 else 0,
                                                         style =
-                                                            if (usesCanvasThumbnail) {
+                                                            if (usesCanvasThumbnail || compactLyrics) {
                                                                 MaterialTheme.typography.bodyMedium
                                                             } else {
                                                                 MaterialTheme.typography.titleMedium
@@ -2291,7 +2316,7 @@ fun PlayerScreen(
                                     enter = canvasControlsEnter,
                                     exit = canvasControlsExit,
                                 ) {
-                                    Spacer(modifier = Modifier.height(QueuePeekHeight + 32.dp))
+                                    Spacer(modifier = Modifier.height(QueuePeekHeight + if (compactLyrics) 8.dp else 32.dp))
                                 }
                                 playerControlsTransition.AnimatedVisibility(
                                     visible = { (expanded, minimalUi) ->
