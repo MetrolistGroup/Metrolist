@@ -2755,4 +2755,7 @@
     <string name="metroeq_preset_electronic">Elettronica</string>
     <string name="metroeq_preset_acoustic">Acustica</string>
     <string name="webview_runtime_unavailable">Impossibile avviare il browser integrato. Installa o ripara Microsoft Edge WebView2 Runtime, poi riavvia Metrolist.</string>
+    <string name="cache_whole_song_while_playing">Salva in cache l'intero brano durante la riproduzione</string>
+    <string name="cache_whole_song_while_playing_desc">Scarica subito il resto di un brano in streaming invece di limitarsi a eseguire il buffering in anticipo. Consuma più dati.</string>
+    <string name="slider_standard_buffered">Standard con buffer</string>
 </resources>
