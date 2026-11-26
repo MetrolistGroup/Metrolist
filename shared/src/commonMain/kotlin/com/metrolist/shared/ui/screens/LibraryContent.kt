@@ -466,7 +466,7 @@ fun LibraryContent(
                             selectedFilter = effectiveFilter,
                             isGridView = isGridView,
                             sortType = effectiveSortType,
-                            itemCount = searchedItems.size,
+                            itemCount = searchedItems.size + searchedAutoPlaylists.size,
                             isSearchOpen = isSearchOpen,
                             onSearchToggle = toggleSearch,
                             onFilterChange = onFilterChange,
