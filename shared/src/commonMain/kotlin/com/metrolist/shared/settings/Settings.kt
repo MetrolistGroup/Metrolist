@@ -75,6 +75,7 @@ import com.metrolist.shared.constants.DiscordAlbumTemplateKey
 import com.metrolist.shared.constants.DiscordPendingAuthSessionKey
 import com.metrolist.shared.constants.DownloadQueueJsonKey
 import com.metrolist.shared.constants.DownloadedCollectionSortDirectionKey
+import com.metrolist.shared.constants.DownloadedSongGroupByKey
 import com.metrolist.shared.constants.DownloadedCollectionSortKey
 import com.metrolist.shared.constants.EnableHapticFeedbackKey
 import com.metrolist.shared.constants.EnableLandscapeScalingKey
@@ -214,6 +215,7 @@ import com.metrolist.shared.model.CollectionSort
 import com.metrolist.shared.model.LyricsProvider
 import com.metrolist.shared.model.PlaylistPickerSort
 import com.metrolist.shared.model.PlaylistSongSort
+import com.metrolist.shared.model.SongGroupBy
 import com.metrolist.shared.model.SortDirection
 import com.metrolist.shared.playback.SleepTimerDefaults
 import com.metrolist.shared.youtube.playback.PlaybackNetworkState
@@ -803,6 +805,7 @@ class Settings(
 
     var downloadedCollectionSort by preference(DownloadedCollectionSortKey, CollectionSort.NEWEST)
     var downloadedCollectionSortDirection by preference(DownloadedCollectionSortDirectionKey, SortDirection.DESCENDING)
+    var downloadedSongGroupBy by preference(DownloadedSongGroupByKey, SongGroupBy.NONE)
     private var collectionCoversJson by preference(CollectionCoversKey, "{}")
     val collectionCovers: Map<String, String> by derivedStateOf {
         runCatching { Json.decodeFromString<Map<String, String>>(collectionCoversJson) }.getOrDefault(emptyMap())

@@ -5693,4 +5693,9 @@
     <string name="wrapped_home_title">Your %1$s Wrapped is here</string>
     <string name="wrapped_home_body">See your year in music and share it.</string>
     <string name="wrapped_home_card_dismissed">You can find your %1$s Wrapped in Statistics until December 31.</string>
+    <string name="group_by">Group by</string>
+    <string name="group_by_none">None</string>
+    <string name="group_by_artist">Artist</string>
+    <string name="group_by_album">Album</string>
+    <string name="unknown_album">Unknown album</string>
 </resources>
