@@ -17,11 +17,10 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import platform.Foundation.NSBundle
-import platform.Foundation.NSData
-import platform.Foundation.create
 import platform.Security.SecRandomCopyBytes
 import platform.Security.errSecSuccess
 import platform.Security.kSecRandomDefault
+import kotlin.io.encoding.Base64
 
 private const val DRIVE_CALLBACK_PATH = "/oauth2redirect"
 private const val DRIVE_SIGN_IN_TIMEOUT_MILLIS = 10 * 60 * 1000L
@@ -168,13 +167,4 @@ private fun randomUrlSafe(byteCount: Int): String {
     return urlSafe(bytes)
 }
 
-@OptIn(ExperimentalForeignApi::class)
-private fun urlSafe(bytes: ByteArray): String =
-    bytes.usePinned { pinned ->
-        NSData
-            .create(pinned.addressOf(0), bytes.size.toULong())
-            .base64EncodedStringWithOptions(0u)
-            .replace('+', '-')
-            .replace('/', '_')
-            .trimEnd('=')
-    }
+private fun urlSafe(bytes: ByteArray): String = Base64.UrlSafe.withPadding(Base64.PaddingOption.ABSENT).encode(bytes)
