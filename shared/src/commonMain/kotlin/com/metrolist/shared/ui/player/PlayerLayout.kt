@@ -156,6 +156,7 @@ import com.metrolist.shared.ui.components.VintagePlayerControls
 import com.metrolist.shared.ui.components.VintagePlayerControlsText
 import com.metrolist.shared.ui.components.formatSleepTimerRemaining
 import com.metrolist.shared.ui.components.lyrics.ActiveLyricsLineContent
+import com.metrolist.shared.ui.components.lyrics.LocalCompactPlayerLyrics
 import com.metrolist.shared.ui.components.lyrics.LyricsOffsetEditor
 import com.metrolist.shared.ui.components.lyrics.LyricsView
 import com.metrolist.shared.ui.components.lyrics.rememberCaptionLyricsPositionState
@@ -910,8 +911,21 @@ internal fun LandscapePlayerContent(
                 .landscapePlayerInsets(),
     ) {
         val compactHeight = maxHeight < 520.dp
-        val centerControls = !isTv && maxHeight >= 600.dp
-        val primaryControlSize = if (compactHeight) 64.dp else 104.dp
+        val readingLyrics = LocalCompactPlayerLyrics.current
+        val centerControls = !isTv && (readingLyrics || maxHeight >= 600.dp)
+        val controlWidth = if (readingLyrics) (maxWidth * 0.4f).coerceAtLeast(268.dp).coerceAtMost(maxWidth / 2) else maxWidth / 2
+        val compactControlPane = readingLyrics && controlWidth < 360.dp
+        val paneStartGap = if (compactControlPane) 12.dp else LandscapeRightPaneStartGap
+        val paneEndGap = if (compactControlPane) 16.dp else LandscapeRightPaneEndGap
+        val compactControls = compactHeight || compactControlPane
+        val primaryControlSize =
+            if (readingLyrics) {
+                48.dp
+            } else if (compactControls) {
+                64.dp
+            } else {
+                104.dp
+            }
         val horizontalPadding = if (compactHeight) 16.dp else LandscapePlayerHorizontalPadding
         val verticalPadding = if (compactHeight) 8.dp else LandscapePlayerVerticalPadding
         val topButtonSize = if (compactHeight) 36.dp else 40.dp
@@ -924,7 +938,7 @@ internal fun LandscapePlayerContent(
             } else {
                 0.dp
             }
-        val rightPaneWidth = maxWidth / 2 - LandscapeRightPaneStartGap - LandscapeRightPaneEndGap
+        val rightPaneWidth = controlWidth - paneStartGap - paneEndGap
         val isClassic = playerType == PlayerType.CLASSIC
         val isVintage = playerType == PlayerType.VINTAGE
 
@@ -1088,7 +1102,7 @@ internal fun LandscapePlayerContent(
                 modifier =
                     Modifier
                         .align(Alignment.TopEnd)
-                        .padding(top = verticalPadding, end = LandscapeRightPaneEndGap)
+                        .padding(top = verticalPadding, end = paneEndGap)
                         .width(rightPaneWidth)
                         .heightIn(min = topButtonSize)
                         .padding(horizontal = topButtonSize + 12.dp)
@@ -1126,7 +1140,7 @@ internal fun LandscapePlayerContent(
                 modifier =
                     Modifier
                         .align(Alignment.TopEnd)
-                        .padding(top = verticalPadding, end = LandscapeRightPaneEndGap)
+                        .padding(top = verticalPadding, end = paneEndGap)
                         .width(rightPaneWidth)
                         .zIndex(1f)
                         .focusProperties { if (isTv && playPauseFocusRequester != null) down = playPauseFocusRequester },
@@ -1181,7 +1195,7 @@ internal fun LandscapePlayerContent(
                     Modifier
                         .weight(1f)
                         .fillMaxHeight()
-                        .padding(horizontal = horizontalPadding),
+                        .padding(horizontal = if (readingLyrics) 8.dp else horizontalPadding),
                 contentAlignment = Alignment.Center,
             ) {
                 val tvArtworkSize = minOf(LandscapePlayerArtworkSize, maxHeight, maxWidth)
@@ -1296,11 +1310,11 @@ internal fun LandscapePlayerContent(
             Column(
                 modifier =
                     Modifier
-                        .weight(1f)
+                        .width(controlWidth)
                         .fillMaxHeight()
                         .padding(
-                            start = LandscapeRightPaneStartGap,
-                            end = LandscapeRightPaneEndGap,
+                            start = paneStartGap,
+                            end = paneEndGap,
                             top = controlsTopPadding,
                         ).focusGroup(),
             ) {
@@ -1517,11 +1531,16 @@ internal fun LandscapePlayerContent(
                                             VintagePlayerControls(
                                                 playPauseFocusRequester = playPauseFocusRequester,
                                                 text = vintagePlayerControlsText(),
-                                                buttonSize = if (compactHeight) 56.dp else 88.dp,
-                                                iconSize = if (compactHeight) 42.dp else 68.dp,
+                                                buttonSize = if (compactControls) 56.dp else 88.dp,
+                                                iconSize = if (compactControls) 42.dp else 68.dp,
                                                 playButtonSize = primaryControlSize,
-                                                playIconSize = if (compactHeight) 48.dp else 84.dp,
-                                                spacing = if (compactHeight) 40.dp else 52.dp,
+                                                playIconSize = if (compactControls) 48.dp else 84.dp,
+                                                spacing =
+                                                    when {
+                                                        compactControlPane -> 28.dp
+                                                        compactHeight -> 40.dp
+                                                        else -> 52.dp
+                                                    },
                                                 isPlaying = isPlaying,
                                                 isLoading = isPlaybackLoading && LocalPlayerContentActive.current,
                                                 showLoadingIndicator = !(showTopVideoSwitch && isVideoModeResolving),
@@ -1585,11 +1604,15 @@ internal fun LandscapePlayerContent(
                             Column(Modifier.fillMaxWidth()) { progressAndControls() }
                         } else {
                             progressAndControls()
+                            if (readingLyrics) {
+                                Spacer(Modifier.height(12.dp))
+                                bottomControls()
+                            }
                         }
                     }
                 }
 
-                bottomControls()
+                if (!readingLyrics) bottomControls()
             }
         }
     }
@@ -1820,6 +1843,7 @@ internal fun LyricsViewWithPosition(
 
     LyricsView(
         noLyricsText = stringResource(Res.string.lyrics_not_found),
+        textSizeMultiplier = if (LocalCompactPlayerLyrics.current) 0.9f else 1f,
         translationProgress = uiState.lyricsTranslationProgress,
         autoScrollText = stringResource(Res.string.lyrics_auto_scroll_btn),
         onShareSelection = shareLyrics,

@@ -222,6 +222,7 @@ import com.metrolist.shared.ui.menu.settingsPage
 import com.metrolist.shared.ui.navigation.AdaptiveFormFactor
 import com.metrolist.shared.ui.navigation.AdaptiveNavigationItem
 import com.metrolist.shared.ui.navigation.AdaptiveNavigationScaffold
+import com.metrolist.shared.ui.navigation.AdaptiveWidthBreakpoint
 import com.metrolist.shared.ui.navigation.LocalContentObscured
 import com.metrolist.shared.ui.navigation.LocalNavigationContainerState
 import com.metrolist.shared.ui.navigation.NavSharedTransitionLayout
@@ -1031,6 +1032,7 @@ fun MobileApp(
                         when (route) {
                             MobileRoute.Home -> {
                                 val text = homeContentText()
+                                val wideHome = adaptiveLayout.widthBreakpoint >= AdaptiveWidthBreakpoint.MEDIUM
                                 var isRefreshing by remember { mutableStateOf(false) }
                                 var showFloatingActions by remember { mutableStateOf(true) }
                                 val fabNestedScrollConnection =
@@ -1052,7 +1054,10 @@ fun MobileApp(
                                     }
 
                                 if (homeState.showLoadingPlaceholder) {
-                                    HomeLoadingPlaceholder(Modifier.fillMaxSize().padding(routePadding))
+                                    HomeLoadingPlaceholder(
+                                        modifier = Modifier.fillMaxSize().padding(routePadding),
+                                        isLandscape = wideHome,
+                                    )
                                 } else {
                                     Box(
                                         modifier =
@@ -1081,6 +1086,7 @@ fun MobileApp(
                                             HomeContent(
                                                 uiState = homeState,
                                                 text = text,
+                                                isLandscape = wideHome,
                                                 onItemClick = ::openItem,
                                                 onLocalShelfClick = { shelf ->
                                                     open(MobileRoute.LocalShelf(shelf.pageKey, shelf.toHomeSection()))
@@ -2168,6 +2174,7 @@ fun MobileApp(
                             PlayerScreen(
                                 viewModel = playerViewModel,
                                 bottomSheetState = sheetState,
+                                useTwoPanesOnLargePortrait = true,
                                 onClose = { setPlayerVisible(false) },
                                 onNavigateToListenTogether = {
                                     showPlayer = false

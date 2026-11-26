@@ -123,6 +123,8 @@ Artwork palettes request a fixed source and decode at 128 px with a separate mem
 
 Seeds use Material's Score over exact color counts from samples of up to 128 pixels per side. Keeping the sampled colors avoids merging sparse accents into neutrals. Grayscale artwork uses Material's blue fallback. Desktop samples the current track once, independently of displayed artwork. Track changes cancel the previous palette request and keep the current colors until the next palette loads. The main window, player controls, dialogs, snackbars and detached mini player share one animated scheme. Windows accent colors apply only when a system palette is requested and no artwork seed is active; they never replace a custom or artwork seed that happens to match the default color.
 
+On iOS, wide windows can show artwork beside the controls. Opening lyrics in portrait gives the lyrics the full width. In landscape the lyrics get the wider pane, with the playback and queue controls grouped alongside them.
+
 The landscape TV player keeps artwork backgrounds visible through a dark scrim behind its controls. Solid backgrounds keep their surface and content color pair. Both color changes animate with the theme motion scheme.
 
 The full-screen artwork style also applies to audio tracks in immersive landscape mode. Immersive mode hides system bars without changing the selected artwork style. Playing music videos retain their inline surface and fullscreen controls.

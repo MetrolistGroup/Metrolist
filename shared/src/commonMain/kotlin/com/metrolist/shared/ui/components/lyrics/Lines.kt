@@ -813,7 +813,15 @@ internal fun InlineLyricsLine(
     val lyricsLineSpacing = Settings.shared.lyricsLineSpacing
 
     // Word-by-word highlighting needs lower line opacity for readability.
-    val unlitAlpha = if (isPlusLighter) 0.2f else 0.35f
+    val compactLines = LocalCompactPlayerLyrics.current
+    val unlitAlpha =
+        if (compactLines) {
+            0.58f
+        } else if (isPlusLighter) {
+            0.2f
+        } else {
+            0.35f
+        }
     val targetFocusedAlpha = unlitAlpha
     val targetAlpha = if (isActive) 1f else unlitAlpha
     val targetTranslationAlpha = if (isActive) 0.5f else unlitAlpha
@@ -977,7 +985,7 @@ internal fun InlineLyricsLine(
                     } else {
                         Modifier
                     },
-                ).padding(horizontal = LYRICS_LINE_HORIZONTAL_PADDING, vertical = 12.dp),
+                ).padding(horizontal = LYRICS_LINE_HORIZONTAL_PADDING, vertical = if (compactLines) 2.dp else 12.dp),
         contentAlignment =
             when (visualAlignment) {
                 TextAlign.Center -> Alignment.Center
