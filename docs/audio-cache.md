@@ -12,6 +12,8 @@ Readers hold leases. Clearing a cache removes future lookup without deleting byt
 
 Pre-cache resolves upcoming tracks without taking playback ownership. Preserve queue occurrence identity, cancellation and the configured storage limit. A track change or reordered queue must not publish an obsolete next-track result.
 
+Android's **Cache whole song while playing** setting fetches the missing ranges of the current direct-stream capture once playback runs, so the song reaches the song cache before it ends. It stops on a track change, while offline and when clearing the cache discards the capture. Changing the cache limit keeps the captures that fit the new limit and lets caching under way finish, so the song that plays keeps filling and reaches the cache. Muxed video files and SABR streams are unchanged. In audio mode the buffered part of the seek bar shows how far the song can play without the network: the player's time-based buffer, or all of it once the capture is complete and for cached and downloaded audio. A partial capture does not extend it, because its ranges need not be contiguous and bytes do not map to playback time for variable-bitrate audio. Every seek bar style except Default draws it, as does the Vintage mini player. Default stays the stock Material 3 slider; Standard with buffer is that slider with the buffered part shaded in its own colors.
+
 ## Downloads
 
 Restore download queues before accepting mutations or draining work. Retain completed files when a later transfer or metadata write fails. Preserve existing destinations during replacement and migration. Reconcile missing files without replacing complete remote playlist membership with an offline snapshot.

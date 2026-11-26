@@ -104,6 +104,22 @@ object DirectPlaybackCache {
         directory?.let(::reconcileDirectory)
     }
 
+    // Keeps the captures that fit a new cache limit, so a limit change does not cut the song that plays off from the
+    // cache. Captures no stream reads go first, and one that alone exceeds the limit goes as well.
+    fun retainWithin(budgetBytes: Long) {
+        val dropped = mutableListOf<Capture>()
+        synchronized(this) {
+            dropped += captures.values.filter { it.size > minOf(budgetBytes, MAX_CAPTURE_BYTES) }
+            captures.values.removeAll(dropped)
+            while (captures.values.sumOf { it.size } > budgetBytes) {
+                val evicted = captures.entries.firstOrNull { !it.value.isAttached() } ?: captures.entries.first()
+                captures.remove(evicted.key)
+                dropped += evicted.value
+            }
+        }
+        dropped.forEach(Capture::discard)
+    }
+
     suspend fun awaitCompletion(
         resource: PlaybackResource,
         httpClient: OkHttpClient = directMediaHttpClient,

@@ -33,6 +33,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -192,7 +194,14 @@ internal class AndroidQueueTransitions(
             snapshotFlow { Settings.shared.maxSongCacheSize }
                 .distinctUntilChanged()
                 .collect { cacheSize ->
-                    withContext(Dispatchers.IO) { DirectPlaybackCache.clear() }
+                    // Captures that fit the new limit stay, so the song that plays still fills and reaches the cache.
+                    withContext(Dispatchers.IO) {
+                        if (cacheSize == 0) {
+                            DirectPlaybackCache.clear()
+                        } else {
+                            DirectPlaybackCache.retainWithin(playbackCaptureBudgetBytes(cacheSize))
+                        }
+                    }
                     audioCacheManager.sabrPlaybackCache.clear()
                     if (cacheSize == 0) {
                         preCacheJob?.cancel()
@@ -210,6 +219,22 @@ internal class AndroidQueueTransitions(
                                 }
                         }
                     }
+                }
+        }
+
+        // Fetches the rest of the current stream once it plays, so the song reaches the cache before it ends.
+        scope.launch {
+            combine(
+                snapshotFlow { Settings.shared.cacheWholeSongWhilePlaying },
+                player.currentPlaybackResource,
+                PlaybackNetworkStateStore.state.map { it.connected },
+            ) { enabled, resource, connected -> cacheableAudioResource(resource)?.takeIf { enabled && connected && it.isDirectFile } }
+                .distinctUntilChanged()
+                .collectLatest { resource ->
+                    if (resource == null) return@collectLatest
+                    // Waiting for playback keeps the extra requests from slowing the start of the song.
+                    player.isPlaying.first { it }
+                    withContext(Dispatchers.IO) { DirectPlaybackCache.complete(resource) }
                 }
         }
     }

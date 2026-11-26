@@ -57,7 +57,6 @@ import com.metrolist.shared.model.isLive
 import com.metrolist.shared.playback.PendingSeekPosition
 import com.metrolist.shared.settings.MiniPlayerType
 import com.metrolist.shared.settings.Settings
-import com.metrolist.shared.settings.SliderStyle
 import com.metrolist.shared.settings.displayName
 import com.metrolist.shared.ui.components.LiveBadge
 import com.metrolist.shared.ui.components.PlayerPrimaryControls
@@ -247,7 +246,7 @@ private fun DesktopMiniPlayerProgress(
             bufferedFraction = if (isLive) 1f else buffered,
             modifier =
                 Modifier.weight(1f).then(
-                    if (Settings.shared.sliderStyle == SliderStyle.DEFAULT) Modifier else Modifier.height(40.dp),
+                    if (Settings.shared.sliderStyle.isStock) Modifier else Modifier.height(40.dp),
                 ),
         )
         if (isLive) {

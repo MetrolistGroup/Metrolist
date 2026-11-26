@@ -556,6 +556,10 @@
     <string name="clear_image_cache">Clear image cache</string>
     <!-- Translators: Option or section label for max song cache size in the settings. -->
     <string name="max_song_cache_size">Max song cache size</string>
+    <!-- Translators: Switch label in the song cache settings for fetching the whole song as soon as it starts playing. -->
+    <string name="cache_whole_song_while_playing">Cache whole song while playing</string>
+    <!-- Translators: Description beneath the switch that fetches the whole song while it plays. -->
+    <string name="cache_whole_song_while_playing_desc">Fetches the rest of a streamed song right away instead of only buffering ahead. Uses more data.</string>
     <!-- Translators: Imperative action label for clear song cache in the settings. -->
     <string name="clear_song_cache">Clear song cache</string>
     <!-- Translators: Option or section label for location in the storage settings. -->
@@ -1671,6 +1675,8 @@
     <string name="slider_style">Slider style</string>
     <!-- Translators: Slider style using the stock Material 3 component. -->
     <string name="slider_standard">Standard</string>
+    <!-- Translators: Slider style using the stock Material 3 component that also shades the part of the song already buffered. -->
+    <string name="slider_standard_buffered">Standard with buffer</string>
     <!-- Translators: Option or section label for wavy in the settings. -->
     <string name="wavy">Wavy</string>
     <!-- Translators: Option or section label for slim in the settings. -->

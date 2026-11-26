@@ -400,6 +400,11 @@ internal fun sliderStyleChoices(): List<SettingsChoice> =
             preview = { SliderStylePreview(SliderStyle.DEFAULT) },
         ),
         SettingsChoice(
+            SliderStyle.DEFAULT_BUFFERED.name,
+            stringResource(Res.string.slider_standard_buffered),
+            preview = { SliderStylePreview(SliderStyle.DEFAULT_BUFFERED, bufferedFraction = 0.85f) },
+        ),
+        SettingsChoice(
             SliderStyle.WAVY.name,
             stringResource(Res.string.wavy),
             preview = { SliderStylePreview(SliderStyle.WAVY) },
@@ -421,6 +426,7 @@ internal fun SliderStylePreview(
     style: SliderStyle,
     modifier: Modifier = Modifier.width(72.dp),
     trackThicknessDp: Float = Settings.shared.sliderTrackThicknessDp,
+    bufferedFraction: Float = 0f,
 ) {
     val defaultColors = SliderDefaults.colors()
     val colors =
@@ -439,6 +445,7 @@ internal fun SliderStylePreview(
         style = style,
         colors = colors,
         isPlaying = true,
+        bufferedFraction = bufferedFraction,
         trackThicknessDp = trackThicknessDp,
         enabled = false,
     )

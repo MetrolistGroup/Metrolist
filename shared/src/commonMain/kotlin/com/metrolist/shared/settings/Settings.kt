@@ -47,6 +47,7 @@ import com.metrolist.shared.constants.BlockAiSlopArtistsKey
 import com.metrolist.shared.constants.BlockedArtistsUndoHintShownKey
 import com.metrolist.shared.constants.BlockedSongsUndoHintShownKey
 import com.metrolist.shared.constants.BlockedUsersUndoHintShownKey
+import com.metrolist.shared.constants.CacheWholeSongWhilePlayingKey
 import com.metrolist.shared.constants.CachedCollectionSortDirectionKey
 import com.metrolist.shared.constants.CachedCollectionSortKey
 import com.metrolist.shared.constants.CachedSongsCustomOrderKey
@@ -608,6 +609,7 @@ class Settings(
 
     var songCacheEnabled by preference(false)
     var maxSongCacheSize by preference(1024)
+    var cacheWholeSongWhilePlaying by preference(CacheWholeSongWhilePlayingKey, false)
     var maxImageCacheSize by preference(512)
     var audioCacheLocation by preference("INTERNAL")
     var downloadLocation by preference("INTERNAL")

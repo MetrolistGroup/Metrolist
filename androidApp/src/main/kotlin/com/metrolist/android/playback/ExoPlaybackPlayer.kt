@@ -4033,7 +4033,7 @@ private fun buildDirectDataSourceFactory(
                         DirectPlaybackCache.begin(
                             resource,
                             playbackCaptureDirectory(context),
-                            Settings.shared.maxSongCacheSize.let { if (it < 0) 512L * 1024 * 1024 else it * 1024L * 1024L },
+                            playbackCaptureBudgetBytes(Settings.shared.maxSongCacheSize),
                         )
                     } else {
                         null

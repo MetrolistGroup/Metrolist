@@ -178,6 +178,9 @@ internal fun cacheableAudioResource(
 
 internal fun playbackCaptureDirectory(context: Context): File = File(context.cacheDir, "playback-tee")
 
+// The bytes playback captures may take for a song cache limit in megabytes, where a negative limit means unlimited.
+internal fun playbackCaptureBudgetBytes(cacheSizeMb: Int): Long = if (cacheSizeMb < 0) 512L * 1024 * 1024 else cacheSizeMb * 1024L * 1024L
+
 internal fun requireDownloadableAudioResource(resource: PlaybackResource) {
     if (resource.isSabr) return
     if (!resource.isDirectFile || !resource.url.startsWith("https://", ignoreCase = true)) {
@@ -1422,11 +1425,18 @@ class AudioCacheManager(
         if ((file.parentFile?.usableSpace ?: 0L) <= bytes + MIN_FREE_SPACE_BYTES) throw InsufficientAudioStorageException()
     }
 
+    // A nonzero limit keeps the captures that fit it and lets the caching under way publish, so the song that plays still
+    // reaches the cache. Disabling the cache stops both, like clearing it does.
     suspend fun enforceCacheLimit() =
         withContext(Dispatchers.IO) {
-            cacheGeneration.incrementAndGet()
+            val limit = Settings.shared.maxSongCacheSize
             sabrPlaybackCache.clear()
-            DirectPlaybackCache.clear(playbackCaptureDirectory(context))
+            if (limit == 0) {
+                cacheGeneration.incrementAndGet()
+                DirectPlaybackCache.clear(playbackCaptureDirectory(context))
+            } else {
+                DirectPlaybackCache.retainWithin(playbackCaptureBudgetBytes(limit))
+            }
             evictIfNeeded()
         }
 

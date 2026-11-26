@@ -731,7 +731,7 @@ internal fun SettingsUiRegistryBuilder.registerAppearanceSettings(host: SharedSe
                 }
                 inlineSlider(
                     id = "sliderThickness",
-                    enabled = selectedSliderStyle != SliderStyle.DEFAULT,
+                    enabled = !selectedSliderStyle.isStock,
                     title = stringResource(Res.string.slider_track_thickness),
                     valueLabel = settings.sliderTrackThicknessDp.roundToInt().toString(),
                     value = settings.sliderTrackThicknessDp.coerceIn(2f, 10f),
