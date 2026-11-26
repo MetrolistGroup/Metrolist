@@ -88,8 +88,8 @@ internal class DesktopPlaybackLibrary(
     private val addLocalBatch: (suspend (String, List<SongItem>) -> PlaylistAddBatchResult)? = { playlistId, songs ->
         addSongsToLocalPlaylist(database(), playlistId, songs)
     },
-    private val addSong: suspend (String, SongItem, Boolean) -> Result<Unit> = { playlistId, song, local ->
-        addSongToStoredPlaylist(database(), repository(), playlistId, song, allowDuplicate = !local)
+    private val addSong: suspend (String, SongItem, Boolean) -> Result<Unit> = { playlistId, song, allowDuplicate ->
+        addSongToStoredPlaylist(database(), repository(), playlistId, song, allowDuplicate)
     },
 ) {
     var userPlaylists by mutableStateOf<List<PlaylistItem>>(emptyList())
@@ -248,6 +248,15 @@ internal class DesktopPlaybackLibrary(
         cancelAddition = true
     }
 
+    private suspend fun remoteSongIds(playlistId: String): MutableSet<String>? =
+        try {
+            withTimeoutOrNull(PLAYLIST_ADD_TIMEOUT) { playlistSongIds(playlistId).toMutableSet() }
+        } catch (error: CancellationException) {
+            throw error
+        } catch (_: Exception) {
+            null
+        }
+
     private suspend fun storeListedPlaylist(playlistId: String) {
         val storedDatabase = database()
         val dao = storedDatabase.dao()
@@ -272,13 +281,9 @@ internal class DesktopPlaybackLibrary(
                     val local = playlistId.startsWith("LP") || userPlaylists.any { it.id == playlistId && it.isLocal }
                     // A playlist from the remote listing is stored first, so its adds go through the queue as well.
                     if (!local) storeListedPlaylist(playlistId)
-                    val existingIds =
-                        if (local) {
-                            null
-                        } else {
-                            withTimeoutOrNull(PLAYLIST_ADD_TIMEOUT) { playlistSongIds(playlistId).toMutableSet() }
-                                ?: throw PlaylistAdditionStopped(0, songs.size, false)
-                        }
+                    // YouTube's membership skips the songs a remote playlist already has. Without it, as offline, each add
+                    // checks the local playlist and YouTube checks again when the queue sends it.
+                    val existingIds = if (local) null else remoteSongIds(playlistId)
                     while (playlistAddCompleted < songs.size) {
                         currentCoroutineContext().ensureActive()
                         if (cancelAddition) throw PlaylistAdditionStopped(playlistAddCompleted, songs.size, false)
@@ -305,7 +310,7 @@ internal class DesktopPlaybackLibrary(
                         }
                         uncertain = true
                         val addition =
-                            withTimeoutOrNull(PLAYLIST_ADD_TIMEOUT) { addSong(playlistId, song, local) }
+                            withTimeoutOrNull(PLAYLIST_ADD_TIMEOUT) { addSong(playlistId, song, !local && existingIds != null) }
                                 ?: throw PlaylistAdditionStopped(playlistAddCompleted, songs.size, true)
                         if (addition.exceptionOrNull() !is PlaylistSongAlreadyPresentException) addition.getOrThrow()
                         uncertain = false
