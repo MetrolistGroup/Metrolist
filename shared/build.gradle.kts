@@ -347,6 +347,7 @@ kotlin {
                 implementation(libs.ktor.serialization.json)
 
                 implementation(libs.kotlinx.serialization.json)
+                implementation(libs.kaml)
                 implementation(libs.kotlinx.coroutines.core)
                 implementation(libs.kotlinx.datetime)
 

@@ -5,6 +5,10 @@ import io.ktor.client.HttpClient
 import io.ktor.client.engine.mock.MockEngine
 import io.ktor.client.engine.mock.respond
 import kotlinx.coroutines.test.runTest
+import kotlinx.serialization.json.addJsonObject
+import kotlinx.serialization.json.buildJsonArray
+import kotlinx.serialization.json.put
+import kotlin.math.roundToLong
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
@@ -81,6 +85,73 @@ class LrcLibLyricsProviderTest {
                         .single()
                         .text,
                 )
+            } finally {
+                client.close()
+            }
+        }
+
+    @Test
+    fun convertsWordSyncedLyricsfile() =
+        runTest {
+            // Reduced from LRCLIB record 8277104; words carry no end_ms, so ends come from the next word or line.
+            val lyricsfile =
+                """
+                version: '1.0'
+                metadata:
+                  title: Blinding Lights
+                  artist: The Weeknd
+                  duration_ms: 200000
+                  instrumental: false
+                lines:
+                - text: I've been tryna call
+                  start_ms: 27100
+                  end_ms: 28198
+                  words:
+                  - text: 'I''ve '
+                    start_ms: 27139
+                  - text: 'been '
+                    start_ms: 27528
+                  - text: 'tryna '
+                    start_ms: 27819
+                  - text: call
+                    start_ms: 28130
+                - text: Line only
+                  start_ms: 29000
+                  end_ms: 30000
+                """.trimIndent()
+            val body =
+                buildJsonArray {
+                    addJsonObject {
+                        put("id", 8277104)
+                        put("name", "Blinding Lights")
+                        put("artistName", "The Weeknd")
+                        put("duration", 200)
+                        put("instrumental", false)
+                        put("hasWordSync", true)
+                        put("syncedLyrics", "[00:27.14]Legacy line")
+                        put("lyricsfile", lyricsfile)
+                    }
+                }.toString()
+            val client = HttpClient(MockEngine { respond(body) })
+            try {
+                val lyrics = assertNotNull(LrcLibLyricsProvider(client).getLyrics("Blinding Lights", "The Weeknd", 200_000))
+                val document = MlxParser.parse(lyrics)
+                assertEquals("8277104", document.meta.sourceId)
+                val (wordLine, plainLine) = document.lines
+                assertEquals(27_100L, wordLine.time)
+                assertEquals(28_198L, wordLine.endTime)
+                assertEquals(
+                    listOf(
+                        "I've" to (27_139L to 27_528L),
+                        "been" to (27_528L to 27_819L),
+                        "tryna" to (27_819L to 28_130L),
+                        "call" to (28_130L to 28_198L),
+                    ),
+                    wordLine.words.orEmpty().map { it.text to ((it.startTime * 1000).roundToLong() to (it.endTime * 1000).roundToLong()) },
+                )
+                assertEquals(listOf(true, true, true, false), wordLine.words.orEmpty().map { it.hasTrailingSpace })
+                assertEquals("Line only", plainLine.text)
+                assertEquals(29_000L, plainLine.time)
             } finally {
                 client.close()
             }
