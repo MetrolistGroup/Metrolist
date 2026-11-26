@@ -2,7 +2,7 @@
 
 ## Artwork
 
-Shared collection covers resolve through `LibraryCovers.kt`. Keep user-selected covers ahead of built-in resources. Android widgets and Android Auto use the same artwork provider for offline covers. Retained download covers use a stable identity that ignores cache-busting revisions, query strings, display sizes and video renditions, so a refetched URL keeps resolving to the PNG already on disk. Legacy keys remain readable and are included when pruning.
+Shared collection covers resolve through `LibraryCovers.kt`. Keep user-selected covers ahead of built-in resources. Android widgets and Android Auto use the same artwork provider for offline covers. Android's image loader also falls back to retained download covers when its normal request fails, including in the player and song lists. Retained download covers use a stable identity that ignores cache-busting revisions, query strings, display sizes and video renditions, so a refetched URL keeps resolving to the PNG already on disk. Legacy keys remain readable and are included when pruning.
 
 Player and collection artwork use square, centered crops. Full-player video thumbnails use the same preview source as song rows, including the thumbnail without encoded letterboxing. Dedicated video shelves, episode previews and video playback keep their wide layouts. On iOS, managed playlist-cover identifiers resolve against the current Application Support directory so container relocation does not break covers. Delete only managed files after the database change succeeds.
 
