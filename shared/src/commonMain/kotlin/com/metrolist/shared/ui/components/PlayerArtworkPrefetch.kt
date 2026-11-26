@@ -16,15 +16,27 @@ import kotlinx.coroutines.launch
 
 internal val LocalPlayerArtworkPrefetchUrls = compositionLocalOf { emptyList<String>() }
 
-internal fun PlayerUiState.adjacentArtworkUrls(): List<String> {
-    if (currentQueueIndex !in queueItems.indices) return emptyList()
+internal fun PlayerUiState.adjacentArtworkUrls(): List<String> =
+    listOfNotNull(nextArtworkUrl(), previousArtworkUrl()).distinct()
+
+internal fun PlayerUiState.nextArtworkUrl(): String? {
+    if (currentQueueIndex !in queueItems.indices) return null
     val nextIndex = if (currentQueueIndex == queueItems.lastIndex && repeatMode == 2) 0 else currentQueueIndex + 1
+    if (nextIndex == currentQueueIndex) return null
+    return queueItems.getOrNull(nextIndex)
+        ?.thumbnail
+        ?.takeIf(String::isNotBlank)
+        ?.takeIf { it != currentSong?.displayThumbnail }
+}
+
+internal fun PlayerUiState.previousArtworkUrl(): String? {
+    if (currentQueueIndex !in queueItems.indices) return null
     val previousIndex = if (currentQueueIndex == 0 && repeatMode == 2) queueItems.lastIndex else currentQueueIndex - 1
-    return listOf(nextIndex, previousIndex)
-        .filter { it != currentQueueIndex }
-        .mapNotNull { queueItems.getOrNull(it)?.thumbnail?.takeIf(String::isNotBlank) }
-        .filter { it != currentSong?.displayThumbnail }
-        .distinct()
+    if (previousIndex == currentQueueIndex) return null
+    return queueItems.getOrNull(previousIndex)
+        ?.thumbnail
+        ?.takeIf(String::isNotBlank)
+        ?.takeIf { it != currentSong?.displayThumbnail }
 }
 
 internal fun artworkPrefetchRequests(

@@ -41,6 +41,7 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -97,8 +98,10 @@ import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.movableContentOf
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -110,6 +113,7 @@ import androidx.compose.ui.draw.BlurredEdgeTreatment
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
@@ -120,6 +124,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.zIndex
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
@@ -146,6 +151,7 @@ import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.LayoutDirection
@@ -218,7 +224,9 @@ import com.metrolist.shared.ui.components.formatSleepTimerRemaining
 import com.metrolist.shared.ui.components.images.AsyncImage
 import com.metrolist.shared.ui.components.lyrics.LyricsContrastScrim
 import com.metrolist.shared.ui.components.lyrics.LyricsOffsetEditor
+import com.metrolist.shared.ui.components.nextArtworkUrl
 import com.metrolist.shared.ui.components.playbackMarquee
+import com.metrolist.shared.ui.components.previousArtworkUrl
 import com.metrolist.shared.ui.components.playerControlBlend
 import com.metrolist.shared.ui.components.rememberBottomSheetState
 import com.metrolist.shared.ui.components.rememberTrackMarquee
@@ -241,61 +249,249 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 import org.jetbrains.compose.resources.stringResource
 import kotlin.math.abs
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.TimeMark
 import kotlin.time.TimeSource
 
+private const val ARTWORK_TRACK_CHANGE_TIMEOUT_MS = 600L
+private const val ARTWORK_SETTLE_HOLD_MS = 450L
+
+/**
+ * Edge-to-edge gap between covers while swiping, sized to feel like the major music apps
+ * (Apple Music, Spotify) instead of having the covers touch.
+ */
+private val ARTWORK_SWIPE_PANE_SPACING = 32.dp
+
+/**
+ * Swipe-to-change-track container matching the legacy thumbnail carousel: while dragging, the
+ * previous/next track artwork slides into view and the current artwork follows the finger, so a
+ * right swipe settles the artwork towards the right and a left swipe towards the left. Pane order
+ * follows the layout direction like the legacy LazyHorizontalGrid, so in RTL the previous track
+ * sits on the right and the next track on the left. Covers keep sliding through the side margins
+ * and only disappear under the screen edges, and adjacent covers are spaced apart by
+ * [ARTWORK_SWIPE_PANE_SPACING]. Adjacent panes render only while a swipe is active so nothing
+ * peeks into the margins at rest.
+ *
+ * When [swipeEdgePadding] is greater than zero (the landscape two-pane player), the box is
+ * expected to be wider than the artwork by exactly that padding on each side: the covers slide
+ * only inside the artwork's lane, the box clips to its bounds, and the padded strips on both
+ * sides of the artwork hide covers entering or leaving, so nothing crosses into the other pane.
+ * With zero padding the covers slide edge-to-edge through the side margins as before.
+ *
+ * Fast consecutive swipes are a first-class case: starting a new drag cancels any settle still
+ * holding the previous cover centred on top, so that cover never stays fixed while the new drag
+ * moves the covers behind it, and the gesture detector keeps running across track changes so a
+ * follow-up swipe is never cancelled by the previous track landing.
+ */
 @Composable
-internal fun Modifier.artworkSwipe(
+internal fun ArtworkSwipeBox(
     enabled: Boolean,
     sensitivity: Float,
+    previousArtworkUrl: String?,
+    nextArtworkUrl: String?,
+    trackKey: String?,
     onPrevious: () -> Unit,
     onNext: () -> Unit,
-): Modifier {
-    if (!enabled) return this
-    val currentOnPrevious by rememberUpdatedState(onPrevious)
-    val currentOnNext by rememberUpdatedState(onNext)
-    var totalDrag by remember { mutableFloatStateOf(0f) }
-    var dragging by remember { mutableStateOf(false) }
-    val offset =
-        animateFloatAsState(
-            targetValue = totalDrag,
-            animationSpec =
-                if (dragging) {
-                    snap()
-                } else {
-                    spring(
-                        dampingRatio = Spring.DampingRatioNoBouncy,
-                        stiffness = Spring.StiffnessMedium,
+    modifier: Modifier = Modifier,
+    contentAlignment: Alignment = Alignment.Center,
+    swipeEdgePadding: Dp = 0.dp,
+    adjacentArtwork: @Composable BoxScope.(url: String) -> Unit,
+    content: @Composable BoxScope.() -> Unit,
+) {
+    val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
+    val leftPaneUrl = if (isRtl) nextArtworkUrl else previousArtworkUrl
+    val rightPaneUrl = if (isRtl) previousArtworkUrl else nextArtworkUrl
+    val onSettleFromLeft by rememberUpdatedState(if (isRtl) onNext else onPrevious)
+    val onSettleFromRight by rememberUpdatedState(if (isRtl) onPrevious else onNext)
+    val currentTrackKey by rememberUpdatedState(trackKey)
+    // Read through rememberUpdatedState so the gesture detector below does not have to restart
+    // when the track changes; restarting it cancelled any fast follow-up swipe already in flight.
+    val currentLeftPaneUrl by rememberUpdatedState(leftPaneUrl)
+    val currentRightPaneUrl by rememberUpdatedState(rightPaneUrl)
+
+    var containerWidthPx by remember { mutableFloatStateOf(0f) }
+    val paneSpacingPx = with(LocalDensity.current) { ARTWORK_SWIPE_PANE_SPACING.toPx() }
+    val edgePaddingPx = with(LocalDensity.current) { swipeEdgePadding.toPx() }
+    // Lane the covers travel in: the artwork width, i.e. the box minus the padded hiding strips.
+    val paneWidthPx = (containerWidthPx - 2 * edgePaddingPx).coerceAtLeast(0f)
+    val offset = remember { Animatable(0f) }
+    val scope = rememberCoroutineScope()
+    val settleSpec =
+        remember { spring<Float>(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMediumLow) }
+    val returnSpec =
+        remember { spring<Float>(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMedium) }
+
+    // Artwork URLs captured at release. While a settle is running the panes keep showing these,
+    // so the queue changing under them never swaps the image mid-animation.
+    var frozenLeftUrl by remember { mutableStateOf<String?>(null) }
+    var frozenRightUrl by remember { mutableStateOf<String?>(null) }
+    var freezePanes by remember { mutableStateOf(false) }
+    // Settled artwork kept centred on top of the content until the new current artwork has had
+    // time to load, so the previous song's cover never flashes between the swipe and the new cover.
+    // Which side's pane is currently held centred on top of the content (-1 left, 1 right, 0 none).
+    // The very same pane node is kept alive and just moved to the centre, so its already loaded
+    // image is never torn down and re-created (which used to blank the cover for a moment).
+    var holdSide by remember { mutableStateOf(0) }
+    // The running settle coroutine and its generation. Starting a new drag cancels the job and
+    // bumps the generation, so a settle interrupted mid-hold never leaves its cover frozen on
+    // top of the content (which is what made fast swipes show a static cover with the dragged
+    // covers sliding behind it) and never resets state owned by a newer settle.
+    var settleJob by remember { mutableStateOf<Job?>(null) }
+    var settleGeneration by remember { mutableIntStateOf(0) }
+    val shownLeftUrl = if (freezePanes) frozenLeftUrl else leftPaneUrl
+    val shownRightUrl = if (freezePanes) frozenRightUrl else rightPaneUrl
+
+    Box(
+        contentAlignment = contentAlignment,
+        modifier =
+            modifier
+                .then(if (swipeEdgePadding > 0.dp) Modifier.clipToBounds() else Modifier)
+                .onSizeChanged { containerWidthPx = it.width.toFloat() }
+                .pointerInput(enabled, sensitivity, isRtl, swipeEdgePadding) {
+                    if (!enabled) return@pointerInput
+                    detectHorizontalDragGestures(
+                        onDragStart = {
+                            // A new swipe takes over immediately: cancel any settle still holding
+                            // a cover centred on top, so the old cover never stays fixed while the
+                            // new drag moves the covers behind it. The panes unfreeze here while
+                            // they are still offscreen at the rest position, so their images never
+                            // swap visibly mid-drag.
+                            settleGeneration += 1
+                            settleJob?.cancel()
+                            settleJob = null
+                            holdSide = 0
+                            freezePanes = false
+                        },
+                        onHorizontalDrag = { change, dragAmount ->
+                            change.consume()
+                            val travel = (size.width.toFloat() - 2 * edgePaddingPx).coerceAtLeast(0f) + paneSpacingPx
+                            // Block dragging towards a side that has no adjacent track.
+                            val minOffset = if (currentRightPaneUrl != null) -travel else 0f
+                            val maxOffset = if (currentLeftPaneUrl != null) travel else 0f
+                            scope.launch {
+                                offset.snapTo((offset.value + dragAmount).coerceIn(minOffset, maxOffset))
+                            }
+                        },
+                        onDragEnd = {
+                            val paneWidth = (size.width.toFloat() - 2 * edgePaddingPx).coerceAtLeast(0f)
+                            val threshold = artworkSwipeThresholdPx(paneWidth, sensitivity)
+                            val keyAtRelease = currentTrackKey
+                            val leftAtRelease = currentLeftPaneUrl
+                            val rightAtRelease = currentRightPaneUrl
+                            val generation = ++settleGeneration
+                            settleJob =
+                                scope.launch {
+                                    try {
+                                        when {
+                                            offset.value >= threshold && leftAtRelease != null -> {
+                                                frozenLeftUrl = leftAtRelease
+                                                frozenRightUrl = rightAtRelease
+                                                freezePanes = true
+                                                offset.animateTo(paneWidth + paneSpacingPx, settleSpec)
+                                                onSettleFromLeft()
+                                                // If the track never changed (queue boundary), return to centre.
+                                                val changed =
+                                                    withTimeoutOrNull(ARTWORK_TRACK_CHANGE_TIMEOUT_MS) {
+                                                        snapshotFlow { currentTrackKey }.first { it != keyAtRelease }
+                                                    } != null
+                                                if (changed && settleGeneration == generation) {
+                                                    holdSide = -1
+                                                    offset.snapTo(0f)
+                                                    delay(ARTWORK_SETTLE_HOLD_MS)
+                                                } else {
+                                                    offset.snapTo(0f)
+                                                }
+                                            }
+                                            offset.value <= -threshold && rightAtRelease != null -> {
+                                                frozenLeftUrl = leftAtRelease
+                                                frozenRightUrl = rightAtRelease
+                                                freezePanes = true
+                                                offset.animateTo(-(paneWidth + paneSpacingPx), settleSpec)
+                                                onSettleFromRight()
+                                                val changed =
+                                                    withTimeoutOrNull(ARTWORK_TRACK_CHANGE_TIMEOUT_MS) {
+                                                        snapshotFlow { currentTrackKey }.first { it != keyAtRelease }
+                                                    } != null
+                                                if (changed && settleGeneration == generation) {
+                                                    holdSide = 1
+                                                    offset.snapTo(0f)
+                                                    delay(ARTWORK_SETTLE_HOLD_MS)
+                                                } else {
+                                                    offset.snapTo(0f)
+                                                }
+                                            }
+                                            else -> offset.animateTo(0f, returnSpec)
+                                        }
+                                    } finally {
+                                        // Only the latest settle may clear the hold/freeze state;
+                                        // a settle cancelled by a newer drag leaves that state to
+                                        // the drag that took over.
+                                        if (settleGeneration == generation) {
+                                            holdSide = 0
+                                            freezePanes = false
+                                        }
+                                    }
+                                }
+                        },
+                        onDragCancel = {
+                            scope.launch { offset.animateTo(0f, returnSpec) }
+                        },
                     )
                 },
-            label = "artworkSwipe",
-        )
-    return graphicsLayer { translationX = offset.value }
-        .pointerInput(sensitivity) {
-            detectHorizontalDragGestures(
-                onDragStart = { dragging = true },
-                onHorizontalDrag = { change, dragAmount ->
-                    change.consume()
-                    totalDrag += dragAmount
-                },
-                onDragEnd = {
-                    val threshold = artworkSwipeThresholdPx(size.width.toFloat(), sensitivity)
-                    when {
-                        totalDrag >= threshold -> currentOnPrevious()
-                        totalDrag <= -threshold -> currentOnNext()
-                    }
-                    dragging = false
-                    totalDrag = 0f
-                },
-                onDragCancel = {
-                    dragging = false
-                    totalDrag = 0f
-                },
-            )
+    ) {
+        // Adjacent track artwork revealed by the drag, like the legacy carousel. Rendered only
+        // while a swipe is active so the covers stay put at rest, and unclipped so they slide
+        // through the side margins and out under the screen edges.
+        // Panes stay composed (invisible at rest) so their images are already loaded when a swipe
+        // starts and nothing fades in or pops during the drag.
+        if (enabled) {
+            shownLeftUrl?.let { url ->
+                Box(
+                    contentAlignment = contentAlignment,
+                    modifier =
+                        Modifier
+                            .fillMaxSize()
+                            .padding(horizontal = swipeEdgePadding)
+                            .zIndex(if (holdSide == -1) 1f else 0f)
+                            .graphicsLayer {
+                                alpha = if (holdSide == -1 || offset.value != 0f) 1f else 0f
+                                translationX =
+                                    if (holdSide == -1) 0f else offset.value - paneWidthPx - paneSpacingPx
+                            },
+                ) {
+                    adjacentArtwork(url)
+                }
+            }
+            shownRightUrl?.let { url ->
+                Box(
+                    contentAlignment = contentAlignment,
+                    modifier =
+                        Modifier
+                            .fillMaxSize()
+                            .padding(horizontal = swipeEdgePadding)
+                            .zIndex(if (holdSide == 1) 1f else 0f)
+                            .graphicsLayer {
+                                alpha = if (holdSide == 1 || offset.value != 0f) 1f else 0f
+                                translationX =
+                                    if (holdSide == 1) 0f else offset.value + paneWidthPx + paneSpacingPx
+                            },
+                ) {
+                    adjacentArtwork(url)
+                }
+            }
         }
+        Box(
+            contentAlignment = contentAlignment,
+            modifier = Modifier.graphicsLayer { translationX = offset.value },
+            content = content,
+        )
+    }
 }
 
 @Composable
@@ -1760,18 +1956,19 @@ fun PlayerScreen(
                                                         Arrangement.Center
                                                     },
                                             ) {
-                                                Box(
-                                                    contentAlignment = Alignment.Center,
+                                                ArtworkSwipeBox(
+                                                    enabled = artworkSwipeEnabled,
+                                                    sensitivity = Settings.shared.swipeSensitivity,
+                                                    previousArtworkUrl = uiState.previousArtworkUrl(),
+                                                    nextArtworkUrl = uiState.nextArtworkUrl(),
+                                                    trackKey = currentSong?.id,
+                                                    onPrevious = viewModel::previous,
+                                                    onNext = viewModel::next,
                                                     modifier =
                                                         Modifier
                                                             .fillMaxWidth()
                                                             .weight(1f, fill = usesCanvasThumbnail || usesFullscreenThumbnail)
-                                                            .artworkSwipe(
-                                                                enabled = artworkSwipeEnabled,
-                                                                sensitivity = Settings.shared.swipeSensitivity,
-                                                                onPrevious = viewModel::previous,
-                                                                onNext = viewModel::next,
-                                                            ).artworkSeekGestures(
+                                                            .artworkSeekGestures(
                                                                 seekEnabled = !isListenTogetherGuest,
                                                                 stepMs = artworkSeekStepMs,
                                                                 onTap =
@@ -1791,6 +1988,21 @@ fun PlayerScreen(
                                                                 progressive = Settings.shared.seekExtraSeconds,
                                                                 onSeek = onArtworkSeek,
                                                             ),
+                                                    adjacentArtwork = { url ->
+                                                        AsyncImage(
+                                                            url = url,
+                                                            contentDescription = null,
+                                                            contentScale = ContentScale.Crop,
+                                                            modifier =
+                                                                if (usesFullscreenThumbnail || usesCanvasThumbnail) {
+                                                                    Modifier.fillMaxSize()
+                                                                } else {
+                                                                    Modifier
+                                                                        .aspectRatio(1f)
+                                                                        .clip(albumArtShape)
+                                                                },
+                                                        )
+                                                    },
                                                 ) {
                                                     if (showVideoSurface) {
                                                         platform.MusicVideoSurface(

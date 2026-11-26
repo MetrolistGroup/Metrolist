@@ -155,13 +155,16 @@ import com.metrolist.shared.ui.components.VintageClassicControlsText
 import com.metrolist.shared.ui.components.VintagePlayerControls
 import com.metrolist.shared.ui.components.VintagePlayerControlsText
 import com.metrolist.shared.ui.components.formatSleepTimerRemaining
+import com.metrolist.shared.ui.components.images.AsyncImage
 import com.metrolist.shared.ui.components.lyrics.ActiveLyricsLineContent
 import com.metrolist.shared.ui.components.lyrics.LyricsOffsetEditor
 import com.metrolist.shared.ui.components.lyrics.LyricsView
 import com.metrolist.shared.ui.components.lyrics.rememberCaptionLyricsPositionState
 import com.metrolist.shared.ui.components.lyrics.resolveLyricsTextColor
+import com.metrolist.shared.ui.components.nextArtworkUrl
 import com.metrolist.shared.ui.components.playbackMarquee
 import com.metrolist.shared.ui.components.playerControlBlend
+import com.metrolist.shared.ui.components.previousArtworkUrl
 import com.metrolist.shared.ui.components.rememberTrackMarquee
 import com.metrolist.shared.ui.components.vintageOnButtonColor
 import com.metrolist.shared.ui.haptics.HapticEvent
@@ -399,17 +402,18 @@ internal fun TabletPlayerContent(
                                     )
                                 }
                             } else if (currentSong?.displayThumbnail != null || showVideoSurface) {
-                                Box(
-                                    contentAlignment = Alignment.Center,
+                                ArtworkSwipeBox(
+                                    enabled = artworkSwipeEnabled,
+                                    sensitivity = artworkSwipeSensitivity,
+                                    previousArtworkUrl = uiState.previousArtworkUrl(),
+                                    nextArtworkUrl = uiState.nextArtworkUrl(),
+                                    trackKey = currentSong?.id,
+                                    onPrevious = viewModel::previous,
+                                    onNext = viewModel::next,
                                     modifier =
                                         Modifier
                                             .requiredSize(artworkSize)
-                                            .artworkSwipe(
-                                                enabled = artworkSwipeEnabled,
-                                                sensitivity = artworkSwipeSensitivity,
-                                                onPrevious = viewModel::previous,
-                                                onNext = viewModel::next,
-                                            ).artworkSeekGestures(
+                                            .artworkSeekGestures(
                                                 seekEnabled = !isListenTogetherGuest,
                                                 stepMs = artworkSeekStepMs,
                                                 onTap = null,
@@ -417,6 +421,14 @@ internal fun TabletPlayerContent(
                                                 progressive = Settings.shared.seekExtraSeconds,
                                                 onSeek = onArtworkSeek,
                                             ),
+                                    adjacentArtwork = { url ->
+                                        AsyncImage(
+                                            url = url,
+                                            contentDescription = null,
+                                            contentScale = ContentScale.Crop,
+                                            modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(PlayerArtworkCornerRadius)),
+                                        )
+                                    },
                                 ) {
                                     if (showVideoSurface) {
                                         platform.MusicVideoSurface(
@@ -826,6 +838,13 @@ private fun LandscapePlayerCastButton(
 private val LandscapeRightPaneStartGap = 24.dp
 private val LandscapeRightPaneEndGap = 32.dp
 
+/**
+ * Horizontal strips on both sides of the landscape artwork that the swipe covers slide under.
+ * Must stay at or below the swipe pane spacing (32.dp in PlayerScreen.kt) so a settled cover is
+ * fully hidden behind the strip, and it is capped by the free space next to the artwork.
+ */
+private val LandscapeArtworkSwipeEdgePadding = 24.dp
+
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 internal fun LandscapePlayerContent(
@@ -1188,6 +1207,19 @@ internal fun LandscapePlayerContent(
                 Column(modifier = Modifier.fillMaxSize()) {
                     BoxWithConstraints(Modifier.fillMaxWidth().weight(1f)) {
                         val artworkSize = if (isTv) tvArtworkSize else minOf(maxHeight, maxWidth)
+                        // Hide the swipe inside the artwork's lane: the covers slide under padded
+                        // strips beside the artwork instead of travelling across the whole screen.
+                        // Capped by the free space beside the artwork so the swipe box never grows
+                        // past this pane, and disabled for fullscreen/canvas artwork.
+                        val artworkSwipeEdgePadding =
+                            if (usesFullscreenThumbnail || usesCanvasThumbnail) {
+                                0.dp
+                            } else {
+                                minOf(
+                                    LandscapeArtworkSwipeEdgePadding,
+                                    ((maxWidth - artworkSize) / 2).coerceAtLeast(0.dp),
+                                )
+                            }
                         AnimatedContent(
                             targetState = uiState.isLyricsVisible,
                             transitionSpec = { fadeIn() togetherWith fadeOut() },
@@ -1210,42 +1242,48 @@ internal fun LandscapePlayerContent(
                                     isBuffering = castState.isBuffering,
                                 )
                             } else if (showVideoSurface || currentSong?.displayThumbnail != null) {
-                                Box(
-                                    contentAlignment = Alignment.Center,
+                                ArtworkSwipeBox(
+                                    enabled = artworkSwipeEnabled,
+                                    sensitivity = artworkSwipeSensitivity,
+                                    previousArtworkUrl = uiState.previousArtworkUrl(),
+                                    nextArtworkUrl = uiState.nextArtworkUrl(),
+                                    trackKey = currentSong?.id,
+                                    onPrevious = viewModel::previous,
+                                    onNext = viewModel::next,
+                                    swipeEdgePadding = artworkSwipeEdgePadding,
                                     modifier =
-                                        if (usesFullscreenThumbnail || usesCanvasThumbnail) {
-                                            Modifier
-                                                .fillMaxSize()
-                                                .artworkSwipe(
-                                                    enabled = artworkSwipeEnabled,
-                                                    sensitivity = artworkSwipeSensitivity,
-                                                    onPrevious = viewModel::previous,
-                                                    onNext = viewModel::next,
-                                                ).artworkSeekGestures(
-                                                    seekEnabled = !isListenTogetherGuest,
-                                                    stepMs = artworkSeekStepMs,
-                                                    onTap = null,
-                                                    tapLabel = null,
-                                                    progressive = Settings.shared.seekExtraSeconds,
-                                                    onSeek = onArtworkSeek,
+                                        (
+                                            if (usesFullscreenThumbnail || usesCanvasThumbnail) {
+                                                Modifier.fillMaxSize()
+                                            } else {
+                                                Modifier.requiredSize(
+                                                    width = artworkSize + artworkSwipeEdgePadding * 2,
+                                                    height = artworkSize,
                                                 )
-                                        } else {
-                                            Modifier
-                                                .requiredSize(artworkSize)
-                                                .artworkSwipe(
-                                                    enabled = artworkSwipeEnabled,
-                                                    sensitivity = artworkSwipeSensitivity,
-                                                    onPrevious = viewModel::previous,
-                                                    onNext = viewModel::next,
-                                                ).artworkSeekGestures(
-                                                    seekEnabled = !isListenTogetherGuest,
-                                                    stepMs = artworkSeekStepMs,
-                                                    onTap = null,
-                                                    tapLabel = null,
-                                                    progressive = Settings.shared.seekExtraSeconds,
-                                                    onSeek = onArtworkSeek,
-                                                )
-                                        },
+                                            }
+                                        ).artworkSeekGestures(
+                                            seekEnabled = !isListenTogetherGuest,
+                                            stepMs = artworkSeekStepMs,
+                                            onTap = null,
+                                            tapLabel = null,
+                                            progressive = Settings.shared.seekExtraSeconds,
+                                            onSeek = onArtworkSeek,
+                                        ),
+                                    adjacentArtwork = { url ->
+                                        AsyncImage(
+                                            url = url,
+                                            contentDescription = null,
+                                            contentScale = ContentScale.Crop,
+                                            modifier =
+                                                if (usesFullscreenThumbnail || usesCanvasThumbnail) {
+                                                    Modifier.fillMaxSize()
+                                                } else {
+                                                    Modifier
+                                                        .fillMaxSize()
+                                                        .clip(RoundedCornerShape(PlayerArtworkCornerRadius))
+                                                },
+                                        )
+                                    },
                                 ) {
                                     if (showVideoSurface) {
                                         platform.MusicVideoSurface(
