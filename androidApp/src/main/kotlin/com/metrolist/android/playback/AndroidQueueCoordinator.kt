@@ -153,11 +153,35 @@ internal class AndroidQueueCoordinator(
     }
 
     fun releaseRadioSeedLock(sessionId: Long? = null) {
-        synchronized(queueSessionLock) {
-            if (sessionId == null || radioSeedLockedSessionId == sessionId) {
-                radioSeedLockedSessionId = null
+        val released =
+            synchronized(queueSessionLock) {
+                val lockedSessionId = radioSeedLockedSessionId
+                if (sessionId == null || lockedSessionId == sessionId) {
+                    radioSeedLockedSessionId = null
+                    lockedSessionId != null
+                } else {
+                    false
+                }
             }
-        }
+        if (!released) return
+        lastAutoLoadedSongId = null
+        val currentIndex = player.currentMediaItemIndex.value
+        val queue = player.songQueue.value
+        scheduleAutoLoadMore(
+            AutoLoadMoreTrigger(
+                sessionId = queueSessionId,
+                currentIndex = currentIndex,
+                queueSize = queue.size,
+                currentSongId = queue.getOrNull(currentIndex)?.id,
+                shouldLoadMore =
+                    shouldAutoLoadMore(
+                        currentIndex = currentIndex,
+                        queue = queue,
+                        autoLoadMore = Settings.shared.autoLoadMore,
+                        repeatMode = repeatMode.value,
+                    ),
+            ),
+        )
     }
 
     fun saveShuffleMode() {

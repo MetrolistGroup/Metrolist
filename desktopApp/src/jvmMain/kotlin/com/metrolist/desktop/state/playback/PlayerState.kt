@@ -548,6 +548,8 @@ object PlayerState {
     private var deviceRadioBootstrapPending = false
     private var deviceRadioBootstrapGeneration = -1L
     private var deviceRadioBootstrapSessionId: String? = null
+
+    @Volatile private var deviceRadioBootstrapRetryArmed = false
     private var controllerPlayback: DcLocalPlaybackState? = null
     private val deviceConnectPlayback =
         object : DeviceConnectPlaybackPort {
@@ -4155,11 +4157,23 @@ object PlayerState {
 
     private fun rearmPendingExplicitRadioBootstrap() {
         if (!deviceRadioBootstrapPending || !syncSession.explicitRadioQueue || deviceConnect.isFollowing) return
+        val activeJob = deviceRadioBootstrapJob
         if (
-            deviceRadioBootstrapJob?.isActive == true &&
+            activeJob?.isActive == true &&
             deviceRadioBootstrapGeneration == playbackTransitionGeneration &&
             deviceRadioBootstrapSessionId == syncSession.sessionId
         ) {
+            if (deviceRadioBootstrapRetryArmed) return
+            deviceRadioBootstrapRetryArmed = true
+            activeJob.invokeOnCompletion { cause ->
+                deviceRadioBootstrapRetryArmed = false
+                if (cause is CancellationException) return@invokeOnCompletion
+                scope.launch {
+                    if (PlaybackNetworkStateStore.current.connected && !castManager.state.value.isConnected) {
+                        rearmPendingExplicitRadioBootstrap()
+                    }
+                }
+            }
             return
         }
         val seed =

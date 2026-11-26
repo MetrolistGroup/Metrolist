@@ -177,6 +177,11 @@ internal suspend fun awaitAutomotiveRadioSeed(
     onAbandoned: () -> Unit,
     playMix: (SongItem) -> Unit,
 ) {
+    val selectedId = song.originalQueueItemId ?: song.id
+
+    fun isSeedRequest(request: QueuePlaybackRequest): Boolean =
+        request.song.id == song.id || (request.song.originalQueueItemId ?: request.song.id) == selectedId
+
     var unrelatedSelection = false
     combine(requests, currentSong, isPlaying, transitionPending) { request, current, playing, pending ->
         AutomotiveRadioSeedState(request, current?.id, current?.originalQueueItemId, playing, pending)
@@ -186,7 +191,7 @@ internal suspend fun awaitAutomotiveRadioSeed(
                 false
             }
 
-            state.request.song.id != song.id -> {
+            !isSeedRequest(state.request) -> {
                 unrelatedSelection = true
                 true
             }
@@ -194,7 +199,7 @@ internal suspend fun awaitAutomotiveRadioSeed(
             else -> {
                 (
                     state.currentSongId == song.id ||
-                        state.currentOriginalQueueItemId == (song.originalQueueItemId ?: song.id)
+                        state.currentOriginalQueueItemId == selectedId
                 ) && state.playing && !state.transitionPending
             }
         }
@@ -203,7 +208,7 @@ internal suspend fun awaitAutomotiveRadioSeed(
     // follow the newest request instead of the one that started the wait.
     val newest = requests.replayCache.lastOrNull()?.takeIf { it.requestId > initialRequestId }
     val committed = currentSong.value
-    if (newest == null || unrelatedSelection || newest.song.id != song.id ||
+    if (newest == null || unrelatedSelection || !isSeedRequest(newest) ||
         newest.requestId != latestRequestId() || !isCurrentSession() || committed == null
     ) {
         onAbandoned()
