@@ -262,7 +262,6 @@ import kotlin.time.TimeMark
 import kotlin.time.TimeSource
 
 private const val ARTWORK_TRACK_CHANGE_TIMEOUT_MS = 600L
-private const val ARTWORK_SETTLE_HOLD_MS = 450L
 
 /** Gap between adjacent artwork panes during a swipe. */
 private val ARTWORK_SWIPE_PANE_SPACING = 32.dp
@@ -277,6 +276,7 @@ internal fun ArtworkSwipeBox(
     previousArtworkUrl: String?,
     nextArtworkUrl: String?,
     trackKey: String?,
+    replacementArtworkReady: Boolean,
     onPrevious: () -> Unit,
     onNext: () -> Unit,
     modifier: Modifier = Modifier,
@@ -291,6 +291,7 @@ internal fun ArtworkSwipeBox(
     val onSettleFromLeft by rememberUpdatedState(if (isRtl) onNext else onPrevious)
     val onSettleFromRight by rememberUpdatedState(if (isRtl) onPrevious else onNext)
     val currentTrackKey by rememberUpdatedState(trackKey)
+    val currentReplacementArtworkReady by rememberUpdatedState(replacementArtworkReady)
     // Keep gesture callbacks current across track changes.
     val currentLeftPaneUrl by rememberUpdatedState(leftPaneUrl)
     val currentRightPaneUrl by rememberUpdatedState(rightPaneUrl)
@@ -382,14 +383,15 @@ internal fun ArtworkSwipeBox(
                                                     navigationRequested = true
                                                     onSettleFromLeft()
                                                     // Return to center if the track does not change.
-                                                    val changed =
+                                                    val changedTrackKey =
                                                         withTimeoutOrNull(ARTWORK_TRACK_CHANGE_TIMEOUT_MS) {
                                                             snapshotFlow { currentTrackKey }.first { it != keyAtRelease }
-                                                        } != null
-                                                    if (changed && settleGeneration == generation) {
+                                                        }
+                                                    if (changedTrackKey != null && settleGeneration == generation) {
                                                         holdSide = -1
                                                         offset.snapTo(0f)
-                                                        delay(ARTWORK_SETTLE_HOLD_MS)
+                                                        snapshotFlow { currentTrackKey to currentReplacementArtworkReady }
+                                                            .first { (trackKey, artworkReady) -> trackKey != changedTrackKey || artworkReady }
                                                     } else {
                                                         offset.snapTo(0f)
                                                     }
@@ -413,14 +415,15 @@ internal fun ArtworkSwipeBox(
                                                 if (currentTrackKey == keyAtRelease) {
                                                     navigationRequested = true
                                                     onSettleFromRight()
-                                                    val changed =
+                                                    val changedTrackKey =
                                                         withTimeoutOrNull(ARTWORK_TRACK_CHANGE_TIMEOUT_MS) {
                                                             snapshotFlow { currentTrackKey }.first { it != keyAtRelease }
-                                                        } != null
-                                                    if (changed && settleGeneration == generation) {
+                                                        }
+                                                    if (changedTrackKey != null && settleGeneration == generation) {
                                                         holdSide = 1
                                                         offset.snapTo(0f)
-                                                        delay(ARTWORK_SETTLE_HOLD_MS)
+                                                        snapshotFlow { currentTrackKey to currentReplacementArtworkReady }
+                                                            .first { (trackKey, artworkReady) -> trackKey != changedTrackKey || artworkReady }
                                                     } else {
                                                         offset.snapTo(0f)
                                                     }
@@ -694,6 +697,10 @@ fun PlayerScreen(
     }.collectAsState(viewModel.uiState.value.adjacentArtworkUrls())
     val trackPresentation = rememberPlayerTrackPresentation(currentSongs, artworkRequestSize, artworkPrefetchUrls, isScreenVisible)
     val currentSong = trackPresentation.song
+    val currentArtworkUrl = uiState.currentSong?.displayThumbnail
+    val replacementArtworkReady =
+        currentArtworkUrl.isNullOrBlank() ||
+            (!trackPresentation.isArtworkLoading && trackPresentation.artwork.url == currentArtworkUrl)
     val repeatMode = uiState.repeatMode
     val isShuffleOn = uiState.isShuffleOn
     val duration = if (currentSong?.id == uiState.currentSong?.id) uiState.duration else currentSong?.duration ?: 0L
@@ -1485,6 +1492,7 @@ fun PlayerScreen(
                                     onLyricsOffsetChange = { offset -> currentSong?.let { viewModel.setLyricsOffset(it.id, offset) } },
                                     onDoneLyricsOffset = { showLyricsOffsetEditor = false },
                                     currentSong = currentSong,
+                                    replacementArtworkReady = replacementArtworkReady,
                                     crossfadeNextArtworkUrl = crossfadeNextArtworkUrl,
                                     artworkCrossfadeProgress = artworkCrossfadeProgress,
                                     isPlaying = isPlaying,
@@ -1532,6 +1540,7 @@ fun PlayerScreen(
                                     onLyricsOffsetChange = { offset -> currentSong?.let { viewModel.setLyricsOffset(it.id, offset) } },
                                     onDoneLyricsOffset = { showLyricsOffsetEditor = false },
                                     currentSong = currentSong,
+                                    replacementArtworkReady = replacementArtworkReady,
                                     crossfadeNextArtworkUrl = crossfadeNextArtworkUrl,
                                     artworkCrossfadeProgress = artworkCrossfadeProgress,
                                     isPlaying = isPlaying,
@@ -1966,6 +1975,7 @@ fun PlayerScreen(
                                                         uiState.currentSong?.id?.let { id ->
                                                             "$id#${uiState.queueEntryKeys.getOrNull(uiState.currentQueueIndex)}"
                                                         },
+                                                    replacementArtworkReady = replacementArtworkReady,
                                                     onPrevious = viewModel::previous,
                                                     onNext = viewModel::next,
                                                     modifier =

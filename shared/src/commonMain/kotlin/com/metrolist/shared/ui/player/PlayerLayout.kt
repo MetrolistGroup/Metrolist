@@ -195,6 +195,7 @@ internal fun TabletPlayerContent(
     onLyricsOffsetChange: (Int) -> Unit,
     onDoneLyricsOffset: () -> Unit,
     currentSong: PlayerViewModel.SongUiModel?,
+    replacementArtworkReady: Boolean,
     crossfadeNextArtworkUrl: String?,
     artworkCrossfadeProgress: () -> Float,
     isPlaying: Boolean,
@@ -411,7 +412,10 @@ internal fun TabletPlayerContent(
                                     canNavigateNext = uiState.hasNextTrack(),
                                     previousArtworkUrl = uiState.previousArtworkUrl(),
                                     nextArtworkUrl = uiState.nextArtworkUrl(),
-                                    trackKey = uiState.currentSong?.id,
+                                    trackKey = uiState.currentSong?.id?.let { id ->
+                                        "$id#${uiState.queueEntryKeys.getOrNull(uiState.currentQueueIndex)}"
+                                    },
+                                    replacementArtworkReady = replacementArtworkReady,
                                     onPrevious = viewModel::previous,
                                     onNext = viewModel::next,
                                     modifier =
@@ -855,6 +859,7 @@ internal fun LandscapePlayerContent(
     onLyricsOffsetChange: (Int) -> Unit,
     onDoneLyricsOffset: () -> Unit,
     currentSong: PlayerViewModel.SongUiModel?,
+    replacementArtworkReady: Boolean,
     crossfadeNextArtworkUrl: String?,
     artworkCrossfadeProgress: () -> Float,
     isPlaying: Boolean,
@@ -1246,7 +1251,10 @@ internal fun LandscapePlayerContent(
                                     canNavigateNext = uiState.hasNextTrack(),
                                     previousArtworkUrl = uiState.previousArtworkUrl(),
                                     nextArtworkUrl = uiState.nextArtworkUrl(),
-                                    trackKey = uiState.currentSong?.id,
+                                    trackKey = uiState.currentSong?.id?.let { id ->
+                                        "$id#${uiState.queueEntryKeys.getOrNull(uiState.currentQueueIndex)}"
+                                    },
+                                    replacementArtworkReady = replacementArtworkReady,
                                     onPrevious = viewModel::previous,
                                     onNext = viewModel::next,
                                     swipeEdgePadding = artworkSwipeEdgePadding,
