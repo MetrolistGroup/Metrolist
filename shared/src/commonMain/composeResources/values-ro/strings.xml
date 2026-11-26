@@ -2692,4 +2692,7 @@
     <string name="listenbrainz_server_url">URL server</string>
     <string name="listenbrainz_server_url_description">Lasă gol pentru ListenBrainz. Pentru un server compatibil, precum Koito, introdu adresa sa API.</string>
     <string name="listenbrainz_invalid_server_url">Introdu o adresă http sau https</string>
+    <string name="cache_whole_song_while_playing">Stochează în cache întreaga melodie în timpul redării</string>
+    <string name="cache_whole_song_while_playing_desc">Preia restul unei melodii redate în flux direct în loc de doar porțiunea imediat următoare în buffer. Utilizează mai multe date.</string>
+    <string name="slider_standard_buffered">Standard cu buffer</string>
 </resources>
