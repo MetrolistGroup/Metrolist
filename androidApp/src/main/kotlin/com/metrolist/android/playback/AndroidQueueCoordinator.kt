@@ -153,23 +153,22 @@ internal class AndroidQueueCoordinator(
     }
 
     fun releaseRadioSeedLock(sessionId: Long? = null) {
-        val released =
+        val releasedSessionId =
             synchronized(queueSessionLock) {
                 val lockedSessionId = radioSeedLockedSessionId
-                if (sessionId == null || lockedSessionId == sessionId) {
+                if (lockedSessionId != null && (sessionId == null || lockedSessionId == sessionId)) {
                     radioSeedLockedSessionId = null
-                    lockedSessionId != null
+                    lockedSessionId.takeIf { it == queueSessionId }
                 } else {
-                    false
+                    null
                 }
-            }
-        if (!released) return
+            } ?: return
         lastAutoLoadedSongId = null
         val currentIndex = player.currentMediaItemIndex.value
         val queue = player.songQueue.value
         scheduleAutoLoadMore(
             AutoLoadMoreTrigger(
-                sessionId = queueSessionId,
+                sessionId = releasedSessionId,
                 currentIndex = currentIndex,
                 queueSize = queue.size,
                 currentSongId = queue.getOrNull(currentIndex)?.id,

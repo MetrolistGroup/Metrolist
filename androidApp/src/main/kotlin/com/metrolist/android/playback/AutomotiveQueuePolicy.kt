@@ -159,8 +159,7 @@ internal fun automotivePlaybackIntent(mode: AutomotiveSongPlaybackMode?): Automo
 
 private data class AutomotiveRadioSeedState(
     val request: QueuePlaybackRequest,
-    val currentSongId: String?,
-    val currentOriginalQueueItemId: String?,
+    val currentIsSeed: Boolean,
     val playing: Boolean,
     val transitionPending: Boolean,
 )
@@ -179,28 +178,24 @@ internal suspend fun awaitAutomotiveRadioSeed(
 ) {
     val selectedId = song.originalQueueItemId ?: song.id
 
-    fun isSeedRequest(request: QueuePlaybackRequest): Boolean =
-        request.song.id == song.id || (request.song.originalQueueItemId ?: request.song.id) == selectedId
+    fun isSeedSong(candidate: SongItem): Boolean = candidate.id == song.id || (candidate.originalQueueItemId ?: candidate.id) == selectedId
 
     var unrelatedSelection = false
     combine(requests, currentSong, isPlaying, transitionPending) { request, current, playing, pending ->
-        AutomotiveRadioSeedState(request, current?.id, current?.originalQueueItemId, playing, pending)
+        AutomotiveRadioSeedState(request, current?.let { isSeedSong(it) } == true, playing, pending)
     }.first { state ->
         when {
             state.request.requestId <= initialRequestId -> {
                 false
             }
 
-            !isSeedRequest(state.request) -> {
+            !isSeedSong(state.request.song) -> {
                 unrelatedSelection = true
                 true
             }
 
             else -> {
-                (
-                    state.currentSongId == song.id ||
-                        state.currentOriginalQueueItemId == selectedId
-                ) && state.playing && !state.transitionPending
+                state.currentIsSeed && state.playing && !state.transitionPending
             }
         }
     }
@@ -208,8 +203,9 @@ internal suspend fun awaitAutomotiveRadioSeed(
     // follow the newest request instead of the one that started the wait.
     val newest = requests.replayCache.lastOrNull()?.takeIf { it.requestId > initialRequestId }
     val committed = currentSong.value
-    if (newest == null || unrelatedSelection || !isSeedRequest(newest) ||
-        newest.requestId != latestRequestId() || !isCurrentSession() || committed == null
+    if (newest == null || unrelatedSelection || !isSeedSong(newest.song) ||
+        newest.requestId != latestRequestId() || !isCurrentSession() ||
+        committed == null || !isSeedSong(committed)
     ) {
         onAbandoned()
         return

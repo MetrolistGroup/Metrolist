@@ -549,7 +549,7 @@ object PlayerState {
     private var deviceRadioBootstrapGeneration = -1L
     private var deviceRadioBootstrapSessionId: String? = null
 
-    @Volatile private var deviceRadioBootstrapRetryArmed = false
+    @Volatile private var deviceRadioBootstrapRetryJob: Job? = null
     private var controllerPlayback: DcLocalPlaybackState? = null
     private val deviceConnectPlayback =
         object : DeviceConnectPlaybackPort {
@@ -4163,10 +4163,11 @@ object PlayerState {
             deviceRadioBootstrapGeneration == playbackTransitionGeneration &&
             deviceRadioBootstrapSessionId == syncSession.sessionId
         ) {
-            if (deviceRadioBootstrapRetryArmed) return
-            deviceRadioBootstrapRetryArmed = true
+            if (deviceRadioBootstrapRetryJob === activeJob) return
+            deviceRadioBootstrapRetryJob = activeJob
             activeJob.invokeOnCompletion { cause ->
-                deviceRadioBootstrapRetryArmed = false
+                if (deviceRadioBootstrapRetryJob !== activeJob) return@invokeOnCompletion
+                deviceRadioBootstrapRetryJob = null
                 if (cause is CancellationException) return@invokeOnCompletion
                 scope.launch {
                     if (PlaybackNetworkStateStore.current.connected && !castManager.state.value.isConnected) {
