@@ -46,7 +46,7 @@ REMOVE may carry `advanceCurrentToSuccessor`, `successorIndex` and `expectedTrac
 
 Radio replacement can set `preserveCurrentTrack`. A matching ready seed retains its instance and position; otherwise it starts at zero. Older targets ignore the flag and may reload using the supplied position. Queue replacement requires complete snapshots. Partial queues need negotiated continuation ownership, cancellation and acknowledgement before use.
 
-A `REPLACE_QUEUE` command carries `recommendationsLocked` to keep a selected-song-only queue from expanding on the target. The target applies it before any bootstrap or auto-load and reports it in snapshots; a later replacement clears it. Android Auto Radio replacements send repeat OFF so the target and its controllers expand the seed instead of repeating it; a replacement without a repeat override preserves the target's repeat mode. A transient Radio seed lock stays local and is never persisted.
+A `REPLACE_QUEUE` command carries `recommendationsLocked` to keep a selected-song-only queue from expanding on targets that read the field. Those targets apply it before any bootstrap or auto-load and report it in snapshots; a later replacement clears it. Peers that predate the field ignore it and may expand the queue depending on the command's `finite` value and their auto-load setting. Android Auto Radio replacements send repeat OFF so the target and its controllers expand the seed instead of repeating it; a replacement without a repeat override preserves the target's repeat mode. A transient Radio seed lock stays local and is never persisted.
 
 ## Transport and account identity
 
