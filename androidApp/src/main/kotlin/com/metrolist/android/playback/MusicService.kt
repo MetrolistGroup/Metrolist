@@ -313,6 +313,9 @@ class MusicService :
                     currentShuffle = if (player.songQueue.value.isEmpty()) _shuffleModeEnabled.value else player.isShuffleEnabled,
                     persistentShuffle = Settings.shared.persistentShuffleAcrossQueues,
                 )
+            pendingRadioJob?.cancel()
+            pendingRadioJob = null
+            queueCoordinator.releaseRadioSeedLock(rearmAutoLoad = false)
             if (!AndroidDeviceConnect.intercept(
                     DcPlaybackCommand(
                         DcPlaybackAction.REPLACE_QUEUE,
@@ -328,9 +331,6 @@ class MusicService :
                     ),
                 )
             ) {
-                pendingRadioJob?.cancel()
-                pendingRadioJob = null
-                queueCoordinator.releaseRadioSeedLock()
                 queueCoordinator.replaceQueueSession(songs, startIndex, queueTitle, finite = true, playlistPage = playlistPage) {
                     when {
                         intent.selectedSongOnly -> queueCoordinator.lockRecommendationsForSelectedSong()
@@ -368,6 +368,13 @@ class MusicService :
                         }
                     }
                 }
+            } else if (intent.remoteRepeatMode != null) {
+                AndroidDeviceConnect.intercept(
+                    DcPlaybackCommand(
+                        DcPlaybackAction.REPEAT,
+                        repeatMode = intent.remoteRepeatMode,
+                    ),
+                )
             }
         }
     private lateinit var scrobbleManager: ScrobbleManager

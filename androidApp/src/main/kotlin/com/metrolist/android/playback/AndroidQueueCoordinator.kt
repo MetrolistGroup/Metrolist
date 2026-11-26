@@ -152,7 +152,10 @@ internal class AndroidQueueCoordinator(
         }
     }
 
-    fun releaseRadioSeedLock(sessionId: Long? = null) {
+    fun releaseRadioSeedLock(
+        sessionId: Long? = null,
+        rearmAutoLoad: Boolean = true,
+    ) {
         val releasedSessionId =
             synchronized(queueSessionLock) {
                 val lockedSessionId = radioSeedLockedSessionId
@@ -164,7 +167,7 @@ internal class AndroidQueueCoordinator(
                 }
             } ?: return
         onSave()
-        if (releasedSessionId != queueSessionId) return
+        if (!rearmAutoLoad || releasedSessionId != queueSessionId) return
         lastAutoLoadedSongId = null
         val currentIndex = player.currentMediaItemIndex.value
         val queue = player.songQueue.value

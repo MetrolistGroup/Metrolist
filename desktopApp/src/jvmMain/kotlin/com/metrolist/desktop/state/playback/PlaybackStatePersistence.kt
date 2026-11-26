@@ -56,6 +56,7 @@ internal data class PlaybackStateWrite(
     val finite: Boolean = false,
     val explicitRadioQueue: Boolean = false,
     val recommendationsLocked: Boolean = false,
+    val title: String? = null,
     val force: Boolean = false,
 )
 
@@ -158,6 +159,7 @@ internal class PlaybackStatePersistence(
         finite: Boolean = false,
         explicitRadioQueue: Boolean = false,
         recommendationsLocked: Boolean = false,
+        title: String? = null,
         force: Boolean = false,
     ) {
         if (!store.persistentQueue) {
@@ -173,7 +175,8 @@ internal class PlaybackStatePersistence(
             !state.queue.hasSameStructure(snapshot) ||
             state.finite != finite ||
             state.explicitRadioQueue != explicitRadioQueue ||
-            state.recommendationsLocked != recommendationsLocked
+            state.recommendationsLocked != recommendationsLocked ||
+            state.title != title
         ) {
             state =
                 PersistedPlaybackState(
@@ -184,6 +187,7 @@ internal class PlaybackStatePersistence(
                     finite,
                     explicitRadioQueue,
                     recommendationsLocked,
+                    title,
                 )
             store.persistentPlaybackState = json.encodeToString(PersistedPlaybackState.serializer(), state)
             lastState = state

@@ -138,10 +138,12 @@ internal class DesktopDeviceConnectSession(
         finite: Boolean,
         explicitRadioQueue: Boolean,
         recommendationsLocked: Boolean,
+        title: String?,
     ) {
         this.finite = finite
         this.explicitRadioQueue = explicitRadioQueue
         this.recommendationsLocked = recommendationsLocked
+        this.title = title
     }
 
     fun remove(

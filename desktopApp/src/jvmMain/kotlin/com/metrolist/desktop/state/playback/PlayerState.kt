@@ -523,6 +523,7 @@ object PlayerState {
                 finite = write.finite,
                 explicitRadioQueue = write.explicitRadioQueue,
                 recommendationsLocked = write.recommendationsLocked,
+                title = write.title,
                 force = write.force,
             )
         })
@@ -551,6 +552,7 @@ object PlayerState {
 
     @Volatile private var deviceRadioBootstrapRetryJob: Job? = null
     private var controllerPlayback: DcLocalPlaybackState? = null
+    private var controllerPlaybackProvisional = false
     private val deviceConnectPlayback =
         object : DeviceConnectPlaybackPort {
             override fun onExplicitRadioRequest() {
@@ -596,6 +598,7 @@ object PlayerState {
                 playback: DcLocalPlaybackState?,
                 provisional: Boolean,
             ) = withContext(Dispatchers.Main) {
+                controllerPlaybackProvisional = provisional && playback != null
                 if (playback != null) {
                     if (externalReportingEnabled) return@withContext
                     if (controllerPlayback == null) {
@@ -628,7 +631,7 @@ object PlayerState {
                 volumeState.value = volume
                 player.setControllerPlayback(playback)
                 if (playback != null) {
-                    persistPlaybackState()
+                    if (!provisional) persistPlaybackState()
                     scrobbleManager.setReportingEnabled(false, player.currentSong.value, playback.playing, playback.scrobbleSession)
                 }
             }
@@ -2234,7 +2237,7 @@ object PlayerState {
     }
 
     private fun persistPlaybackState(flushPodcast: Boolean = true) {
-        if (restoration.pending) return
+        if (restoration.pending || controllerPlaybackProvisional) return
         if (flushPodcast) flushPodcastProgress()
         playbackStateWrites.submit(
             PlaybackStateWrite(
@@ -2244,6 +2247,7 @@ object PlayerState {
                 finite = syncSession.finite,
                 explicitRadioQueue = syncSession.explicitRadioQueue,
                 recommendationsLocked = syncSession.recommendationsLocked,
+                title = syncSession.title,
             ),
         )
     }
@@ -2271,6 +2275,7 @@ object PlayerState {
                 finite = syncSession.finite,
                 explicitRadioQueue = syncSession.explicitRadioQueue,
                 recommendationsLocked = syncSession.recommendationsLocked,
+                title = syncSession.title,
                 force = true,
             ),
         )
@@ -2284,7 +2289,7 @@ object PlayerState {
         queue.restore(restoreQueue)
         shuffleEnabled = restoreQueue.isShuffled
         localRepeatMode = state.repeatMode
-        syncSession.setPersistedQueueFlags(state.finite, state.explicitRadioQueue, state.recommendationsLocked)
+        syncSession.setPersistedQueueFlags(state.finite, state.explicitRadioQueue, state.recommendationsLocked, state.title)
         radio.syncQueue()
         updateCurrentTrack(queue.currentItem(), startArtworkFetch = true)
 

@@ -15,4 +15,5 @@ data class PersistedPlaybackState(
     val finite: Boolean = false,
     val explicitRadioQueue: Boolean = false,
     val recommendationsLocked: Boolean = false,
+    val title: String? = null,
 )
