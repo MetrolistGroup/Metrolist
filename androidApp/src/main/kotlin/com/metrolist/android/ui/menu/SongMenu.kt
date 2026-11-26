@@ -34,6 +34,7 @@ import com.metrolist.shared.generated.resources.suggested_to_host
 import com.metrolist.shared.listentogether.ListenTogetherRoomRole
 import com.metrolist.shared.model.SongItem
 import com.metrolist.shared.model.editSongMetadata
+import com.metrolist.shared.model.isPodcast
 import com.metrolist.shared.model.resetSongMetadata
 import com.metrolist.shared.settings.BlockedContent
 import com.metrolist.shared.state.SongLikeState
@@ -145,7 +146,7 @@ fun SongMenu(
                         Toast.LENGTH_SHORT,
                     ).show()
             },
-            onStartRadio = onStartRadio,
+            onStartRadio = onStartRadio?.takeUnless { song.isPodcast || song.isLocal || song.id.startsWith("local_") },
             onAddToPlaylist = {
                 if (onAddToPlaylist != null) {
                     onAddToPlaylist()

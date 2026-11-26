@@ -620,6 +620,7 @@ fun SearchScreen(
             song = song,
             isLiked = SongLikeState.isLiked(song.id),
             onDismiss = { showSongMenu = null },
+            onStartRadio = playerConnection?.let { connection -> { connection.startRadio(song) } },
             onPlayNext = { playerConnection?.addToQueue(song, playNext = true) },
             onAddToQueue = { playerConnection?.addToQueue(song) },
             onLike = { SongLikeState.toggleLike(song) },
