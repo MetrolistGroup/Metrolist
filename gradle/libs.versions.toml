@@ -38,6 +38,7 @@ sqliteJdbc = "3.54.1.0"
 timber = "5.0.1"
 materialKolor = "6.0.0"
 kotlinxSerialization = "1.13.0"
+kaml = "0.104.0"
 kotlinxCoroutines = "1.11.0"
 kotlinxDatetime = "0.8.0"
 jna = "5.19.1"
@@ -135,6 +136,7 @@ ktor-serialization-json = { module = "io.ktor:ktor-serialization-kotlinx-json", 
 desugaring = { module = "com.android.tools:desugar_jdk_libs_nio", version.ref = "desugaring" }
 timber = { module = "com.jakewharton.timber:timber", version.ref = "timber" }
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinxSerialization" }
+kaml = { module = "com.charleskorn.kaml:kaml", version.ref = "kaml" }
 kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinxCoroutines" }
 kotlinx-datetime = { module = "org.jetbrains.kotlinx:kotlinx-datetime", version.ref = "kotlinxDatetime" }
 jna = { module = "net.java.dev.jna:jna", version.ref = "jna" }

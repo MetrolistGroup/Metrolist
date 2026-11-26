@@ -5,10 +5,13 @@
 
 package com.metrolist.shared.api.lyrics
 
+import com.charleskorn.kaml.Yaml
+import com.charleskorn.kaml.YamlConfiguration
 import com.metrolist.shared.api.musicvideo.MusicVideoMatcher
 import io.ktor.client.HttpClient
 import io.ktor.client.request.parameter
 import io.ktor.client.request.prepareGet
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import kotlin.math.abs
@@ -23,6 +26,8 @@ data class LrcLibResponse(
     val instrumental: Boolean,
     val plainLyrics: String? = null,
     val syncedLyrics: String? = null,
+    val hasWordSync: Boolean = false,
+    val lyricsfile: String? = null,
 )
 
 class LrcLibLyricsProvider(
@@ -52,6 +57,12 @@ class LrcLibLyricsProvider(
                 }
                 ?: return null
 
+        if (best.hasWordSync) {
+            best.lyricsfile
+                ?.let { runCatching { lyricsfileToMlx(it, title, artist, sourceId = best.id.toString()) }.getOrNull() }
+                ?.takeIf(MlxParser::isMlxFormat)
+                ?.let { return it }
+        }
         val synced = best.syncedLyrics?.takeIf { it.isNotBlank() }
         return if (synced != null) {
             lrcToMlx(synced, title, artist, source = "LrcLib", sourceId = best.id.toString())
@@ -104,6 +115,7 @@ class LrcLibLyricsProvider(
                     normAlbum.isNotEmpty() &&
                         MusicVideoMatcher.normalizeTitle(candidate.albumName.orEmpty()) == normAlbum
                 }.thenBy { candidate -> knownDuration?.let { abs(candidate.duration * 1000 - it) } ?: 0f }
+                    .thenByDescending { it.hasWordSync }
                     .thenByDescending { !it.syncedLyrics.isNullOrBlank() },
             ).firstOrNull()
     }
@@ -158,4 +170,96 @@ class LrcLibLyricsProvider(
         val BRACKETED_FEAT_REGEX = Regex("""[\(\[](?:feat\.?|ft\.?|featuring|with)\b[^\)\]]*[\)\]]""", RegexOption.IGNORE_CASE)
         val TRAILING_FEAT_REGEX = Regex("""\s+\b(?:feat\.?|ft\.?|featuring)\b.*$""", RegexOption.IGNORE_CASE)
     }
+}
+
+@Serializable
+private data class Lyricsfile(
+    val version: String? = null,
+    val metadata: LyricsfileMetadata? = null,
+    val lines: List<LyricsfileLine>? = null,
+)
+
+@Serializable
+private data class LyricsfileMetadata(
+    val instrumental: Boolean = false,
+)
+
+@Serializable
+private data class LyricsfileLine(
+    val text: String? = null,
+    @SerialName("start_ms") val startMs: Long? = null,
+    @SerialName("end_ms") val endMs: Long? = null,
+    val words: List<LyricsfileWord>? = null,
+)
+
+@Serializable
+private data class LyricsfileWord(
+    val text: String? = null,
+    @SerialName("start_ms") val startMs: Long? = null,
+    @SerialName("end_ms") val endMs: Long? = null,
+)
+
+private val lyricsfileYaml = Yaml(configuration = YamlConfiguration(strictMode = false))
+
+/** Converts LRCLIB's YAML Lyricsfile; words without `end_ms` end where the next word or the line ends. */
+internal fun lyricsfileToMlx(
+    lyricsfile: String,
+    title: String?,
+    artist: String?,
+    sourceId: String? = null,
+): String? {
+    val document = lyricsfileYaml.decodeFromString(Lyricsfile.serializer(), lyricsfile)
+    // The draft spec forbids reading unknown versions as 1.0; returning null lets the caller use legacy LRC.
+    if (document.version != "1.0" || document.metadata?.instrumental == true) return null
+    val lines =
+        document.lines
+            .orEmpty()
+            .filter { it.startMs != null }
+            .sortedBy { it.startMs }
+    val builder = MlxBuilder().meta("LrcLib", sourceId = sourceId).song(title = title, artist = artist)
+    var hasLyrics = false
+    lines.forEach { line ->
+        val start = line.startMs ?: return@forEach
+        // The spec allows overlapping lines, so a missing end comes from this line's words, never the next line.
+        val lineEnd = line.endMs?.takeIf { it >= start }
+        val timedWords = line.words.orEmpty().filter { !it.text.isNullOrEmpty() && it.startMs != null }
+        val words = mutableListOf<MlxWord>()
+        timedWords.forEachIndexed { wordIndex, word ->
+            val raw = word.text!!
+            // Spacing may be its own segment or sit before a word; MLX carries it as the previous word's trailing space.
+            if (raw.first().isWhitespace() && words.isNotEmpty()) words[words.lastIndex] = words.last().copy(hasTrailingSpace = true)
+            if (raw.isBlank()) return@forEachIndexed
+            val wordStart = word.startMs!!
+            val end =
+                word.endMs?.takeIf { it >= wordStart }
+                    ?: timedWords.getOrNull(wordIndex + 1)?.startMs?.takeIf { it > wordStart }
+                    ?: lineEnd?.takeIf { it > wordStart }
+                    ?: (wordStart + 500L)
+            words += MlxWord(raw.trim(), wordStart, end, hasTrailingSpace = raw.last().isWhitespace())
+        }
+        val text = line.text?.trim().orEmpty()
+        when {
+            words.isNotEmpty() -> {
+                builder.line(
+                    minOf(start, words.minOf { it.startMs }),
+                    maxOf(lineEnd ?: 0L, words.maxOf { it.endMs }),
+                    words = words,
+                )
+            }
+
+            text.isEmpty() -> {
+                return@forEach
+            }
+
+            lineEnd != null -> {
+                builder.line(start, lineEnd, text)
+            }
+
+            else -> {
+                builder.line(start, text)
+            }
+        }
+        hasLyrics = true
+    }
+    return if (hasLyrics) builder.build() else null
 }
