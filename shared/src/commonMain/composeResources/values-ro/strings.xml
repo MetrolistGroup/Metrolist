@@ -535,7 +535,7 @@
     <string name="minimum_song_duration">Durata minimă a melodiilor</string>
     <string name="minimum_song_duration_desc">Ascunde melodiile mai scurte de %1$d (de) secunde</string>
     <string name="block_ai_slop_artists">Blochează artiștii generați de AI cunoscuți</string>
-    <string name="block_ai_slop_artists_desc">Ascunde canalele incluse în lista Override92/AiSList. Lista, publicată sub licența CC BY-NC 4.0, se actualizează zilnic și este disponibilă și offline.</string>
+    <string name="block_ai_slop_artists_desc">Ascunde canalele incluse în lista Override92/AiSList. Lista, publicată sub licența CC BY-NC 4.0, se actualizează zilnic și rămâne disponibilă și offline.</string>
     <string name="listen_together_entry_subtitle">Ascultă muzică cu prietenii în timp real.</string>
     <string name="listen_together_create_room_title">Creează o cameră</string>
     <string name="listen_together_username_required">Numele de utilizator este necesar</string>
