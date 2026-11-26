@@ -131,9 +131,11 @@ private suspend fun MusicDatabase.cacheRemotePlaylistSnapshot(
     }
     // Local copies of songs whose queued adds YouTube has not confirmed yet stay listed until it does. Their rows have no
     // item ID yet and are set aside before the fallback below, so an older remote copy of the song cannot take one over.
+    // A playlist not stored yet has no queued rows a stale snapshot could drop, so only a stored one checks the revision.
+    val remoteCounts = songs.groupingBy { it.id }.eachCount()
     val unconfirmed =
         PendingPlaylistAdds
-            .unconfirmedCopies(existing?.id ?: requestedId, songs.groupingBy { it.id }.eachCount(), queueRevision)
+            .unconfirmedCopies(existing?.id ?: requestedId, remoteCounts, queueRevision.takeIf { existing != null })
             ?.toMutableMap() ?: return false
     val pendingMappings = mutableListOf<PlaylistSongMap>()
     for (mapping in existingMappings) {
