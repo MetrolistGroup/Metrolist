@@ -55,6 +55,7 @@ internal class IosMusicVideoSurfacePlayer(
     private var latestTargetPositionMs = 0L
     private var latestTargetUpdatedAt: TimeMark? = null
     private var userSeekPending = false
+    private var forceSeekPending = false
     val positionSynchronized: Boolean
         get() = seekLifecycle.positionSynchronized
     private val foreground: Boolean
@@ -175,29 +176,33 @@ internal class IosMusicVideoSurfacePlayer(
     internal fun synchronizePastVideoEnd(
         playing: Boolean,
         playbackSpeed: Float,
-    ): Long? {
-        if (closed) return null
+    ) {
+        if (closed) return
         expectingProgress = false
         watchdog.reset()
         if (!playing) {
             pauseForApplication()
-            return null
+            return
         }
-        val durationSeconds = player.currentItem?.let { CMTimeGetSeconds(it.duration) } ?: return null
-        if (!durationSeconds.isFinite() || durationSeconds <= 0.0) return null
+        val durationSeconds = player.currentItem?.let { CMTimeGetSeconds(it.duration) } ?: return
+        if (!durationSeconds.isFinite() || durationSeconds <= 0.0) return
         val holdPositionMs = (durationSeconds * 1000.0 - OUTRO_TRANSPORT_MARGIN_MS).toLong().coerceAtLeast(0L)
         val positionMs = (CMTimeGetSeconds(player.currentTime()) * 1000.0).toLong().coerceAtLeast(0L)
         if (positionMs >= holdPositionMs && !pastEndSeekPending) {
-            pastEndSeekPending = true
             clearAutomaticStop()
-            val target = CMTimeMakeWithSeconds(holdPositionMs / 1000.0, 600)
-            val zero = CMTimeMakeWithSeconds(0.0, 600)
-            player.seekToTime(target, toleranceBefore = zero, toleranceAfter = zero) { _ ->
-                pastEndSeekPending = false
-            }
+            cancelPendingSeek()
+            latestTargetPositionMs = holdPositionMs
+            latestTargetUpdatedAt = TimeSource.Monotonic.markNow()
+            userSeekPending = false
+            forceSeekPending = true
+            pastEndSeekPending = true
+            seekCooldownStartedAt = null
+            driftRetryPolicy.reset()
+            driftRecoveryFailed = false
+            seekLifecycle.markUnsynchronized()
+            applyPendingSeek()
         }
         if (player.rate != playbackSpeed) setRateForApplication(playbackSpeed)
-        return holdPositionMs
     }
 
     fun setForeground(isForeground: Boolean) {
@@ -244,16 +249,19 @@ internal class IosMusicVideoSurfacePlayer(
         val currentMs = (CMTimeGetSeconds(player.currentTime()) * 1000.0).toLong()
         val targetPositionMs = latestTargetPositionMs
         val driftToleranceMs = if (sinceLastSeekMs == null) SEEK_DRIFT_TOLERANCE_MS else SEEK_POST_SEEK_DRIFT_TOLERANCE_MS
-        if (abs(currentMs - targetPositionMs) <= driftToleranceMs) {
+        val forceSeek = forceSeekPending
+        if (abs(currentMs - targetPositionMs) <= driftToleranceMs && !forceSeek) {
             userSeekPending = false
             seekLifecycle.markSynchronized()
             return
         }
-        if (!driftRetryPolicy.shouldRetry(userSeekPending)) {
+        if (!driftRetryPolicy.shouldRetry(userSeekPending || forceSeek)) {
+            forceSeekPending = false
             driftRecoveryFailed = true
             return
         }
         userSeekPending = false
+        forceSeekPending = false
         val currentSeekGeneration = seekLifecycle.beginSeek() ?: return
         val target = CMTimeMakeWithSeconds(targetPositionMs / 1000.0, 600)
         val zero = CMTimeMakeWithSeconds(0.0, 600)
@@ -261,6 +269,7 @@ internal class IosMusicVideoSurfacePlayer(
         didEnd = false
         player.seekToTime(target, toleranceBefore = zero, toleranceAfter = zero) { finished ->
             if (!seekLifecycle.isCurrentSeek(currentSeekGeneration)) return@seekToTime
+            pastEndSeekPending = false
             val seekDurationMs = seekStartedAt.elapsedNow().inWholeMilliseconds
             val currentPositionMs = (CMTimeGetSeconds(player.currentTime()) * 1000.0).toLong()
             val stillAligned = abs(currentPositionMs - latestTargetPositionMs) <= SEEK_POST_SEEK_DRIFT_TOLERANCE_MS
@@ -386,5 +395,7 @@ internal class IosMusicVideoSurfacePlayer(
     private fun cancelPendingSeek() {
         seekLifecycle.cancelSeek()
         player.currentItem?.cancelPendingSeeks()
+        forceSeekPending = false
+        pastEndSeekPending = false
     }
 }

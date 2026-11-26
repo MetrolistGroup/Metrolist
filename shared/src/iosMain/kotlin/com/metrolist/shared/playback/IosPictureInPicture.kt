@@ -174,12 +174,12 @@ private object IosPictureInPictureBridge : NSObject(), AVPictureInPictureControl
                         }
                         val positionMap = state.videoPositionMap
                         val positionMapped = positionMap?.containsSourcePosition(state.positionMs) ?: true
-                        val playing = state.isPlaying && !state.isLoading && state.isVideoModeActive
+                        val playing = state.isPlaying && state.isVideoModeActive
                         if (positionMap?.isPastLastSegment(state.positionMs) == true) {
                             // The mapped video is at EOF and AVKit would only offer replay. Hold its
                             // transport just before the end so Pause still reaches the audible outro.
-                            val transportPositionMs = surfacePlayer.synchronizePastVideoEnd(playing, state.playbackSpeed)
-                            if (transportPositionMs != null) lastSurfacePositionMs = transportPositionMs
+                            surfacePlayer.synchronizePastVideoEnd(playing, state.playbackSpeed)
+                            lastSurfacePositionMs = surfacePositionMs
                             return@collect
                         }
                         // An unmapped audio-side gap has no video target; let the retained player free-run
@@ -195,6 +195,7 @@ private object IosPictureInPictureBridge : NSObject(), AVPictureInPictureControl
                             playing,
                             state.playbackSpeed,
                             surfaceVisible = true,
+                            shouldExpectProgress = playing && !state.isLoading && positionMapped,
                         )
                     }
                 }
@@ -232,7 +233,6 @@ private object IosPictureInPictureBridge : NSObject(), AVPictureInPictureControl
         if (!surfacePlayer.pictureInPictureActive.value || forwardingPlayPause) return
         if (ignoredRate == surfacePlayer.player.rate) return
         val snapshot = playbackController.state.value
-        if (snapshot.isLoading) return
         val surfacePlaying = surfacePlayer.player.rate != 0f
         if (!surfacePlaying && surfacePlayer.stoppedAutomatically) return
         if (surfacePlaying) surfacePlayer.clearAutomaticStop()
