@@ -173,6 +173,7 @@ class LrcLibLyricsProvider(
 
 @Serializable
 private data class Lyricsfile(
+    val version: String? = null,
     val metadata: LyricsfileMetadata? = null,
     val lines: List<LyricsfileLine>? = null,
 )
@@ -207,7 +208,8 @@ internal fun lyricsfileToMlx(
     sourceId: String? = null,
 ): String? {
     val document = lyricsfileYaml.decodeFromString(Lyricsfile.serializer(), lyricsfile)
-    if (document.metadata?.instrumental == true) return null
+    // The draft spec forbids reading unknown versions as 1.0; returning null lets the caller use legacy LRC.
+    if (document.version != "1.0" || document.metadata?.instrumental == true) return null
     val lines =
         document.lines
             .orEmpty()
@@ -218,24 +220,42 @@ internal fun lyricsfileToMlx(
     lines.forEachIndexed { index, line ->
         val start = line.startMs ?: return@forEachIndexed
         val lineEnd = line.endMs?.takeIf { it >= start } ?: lines.getOrNull(index + 1)?.startMs?.takeIf { it > start }
-        val timedWords = line.words.orEmpty().filter { !it.text.isNullOrBlank() && it.startMs != null }
-        val words =
-            timedWords.mapIndexed { wordIndex, word ->
-                val wordStart = word.startMs!!
-                val end =
-                    word.endMs?.takeIf { it >= wordStart }
-                        ?: timedWords.getOrNull(wordIndex + 1)?.startMs?.takeIf { it > wordStart }
-                        ?: lineEnd?.takeIf { it > wordStart }
-                        ?: (wordStart + 500L)
-                val text = word.text!!
-                MlxWord(text.trimEnd(), wordStart, end, hasTrailingSpace = text.last().isWhitespace())
-            }
+        val timedWords = line.words.orEmpty().filter { !it.text.isNullOrEmpty() && it.startMs != null }
+        val words = mutableListOf<MlxWord>()
+        timedWords.forEachIndexed { wordIndex, word ->
+            val raw = word.text!!
+            // Spacing may be its own segment or sit before a word; MLX carries it as the previous word's trailing space.
+            if (raw.first().isWhitespace() && words.isNotEmpty()) words[words.lastIndex] = words.last().copy(hasTrailingSpace = true)
+            if (raw.isBlank()) return@forEachIndexed
+            val wordStart = word.startMs!!
+            val end =
+                word.endMs?.takeIf { it >= wordStart }
+                    ?: timedWords.getOrNull(wordIndex + 1)?.startMs?.takeIf { it > wordStart }
+                    ?: lineEnd?.takeIf { it > wordStart }
+                    ?: (wordStart + 500L)
+            words += MlxWord(raw.trim(), wordStart, end, hasTrailingSpace = raw.last().isWhitespace())
+        }
         val text = line.text?.trim().orEmpty()
         when {
-            words.isNotEmpty() -> builder.line(minOf(start, words.first().startMs), maxOf(lineEnd ?: 0L, words.last().endMs), words = words)
-            text.isEmpty() -> return@forEachIndexed
-            lineEnd != null -> builder.line(start, lineEnd, text)
-            else -> builder.line(start, text)
+            words.isNotEmpty() -> {
+                builder.line(
+                    minOf(start, words.minOf { it.startMs }),
+                    maxOf(lineEnd ?: 0L, words.maxOf { it.endMs }),
+                    words = words,
+                )
+            }
+
+            text.isEmpty() -> {
+                return@forEachIndexed
+            }
+
+            lineEnd != null -> {
+                builder.line(start, lineEnd, text)
+            }
+
+            else -> {
+                builder.line(start, text)
+            }
         }
         hasLyrics = true
     }

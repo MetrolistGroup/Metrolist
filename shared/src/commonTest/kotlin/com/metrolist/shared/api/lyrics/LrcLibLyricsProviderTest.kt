@@ -118,6 +118,16 @@ class LrcLibLyricsProviderTest {
                 - text: Line only
                   start_ms: 29000
                   end_ms: 30000
+                - text: Hello world
+                  start_ms: 31000
+                  words:
+                  - text: Hello
+                    start_ms: 31000
+                  - text: ' '
+                    start_ms: 31400
+                  - text: world
+                    start_ms: 31500
+                    end_ms: 32000
                 """.trimIndent()
             val body =
                 buildJsonArray {
@@ -137,7 +147,7 @@ class LrcLibLyricsProviderTest {
                 val lyrics = assertNotNull(LrcLibLyricsProvider(client).getLyrics("Blinding Lights", "The Weeknd", 200_000))
                 val document = MlxParser.parse(lyrics)
                 assertEquals("8277104", document.meta.sourceId)
-                val (wordLine, plainLine) = document.lines
+                val (wordLine, plainLine, segmentLine) = document.lines
                 assertEquals(27_100L, wordLine.time)
                 assertEquals(28_198L, wordLine.endTime)
                 assertEquals(
@@ -152,6 +162,9 @@ class LrcLibLyricsProviderTest {
                 assertEquals(listOf(true, true, true, false), wordLine.words.orEmpty().map { it.hasTrailingSpace })
                 assertEquals("Line only", plainLine.text)
                 assertEquals(29_000L, plainLine.time)
+                assertEquals("Hello world", segmentLine.text)
+                assertEquals(listOf(true, false), segmentLine.words.orEmpty().map { it.hasTrailingSpace })
+                assertNull(lyricsfileToMlx(lyricsfile.replace("version: '1.0'", "version: '2.0'"), "Blinding Lights", "The Weeknd"))
             } finally {
                 client.close()
             }
