@@ -27,6 +27,7 @@ import com.metrolist.shared.db.entities.toPlaylistItem
 import com.metrolist.shared.db.entities.toSongItem
 import com.metrolist.shared.db.hasCompleteStoredSongs
 import com.metrolist.shared.db.refreshHistoryPlaylist
+import com.metrolist.shared.db.syncRemotePlaylists
 import com.metrolist.shared.generated.resources.Res
 import com.metrolist.shared.generated.resources.added_song
 import com.metrolist.shared.generated.resources.could_not_finish_adding_song
@@ -45,12 +46,14 @@ import com.metrolist.shared.model.PlaylistPresentation
 import com.metrolist.shared.model.PlaylistPresentationOptions
 import com.metrolist.shared.model.PlaylistSongSort
 import com.metrolist.shared.model.SongItem
+import com.metrolist.shared.model.canEdit
 import com.metrolist.shared.model.isSyncablePlaylistId
 import com.metrolist.shared.model.moveSelection
 import com.metrolist.shared.model.preparePlaylistPresentation
 import com.metrolist.shared.model.preservePlaylistOccurrenceMappings
 import com.metrolist.shared.model.selectionReorderMoves
 import com.metrolist.shared.model.withNavigationThumbnail
+import com.metrolist.shared.playlist.PendingPlaylistAdds
 import com.metrolist.shared.playlist.PlaylistChanges
 import com.metrolist.shared.playlist.PlaylistPartiallyUpdatedException
 import com.metrolist.shared.playlist.deleteStoredPlaylist
@@ -102,6 +105,9 @@ class PlaylistViewModel(
     val playlistId: State<String?> = _playlistId
 
     private val _playlistInfo = mutableStateOf<PlaylistItem?>(null)
+
+    // The queue revision from before the first page of the loaded playlist, which storing its snapshot passes along.
+    private var pageQueueRevision: Long? = null
     val playlistInfo: State<PlaylistItem?> = _playlistInfo
 
     private val _songs = mutableStateOf<List<SongItem>>(emptyList())
@@ -310,6 +316,7 @@ class PlaylistViewModel(
                             _isLoading.value = true
                         }
 
+                        pageQueueRevision = PendingPlaylistAdds.queueRevision()
                         val page =
                             withContext(Dispatchers.IO) {
                                 val repository = repositoryProvider()
@@ -636,7 +643,13 @@ class PlaylistViewModel(
                             publishLoadedSongs(liked) { _playlistTrackCount.intValue = liked.size }
                         }
                     } else {
-                        val playlist = localPlaylistFor(playlistId)
+                        // An editable playlist shown from YouTube is stored first, so the add goes through the queue as well.
+                        val playlist =
+                            localPlaylistFor(playlistId)
+                                ?: _playlistInfo.value?.takeIf { it.canEdit && !it.isLocal }?.let { info ->
+                                    database.syncRemotePlaylists(listOf(info))
+                                    localPlaylistFor(playlistId)
+                                }
                         val remoteId = playlist?.playlist?.browseId ?: playlistId.takeUnless { it.startsWith("LP") }
                         if (playlist != null) {
                             val result = addSongToPlaylist(database, playlist, song, allowDuplicate)
@@ -649,8 +662,8 @@ class PlaylistViewModel(
                                 return@withLock
                             }
                             if (_playlistId.value == playlistId) loadLocalPlaylist(playlistId, preferBrowseId = true)
-                        } else if (remoteId != null) {
-                            repositoryProvider().addToPlaylist(remoteId, song.id, allowDuplicate = allowDuplicate).getOrThrow()
+                        } else {
+                            error("Playlist is unavailable")
                         }
                         if (remoteId != null && _playlistId.value == playlistId) loadPlaylist(remoteId, forceRefresh = true)
                     }
@@ -1042,7 +1055,9 @@ class PlaylistViewModel(
         playlistInfo: PlaylistItem?,
         songs: List<SongItem>,
     ) {
-        if (playlistInfo != null) withContext(Dispatchers.IO) { database.cacheRemotePlaylist(requestedId, playlistInfo, songs) }
+        if (playlistInfo != null) {
+            withContext(Dispatchers.IO) { database.cacheRemotePlaylist(requestedId, playlistInfo, songs, pageQueueRevision) }
+        }
     }
 }
 

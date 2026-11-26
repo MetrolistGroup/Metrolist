@@ -174,7 +174,7 @@ object PendingPlaylistAdds {
     }
 
     // Changes whenever an add leaves the queue. Read it before fetching a playlist snapshot and pass it to unconfirmedCopies.
-    internal fun queueRevision(): Long = departures.value
+    fun queueRevision(): Long = departures.value
 
     // Copies of each song the local playlist keeps beyond those YouTube lists until their queued adds are confirmed. Returns
     // null when an add left the queue since [fetchedAtRevision], because a snapshot fetched before then may lack its copy.
@@ -189,11 +189,6 @@ object PendingPlaylistAdds {
                 entry.playlistId == playlistId && (entry.expectedCount?.let { copies < it } ?: (entry.allowDuplicate || copies == 0))
             }?.groupingBy { it.songId }
             ?.eachCount()
-
-    fun clear() {
-        synchronized(lock) { write(emptyList()) }
-        YouTubeSyncState.succeeded(SYNC_OPERATION)
-    }
 
     private suspend fun syncWhileQueued(database: MusicDatabase) =
         coroutineScope {
