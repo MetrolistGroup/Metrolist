@@ -4116,6 +4116,7 @@ object PlayerState {
     private fun startPendingExplicitRadioBootstrap(
         seed: SongItem,
         expectedSessionId: String?,
+        armRetry: Boolean = true,
     ) {
         val generation = playbackTransitionGeneration
         if (
@@ -4125,11 +4126,12 @@ object PlayerState {
         ) {
             return
         }
+        deviceRadioBootstrapRetryJob = null
         deviceRadioBootstrapJob?.cancel()
         deviceRadioBootstrapGeneration = generation
         deviceRadioBootstrapSessionId = expectedSessionId
         val requestGeneration = explicitRadioRequestGeneration
-        deviceRadioBootstrapJob =
+        val job =
             scope.launch {
                 try {
                     val songs = freshRadioRecommendations(seed.id, generation)
@@ -4153,35 +4155,41 @@ object PlayerState {
                     Logger.w("PlayerState", "Failed to start remote radio (${error::class.simpleName})")
                 }
             }
+        deviceRadioBootstrapJob = job
+        if (armRetry) armDeviceRadioBootstrapRetry(job)
     }
 
-    private fun rearmPendingExplicitRadioBootstrap() {
+    private fun rearmPendingExplicitRadioBootstrap(armRetry: Boolean = true) {
         if (!deviceRadioBootstrapPending || !syncSession.explicitRadioQueue || deviceConnect.isFollowing) return
+        val seed =
+            queue.items.value
+                .singleOrNull()
+                ?.takeIf { it.id == currentTrack?.id } ?: return
         val activeJob = deviceRadioBootstrapJob
         if (
             activeJob?.isActive == true &&
             deviceRadioBootstrapGeneration == playbackTransitionGeneration &&
             deviceRadioBootstrapSessionId == syncSession.sessionId
         ) {
-            if (deviceRadioBootstrapRetryJob === activeJob) return
-            deviceRadioBootstrapRetryJob = activeJob
-            activeJob.invokeOnCompletion { cause ->
-                if (deviceRadioBootstrapRetryJob !== activeJob) return@invokeOnCompletion
-                deviceRadioBootstrapRetryJob = null
-                if (cause is CancellationException) return@invokeOnCompletion
-                scope.launch {
-                    if (PlaybackNetworkStateStore.current.connected && !castManager.state.value.isConnected) {
-                        rearmPendingExplicitRadioBootstrap()
-                    }
-                }
-            }
+            if (armRetry) armDeviceRadioBootstrapRetry(activeJob)
             return
         }
-        val seed =
-            queue.items.value
-                .singleOrNull()
-                ?.takeIf { it.id == currentTrack?.id } ?: return
-        startPendingExplicitRadioBootstrap(seed, syncSession.sessionId)
+        startPendingExplicitRadioBootstrap(seed, syncSession.sessionId, armRetry)
+    }
+
+    private fun armDeviceRadioBootstrapRetry(job: Job) {
+        if (deviceRadioBootstrapRetryJob === job) return
+        deviceRadioBootstrapRetryJob = job
+        job.invokeOnCompletion { cause ->
+            if (deviceRadioBootstrapRetryJob !== job) return@invokeOnCompletion
+            deviceRadioBootstrapRetryJob = null
+            if (cause is CancellationException) return@invokeOnCompletion
+            scope.launch {
+                if (PlaybackNetworkStateStore.current.connected && !castManager.state.value.isConnected) {
+                    rearmPendingExplicitRadioBootstrap(armRetry = false)
+                }
+            }
+        }
     }
 
     fun playFromId(videoId: String) {
