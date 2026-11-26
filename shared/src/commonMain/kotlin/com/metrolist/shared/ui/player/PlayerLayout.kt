@@ -838,11 +838,7 @@ private fun LandscapePlayerCastButton(
 private val LandscapeRightPaneStartGap = 24.dp
 private val LandscapeRightPaneEndGap = 32.dp
 
-/**
- * Horizontal strips on both sides of the landscape artwork that the swipe covers slide under.
- * Must stay at or below the swipe pane spacing (32.dp in PlayerScreen.kt) so a settled cover is
- * fully hidden behind the strip, and it is capped by the free space next to the artwork.
- */
+/** Hides neighboring landscape artwork; keep padding below the 32.dp pane gap. */
 private val LandscapeArtworkSwipeEdgePadding = 24.dp
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
@@ -1207,10 +1203,7 @@ internal fun LandscapePlayerContent(
                 Column(modifier = Modifier.fillMaxSize()) {
                     BoxWithConstraints(Modifier.fillMaxWidth().weight(1f)) {
                         val artworkSize = if (isTv) tvArtworkSize else minOf(maxHeight, maxWidth)
-                        // Hide the swipe inside the artwork's lane: the covers slide under padded
-                        // strips beside the artwork instead of travelling across the whole screen.
-                        // Capped by the free space beside the artwork so the swipe box never grows
-                        // past this pane, and disabled for fullscreen/canvas artwork.
+                        // Limit swipes to the artwork lane in landscape.
                         val artworkSwipeEdgePadding =
                             if (usesFullscreenThumbnail || usesCanvasThumbnail) {
                                 0.dp

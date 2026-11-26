@@ -262,33 +262,10 @@ import kotlin.time.TimeSource
 private const val ARTWORK_TRACK_CHANGE_TIMEOUT_MS = 600L
 private const val ARTWORK_SETTLE_HOLD_MS = 450L
 
-/**
- * Edge-to-edge gap between covers while swiping, sized to feel like the major music apps
- * (Apple Music, Spotify) instead of having the covers touch.
- */
+/** Gap between adjacent artwork panes during a swipe. */
 private val ARTWORK_SWIPE_PANE_SPACING = 32.dp
 
-/**
- * Swipe-to-change-track container matching the legacy thumbnail carousel: while dragging, the
- * previous/next track artwork slides into view and the current artwork follows the finger, so a
- * right swipe settles the artwork towards the right and a left swipe towards the left. Pane order
- * follows the layout direction like the legacy LazyHorizontalGrid, so in RTL the previous track
- * sits on the right and the next track on the left. Covers keep sliding through the side margins
- * and only disappear under the screen edges, and adjacent covers are spaced apart by
- * [ARTWORK_SWIPE_PANE_SPACING]. Adjacent panes render only while a swipe is active so nothing
- * peeks into the margins at rest.
- *
- * When [swipeEdgePadding] is greater than zero (the landscape two-pane player), the box is
- * expected to be wider than the artwork by exactly that padding on each side: the covers slide
- * only inside the artwork's lane, the box clips to its bounds, and the padded strips on both
- * sides of the artwork hide covers entering or leaving, so nothing crosses into the other pane.
- * With zero padding the covers slide edge-to-edge through the side margins as before.
- *
- * Fast consecutive swipes are a first-class case: starting a new drag cancels any settle still
- * holding the previous cover centred on top, so that cover never stays fixed while the new drag
- * moves the covers behind it, and the gesture detector keeps running across track changes so a
- * follow-up swipe is never cancelled by the previous track landing.
- */
+/** Shows neighboring artwork during swipes, respecting RTL and optional landscape padding. */
 @Composable
 internal fun ArtworkSwipeBox(
     enabled: Boolean,
@@ -310,15 +287,14 @@ internal fun ArtworkSwipeBox(
     val onSettleFromLeft by rememberUpdatedState(if (isRtl) onNext else onPrevious)
     val onSettleFromRight by rememberUpdatedState(if (isRtl) onPrevious else onNext)
     val currentTrackKey by rememberUpdatedState(trackKey)
-    // Read through rememberUpdatedState so the gesture detector below does not have to restart
-    // when the track changes; restarting it cancelled any fast follow-up swipe already in flight.
+    // Keep gesture callbacks current across track changes.
     val currentLeftPaneUrl by rememberUpdatedState(leftPaneUrl)
     val currentRightPaneUrl by rememberUpdatedState(rightPaneUrl)
 
     var containerWidthPx by remember { mutableFloatStateOf(0f) }
     val paneSpacingPx = with(LocalDensity.current) { ARTWORK_SWIPE_PANE_SPACING.toPx() }
     val edgePaddingPx = with(LocalDensity.current) { swipeEdgePadding.toPx() }
-    // Lane the covers travel in: the artwork width, i.e. the box minus the padded hiding strips.
+    // Width of the artwork's travel lane.
     val paneWidthPx = (containerWidthPx - 2 * edgePaddingPx).coerceAtLeast(0f)
     val offset = remember { Animatable(0f) }
     val scope = rememberCoroutineScope()
@@ -327,21 +303,13 @@ internal fun ArtworkSwipeBox(
     val returnSpec =
         remember { spring<Float>(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMedium) }
 
-    // Artwork URLs captured at release. While a settle is running the panes keep showing these,
-    // so the queue changing under them never swaps the image mid-animation.
+    // Freeze neighboring artwork URLs until the track-change animation completes.
     var frozenLeftUrl by remember { mutableStateOf<String?>(null) }
     var frozenRightUrl by remember { mutableStateOf<String?>(null) }
     var freezePanes by remember { mutableStateOf(false) }
-    // Settled artwork kept centred on top of the content until the new current artwork has had
-    // time to load, so the previous song's cover never flashes between the swipe and the new cover.
-    // Which side's pane is currently held centred on top of the content (-1 left, 1 right, 0 none).
-    // The very same pane node is kept alive and just moved to the centre, so its already loaded
-    // image is never torn down and re-created (which used to blank the cover for a moment).
+    // Hold settled artwork until replacement loads (-1 = left, 1 = right, 0 = none).
     var holdSide by remember { mutableStateOf(0) }
-    // The running settle coroutine and its generation. Starting a new drag cancels the job and
-    // bumps the generation, so a settle interrupted mid-hold never leaves its cover frozen on
-    // top of the content (which is what made fast swipes show a static cover with the dragged
-    // covers sliding behind it) and never resets state owned by a newer settle.
+    // Cancel obsolete settles so older swipes cannot reset newer state.
     var settleJob by remember { mutableStateOf<Job?>(null) }
     var settleGeneration by remember { mutableIntStateOf(0) }
     val shownLeftUrl = if (freezePanes) frozenLeftUrl else leftPaneUrl
@@ -357,11 +325,7 @@ internal fun ArtworkSwipeBox(
                     if (!enabled) return@pointerInput
                     detectHorizontalDragGestures(
                         onDragStart = {
-                            // A new swipe takes over immediately: cancel any settle still holding
-                            // a cover centred on top, so the old cover never stays fixed while the
-                            // new drag moves the covers behind it. The panes unfreeze here while
-                            // they are still offscreen at the rest position, so their images never
-                            // swap visibly mid-drag.
+                            // Cancel any previous settle before moving the artwork.
                             settleGeneration += 1
                             settleJob?.cancel()
                             settleJob = null
@@ -371,7 +335,7 @@ internal fun ArtworkSwipeBox(
                         onHorizontalDrag = { change, dragAmount ->
                             change.consume()
                             val travel = (size.width.toFloat() - 2 * edgePaddingPx).coerceAtLeast(0f) + paneSpacingPx
-                            // Block dragging towards a side that has no adjacent track.
+                            // Disable swipes when no adjacent track exists.
                             val minOffset = if (currentRightPaneUrl != null) -travel else 0f
                             val maxOffset = if (currentLeftPaneUrl != null) travel else 0f
                             scope.launch {
@@ -395,7 +359,7 @@ internal fun ArtworkSwipeBox(
                                                 freezePanes = true
                                                 offset.animateTo(paneWidth + paneSpacingPx, settleSpec)
                                                 onSettleFromLeft()
-                                                // If the track never changed (queue boundary), return to centre.
+                                                // Return to center if the track does not change.
                                                 val changed =
                                                     withTimeoutOrNull(ARTWORK_TRACK_CHANGE_TIMEOUT_MS) {
                                                         snapshotFlow { currentTrackKey }.first { it != keyAtRelease }
@@ -429,9 +393,7 @@ internal fun ArtworkSwipeBox(
                                             else -> offset.animateTo(0f, returnSpec)
                                         }
                                     } finally {
-                                        // Only the latest settle may clear the hold/freeze state;
-                                        // a settle cancelled by a newer drag leaves that state to
-                                        // the drag that took over.
+                                        // Only the active settle may clear held artwork state.
                                         if (settleGeneration == generation) {
                                             holdSide = 0
                                             freezePanes = false
@@ -445,11 +407,7 @@ internal fun ArtworkSwipeBox(
                     )
                 },
     ) {
-        // Adjacent track artwork revealed by the drag, like the legacy carousel. Rendered only
-        // while a swipe is active so the covers stay put at rest, and unclipped so they slide
-        // through the side margins and out under the screen edges.
-        // Panes stay composed (invisible at rest) so their images are already loaded when a swipe
-        // starts and nothing fades in or pops during the drag.
+        // Keep neighboring images loaded so they appear immediately during a swipe.
         if (enabled) {
             shownLeftUrl?.let { url ->
                 Box(
