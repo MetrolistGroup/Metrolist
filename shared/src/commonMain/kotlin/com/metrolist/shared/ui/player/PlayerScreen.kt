@@ -221,6 +221,8 @@ import com.metrolist.shared.ui.components.VintagePlayerControls
 import com.metrolist.shared.ui.components.adjacentArtworkUrls
 import com.metrolist.shared.ui.components.focusOutline
 import com.metrolist.shared.ui.components.formatSleepTimerRemaining
+import com.metrolist.shared.ui.components.hasNextTrack
+import com.metrolist.shared.ui.components.hasPreviousTrack
 import com.metrolist.shared.ui.components.images.AsyncImage
 import com.metrolist.shared.ui.components.lyrics.LyricsContrastScrim
 import com.metrolist.shared.ui.components.lyrics.LyricsOffsetEditor
@@ -270,6 +272,8 @@ private val ARTWORK_SWIPE_PANE_SPACING = 32.dp
 internal fun ArtworkSwipeBox(
     enabled: Boolean,
     sensitivity: Float,
+    canNavigatePrevious: Boolean,
+    canNavigateNext: Boolean,
     previousArtworkUrl: String?,
     nextArtworkUrl: String?,
     trackKey: String?,
@@ -290,6 +294,9 @@ internal fun ArtworkSwipeBox(
     // Keep gesture callbacks current across track changes.
     val currentLeftPaneUrl by rememberUpdatedState(leftPaneUrl)
     val currentRightPaneUrl by rememberUpdatedState(rightPaneUrl)
+    // Navigation follows queue position even when a neighbor has no distinct artwork.
+    val currentCanSettleFromLeft by rememberUpdatedState(if (isRtl) canNavigateNext else canNavigatePrevious)
+    val currentCanSettleFromRight by rememberUpdatedState(if (isRtl) canNavigatePrevious else canNavigateNext)
 
     var containerWidthPx by remember { mutableFloatStateOf(0f) }
     val paneSpacingPx = with(LocalDensity.current) { ARTWORK_SWIPE_PANE_SPACING.toPx() }
@@ -336,8 +343,8 @@ internal fun ArtworkSwipeBox(
                             change.consume()
                             val travel = (size.width.toFloat() - 2 * edgePaddingPx).coerceAtLeast(0f) + paneSpacingPx
                             // Disable swipes when no adjacent track exists.
-                            val minOffset = if (currentRightPaneUrl != null) -travel else 0f
-                            val maxOffset = if (currentLeftPaneUrl != null) travel else 0f
+                            val minOffset = if (currentCanSettleFromRight) -travel else 0f
+                            val maxOffset = if (currentCanSettleFromLeft) travel else 0f
                             scope.launch {
                                 offset.snapTo((offset.value + dragAmount).coerceIn(minOffset, maxOffset))
                             }
@@ -348,45 +355,57 @@ internal fun ArtworkSwipeBox(
                             val keyAtRelease = currentTrackKey
                             val leftAtRelease = currentLeftPaneUrl
                             val rightAtRelease = currentRightPaneUrl
+                            val canLeftAtRelease = currentCanSettleFromLeft
+                            val canRightAtRelease = currentCanSettleFromRight
                             val generation = ++settleGeneration
                             settleJob =
                                 scope.launch {
                                     try {
                                         when {
-                                            offset.value >= threshold && leftAtRelease != null -> {
+                                            offset.value >= threshold && canLeftAtRelease -> {
                                                 frozenLeftUrl = leftAtRelease
                                                 frozenRightUrl = rightAtRelease
                                                 freezePanes = true
                                                 offset.animateTo(paneWidth + paneSpacingPx, settleSpec)
-                                                onSettleFromLeft()
-                                                // Return to center if the track does not change.
-                                                val changed =
-                                                    withTimeoutOrNull(ARTWORK_TRACK_CHANGE_TIMEOUT_MS) {
-                                                        snapshotFlow { currentTrackKey }.first { it != keyAtRelease }
-                                                    } != null
-                                                if (changed && settleGeneration == generation) {
-                                                    holdSide = -1
-                                                    offset.snapTo(0f)
-                                                    delay(ARTWORK_SETTLE_HOLD_MS)
+                                                if (currentTrackKey == keyAtRelease) {
+                                                    onSettleFromLeft()
+                                                    // Return to center if the track does not change.
+                                                    val changed =
+                                                        withTimeoutOrNull(ARTWORK_TRACK_CHANGE_TIMEOUT_MS) {
+                                                            snapshotFlow { currentTrackKey }.first { it != keyAtRelease }
+                                                        } != null
+                                                    if (changed && settleGeneration == generation) {
+                                                        holdSide = -1
+                                                        offset.snapTo(0f)
+                                                        delay(ARTWORK_SETTLE_HOLD_MS)
+                                                    } else {
+                                                        offset.snapTo(0f)
+                                                    }
                                                 } else {
+                                                    // Playback advanced during the settle; never skip a second track.
                                                     offset.snapTo(0f)
                                                 }
                                             }
-                                            offset.value <= -threshold && rightAtRelease != null -> {
+                                            offset.value <= -threshold && canRightAtRelease -> {
                                                 frozenLeftUrl = leftAtRelease
                                                 frozenRightUrl = rightAtRelease
                                                 freezePanes = true
                                                 offset.animateTo(-(paneWidth + paneSpacingPx), settleSpec)
-                                                onSettleFromRight()
-                                                val changed =
-                                                    withTimeoutOrNull(ARTWORK_TRACK_CHANGE_TIMEOUT_MS) {
-                                                        snapshotFlow { currentTrackKey }.first { it != keyAtRelease }
-                                                    } != null
-                                                if (changed && settleGeneration == generation) {
-                                                    holdSide = 1
-                                                    offset.snapTo(0f)
-                                                    delay(ARTWORK_SETTLE_HOLD_MS)
+                                                if (currentTrackKey == keyAtRelease) {
+                                                    onSettleFromRight()
+                                                    val changed =
+                                                        withTimeoutOrNull(ARTWORK_TRACK_CHANGE_TIMEOUT_MS) {
+                                                            snapshotFlow { currentTrackKey }.first { it != keyAtRelease }
+                                                        } != null
+                                                    if (changed && settleGeneration == generation) {
+                                                        holdSide = 1
+                                                        offset.snapTo(0f)
+                                                        delay(ARTWORK_SETTLE_HOLD_MS)
+                                                    } else {
+                                                        offset.snapTo(0f)
+                                                    }
                                                 } else {
+                                                    // Playback advanced during the settle; never skip a second track.
                                                     offset.snapTo(0f)
                                                 }
                                             }
@@ -1917,9 +1936,11 @@ fun PlayerScreen(
                                                 ArtworkSwipeBox(
                                                     enabled = artworkSwipeEnabled,
                                                     sensitivity = Settings.shared.swipeSensitivity,
+                                                    canNavigatePrevious = uiState.hasPreviousTrack(),
+                                                    canNavigateNext = uiState.hasNextTrack(),
                                                     previousArtworkUrl = uiState.previousArtworkUrl(),
                                                     nextArtworkUrl = uiState.nextArtworkUrl(),
-                                                    trackKey = currentSong?.id,
+                                                    trackKey = uiState.currentSong?.id,
                                                     onPrevious = viewModel::previous,
                                                     onNext = viewModel::next,
                                                     modifier =

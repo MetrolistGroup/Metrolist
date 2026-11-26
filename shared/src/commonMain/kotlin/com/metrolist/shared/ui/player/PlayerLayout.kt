@@ -155,6 +155,8 @@ import com.metrolist.shared.ui.components.VintageClassicControlsText
 import com.metrolist.shared.ui.components.VintagePlayerControls
 import com.metrolist.shared.ui.components.VintagePlayerControlsText
 import com.metrolist.shared.ui.components.formatSleepTimerRemaining
+import com.metrolist.shared.ui.components.hasNextTrack
+import com.metrolist.shared.ui.components.hasPreviousTrack
 import com.metrolist.shared.ui.components.images.AsyncImage
 import com.metrolist.shared.ui.components.lyrics.ActiveLyricsLineContent
 import com.metrolist.shared.ui.components.lyrics.LyricsOffsetEditor
@@ -405,9 +407,11 @@ internal fun TabletPlayerContent(
                                 ArtworkSwipeBox(
                                     enabled = artworkSwipeEnabled,
                                     sensitivity = artworkSwipeSensitivity,
+                                    canNavigatePrevious = uiState.hasPreviousTrack(),
+                                    canNavigateNext = uiState.hasNextTrack(),
                                     previousArtworkUrl = uiState.previousArtworkUrl(),
                                     nextArtworkUrl = uiState.nextArtworkUrl(),
-                                    trackKey = currentSong?.id,
+                                    trackKey = uiState.currentSong?.id,
                                     onPrevious = viewModel::previous,
                                     onNext = viewModel::next,
                                     modifier =
@@ -1238,9 +1242,11 @@ internal fun LandscapePlayerContent(
                                 ArtworkSwipeBox(
                                     enabled = artworkSwipeEnabled,
                                     sensitivity = artworkSwipeSensitivity,
+                                    canNavigatePrevious = uiState.hasPreviousTrack(),
+                                    canNavigateNext = uiState.hasNextTrack(),
                                     previousArtworkUrl = uiState.previousArtworkUrl(),
                                     nextArtworkUrl = uiState.nextArtworkUrl(),
-                                    trackKey = currentSong?.id,
+                                    trackKey = uiState.currentSong?.id,
                                     onPrevious = viewModel::previous,
                                     onNext = viewModel::next,
                                     swipeEdgePadding = artworkSwipeEdgePadding,
