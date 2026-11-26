@@ -5699,7 +5699,7 @@
     <string name="wrapped_home_title">Your %1$s Wrapped is here</string>
     <string name="wrapped_home_body">See your year in music and share it.</string>
     <string name="wrapped_home_card_dismissed">You can find your %1$s Wrapped in Statistics until December 31.</string>
-    <string name="car_lights_title">Car Lights</string>
+    <string name="car_lights_title">Car lights</string>
     <string name="settings_car_lights_overview">Match Magic CarLight strips to your theme colors</string>
     <string name="car_lights_enable">Enable car lights</string>
     <string name="car_lights_enable_description">Send the app theme colors to your car lights over Bluetooth</string>
@@ -5728,7 +5728,6 @@
     <string name="car_lights_turn_on_location">Turn on Location</string>
     <string name="car_lights_location_off">Android 11 and older need Location on to find Bluetooth devices</string>
     <string name="car_lights_zones_section">Zones</string>
-    <string name="car_lights_zones_description">Pick which theme color each part of the car follows. Example: console is Primary, doors are Secondary, trunk is Tertiary.</string>
     <string name="car_lights_zone_central">Center console</string>
     <string name="car_lights_zone_doors">Doors</string>
     <string name="car_lights_zone_rear">Rear and trunk</string>
@@ -5737,10 +5736,6 @@
     <string name="car_lights_role_secondary">Secondary</string>
     <string name="car_lights_role_tertiary">Tertiary</string>
     <string name="car_lights_roles_section">Theme colors</string>
-    <string name="car_lights_roles_description">These follow the colors the app is using right now, including the song artwork.</string>
-    <string name="car_lights_role_primary_description">Play/pause button and the cover's main color</string>
-    <string name="car_lights_role_secondary_description">Next and previous track buttons</string>
-    <string name="car_lights_role_tertiary_description">Background</string>
     <string name="car_lights_vivid">Vivid colors</string>
     <string name="car_lights_vivid_description">Boost saturation so soft theme colors stay colorful on LEDs</string>
     <string name="car_lights_send_now">Send colors now</string>

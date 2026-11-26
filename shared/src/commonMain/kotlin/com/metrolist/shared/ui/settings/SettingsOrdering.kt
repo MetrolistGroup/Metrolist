@@ -61,7 +61,6 @@ internal fun List<SettingsGroupRegistration>.prioritized(page: SettingsPageId): 
                         "dynamicTheme",
                         "paletteStyle",
                         "fonts",
-                        "carLights",
                         "appIcon",
                     )
                 }

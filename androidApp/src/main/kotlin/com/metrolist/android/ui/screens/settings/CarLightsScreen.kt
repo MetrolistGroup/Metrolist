@@ -4,26 +4,22 @@ package com.metrolist.android.ui.screens.settings
 
 import android.bluetooth.BluetoothAdapter
 import android.content.Intent
+import android.net.Uri
 import android.os.Build
+import androidx.activity.compose.LocalActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.unit.dp
+import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import com.metrolist.android.carlights.CarLightDevice
 import com.metrolist.android.carlights.CarLights
 import com.metrolist.android.carlights.CarLightsController
@@ -46,12 +42,8 @@ import com.metrolist.shared.generated.resources.car_lights_no_devices
 import com.metrolist.shared.generated.resources.car_lights_permission_needed
 import com.metrolist.shared.generated.resources.car_lights_role_off
 import com.metrolist.shared.generated.resources.car_lights_role_primary
-import com.metrolist.shared.generated.resources.car_lights_role_primary_description
 import com.metrolist.shared.generated.resources.car_lights_role_secondary
-import com.metrolist.shared.generated.resources.car_lights_role_secondary_description
 import com.metrolist.shared.generated.resources.car_lights_role_tertiary
-import com.metrolist.shared.generated.resources.car_lights_role_tertiary_description
-import com.metrolist.shared.generated.resources.car_lights_roles_description
 import com.metrolist.shared.generated.resources.car_lights_roles_section
 import com.metrolist.shared.generated.resources.car_lights_search
 import com.metrolist.shared.generated.resources.car_lights_search_description
@@ -72,18 +64,17 @@ import com.metrolist.shared.generated.resources.car_lights_zone_all
 import com.metrolist.shared.generated.resources.car_lights_zone_central
 import com.metrolist.shared.generated.resources.car_lights_zone_doors
 import com.metrolist.shared.generated.resources.car_lights_zone_rear
-import com.metrolist.shared.generated.resources.car_lights_zones_description
 import com.metrolist.shared.generated.resources.car_lights_zones_section
+import com.metrolist.shared.generated.resources.shortcut_open_settings
 import com.metrolist.shared.settings.CarLightRole
 import com.metrolist.shared.settings.Settings
 import org.jetbrains.compose.resources.stringResource
 import android.provider.Settings as AndroidSettings
 
-// >> functions
-// appearance > car lights page with the master toggle, device search and connect, and zone color roles
-// @params: onNavigateBack () -> Unit -- called by the back button.
 @Composable
 fun CarLightsScreen(onNavigateBack: () -> Unit) {
+    val context = LocalContext.current
+    val activity = LocalActivity.current
     val settings = Settings.shared
     val controller = CarLights.controller
     val link by controller.link.collectAsState()
@@ -94,14 +85,25 @@ fun CarLightsScreen(onNavigateBack: () -> Unit) {
     val hasZones by controller.hasZones.collectAsState()
     val connectedName by controller.connectedName.collectAsState()
     var permissionGranted by remember { mutableStateOf(controller.hasPermissions()) }
+    var permissionBlocked by rememberSaveable { mutableStateOf(false) }
     var hasSearched by remember { mutableStateOf(false) }
 
-    // the empty result only shows after a scan really started
     LaunchedEffect(discovering) { if (discovering) hasSearched = true }
+    LifecycleResumeEffect(controller) {
+        permissionGranted = controller.hasPermissions()
+        if (permissionGranted) permissionBlocked = false
+        controller.refresh()
+        onPauseOrDispose { }
+    }
 
     val permissionLauncher =
-        rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
+        rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { grants ->
             permissionGranted = controller.hasPermissions()
+            permissionBlocked =
+                !permissionGranted &&
+                grants.any { (permission, granted) ->
+                    !granted && activity?.shouldShowRequestPermissionRationale(permission) == false
+                }
             controller.refresh()
         }
     val enableBluetoothLauncher =
@@ -110,7 +112,13 @@ fun CarLightsScreen(onNavigateBack: () -> Unit) {
         }
 
     fun requestPermissions() {
-        permissionLauncher.launch(CarLightsController.requiredPermissions().toTypedArray())
+        if (permissionBlocked) {
+            context.startActivity(
+                Intent(AndroidSettings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", context.packageName, null)),
+            )
+        } else {
+            permissionLauncher.launch(CarLightsController.requiredPermissions().toTypedArray())
+        }
     }
 
     val enabled = settings.carLightsEnabled
@@ -150,7 +158,10 @@ fun CarLightsScreen(onNavigateBack: () -> Unit) {
             if (!permissionGranted) {
                 masterItems +=
                     SettingsSubScreenItem(
-                        title = stringResource(Res.string.car_lights_grant_permission),
+                        title =
+                            stringResource(
+                                if (permissionBlocked) Res.string.shortcut_open_settings else Res.string.car_lights_grant_permission,
+                            ),
                         description = stringResource(Res.string.car_lights_permission_needed),
                         onClick = ::requestPermissions,
                     )
@@ -171,6 +182,7 @@ fun CarLightsScreen(onNavigateBack: () -> Unit) {
             }
         }
         SettingsSubScreenGroup(items = masterItems)
+        if (!enabled) return@SettingsSubScreen
 
         val deviceItems = mutableListOf<SettingsSubScreenItem>()
         deviceItems +=
@@ -186,7 +198,6 @@ fun CarLightsScreen(onNavigateBack: () -> Unit) {
                     ),
                 checked = settings.carLightsAutoConnect,
                 onCheckedChange = { settings.carLightsAutoConnect = it },
-                enabled = enabled,
             )
         if (savedAddress.isNotEmpty()) {
             if (link == CarLightsLink.CONNECTED) {
@@ -194,7 +205,6 @@ fun CarLightsScreen(onNavigateBack: () -> Unit) {
                     SettingsSubScreenItem(
                         title = stringResource(Res.string.car_lights_disconnect),
                         description = deviceLabel,
-                        enabled = enabled,
                         onClick = controller::disconnect,
                     )
             }
@@ -202,7 +212,6 @@ fun CarLightsScreen(onNavigateBack: () -> Unit) {
                 SettingsSubScreenItem(
                     title = stringResource(Res.string.car_lights_forget),
                     description = stringResource(Res.string.car_lights_forget_description, savedName),
-                    enabled = enabled,
                     onClick = {
                         controller.forget {
                             settings.carLightsDeviceAddress = ""
@@ -215,7 +224,7 @@ fun CarLightsScreen(onNavigateBack: () -> Unit) {
             SettingsSubScreenItem(
                 title = stringResource(if (discovering) Res.string.car_lights_searching else Res.string.car_lights_search),
                 description = stringResource(Res.string.car_lights_search_description),
-                enabled = enabled && !discovering,
+                enabled = !discovering,
                 onClick = {
                     if (!controller.hasPermissions()) {
                         requestPermissions()
@@ -225,7 +234,7 @@ fun CarLightsScreen(onNavigateBack: () -> Unit) {
                 },
             )
         discovered.forEach { device ->
-            deviceItems += deviceItem(device, device.address == savedAddress && link == CarLightsLink.CONNECTED, enabled, controller)
+            deviceItems += deviceItem(device, device.address == savedAddress && link == CarLightsLink.CONNECTED, controller)
         }
         if (hasSearched && !discovering && discovered.isEmpty()) {
             deviceItems += SettingsSubScreenItem(title = stringResource(Res.string.car_lights_no_devices))
@@ -237,23 +246,21 @@ fun CarLightsScreen(onNavigateBack: () -> Unit) {
 
         val zoneOptions = listOf(CarLightRole.PRIMARY, CarLightRole.SECONDARY, CarLightRole.TERTIARY, CarLightRole.OFF)
         val zoneItems = mutableListOf<SettingsSubScreenItem>()
+        zoneItems +=
+            listChooserSettingsItem(
+                title = stringResource(if (hasZones) Res.string.car_lights_zone_central else Res.string.car_lights_zone_all),
+                options = zoneOptions,
+                selectedOption = settings.carLightsCentralRole,
+                optionToString = { roleLabel(it) },
+                onOptionSelected = { settings.carLightsCentralRole = it },
+            )
         if (hasZones) {
-            zoneItems +=
-                listChooserSettingsItem(
-                    title = stringResource(Res.string.car_lights_zone_central),
-                    options = zoneOptions,
-                    selectedOption = settings.carLightsCentralRole,
-                    optionToString = { roleLabel(it) },
-                    enabled = enabled,
-                    onOptionSelected = { settings.carLightsCentralRole = it },
-                )
             zoneItems +=
                 listChooserSettingsItem(
                     title = stringResource(Res.string.car_lights_zone_doors),
                     options = zoneOptions,
                     selectedOption = settings.carLightsDoorsRole,
                     optionToString = { roleLabel(it) },
-                    enabled = enabled,
                     onOptionSelected = { settings.carLightsDoorsRole = it },
                 )
             zoneItems +=
@@ -262,19 +269,7 @@ fun CarLightsScreen(onNavigateBack: () -> Unit) {
                     options = zoneOptions,
                     selectedOption = settings.carLightsRearRole,
                     optionToString = { roleLabel(it) },
-                    enabled = enabled,
                     onOptionSelected = { settings.carLightsRearRole = it },
-                )
-        } else {
-            // plain lights have one color, it follows the central role
-            zoneItems +=
-                listChooserSettingsItem(
-                    title = stringResource(Res.string.car_lights_zone_all),
-                    options = zoneOptions,
-                    selectedOption = settings.carLightsCentralRole,
-                    optionToString = { roleLabel(it) },
-                    enabled = enabled,
-                    onOptionSelected = { settings.carLightsCentralRole = it },
                 )
         }
         zoneItems +=
@@ -283,48 +278,21 @@ fun CarLightsScreen(onNavigateBack: () -> Unit) {
                 description = stringResource(Res.string.car_lights_vivid_description),
                 checked = settings.carLightsVivid,
                 onCheckedChange = { settings.carLightsVivid = it },
-                enabled = enabled,
+            )
+        zoneItems +=
+            SettingsSubScreenItem(
+                title = stringResource(Res.string.car_lights_send_now),
+                description = stringResource(Res.string.car_lights_send_now_description),
+                enabled = link == CarLightsLink.CONNECTED,
+                onClick = CarLights::resend,
             )
         SettingsSubScreenGroup(
-            title = stringResource(Res.string.car_lights_zones_section),
-            description = stringResource(Res.string.car_lights_zones_description),
+            title = stringResource(if (hasZones) Res.string.car_lights_zones_section else Res.string.car_lights_roles_section),
             items = zoneItems,
-        )
-
-        val scheme = MaterialTheme.colorScheme
-        SettingsSubScreenGroup(
-            title = stringResource(Res.string.car_lights_roles_section),
-            description = stringResource(Res.string.car_lights_roles_description),
-            items =
-                listOf(
-                    swatchItem(
-                        stringResource(Res.string.car_lights_role_primary),
-                        stringResource(Res.string.car_lights_role_primary_description),
-                        scheme.primary,
-                    ),
-                    swatchItem(
-                        stringResource(Res.string.car_lights_role_secondary),
-                        stringResource(Res.string.car_lights_role_secondary_description),
-                        scheme.secondary,
-                    ),
-                    swatchItem(
-                        stringResource(Res.string.car_lights_role_tertiary),
-                        stringResource(Res.string.car_lights_role_tertiary_description),
-                        scheme.tertiary,
-                    ),
-                    SettingsSubScreenItem(
-                        title = stringResource(Res.string.car_lights_send_now),
-                        description = stringResource(Res.string.car_lights_send_now_description),
-                        enabled = enabled && link == CarLightsLink.CONNECTED,
-                        onClick = CarLights::resend,
-                    ),
-                ),
         )
     }
 }
 
-// display name of a color role
-// @params: role CarLightRole -- role to name.
 @Composable
 private fun roleLabel(role: CarLightRole): String =
     stringResource(
@@ -336,38 +304,14 @@ private fun roleLabel(role: CarLightRole): String =
         },
     )
 
-// settings row for one scan result
-// @params: device CarLightDevice -- scan result.
-// @params: isConnected Boolean -- true if this is the connected light.
-// @params: enabled Boolean -- master toggle state.
-// @params: controller CarLightsController -- used to connect on tap.
 @Composable
 private fun deviceItem(
     device: CarLightDevice,
     isConnected: Boolean,
-    enabled: Boolean,
     controller: CarLightsController,
 ) = SettingsSubScreenItem(
     title = device.name.ifEmpty { device.address },
     description = stringResource(Res.string.car_lights_device_details, device.address, device.rssi),
-    enabled = enabled && !isConnected,
+    enabled = !isConnected,
     onClick = { controller.connect(device) },
 )
-
-// settings row with a color dot, used to show the live theme colors
-// @params: title String -- role name.
-// @params: description String -- what the role colors in the player.
-// @params: color Color -- current theme color.
-private fun swatchItem(
-    title: String,
-    description: String,
-    color: Color,
-) = SettingsSubScreenItem(
-    title = title,
-    description = description,
-    trailingContent = {
-        Box(Modifier.size(28.dp).clip(CircleShape).background(color))
-    },
-)
-
-// >> end << //

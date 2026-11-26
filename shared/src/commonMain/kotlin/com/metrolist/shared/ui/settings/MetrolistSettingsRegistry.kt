@@ -102,18 +102,6 @@ fun rememberMetrolistSettingsRegistry(
                         )
                     }
 
-                    SettingsPageId.CAR_LIGHTS -> {
-                        listOf(
-                            Res.string.car_lights_enable,
-                            Res.string.car_lights_auto_connect,
-                            Res.string.car_lights_search,
-                            Res.string.car_lights_zone_central,
-                            Res.string.car_lights_zone_doors,
-                            Res.string.car_lights_zone_rear,
-                            Res.string.car_lights_vivid,
-                        )
-                    }
-
                     SettingsPageId.UPDATES -> {
                         listOf(
                             Res.string.updates_auto_check,
@@ -190,13 +178,6 @@ fun rememberMetrolistSettingsRegistry(
         stringResource(Res.string.android_auto_title),
         stringResource(Res.string.settings_android_auto_overview),
         MetrolistIcons.Outlined.Settings,
-        SettingsTone.ORANGE,
-    )
-    customPage(
-        SettingsPageId.CAR_LIGHTS,
-        stringResource(Res.string.car_lights_title),
-        stringResource(Res.string.settings_car_lights_overview),
-        MetrolistIcons.Outlined.DirectionsCar,
         SettingsTone.ORANGE,
     )
     customPage(
