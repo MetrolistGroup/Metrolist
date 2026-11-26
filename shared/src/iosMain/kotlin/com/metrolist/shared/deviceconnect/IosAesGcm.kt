@@ -52,7 +52,7 @@ internal object IosAesGcm {
                     }
                 }
             }
-        check(status == kCCSuccess) { "AES-GCM encrypt failed: $status" }
+        check(status == kCCSuccess.toInt()) { "AES-GCM encrypt failed: $status" }
         return iv + ciphertext + tag
     }
 
@@ -96,7 +96,7 @@ internal object IosAesGcm {
                     }
                 }
             }
-        check(status == kCCSuccess) { "AES-GCM decrypt failed: $status" }
+        check(status == kCCSuccess.toInt()) { "AES-GCM decrypt failed: $status" }
         return plaintext.copyOf(ciphertext.size)
     }
 }
