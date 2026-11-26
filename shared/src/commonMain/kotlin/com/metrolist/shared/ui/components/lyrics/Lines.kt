@@ -24,6 +24,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.TextAutoSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -103,6 +104,7 @@ private fun AlphaSafeText(
     maxLines: Int = Int.MAX_VALUE,
     softWrap: Boolean = true,
     overflow: TextOverflow = TextOverflow.Clip,
+    autoSize: TextAutoSize? = null,
 ) {
     val needsLayer = color.alpha > 0f && color.alpha < 1f && remember(text) { isJoiningScript(text) }
     if (needsLayer) {
@@ -114,6 +116,7 @@ private fun AlphaSafeText(
             maxLines = maxLines,
             softWrap = softWrap,
             overflow = overflow,
+            autoSize = autoSize,
             modifier =
                 modifier.graphicsLayer {
                     alpha = layerAlpha
@@ -128,6 +131,7 @@ private fun AlphaSafeText(
             maxLines = maxLines,
             softWrap = softWrap,
             overflow = overflow,
+            autoSize = autoSize,
             modifier = modifier,
         )
     }
@@ -295,6 +299,7 @@ fun ActiveLyricsLineContent(
     fillWidth: Boolean = true,
     mainLineOnly: Boolean = false,
     useFixedTone: Boolean = true,
+    mainLineAutoSize: TextAutoSize? = null,
 ) {
     val currentPositionProvider by rememberUpdatedState(positionProvider)
     val romanizationEnabled = Settings.shared.isLyricsRomanizationActive
@@ -440,6 +445,7 @@ fun ActiveLyricsLineContent(
             )
         } else {
             val isJoining = remember(displayText) { isJoiningScript(displayText) }
+            val mainOverflow = if (mainLineAutoSize != null) TextOverflow.Ellipsis else TextOverflow.Clip
             if (isJoining) {
                 AlphaSafeText(
                     text = displayText,
@@ -448,7 +454,8 @@ fun ActiveLyricsLineContent(
                     textAlign = alignment,
                     maxLines = maxLines,
                     softWrap = true,
-                    overflow = TextOverflow.Clip,
+                    overflow = mainOverflow,
+                    autoSize = mainLineAutoSize,
                     modifier = Modifier.fillMaxWidth(),
                 )
             } else {
@@ -458,7 +465,8 @@ fun ActiveLyricsLineContent(
                     textAlign = alignment,
                     maxLines = maxLines,
                     softWrap = true,
-                    overflow = TextOverflow.Clip,
+                    overflow = mainOverflow,
+                    autoSize = mainLineAutoSize,
                     modifier = Modifier.fillMaxWidth(),
                 )
             }

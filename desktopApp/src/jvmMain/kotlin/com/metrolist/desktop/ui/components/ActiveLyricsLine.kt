@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.foundation.text.TextAutoSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
@@ -233,6 +234,16 @@ fun ActiveLyricsLine(
                                 maxLines = 2,
                                 alignment = LyricsUtils.textAlignment(Settings.shared.activeLyricsTextPosition),
                                 fillWidth = false,
+                                mainLineOnly = inMiniplayer,
+                                mainLineAutoSize =
+                                    if (inMiniplayer) {
+                                        TextAutoSize.StepBased(
+                                            minFontSize = MaterialTheme.typography.titleSmall.fontSize,
+                                            maxFontSize = style.fontSize,
+                                        )
+                                    } else {
+                                        null
+                                    },
                             )
                         }
                     }
