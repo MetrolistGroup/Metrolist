@@ -40,6 +40,7 @@ import com.metrolist.shared.db.MusicDatabase
 import com.metrolist.shared.db.cacheRemotePlaylist
 import com.metrolist.shared.db.cachedRemotePlaylistSections
 import com.metrolist.shared.db.entities.toSongItem
+import com.metrolist.shared.db.loadAndCachePlaylistPage
 import com.metrolist.shared.generated.resources.Res
 import com.metrolist.shared.generated.resources.error
 import com.metrolist.shared.generated.resources.error_occurred
@@ -633,11 +634,16 @@ internal fun MobilePlaylistScreen(
                     try {
                         editMutex.withLock {
                             if (!editingPrepared) {
-                                // Stored rows keep their mappings; fetched pages pass the queue revision from before the fetch.
+                                // Stored rows keep their mappings. Fetched pages pass the queue revision from before the fetch, and
+                                // pages an add leaving the queue made stale are read again, so editing never runs on a skipped snapshot.
                                 val storedSongs = cachedSections?.playlistSongs()
-                                val complete = storedSongs ?: loader.complete().songs
-                                val queueRevision = loader.queueRevision.takeIf { storedSongs == null }
-                                database.cacheRemotePlaylist(playlistId, playlist, complete, queueRevision)
+                                val cached =
+                                    if (storedSongs != null) {
+                                        database.cacheRemotePlaylist(playlistId, playlist, storedSongs)
+                                    } else {
+                                        database.cacheRemotePlaylist(playlistId, playlist, loader.complete().songs, loader.queueRevision)
+                                    }
+                                if (!cached) database.loadAndCachePlaylistPage(GlobalYouTubeRepository.instance, playlistId)
                                 val stored = checkNotNull(database.dao().findPlaylistEntity(playlistId))
                                 reorder.update(
                                     database

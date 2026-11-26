@@ -90,19 +90,30 @@ suspend fun MusicDatabase.syncRemotePlaylists(
 }
 
 // A snapshot fetched from YouTube passes the queue revision read before the fetch. When a queued add left the queue since,
-// the snapshot may lack that add's copy, so it is not stored and the next read stores the playlist instead.
+// the snapshot may lack that add's copy, so it is not stored and the next read stores the playlist instead. Returns whether
+// the snapshot was stored.
 suspend fun MusicDatabase.cacheRemotePlaylist(
     requestedId: String,
     playlist: PlaylistItem,
     songs: List<SongItem>,
     queueRevision: Long? = null,
-) = withDatabaseTransaction {
+): Boolean =
+    withDatabaseTransaction {
+        cacheRemotePlaylistSnapshot(requestedId, playlist, songs, queueRevision)
+    }
+
+private suspend fun MusicDatabase.cacheRemotePlaylistSnapshot(
+    requestedId: String,
+    playlist: PlaylistItem,
+    songs: List<SongItem>,
+    queueRevision: Long?,
+): Boolean {
     val dao = dao()
     if (LibraryDeletionTracker.isDeleted(playlist) || LibraryDeletionTracker.isDeleted("playlist:${requestedId.removePrefix("VL")}")) {
-        return@withDatabaseTransaction
+        return false
     }
     val existing = dao.findPlaylistEntity(requestedId)
-    if (existing != null && existing.browseId == null) return@withDatabaseTransaction
+    if (existing != null && existing.browseId == null) return false
     val existingMappings =
         dao
             .playlistSongs(existing?.id ?: requestedId)
@@ -123,7 +134,7 @@ suspend fun MusicDatabase.cacheRemotePlaylist(
     val unconfirmed =
         PendingPlaylistAdds
             .unconfirmedCopies(existing?.id ?: requestedId, songs.groupingBy { it.id }.eachCount(), queueRevision)
-            ?.toMutableMap() ?: return@withDatabaseTransaction
+            ?.toMutableMap() ?: return false
     val pendingMappings = mutableListOf<PlaylistSongMap>()
     for (mapping in existingMappings) {
         val left = unconfirmed[mapping.songId] ?: 0
@@ -172,6 +183,7 @@ suspend fun MusicDatabase.cacheRemotePlaylist(
         )
     }
     pendingMappings.forEachIndexed { offset, mapping -> dao.insert(mapping.copy(position = songs.size + offset)) }
+    return true
 }
 
 internal suspend fun MusicDatabase.repairRemotePlaylistMembership(
