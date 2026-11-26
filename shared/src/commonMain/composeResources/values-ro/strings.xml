@@ -363,7 +363,7 @@
     <string name="song_gestures">Gesturi pentru melodii</string>
     <string name="appearance_enable_swipe_to_change_track">Glisează coperta de album pentru a schimba piesele</string>
     <string name="appearance_play_videos_in_mini_player" tools:ignore="MissingTranslation">Redă videoclipuri în mini-player</string>
-    <string name="appearance_play_videos_in_mini_player_desc" tools:ignore="MissingTranslation">Afișează videoclipuri muzicale atunci când mini-playerul este restrâns</string>
+    <string name="appearance_play_videos_in_mini_player_desc" tools:ignore="MissingTranslation">Afișează videoclipurile muzicale atunci când mini-playerul este restrâns</string>
     <string name="appearance_mini_player_swipe_sensitivity">Sensibilitatea glisării</string>
     <string name="appearance_misc">Diverse</string>
     <string name="appearance_default_open_tab">Fila prestabilită deschisă</string>
@@ -2670,4 +2670,9 @@
     <string name="automatic_backup_restore_empty">Nu sunt disponibile copii de rezervă automate.</string>
     <string name="automatic_backup_restore_desc">Alegeți o copie de rezervă automată salvată pentru restaurare.</string>
     <string name="foreign_import_error_generic">Copia de rezervă nu a putut fi importată</string>
+    <string name="metroeq_preset_commute">Navetă</string>
+    <string name="metroeq_preset_pop">Pop</string>
+    <string name="metroeq_preset_electronic">Electronică</string>
+    <string name="metroeq_preset_acoustic">Acustică</string>
+    <string name="metroeq_preset_loudness">Intensitate sonoră</string>
 </resources>
