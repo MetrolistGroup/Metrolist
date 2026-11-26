@@ -44,6 +44,7 @@ import com.metrolist.shared.settings.Settings
 import com.metrolist.shared.ui.components.WavyCircularProgressIndicator
 import com.metrolist.shared.ui.components.lyrics.ActiveLyricsLineContent
 import com.metrolist.shared.ui.components.lyrics.rememberCaptionLyricsPositionState
+import com.metrolist.shared.ui.components.lyrics.rememberSmoothLyricsPositionState
 
 @Composable
 fun ActiveLyricsLine(
@@ -72,16 +73,17 @@ fun ActiveLyricsLine(
     val castState by PlayerState.castManager.state.collectAsState()
     val isPlaying = PlayerState.isPlaying
     val timingOffsetMs = LyricsState.currentLyricsOffsetMs
+    val playbackSpeed =
+        PlayerState.player.playbackSpeed
+            .collectAsState()
+            .value
 
     val lyricsPositionState =
         rememberCaptionLyricsPositionState(
             lyrics = lyrics,
             currentPositionFlow = PlayerState.playbackPosition,
             positionReader = PlayerState::currentMediaPositionMs,
-            playbackSpeed =
-                PlayerState.player.playbackSpeed
-                    .collectAsState()
-                    .value,
+            playbackSpeed = playbackSpeed,
             isPlaying = isPlaying,
             songId = PlayerState.currentTrack?.id,
             timingOffsetMs = timingOffsetMs,
@@ -193,9 +195,22 @@ fun ActiveLyricsLine(
                     ) { (line, displayedLineEndTime, gap) ->
                         if (gap != null) {
                             val (gapStart, gapEnd) = gap
+                            val smoothPosition =
+                                rememberSmoothLyricsPositionState(
+                                    positionFlow = PlayerState.playbackPosition,
+                                    positionReader = PlayerState::currentMediaPositionMs,
+                                    playbackSpeed = playbackSpeed,
+                                    isPlaying = isPlaying,
+                                    songId = PlayerState.currentTrack?.id,
+                                    isCasting = castState.isConnected,
+                                    isBuffering = castState.isBuffering,
+                                )
+                            val effectiveOffsetMs =
+                                LyricsUtils.combinedLyricsOffsetMs(timingOffsetMs, Settings.shared.globalLyricsOffsetMs)
                             WavyCircularProgressIndicator(
                                 progress = {
-                                    ((lyricsPositionState.value - gapStart).toFloat() / (gapEnd - gapStart)).coerceIn(0f, 1f)
+                                    val position = LyricsUtils.lyricsPositionForOffset(smoothPosition.longValue, effectiveOffsetMs)
+                                    ((position - gapStart).toFloat() / (gapEnd - gapStart)).coerceIn(0f, 1f)
                                 },
                                 animate = isPlaying,
                                 color = textColor,
