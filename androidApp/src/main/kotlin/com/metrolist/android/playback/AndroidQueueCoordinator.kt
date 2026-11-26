@@ -158,11 +158,13 @@ internal class AndroidQueueCoordinator(
                 val lockedSessionId = radioSeedLockedSessionId
                 if (lockedSessionId != null && (sessionId == null || lockedSessionId == sessionId)) {
                     radioSeedLockedSessionId = null
-                    lockedSessionId.takeIf { it == queueSessionId }
+                    lockedSessionId
                 } else {
                     null
                 }
             } ?: return
+        onSave()
+        if (releasedSessionId != queueSessionId) return
         lastAutoLoadedSongId = null
         val currentIndex = player.currentMediaItemIndex.value
         val queue = player.songQueue.value
@@ -199,6 +201,7 @@ internal class AndroidQueueCoordinator(
         if (queue.displayedItems.isEmpty()) return null
         val currentIndex = queue.currentIndex.coerceIn(queue.displayedItems.indices)
         val persistedQueue = queue.copy(currentIndex = currentIndex)
+        val radioSeedPending = radioSeedLockedSessionId == queueSessionId
 
         val remote = castState().takeIf { it.isConnected }?.forQueueEntry(player.queueState.value)
         val playing = remote?.isPlaying ?: player.isPlaying.value
@@ -213,10 +216,10 @@ internal class AndroidQueueCoordinator(
             volume = 1.0f,
             queueTitle = queueTitleState.value,
             radioQueueSeedSongId = recommendationSeedSongId,
-            radioQueueFinite = isFiniteQueue,
-            radioQueue = isRadioQueue,
-            explicitRadioQueue = isExplicitRadioQueue,
-            queueSessionId = queueSessionId.takeIf { isRadioQueue },
+            radioQueueFinite = !radioSeedPending && isFiniteQueue,
+            radioQueue = isRadioQueue || radioSeedPending,
+            explicitRadioQueue = isExplicitRadioQueue || radioSeedPending,
+            queueSessionId = queueSessionId.takeIf { isRadioQueue || radioSeedPending },
             radioQueueChips =
                 queueChipsState.value.map { chip ->
                     PersistRadioQueueChip(chip.id, chip.title, chip.playlistId, chip.params, chip.isSelected)
