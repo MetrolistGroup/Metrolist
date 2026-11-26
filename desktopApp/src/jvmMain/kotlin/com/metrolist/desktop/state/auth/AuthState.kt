@@ -123,7 +123,10 @@ object AuthState {
                         Settings.shared.accountEmail = info.email.orEmpty()
                         Settings.shared.accountChannelHandle = info.channelHandle.orEmpty()
                         Settings.shared.accountThumbnail = info.thumbnailUrl ?: ""
-                        AuthManager().resolveDelegatedSession()
+                    }
+                    // History loaded before the brand page was installed was cancelled or used the unscoped session.
+                    if (generation == accountInfoGeneration && isSignedIn && AuthManager().resolveDelegatedSession()) {
+                        PlayerState.refreshHistory()
                     }
                 } catch (error: CancellationException) {
                     throw error

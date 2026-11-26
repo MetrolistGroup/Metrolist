@@ -6,6 +6,7 @@ import com.metrolist.innertubex.extraction.generateClientPlaybackNonce
 import com.metrolist.innertubex.models.YouTubeClient
 import com.metrolist.shared.api.YouTubeRepository
 import com.metrolist.shared.api.YouTubeRepository.PlaybackTrackingSession
+import com.metrolist.shared.auth.requestDelegatedSessionResolution
 import com.metrolist.shared.settings.Settings
 import com.metrolist.shared.utils.Logger
 import com.metrolist.shared.youtube.playback.PlaybackNetworkStateStore
@@ -84,6 +85,7 @@ class YouTubePlaybackReporter internal constructor(
     private var session: Session? = null
     private var reportingEnabled = true
     private var reportingGeneration = 0L
+    private var unscopedTrackingInstanceId = 0L
     private val consumerJobs = mutableSetOf<Job>()
 
     init {
@@ -118,17 +120,29 @@ class YouTubePlaybackReporter internal constructor(
                 return
             }
             val current = session
+            // A brand page resolved mid-song makes the session's snapshot stale, so its pings would be rejected.
+            val delegationChanged =
+                current != null &&
+                    current.playbackInstanceId == playbackInstanceId &&
+                    current.playbackSession.snapshot.delegatedSessionId !=
+                    repository.playbackTrackingSession().snapshot.delegatedSessionId
             if (current != null &&
-                (current.playbackInstanceId != playbackInstanceId || current.accountKey != repository.playbackReportingAccountKey())
+                (
+                    current.playbackInstanceId != playbackInstanceId ||
+                        current.accountKey != repository.playbackReportingAccountKey() ||
+                        delegationChanged
+                )
             ) {
+                if (delegationChanged) unscopedTrackingInstanceId = playbackInstanceId
                 finishLocked(current, endPositionMs = null)
             }
 
             var active = session
             if (active == null) {
                 val resource = resource ?: return
-                val tracking = resource.playbackTracking
-                if (tracking == null && !resource.allowPlaybackTrackingFallback) return
+                if (resource.playbackTracking == null && !resource.allowPlaybackTrackingFallback) return
+                // Tracking fetched before the brand page was known belongs to the unscoped session.
+                val tracking = resource.playbackTracking.takeUnless { unscopedTrackingInstanceId == playbackInstanceId }
                 if (!isRendering || playbackInstanceId <= 0L) return
                 val newSession =
                     Session(
@@ -146,6 +160,7 @@ class YouTubePlaybackReporter internal constructor(
                 newSession.lastRenderingPositionMs = positionMs
                 newSession.lastRenderingSampleAtMs = monotonicTimeMs()
                 session = newSession
+                requestDelegatedSessionResolution()
                 newSession.pendingId()?.let { pendingDrainLock.withLock { activePendingIds += it } }
                 newSession.pings.trySend(Ping.Start(positionMs.coerceAtLeast(0L)))
                 val consumer = scope.launch { consume(newSession) }
