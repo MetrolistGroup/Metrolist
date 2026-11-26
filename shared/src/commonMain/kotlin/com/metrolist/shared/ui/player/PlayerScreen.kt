@@ -372,6 +372,7 @@ internal fun ArtworkSwipeBox(
                                             offset.value >= threshold && canLeftAtRelease -> {
                                                 if (leftAtRelease == null) {
                                                     // No neighbor preview (for example restarting the first track): act, then bounce back.
+                                                    navigationRequested = true
                                                     onSettleFromLeft()
                                                     offset.animateTo(0f, returnSpec)
                                                     return@launch
@@ -403,6 +404,7 @@ internal fun ArtworkSwipeBox(
                                             offset.value <= -threshold && canRightAtRelease -> {
                                                 if (rightAtRelease == null) {
                                                     // No neighbor preview (for example restarting the first track): act, then bounce back.
+                                                    navigationRequested = true
                                                     onSettleFromRight()
                                                     offset.animateTo(0f, returnSpec)
                                                     return@launch
@@ -1962,7 +1964,11 @@ fun PlayerScreen(
                                                     canNavigateNext = uiState.hasNextTrack(),
                                                     previousArtworkUrl = uiState.previousArtworkUrl(),
                                                     nextArtworkUrl = uiState.nextArtworkUrl(),
-                                                    trackKey = uiState.currentSong?.id,
+                                                    // Queue entry identity, so duplicate songs in the queue still count as a track change.
+                                                    trackKey =
+                                                        uiState.currentSong?.id?.let { id ->
+                                                            "$id#${uiState.currentQueueIndex}#${uiState.queueEntryKeys.getOrNull(uiState.currentQueueIndex)}"
+                                                        },
                                                     onPrevious = viewModel::previous,
                                                     onNext = viewModel::next,
                                                     modifier =
