@@ -178,6 +178,9 @@ internal fun cacheableAudioResource(
 
 internal fun playbackCaptureDirectory(context: Context): File = File(context.cacheDir, "playback-tee")
 
+// The bytes playback captures may take for a song cache limit in megabytes, where a negative limit means unlimited.
+internal fun playbackCaptureBudgetBytes(cacheSizeMb: Int): Long = if (cacheSizeMb < 0) 512L * 1024 * 1024 else cacheSizeMb * 1024L * 1024L
+
 internal fun requireDownloadableAudioResource(resource: PlaybackResource) {
     if (resource.isSabr) return
     if (!resource.isDirectFile || !resource.url.startsWith("https://", ignoreCase = true)) {

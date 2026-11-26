@@ -194,7 +194,14 @@ internal class AndroidQueueTransitions(
             snapshotFlow { Settings.shared.maxSongCacheSize }
                 .distinctUntilChanged()
                 .collect { cacheSize ->
-                    withContext(Dispatchers.IO) { DirectPlaybackCache.clear() }
+                    // Captures that fit the new limit stay, so the song that plays still fills and reaches the cache.
+                    withContext(Dispatchers.IO) {
+                        if (cacheSize == 0) {
+                            DirectPlaybackCache.clear()
+                        } else {
+                            DirectPlaybackCache.retainWithin(playbackCaptureBudgetBytes(cacheSize))
+                        }
+                    }
                     audioCacheManager.sabrPlaybackCache.clear()
                     if (cacheSize == 0) {
                         preCacheJob?.cancel()
