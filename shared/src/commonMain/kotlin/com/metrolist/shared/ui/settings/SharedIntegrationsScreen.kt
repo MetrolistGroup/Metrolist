@@ -105,6 +105,7 @@ data class SharedIntegrationsHost(
     val onCopyText: (String, String) -> Unit = { _, _ -> },
     val onShareText: ((String) -> Unit)? = null,
     val onMessage: (String) -> Unit = {},
+    val carLightsContent: (@Composable (onBack: () -> Unit) -> Unit)? = null,
 )
 
 data class IntegrationPlaybackState(
@@ -172,6 +173,9 @@ fun SharedIntegrationsScreen(
             bottomContentPadding = host.bottomContentPadding,
             initialPage = host.initialPage?.takeUnless { it == SettingsPageId.LISTEN_TOGETHER },
             singlePane = true,
+            pageContent = { page, onBack, _ ->
+                if (page == SettingsPageId.CAR_LIGHTS) host.carLightsContent?.invoke(onBack)
+            },
             externalPages = setOf(SettingsPageId.LISTEN_TOGETHER),
             onOpenPage = { page ->
                 when (page) {
@@ -735,6 +739,25 @@ private fun buildIntegrationsRegistry(
                 ),
         )
     }
+    if (host.carLightsContent != null) {
+        builder.customPage(
+            SettingsPageId.CAR_LIGHTS,
+            stringResource(Res.string.car_lights_title),
+            stringResource(Res.string.settings_car_lights_overview),
+            MetrolistIcons.Outlined.DirectionsCar,
+            SettingsTone.ORANGE,
+            searchTerms =
+                listOf(
+                    stringResource(Res.string.car_lights_enable),
+                    stringResource(Res.string.car_lights_auto_connect),
+                    stringResource(Res.string.car_lights_search),
+                    stringResource(Res.string.car_lights_zone_central),
+                    stringResource(Res.string.car_lights_zone_doors),
+                    stringResource(Res.string.car_lights_zone_rear),
+                    stringResource(Res.string.car_lights_vivid),
+                ),
+        )
+    }
     builder.rootGroup(
         stringResource(Res.string.integrations),
         *listOfNotNull(
@@ -743,6 +766,7 @@ private fun buildIntegrationsRegistry(
             SettingsPageId.LISTEN_BRAINZ,
             SettingsPageId.DEVICE_CONNECT.takeIf { host.deviceConnect != null },
             SettingsPageId.LISTEN_TOGETHER.takeIf { host.listenTogetherManager != null || host.onOpenListenTogether != null },
+            SettingsPageId.CAR_LIGHTS.takeIf { host.carLightsContent != null },
         ).toTypedArray(),
     )
     return builder.build()

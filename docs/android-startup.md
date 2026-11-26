@@ -46,6 +46,22 @@ Paused network recovery waits for playback or connectivity events. A connection 
 
 Pausing these timers must not change crossfade durations, gain curves, animated-cover fallback transitions or reduced-motion rules.
 
+## Car lights
+
+Open Integrations > Car lights on Android to enable this integration.
+
+`App.onCreate` calls `CarLights.start` after Koin starts. It creates `CarLightsController` and observes the `carLights*` preferences. Nothing scans or follows the theme until `carLightsEnabled` is on. Theme tracking also waits for app startup to finish before resolving playback and artwork dependencies on the main thread. The controller reads the Bluetooth adapter only after the runtime permissions are granted: `BLUETOOTH_SCAN` and `BLUETOOTH_CONNECT` on Android 12 and later, `ACCESS_FINE_LOCATION` and the system Location switch on Android 11 and older.
+
+With auto-connect on, the controller runs one low-power scan filtered to the saved address in the application scope and connects when the lights appear. It retries ten seconds after a disconnect or failed scan, and stops when the feature is disabled or Bluetooth turns off. On Android 10 and 11 a scan with the app in the background works only while `MusicService` runs as a foreground service. Scanning and connections require the app process to stay alive on every Android version, as described in [Android's BLE background guidance](https://developer.android.com/develop/connectivity/bluetooth/ble/background). Car Lights does not start the app after its process is killed.
+
+The lights use GATT service `0000fff0-0000-1000-8000-00805f9b34fb` and write characteristic `0000fff3-0000-1000-8000-00805f9b34fb`. Supported advertised names:
+
+- `HRS-MBLEM*` takes zoned frames `8E 07 05 03 RR GG BB 10 ZZ`, where `ZZ` is a zone mask (`10` console, `20` doors, `40` rear).
+- `MELK-QA*` and `MHRS-QA*` take both the zoned frame and the plain frame `7E 07 05 03 RR GG BB 10 EF`.
+- `MELK-O*` without a `W` takes the plain frame only.
+
+The controller writes one frame at a time, at least 60 ms apart, retries rejected writes and response errors up to three times and sends the colors again after every reconnect. New colors and manual sends preserve the 150 ms delay after service discovery and the gap between writes. No-response writes advance on a timer; their callbacks never complete a later frame. A response timeout or no-response error closes the GATT session, and auto-connect retries when enabled. Permanently denied permissions get an Open settings action, and returning to the page refreshes permission state. Settings backups exclude the saved address and name.
+
 ## Background power checks
 
 Idle work has no periodic timer:
