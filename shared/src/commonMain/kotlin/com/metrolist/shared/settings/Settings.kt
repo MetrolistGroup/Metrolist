@@ -20,6 +20,14 @@ import com.metrolist.shared.constants.AndroidActiveFontIdKey
 import com.metrolist.shared.constants.AndroidAutoPinnedPlaylistPlaybackModeKey
 import com.metrolist.shared.constants.AndroidAutoPinnedPlaylistsJsonKey
 import com.metrolist.shared.constants.AndroidAutoTargetPlaylistKey
+import com.metrolist.shared.constants.CarLightsAutoConnectKey
+import com.metrolist.shared.constants.CarLightsCentralRoleKey
+import com.metrolist.shared.constants.CarLightsDeviceAddressKey
+import com.metrolist.shared.constants.CarLightsDeviceNameKey
+import com.metrolist.shared.constants.CarLightsDoorsRoleKey
+import com.metrolist.shared.constants.CarLightsEnabledKey
+import com.metrolist.shared.constants.CarLightsRearRoleKey
+import com.metrolist.shared.constants.CarLightsVividKey
 import com.metrolist.shared.constants.AndroidCustomFontFileKey
 import com.metrolist.shared.constants.AndroidCustomFontNameKey
 import com.metrolist.shared.constants.AndroidLastStorageAuditKey
@@ -468,6 +476,14 @@ class Settings(
         AndroidAutoPinnedPlaylistPlaybackModeKey,
         AutomotivePinnedPlaylistPlaybackMode.IN_ORDER,
     )
+    var carLightsEnabled by preference(CarLightsEnabledKey, false)
+    var carLightsAutoConnect by preference(CarLightsAutoConnectKey, true)
+    var carLightsDeviceAddress by preference(CarLightsDeviceAddressKey, "")
+    var carLightsDeviceName by preference(CarLightsDeviceNameKey, "")
+    var carLightsCentralRole by preference(CarLightsCentralRoleKey, CarLightRole.PRIMARY)
+    var carLightsDoorsRole by preference(CarLightsDoorsRoleKey, CarLightRole.SECONDARY)
+    var carLightsRearRole by preference(CarLightsRearRoleKey, CarLightRole.TERTIARY)
+    var carLightsVivid by preference(CarLightsVividKey, true)
     var crossfadeEnabled by preference(false)
     var crossfadeDuration by preference(10f)
     var crossfadeGapless by preference(true)
@@ -1400,6 +1416,8 @@ class Settings(
                     "aiSlopBlocklistUpdatedAt",
                     SpeedDialArtworkRefreshTimesKey,
                     "customDownloadPath",
+                    CarLightsDeviceAddressKey,
+                    CarLightsDeviceNameKey,
                     "knownUploadIdsJson",
                     "hasNewUploads",
                     "desktopOnboardingComplete",

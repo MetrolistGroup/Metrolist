@@ -56,6 +56,7 @@ import com.metrolist.android.ui.player.CanvasCache
 import com.metrolist.android.ui.screens.settings.AndroidAboutScreen
 import com.metrolist.android.ui.screens.settings.AndroidAutoScreen
 import com.metrolist.android.ui.screens.settings.BackupRestoreScreen
+import com.metrolist.android.ui.screens.settings.CarLightsScreen
 import com.metrolist.android.ui.screens.settings.DevtoolsSettingsScreen
 import com.metrolist.android.ui.screens.settings.PlaybackBenchmarkSettingsScreen
 import com.metrolist.android.ui.screens.settings.StorageSettingsScreen
@@ -357,6 +358,7 @@ fun SettingsScreen(
                 add(SettingsPageId.PLAYBACK_BENCHMARK)
             }
             add(SettingsPageId.ANDROID_AUTO)
+            add(SettingsPageId.CAR_LIGHTS)
         }
 
     fun openSupportedLinks() {
@@ -502,6 +504,10 @@ fun SettingsScreen(
                             when (page) {
                                 SettingsPageId.ANDROID_AUTO -> {
                                     AndroidAutoScreen(onNavigateBack = onBack)
+                                }
+
+                                SettingsPageId.CAR_LIGHTS -> {
+                                    CarLightsScreen(onNavigateBack = onBack)
                                 }
 
                                 SettingsPageId.STORAGE -> {

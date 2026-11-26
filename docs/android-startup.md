@@ -46,6 +46,20 @@ Paused network recovery waits for playback or connectivity events. A connection 
 
 Pausing these timers must not change crossfade durations, gain curves, animated-cover fallback transitions or reduced-motion rules.
 
+## Car Lights
+
+`App.onCreate` calls `CarLights.start` after Koin starts. It creates `CarLightsController` and observes the `carLights*` preferences. Nothing scans or follows the theme until `carLightsEnabled` is on. The controller reads the Bluetooth adapter only after the runtime permissions are granted: `BLUETOOTH_SCAN` and `BLUETOOTH_CONNECT` on Android 12 and later, `ACCESS_FINE_LOCATION` and the system Location switch on Android 11 and older.
+
+With auto-connect on, the controller runs one low-power scan filtered to the saved address in the application scope and connects when the lights appear. It retries ten seconds after a disconnect or failed scan, and stops when the feature is disabled or Bluetooth turns off. On Android 10 and 11 a scan with the app in the background works only while `MusicService` runs as a foreground service. Android 12 and later have no such limit.
+
+The lights use GATT service `0000fff0-0000-1000-8000-00805f9b34fb` and write characteristic `0000fff3-0000-1000-8000-00805f9b34fb`. Supported advertised names:
+
+- `HRS-MBLEM*` takes zoned frames `8E 07 05 03 RR GG BB 10 ZZ`, where `ZZ` is a zone mask (`10` console, `20` doors, `40` rear).
+- `MELK-QA*` and `MHRS-QA*` take both the zoned frame and the plain frame `7E 07 05 03 RR GG BB 10 EF`.
+- `MELK-O*` without a `W` takes the plain frame only.
+
+The controller writes one frame at a time, about 60 ms apart, retries a failed write up to three times and sends the colors again after every reconnect. Settings backups exclude the saved address and name.
+
 ## Background power checks
 
 Idle work has no periodic timer:

@@ -38,6 +38,7 @@ enum class SettingsPageId {
     LYRICS,
     PRIVACY,
     ANDROID_AUTO,
+    CAR_LIGHTS,
     FONTS,
     PLAYER_STYLE,
     PLAYER_ARTWORK,

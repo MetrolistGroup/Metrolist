@@ -172,6 +172,14 @@ internal fun SettingsUiRegistryBuilder.registerAppearanceSettings(host: SharedSe
                     description = stringResource(Res.string.settings_fonts_overview),
                 )
             }
+            if (SettingsPageId.CAR_LIGHTS in host.availablePages) {
+                navigation(
+                    id = "carLights",
+                    title = stringResource(Res.string.car_lights_title),
+                    destination = SettingsPageId.CAR_LIGHTS,
+                    description = stringResource(Res.string.settings_car_lights_overview),
+                )
+            }
         }
         if (host.platform == SettingsPlatform.DESKTOP) {
             group("libraryGrid", stringResource(Res.string.library)) {
