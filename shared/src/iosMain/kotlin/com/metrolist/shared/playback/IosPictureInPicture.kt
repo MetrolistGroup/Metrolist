@@ -195,7 +195,7 @@ private object IosPictureInPictureBridge : NSObject(), AVPictureInPictureControl
                             playing,
                             state.playbackSpeed,
                             surfaceVisible = true,
-                            shouldExpectProgress = playing && !state.isLoading && positionMapped,
+                            shouldExpectProgress = playing && !state.isLoading,
                         )
                     }
                 }
