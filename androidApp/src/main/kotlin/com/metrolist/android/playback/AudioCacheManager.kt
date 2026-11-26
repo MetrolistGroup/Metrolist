@@ -1365,11 +1365,18 @@ class AudioCacheManager(
         if ((file.parentFile?.usableSpace ?: 0L) <= bytes + MIN_FREE_SPACE_BYTES) throw InsufficientAudioStorageException()
     }
 
+    // A nonzero limit keeps the captures that fit it and lets the caching under way publish, so the song that plays still
+    // reaches the cache. Disabling the cache stops both, like clearing it does.
     suspend fun enforceCacheLimit() =
         withContext(Dispatchers.IO) {
-            cacheGeneration.incrementAndGet()
+            val limit = Settings.shared.maxSongCacheSize
             sabrPlaybackCache.clear()
-            DirectPlaybackCache.clear(playbackCaptureDirectory(context))
+            if (limit == 0) {
+                cacheGeneration.incrementAndGet()
+                DirectPlaybackCache.clear(playbackCaptureDirectory(context))
+            } else {
+                DirectPlaybackCache.retainWithin(playbackCaptureBudgetBytes(limit))
+            }
             evictIfNeeded()
         }
 
