@@ -65,7 +65,14 @@ fun rememberMetrolistSettingsRegistry(
                                     listOf(
                                         Res.string.song_cache_location,
                                         Res.string.song_cache_directory,
+                                    ),
+                                )
+                            }
+                            if (host.platform == SettingsPlatform.ANDROID || host.platform == SettingsPlatform.DESKTOP) {
+                                addAll(
+                                    listOf(
                                         Res.string.animated_artwork_cache,
+                                        Res.string.max_animated_artwork_cache_size,
                                         Res.string.clear_animated_artwork_cache,
                                     ),
                                 )
