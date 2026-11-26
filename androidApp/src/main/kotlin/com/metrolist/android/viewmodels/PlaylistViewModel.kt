@@ -663,7 +663,7 @@ class PlaylistViewModel(
                             }
                             if (_playlistId.value == playlistId) loadLocalPlaylist(playlistId, preferBrowseId = true)
                         } else {
-                            error("Playlist is unavailable")
+                            error(getString(Res.string.playlist_unavailable))
                         }
                         if (remoteId != null && _playlistId.value == playlistId) loadPlaylist(remoteId, forceRefresh = true)
                     }
