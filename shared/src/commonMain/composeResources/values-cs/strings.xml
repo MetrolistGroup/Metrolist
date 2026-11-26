@@ -2736,4 +2736,5 @@
     <string name="discord_preview_edit_hint">Klepnutím na řádek v náhledu jej upravíte</string>
     <string name="discord_time_left">%1$s zbývá</string>
     <string name="discord_position_duration">%1$s / %2$s</string>
+    <string name="recently_played">Nedávno přehráno</string>
 </resources>
