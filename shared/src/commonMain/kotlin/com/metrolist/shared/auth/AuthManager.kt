@@ -15,7 +15,6 @@ import com.metrolist.shared.state.GlobalYouTubeRepository
 import com.metrolist.shared.state.SongLikeState
 import com.metrolist.shared.utils.clearWebCookies
 import com.metrolist.shared.youtube.logging.YtLogger
-import com.metrolist.shared.youtube.playback.PlaybackNetworkStateStore
 import kotlinx.atomicfu.locks.ReentrantLock
 import kotlinx.atomicfu.locks.withLock
 import kotlinx.coroutines.CancellationException
@@ -108,25 +107,24 @@ private fun launchDelegatedSessionResolution(waitIfRunning: Boolean) {
 // The lookup is optional, so a failed request or secure-settings write must not fail login, startup or an account refresh.
 private suspend fun resolveDelegatedSessionSafely(): Boolean {
     val dataSyncId = Settings.shared.dataSyncId
+    var listedAccounts = false
     val installed =
         try {
-            AuthManager().resolveDelegatedSession(::fetchDelegatedSessionAccounts)
+            AuthManager().resolveDelegatedSession { fetchDelegatedSessionAccounts().also { listedAccounts = it.isNotEmpty() } }
         } catch (e: CancellationException) {
             throw e
         } catch (error: Exception) {
             YtLogger.e("YouTubeAuth", "Delegated session lookup failed type=${error::class.simpleName}")
-            false
+            return false
         }
-    // An offline lookup proves nothing about the account, so it must not release queued replays.
-    if (PlaybackNetworkStateStore.current.connected) {
-        delegatedSessionLock.withLock { settledDelegatedSessionLookup = dataSyncId }
-    }
+    // Failed account-list requests come back empty, so only a non-empty list proves the account has no brand page to wait for.
+    if (listedAccounts) delegatedSessionLock.withLock { settledDelegatedSessionLookup = dataSyncId }
     return installed
 }
 
 /**
- * True until the signed-in account's brand page is known or one lookup for it has finished, so queued plays are not
- * replayed to the personal account while a brand page may still be found. A failed lookup stops blocking replay.
+ * True until the signed-in account's brand page is known or a successful account list has been read for it, so plays
+ * are not reported to the personal account while a brand page may still be found.
  */
 internal fun isDelegatedSessionLookupPending(): Boolean {
     val dataSyncId = Settings.shared.dataSyncId

@@ -27,6 +27,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.selects.select
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.math.abs
 import kotlin.time.Clock
 import kotlin.time.TimeSource
@@ -410,6 +411,11 @@ class YouTubePlaybackReporter internal constructor(
 
     private suspend fun consume(active: Session) {
         try {
+            // A Start sent before the brand page is known lands on the personal account and cannot be retracted.
+            // shortcut: polls the lookup state, bounded by DELEGATION_WAIT_MS; switch to a lookup completion signal if one is added.
+            withTimeoutOrNull(DELEGATION_WAIT_MS) {
+                while (isDelegatedSessionLookupPending()) delay(DELEGATION_POLL_MS)
+            }
             val initial = active.initialTracking?.takeIf { active.clientName == YouTubeClient.WEB_REMIX.clientName && isFresh(it) }
             val tracking =
                 if (!isReportingEnabled(active)) {
@@ -746,6 +752,8 @@ class YouTubePlaybackReporter internal constructor(
         private const val TRACKING_MAX_AGE_MS = 60L * 60L * 1000L
         private const val BASE_RETRY_MS = 30_000L
         private const val OFFLINE_CHECKPOINT_MS = 30_000L
+        private const val DELEGATION_WAIT_MS = 15_000L
+        private const val DELEGATION_POLL_MS = 500L
         private val pendingDrainLock = ReentrantLock()
         private var pendingDrainJob: Job? = null
         private var pendingDrainAttempt: CompletableDeferred<Unit>? = null
