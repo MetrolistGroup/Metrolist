@@ -171,6 +171,16 @@ fun rememberCachedArtworkPreview(
 
 fun highResolutionArtworkUrl(url: String): String = sizedArtworkUrl(url, MAX_ARTWORK_SIZE_PX)
 
+internal fun uncroppedHighResolutionArtworkUrl(url: String): String {
+    val highResolutionUrl = highResolutionArtworkUrl(url)
+    val host = highResolutionUrl.substringAfter("://", "").substringBefore('/').lowercase()
+    if (!host.endsWith(".googleusercontent.com") && !host.endsWith(".ggpht.com")) return highResolutionUrl
+    return highResolutionUrl.replace(GoogleArtworkSizeSuffix) { match ->
+        val flags = match.groupValues[3].split('-').filter { it.isNotEmpty() && it !in setOf("c", "s", "p", "pp", "p-k") }
+        "=s$MAX_ARTWORK_SIZE_PX" + flags.joinToString("") { "-$it" }
+    }
+}
+
 fun String?.withArtworkCacheRevision(revision: Long): String? = this?.substringBefore('#')?.let { "$it#metrolist-refresh=$revision" }
 
 fun ImageLoader.evictArtworkCache(url: String?) {
