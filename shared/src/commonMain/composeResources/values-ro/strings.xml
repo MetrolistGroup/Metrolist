@@ -619,7 +619,7 @@
     <string name="device_connect_account_mismatch">Cont diferit</string>
     <string name="device_connect_permission_needed">Permisiunea pentru rețeaua locală este necesară pentru a găsi și a te conecta la dispozitive.</string>
     <string name="device_connect_grant_permission">Acordă permisiunea</string>
-    <string name="side_menu_welcome">Bun venit în Metrolist</string>
+    <string name="side_menu_welcome">Bun venit la Metrolist</string>
     <string name="action_cannot_be_undone">Această acțiune nu poate fi anulată.</string>
     <string name="add">Adaugă</string>
     <string name="add_a_song">Adaugă o melodie</string>
@@ -636,7 +636,7 @@
     <string name="ai_system_prompt_label">Prompt de sistem</string>
     <string name="ai_translation_enable">Tradu versurile</string>
     <string name="ai_translation_enable_description">Afișează versurile în limba ta sub cuvintele originale</string>
-    <string name="ai_translation_for_track">Traduceri cu AI pentru această piesă</string>
+    <string name="ai_translation_for_track">Traducere cu AI pentru această piesă</string>
     <string name="ai_translation_new_title">Traducere nouă a versurilor cu AI</string>
     <string name="ai_translation_new_desc">Creează o traducere nouă</string>
     <string name="ai_translation_mode_literal">Traducere</string>
@@ -667,7 +667,7 @@
     <string name="clear_recent_from_searches_question">Ștergi melodiile din căutările recente?</string>
     <string name="clear_recent_searches_question">Elimini căutările recente?</string>
     <string name="clear_recognition_history_description">Toate melodiile recunoscute vor fi eliminate de pe acest dispozitiv.</string>
-    <string name="clear_recognition_history_question">Șterge istoricul recunoașterii?</string>
+    <string name="clear_recognition_history_question">Șterge istoricul recunoașterilor?</string>
     <string name="clear_section">Șterge %1$s</string>
     <string name="clear_selection">Anulează selecția</string>
     <string name="client">Client</string>
@@ -2700,5 +2700,5 @@
     <string name="updates_nightly_builds_desc">Obține o versiune nouă după fiecare modificare. Versiunile nightly pot fi instabile.</string>
     <string name="updates_nightly_builds">Versiuni nightly</string>
     <string name="updates_force_install">Instalează oricum</string>
-    <string name="ai_api_key_optional">Opțional, modelele gratuite funcționează fără cheie</string>
+    <string name="ai_api_key_optional">Opțional, modelele gratuite funcționează fără o cheie</string>
 </resources>
