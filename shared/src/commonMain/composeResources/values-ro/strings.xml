@@ -713,7 +713,7 @@
     <string name="export_format_csv" translatable="false">CSV</string>
     <string name="export_format_csv_description">Listă de melodii pentru foi de calcul</string>
     <string name="export_format_m3u" translatable="false">M3U</string>
-    <string name="export_format_m3u_description">Fișier playlist cu link-uri YouTube Music</string>
+    <string name="export_format_m3u_description">Fișier playlist cu linkuri YouTube Music</string>
     <string name="export_saved">Export salvat</string>
     <string name="full_screen">Ecran complet</string>
     <string name="enter_pip" tools:ignore="MissingTranslation">Intră în modul Picture-in-Picture</string>
@@ -742,7 +742,7 @@
     <string name="language_hindi">Hindi</string>
     <string name="language_japanese">Japoneză</string>
     <string name="language_korean">Coreeană</string>
-    <string name="language_kyrgyz">Kyrgyz</string>
+    <string name="language_kyrgyz">Kirghiză</string>
     <string name="language_macedonian">Macedoneană</string>
     <string name="language_punjabi">Punjabi</string>
     <string name="language_russian">Rusă</string>
