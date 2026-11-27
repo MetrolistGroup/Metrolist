@@ -200,6 +200,7 @@ internal class AndroidQueueCoordinator(
                         isRadioQueue = true
                         isExplicitRadioQueue = true
                         isFiniteQueue = false
+                        _repeatMode.value = Player.REPEAT_MODE_OFF
                     }
                 }
                 locked
@@ -918,9 +919,9 @@ internal class AndroidQueueCoordinator(
                     remoteState.sessionId != null && remoteState.targetId != localId
                 }.distinctUntilChanged()
 
-            combine(repeatMode, followingFlow) { mode, following ->
+            combine(repeatMode, player.songQueue, followingFlow) { mode, _, following ->
                 mode to following
-            }.distinctUntilChanged().collect { (mode, following) ->
+            }.collect { (mode, following) ->
                 if (mode == Player.REPEAT_MODE_ALL && !following) {
                     autoLoadMoreJob?.cancel()
                     // Repeat All removes generated tracks; allow the same song to refill once repeat is off.
