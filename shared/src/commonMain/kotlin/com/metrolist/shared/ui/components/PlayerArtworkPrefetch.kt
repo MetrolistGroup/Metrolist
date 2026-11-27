@@ -16,16 +16,33 @@ import kotlinx.coroutines.launch
 
 internal val LocalPlayerArtworkPrefetchUrls = compositionLocalOf { emptyList<String>() }
 
-internal fun PlayerUiState.adjacentArtworkUrls(): List<String> {
-    if (currentQueueIndex !in queueItems.indices) return emptyList()
+internal fun PlayerUiState.adjacentArtworkUrls(): List<String> =
+    listOfNotNull(nextArtworkUrl(), previousArtworkUrl()).distinct()
+
+private fun PlayerUiState.nextQueueIndex(): Int? {
+    if (currentQueueIndex !in queueItems.indices) return null
     val nextIndex = if (currentQueueIndex == queueItems.lastIndex && repeatMode == 2) 0 else currentQueueIndex + 1
-    val previousIndex = if (currentQueueIndex == 0 && repeatMode == 2) queueItems.lastIndex else currentQueueIndex - 1
-    return listOf(nextIndex, previousIndex)
-        .filter { it != currentQueueIndex }
-        .mapNotNull { queueItems.getOrNull(it)?.thumbnail?.takeIf(String::isNotBlank) }
-        .filter { it != currentSong?.displayThumbnail }
-        .distinct()
+    return nextIndex.takeIf { it != currentQueueIndex && it in queueItems.indices }
 }
+
+private fun PlayerUiState.previousQueueIndex(): Int? {
+    if (currentQueueIndex !in queueItems.indices) return null
+    val previousIndex = if (currentQueueIndex == 0 && repeatMode == 2) queueItems.lastIndex else currentQueueIndex - 1
+    return previousIndex.takeIf { it != currentQueueIndex && it in queueItems.indices }
+}
+
+// Navigation depends on queue position only, so tracks that share or lack artwork stay swipeable.
+internal fun PlayerUiState.hasNextTrack(): Boolean = nextQueueIndex() != null
+
+// The first track stays swipeable without repeat because previous() restarts it once playback passes the restart point.
+internal fun PlayerUiState.hasPreviousTrack(): Boolean = currentQueueIndex in queueItems.indices
+
+// Preview URLs are best-effort; URL deduplication for prefetching lives in artworkPrefetchRequests.
+internal fun PlayerUiState.nextArtworkUrl(): String? =
+    nextQueueIndex()?.let { queueItems[it].thumbnail?.takeIf(String::isNotBlank) }
+
+internal fun PlayerUiState.previousArtworkUrl(): String? =
+    previousQueueIndex()?.let { queueItems[it].thumbnail?.takeIf(String::isNotBlank) }
 
 internal fun artworkPrefetchRequests(
     request: ImageRequest,

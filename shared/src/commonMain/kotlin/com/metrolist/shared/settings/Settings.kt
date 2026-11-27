@@ -728,7 +728,7 @@ class Settings(
     var deviceConnectPairedDevices by preference("")
     var deviceConnectDefaultDeviceId by preference(DeviceConnectDefaultDeviceIdKey, "")
 
-    var swipeThumbnail by preference(false)
+    var swipeThumbnail by preference(true)
     var swipeSensitivity by preference(73f)
     var swipeToSong by preference(SwipeToSongKey, false)
     var swipeToRemoveSong by preference(SwipeToRemoveSongKey, false)

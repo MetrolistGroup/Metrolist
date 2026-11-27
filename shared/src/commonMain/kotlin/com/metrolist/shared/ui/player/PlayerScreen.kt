@@ -36,11 +36,15 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.focusable
-import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.awaitHorizontalTouchSlopOrCancellation
+import androidx.compose.foundation.gestures.horizontalDrag
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -97,8 +101,10 @@ import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.movableContentOf
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -110,6 +116,7 @@ import androidx.compose.ui.draw.BlurredEdgeTreatment
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
@@ -120,6 +127,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.zIndex
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
@@ -127,7 +135,10 @@ import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.input.pointer.positionChange
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.util.VelocityTracker
+import androidx.compose.ui.input.pointer.util.addPointerInputChange
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.layout
@@ -146,6 +157,7 @@ import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.LayoutDirection
@@ -215,10 +227,14 @@ import com.metrolist.shared.ui.components.VintagePlayerControls
 import com.metrolist.shared.ui.components.adjacentArtworkUrls
 import com.metrolist.shared.ui.components.focusOutline
 import com.metrolist.shared.ui.components.formatSleepTimerRemaining
+import com.metrolist.shared.ui.components.hasNextTrack
+import com.metrolist.shared.ui.components.hasPreviousTrack
 import com.metrolist.shared.ui.components.images.AsyncImage
 import com.metrolist.shared.ui.components.lyrics.LyricsContrastScrim
 import com.metrolist.shared.ui.components.lyrics.LyricsOffsetEditor
+import com.metrolist.shared.ui.components.nextArtworkUrl
 import com.metrolist.shared.ui.components.playbackMarquee
+import com.metrolist.shared.ui.components.previousArtworkUrl
 import com.metrolist.shared.ui.components.playerControlBlend
 import com.metrolist.shared.ui.components.rememberBottomSheetState
 import com.metrolist.shared.ui.components.rememberTrackMarquee
@@ -241,61 +257,334 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 import org.jetbrains.compose.resources.stringResource
 import kotlin.math.abs
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.TimeMark
 import kotlin.time.TimeSource
 
+private const val ARTWORK_TRACK_CHANGE_TIMEOUT_MS = 5_000L
+private const val ARTWORK_FLING_VELOCITY_THRESHOLD_PX_PER_SECOND = 500f
+
+/** Gap between adjacent artwork panes during a swipe. */
+private val ARTWORK_SWIPE_PANE_SPACING = 32.dp
+
+/** Shows neighboring artwork during swipes, respecting RTL and optional landscape padding. */
 @Composable
-internal fun Modifier.artworkSwipe(
+internal fun ArtworkSwipeBox(
     enabled: Boolean,
     sensitivity: Float,
+    canNavigatePrevious: Boolean,
+    canNavigateNext: Boolean,
+    previousArtworkUrl: String?,
+    nextArtworkUrl: String?,
+    trackKey: String?,
+    replacementArtworkReady: Boolean,
     onPrevious: () -> Unit,
     onNext: () -> Unit,
-): Modifier {
-    if (!enabled) return this
-    val currentOnPrevious by rememberUpdatedState(onPrevious)
-    val currentOnNext by rememberUpdatedState(onNext)
-    var totalDrag by remember { mutableFloatStateOf(0f) }
-    var dragging by remember { mutableStateOf(false) }
-    val offset =
-        animateFloatAsState(
-            targetValue = totalDrag,
-            animationSpec =
-                if (dragging) {
-                    snap()
-                } else {
-                    spring(
-                        dampingRatio = Spring.DampingRatioNoBouncy,
-                        stiffness = Spring.StiffnessMedium,
-                    )
-                },
-            label = "artworkSwipe",
-        )
-    return graphicsLayer { translationX = offset.value }
-        .pointerInput(sensitivity) {
-            detectHorizontalDragGestures(
-                onDragStart = { dragging = true },
-                onHorizontalDrag = { change, dragAmount ->
-                    change.consume()
-                    totalDrag += dragAmount
-                },
-                onDragEnd = {
-                    val threshold = artworkSwipeThresholdPx(size.width.toFloat(), sensitivity)
-                    when {
-                        totalDrag >= threshold -> currentOnPrevious()
-                        totalDrag <= -threshold -> currentOnNext()
+    modifier: Modifier = Modifier,
+    contentAlignment: Alignment = Alignment.Center,
+    swipeEdgePadding: Dp = 0.dp,
+    adjacentArtwork: @Composable BoxScope.(url: String) -> Unit,
+    content: @Composable BoxScope.() -> Unit,
+) {
+    val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
+    val leftPaneUrl = if (isRtl) nextArtworkUrl else previousArtworkUrl
+    val rightPaneUrl = if (isRtl) previousArtworkUrl else nextArtworkUrl
+    val onSettleFromLeft by rememberUpdatedState(if (isRtl) onNext else onPrevious)
+    val onSettleFromRight by rememberUpdatedState(if (isRtl) onPrevious else onNext)
+    val currentTrackKey by rememberUpdatedState(trackKey)
+    val currentReplacementArtworkReady by rememberUpdatedState(replacementArtworkReady)
+    // Keep gesture callbacks current across track changes.
+    val currentLeftPaneUrl by rememberUpdatedState(leftPaneUrl)
+    val currentRightPaneUrl by rememberUpdatedState(rightPaneUrl)
+    // Navigation follows queue position even when a neighbor has no distinct artwork.
+    val currentCanSettleFromLeft by rememberUpdatedState(if (isRtl) canNavigateNext else canNavigatePrevious)
+    val currentCanSettleFromRight by rememberUpdatedState(if (isRtl) canNavigatePrevious else canNavigateNext)
+
+    var containerWidthPx by remember { mutableFloatStateOf(0f) }
+    val paneSpacingPx = with(LocalDensity.current) { ARTWORK_SWIPE_PANE_SPACING.toPx() }
+    val edgePaddingPx = with(LocalDensity.current) { swipeEdgePadding.toPx() }
+    // Width of the artwork's travel lane.
+    val paneWidthPx = (containerWidthPx - 2 * edgePaddingPx).coerceAtLeast(0f)
+    val offset = remember { Animatable(0f) }
+    var isDragging by remember { mutableStateOf(false) }
+    var dragOffsetPx by remember { mutableFloatStateOf(0f) }
+    val displayedOffsetPx = if (isDragging) dragOffsetPx else offset.value
+    val scope = rememberCoroutineScope()
+    val settleSpec =
+        remember { spring<Float>(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMedium) }
+    val returnSpec =
+        remember { spring<Float>(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMedium) }
+
+    // Freeze neighboring artwork URLs until the track-change animation completes.
+    var frozenLeftUrl by remember { mutableStateOf<String?>(null) }
+    var frozenRightUrl by remember { mutableStateOf<String?>(null) }
+    var freezePanes by remember { mutableStateOf(false) }
+    // Hold settled artwork until replacement loads (-1 = left, 1 = right, 0 = none).
+    var holdSide by remember { mutableStateOf(0) }
+    // Cancel obsolete settles so older swipes cannot reset newer state.
+    var settleJob by remember { mutableStateOf<Job?>(null) }
+    var settleGeneration by remember { mutableIntStateOf(0) }
+    // Keep a settle and its artwork handoff from being interrupted by another drag.
+    val navigationRequested = remember { mutableStateOf(false) }
+    val shownLeftUrl = if (freezePanes) frozenLeftUrl else leftPaneUrl
+    val shownRightUrl = if (freezePanes) frozenRightUrl else rightPaneUrl
+
+    Box(
+        contentAlignment = contentAlignment,
+        modifier =
+            modifier
+                .then(if (swipeEdgePadding > 0.dp) Modifier.clipToBounds() else Modifier)
+                .onSizeChanged { containerWidthPx = it.width.toFloat() }
+                .pointerInput(enabled, sensitivity, swipeEdgePadding, isRtl) {
+                    if (!enabled) return@pointerInput
+                    val velocityTracker = VelocityTracker()
+                    fun clampDragOffset(value: Float): Float {
+                        val travel = (size.width.toFloat() - 2 * edgePaddingPx).coerceAtLeast(0f) + paneSpacingPx
+                        val minOffset = if (currentCanSettleFromRight) -travel else 0f
+                        val maxOffset = if (currentCanSettleFromLeft) travel else 0f
+                        return value.coerceIn(minOffset, maxOffset)
                     }
-                    dragging = false
-                    totalDrag = 0f
+
+                    fun launchSettle(
+                        settleFromLeft: Boolean,
+                        settleFromRight: Boolean,
+                        keyAtRelease: String?,
+                        leftAtRelease: String?,
+                        rightAtRelease: String?,
+                        paneWidth: Float,
+                        velocityX: Float,
+                        offsetAtRelease: Float,
+                    ) {
+                        navigationRequested.value = settleFromLeft || settleFromRight
+                        val generation = ++settleGeneration
+                        settleJob =
+                            scope.launch {
+                                try {
+                                    offset.snapTo(offsetAtRelease)
+                                    if (settleGeneration == generation) isDragging = false
+                                    when {
+                                        settleFromLeft -> {
+                                            if (leftAtRelease == null) {
+                                                // No neighbor preview (for example restarting the first track): act, then bounce back.
+                                                navigationRequested.value = true
+                                                onSettleFromLeft()
+                                                offset.animateTo(0f, returnSpec)
+                                                return@launch
+                                            }
+                                            frozenLeftUrl = leftAtRelease
+                                            frozenRightUrl = rightAtRelease
+                                            freezePanes = true
+                                            offset.animateTo(
+                                                paneWidth + paneSpacingPx,
+                                                settleSpec,
+                                                initialVelocity = velocityX.coerceIn(0f, paneWidth * 1.5f),
+                                            )
+                                            if (currentTrackKey == keyAtRelease) {
+                                                navigationRequested.value = true
+                                                onSettleFromLeft()
+                                                // Park the settled neighbor artwork at center while the player switches tracks.
+                                                holdSide = -1
+                                                offset.snapTo(0f)
+                                                val changedTrackKey =
+                                                    withTimeoutOrNull(ARTWORK_TRACK_CHANGE_TIMEOUT_MS) {
+                                                        snapshotFlow { currentTrackKey }.first { it != keyAtRelease }
+                                                    }
+                                                if (changedTrackKey != null && settleGeneration == generation) {
+                                                    snapshotFlow { currentReplacementArtworkReady }.first { it }
+                                                }
+                                            } else {
+                                                // Playback advanced during the settle; never skip a second track.
+                                                offset.snapTo(0f)
+                                            }
+                                        }
+                                        settleFromRight -> {
+                                            if (rightAtRelease == null) {
+                                                // No neighbor preview (for example restarting the first track): act, then bounce back.
+                                                navigationRequested.value = true
+                                                onSettleFromRight()
+                                                offset.animateTo(0f, returnSpec)
+                                                return@launch
+                                            }
+                                            frozenLeftUrl = leftAtRelease
+                                            frozenRightUrl = rightAtRelease
+                                            freezePanes = true
+                                            offset.animateTo(
+                                                -(paneWidth + paneSpacingPx),
+                                                settleSpec,
+                                                initialVelocity = velocityX.coerceIn(-paneWidth * 1.5f, 0f),
+                                            )
+                                            if (currentTrackKey == keyAtRelease) {
+                                                navigationRequested.value = true
+                                                onSettleFromRight()
+                                                // Park the settled neighbor artwork at center while the player switches tracks.
+                                                holdSide = 1
+                                                offset.snapTo(0f)
+                                                val changedTrackKey =
+                                                    withTimeoutOrNull(ARTWORK_TRACK_CHANGE_TIMEOUT_MS) {
+                                                        snapshotFlow { currentTrackKey }.first { it != keyAtRelease }
+                                                    }
+                                                if (changedTrackKey != null && settleGeneration == generation) {
+                                                    snapshotFlow { currentReplacementArtworkReady }.first { it }
+                                                }
+                                            } else {
+                                                // Playback advanced during the settle; never skip a second track.
+                                                offset.snapTo(0f)
+                                            }
+                                        }
+                                        else -> offset.animateTo(0f, returnSpec)
+                                    }
+                                } finally {
+                                    // Only the active settle may clear held artwork state.
+                                    if (settleGeneration == generation) {
+                                        isDragging = false
+                                        dragOffsetPx = 0f
+                                        navigationRequested.value = false
+                                        holdSide = 0
+                                        freezePanes = false
+                                    }
+                                }
+                            }
+                    }
+
+                    awaitEachGesture {
+                        val down = awaitFirstDown(requireUnconsumed = false)
+                        velocityTracker.resetTracking()
+                        velocityTracker.addPointerInputChange(down)
+                        var overSlop = 0f
+                        val drag =
+                            awaitHorizontalTouchSlopOrCancellation(down.id) { change, amount ->
+                                overSlop = amount
+                                velocityTracker.addPointerInputChange(change)
+                                change.consume()
+                            }
+                        if (drag == null) {
+                            velocityTracker.resetTracking()
+                            return@awaitEachGesture
+                        }
+                        if (navigationRequested.value) {
+                            velocityTracker.resetTracking()
+                            return@awaitEachGesture
+                        }
+
+                        // Apply every pointer delta before handling release, so fast flicks cannot use stale offsets.
+                        settleGeneration += 1
+                        settleJob?.cancel()
+                        settleJob = null
+                        navigationRequested.value = false
+                        holdSide = 0
+                        freezePanes = false
+                        isDragging = true
+                        dragOffsetPx = 0f
+                        var gestureOffsetPx = clampDragOffset(overSlop)
+                        dragOffsetPx = gestureOffsetPx
+                        val completed =
+                            horizontalDrag(drag.id) { change ->
+                                velocityTracker.addPointerInputChange(change)
+                                gestureOffsetPx = clampDragOffset(gestureOffsetPx + change.positionChange().x)
+                                dragOffsetPx = gestureOffsetPx
+                                change.consume()
+                            }
+                        if (!completed) {
+                            velocityTracker.resetTracking()
+                            val offsetAtCancel = gestureOffsetPx
+                            val generation = settleGeneration
+                            settleJob =
+                                scope.launch {
+                                    try {
+                                        offset.snapTo(offsetAtCancel)
+                                        if (settleGeneration == generation) isDragging = false
+                                        offset.animateTo(0f, returnSpec)
+                                    } finally {
+                                        if (settleGeneration == generation) {
+                                            isDragging = false
+                                            dragOffsetPx = 0f
+                                        }
+                                    }
+                                }
+                            return@awaitEachGesture
+                        }
+
+                        val velocityX = velocityTracker.calculateVelocity().x
+                        velocityTracker.resetTracking()
+                        val paneWidth = (size.width.toFloat() - 2 * edgePaddingPx).coerceAtLeast(0f)
+                        val threshold = artworkSwipeThresholdPx(paneWidth + paneSpacingPx, sensitivity)
+                        val isFling =
+                            velocityX >= ARTWORK_FLING_VELOCITY_THRESHOLD_PX_PER_SECOND ||
+                                velocityX <= -ARTWORK_FLING_VELOCITY_THRESHOLD_PX_PER_SECOND
+                        val canLeftAtRelease = currentCanSettleFromLeft
+                        val canRightAtRelease = currentCanSettleFromRight
+                        val settleFromLeft =
+                            canLeftAtRelease &&
+                                if (isFling) velocityX > 0f else gestureOffsetPx >= threshold
+                        val settleFromRight =
+                            canRightAtRelease &&
+                                if (isFling) velocityX < 0f else gestureOffsetPx <= -threshold
+                        val keyAtRelease = currentTrackKey
+                        val leftAtRelease = currentLeftPaneUrl
+                        val rightAtRelease = currentRightPaneUrl
+                        val offsetAtRelease = gestureOffsetPx
+                        launchSettle(
+                            settleFromLeft = settleFromLeft,
+                            settleFromRight = settleFromRight,
+                            keyAtRelease = keyAtRelease,
+                            leftAtRelease = leftAtRelease,
+                            rightAtRelease = rightAtRelease,
+                            paneWidth = paneWidth,
+                            velocityX = velocityX,
+                            offsetAtRelease = offsetAtRelease,
+                        )
+                    }
                 },
-                onDragCancel = {
-                    dragging = false
-                    totalDrag = 0f
-                },
-            )
+    ) {
+        // Keep neighboring images loaded so they appear immediately during a swipe.
+        if (enabled) {
+            shownLeftUrl?.let { url ->
+                Box(
+                    contentAlignment = contentAlignment,
+                    modifier =
+                        Modifier
+                            .matchParentSize()
+                            .padding(horizontal = swipeEdgePadding)
+                            .zIndex(if (holdSide == -1) 1f else 0f)
+                            .graphicsLayer {
+                                alpha = if (holdSide == -1 || displayedOffsetPx != 0f) 1f else 0f
+                                translationX =
+                                    if (holdSide == -1) 0f else displayedOffsetPx - paneWidthPx - paneSpacingPx
+                            },
+                ) {
+                    adjacentArtwork(url)
+                }
+            }
+            shownRightUrl?.let { url ->
+                Box(
+                    contentAlignment = contentAlignment,
+                    modifier =
+                        Modifier
+                            .matchParentSize()
+                            .padding(horizontal = swipeEdgePadding)
+                            .zIndex(if (holdSide == 1) 1f else 0f)
+                            .graphicsLayer {
+                                alpha = if (holdSide == 1 || displayedOffsetPx != 0f) 1f else 0f
+                                translationX =
+                                    if (holdSide == 1) 0f else displayedOffsetPx + paneWidthPx + paneSpacingPx
+                            },
+                ) {
+                    adjacentArtwork(url)
+                }
+            }
         }
+        Box(
+            contentAlignment = contentAlignment,
+            modifier = Modifier.graphicsLayer { translationX = displayedOffsetPx },
+            content = content,
+        )
+    }
 }
 
 @Composable
@@ -500,6 +789,10 @@ fun PlayerScreen(
     }.collectAsState(viewModel.uiState.value.adjacentArtworkUrls())
     val trackPresentation = rememberPlayerTrackPresentation(currentSongs, artworkRequestSize, artworkPrefetchUrls, isScreenVisible)
     val currentSong = trackPresentation.song
+    val currentArtworkUrl = uiState.currentSong?.displayThumbnail
+    val replacementArtworkReady =
+        currentArtworkUrl.isNullOrBlank() ||
+            (!trackPresentation.isArtworkLoading && trackPresentation.artwork.url == currentArtworkUrl)
     val repeatMode = uiState.repeatMode
     val isShuffleOn = uiState.isShuffleOn
     val duration = if (currentSong?.id == uiState.currentSong?.id) uiState.duration else currentSong?.duration ?: 0L
@@ -1291,6 +1584,7 @@ fun PlayerScreen(
                                     onLyricsOffsetChange = { offset -> currentSong?.let { viewModel.setLyricsOffset(it.id, offset) } },
                                     onDoneLyricsOffset = { showLyricsOffsetEditor = false },
                                     currentSong = currentSong,
+                                    replacementArtworkReady = replacementArtworkReady,
                                     crossfadeNextArtworkUrl = crossfadeNextArtworkUrl,
                                     artworkCrossfadeProgress = artworkCrossfadeProgress,
                                     isPlaying = isPlaying,
@@ -1338,6 +1632,7 @@ fun PlayerScreen(
                                     onLyricsOffsetChange = { offset -> currentSong?.let { viewModel.setLyricsOffset(it.id, offset) } },
                                     onDoneLyricsOffset = { showLyricsOffsetEditor = false },
                                     currentSong = currentSong,
+                                    replacementArtworkReady = replacementArtworkReady,
                                     crossfadeNextArtworkUrl = crossfadeNextArtworkUrl,
                                     artworkCrossfadeProgress = artworkCrossfadeProgress,
                                     isPlaying = isPlaying,
@@ -1760,18 +2055,26 @@ fun PlayerScreen(
                                                         Arrangement.Center
                                                     },
                                             ) {
-                                                Box(
-                                                    contentAlignment = Alignment.Center,
+                                                ArtworkSwipeBox(
+                                                    enabled = artworkSwipeEnabled,
+                                                    sensitivity = Settings.shared.swipeSensitivity,
+                                                    canNavigatePrevious = uiState.hasPreviousTrack(),
+                                                    canNavigateNext = uiState.hasNextTrack(),
+                                                    previousArtworkUrl = uiState.previousArtworkUrl(),
+                                                    nextArtworkUrl = uiState.nextArtworkUrl(),
+                                                    // Queue entry identity, so duplicate songs in the queue still count as a track change.
+                                                    trackKey =
+                                                        uiState.currentSong?.id?.let { id ->
+                                                            "$id#${uiState.queueEntryKeys.getOrNull(uiState.currentQueueIndex)}"
+                                                        },
+                                                    replacementArtworkReady = replacementArtworkReady,
+                                                    onPrevious = viewModel::previous,
+                                                    onNext = viewModel::next,
                                                     modifier =
                                                         Modifier
                                                             .fillMaxWidth()
                                                             .weight(1f, fill = usesCanvasThumbnail || usesFullscreenThumbnail)
-                                                            .artworkSwipe(
-                                                                enabled = artworkSwipeEnabled,
-                                                                sensitivity = Settings.shared.swipeSensitivity,
-                                                                onPrevious = viewModel::previous,
-                                                                onNext = viewModel::next,
-                                                            ).artworkSeekGestures(
+                                                            .artworkSeekGestures(
                                                                 seekEnabled = !isListenTogetherGuest,
                                                                 stepMs = artworkSeekStepMs,
                                                                 onTap =
@@ -1791,6 +2094,21 @@ fun PlayerScreen(
                                                                 progressive = Settings.shared.seekExtraSeconds,
                                                                 onSeek = onArtworkSeek,
                                                             ),
+                                                    adjacentArtwork = { url ->
+                                                        AsyncImage(
+                                                            url = url,
+                                                            contentDescription = null,
+                                                            contentScale = ContentScale.Crop,
+                                                            modifier =
+                                                                if (usesFullscreenThumbnail || usesCanvasThumbnail) {
+                                                                    Modifier.fillMaxSize()
+                                                                } else {
+                                                                    Modifier
+                                                                        .aspectRatio(1f)
+                                                                        .clip(albumArtShape)
+                                                                },
+                                                        )
+                                                    },
                                                 ) {
                                                     if (showVideoSurface) {
                                                         platform.MusicVideoSurface(
