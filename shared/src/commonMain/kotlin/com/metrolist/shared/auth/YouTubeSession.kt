@@ -70,6 +70,7 @@ private fun clearStoredYouTubeSession() {
             "accountThumbnail" to "",
         ),
     )
+    resetDelegatedSessionLookup()
     runCatching { Settings.shared.lastLibraryRefreshEpoch = 0L }
     runCatching { Settings.shared.lastLibraryRefreshAccount = "" }
     runCatching { Settings.shared.lastRemoteLibraryItemKeysJson = "[]" }

@@ -6,6 +6,8 @@ import com.metrolist.innertubex.bodyAsTextLimited
 import com.metrolist.innertubex.models.YouTubeClient
 import com.metrolist.innertubex.models.response.BrowseResponse
 import com.metrolist.innertubex.models.response.CreatePlaylistResponse
+import com.metrolist.shared.auth.AuthManager
+import com.metrolist.shared.auth.isDelegatedSessionLookupPending
 import com.metrolist.shared.auth.isExpiredYouTubeSessionResponse
 import com.metrolist.shared.model.isEditablePlaylistId
 import com.metrolist.shared.utils.Logger
@@ -66,6 +68,8 @@ internal class YouTubePlaylistEdits(
         reconcileNotFound: Boolean = true,
         block: suspend (InnerTube, String) -> Unit,
     ) {
+        // Right after a brand login the page is installed in the background; an edit sent before it changes the personal account.
+        if (isDelegatedSessionLookupPending()) AuthManager().resolveDelegatedSession()
         val session = innerTube.sessionSnapshot()
         val requestTube = innerTube.createIsolatedSession(true)
         requestTube.replaceSession(

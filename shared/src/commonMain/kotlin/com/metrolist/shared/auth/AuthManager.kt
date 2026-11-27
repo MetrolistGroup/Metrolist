@@ -53,7 +53,25 @@ private val delegatedSessionMutex = Mutex()
 // Readers take this with the resolver's write so one account's page id is never paired with another account's dataSyncId.
 private val delegatedSessionLock = ReentrantLock()
 private var lastDelegatedSessionAttempt: Pair<String, TimeMark>? = null
-private var settledDelegatedSessionLookup: String? = null
+private var settledDelegatedSessionLookup: DelegatedLookupKey? = null
+
+// The whole credential set, so a lookup for an earlier cookie or account index never releases a new sign-in.
+private data class DelegatedLookupKey(
+    val dataSyncId: String,
+    val authUser: String,
+    val cookie: String,
+)
+
+private fun currentDelegatedLookupKey() =
+    DelegatedLookupKey(Settings.shared.dataSyncId, Settings.shared.innerTubeAuthUser, Settings.shared.innerTubeCookie)
+
+internal fun resetDelegatedSessionLookup() {
+    delegatedSessionLock.withLock {
+        settledDelegatedSessionLookup = null
+        lastDelegatedSessionAttempt = null
+    }
+}
+
 private val delegatedSessionRetryInterval = 5.minutes
 
 internal fun storedDelegatedSessionId(dataSyncId: String?): String? =
@@ -106,7 +124,7 @@ private fun launchDelegatedSessionResolution(waitIfRunning: Boolean) {
 
 // The lookup is optional, so a failed request or secure-settings write must not fail login, startup or an account refresh.
 private suspend fun resolveDelegatedSessionSafely(): Boolean {
-    val dataSyncId = Settings.shared.dataSyncId
+    val lookupKey = currentDelegatedLookupKey()
     var listedAccounts = false
     val installed =
         try {
@@ -118,7 +136,7 @@ private suspend fun resolveDelegatedSessionSafely(): Boolean {
             return false
         }
     // Failed account-list requests come back empty, so only a non-empty list proves the account has no brand page to wait for.
-    if (listedAccounts) delegatedSessionLock.withLock { settledDelegatedSessionLookup = dataSyncId }
+    if (listedAccounts) delegatedSessionLock.withLock { settledDelegatedSessionLookup = lookupKey }
     return installed
 }
 
@@ -130,7 +148,7 @@ internal fun isDelegatedSessionLookupPending(): Boolean {
     val dataSyncId = Settings.shared.dataSyncId
     if (dataSyncId.isBlank() || !hasSupportedYouTubeAuthCookie(Settings.shared.innerTubeCookie)) return false
     return delegatedSessionLock.withLock {
-        Settings.shared.delegatedSessionDataSyncId != dataSyncId && settledDelegatedSessionLookup != dataSyncId
+        Settings.shared.delegatedSessionDataSyncId != dataSyncId && settledDelegatedSessionLookup != currentDelegatedLookupKey()
     }
 }
 
