@@ -27,7 +27,7 @@
     <string name="yesterday">Вчера</string>
     <string name="this_week">На этой неделе</string>
     <string name="last_week">На прошлой неделе</string>
-    <string name="most_viewed_videos">Самые просматриваемые музыкальные видео</string>
+    <string name="most_viewed_videos">Самые просматриваемые клипы</string>
     <string name="search">Поиск</string>
     <string name="search_library">Поиск по библиотеке</string>
     <string name="filter_library">Библиотека</string>
@@ -184,16 +184,16 @@
     <string name="auto_skip_next_on_error_desc">Переходит к следующему треку при ошибке воспроизведения</string>
     <string name="stop_music_on_task_clear">Останавливать музыку при удалении приложения из списка недавних приложений</string>
     <string name="storage">Хранилище</string>
-    <string name="music_video_quality" tools:ignore="MissingTranslation">Качество клипа</string>
-    <string name="music_video_quality_desc" tools:ignore="MissingTranslation">Качество клипов по умолчанию</string>
+    <string name="music_video_quality" tools:ignore="MissingTranslation">Качество клипов</string>
+    <string name="music_video_quality_desc" tools:ignore="MissingTranslation">Разрешение клипов по умолчанию</string>
     <string name="music_video_quality_auto" tools:ignore="MissingTranslation">Авто</string>
     <string name="music_video_quality_resolution" tools:ignore="MissingTranslation" translatable="false">%1$sp</string>
-    <string name="music_video_resolution" tools:ignore="MissingTranslation">Качество видео</string>
-    <string name="music_video_resolution_desc" tools:ignore="MissingTranslation">Измените качество для этого клипа</string>
+    <string name="music_video_resolution" tools:ignore="MissingTranslation">Разрешение видео</string>
+    <string name="music_video_resolution_desc" tools:ignore="MissingTranslation">Изменить разрешение этого клипа</string>
     <string name="music_video_resolution_current" tools:ignore="MissingTranslation">Текущее разрешение</string>
-    <string name="music_video_cache" tools:ignore="MissingTranslation">Кэш клипа</string>
+    <string name="music_video_cache" tools:ignore="MissingTranslation">Кэш клипов</string>
     <string name="clear_music_video_cache" tools:ignore="MissingTranslation">Очистить кэш клипов</string>
-    <string name="clear_music_video_cache_desc" tools:ignore="MissingTranslation">Удалить кэшированные сопоставления разрешений треков с видео</string>
+    <string name="clear_music_video_cache_desc" tools:ignore="MissingTranslation">Удалить кэшированные привязки клипов и их разрешений к трекам</string>
     <string name="image_cache">Кэш изображений</string>
     <string name="song_cache">Кэш треков</string>
     <string name="unlimited">Неограниченно</string>
@@ -371,7 +371,7 @@
     <string name="song_gestures">Жесты песен</string>
     <string name="appearance_enable_swipe_to_change_track">Переключать треки свайпом по обложке</string>
     <string name="appearance_play_videos_in_mini_player" tools:ignore="MissingTranslation">Проигрывать клип в мини-плеере</string>
-    <string name="appearance_play_videos_in_mini_player_desc" tools:ignore="MissingTranslation">Показывает клип, когда мини-плеер свернут</string>
+    <string name="appearance_play_videos_in_mini_player_desc" tools:ignore="MissingTranslation">Показывать клипы, когда мини-плеер свёрнут</string>
     <string name="appearance_mini_player_swipe_sensitivity">Чувствительность свайпа</string>
     <string name="appearance_misc">Разное</string>
     <string name="appearance_default_open_tab">Вкладка по умолчанию</string>
@@ -540,7 +540,7 @@
     <string name="hide_video_songs">Скрыть клипы</string>
     <string name="hide_video_songs_desc">Скрыть видеоверсии песен в поиске и плейлистах</string>
     <string name="hide_non_musical_videos">Скрыть видео немузыкального характера</string>
-    <string name="hide_non_musical_videos_desc">Оставляет официальные клипы и скрывает другие видео, например, влоги и трейлеры</string>
+    <string name="hide_non_musical_videos_desc">Оставлять официальные клипы и скрывать другие видео, например влоги и трейлеры</string>
     <string name="hide_podcasts">Скрыть подкасты</string>
     <string name="hide_podcasts_desc">Скрывает подкасты и выпуски из обзора, поиска и воспроизведения</string>
     <string name="hide_short_songs">Скрыть короткие песни</string>
@@ -893,8 +893,8 @@
     <string name="song_already_in_playlist">%1$s уже в этом плейлисте.</string>
     <string name="song_already_in_named_playlist">%1$s уже в %2$s.</string>
     <string name="song_details">Детали трека</string>
-    <string name="music_video_not_found">Музыкальное видео недоступно для этого трека.</string>
-    <string name="music_video_unavailable">Не удалось воспроизвести музыкальное видео.</string>
+    <string name="music_video_not_found">Для этого трека клип недоступен.</string>
+    <string name="music_video_unavailable">Не удалось воспроизвести клип.</string>
     <string name="song_liked">Вы поставили отметку «Нравится»</string>
     <string name="song_mix_title">%1$s микс</string>
     <string name="recognition">Распознавание</string>
@@ -1113,7 +1113,7 @@
     <string name="auto_download_on_like">Автоскачивание понравившихся</string>
     <string name="clear_song_cache_dialog">Очистить все кэшированные песни?</string>
     <string name="clear_image_cache_dialog">Очистить все кэшированные фото?</string>
-    <string name="clear_music_video_cache_dialog" tools:ignore="MissingTranslation">Очистить все кэшированные разрешения музыкальных видео?</string>
+    <string name="clear_music_video_cache_dialog" tools:ignore="MissingTranslation">Удалить все кэшированные разрешения клипов?</string>
     <string name="disable">Отключить</string>
     <string name="history_duration">Длительность истории</string>
     <string name="information">Информация</string>
@@ -1679,7 +1679,7 @@
     <string name="apple_music_artist_images_title">Изображения исполнителей Apple Music</string>
     <string name="apple_music_artist_images_description">Использует изображения профилей высокого разрешения Apple Music на страницах исполнителей</string>
     <string name="apple_music_artist_videos_title">Видео профиля исполнителя Apple Music</string>
-    <string name="apple_music_artist_videos_description">Проигрывать анимированные видео профиля Apple Music на страницах исполнителей, если они доступны</string>
+    <string name="apple_music_artist_videos_description">Воспроизводить анимированные видео профиля Apple Music на страницах исполнителей, если они доступны</string>
     <string name="apple_music_artist_video_quality_title">Качество видео профиля исполнителя</string>
     <string name="apple_music_artist_video_quality_description">Выберите максимальное разрешение для анимированных видео профиля исполнителя</string>
     <string name="playback_error_sabr_attestation">YouTube отказал в аттестации потока SABR.</string>
@@ -1852,12 +1852,12 @@
     <string name="youtube_canvas_quality_desc">Разрешение клипов YouTube, используемых в качестве фона</string>
     <string name="youtube_canvas_mode">Воспроизведение YouTube фона</string>
     <string name="youtube_video_canvas">Видеофон YouTube</string>
-    <string name="play_music_videos">Воспроизводить музыкальные видео</string>
+    <string name="play_music_videos">Воспроизводить клипы</string>
     <string name="youtube_canvas_mode_short_clips">Короткие клипы</string>
     <string name="youtube_canvas_mode_full_video">Полный клип</string>
     <string name="canvas_content_order">Порядок содержимого фона</string>
     <string name="canvas_content_order_desc">Выберите, какой источник анимированной обложки будет использоваться первым</string>
-    <string name="canvas_source_youtube_music_video">YouTube клип</string>
+    <string name="canvas_source_youtube_music_video">Клип YouTube</string>
     <string name="seek_duration_description_android">Количество секунд перемотки при двойном нажатии на обложку или использовании кнопок перемотки</string>
     <string name="seek_duration_description_skip_controls">Количество секунд перемотки при использовании кнопок перемотки</string>
     <string name="seek_feedback_seconds">%1$d с</string>
@@ -1886,7 +1886,7 @@
     <string name="show_player_video_button">Переключатель аудио и видео</string>
     <string name="onboarding_language_lyrics_description">Выберите язык приложения и способ показа текстов песен.</string>
     <string name="onboarding_playback_description">Выберите, слушать ли музыку на телевизорах и колонках.</string>
-    <string name="play_music_videos_description">Показывать видео для песен, у которых оно есть (расходует больше интернет-трафика)</string>
+    <string name="play_music_videos_description">Показывать клип, если он есть у трека (расходует больше трафика)</string>
     <string name="cast_description">Слушать музыку на телевизоре, Chromecast или колонках Sonos в той же сети Wi-Fi</string>
     <string name="statistics_chart_listens">Прослушивания</string>
     <string name="statistics_chart_less">Меньше</string>
@@ -1940,7 +1940,7 @@
     <string name="onboarding_migration_failed">Не удалось подготовить библиотеку. Ваши исходные данные сохранены.</string>
     <string name="onboarding_library_migrated_description">Ваши плейлисты, история, понравившиеся и данные библиотеки теперь доступны в этой версии Metrolist.</string>
     <string name="onboarding_notifications_denied">Уведомления отключены. Вы можете включить их позже в настройках приложения в Android или выбрать «Нет», чтобы продолжить.</string>
-    <string name="mini_player_video_prerequisite">Сначала включите «Воспроизводить музыкальные видео» в настройках воспроизведения</string>
+    <string name="mini_player_video_prerequisite">Сначала включите «Воспроизводить клипы» в настройках воспроизведения</string>
     <string name="download_folder_access_failed">Не удалось сохранить разрешение на доступ к этой папке. Выберите папку с доступом для чтения и записи.</string>
     <string name="download_migration_failed">Некоторые скачанные файлы не удалось переместить, поэтому они остались на прежнем месте. Проверьте доступ к хранилищу и наличие свободного места, затем повторите попытку.</string>
     <string name="download_error_storage_full">Недостаточно места в хранилище. Освободите место и повторите попытку.</string>
@@ -2011,7 +2011,7 @@
     <string name="listen_together_submitting_join">Отправляется запрос на вход…</string>
     <string name="listen_together_connection_lost_guest">Соединение потеряно. Повторите попытку, чтобы возобновить воспроизведение в комнате, или покиньте комнату, чтобы управлять воспроизведением самостоятельно.</string>
     <string name="listen_together_suggestion_waiting">Ожидаем рассмотрения вашего предложения хостом</string>
-    <string name="playlist_update_partially_failed">Плейлист переименован, но описание не удалось сохранить. Попробуйте отредактировать описание ещё раз.</string>
+    <string name="playlist_update_partially_failed">Плейлист переименован, но описание не удалось сохранить. Попробуйте изменить его ещё раз.</string>
     <string name="import_error_resolution_failed">Не удалось выполнить поиск песен. Проверьте соединение и повторите импорт.</string>
     <string name="import_error_incomplete_source">Не удалось загрузить весь плейлист. Повторите попытку.</string>
     <string name="ios_screen_privacy">Скрывать предпросмотр и записи экрана</string>
@@ -2083,7 +2083,7 @@
     <string name="settings_player_control_summary">Показывать этот элемент управления в развёрнутом плеере</string>
     <string name="settings_mini_player_control_summary">Показывать этот элемент управления в мини-плеере</string>
     <string name="settings_mini_player_progress_summary">Показывать ход воспроизведения вокруг обложки мини-плеера</string>
-    <string name="settings_canvas_playback_summary">Воспроизводить короткие фрагменты или полный клип за плеером</string>
+    <string name="settings_canvas_playback_summary">Воспроизводить короткие фрагменты или полный клип на фоне плеера</string>
     <string name="settings_normalization_summary">Выравнивать громкость песен, чтобы избежать резких перепадов</string>
     <string name="settings_loudness_target_summary">Задайте целевую громкость при включённой нормализации звука</string>
     <string name="settings_stop_on_close_summary">Останавливать воспроизведение при смахивании Metrolist из недавних приложений. На Android TV воспроизведение также приостанавливается при выходе из приложения.</string>
@@ -2325,7 +2325,7 @@
     <string name="playback_reconnecting">Восстановление соединения...</string>
     <string name="keep_paused_on_song_change">Сохранять паузу при смене песни</string>
     <string name="keep_paused_on_song_change_description">При пропуске или выборе другого трека на этом устройстве, воспроизведение останется в режиме паузы</string>
-    <string name="error_audio_output_unavailable">Аудиовыход недоступен. Проверьте настройки звука в системе, а затем попробуйте воспроизвести ещё раз.</string>
+    <string name="error_audio_output_unavailable">Аудиовыход недоступен. Проверьте системные настройки звука и повторите попытку воспроизведения.</string>
     <string name="playlist_removed_from_youtube">Этот плейлист больше недоступен на YouTube Music и был удален из вашей библиотеки. Загруженные песни по-прежнему доступны.</string>
     <string name="mini_player_cookie_artwork">Обложка в форме "печеньки"</string>
     <string name="mini_player_shape_motion">Вращать "печеньку" во время воспроизведения</string>
@@ -2588,7 +2588,7 @@
     <string name="ai_translation_failed_credit">ИИ-перевод не удался - превышен лимит аккаунта или ключа</string>
     <string name="ai_translation_failed_rate">ИИ-перевод не удался: превышен лимит запросов</string>
     <string name="ai_translation_failed_daily">Достигнут ежедневный лимит бесплатных переводов. Попробуйте завтра или увеличьте баланс OpenRouter.</string>
-    <string name="ai_translation_failed_minute">Достигнут лимит бесплатных переводов. Подождите немного и попробуйте ещё раз.</string>
+    <string name="ai_translation_failed_minute">Достигнут лимит бесплатных переводов. Подождите немного и повторите попытку.</string>
     <string name="ai_translation_failed_busy">ИИ-перевод не удался: бесплатные модели заняты</string>
     <string name="ai_translation_failed_model">ИИ-перевод не удался: модель недоступна</string>
     <string name="ai_translation_failed_network">ИИ-перевод не удался: соединение потеряно или вышло время</string>
@@ -2617,8 +2617,8 @@
     <string name="ai_setup_minute_hint">Дождитесь сброса поминутного лимита OpenRouter, а затем повторите попытку. Смена модели не позволит обойти этот лимит.</string>
     <string name="ai_setup_busy_hint">Доступные бесплатные модели временно заняты. Повторите попытку позже.</string>
     <string name="ai_setup_model_hint">Выберите другую бесплатную модель или попробуйте позже, когда эта модель станет доступной.</string>
-    <string name="ai_setup_network_hint">Проверьте подключение к Интернету и попробуйте ещё раз.</string>
-    <string name="ai_setup_response_hint">Модель не выдала пригодный для использования перевод. Попробуйте ещё раз или выберите другую бесплатную модель.</string>
+    <string name="ai_setup_network_hint">Проверьте подключение к интернету и повторите попытку.</string>
+    <string name="ai_setup_response_hint">Модель не выдала подходящий перевод. Повторите попытку или выберите другую бесплатную модель.</string>
     <string name="ai_setup_privacy_settings">Открыть настройки конфиденциальности</string>
     <string name="ai_setup_sign_in_again">Войдите заново</string>
     <string name="ai_setup_key_limits">Ознакомьтесь с основными ограничениями</string>
@@ -2812,4 +2812,45 @@
     <string name="cache_whole_song_while_playing">Кэшировать трек целиком при воспроизведении</string>
     <string name="cache_whole_song_while_playing_desc">При потоковом воспроизведении сразу загружает оставшуюся часть трека вместо буферизации только вперёд. Расходует больше трафика.</string>
     <string name="slider_standard_buffered">Стандартный с буфером</string>
+    <string name="car_lights_title">Подсветка автомобиля</string>
+    <string name="settings_car_lights_overview">Синхронизировать ленты Magic CarLight с цветами темы</string>
+    <string name="car_lights_enable">Включить подсветку автомобиля</string>
+    <string name="car_lights_enable_description">Передавать цвета темы приложения на подсветку автомобиля по Bluetooth</string>
+    <string name="car_lights_auto_connect">Автоподключение</string>
+    <string name="car_lights_auto_connect_description">Автоматически подключаться к сохранённой подсветке, когда она в зоне действия</string>
+    <string name="car_lights_auto_connect_description_legacy">Подключаться к сохранённой подсветке, пока Metrolist открыт или воспроизводит музыку. Android 10 и 11 блокируют фоновое сканирование без дополнительного доступа к местоположению</string>
+    <string name="car_lights_zone_all">Цвет подсветки</string>
+    <string name="car_lights_status">Состояние</string>
+    <string name="car_lights_status_off">Не подключено</string>
+    <string name="car_lights_status_waiting">Ожидание %1$s</string>
+    <string name="car_lights_status_connecting">Подключение к %1$s</string>
+    <string name="car_lights_status_connected">Подключено к %1$s</string>
+    <string name="car_lights_device_section">Подсветка</string>
+    <string name="car_lights_device_details">%1$s, %2$d дБм</string>
+    <string name="car_lights_search">Найти подсветку автомобиля</string>
+    <string name="car_lights_search_description">Включите подсветку и держите телефон рядом</string>
+    <string name="car_lights_searching">Идёт поиск…</string>
+    <string name="car_lights_no_devices">Подсветка автомобиля пока не найдена</string>
+    <string name="car_lights_disconnect">Отключить</string>
+    <string name="car_lights_forget">Забыть сохранённую подсветку</string>
+    <string name="car_lights_forget_description">Прекратить автоподключение к %1$s</string>
+    <string name="car_lights_permission_needed">Разрешите доступ к Bluetooth для поиска и управления подсветкой</string>
+    <string name="car_lights_grant_permission">Предоставить доступ к Bluetooth</string>
+    <string name="car_lights_bluetooth_off">Bluetooth выключен</string>
+    <string name="car_lights_turn_on_bluetooth">Включить Bluetooth</string>
+    <string name="car_lights_turn_on_location">Включить геолокацию</string>
+    <string name="car_lights_location_off">В Android 11 и более ранних версиях для поиска Bluetooth-устройств требуется включённая геолокация</string>
+    <string name="car_lights_zones_section">Зоны</string>
+    <string name="car_lights_zone_central">Центральная консоль</string>
+    <string name="car_lights_zone_doors">Двери</string>
+    <string name="car_lights_zone_rear">Задняя часть и багажник</string>
+    <string name="car_lights_role_off">Выкл. (не изменять)</string>
+    <string name="car_lights_role_primary">Основной</string>
+    <string name="car_lights_role_secondary">Вторичный</string>
+    <string name="car_lights_role_tertiary">Третичный</string>
+    <string name="car_lights_roles_section">Цвета темы</string>
+    <string name="car_lights_vivid">Насыщенные цвета</string>
+    <string name="car_lights_vivid_description">Повышать насыщенность, чтобы приглушённые цвета темы оставались яркими на светодиодах</string>
+    <string name="car_lights_send_now">Отправить цвета сейчас</string>
+    <string name="car_lights_send_now_description">Передать текущие цвета темы на подсветку</string>
 </resources>
