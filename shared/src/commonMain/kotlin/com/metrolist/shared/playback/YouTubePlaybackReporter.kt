@@ -75,6 +75,9 @@ class YouTubePlaybackReporter internal constructor(
         var accumulating = false
         var wasRendering = false
         var finished = false
+
+        // Set when a brand page resolves mid-song; the replacement session reports this listen instead.
+        var discarded = false
         var lastRenderingPositionMs: Long? = null
         var lastRenderingSampleAtMs: Long? = null
 
@@ -133,7 +136,10 @@ class YouTubePlaybackReporter internal constructor(
                         delegationChanged
                 )
             ) {
-                if (delegationChanged) unscopedTrackingInstanceId = playbackInstanceId
+                if (delegationChanged) {
+                    unscopedTrackingInstanceId = playbackInstanceId
+                    current.discarded = true
+                }
                 finishLocked(current, endPositionMs = null)
             }
 
@@ -489,7 +495,7 @@ class YouTubePlaybackReporter internal constructor(
     }
 
     private fun isReportingEnabled(active: Session): Boolean =
-        lock.withLock { reportingEnabled && active.reportingGeneration == reportingGeneration } &&
+        lock.withLock { reportingEnabled && !active.discarded && active.reportingGeneration == reportingGeneration } &&
             repository.isPlaybackReportingEnabled() &&
             active.pendingGeneration == PendingYouTubePlaybackReportStore.generation &&
             if (active.accountKey != null) {
