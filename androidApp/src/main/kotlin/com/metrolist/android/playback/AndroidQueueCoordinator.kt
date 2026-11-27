@@ -149,9 +149,34 @@ internal class AndroidQueueCoordinator(
     }
 
     fun applyRemoteRecommendationLock(locked: Boolean) {
-        synchronized(queueSessionLock) {
-            recommendationLockedSessionId = queueSessionId.takeIf { locked }
+        val wasLocked =
+            synchronized(queueSessionLock) {
+                val wasLocked = recommendationLockedSessionId == queueSessionId
+                recommendationLockedSessionId = queueSessionId.takeIf { locked }
+                wasLocked
+            }
+        if (wasLocked && !locked) {
+            lastAutoLoadedSongId = null
+            scheduleAutoLoadMore(currentAutoLoadMoreTrigger())
         }
+    }
+
+    private fun currentAutoLoadMoreTrigger(sessionId: Long = queueSessionId): AutoLoadMoreTrigger {
+        val currentIndex = player.currentMediaItemIndex.value
+        val queue = player.songQueue.value
+        return AutoLoadMoreTrigger(
+            sessionId = sessionId,
+            currentIndex = currentIndex,
+            queueSize = queue.size,
+            currentSongId = queue.getOrNull(currentIndex)?.id,
+            shouldLoadMore =
+                shouldAutoLoadMore(
+                    currentIndex = currentIndex,
+                    queue = queue,
+                    autoLoadMore = Settings.shared.autoLoadMore,
+                    repeatMode = repeatMode.value,
+                ),
+        )
     }
 
     fun releaseRadioSeedLock(
@@ -171,23 +196,7 @@ internal class AndroidQueueCoordinator(
         onSave()
         if (!rearmAutoLoad || releasedSessionId != queueSessionId) return
         lastAutoLoadedSongId = null
-        val currentIndex = player.currentMediaItemIndex.value
-        val queue = player.songQueue.value
-        scheduleAutoLoadMore(
-            AutoLoadMoreTrigger(
-                sessionId = releasedSessionId,
-                currentIndex = currentIndex,
-                queueSize = queue.size,
-                currentSongId = queue.getOrNull(currentIndex)?.id,
-                shouldLoadMore =
-                    shouldAutoLoadMore(
-                        currentIndex = currentIndex,
-                        queue = queue,
-                        autoLoadMore = Settings.shared.autoLoadMore,
-                        repeatMode = repeatMode.value,
-                    ),
-            ),
-        )
+        scheduleAutoLoadMore(currentAutoLoadMoreTrigger(releasedSessionId))
     }
 
     fun releaseRadioSeedLockKeepingSeed() {
@@ -246,6 +255,7 @@ internal class AndroidQueueCoordinator(
             radioQueueFinite = !radioSeedPending && isFiniteQueue,
             radioQueue = isRadioQueue || radioSeedPending,
             explicitRadioQueue = isExplicitRadioQueue || radioSeedPending,
+            radioQueueBootstrapPending = pendingRadioBootstrapSeedId != null || radioSeedPending,
             queueSessionId = queueSessionId.takeIf { isRadioQueue || radioSeedPending },
             radioQueueChips =
                 queueChipsState.value.map { chip ->
@@ -288,6 +298,13 @@ internal class AndroidQueueCoordinator(
             recommendationLockedSessionId = queueSessionId.takeIf { state.recommendationLocked }
             isRadioQueue = state.radioQueue || restoredMix
             isExplicitRadioQueue = state.explicitRadioQueue ?: false
+            if (
+                state.radioQueueBootstrapPending &&
+                recommendationSeedSongId != null &&
+                restoredQueue.originalItems.none { it.queueSourceTitle.isRecommendationGeneratedQueueSource() }
+            ) {
+                pendingRadioBootstrapSeedId = recommendationSeedSongId
+            }
             radioQueueContinuation = null
             // A persisted continuation's recommendations mode is not stored, so after a
             // restart its mode is unknown: discard it and let autoplay fetch a fresh page.

@@ -8,6 +8,7 @@ import androidx.media3.session.SessionResult
 import com.metrolist.innertubex.extraction.StreamResolveException
 import com.metrolist.shared.deviceconnect.DcRepeatMode
 import com.metrolist.shared.model.SongItem
+import com.metrolist.shared.model.isPodcast
 import com.metrolist.shared.playback.MusicQueueEntry
 import com.metrolist.shared.playback.PlaybackFailureCategory
 import com.metrolist.shared.playback.PlaybackFailureClassifier
@@ -147,7 +148,7 @@ internal suspend fun resolveAutomotiveSearchSongQueue(
             val effectiveMode =
                 if (
                     mode == AutomotiveSongPlaybackMode.RADIO &&
-                    (song.isLocal || song.id.startsWith("local_"))
+                    (song.isLocal || song.isPodcast || song.id.startsWith("local_"))
                 ) {
                     AutomotiveSongPlaybackMode.SINGLE_SONG
                 } else {
