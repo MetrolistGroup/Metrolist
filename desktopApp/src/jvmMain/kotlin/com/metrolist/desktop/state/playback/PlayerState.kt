@@ -1285,7 +1285,16 @@ object PlayerState {
         newTrack: SongItem?,
         startArtworkFetch: Boolean = true,
     ) {
-        currentTrack = newTrack?.let(SongMetadataState::apply)
+        val nextTrack = newTrack?.let(SongMetadataState::apply)
+        if (currentTrack?.id != nextTrack?.id) {
+            playbackDuration.value =
+                if (!castManager.state.value.isConnected && player.currentSong.value?.id == nextTrack?.id) {
+                    player.duration.value.takeIf { it > 0L } ?: ((nextTrack?.duration ?: 0L) * 1000L)
+                } else {
+                    (nextTrack?.duration ?: 0L) * 1000L
+                }
+        }
+        currentTrack = nextTrack
         artworkPreview = artworkPreview.forTrack(currentTrack?.id, currentArtworkUrl)
         artwork.updateTrack(currentTrack, startArtworkFetch)
     }
