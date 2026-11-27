@@ -105,7 +105,11 @@ class LrcLibLyricsProvider(
                     titleMatchesCandidate(queryTitle, normTitle, coreTitle, candidate.name) &&
                     artistMatchesCandidate(normArtist, artistTokens, candidate.artistName) &&
                     (knownDuration == null || abs(candidate.duration * 1000 - knownDuration) <= 10_000) &&
-                    (!candidate.syncedLyrics.isNullOrBlank() || !candidate.plainLyrics.isNullOrBlank())
+                    (
+                        (candidate.hasWordSync && !candidate.lyricsfile.isNullOrBlank()) ||
+                            !candidate.syncedLyrics.isNullOrBlank() ||
+                            !candidate.plainLyrics.isNullOrBlank()
+                    )
             }.sortedWith(
                 compareByDescending<LrcLibResponse> { candidate ->
                     MusicVideoMatcher.normalizeTitle(candidate.name) == normTitle
