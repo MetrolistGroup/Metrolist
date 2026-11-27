@@ -169,6 +169,12 @@ internal fun SettingsUiRegistryBuilder.registerLyricsSettings(host: SharedSettin
                 range = LyricsTextSizeRange,
                 steps = 29,
             ) { settings.lyricsTextSize = it.roundToInt().toFloat() }
+            switch(
+                id = "lyricsAlwaysShowBackgroundLines",
+                title = stringResource(Res.string.lyrics_always_show_background_lines),
+                description = stringResource(Res.string.lyrics_always_show_background_lines_description),
+                checked = settings.lyricsAlwaysShowBackgroundLines,
+            ) { settings.lyricsAlwaysShowBackgroundLines = it }
             inlineSlider(
                 id = "lyricsLineSpacing",
                 title = stringResource(Res.string.lyrics_line_spacing),

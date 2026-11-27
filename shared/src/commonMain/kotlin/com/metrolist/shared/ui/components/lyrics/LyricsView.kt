@@ -271,6 +271,7 @@ fun LyricsView(
     val effectiveOffsetMs = LyricsUtils.combinedLyricsOffsetMs(timingOffsetMs, globalOffsetMs)
     val isPlusLighter = isLiquidBackground && Settings.shared.lyricsPlusLighter && textColor.luminance() > 0.5f
     val lyricsActiveByRealTiming = Settings.shared.lyricsActiveByRealTiming
+    val alwaysShowBackgroundLines = Settings.shared.lyricsAlwaysShowBackgroundLines
     val selection = selectionState ?: remember(songId, lyrics) { LyricsSelectionState() }
     val selectedIndices = selection.selectedIndices
     val isSelectionMode = selection.isActive
@@ -758,6 +759,7 @@ fun LyricsView(
             effectiveOffsetMs,
             isAutoScrollEnabled,
             isSelectionMode,
+            alwaysShowBackgroundLines,
             isVisible,
             isWordByWord,
             lyricsPositionState,
@@ -803,7 +805,7 @@ fun LyricsView(
                 var cumulativeBgDelta = 0
                 for (i in items.indices) {
                     val item = items[i]
-                    val shouldExpandBg = isSelectionMode || item.index in highlightSet
+                    val shouldExpandBg = alwaysShowBackgroundLines || isSelectionMode || item.index in highlightSet
                     val bgDelta = scrollShifter.pendingBgDelta(item.index, shouldExpandBg)
                     val effTop = item.offset + cumulativeBgDelta
                     val effSize = (item.size + bgDelta).coerceAtLeast(0)

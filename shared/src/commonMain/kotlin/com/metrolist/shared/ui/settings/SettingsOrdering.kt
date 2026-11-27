@@ -131,7 +131,14 @@ internal fun List<SettingsGroupRegistration>.prioritized(page: SettingsPageId): 
                 }
 
                 SettingsPageId.LYRICS to "display" -> {
-                    listOf("lyricsTextSize", "lyricsColor", "lyricsAnimation", "lyricsLineSpacing", "subtitleTextSize")
+                    listOf(
+                        "lyricsTextSize",
+                        "lyricsColor",
+                        "lyricsAnimation",
+                        "lyricsAlwaysShowBackgroundLines",
+                        "lyricsLineSpacing",
+                        "subtitleTextSize",
+                    )
                 }
 
                 SettingsPageId.LYRICS to "accessibility" -> {
