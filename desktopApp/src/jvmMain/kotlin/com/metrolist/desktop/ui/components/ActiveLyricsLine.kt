@@ -17,8 +17,10 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.foundation.text.TextAutoSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
@@ -40,13 +42,18 @@ import com.metrolist.desktop.state.playback.LyricsState
 import com.metrolist.desktop.state.playback.PlayerState
 import com.metrolist.shared.api.lyrics.LyricsUtils
 import com.metrolist.shared.settings.Settings
+import com.metrolist.shared.ui.components.WavyCircularProgressIndicator
 import com.metrolist.shared.ui.components.lyrics.ActiveLyricsLineContent
 import com.metrolist.shared.ui.components.lyrics.rememberCaptionLyricsPositionState
+import com.metrolist.shared.ui.components.lyrics.rememberSmoothLyricsPositionState
 
 @Composable
-fun ActiveLyricsLine(modifier: Modifier = Modifier) {
+fun ActiveLyricsLine(
+    modifier: Modifier = Modifier,
+    inMiniplayer: Boolean = false,
+) {
     val showLyricsOnPlayer = Settings.shared.showLyricsOnPlayer || PlayerState.isSubtitleActive
-    val lyricsDrawerOpen = UiState.showLyricsDrawer
+    val lyricsDrawerOpen = !inMiniplayer && UiState.showLyricsDrawer
     val currentTrack = PlayerState.currentTrack
     LaunchedEffect(
         showLyricsOnPlayer,
@@ -67,22 +74,23 @@ fun ActiveLyricsLine(modifier: Modifier = Modifier) {
     val castState by PlayerState.castManager.state.collectAsState()
     val isPlaying = PlayerState.isPlaying
     val timingOffsetMs = LyricsState.currentLyricsOffsetMs
+    val playbackSpeed =
+        PlayerState.player.playbackSpeed
+            .collectAsState()
+            .value
 
     val lyricsPositionState =
         rememberCaptionLyricsPositionState(
             lyrics = lyrics,
             currentPositionFlow = PlayerState.playbackPosition,
             positionReader = PlayerState::currentMediaPositionMs,
-            playbackSpeed =
-                PlayerState.player.playbackSpeed
-                    .collectAsState()
-                    .value,
+            playbackSpeed = playbackSpeed,
             isPlaying = isPlaying,
             songId = PlayerState.currentTrack?.id,
             timingOffsetMs = timingOffsetMs,
             isCasting = castState.isConnected,
             isBuffering = castState.isBuffering,
-            enabled = !UiState.videoFullscreenObscuresPlayer,
+            enabled = inMiniplayer || !UiState.videoFullscreenObscuresPlayer,
         )
     val currentLineIndex by remember(lyrics, lyricsPositionState) {
         derivedStateOf(structuralEqualityPolicy()) { LyricsUtils.findCurrentLineIndex(lyrics, lyricsPositionState.value) }
@@ -96,26 +104,35 @@ fun ActiveLyricsLine(modifier: Modifier = Modifier) {
             LyricsUtils.getLineEndTime(it, nextLine)
         } ?: 0L
 
-    val isLineVisible by remember(lyrics, currentLineIndex, currentLine, nextLine, lineEndTime, lyricsPositionState, lyricsDrawerOpen) {
+    val gapRange by remember(lyrics, currentLineIndex, currentLine, nextLine, lineEndTime, lyricsPositionState) {
         derivedStateOf(structuralEqualityPolicy()) {
             val lyricsPosition = lyricsPositionState.value
-            val inSignificantGap =
+            val firstLineTime = lyrics.firstOrNull()?.time ?: 0L
+            when {
                 currentLine != null && nextLine != null &&
-                    lyricsPosition > lineEndTime && (nextLine.time - lineEndTime) > 5000L
+                    lyricsPosition > lineEndTime && (nextLine.time - lineEndTime) > 5000L -> lineEndTime to nextLine.time
 
-            val afterLastLine =
-                currentLine != null && nextLine == null &&
-                    lyricsPosition > lineEndTime + 2000L
+                currentLineIndex == -1 && firstLineTime > 5000L && lyricsPosition < firstLineTime -> 0L to firstLineTime
 
-            val isBeforeFirstLine =
-                currentLineIndex == -1 && (lyrics.firstOrNull()?.time ?: 0L) > 5000L && lyricsPosition < (lyrics.firstOrNull()?.time ?: 0L)
-
-            !lyricsDrawerOpen && currentLine != null && !inSignificantGap && !afterLastLine && !isBeforeFirstLine
+                else -> null
+            }
         }
     }
 
+    val isLineVisible by remember(lyrics, currentLineIndex, currentLine, nextLine, lineEndTime, lyricsPositionState, lyricsDrawerOpen) {
+        derivedStateOf(structuralEqualityPolicy()) {
+            val afterLastLine =
+                currentLine != null && nextLine == null &&
+                    lyricsPositionState.value > lineEndTime + 2000L
+
+            !lyricsDrawerOpen && currentLine != null && gapRange == null && !afterLastLine
+        }
+    }
+    val shownGapRange = gapRange.takeIf { inMiniplayer }
+    val textColor = if (inMiniplayer) MaterialTheme.colorScheme.onSurface else Color.White
+
     AnimatedVisibility(
-        visible = isLineVisible,
+        visible = isLineVisible || shownGapRange != null,
         enter =
             expandVertically(
                 animationSpec =
@@ -153,13 +170,13 @@ fun ActiveLyricsLine(modifier: Modifier = Modifier) {
             contentAlignment = Alignment.Center,
         ) {
             val style =
-                MaterialTheme.typography.titleMedium.copy(
+                (if (inMiniplayer) MaterialTheme.typography.titleLarge else MaterialTheme.typography.titleMedium).copy(
                     fontWeight = FontWeight.Bold,
                     textAlign = LyricsUtils.textAlignment(Settings.shared.activeLyricsTextPosition),
                 )
             val reservedLineHeight = with(LocalDensity.current) { style.lineHeight.toDp() * 2 }
             Surface(
-                color = Color.Black.copy(alpha = 0.3f),
+                color = if (inMiniplayer) Color.Transparent else Color.Black.copy(alpha = 0.3f),
                 shape = MaterialTheme.shapes.large,
                 modifier = Modifier.padding(horizontal = 24.dp),
             ) {
@@ -168,7 +185,7 @@ fun ActiveLyricsLine(modifier: Modifier = Modifier) {
                     contentAlignment = Alignment.Center,
                 ) {
                     AnimatedContent(
-                        targetState = currentLine to lineEndTime,
+                        targetState = Triple(currentLine, lineEndTime, shownGapRange),
                         transitionSpec = {
                             (fadeIn(animationSpec = tween(400)) togetherWith fadeOut(animationSpec = tween(400)))
                                 .using(null)
@@ -176,8 +193,32 @@ fun ActiveLyricsLine(modifier: Modifier = Modifier) {
                         contentAlignment = Alignment.Center,
                         label = "activeLyricLineSwitch",
                         modifier = Modifier.sizeIn(minHeight = reservedLineHeight).wrapContentHeight(Alignment.CenterVertically),
-                    ) { (line, displayedLineEndTime) ->
-                        if (line != null) {
+                    ) { (line, displayedLineEndTime, gap) ->
+                        if (gap != null) {
+                            val (gapStart, gapEnd) = gap
+                            val smoothPosition =
+                                rememberSmoothLyricsPositionState(
+                                    positionFlow = PlayerState.playbackPosition,
+                                    positionReader = PlayerState::currentMediaPositionMs,
+                                    playbackSpeed = playbackSpeed,
+                                    isPlaying = isPlaying,
+                                    songId = PlayerState.currentTrack?.id,
+                                    isCasting = castState.isConnected,
+                                    isBuffering = castState.isBuffering,
+                                )
+                            val effectiveOffsetMs =
+                                LyricsUtils.combinedLyricsOffsetMs(timingOffsetMs, Settings.shared.globalLyricsOffsetMs)
+                            WavyCircularProgressIndicator(
+                                progress = {
+                                    val position = LyricsUtils.lyricsPositionForOffset(smoothPosition.longValue, effectiveOffsetMs)
+                                    ((position - gapStart).toFloat() / (gapEnd - gapStart)).coerceIn(0f, 1f)
+                                },
+                                animate = isPlaying,
+                                color = textColor,
+                                trackColor = textColor.copy(alpha = 0.4f),
+                                modifier = Modifier.size(32.dp),
+                            )
+                        } else if (line != null) {
                             val isActive by remember(line, displayedLineEndTime, lyricsPositionState) {
                                 derivedStateOf(structuralEqualityPolicy()) { lyricsPositionState.value in line.time..displayedLineEndTime }
                             }
@@ -187,12 +228,22 @@ fun ActiveLyricsLine(modifier: Modifier = Modifier) {
                                 positionProvider = { lyricsPositionState.value },
                                 lineEndTimeMs = displayedLineEndTime,
                                 isPlaying = isPlaying,
-                                textColor = Color.White,
+                                textColor = textColor,
                                 lyricStyle = style,
                                 textMeasurer = rememberTextMeasurer(),
                                 maxLines = 2,
                                 alignment = LyricsUtils.textAlignment(Settings.shared.activeLyricsTextPosition),
                                 fillWidth = false,
+                                mainLineOnly = inMiniplayer,
+                                mainLineAutoSize =
+                                    if (inMiniplayer) {
+                                        TextAutoSize.StepBased(
+                                            minFontSize = MaterialTheme.typography.titleSmall.fontSize,
+                                            maxFontSize = style.fontSize,
+                                        )
+                                    } else {
+                                        null
+                                    },
                             )
                         }
                     }
