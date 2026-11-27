@@ -169,7 +169,9 @@ class YouTubePlaybackReporter internal constructor(
                 newSession.lastRenderingSampleAtMs = monotonicTimeMs()
                 session = newSession
                 requestDelegatedSessionResolution()
-                newSession.pendingId()?.let { pendingDrainLock.withLock { activePendingIds += it } }
+                newSession.pendingId()?.let {
+                    pendingDrainLock.withLock { activePendingIds[it] = newSession.playbackSession.snapshot.delegatedSessionId }
+                }
                 newSession.pings.trySend(Ping.Start(positionMs.coerceAtLeast(0L)))
                 val consumer = scope.launch { consume(newSession) }
                 consumerJobs += consumer
@@ -613,6 +615,12 @@ class YouTubePlaybackReporter internal constructor(
             if (report.nextAttemptAtMs > epochTimeMs()) continue
             val playbackSession = repository.playbackTrackingSession()
             if (!isReplayCurrent(accountKey, playbackSession)) return null
+            // A live session started before the brand page resolved discards its own report on its next sample.
+            val ownedByOtherDelegation =
+                pendingDrainLock.withLock {
+                    report.id in activePendingIds && activePendingIds[report.id] != playbackSession.snapshot.delegatedSessionId
+                }
+            if (ownedByOtherDelegation) continue
             val tracking =
                 try {
                     repository.getPlaybackTracking(
@@ -729,7 +737,7 @@ class YouTubePlaybackReporter internal constructor(
         private val pendingDrainLock = ReentrantLock()
         private var pendingDrainJob: Job? = null
         private var pendingDrainAttempt: CompletableDeferred<Unit>? = null
-        private val activePendingIds = mutableSetOf<String>()
+        private val activePendingIds = mutableMapOf<String, String?>()
     }
 }
 
