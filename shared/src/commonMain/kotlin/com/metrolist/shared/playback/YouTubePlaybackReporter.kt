@@ -136,8 +136,9 @@ class YouTubePlaybackReporter internal constructor(
                         delegationChanged
                 )
             ) {
-                if (delegationChanged) {
-                    unscopedTrackingInstanceId = playbackInstanceId
+                if (delegationChanged) unscopedTrackingInstanceId = playbackInstanceId
+                // Only the same account gets a replacement report; another account's queued report stays for replay.
+                if (delegationChanged && current.accountKey == repository.playbackReportingAccountKey()) {
                     current.discarded = true
                     // Drop it now so the pending drain cannot replay it under the brand session.
                     current.pendingId()?.let(PendingYouTubePlaybackReportStore::remove)
@@ -380,20 +381,24 @@ class YouTubePlaybackReporter internal constructor(
         if (!Settings.shared.queueYouTubeHistoryWhenOffline || !isReportingEnabled(active)) return
         val accountKey = active.accountKey ?: return
         val pending = ping.toPending()
+        // Held with the append so a concurrent delegation discard cannot be undone by a late write.
         val appended =
-            PendingYouTubePlaybackReportStore.append(
-                PendingYouTubePlaybackReport(
-                    id = accountKey + ":" + active.clientPlaybackNonce,
-                    accountKey = accountKey,
-                    videoId = active.videoId,
-                    clientPlaybackNonce = active.clientPlaybackNonce,
-                    format = lock.withLock { active.format },
-                    pings = emptyList(),
-                    lastAcknowledgedOffsetMs = active.lastAcknowledgedOffsetMs,
-                ),
-                pending,
-                expectedGeneration = active.pendingGeneration,
-            )
+            lock.withLock {
+                if (active.discarded) return
+                PendingYouTubePlaybackReportStore.append(
+                    PendingYouTubePlaybackReport(
+                        id = accountKey + ":" + active.clientPlaybackNonce,
+                        accountKey = accountKey,
+                        videoId = active.videoId,
+                        clientPlaybackNonce = active.clientPlaybackNonce,
+                        format = active.format,
+                        pings = emptyList(),
+                        lastAcknowledgedOffsetMs = active.lastAcknowledgedOffsetMs,
+                    ),
+                    pending,
+                    expectedGeneration = active.pendingGeneration,
+                )
+            }
         if (!appended) {
             Logger.i(
                 REPORTING_TAG,
