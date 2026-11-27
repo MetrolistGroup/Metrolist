@@ -568,6 +568,8 @@ class YouTubePlaybackReporter internal constructor(
                                             innerTubeCookie,
                                             dataSyncId,
                                             innerTubeAuthUser,
+                                            delegatedSessionId,
+                                            delegatedSessionDataSyncId,
                                         )
                                     }
                                 },
