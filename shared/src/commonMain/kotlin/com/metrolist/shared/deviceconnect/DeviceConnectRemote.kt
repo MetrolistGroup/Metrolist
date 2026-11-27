@@ -1101,6 +1101,7 @@ class DeviceConnectRemote(
         tickJob = null
         extendJob?.cancel()
         extendJob = null
+        _state.value = DcSyncState(playbackAvailable = port != null, error = error)
         try {
             port?.setControllerPlayback(null)
             if (pause) port?.setPlaying(false)
@@ -1111,7 +1112,6 @@ class DeviceConnectRemote(
             wireQueueCache.clear()
             controllers.clear()
             lastEndedTrack = -1L
-            _state.value = DcSyncState(playbackAvailable = port != null, error = error)
         }
     }
 

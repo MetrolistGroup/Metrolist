@@ -255,6 +255,7 @@ internal class AndroidDeviceConnectPlayback(
                 provisional: Boolean,
             ) = withContext(Dispatchers.Main.immediate) {
                 if (playbackReleased) return@withContext
+                val wasController = controllerPlayback != null
                 val clearsQueue =
                     shouldClearPersistedPlaybackForControllerState(
                         previous = controllerPlayback,
@@ -290,6 +291,7 @@ internal class AndroidDeviceConnectPlayback(
                 controllerPlayback = playback
                 player.setControllerPlayback(playback)
                 if (clearsQueue) onQueueCleared()
+                if (playback == null && wasController) queue.rearmAutoLoadMore()
                 if (playback !=
                     null
                 ) {

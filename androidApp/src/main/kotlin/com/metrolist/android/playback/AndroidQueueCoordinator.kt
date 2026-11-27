@@ -155,10 +155,12 @@ internal class AndroidQueueCoordinator(
                 recommendationLockedSessionId = queueSessionId.takeIf { locked }
                 wasLocked
             }
-        if (wasLocked && !locked) {
-            lastAutoLoadedSongId = null
-            scheduleAutoLoadMore(currentAutoLoadMoreTrigger())
-        }
+        if (wasLocked && !locked && !AndroidDeviceConnect.manager.remote.isFollowing) rearmAutoLoadMore()
+    }
+
+    fun rearmAutoLoadMore() {
+        lastAutoLoadedSongId = null
+        scheduleAutoLoadMore(currentAutoLoadMoreTrigger())
     }
 
     private fun currentAutoLoadMoreTrigger(sessionId: Long = queueSessionId): AutoLoadMoreTrigger {
@@ -607,6 +609,9 @@ internal class AndroidQueueCoordinator(
         ) {
             // REPLACE_QUEUE may force playing=true; make the requested state explicit.
             AndroidDeviceConnect.intercept(DcPlaybackCommand(if (startPlaying) DcPlaybackAction.PLAY else DcPlaybackAction.PAUSE))
+            if (remoteRepeatMode != null) {
+                AndroidDeviceConnect.intercept(DcPlaybackCommand(DcPlaybackAction.REPEAT, repeatMode = remoteRepeatMode))
+            }
             return
         }
         val preserveCurrent = current != null && (remote != null || player.isReady) && !player.playbackTransitionPending.value
@@ -1026,7 +1031,10 @@ internal class AndroidQueueCoordinator(
 
         val currentQueue = player.songQueue.value
         val currentIndex = player.currentMediaItemIndex.value
-        if (currentIndex !in currentQueue.indices) return false
+        if (currentIndex !in currentQueue.indices || hasUpcomingQueuedTracks(currentQueue, currentIndex)) {
+            lastAutoLoadedSongId = null
+            return false
+        }
 
         val suggestedIndices =
             currentQueue.indices.filter { index ->

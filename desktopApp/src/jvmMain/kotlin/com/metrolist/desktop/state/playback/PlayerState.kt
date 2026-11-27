@@ -598,6 +598,7 @@ object PlayerState {
                 playback: DcLocalPlaybackState?,
                 provisional: Boolean,
             ) = withContext(Dispatchers.Main) {
+                val previousControllerPlayback = controllerPlayback.takeUnless { controllerPlaybackProvisional }
                 controllerPlaybackProvisional = provisional && playback != null
                 if (playback != null) {
                     if (externalReportingEnabled) return@withContext
@@ -631,7 +632,11 @@ object PlayerState {
                 volumeState.value = volume
                 player.setControllerPlayback(playback)
                 if (playback != null) {
-                    if (!provisional) persistPlaybackState()
+                    if (!provisional &&
+                        previousControllerPlayback?.copy(positionMs = playback.positionMs) != playback
+                    ) {
+                        persistPlaybackState()
+                    }
                     scrobbleManager.setReportingEnabled(false, player.currentSong.value, playback.playing, playback.scrobbleSession)
                 }
             }
