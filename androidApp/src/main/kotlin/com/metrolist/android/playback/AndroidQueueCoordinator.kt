@@ -13,6 +13,7 @@ import com.metrolist.shared.cast.CastState
 import com.metrolist.shared.cast.forQueueEntry
 import com.metrolist.shared.deviceconnect.DcPlaybackAction
 import com.metrolist.shared.deviceconnect.DcPlaybackCommand
+import com.metrolist.shared.deviceconnect.DcRepeatMode
 import com.metrolist.shared.model.RadioQueueChip
 import com.metrolist.shared.model.RadioQueuePage
 import com.metrolist.shared.model.RadioRecommendationHistory
@@ -45,6 +46,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -186,6 +188,27 @@ internal class AndroidQueueCoordinator(
                     ),
             ),
         )
+    }
+
+    fun releaseRadioSeedLockKeepingSeed() {
+        val lockedSessionId =
+            synchronized(queueSessionLock) {
+                val locked = radioSeedLockedSessionId
+                if (locked == queueSessionId) {
+                    recommendationSeedSongId?.let { seed ->
+                        pendingRadioBootstrapSeedId = seed
+                        isRadioQueue = true
+                        isExplicitRadioQueue = true
+                        isFiniteQueue = false
+                    }
+                }
+                locked
+            }
+        if (lockedSessionId != null) releaseRadioSeedLock(lockedSessionId)
+    }
+
+    fun clearPendingRadioBootstrapSeed() {
+        synchronized(queueSessionLock) { pendingRadioBootstrapSeedId = null }
     }
 
     fun saveShuffleMode() {
@@ -541,6 +564,7 @@ internal class AndroidQueueCoordinator(
     fun playMix(
         seed: SongItem,
         startPlaying: Boolean,
+        remoteRepeatMode: DcRepeatMode? = null,
     ) {
         if (seed.isUnavailable || BlockedContent.isBlocked(seed)) return
         val title = context.getString(R.string.song_mix_title, seed.title)
@@ -559,11 +583,12 @@ internal class AndroidQueueCoordinator(
                     explicitRadioQueue = true,
                     positionMs = if (current != null) remote?.positionMs ?: player.getRealtimePositionMs() else 0L,
                     preserveCurrentTrack = true,
+                    repeatMode = remoteRepeatMode,
                 ),
             )
         ) {
-            // The target keeps a retained seed's play state, so send the play intent separately.
-            if (startPlaying) AndroidDeviceConnect.intercept(DcPlaybackCommand(DcPlaybackAction.PLAY))
+            // REPLACE_QUEUE may force playing=true; make the requested state explicit.
+            AndroidDeviceConnect.intercept(DcPlaybackCommand(if (startPlaying) DcPlaybackAction.PLAY else DcPlaybackAction.PAUSE))
             return
         }
         val preserveCurrent = current != null && (remote != null || player.isReady) && !player.playbackTransitionPending.value
@@ -639,12 +664,12 @@ internal class AndroidQueueCoordinator(
         if (AndroidDeviceConnect.manager.remote.isFollowing || AndroidListenTogetherManager.isGuestPlaybackLocked) return
         val sessionId = queueSessionId
         val requestGeneration = ++recommendationRequestGeneration
-        val requestClassic = Settings.shared.classicRecommendations
         recommendationBootstrapJob?.cancel()
         recommendationBootstrapJob =
             scope
                 .launch {
                     repeat(MAX_RADIO_BOOTSTRAP_ATTEMPTS) { attempt ->
+                        val requestClassic = Settings.shared.classicRecommendations
                         try {
                             bootstrapRadioQueue(
                                 loadPage = { continuation ->
@@ -883,8 +908,20 @@ internal class AndroidQueueCoordinator(
 
     fun observeAutoLoadMore() {
         scope.launch {
-            combine(repeatMode, player.songQueue) { mode, _ -> mode }.collect { mode ->
-                if (mode == Player.REPEAT_MODE_ALL) {
+            val followingFlow =
+                combine(
+                    AndroidDeviceConnect.manager.remote.state,
+                    AndroidDeviceConnect.manager.state
+                        .map { it.localDeviceId }
+                        .distinctUntilChanged(),
+                ) { remoteState, localId ->
+                    remoteState.sessionId != null && remoteState.targetId != localId
+                }.distinctUntilChanged()
+
+            combine(repeatMode, followingFlow) { mode, following ->
+                mode to following
+            }.distinctUntilChanged().collect { (mode, following) ->
+                if (mode == Player.REPEAT_MODE_ALL && !following) {
                     autoLoadMoreJob?.cancel()
                     // Repeat All removes generated tracks; allow the same song to refill once repeat is off.
                     lastAutoLoadedSongId = null
@@ -987,6 +1024,7 @@ internal class AndroidQueueCoordinator(
             player.updateQueueItems(updates)
             queuedSongIds.addAll(updates.values.map(SongItem::id))
             isFiniteQueue = false
+            pendingRadioBootstrapSeedId = null
             onSave()
 
             val remainingSuggested = suggestedIndices.size - indicesToPromote.size
@@ -1135,6 +1173,7 @@ internal class AndroidQueueCoordinator(
         queuedSongIds.clear()
         queuedSongIds.addAll(player.songQueue.value.map(SongItem::id))
         isFiniteQueue = false
+        pendingRadioBootstrapSeedId = null
         onSave()
 
         return true
@@ -1178,6 +1217,7 @@ internal class AndroidQueueCoordinator(
             return
         }
         if (completedPlaybackInstanceId != null && transitions.consumePreloadedNext(completedPlaybackInstanceId)) return
+        val sessionId = queueSessionId
 
         if (player.currentMediaItemIndex.value < player.songQueue.value.lastIndex) {
             player.skipToNext()
@@ -1185,7 +1225,6 @@ internal class AndroidQueueCoordinator(
         }
 
         if (playlistPage?.hasMore == true) {
-            val sessionId = queueSessionId
             schedulePlaylistPage()
             playlistPageJob?.join()
             if (sessionId != queueSessionId) return
@@ -1211,13 +1250,13 @@ internal class AndroidQueueCoordinator(
         }
 
         autoLoadMoreJob?.join()
+        if (sessionId != queueSessionId) return
         if (player.currentMediaItemIndex.value < player.songQueue.value.lastIndex) {
             player.skipToNext()
             return
         }
 
         if (Settings.shared.autoLoadMore) {
-            val sessionId = queueSessionId
             val loaded = performAutoLoadMore(sessionId, player.currentSong.value?.id)
             if (loaded && sessionId == queueSessionId && player.currentMediaItemIndex.value < player.songQueue.value.lastIndex) {
                 player.skipToNext()
@@ -1225,6 +1264,7 @@ internal class AndroidQueueCoordinator(
             }
         }
 
+        if (sessionId != queueSessionId) return
         player.skipToNext()
     }
 

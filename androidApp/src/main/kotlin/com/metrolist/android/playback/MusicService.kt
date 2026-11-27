@@ -320,6 +320,7 @@ class MusicService :
             pendingRadioJob?.cancel()
             pendingRadioJob = null
             queueCoordinator.releaseRadioSeedLock(rearmAutoLoad = false)
+            queueCoordinator.clearPendingRadioBootstrapSeed()
             if (!AndroidDeviceConnect.intercept(
                     DcPlaybackCommand(
                         DcPlaybackAction.REPLACE_QUEUE,
@@ -358,14 +359,18 @@ class MusicService :
                                             combine(player.isPlaying, castManager.state) { local, cast ->
                                                 local || (cast.isConnected && cast.isPlaying)
                                             },
+                                        isPlayingNow = {
+                                            player.isPlaying.value ||
+                                                castManager.state.value.let { cast -> cast.isConnected && cast.isPlaying }
+                                        },
                                         transitionPending = player.playbackTransitionPending,
                                         latestRequestId = { player.latestQueuePlaybackRequestId },
                                         isCurrentSession = { queueCoordinator.queueSessionId == sessionId },
                                         onAbandoned = { queueCoordinator.releaseRadioSeedLock(sessionId) },
-                                        playMix = {
+                                        playMix = { song, playing ->
                                             queueCoordinator.releaseRadioSeedLock(sessionId)
                                             _repeatMode.value = Player.REPEAT_MODE_OFF
-                                            playMix(it, true)
+                                            playMix(song, startPlaying = playing, remoteRepeatMode = DcRepeatMode.OFF)
                                         },
                                     )
                                 }
@@ -873,7 +878,7 @@ class MusicService :
                     automotivePlaybackRequestGate.cancelPendingRequests()
                     pendingRadioJob?.cancel()
                     pendingRadioJob = null
-                    queueCoordinator.releaseRadioSeedLock()
+                    queueCoordinator.releaseRadioSeedLockKeepingSeed()
                     pauseOnMute.cancelResume()
                     // Pause even after focus loss so its delayed recovery cannot restart on the phone speaker.
                     player.pause()
@@ -3058,9 +3063,10 @@ class MusicService :
     fun playMix(
         seed: SongItem,
         startPlaying: Boolean,
+        remoteRepeatMode: DcRepeatMode? = null,
     ) {
         playbackBenchmark.cancel()
-        queueCoordinator.playMix(seed, startPlaying)
+        queueCoordinator.playMix(seed, startPlaying, remoteRepeatMode)
     }
 
     fun updatePendingRestorePosition(position: Long) = queueCoordinator.updatePendingRestorePosition(position)

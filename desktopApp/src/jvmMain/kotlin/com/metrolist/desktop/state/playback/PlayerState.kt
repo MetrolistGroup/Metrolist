@@ -2267,6 +2267,7 @@ object PlayerState {
 
     private suspend fun flushPlaybackState() {
         flushPodcastProgress()?.join()
+        if (controllerPlaybackProvisional) return
         playbackStateWrites.flush(
             PlaybackStateWrite(
                 queue.snapshots.value,
@@ -4113,19 +4114,19 @@ object PlayerState {
     private fun appendRadioRecommendations(
         bootstrap: DesktopRadioBootstrap?,
         generation: Long,
-    ) {
-        if (!isCurrentPlaybackTransition(generation)) return
+    ): Boolean {
+        if (!isCurrentPlaybackTransition(generation)) return false
         initialRecommendationsGeneration = null
-        if (bootstrap == null) return
+        if (bootstrap == null) return false
         radio.acceptBootstrap(bootstrap)
         val blocked = BlockedContent.snapshot()
         val existing = queue.items.value.mapTo(mutableSetOf()) { it.id }
         val additions = bootstrap.page.songs.filter { !it.isUnavailable && !blocked.isBlocked(it) && existing.add(it.id) }
-        if (additions.isNotEmpty()) {
-            queue.addToQueue(additions)
-            recommendationHistory.remember(additions)
-            queueChanged()
-        }
+        if (additions.isEmpty()) return false
+        queue.addToQueue(additions)
+        recommendationHistory.remember(additions)
+        queueChanged()
+        return true
     }
 
     private fun startPendingExplicitRadioBootstrap(
@@ -4161,8 +4162,8 @@ object PlayerState {
                         !syncSession.recommendationsLocked &&
                         !deviceConnect.isFollowing
                     ) {
-                        deviceRadioBootstrapPending = false
-                        appendRadioRecommendations(songs, generation)
+                        val appended = appendRadioRecommendations(songs, generation)
+                        if (appended) deviceRadioBootstrapPending = false
                     }
                 } catch (error: CancellationException) {
                     throw error

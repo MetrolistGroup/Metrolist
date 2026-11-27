@@ -185,11 +185,12 @@ internal suspend fun awaitAutomotiveRadioSeed(
     requests: SharedFlow<QueuePlaybackRequest>,
     currentSong: StateFlow<SongItem?>,
     isPlaying: Flow<Boolean>,
+    isPlayingNow: () -> Boolean,
     transitionPending: StateFlow<Boolean>,
     latestRequestId: () -> Long,
     isCurrentSession: () -> Boolean,
     onAbandoned: () -> Unit,
-    playMix: (SongItem) -> Unit,
+    playMix: (SongItem, Boolean) -> Unit,
 ) {
     val selectedId = song.originalQueueItemId ?: song.id
 
@@ -225,5 +226,6 @@ internal suspend fun awaitAutomotiveRadioSeed(
         onAbandoned()
         return
     }
-    playMix(committed)
+    // A pause after readiness must not re-enable playback inside playMix.
+    playMix(committed, isPlayingNow())
 }
