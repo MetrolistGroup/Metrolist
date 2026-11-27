@@ -412,13 +412,20 @@ class YouTubePlaybackReporter internal constructor(
     private suspend fun consume(active: Session) {
         try {
             // A Start sent before the brand page is known lands on the personal account and cannot be retracted.
-            // shortcut: polls the lookup state, bounded by DELEGATION_WAIT_MS; switch to a lookup completion signal if one is added.
-            withTimeoutOrNull(DELEGATION_WAIT_MS) {
-                while (isDelegatedSessionLookupPending()) delay(DELEGATION_POLL_MS)
+            // With offline queuing the pings go to disk and the drain replays them once the lookup settles.
+            val queueForLookup = isDelegatedSessionLookupPending() && Settings.shared.queueYouTubeHistoryWhenOffline
+            if (!queueForLookup) {
+                // shortcut: polls the lookup state, bounded by DELEGATION_WAIT_MS; switch to a lookup completion signal if one is added.
+                withTimeoutOrNull(DELEGATION_WAIT_MS) {
+                    while (isDelegatedSessionLookupPending()) delay(DELEGATION_POLL_MS)
+                }
             }
             val initial = active.initialTracking?.takeIf { active.clientName == YouTubeClient.WEB_REMIX.clientName && isFresh(it) }
             val tracking =
-                if (!isReportingEnabled(active)) {
+                if (queueForLookup) {
+                    // Queued pings are replayed with tracking fetched by the drain, so skip this request.
+                    null
+                } else if (!isReportingEnabled(active)) {
                     Logger.i(REPORTING_TAG, "suppressed phase=tracking generation=${active.reportingGeneration}")
                     null
                 } else {
