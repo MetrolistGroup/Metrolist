@@ -15,6 +15,7 @@ import com.metrolist.shared.network.sharedOkHttpClient
 import com.metrolist.shared.settings.FontOption
 import com.metrolist.shared.settings.Settings
 import com.metrolist.shared.utils.XdgUtils
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -153,7 +154,7 @@ object DesktopFontManager {
 
     suspend fun download(option: FontOption): Result<Unit> =
         withContext(Dispatchers.IO) {
-            runCatching {
+            runCatchingCancellable {
                 val spec = checkNotNull(specsByOption[option]) { "Font is not downloadable" }
                 recoverInterruptedInstall(option)
                 val destination = fontDirectory(option)
@@ -187,7 +188,7 @@ object DesktopFontManager {
         // Imports share one staging directory, so a second one waits for the first to finish.
         customImportLock.withLock {
             withContext(Dispatchers.IO) {
-                runCatching {
+                runCatchingCancellable {
                     val option = FontOption.CUSTOM
                     recoverInterruptedInstall(option)
                     val staging = stagingDirectory(option).apply { deleteRecursively() }
@@ -377,4 +378,7 @@ object DesktopFontManager {
     private fun backupDirectory(option: FontOption): File = File(fontRoot(), ".${option.name.lowercase()}.previous")
 
     private fun fontRoot(): File = File(XdgUtils.getXdgDataHome(), "metrolist/fonts").apply { check(mkdirs() || isDirectory) }
+
+    private inline fun <T> runCatchingCancellable(block: () -> T): Result<T> =
+        runCatching(block).onFailure { error -> if (error is CancellationException) throw error }
 }

@@ -288,14 +288,17 @@ fun SettingsOverlay(colorScheme: ColorScheme) {
                         downloadingFont = option
                         failedFontDownload = null
                         scope.launch {
-                            DesktopFontManager.download(option).fold(
-                                onSuccess = {
-                                    installedFontOptions = installedFontOptions.orEmpty() + option
-                                    Settings.shared.appFont = option
-                                },
-                                onFailure = { failedFontDownload = option },
-                            )
-                            downloadingFont = null
+                            try {
+                                DesktopFontManager.download(option).fold(
+                                    onSuccess = {
+                                        installedFontOptions = installedFontOptions.orEmpty() + option
+                                        Settings.shared.appFont = option
+                                    },
+                                    onFailure = { failedFontDownload = option },
+                                )
+                            } finally {
+                                downloadingFont = null
+                            }
                         }
                     }
                 },
