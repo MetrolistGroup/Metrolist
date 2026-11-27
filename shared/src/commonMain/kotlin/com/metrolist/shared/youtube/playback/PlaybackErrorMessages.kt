@@ -15,7 +15,7 @@ object PlaybackErrorMessages {
                 describeOne(current)?.let(parts::add)
             }
         return parts.distinct().joinToString(" ").ifBlank {
-            error::class.simpleName?.let { "$it occurred during playback." } ?: "Unknown playback error."
+            error::class.simpleName?.let { "$it was thrown." } ?: "Unknown playback error."
         }
     }
 
@@ -220,7 +220,7 @@ object PlaybackErrorMessages {
                     }
 
                     else -> {
-                        name.takeIf { it.isNotBlank() }?.let { "$it occurred during playback." }
+                        name.takeIf { it.isNotBlank() }?.let { "$it was thrown." }
                     }
                 }
             }
