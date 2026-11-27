@@ -152,9 +152,9 @@ fun LoginDialog(
     var cleanupAttempt by remember { mutableStateOf(0) }
     val defaultCleanupError = stringResource(Res.string.webview_cleanup_failed)
     val requestDismiss: () -> Unit = {
-        if (loginCompleted || isSwitchingChannel || OsUtil.isWindows || cleanupError != null) {
+        if (loginCompleted || isSwitchingChannel || OsUtil.isWindows) {
             onDismissRequest()
-        } else if (!cleanupRequested) {
+        } else if (!cleanupRequested || cleanupError != null) {
             cleanupRequested = true
             cleanupError = null
             cleanupAttempt += 1
@@ -208,22 +208,14 @@ fun LoginDialog(
                             )
                             cleanupError?.let { Text(it) }
                             if (cleanupError != null) {
-                                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                    Button(
-                                        onClick = {
-                                            cleanupError = null
-                                            cleanupAttempt++
-                                        },
-                                        shapes = ButtonDefaults.shapes(),
-                                    ) {
-                                        Text(stringResource(Res.string.retry_cleanup))
-                                    }
-                                    OutlinedButton(
-                                        onClick = onDismissRequest,
-                                        shapes = ButtonDefaults.shapes(),
-                                    ) {
-                                        Text(stringResource(Res.string.close))
-                                    }
+                                Button(
+                                    onClick = {
+                                        cleanupError = null
+                                        cleanupAttempt++
+                                    },
+                                    shapes = ButtonDefaults.shapes(),
+                                ) {
+                                    Text(stringResource(Res.string.retry_cleanup))
                                 }
                             }
                         }
