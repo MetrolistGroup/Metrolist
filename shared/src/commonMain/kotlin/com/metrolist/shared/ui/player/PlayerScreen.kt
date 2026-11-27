@@ -36,7 +36,10 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.focusable
-import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.awaitHorizontalTouchSlopOrCancellation
+import androidx.compose.foundation.gestures.horizontalDrag
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -132,7 +135,10 @@ import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.input.pointer.positionChange
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.util.VelocityTracker
+import androidx.compose.ui.input.pointer.util.addPointerInputChange
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.layout
@@ -261,7 +267,8 @@ import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.TimeMark
 import kotlin.time.TimeSource
 
-private const val ARTWORK_TRACK_CHANGE_TIMEOUT_MS = 600L
+private const val ARTWORK_TRACK_CHANGE_TIMEOUT_MS = 5_000L
+private const val ARTWORK_FLING_VELOCITY_THRESHOLD_PX_PER_SECOND = 500f
 
 /** Gap between adjacent artwork panes during a swipe. */
 private val ARTWORK_SWIPE_PANE_SPACING = 32.dp
@@ -305,9 +312,12 @@ internal fun ArtworkSwipeBox(
     // Width of the artwork's travel lane.
     val paneWidthPx = (containerWidthPx - 2 * edgePaddingPx).coerceAtLeast(0f)
     val offset = remember { Animatable(0f) }
+    var isDragging by remember { mutableStateOf(false) }
+    var dragOffsetPx by remember { mutableFloatStateOf(0f) }
+    val displayedOffsetPx = if (isDragging) dragOffsetPx else offset.value
     val scope = rememberCoroutineScope()
     val settleSpec =
-        remember { spring<Float>(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMediumLow) }
+        remember { spring<Float>(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMedium) }
     val returnSpec =
         remember { spring<Float>(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMedium) }
 
@@ -320,8 +330,8 @@ internal fun ArtworkSwipeBox(
     // Cancel obsolete settles so older swipes cannot reset newer state.
     var settleJob by remember { mutableStateOf<Job?>(null) }
     var settleGeneration by remember { mutableIntStateOf(0) }
-    // True once a settle has already requested navigation, so its leftover offset must not seed a new drag.
-    var navigationRequested by remember { mutableStateOf(false) }
+    // Keep a settle and its artwork handoff from being interrupted by another drag.
+    val navigationRequested = remember { mutableStateOf(false) }
     val shownLeftUrl = if (freezePanes) frozenLeftUrl else leftPaneUrl
     val shownRightUrl = if (freezePanes) frozenRightUrl else rightPaneUrl
 
@@ -331,123 +341,205 @@ internal fun ArtworkSwipeBox(
             modifier
                 .then(if (swipeEdgePadding > 0.dp) Modifier.clipToBounds() else Modifier)
                 .onSizeChanged { containerWidthPx = it.width.toFloat() }
-                .pointerInput(enabled, sensitivity, isRtl, swipeEdgePadding) {
+                .pointerInput(enabled, sensitivity, swipeEdgePadding, isRtl) {
                     if (!enabled) return@pointerInput
-                    detectHorizontalDragGestures(
-                        onDragStart = {
-                            // Start from zero so a cancelled settle cannot bias the new drag.
-                            settleGeneration += 1
-                            settleJob?.cancel()
-                            settleJob = null
-                            navigationRequested = false
-                            scope.launch { offset.snapTo(0f) }
-                            holdSide = 0
-                            freezePanes = false
-                        },
-                        onHorizontalDrag = { change, dragAmount ->
-                            change.consume()
-                            val travel = (size.width.toFloat() - 2 * edgePaddingPx).coerceAtLeast(0f) + paneSpacingPx
-                            // Disable swipes when no adjacent track exists.
-                            val minOffset = if (currentCanSettleFromRight) -travel else 0f
-                            val maxOffset = if (currentCanSettleFromLeft) travel else 0f
+                    val velocityTracker = VelocityTracker()
+                    fun clampDragOffset(value: Float): Float {
+                        val travel = (size.width.toFloat() - 2 * edgePaddingPx).coerceAtLeast(0f) + paneSpacingPx
+                        val minOffset = if (currentCanSettleFromRight) -travel else 0f
+                        val maxOffset = if (currentCanSettleFromLeft) travel else 0f
+                        return value.coerceIn(minOffset, maxOffset)
+                    }
+
+                    fun launchSettle(
+                        settleFromLeft: Boolean,
+                        settleFromRight: Boolean,
+                        keyAtRelease: String?,
+                        leftAtRelease: String?,
+                        rightAtRelease: String?,
+                        paneWidth: Float,
+                        velocityX: Float,
+                        offsetAtRelease: Float,
+                    ) {
+                        navigationRequested.value = settleFromLeft || settleFromRight
+                        val generation = ++settleGeneration
+                        settleJob =
                             scope.launch {
-                                offset.snapTo((offset.value + dragAmount).coerceIn(minOffset, maxOffset))
+                                try {
+                                    offset.snapTo(offsetAtRelease)
+                                    if (settleGeneration == generation) isDragging = false
+                                    when {
+                                        settleFromLeft -> {
+                                            if (leftAtRelease == null) {
+                                                // No neighbor preview (for example restarting the first track): act, then bounce back.
+                                                navigationRequested.value = true
+                                                onSettleFromLeft()
+                                                offset.animateTo(0f, returnSpec)
+                                                return@launch
+                                            }
+                                            frozenLeftUrl = leftAtRelease
+                                            frozenRightUrl = rightAtRelease
+                                            freezePanes = true
+                                            offset.animateTo(
+                                                paneWidth + paneSpacingPx,
+                                                settleSpec,
+                                                initialVelocity = velocityX.coerceIn(0f, paneWidth * 1.5f),
+                                            )
+                                            if (currentTrackKey == keyAtRelease) {
+                                                navigationRequested.value = true
+                                                onSettleFromLeft()
+                                                // Park the settled neighbor artwork at center while the player switches tracks.
+                                                holdSide = -1
+                                                offset.snapTo(0f)
+                                                val changedTrackKey =
+                                                    withTimeoutOrNull(ARTWORK_TRACK_CHANGE_TIMEOUT_MS) {
+                                                        snapshotFlow { currentTrackKey }.first { it != keyAtRelease }
+                                                    }
+                                                if (changedTrackKey != null && settleGeneration == generation) {
+                                                    snapshotFlow { currentReplacementArtworkReady }.first { it }
+                                                }
+                                            } else {
+                                                // Playback advanced during the settle; never skip a second track.
+                                                offset.snapTo(0f)
+                                            }
+                                        }
+                                        settleFromRight -> {
+                                            if (rightAtRelease == null) {
+                                                // No neighbor preview (for example restarting the first track): act, then bounce back.
+                                                navigationRequested.value = true
+                                                onSettleFromRight()
+                                                offset.animateTo(0f, returnSpec)
+                                                return@launch
+                                            }
+                                            frozenLeftUrl = leftAtRelease
+                                            frozenRightUrl = rightAtRelease
+                                            freezePanes = true
+                                            offset.animateTo(
+                                                -(paneWidth + paneSpacingPx),
+                                                settleSpec,
+                                                initialVelocity = velocityX.coerceIn(-paneWidth * 1.5f, 0f),
+                                            )
+                                            if (currentTrackKey == keyAtRelease) {
+                                                navigationRequested.value = true
+                                                onSettleFromRight()
+                                                // Park the settled neighbor artwork at center while the player switches tracks.
+                                                holdSide = 1
+                                                offset.snapTo(0f)
+                                                val changedTrackKey =
+                                                    withTimeoutOrNull(ARTWORK_TRACK_CHANGE_TIMEOUT_MS) {
+                                                        snapshotFlow { currentTrackKey }.first { it != keyAtRelease }
+                                                    }
+                                                if (changedTrackKey != null && settleGeneration == generation) {
+                                                    snapshotFlow { currentReplacementArtworkReady }.first { it }
+                                                }
+                                            } else {
+                                                // Playback advanced during the settle; never skip a second track.
+                                                offset.snapTo(0f)
+                                            }
+                                        }
+                                        else -> offset.animateTo(0f, returnSpec)
+                                    }
+                                } finally {
+                                    // Only the active settle may clear held artwork state.
+                                    if (settleGeneration == generation) {
+                                        isDragging = false
+                                        dragOffsetPx = 0f
+                                        navigationRequested.value = false
+                                        holdSide = 0
+                                        freezePanes = false
+                                    }
+                                }
                             }
-                        },
-                        onDragEnd = {
-                            val paneWidth = (size.width.toFloat() - 2 * edgePaddingPx).coerceAtLeast(0f)
-                            val threshold = artworkSwipeThresholdPx(paneWidth, sensitivity)
-                            val keyAtRelease = currentTrackKey
-                            val leftAtRelease = currentLeftPaneUrl
-                            val rightAtRelease = currentRightPaneUrl
-                            val canLeftAtRelease = currentCanSettleFromLeft
-                            val canRightAtRelease = currentCanSettleFromRight
-                            val generation = ++settleGeneration
+                    }
+
+                    awaitEachGesture {
+                        val down = awaitFirstDown(requireUnconsumed = false)
+                        velocityTracker.resetTracking()
+                        velocityTracker.addPointerInputChange(down)
+                        var overSlop = 0f
+                        val drag =
+                            awaitHorizontalTouchSlopOrCancellation(down.id) { change, amount ->
+                                overSlop = amount
+                                velocityTracker.addPointerInputChange(change)
+                                change.consume()
+                            }
+                        if (drag == null) {
+                            velocityTracker.resetTracking()
+                            return@awaitEachGesture
+                        }
+                        if (navigationRequested.value) {
+                            velocityTracker.resetTracking()
+                            return@awaitEachGesture
+                        }
+
+                        // Apply every pointer delta before handling release, so fast flicks cannot use stale offsets.
+                        settleGeneration += 1
+                        settleJob?.cancel()
+                        settleJob = null
+                        navigationRequested.value = false
+                        holdSide = 0
+                        freezePanes = false
+                        isDragging = true
+                        dragOffsetPx = 0f
+                        var gestureOffsetPx = clampDragOffset(overSlop)
+                        dragOffsetPx = gestureOffsetPx
+                        val completed =
+                            horizontalDrag(drag.id) { change ->
+                                velocityTracker.addPointerInputChange(change)
+                                gestureOffsetPx = clampDragOffset(gestureOffsetPx + change.positionChange().x)
+                                dragOffsetPx = gestureOffsetPx
+                                change.consume()
+                            }
+                        if (!completed) {
+                            velocityTracker.resetTracking()
+                            val offsetAtCancel = gestureOffsetPx
+                            val generation = settleGeneration
                             settleJob =
                                 scope.launch {
                                     try {
-                                        when {
-                                            offset.value >= threshold && canLeftAtRelease -> {
-                                                if (leftAtRelease == null) {
-                                                    // No neighbor preview (for example restarting the first track): act, then bounce back.
-                                                    navigationRequested = true
-                                                    onSettleFromLeft()
-                                                    offset.animateTo(0f, returnSpec)
-                                                    return@launch
-                                                }
-                                                frozenLeftUrl = leftAtRelease
-                                                frozenRightUrl = rightAtRelease
-                                                freezePanes = true
-                                                offset.animateTo(paneWidth + paneSpacingPx, settleSpec)
-                                                if (currentTrackKey == keyAtRelease) {
-                                                    navigationRequested = true
-                                                    onSettleFromLeft()
-                                                    // Return to center if the track does not change.
-                                                    val changedTrackKey =
-                                                        withTimeoutOrNull(ARTWORK_TRACK_CHANGE_TIMEOUT_MS) {
-                                                            snapshotFlow { currentTrackKey }.first { it != keyAtRelease }
-                                                        }
-                                                    if (changedTrackKey != null && settleGeneration == generation) {
-                                                        holdSide = -1
-                                                        offset.snapTo(0f)
-                                                        snapshotFlow { currentTrackKey to currentReplacementArtworkReady }
-                                                            .first { (trackKey, artworkReady) -> trackKey != changedTrackKey || artworkReady }
-                                                    } else {
-                                                        offset.snapTo(0f)
-                                                    }
-                                                } else {
-                                                    // Playback advanced during the settle; never skip a second track.
-                                                    offset.snapTo(0f)
-                                                }
-                                            }
-                                            offset.value <= -threshold && canRightAtRelease -> {
-                                                if (rightAtRelease == null) {
-                                                    // No neighbor preview (for example restarting the first track): act, then bounce back.
-                                                    navigationRequested = true
-                                                    onSettleFromRight()
-                                                    offset.animateTo(0f, returnSpec)
-                                                    return@launch
-                                                }
-                                                frozenLeftUrl = leftAtRelease
-                                                frozenRightUrl = rightAtRelease
-                                                freezePanes = true
-                                                offset.animateTo(-(paneWidth + paneSpacingPx), settleSpec)
-                                                if (currentTrackKey == keyAtRelease) {
-                                                    navigationRequested = true
-                                                    onSettleFromRight()
-                                                    val changedTrackKey =
-                                                        withTimeoutOrNull(ARTWORK_TRACK_CHANGE_TIMEOUT_MS) {
-                                                            snapshotFlow { currentTrackKey }.first { it != keyAtRelease }
-                                                        }
-                                                    if (changedTrackKey != null && settleGeneration == generation) {
-                                                        holdSide = 1
-                                                        offset.snapTo(0f)
-                                                        snapshotFlow { currentTrackKey to currentReplacementArtworkReady }
-                                                            .first { (trackKey, artworkReady) -> trackKey != changedTrackKey || artworkReady }
-                                                    } else {
-                                                        offset.snapTo(0f)
-                                                    }
-                                                } else {
-                                                    // Playback advanced during the settle; never skip a second track.
-                                                    offset.snapTo(0f)
-                                                }
-                                            }
-                                            else -> offset.animateTo(0f, returnSpec)
-                                        }
+                                        offset.snapTo(offsetAtCancel)
+                                        if (settleGeneration == generation) isDragging = false
+                                        offset.animateTo(0f, returnSpec)
                                     } finally {
-                                        // Only the active settle may clear held artwork state.
                                         if (settleGeneration == generation) {
-                                            navigationRequested = false
-                                            holdSide = 0
-                                            freezePanes = false
+                                            isDragging = false
+                                            dragOffsetPx = 0f
                                         }
                                     }
                                 }
-                        },
-                        onDragCancel = {
-                            scope.launch { offset.animateTo(0f, returnSpec) }
-                        },
-                    )
+                            return@awaitEachGesture
+                        }
+
+                        val velocityX = velocityTracker.calculateVelocity().x
+                        velocityTracker.resetTracking()
+                        val paneWidth = (size.width.toFloat() - 2 * edgePaddingPx).coerceAtLeast(0f)
+                        val threshold = artworkSwipeThresholdPx(paneWidth + paneSpacingPx, sensitivity)
+                        val isFling =
+                            velocityX >= ARTWORK_FLING_VELOCITY_THRESHOLD_PX_PER_SECOND ||
+                                velocityX <= -ARTWORK_FLING_VELOCITY_THRESHOLD_PX_PER_SECOND
+                        val canLeftAtRelease = currentCanSettleFromLeft
+                        val canRightAtRelease = currentCanSettleFromRight
+                        val settleFromLeft =
+                            canLeftAtRelease &&
+                                if (isFling) velocityX > 0f else gestureOffsetPx >= threshold
+                        val settleFromRight =
+                            canRightAtRelease &&
+                                if (isFling) velocityX < 0f else gestureOffsetPx <= -threshold
+                        val keyAtRelease = currentTrackKey
+                        val leftAtRelease = currentLeftPaneUrl
+                        val rightAtRelease = currentRightPaneUrl
+                        val offsetAtRelease = gestureOffsetPx
+                        launchSettle(
+                            settleFromLeft = settleFromLeft,
+                            settleFromRight = settleFromRight,
+                            keyAtRelease = keyAtRelease,
+                            leftAtRelease = leftAtRelease,
+                            rightAtRelease = rightAtRelease,
+                            paneWidth = paneWidth,
+                            velocityX = velocityX,
+                            offsetAtRelease = offsetAtRelease,
+                        )
+                    }
                 },
     ) {
         // Keep neighboring images loaded so they appear immediately during a swipe.
@@ -461,9 +553,9 @@ internal fun ArtworkSwipeBox(
                             .padding(horizontal = swipeEdgePadding)
                             .zIndex(if (holdSide == -1) 1f else 0f)
                             .graphicsLayer {
-                                alpha = if (holdSide == -1 || offset.value != 0f) 1f else 0f
+                                alpha = if (holdSide == -1 || displayedOffsetPx != 0f) 1f else 0f
                                 translationX =
-                                    if (holdSide == -1) 0f else offset.value - paneWidthPx - paneSpacingPx
+                                    if (holdSide == -1) 0f else displayedOffsetPx - paneWidthPx - paneSpacingPx
                             },
                 ) {
                     adjacentArtwork(url)
@@ -478,9 +570,9 @@ internal fun ArtworkSwipeBox(
                             .padding(horizontal = swipeEdgePadding)
                             .zIndex(if (holdSide == 1) 1f else 0f)
                             .graphicsLayer {
-                                alpha = if (holdSide == 1 || offset.value != 0f) 1f else 0f
+                                alpha = if (holdSide == 1 || displayedOffsetPx != 0f) 1f else 0f
                                 translationX =
-                                    if (holdSide == 1) 0f else offset.value + paneWidthPx + paneSpacingPx
+                                    if (holdSide == 1) 0f else displayedOffsetPx + paneWidthPx + paneSpacingPx
                             },
                 ) {
                     adjacentArtwork(url)
@@ -489,7 +581,7 @@ internal fun ArtworkSwipeBox(
         }
         Box(
             contentAlignment = contentAlignment,
-            modifier = Modifier.graphicsLayer { translationX = offset.value },
+            modifier = Modifier.graphicsLayer { translationX = displayedOffsetPx },
             content = content,
         )
     }
