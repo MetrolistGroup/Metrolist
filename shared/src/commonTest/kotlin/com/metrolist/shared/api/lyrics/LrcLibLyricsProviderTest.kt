@@ -187,9 +187,12 @@ class LrcLibLyricsProviderTest {
                   start_ms: 1000
                   end_ms: 2000
                   words:
-                  - text: Word
+                  - text: 'Word '
                     start_ms: 1000
                     end_ms: 1500
+                  - text: line
+                    start_ms: 1500
+                    end_ms: 2000
                 """.trimIndent()
             val body =
                 buildJsonArray {
