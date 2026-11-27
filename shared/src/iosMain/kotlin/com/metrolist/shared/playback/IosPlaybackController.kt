@@ -755,11 +755,10 @@ internal class IosPlaybackController(
                             scope.launch {
                                 val expectedCurrentSongId = player.currentSong.value?.id ?: return@launch
                                 val expectedIndex = player.currentMediaItemIndex.value
-                                val preparedQueueIndex = if (nextIndex <= state.value.queue.lastIndex) nextIndex else 0
+                                var preparedQueueIndex = if (nextIndex <= state.value.queue.lastIndex) nextIndex else 0
                                 try {
                                     val resource = resolveAudioResource(nextSong)
                                     currentCoroutineContext().ensureActive()
-                                    if (nextQueuedSong == null) return@launch
                                     if (nextSong.isPodcast && PodcastLibrary.resumePosition(
                                             database,
                                             nextSong,
@@ -767,6 +766,22 @@ internal class IosPlaybackController(
                                         ) > 0L
                                     ) {
                                         return@launch
+                                    }
+                                    if (nextQueuedSong == null) {
+                                        // Queue the suggestion before the song ends so it can be prepared and crossfaded into.
+                                        if (guestLocked || pendingPlayback.value != null ||
+                                            player.playbackInstance.value?.first != playbackInstanceId ||
+                                            player.currentSong.value?.id != expectedCurrentSongId ||
+                                            player.currentMediaItemIndex.value != expectedIndex ||
+                                            expectedIndex != player.songQueue.value.lastIndex ||
+                                            suggestedTracks.value.firstOrNull()?.id != nextSong.id
+                                        ) {
+                                            return@launch
+                                        }
+                                        suggestedTracks.value = suggestedTracks.value.filterNot { it.id == nextSong.id }
+                                        editQueue { addToQueue(listOf(nextSong), false) }
+                                        preparedQueueIndex = expectedIndex + 1
+                                        preResolveKey = "$playbackInstanceId:$preparedQueueIndex:${nextSong.id}"
                                     }
                                     val wrapsQueue = preparedQueueIndex == 0 && expectedIndex == player.songQueue.value.lastIndex
                                     if (player.playbackInstance.value?.first == playbackInstanceId &&
