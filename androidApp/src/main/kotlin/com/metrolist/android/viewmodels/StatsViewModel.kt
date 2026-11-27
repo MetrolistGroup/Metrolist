@@ -52,12 +52,18 @@ class StatsViewModel internal constructor(
     private val loadSnapshot: suspend (Long, Long, List<LastFmListen>) -> HistoryStatisticsSnapshot,
     private val loadRecent: suspend () -> List<PlayHistoryEntry>,
     private val loadSongs: suspend (List<HistoryStatGroup>) -> List<SongItem>,
+    private val syncHistory: suspend () -> Boolean = { false },
     private val loadLastFm: suspend (Long, Long) -> List<LastFmListen> = LastFmHistoryCache::listens,
     private val clock: Clock = Clock.System,
 ) : ViewModel() {
     constructor(
         repository: PlayHistoryRepository,
-    ) : this(repository::getStatisticsSnapshot, { repository.getRecentHistory(20) }, repository::getStatisticsSongs)
+    ) : this(
+        repository::getStatisticsSnapshot,
+        { repository.getRecentHistory(20) },
+        repository::getStatisticsSongs,
+        repository::syncFromYouTubeHistory,
+    )
 
     private val _uiState = MutableStateFlow(StatsUiState())
     val uiState: StateFlow<StatsUiState> = _uiState.asStateFlow()
@@ -103,8 +109,20 @@ class StatsViewModel internal constructor(
                 try {
                     val (sinceMs, untilMs) = period.epochRange(dateRange, clock, mode = mode)
 
-                    val recent = loadRecent()
+                    var recent = loadRecent()
                     showSnapshot(loadSnapshot(sinceMs, untilMs, emptyList()), period, mode, dateRange, recent)
+                    val synced =
+                        try {
+                            syncHistory()
+                        } catch (error: CancellationException) {
+                            throw error
+                        } catch (_: Exception) {
+                            false
+                        }
+                    if (synced) {
+                        recent = loadRecent()
+                        showSnapshot(loadSnapshot(sinceMs, untilMs, emptyList()), period, mode, dateRange, recent)
+                    }
                     // Last.fm can take a while for long periods, so local numbers show first.
                     val lastFm = loadLastFm(sinceMs, untilMs)
                     if (lastFm.isNotEmpty()) showSnapshot(loadSnapshot(sinceMs, untilMs, lastFm), period, mode, dateRange, recent)
