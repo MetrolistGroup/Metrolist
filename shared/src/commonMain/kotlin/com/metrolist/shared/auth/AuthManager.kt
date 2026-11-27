@@ -93,16 +93,23 @@ private fun launchDelegatedSessionResolution(waitIfRunning: Boolean) {
             return@launch
         }
         try {
-            AuthManager().resolveDelegatedSession(::fetchDelegatedSessionAccounts)
-        } catch (e: CancellationException) {
-            throw e
-        } catch (error: Exception) {
-            YtLogger.e("YouTubeAuth", "Delegated session lookup failed type=${error::class.simpleName}")
+            resolveDelegatedSessionSafely()
         } finally {
             delegatedSessionMutex.unlock()
         }
     }
 }
+
+// The lookup is optional, so a failed request or secure-settings write must not fail login, startup or an account refresh.
+private suspend fun resolveDelegatedSessionSafely(): Boolean =
+    try {
+        AuthManager().resolveDelegatedSession(::fetchDelegatedSessionAccounts)
+    } catch (e: CancellationException) {
+        throw e
+    } catch (error: Exception) {
+        YtLogger.e("YouTubeAuth", "Delegated session lookup failed type=${error::class.simpleName}")
+        false
+    }
 
 private suspend fun fetchDelegatedSessionAccounts() = GlobalYouTubeRepository.instance.getAccountsList(publishExpiredSessionNotice = false)
 
@@ -256,7 +263,7 @@ class AuthManager {
     /** Returns true when a brand page was installed on the live session. */
     suspend fun resolveDelegatedSession(): Boolean =
         delegatedSessionMutex.withLock {
-            resolveDelegatedSession(::fetchDelegatedSessionAccounts)
+            resolveDelegatedSessionSafely()
         }
 
     // The stored dataSyncId alone cannot tell a brand page from a personal account, so the account list decides once per identity.
