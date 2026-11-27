@@ -313,10 +313,13 @@ class AuthManager {
                     DelegatedSessionDataSyncIdKey to dataSyncId,
                 ),
             )
+            // Installed under the same lock so isDelegatedSessionLookupPending never clears before the brand session is live.
+            if (delegatedSessionId.isNotEmpty()) {
+                syncToInnerTube(cookie, Settings.shared.visitorData, dataSyncId, authUser, useLoginForBrowse = true)
+            }
         }
         YtLogger.w("YouTubeAuth", "Delegated session resolved brand=${delegatedSessionId.isNotEmpty()}")
         if (delegatedSessionId.isEmpty()) return false
-        syncToInnerTube(cookie, Settings.shared.visitorData, dataSyncId, authUser, useLoginForBrowse = true)
         // Logout or an account switch can run between the check above and this sync; undo the stale values if it did.
         if (credentialsUnchanged()) return true
         delegatedSessionLock.withLock {
