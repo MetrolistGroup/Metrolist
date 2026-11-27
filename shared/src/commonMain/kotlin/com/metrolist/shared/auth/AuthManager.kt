@@ -92,11 +92,14 @@ private fun launchDelegatedSessionResolution(waitIfRunning: Boolean) {
         } else if (!delegatedSessionMutex.tryLock()) {
             return@launch
         }
-        try {
-            resolveDelegatedSessionSafely()
-        } finally {
-            delegatedSessionMutex.unlock()
-        }
+        val installed =
+            try {
+                resolveDelegatedSessionSafely()
+            } finally {
+                delegatedSessionMutex.unlock()
+            }
+        // Likes refreshed by login or playback before the page id existed used the personal account.
+        if (installed) SongLikeState.refreshLikesFromRemoteAsync()
     }
 }
 
