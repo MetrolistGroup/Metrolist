@@ -63,6 +63,7 @@ import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.isActive
@@ -99,6 +100,7 @@ import kotlin.time.TimeMark
 import kotlin.time.TimeSource
 
 private const val RELATED_SONGS_LIMIT = 20
+private const val SUGGESTION_PREPARE_LEAD_MS = 10_000L
 
 // AVFoundation plays Opus-in-MP4 only from iOS 17; iOS 16 decodes the remuxed asset as silence.
 private val iosOpusRemuxSupported: Boolean =
@@ -755,11 +757,10 @@ internal class IosPlaybackController(
                             scope.launch {
                                 val expectedCurrentSongId = player.currentSong.value?.id ?: return@launch
                                 val expectedIndex = player.currentMediaItemIndex.value
-                                val preparedQueueIndex = if (nextIndex <= state.value.queue.lastIndex) nextIndex else 0
+                                var preparedQueueIndex = if (nextIndex <= state.value.queue.lastIndex) nextIndex else 0
                                 try {
                                     val resource = resolveAudioResource(nextSong)
                                     currentCoroutineContext().ensureActive()
-                                    if (nextQueuedSong == null) return@launch
                                     if (nextSong.isPodcast && PodcastLibrary.resumePosition(
                                             database,
                                             nextSong,
@@ -767,6 +768,32 @@ internal class IosPlaybackController(
                                         ) > 0L
                                     ) {
                                         return@launch
+                                    }
+                                    if (nextQueuedSong == null) {
+                                        // Queue the suggestion just before the crossfade window so it can be prepared
+                                        // and faded into. Earlier promotion would persist an unplayed recommendation.
+                                        if (!Settings.shared.crossfadeEnabled) return@launch
+                                        val leadMs = (Settings.shared.crossfadeDuration * 1000f).toLong() + SUGGESTION_PREPARE_LEAD_MS
+                                        combine(player.currentPosition, player.duration) { position, duration ->
+                                            duration > 0L && duration - position <= leadMs
+                                        }.first { it }
+                                        if (guestLocked || pendingPlayback.value != null || inListenTogether ||
+                                            sleepTimerController.isStopAfterCurrentSong ||
+                                            !Settings.shared.crossfadeEnabled ||
+                                            repeatMode.value != RepeatMode.OFF ||
+                                            (isFiniteQueue && !canAutoLoadMore) ||
+                                            player.playbackInstance.value?.first != playbackInstanceId ||
+                                            player.currentSong.value?.id != expectedCurrentSongId ||
+                                            player.currentMediaItemIndex.value != expectedIndex ||
+                                            expectedIndex != player.songQueue.value.lastIndex ||
+                                            suggestedTracks.value.firstOrNull()?.id != nextSong.id
+                                        ) {
+                                            return@launch
+                                        }
+                                        suggestedTracks.value = suggestedTracks.value.filterNot { it.id == nextSong.id }
+                                        editQueue { addToQueue(listOf(nextSong), false) }
+                                        preparedQueueIndex = expectedIndex + 1
+                                        preResolveKey = "$playbackInstanceId:$preparedQueueIndex:${nextSong.id}"
                                     }
                                     val wrapsQueue = preparedQueueIndex == 0 && expectedIndex == player.songQueue.value.lastIndex
                                     if (player.playbackInstance.value?.first == playbackInstanceId &&
