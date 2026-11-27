@@ -293,6 +293,7 @@ internal class AndroidDeviceConnectPlayback(
                 if (playback !=
                     null
                 ) {
+                    if (!provisional) onSave()
                     scrobbleManager.setReportingEnabled(false, player.currentSong.value, playback.playing, playback.scrobbleSession)
                 }
             }

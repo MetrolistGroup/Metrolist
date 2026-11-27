@@ -700,7 +700,7 @@ object PlayerState {
                 Logger.e("PlayerState", "Failed to record final listening session", it)
             }
             val preserveStoredSession = restoration.stop()
-            runCatching { if (!preserveStoredSession) flushPlaybackState() }.exceptionOrNull()?.let {
+            runCatching { if (!preserveStoredSession && !controllerPlaybackProvisional) flushPlaybackState() }.exceptionOrNull()?.let {
                 Logger.e("PlayerState", "Failed to persist final playback state", it)
             }
         }
