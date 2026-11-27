@@ -173,6 +173,14 @@ internal fun SettingsUiRegistryBuilder.registerAppearanceSettings(host: SharedSe
                 )
             }
         }
+        group("listAppearance", stringResource(Res.string.appearance_misc)) {
+            switch(
+                id = "multilineSongTitles",
+                title = stringResource(Res.string.multiline_song_titles),
+                description = stringResource(Res.string.multiline_song_titles_description),
+                checked = settings.multilineSongTitles,
+            ) { settings.multilineSongTitles = it }
+        }
         if (host.platform == SettingsPlatform.DESKTOP) {
             group("libraryGrid", stringResource(Res.string.library)) {
                 choice(

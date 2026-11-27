@@ -1511,12 +1511,17 @@ private fun TrackItem(
                             lineHeight = 20.sp,
                             letterSpacing = 0.15.sp,
                         ),
-                    maxLines = 1,
+                    maxLines = if (Settings.shared.multilineSongTitles) 3 else 1,
                     overflow = TextOverflow.Ellipsis,
                     color = contentColor,
                 )
                 Row(
-                    modifier = Modifier.height(18.dp),
+                    modifier =
+                        if (Settings.shared.multilineSongTitles) {
+                            Modifier.heightIn(min = 18.dp)
+                        } else {
+                            Modifier.height(18.dp)
+                        },
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     MetadataIcons(track = track)

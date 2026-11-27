@@ -571,7 +571,7 @@ private fun EpisodeRow(
                     modifier = Modifier.weight(1f).clickable(onClick = onShowDetails),
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.SemiBold,
-                    maxLines = 2,
+                    maxLines = if (Settings.shared.multilineSongTitles) 3 else 2,
                     overflow = TextOverflow.Ellipsis,
                 )
                 Box {

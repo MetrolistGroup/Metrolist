@@ -109,6 +109,7 @@ import com.metrolist.shared.model.previewAspectRatio
 import com.metrolist.shared.model.previewThumbnailUrl
 import com.metrolist.shared.model.thumbnailAspectRatio
 import com.metrolist.shared.settings.ArtistNameAliases
+import com.metrolist.shared.settings.Settings
 import com.metrolist.shared.settings.displayName
 import com.metrolist.shared.settings.displayTitle
 import com.metrolist.shared.state.SongMetadataState
@@ -362,6 +363,7 @@ fun SongListItem(
                 style = MaterialTheme.typography.bodyLarge,
                 fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.Medium,
                 color = contentColor,
+                maxLines = if (!effectiveSong.isPodcast && Settings.shared.multilineSongTitles) 3 else 1,
             )
 
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -429,6 +431,7 @@ fun ListItemTitle(
     style: TextStyle = MaterialTheme.typography.bodyLarge,
     fontWeight: FontWeight = FontWeight.Medium,
     color: Color = MaterialTheme.colorScheme.onSurface,
+    maxLines: Int = 1,
 ) {
     Row(
         modifier = modifier,
@@ -441,7 +444,7 @@ fun ListItemTitle(
             style = style,
             fontWeight = fontWeight,
             color = color,
-            maxLines = 1,
+            maxLines = maxLines,
             overflow = TextOverflow.Ellipsis,
         )
         if (isExplicit) ExplicitBadge()
@@ -650,8 +653,8 @@ fun YTGridItem(
                 color = MaterialTheme.colorScheme.onSurface,
                 style = if (largeText) MaterialTheme.typography.titleMedium else MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.Medium,
-                maxLines = 1,
-                softWrap = false,
+                maxLines = if (item is SongItem && !item.isPodcast && Settings.shared.multilineSongTitles) 3 else 1,
+                softWrap = item is SongItem && !item.isPodcast && Settings.shared.multilineSongTitles,
                 overflow = TextOverflow.Ellipsis,
                 textAlign = TextAlign.Start,
                 modifier = Modifier.fillMaxWidth(),
@@ -859,6 +862,7 @@ fun YTListItem(
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.Medium,
                 color = contentColor,
+                maxLines = if (item is SongItem && !item.isPodcast && Settings.shared.multilineSongTitles) 3 else 1,
             )
 
             Row(

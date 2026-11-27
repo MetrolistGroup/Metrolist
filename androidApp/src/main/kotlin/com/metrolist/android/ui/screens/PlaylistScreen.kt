@@ -1325,7 +1325,12 @@ private fun AddSongResultRow(
             )
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
-                Text(song.title, maxLines = 1, overflow = TextOverflow.Ellipsis, fontWeight = FontWeight.SemiBold)
+                Text(
+                    song.title,
+                    maxLines = if (Settings.shared.multilineSongTitles) 3 else 1,
+                    overflow = TextOverflow.Ellipsis,
+                    fontWeight = FontWeight.SemiBold,
+                )
                 SongMetadataRow(song)
             }
             Icon(MetrolistIcons.Default.Add, contentDescription = stringResource(Res.string.add))

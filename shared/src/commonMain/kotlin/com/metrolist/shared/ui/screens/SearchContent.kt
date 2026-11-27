@@ -1546,7 +1546,12 @@ private fun TopResultCard(
                                             style =
                                                 if (isWide) MaterialTheme.typography.headlineSmall else MaterialTheme.typography.titleLarge,
                                             fontWeight = FontWeight.Bold,
-                                            maxLines = 1,
+                                            maxLines =
+                                                if (mainItem is SongItem && Settings.shared.multilineSongTitles) {
+                                                    3
+                                                } else {
+                                                    1
+                                                },
                                             overflow = TextOverflow.Ellipsis,
                                         )
                                         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -1801,7 +1806,12 @@ private fun TopResultItem(
                 text = item.displayTitle,
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
-                maxLines = 1,
+                maxLines =
+                    if ((item is SongItem || item is EpisodeItem) && Settings.shared.multilineSongTitles) {
+                        3
+                    } else {
+                        1
+                    },
                 overflow = TextOverflow.Ellipsis,
                 color = if (isCurrentSong) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
             )

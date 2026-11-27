@@ -5051,6 +5051,10 @@
     <string name="display_density">Display density</string>
     <string name="enable_landscape_scaling">Landscape scaling</string>
     <string name="enable_landscape_scaling_desc">Scale the interface for larger screens in landscape mode</string>
+    <!-- Translators: Title of the appearance switch that allows song titles to wrap in lists. -->
+    <string name="multiline_song_titles">Multiline song titles</string>
+    <!-- Translators: Supporting text beneath the multiline song titles switch in appearance settings. -->
+    <string name="multiline_song_titles_description">Allow long song titles in lists to wrap up to 3 lines instead of truncating</string>
     <string name="force_bottom_navbar">Force bottom navigation bar</string>
     <string name="density_massive">Massive (200%)</string>
     <string name="density_huge">Huge (175%)</string>

@@ -1354,7 +1354,7 @@ fun ExpressiveDownloadIndicatorPill(
                                     Text(
                                         songTitle,
                                         style = MaterialTheme.typography.bodySmall,
-                                        maxLines = 1,
+                                        maxLines = if (Settings.shared.multilineSongTitles) 3 else 1,
                                         overflow = TextOverflow.Ellipsis,
                                         color = colorScheme.onSurface,
                                         modifier = Modifier.weight(1f),

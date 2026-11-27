@@ -95,6 +95,7 @@ import com.metrolist.shared.model.YTItem
 import com.metrolist.shared.model.previewAspectRatio
 import com.metrolist.shared.model.previewThumbnailUrl
 import com.metrolist.shared.settings.ArtistNameAliases
+import com.metrolist.shared.settings.Settings
 import com.metrolist.shared.settings.displayName
 import com.metrolist.shared.settings.displayTitle
 import com.metrolist.shared.state.SongMetadataState
@@ -384,6 +385,7 @@ fun YTListItem(
                     fontWeight = FontWeight.Medium,
                     color = contentColor,
                     modifier = Modifier,
+                    maxLines = if ((item is SongItem || item is EpisodeItem) && Settings.shared.multilineSongTitles) 3 else 1,
                 )
 
                 if (item is SongItem) {
