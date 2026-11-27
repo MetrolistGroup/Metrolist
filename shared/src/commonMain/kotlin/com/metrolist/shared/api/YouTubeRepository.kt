@@ -36,12 +36,10 @@ import com.metrolist.shared.api.YouTubeResponseParser.textContent
 import com.metrolist.shared.api.YouTubeResponseParser.uploadShelfObjects
 import com.metrolist.shared.api.musicvideo.MusicVideoCounterpart
 import com.metrolist.shared.api.musicvideo.parseMusicVideoCounterpart
-import com.metrolist.shared.auth.AuthManager
 import com.metrolist.shared.auth.YouTubeSessionState
 import com.metrolist.shared.auth.YouTubeSyncState
 import com.metrolist.shared.auth.invalidateYouTubeSession
 import com.metrolist.shared.auth.invalidateYouTubeSessionIfCurrent
-import com.metrolist.shared.auth.isDelegatedSessionLookupPending
 import com.metrolist.shared.auth.isExpiredYouTubeSessionResponse
 import com.metrolist.shared.db.MusicDatabase
 import com.metrolist.shared.db.OfflineSongAvailability
@@ -1714,11 +1712,7 @@ class YouTubeRepository(
     internal suspend fun removeSearchHistoryItems(
         feedbackTokens: List<String>,
         session: InnerTube.SessionSnapshot,
-    ) {
-        // A removal sent before the brand page is installed hits the personal account; the session check below then cancels it.
-        if (isDelegatedSessionLookupPending()) AuthManager().resolveDelegatedSession()
-        withSearchHistorySession(session) { it.removeSearchHistoryItems(feedbackTokens) }
-    }
+    ) = withSearchHistorySession(session) { it.removeSearchHistoryItems(feedbackTokens) }
 
     private suspend fun <T> withSearchHistorySession(
         session: InnerTube.SessionSnapshot,

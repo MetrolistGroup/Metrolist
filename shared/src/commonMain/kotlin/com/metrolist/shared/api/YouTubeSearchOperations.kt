@@ -9,8 +9,6 @@ import com.metrolist.shared.api.YouTubeResponseParser.parseItem
 import com.metrolist.shared.api.YouTubeResponseParser.runText
 import com.metrolist.shared.api.YouTubeSearchParser.parseCardShelfItem
 import com.metrolist.shared.api.YouTubeSearchParser.parseSearchResponse
-import com.metrolist.shared.auth.AuthManager
-import com.metrolist.shared.auth.isDelegatedSessionLookupPending
 import com.metrolist.shared.model.AlbumItem
 import com.metrolist.shared.model.ArtistItem
 import com.metrolist.shared.model.ArtistTiny
@@ -451,11 +449,7 @@ internal class YouTubeSearchOperations(
     }
 
     suspend fun clearSearchHistory(initialFeedbackTokens: List<String>) {
-        // The initial tokens belong to this session, so a brand page installed while waiting cancels the clear.
-        val original = innerTube.sessionSnapshot()
-        if (isDelegatedSessionLookupPending()) AuthManager().resolveDelegatedSession()
         val session = innerTube.sessionSnapshot()
-        if (session != original) throw CancellationException("InnerTube session changed")
         if (!innerTube.hasSapCookieAuth(session)) return
         val requestTube = innerTube.createIsolatedSession(true)
         requestTube.replaceSession(
