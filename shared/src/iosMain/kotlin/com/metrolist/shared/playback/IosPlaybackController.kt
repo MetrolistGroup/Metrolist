@@ -727,6 +727,8 @@ internal class IosPlaybackController(
             combine(player.playbackInstance, player.currentPosition, player.duration, suggestedTracks) { instance, pos, dur, _ ->
                 Triple(instance?.first, pos, dur)
             }.collect { (instance, pos, dur) ->
+                // The incoming song's instance is published while the outgoing one is still current.
+                if (player.isCrossfadeReportingActive.value) return@collect
                 if (preResolveInstance != instance) {
                     preResolveJob?.cancel()
                     preResolveKey = null
