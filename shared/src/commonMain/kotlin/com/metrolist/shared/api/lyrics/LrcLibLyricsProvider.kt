@@ -65,10 +65,10 @@ class LrcLibLyricsProvider(
                 ?.takeIf(MlxParser::isMlxFormat)
                 ?.let { return it }
         }
-        val synced = candidate.syncedLyrics?.takeIf { it.isNotBlank() }
-        if (synced != null) {
-            return lrcToMlx(synced, title, artist, source = "LrcLib", sourceId = candidate.id.toString())
-        }
+        candidate.syncedLyrics
+            ?.takeIf { it.isNotBlank() }
+            ?.let { lrcToMlx(it, title, artist, source = "LrcLib", sourceId = candidate.id.toString()) }
+            ?.let { return it }
         val plain = candidate.plainLyrics?.takeIf { it.isNotBlank() } ?: return null
         return MlxBuilder()
             .meta("LrcLib", sourceId = candidate.id.toString())
