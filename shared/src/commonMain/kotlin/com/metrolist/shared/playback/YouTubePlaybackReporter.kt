@@ -6,6 +6,7 @@ import com.metrolist.innertubex.extraction.generateClientPlaybackNonce
 import com.metrolist.innertubex.models.YouTubeClient
 import com.metrolist.shared.api.YouTubeRepository
 import com.metrolist.shared.api.YouTubeRepository.PlaybackTrackingSession
+import com.metrolist.shared.auth.isDelegatedSessionLookupPending
 import com.metrolist.shared.auth.requestDelegatedSessionResolution
 import com.metrolist.shared.settings.Settings
 import com.metrolist.shared.utils.Logger
@@ -611,6 +612,10 @@ class YouTubePlaybackReporter internal constructor(
         if (!PlaybackNetworkStateStore.current.connected) return null
         val accountKey = repository.playbackReportingAccountKey() ?: return null
         if (!Settings.shared.queueYouTubeHistoryWhenOffline || !repository.isPlaybackReportingEnabled()) return null
+        if (isDelegatedSessionLookupPending()) {
+            requestDelegatedSessionResolution()
+            return BASE_RETRY_MS
+        }
         for (report in PendingYouTubePlaybackReportStore.all()) {
             if (report.accountKey != accountKey) continue
             if (report.pings.isEmpty()) {

@@ -15,6 +15,7 @@ import com.metrolist.shared.state.GlobalYouTubeRepository
 import com.metrolist.shared.state.SongLikeState
 import com.metrolist.shared.utils.clearWebCookies
 import com.metrolist.shared.youtube.logging.YtLogger
+import com.metrolist.shared.youtube.playback.PlaybackNetworkStateStore
 import kotlinx.atomicfu.locks.ReentrantLock
 import kotlinx.atomicfu.locks.withLock
 import kotlinx.coroutines.CancellationException
@@ -53,6 +54,7 @@ private val delegatedSessionMutex = Mutex()
 // Readers take this with the resolver's write so one account's page id is never paired with another account's dataSyncId.
 private val delegatedSessionLock = ReentrantLock()
 private var lastDelegatedSessionAttempt: Pair<String, TimeMark>? = null
+private var settledDelegatedSessionLookup: String? = null
 private val delegatedSessionRetryInterval = 5.minutes
 
 internal fun storedDelegatedSessionId(dataSyncId: String?): String? =
@@ -104,15 +106,35 @@ private fun launchDelegatedSessionResolution(waitIfRunning: Boolean) {
 }
 
 // The lookup is optional, so a failed request or secure-settings write must not fail login, startup or an account refresh.
-private suspend fun resolveDelegatedSessionSafely(): Boolean =
-    try {
-        AuthManager().resolveDelegatedSession(::fetchDelegatedSessionAccounts)
-    } catch (e: CancellationException) {
-        throw e
-    } catch (error: Exception) {
-        YtLogger.e("YouTubeAuth", "Delegated session lookup failed type=${error::class.simpleName}")
-        false
+private suspend fun resolveDelegatedSessionSafely(): Boolean {
+    val dataSyncId = Settings.shared.dataSyncId
+    val installed =
+        try {
+            AuthManager().resolveDelegatedSession(::fetchDelegatedSessionAccounts)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (error: Exception) {
+            YtLogger.e("YouTubeAuth", "Delegated session lookup failed type=${error::class.simpleName}")
+            false
+        }
+    // An offline lookup proves nothing about the account, so it must not release queued replays.
+    if (PlaybackNetworkStateStore.current.connected) {
+        delegatedSessionLock.withLock { settledDelegatedSessionLookup = dataSyncId }
     }
+    return installed
+}
+
+/**
+ * True until the signed-in account's brand page is known or one lookup for it has finished, so queued plays are not
+ * replayed to the personal account while a brand page may still be found. A failed lookup stops blocking replay.
+ */
+internal fun isDelegatedSessionLookupPending(): Boolean {
+    val dataSyncId = Settings.shared.dataSyncId
+    if (dataSyncId.isBlank() || !hasSupportedYouTubeAuthCookie(Settings.shared.innerTubeCookie)) return false
+    return delegatedSessionLock.withLock {
+        Settings.shared.delegatedSessionDataSyncId != dataSyncId && settledDelegatedSessionLookup != dataSyncId
+    }
+}
 
 private suspend fun fetchDelegatedSessionAccounts() = GlobalYouTubeRepository.instance.getAccountsList(publishExpiredSessionNotice = false)
 
