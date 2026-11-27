@@ -909,6 +909,7 @@ class YouTubeRepository(
     suspend fun getPlaylistPageData(
         playlistId: String,
         applyContentFilters: Boolean = true,
+        isAccountCurrent: () -> Boolean = { true },
     ): PlaylistPage {
         val id = playlistId.toPlaylistBrowseId()
         val voteRevision = SongLikeState.voteObservationRevision()
@@ -929,6 +930,9 @@ class YouTubeRepository(
         }
         return try {
             requireCurrentSession(requestSession)
+            // Checked once the session is fixed: an account switch stores the account before the session, so a
+            // request that still sees its account runs under that account's session.
+            if (!isAccountCurrent()) throw CancellationException("Library account changed")
             val httpResponse =
                 innerTube
                     .browse(
@@ -2459,9 +2463,10 @@ class YouTubeRepository(
         videoId: String,
         allowDuplicate: Boolean = true,
         notifyChange: Boolean = true,
+        isAccountCurrent: () -> Boolean = { true },
     ): Result<Unit> =
         try {
-            playlistEdits.addToPlaylist(playlistId, videoId, allowDuplicate).also {
+            playlistEdits.addToPlaylist(playlistId, videoId, allowDuplicate, isAccountCurrent).also {
                 if (it.isFailure && it.exceptionOrNull() !is PlaylistSongAlreadyPresentException) {
                     playlistMembership.invalidate(innerTube.sessionSnapshot(), playlistId)
                 }

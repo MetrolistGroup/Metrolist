@@ -2,6 +2,7 @@ package com.metrolist.shared.viewmodels
 
 import com.metrolist.shared.api.PlaylistPage
 import com.metrolist.shared.api.YouTubeRepository
+import com.metrolist.shared.playlist.PendingPlaylistAdds
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
@@ -23,7 +24,16 @@ internal class PlaylistPageLoader(
     private val _loading = MutableStateFlow(false)
     val loading = _loading.asStateFlow()
 
-    suspend fun loadFirst() = mutex.withLock { if (_page.value == null) _page.value = firstPage() }
+    // The queue revision from before the first page, which storing a snapshot of these pages passes along.
+    var queueRevision: Long? = null
+        private set
+
+    suspend fun loadFirst() = mutex.withLock { if (_page.value == null) _page.value = fetchFirst() }
+
+    private suspend fun fetchFirst(): PlaylistPage {
+        queueRevision = PendingPlaylistAdds.queueRevision()
+        return firstPage()
+    }
 
     suspend fun loadMore() {
         val cursor = _page.value ?: return
@@ -42,7 +52,7 @@ internal class PlaylistPageLoader(
         mutex.withLock {
             _loading.value = true
             try {
-                if (_page.value == null) _page.value = firstPage()
+                if (_page.value == null) _page.value = fetchFirst()
                 while (_page.value!!.hasMore) _page.value = nextPage(_page.value!!)
                 _page.value!!
             } finally {

@@ -155,6 +155,7 @@ import com.metrolist.shared.constants.MusicVideoPlaybackEnabledKey
 import com.metrolist.shared.constants.MusicVideoQualityKey
 import com.metrolist.shared.constants.PauseOnMuteKey
 import com.metrolist.shared.constants.PendingContinuePlaybackKey
+import com.metrolist.shared.constants.PendingPlaylistAddsJsonKey
 import com.metrolist.shared.constants.PendingRemoteLibraryRemovalKeysJsonKey
 import com.metrolist.shared.constants.PendingSongVotesJsonKey
 import com.metrolist.shared.constants.PersistentPlaybackPositionKey
@@ -857,6 +858,7 @@ class Settings(
     var lastLibraryRefreshAccount by preference(LastLibraryRefreshAccountKey, "")
     var lastRemoteLibraryItemKeysJson by preference(LastRemoteLibraryItemKeysJsonKey, "[]")
     var pendingRemoteLibraryRemovalKeysJson by preference(PendingRemoteLibraryRemovalKeysJsonKey, "[]")
+    var pendingPlaylistAddsJson by preference(PendingPlaylistAddsJsonKey, "[]")
     var deletedPlaylistIdsJson by preference(DeletedPlaylistIdsJsonKey, "[]")
     var libraryGridView by preference(true)
     private var libraryViewsByFilterJson by preference(LibraryViewsByFilterKey, "{}")

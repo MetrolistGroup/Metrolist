@@ -70,6 +70,7 @@ import com.metrolist.shared.discord.DiscordTokenStore
 import com.metrolist.shared.discord.observeDiscordInitialization
 import com.metrolist.shared.equalizer.EqualizerProfiles
 import com.metrolist.shared.listentogether.network.isAllowedListenTogetherServerUrl
+import com.metrolist.shared.playlist.PendingPlaylistAdds
 import com.metrolist.shared.settings.BlockedContent
 import com.metrolist.shared.settings.Settings
 import com.metrolist.shared.state.GlobalYouTube
@@ -454,6 +455,7 @@ class App :
         }
         observeWidgetThemeChanges()
         SongMetadataState.bind(get<MusicDatabase>(), get<CoroutineScope>())
+        PendingPlaylistAdds.bind(get<MusicDatabase>(), get<CoroutineScope>())
         get<SongDownloadManager>().observeTrackedPlaylists(get<CoroutineScope>())
         get<CoroutineScope>().launch {
             PlaybackNetworkStateStore.state

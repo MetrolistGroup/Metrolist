@@ -14,6 +14,7 @@ import com.metrolist.shared.db.distinctPlaylistItems
 import com.metrolist.shared.db.preserveKnownPlaylistEditability
 import com.metrolist.shared.db.readOnlyPlaylistItems
 import com.metrolist.shared.db.selectablePlaylistItems
+import com.metrolist.shared.db.syncRemotePlaylists
 import com.metrolist.shared.model.PlaylistItem
 import com.metrolist.shared.model.SongItem
 import com.metrolist.shared.playlist.LibraryDeletionTracker
@@ -40,7 +41,7 @@ import kotlin.time.Duration.Companion.seconds
 
 internal class DesktopPlaybackLibrary(
     private val scope: CoroutineScope,
-    database: () -> MusicDatabase,
+    private val database: () -> MusicDatabase,
     repository: () -> YouTubeRepository = { GlobalYouTubeRepository.instance },
     private val loadPlaylists: suspend (Boolean, (List<PlaylistItem>) -> Unit) -> List<PlaylistItem> = { signedIn, publishLocal ->
         val local =
@@ -97,13 +98,8 @@ internal class DesktopPlaybackLibrary(
     private val addLocalBatch: (suspend (String, List<SongItem>) -> PlaylistAddBatchResult)? = { playlistId, songs ->
         addSongsToLocalPlaylist(database(), playlistId, songs)
     },
-    private val addSong: suspend (String, SongItem, Boolean) -> Result<Unit> = { playlistId, song, local ->
-        val storedDatabase = database()
-        if (local || storedDatabase.dao().findPlaylistEntity(playlistId) != null) {
-            addSongToStoredPlaylist(storedDatabase, repository(), playlistId, song, allowDuplicate = !local)
-        } else {
-            repository().addToPlaylist(playlistId, song.id, allowDuplicate = true)
-        }
+    private val addSong: suspend (String, SongItem, Boolean) -> Result<Unit> = { playlistId, song, allowDuplicate ->
+        addSongToStoredPlaylist(database(), repository(), playlistId, song, allowDuplicate)
     },
 ) {
     var userPlaylists by mutableStateOf<List<PlaylistItem>>(emptyList())
@@ -265,6 +261,22 @@ internal class DesktopPlaybackLibrary(
         cancelAddition = true
     }
 
+    private suspend fun remoteSongIds(playlistId: String): MutableSet<String>? =
+        try {
+            withTimeoutOrNull(PLAYLIST_ADD_TIMEOUT) { playlistSongIds(playlistId).toMutableSet() }
+        } catch (error: CancellationException) {
+            throw error
+        } catch (_: Exception) {
+            null
+        }
+
+    private suspend fun storeListedPlaylist(playlistId: String) {
+        val storedDatabase = database()
+        val dao = storedDatabase.dao()
+        if ((dao.findPlaylistEntity(playlistId) ?: dao.findPlaylistEntity(playlistId.removePrefix("VL"))) != null) return
+        userPlaylists.firstOrNull { it.id == playlistId }?.let { storedDatabase.syncRemotePlaylists(listOf(it)) }
+    }
+
     fun addToPlaylist(
         playlistId: String,
         songs: List<SongItem>,
@@ -280,13 +292,11 @@ internal class DesktopPlaybackLibrary(
                 try {
                     require(songs.isNotEmpty())
                     val local = playlistId.startsWith("LP") || userPlaylists.any { it.id == playlistId && it.isLocal }
-                    val existingIds =
-                        if (local) {
-                            null
-                        } else {
-                            withTimeoutOrNull(PLAYLIST_ADD_TIMEOUT) { playlistSongIds(playlistId).toMutableSet() }
-                                ?: throw PlaylistAdditionStopped(0, songs.size, false)
-                        }
+                    // A playlist from the remote listing is stored first, so its adds go through the queue as well.
+                    if (!local) storeListedPlaylist(playlistId)
+                    // YouTube's membership skips the songs a remote playlist already has. Without it, as offline, each add
+                    // checks the local playlist and YouTube checks again when the queue sends it.
+                    val existingIds = if (local) null else remoteSongIds(playlistId)
                     while (playlistAddCompleted < songs.size) {
                         currentCoroutineContext().ensureActive()
                         if (cancelAddition) throw PlaylistAdditionStopped(playlistAddCompleted, songs.size, false)
@@ -313,7 +323,7 @@ internal class DesktopPlaybackLibrary(
                         }
                         uncertain = true
                         val addition =
-                            withTimeoutOrNull(PLAYLIST_ADD_TIMEOUT) { addSong(playlistId, song, local) }
+                            withTimeoutOrNull(PLAYLIST_ADD_TIMEOUT) { addSong(playlistId, song, !local && existingIds != null) }
                                 ?: throw PlaylistAdditionStopped(playlistAddCompleted, songs.size, true)
                         if (addition.exceptionOrNull() !is PlaylistSongAlreadyPresentException) addition.getOrThrow()
                         uncertain = false

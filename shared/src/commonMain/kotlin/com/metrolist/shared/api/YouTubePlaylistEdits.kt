@@ -424,11 +424,15 @@ internal class YouTubePlaylistEdits(
         playlistId: String,
         videoId: String,
         allowDuplicate: Boolean = true,
+        isAccountCurrent: () -> Boolean = { true },
     ): Result<Unit> =
         try {
             val requestSession = innerTube.sessionSnapshot()
             runSessionPlaylistEdit(playlistId) { requestTube, id ->
                 require(innerTube.hasSapCookieAuth(requestSession))
+                // Checked once the session is fixed: an account switch stores the account before the session, so a
+                // request that still sees its account runs under that account's session.
+                if (!isAccountCurrent()) throw CancellationException("Library account changed")
                 if (innerTube.sessionSnapshot() != requestSession) throw CancellationException("InnerTube session changed")
                 val alreadyPresent = !allowDuplicate && playlistContainsSong(playlistId, videoId)
                 if (innerTube.sessionSnapshot() != requestSession) throw CancellationException("InnerTube session changed")

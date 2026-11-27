@@ -40,6 +40,7 @@ import com.metrolist.shared.db.MusicDatabase
 import com.metrolist.shared.db.cacheRemotePlaylist
 import com.metrolist.shared.db.cachedRemotePlaylistSections
 import com.metrolist.shared.db.entities.toSongItem
+import com.metrolist.shared.db.loadAndCachePlaylistPage
 import com.metrolist.shared.generated.resources.Res
 import com.metrolist.shared.generated.resources.error
 import com.metrolist.shared.generated.resources.error_occurred
@@ -539,7 +540,11 @@ internal fun MobilePlaylistScreen(
         val header = complete.sections["header"]?.firstOrNull() as? PlaylistItem ?: return@LaunchedEffect
         try {
             editMutex.withLock {
-                if (!editingPrepared) withContext(Dispatchers.Default) { database.cacheRemotePlaylist(playlistId, header, complete.songs) }
+                if (!editingPrepared) {
+                    withContext(Dispatchers.Default) {
+                        database.cacheRemotePlaylist(playlistId, header, complete.songs, loader.queueRevision)
+                    }
+                }
             }
         } catch (e: CancellationException) {
             throw e
@@ -629,8 +634,16 @@ internal fun MobilePlaylistScreen(
                     try {
                         editMutex.withLock {
                             if (!editingPrepared) {
-                                val complete = cachedSections?.playlistSongs() ?: loader.complete().songs
-                                database.cacheRemotePlaylist(playlistId, playlist, complete)
+                                // Stored rows keep their mappings. Fetched pages pass the queue revision from before the fetch, and
+                                // pages an add leaving the queue made stale are read again, so editing never runs on a skipped snapshot.
+                                val storedSongs = cachedSections?.playlistSongs()
+                                val cached =
+                                    if (storedSongs != null) {
+                                        database.cacheRemotePlaylist(playlistId, playlist, storedSongs)
+                                    } else {
+                                        database.cacheRemotePlaylist(playlistId, playlist, loader.complete().songs, loader.queueRevision)
+                                    }
+                                if (!cached) database.loadAndCachePlaylistPage(GlobalYouTubeRepository.instance, playlistId)
                                 val stored = checkNotNull(database.dao().findPlaylistEntity(playlistId))
                                 reorder.update(
                                     database

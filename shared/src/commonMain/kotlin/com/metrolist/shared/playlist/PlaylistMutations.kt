@@ -103,7 +103,9 @@ suspend fun removeSongsFromStoredPlaylist(
                     } else if (remoteId != null && song.playlistSetVideoId != null) {
                         available.firstOrNull { it.map.setVideoId == song.playlistSetVideoId }
                     } else {
-                        available.firstOrNull { it.map.songId == song.id }
+                        // A copy still queued for YouTube has only its local mapping ID, even in a remote playlist.
+                        song.playlistLocalMappingId?.let { id -> available.firstOrNull { it.map.id == id && it.map.songId == song.id } }
+                            ?: available.firstOrNull { it.map.songId == song.id }
                     }
                 occurrence?.also { available.remove(it) }
                 song to occurrence
@@ -111,14 +113,8 @@ suspend fun removeSongsFromStoredPlaylist(
 
         if (remoteId != null) {
             check(repository.canManagePlaylists()) { "YouTube Music sign-in is required" }
-            val remoteRemovals =
-                matchedPairs.map { (song, matchedOccurrence) ->
-                    val setVideoId =
-                        song.playlistSetVideoId
-                            ?: matchedOccurrence?.map?.setVideoId
-                    checkNotNull(setVideoId) { "Missing playlist item identifier" } to song.id
-                }
-            repository.removePlaylistSongs(remoteId, remoteRemovals).getOrThrow()
+            // A song still queued for YouTube has no item ID yet, so removing it cancels its queued add instead.
+            PendingPlaylistAdds.removeFromPlaylist(database, repository, remoteId, localId, matchedPairs)
         }
 
         val matchedEntities = matchedPairs.mapNotNull { it.second }
@@ -473,7 +469,7 @@ private suspend fun updateLocalPlaylist(
 }
 
 // shortcut: Serialize membership checks and additions; use per-playlist locks if imports need parallelism.
-private val playlistAddMutex = Mutex()
+internal val playlistAddMutex = Mutex()
 
 data class PlaylistAddBatchResult(
     val addedCount: Int,
@@ -550,29 +546,33 @@ suspend fun addSongToStoredPlaylist(
             if (!allowDuplicate && database.dao().checkInPlaylist(targetLocalId, song.id) > 0) {
                 throw PlaylistSongAlreadyPresentException()
             }
-            if (remoteId != null) {
-                repository.addToPlaylist(remoteId, song.id, allowDuplicate = allowDuplicate, notifyChange = false).getOrThrow()
-            }
-
-            database.withDatabaseTransaction {
-                val dao = database.dao()
-                dao.upsertHistorySong(song)
-                val currentEntity = checkNotNull(dao.findPlaylistEntity(targetLocalId))
-                val nextPosition = dao.nextPlaylistPosition(targetLocalId)
-                val currentCount = currentEntity.remoteSongCount ?: dao.localPlaylistSongCount(targetLocalId)
-                dao.insert(
-                    PlaylistSongMap(
-                        playlistId = targetLocalId,
-                        songId = song.id,
-                        position = nextPosition,
-                    ),
-                )
-                dao.update(
-                    currentEntity.copy(
-                        remoteSongCount = currentCount + 1,
-                        lastUpdateTime = Clock.System.now().toLocalDateTime(TimeZone.UTC),
-                    ),
-                )
+            // The song is listed locally at once and the background sync adds it on YouTube. Queuing it before the local
+            // row commits keeps a playlist refresh in between from dropping that row.
+            val pendingAdd = remoteId?.let { PendingPlaylistAdds.enqueue(targetLocalId, song.id, allowDuplicate) }
+            try {
+                database.withDatabaseTransaction {
+                    val dao = database.dao()
+                    dao.upsertHistorySong(song)
+                    val currentEntity = checkNotNull(dao.findPlaylistEntity(targetLocalId))
+                    val nextPosition = dao.nextPlaylistPosition(targetLocalId)
+                    val currentCount = currentEntity.remoteSongCount ?: dao.localPlaylistSongCount(targetLocalId)
+                    dao.insert(
+                        PlaylistSongMap(
+                            playlistId = targetLocalId,
+                            songId = song.id,
+                            position = nextPosition,
+                        ),
+                    )
+                    dao.update(
+                        currentEntity.copy(
+                            remoteSongCount = currentCount + 1,
+                            lastUpdateTime = Clock.System.now().toLocalDateTime(TimeZone.UTC),
+                        ),
+                    )
+                }
+            } catch (error: Exception) {
+                pendingAdd?.let(PendingPlaylistAdds::discard)
+                throw error
             }
             PlaylistChanges.notifyChanged(remoteId ?: targetLocalId)
         }

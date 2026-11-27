@@ -15,6 +15,7 @@ import com.metrolist.shared.model.isEditablePlaylistId
 import com.metrolist.shared.model.isSyncablePlaylistId
 import com.metrolist.shared.model.parseDisplayCount
 import com.metrolist.shared.playlist.LibraryDeletionTracker
+import com.metrolist.shared.playlist.PendingPlaylistAdds
 import com.metrolist.shared.playlist.PlaylistChanges
 import com.metrolist.shared.youtube.logging.YtLogger
 import kotlinx.coroutines.CancellationException
@@ -88,39 +89,36 @@ suspend fun MusicDatabase.syncRemotePlaylists(
     }
 }
 
+// A snapshot fetched from YouTube passes the queue revision read before the fetch. When a queued add left the queue since,
+// the snapshot may lack that add's copy, so it is not stored and the next read stores the playlist instead. Returns whether
+// the snapshot was stored.
 suspend fun MusicDatabase.cacheRemotePlaylist(
     requestedId: String,
     playlist: PlaylistItem,
     songs: List<SongItem>,
-) = withDatabaseTransaction {
+    queueRevision: Long? = null,
+): Boolean =
+    withDatabaseTransaction {
+        cacheRemotePlaylistSnapshot(requestedId, playlist, songs, queueRevision)
+    }
+
+private suspend fun MusicDatabase.cacheRemotePlaylistSnapshot(
+    requestedId: String,
+    playlist: PlaylistItem,
+    songs: List<SongItem>,
+    queueRevision: Long?,
+): Boolean {
     val dao = dao()
     if (LibraryDeletionTracker.isDeleted(playlist) || LibraryDeletionTracker.isDeleted("playlist:${requestedId.removePrefix("VL")}")) {
-        return@withDatabaseTransaction
+        return false
     }
     val existing = dao.findPlaylistEntity(requestedId)
-    if (existing != null && existing.browseId == null) return@withDatabaseTransaction
-    val entity =
-        (existing ?: PlaylistEntity(id = requestedId, name = playlist.title, bookmarkedAt = null)).copy(
-            name = playlist.title,
-            browseId = (existing?.browseId ?: requestedId).removePrefix("VL"),
-            thumbnailUrl = playlist.thumbnail.takeUnless { it == playlist.customThumbnail } ?: existing?.thumbnailUrl,
-            isEditable = playlist.canEdit,
-            remoteSongCount = songs.size,
-            description = playlist.description,
-            playEndpointParams = playlist.playEndpointParams,
-            radioEndpointParams = playlist.radioEndpointParams,
-            remoteHeader = playlist,
-            lastUpdateTime = Clock.System.now().toLocalDateTime(TimeZone.UTC),
-            isAutoSync = true,
-        )
-    dao.upsert(entity)
+    if (existing != null && existing.browseId == null) return false
     val existingMappings =
         dao
-            .playlistSongs(entity.id)
+            .playlistSongs(existing?.id ?: requestedId)
             .first()
             .map { it.map }
-            .toMutableList()
-    dao.clearPlaylist(entity.id)
     val existingById = existingMappings.associateBy { it.id }
     val existingBySetVideoId = existingMappings.mapNotNull { m -> m.setVideoId?.let { it to m } }.toMap()
     val matches = mutableMapOf<Int, PlaylistSongMap>()
@@ -130,6 +128,22 @@ suspend fun MusicDatabase.cacheRemotePlaylist(
             song.playlistLocalMappingId?.let { id -> existingById[id] }
                 ?: song.playlistSetVideoId?.let { token -> existingBySetVideoId[token] }
         if (mapping != null && claimed.add(mapping.id)) matches[index] = mapping
+    }
+    // Local copies of songs whose queued adds YouTube has not confirmed yet stay listed until it does. Their rows have no
+    // item ID yet and are set aside before the fallback below, so an older remote copy of the song cannot take one over.
+    // A playlist not stored yet has no queued rows a stale snapshot could drop, so only a stored one checks the revision.
+    val remoteCounts = songs.groupingBy { it.id }.eachCount()
+    val unconfirmed =
+        PendingPlaylistAdds
+            .unconfirmedCopies(existing?.id ?: requestedId, remoteCounts, queueRevision.takeIf { existing != null })
+            ?.toMutableMap() ?: return false
+    val pendingMappings = mutableListOf<PlaylistSongMap>()
+    for (mapping in existingMappings) {
+        val left = unconfirmed[mapping.songId] ?: 0
+        if (left > 0 && mapping.setVideoId == null && claimed.add(mapping.id)) {
+            pendingMappings += mapping
+            unconfirmed[mapping.songId] = left - 1
+        }
     }
     val unmatchedBySongId = existingMappings.filterNot { it.id in claimed }.groupBy { it.songId }
     songs.indices.filterNot(matches::containsKey).groupBy { songs[it].id }.forEach { (songId, indices) ->
@@ -141,6 +155,22 @@ suspend fun MusicDatabase.cacheRemotePlaylist(
             }
         }
     }
+    val entity =
+        (existing ?: PlaylistEntity(id = requestedId, name = playlist.title, bookmarkedAt = null)).copy(
+            name = playlist.title,
+            browseId = (existing?.browseId ?: requestedId).removePrefix("VL"),
+            thumbnailUrl = playlist.thumbnail.takeUnless { it == playlist.customThumbnail } ?: existing?.thumbnailUrl,
+            isEditable = playlist.canEdit,
+            remoteSongCount = songs.size + pendingMappings.size,
+            description = playlist.description,
+            playEndpointParams = playlist.playEndpointParams,
+            radioEndpointParams = playlist.radioEndpointParams,
+            remoteHeader = playlist,
+            lastUpdateTime = Clock.System.now().toLocalDateTime(TimeZone.UTC),
+            isAutoSync = true,
+        )
+    dao.upsert(entity)
+    dao.clearPlaylist(entity.id)
     songs.forEachIndexed { index, song ->
         dao.upsertHistorySong(song)
         val existingMapping = matches[index]
@@ -154,6 +184,8 @@ suspend fun MusicDatabase.cacheRemotePlaylist(
             ),
         )
     }
+    pendingMappings.forEachIndexed { offset, mapping -> dao.insert(mapping.copy(position = songs.size + offset)) }
+    return true
 }
 
 internal suspend fun MusicDatabase.repairRemotePlaylistMembership(
@@ -173,6 +205,7 @@ internal suspend fun MusicDatabase.repairRemotePlaylistMembership(
         if (expectedCount != null && expectedCount > 0 && count >= expectedCount) continue
         if (expectedCount == 0 && count == 0 && entity.isAutoSync) continue
         try {
+            val queueRevision = PendingPlaylistAdds.queueRevision()
             val firstPage = repository.getPlaylistPageData(entity.browseId, applyContentFilters = false)
             val page = repository.completePlaylistPage(firstPage, applyContentFilters = false)
             if (!isCurrent()) return
@@ -180,7 +213,7 @@ internal suspend fun MusicDatabase.repairRemotePlaylistMembership(
             val header = page.sections["header"]?.firstOrNull() as? PlaylistItem ?: continue
             withDatabaseTransaction {
                 if (isCurrent() && dao.findPlaylistEntity(entity.id) != null) {
-                    cacheRemotePlaylist(entity.id, header, page.songs)
+                    cacheRemotePlaylist(entity.id, header, page.songs, queueRevision)
                 }
             }
         } catch (error: CancellationException) {
@@ -238,11 +271,12 @@ suspend fun MusicDatabase.loadAndCachePlaylistPage(
     onFirstPage: suspend (PlaylistPage) -> Unit = {},
 ): PlaylistPage {
     val remoteId = dao().findPlaylistEntity(id)?.browseId ?: id
+    val queueRevision = PendingPlaylistAdds.queueRevision()
     val firstPage = repository.getPlaylistPageData(remoteId, applyContentFilters = false)
     onFirstPage(firstPage)
     val page = repository.completePlaylistPage(firstPage, applyContentFilters = false)
     val header = checkNotNull(page.sections["header"]?.firstOrNull() as? PlaylistItem)
-    if (!page.isOffline) cacheRemotePlaylist(id, header, page.songs)
+    if (!page.isOffline) cacheRemotePlaylist(id, header, page.songs, queueRevision)
     return page.copy(sections = page.sections + ("header" to listOf(header)))
 }
 

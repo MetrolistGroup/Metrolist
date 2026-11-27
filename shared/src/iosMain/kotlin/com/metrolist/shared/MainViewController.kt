@@ -68,6 +68,7 @@ import com.metrolist.shared.playback.IosPlaybackController
 import com.metrolist.shared.playback.IosPlayerPlatformServices
 import com.metrolist.shared.playback.MusicPlayer
 import com.metrolist.shared.playlist.IosPlaylistCoverMapper
+import com.metrolist.shared.playlist.PendingPlaylistAdds
 import com.metrolist.shared.playlist.migrateIosPlaylistCovers
 import com.metrolist.shared.playlist.removeStoredPlaylistCover
 import com.metrolist.shared.playlist.setStoredPlaylistCover
@@ -208,6 +209,7 @@ fun MetrolistIOSApp() {
     LaunchedEffect(database, appScope) {
         SongLikeState.recoverDatabaseLikes(database)
         SongMetadataState.bind(database, appScope)
+        PendingPlaylistAdds.bind(database, appScope)
     }
     val downloadManager = remember(database, appScope) { IosAudioDownloadManager(database, appScope) }
     val playbackController =
