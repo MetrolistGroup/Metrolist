@@ -1,0 +1,20 @@
+# Keep local credentials and generated state out of the broker build context.
+.git
+.gradle
+**/.gradle
+**/build
+**/.kotlin
+.idea
+.vscode
+.zed
+local.properties
+secrets.properties
+**/*.keystore
+**/*.jks
+**/*.p12
+**/*.pem
+**/*.key
+**/.env
+*.log
+chucker-export-*
+.DS_Store

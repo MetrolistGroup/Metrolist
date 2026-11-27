@@ -62,8 +62,9 @@ val sharedHttpEngine: HttpClientEngine by lazy {
     OkHttp.create { preconfigured = apiOkHttpClient() }
 }
 
-actual fun createHttpClient(): HttpClient =
+actual fun createHttpClient(followRedirects: Boolean): HttpClient =
     HttpClient(sharedHttpEngine) {
+        this.followRedirects = followRedirects
         install(HttpFailureLog) { transportHandledByEngine = true }
         install(ExtractionHttpCooldown)
         install(ContentNegotiation) {

@@ -24,6 +24,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -33,16 +34,22 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
+import com.metrolist.shared.backup.AutoBackupDestination
 import com.metrolist.shared.backup.AutoBackupFrequency
 import com.metrolist.shared.backup.BackupValidationException
 import com.metrolist.shared.backup.BackupValidationFailure
+import com.metrolist.shared.backup.DriveAccountConnectionState
 import com.metrolist.shared.generated.resources.Res
 import com.metrolist.shared.generated.resources.automatic_backup
 import com.metrolist.shared.generated.resources.automatic_backup_daily
 import com.metrolist.shared.generated.resources.automatic_backup_description
+import com.metrolist.shared.generated.resources.automatic_backup_destination
 import com.metrolist.shared.generated.resources.automatic_backup_frequency
+import com.metrolist.shared.generated.resources.automatic_backup_google_drive
+import com.metrolist.shared.generated.resources.automatic_backup_local
 import com.metrolist.shared.generated.resources.automatic_backup_location
 import com.metrolist.shared.generated.resources.automatic_backup_monthly
+import com.metrolist.shared.generated.resources.automatic_backup_use_google_drive
 import com.metrolist.shared.generated.resources.automatic_backup_weekly
 import com.metrolist.shared.generated.resources.backup_create_failed
 import com.metrolist.shared.generated.resources.backup_create_success
@@ -58,6 +65,12 @@ import com.metrolist.shared.generated.resources.backup_unsupported_format
 import com.metrolist.shared.generated.resources.cancel
 import com.metrolist.shared.generated.resources.create_backup
 import com.metrolist.shared.generated.resources.create_backup_countdown
+import com.metrolist.shared.generated.resources.drive_account_connected
+import com.metrolist.shared.generated.resources.drive_account_disconnected
+import com.metrolist.shared.generated.resources.drive_connect
+import com.metrolist.shared.generated.resources.drive_connect_failed
+import com.metrolist.shared.generated.resources.drive_disconnect
+import com.metrolist.shared.generated.resources.drive_reauthorization_required
 import com.metrolist.shared.generated.resources.foreign_import_desc
 import com.metrolist.shared.generated.resources.foreign_import_title
 import com.metrolist.shared.generated.resources.restore_backup
@@ -87,12 +100,36 @@ fun BackupRestorePage(
     failure: Throwable? = null,
     onAutoBackupSettingsChanged: () -> Unit = {},
     foreignImportStatus: String? = null,
+    driveAvailable: Boolean = false,
+    onConnectDrive: () -> Unit = {},
+    onDisconnectDrive: () -> Unit = {},
 ) {
     val settings = Settings.shared
     val autoBackupFrequency = AutoBackupFrequency.fromSetting(settings.autoBackupFrequency)
+    val driveConnected by DriveAccountConnectionState.connected.collectAsState()
+    val driveReauthorizationRequired by DriveAccountConnectionState.reauthorizationRequired.collectAsState()
+    val driveSignInFailed by DriveAccountConnectionState.signInFailed.collectAsState()
+    val driveSignInInProgress by DriveAccountConnectionState.signInInProgress.collectAsState()
+    var pendingDriveDestination by remember { mutableStateOf<AutoBackupDestination?>(null) }
     var showBackupWarning by remember { mutableStateOf(false) }
     var showRestoreWarning by remember { mutableStateOf(false) }
     var warningSeconds by remember { mutableIntStateOf(5) }
+    val driveDestinationAvailable = driveAvailable && driveConnected
+    val selectedDestination =
+        if (driveDestinationAvailable) {
+            AutoBackupDestination.fromSetting(settings.autoBackupDestination)
+        } else {
+            AutoBackupDestination.LOCAL
+        }
+
+    LaunchedEffect(driveAvailable) {
+        if (!driveAvailable &&
+            AutoBackupDestination.fromSetting(settings.autoBackupDestination) == AutoBackupDestination.GOOGLE_DRIVE
+        ) {
+            settings.autoBackupDestination = AutoBackupDestination.LOCAL.name
+            onAutoBackupSettingsChanged()
+        }
+    }
 
     LaunchedEffect(showBackupWarning) {
         if (showBackupWarning) {
@@ -157,8 +194,82 @@ fun BackupRestorePage(
                 }
             }
         }
+        Text(stringResource(Res.string.automatic_backup_destination), style = MaterialTheme.typography.titleSmall)
+        listOf(AutoBackupDestination.LOCAL, AutoBackupDestination.GOOGLE_DRIVE).forEach { destination ->
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                RadioButton(
+                    selected = selectedDestination == destination,
+                    onClick = {
+                        if (destination == AutoBackupDestination.GOOGLE_DRIVE) {
+                            pendingDriveDestination = destination
+                            showBackupWarning = true
+                        } else {
+                            settings.autoBackupDestination = destination.name
+                            onAutoBackupSettingsChanged()
+                        }
+                    },
+                    enabled = settings.autoBackupEnabled && (destination == AutoBackupDestination.LOCAL || driveDestinationAvailable),
+                )
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    stringResource(
+                        if (destination == AutoBackupDestination.LOCAL) {
+                            Res.string.automatic_backup_local
+                        } else {
+                            Res.string.automatic_backup_google_drive
+                        },
+                    ),
+                )
+            }
+        }
+        if (driveAvailable) {
+            Button(
+                onClick = {
+                    DriveAccountConnectionState.clearSignInFailure()
+                    if (driveConnected) {
+                        onDisconnectDrive()
+                    } else {
+                        onConnectDrive()
+                    }
+                },
+                modifier = Modifier.fillMaxWidth(),
+                enabled = !driveSignInInProgress,
+                shapes = ButtonDefaults.shapes(),
+            ) {
+                Text(stringResource(if (driveConnected) Res.string.drive_disconnect else Res.string.drive_connect))
+            }
+            Text(
+                stringResource(
+                    if (driveConnected) Res.string.drive_account_connected else Res.string.drive_account_disconnected,
+                ),
+                style = MaterialTheme.typography.bodySmall,
+            )
+            when {
+                driveReauthorizationRequired -> {
+                    Text(
+                        stringResource(Res.string.drive_reauthorization_required),
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
+
+                driveSignInFailed -> {
+                    Text(
+                        stringResource(Res.string.drive_connect_failed),
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
+            }
+        }
         Button(
-            onClick = { showBackupWarning = true },
+            onClick = {
+                pendingDriveDestination = null
+                showBackupWarning = true
+            },
             modifier = Modifier.fillMaxWidth(),
             enabled = status != BackupRestoreStatus.BUSY,
             shapes = ButtonDefaults.shapes(),
@@ -253,7 +364,10 @@ fun BackupRestorePage(
 
     PopupVisibility(visible = showBackupWarning) {
         AlertDialog(
-            onDismissRequest = { showBackupWarning = false },
+            onDismissRequest = {
+                showBackupWarning = false
+                pendingDriveDestination = null
+            },
             title = { Text(stringResource(Res.string.backup_sensitive_title)) },
             text = {
                 Text(
@@ -265,13 +379,22 @@ fun BackupRestorePage(
                 Button(
                     enabled = warningSeconds == 0,
                     onClick = {
+                        val destination = pendingDriveDestination
                         showBackupWarning = false
-                        onExport()
+                        pendingDriveDestination = null
+                        if (destination != null) {
+                            settings.autoBackupDestination = destination.name
+                            onAutoBackupSettingsChanged()
+                        } else {
+                            onExport()
+                        }
                     },
                     shapes = ButtonDefaults.shapes(),
                 ) {
                     Text(
-                        if (warningSeconds == 0) {
+                        if (pendingDriveDestination != null) {
+                            stringResource(Res.string.automatic_backup_use_google_drive)
+                        } else if (warningSeconds == 0) {
                             stringResource(Res.string.create_backup)
                         } else {
                             stringResource(Res.string.create_backup_countdown, warningSeconds)
@@ -280,7 +403,13 @@ fun BackupRestorePage(
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showBackupWarning = false }, shapes = ButtonDefaults.shapes()) {
+                TextButton(
+                    onClick = {
+                        showBackupWarning = false
+                        pendingDriveDestination = null
+                    },
+                    shapes = ButtonDefaults.shapes(),
+                ) {
                     Text(stringResource(Res.string.cancel))
                 }
             },

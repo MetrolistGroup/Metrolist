@@ -102,6 +102,7 @@ jobs:
           LASTFM_SECRET: ${{ secrets.LASTFM_SECRET }}
           LYPRIO_BASE_URL: ${{ secrets.LYPRIO_BASE_URL }}
           LYPRIO_HMAC_KEY: ${{ secrets.LYPRIO_HMAC_KEY }}
+          METROLIST_DRIVE_BROKER_URL: ${{ vars.METROLIST_DRIVE_BROKER_URL }}
         run: ./scripts/build_appimage.sh -Pmetrolist.verifyPackaging=${{ inputs.run-verification }}
 
       - name: Upload desktop Sentry source context

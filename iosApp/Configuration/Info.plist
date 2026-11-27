@@ -31,9 +31,14 @@
             <array>
                 <string>metrolist-auth</string>
                 <string>metrolist</string>
+                <string>$(GOOGLE_IOS_CLIENT_ID_SCHEME)</string>
             </array>
         </dict>
     </array>
+    <key>DriveBrokerUrl</key>
+    <string>$(METROLIST_DRIVE_BROKER_URL)</string>
+    <key>GoogleDriveOAuthScheme</key>
+    <string>$(GOOGLE_IOS_CLIENT_ID_SCHEME)</string>
     <key>CADisableMinimumFrameDurationOnPhone</key>
     <true/>
     <key>LSRequiresIPhoneOS</key>

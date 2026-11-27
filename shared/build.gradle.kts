@@ -549,6 +549,21 @@ val generateBuildConfig =
                 .orElse(providers.provider { "" })
                 .get()
                 .trim()
+        val driveBrokerUrl =
+            providers
+                .gradleProperty("metrolist.driveBrokerUrl")
+                .filter { it.isNotEmpty() }
+                .orElse(providers.environmentVariable("METROLIST_DRIVE_BROKER_URL").filter { it.isNotEmpty() })
+                .orElse(providers.provider { localProperties.getProperty("metrolist.driveBrokerUrl").orEmpty() }.filter { it.isNotEmpty() })
+                .orElse(providers.provider { "" })
+                .get()
+                .trim()
+        require(driveBrokerUrl.isBlank() || driveBrokerUrl.startsWith("https://")) {
+            "metrolist.driveBrokerUrl must use HTTPS"
+        }
+        require(driveBrokerUrl.none { it == '"' || it == '\\' || it == '$' || it.isISOControl() }) {
+            "metrolist.driveBrokerUrl contains unsupported characters"
+        }
         val isIzzyTask = gradle.startParameter.taskNames.any { it.contains("Izzy", ignoreCase = true) }
         val isReleaseTask =
             gradle.startParameter.taskNames.any { name ->
@@ -608,6 +623,7 @@ val generateBuildConfig =
         }
         inputs.property("lastFmKey", lastFmKey)
         inputs.property("lastFmSecret", lastFmSecret)
+        inputs.property("driveBrokerUrl", driveBrokerUrl)
         // shortcut: BuildConfig is per invocation, so an Izzy build leaves Lyprio out of every APK it assembles; build Izzy alone.
         inputs.property("lyprioBaseUrl", if (isIzzyTask) "" else lyprioBaseUrl)
         inputs.property("lyprioHmacKey", if (isIzzyTask) "" else lyprioHmacKey)
@@ -645,6 +661,7 @@ val generateBuildConfig =
                     const val LASTFM_SECRET = "${inputs.properties["lastFmSecret"]}"
                     const val LYPRIO_BASE_URL = "${inputs.properties["lyprioBaseUrl"]}"
                     const val LYPRIO_HMAC_KEY = "${inputs.properties["lyprioHmacKey"]}"
+                    const val DRIVE_BROKER_URL = "${inputs.properties["driveBrokerUrl"]}"
                     const val APP_VERSION = "${inputs.properties["appVersion"]}"
                     const val SOURCE_REVISION = "${inputs.properties["sourceRevision"]}"
                     const val BUNDLED_LANGUAGE_TAGS = "${inputs.properties["bundledLanguageTags"]}"

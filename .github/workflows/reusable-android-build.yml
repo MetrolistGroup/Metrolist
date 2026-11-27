@@ -193,6 +193,7 @@ jobs:
           LASTFM_SECRET: ${{ secrets.LASTFM_SECRET }}
           LYPRIO_BASE_URL: ${{ secrets.LYPRIO_BASE_URL }}
           LYPRIO_HMAC_KEY: ${{ secrets.LYPRIO_HMAC_KEY }}
+          METROLIST_DRIVE_BROKER_URL: ${{ vars.METROLIST_DRIVE_BROKER_URL }}
         run: |
           set -euo pipefail
           extra_args=()
@@ -216,6 +217,9 @@ jobs:
             if [[ "$ASSEMBLE" == "true" ]]; then
               tasks+=(':androidApp:assembleDebug')
             fi
+          fi
+          if [[ -n "${METROLIST_DRIVE_BROKER_URL:-}" ]]; then
+            extra_args+=("-Pmetrolist.driveBrokerUrl=$METROLIST_DRIVE_BROKER_URL")
           fi
           # gradle.properties caps local builds at 4 workers and 4 GiB; the CI runner has 8 vCPUs.
           ./gradlew "${tasks[@]}" --no-daemon --max-workers="$(nproc)" \

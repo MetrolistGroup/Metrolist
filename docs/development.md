@@ -67,6 +67,8 @@ This produces an unsigned `dist/Metrolist.ipa`. It needs signing or a sideloadin
 
 See [AGENTS.md](../AGENTS.md#modules) for modules and source sets. Put reusable logic in `shared`; keep platform APIs and native lifecycle handling in their platform source sets. Desktop Kotlin is under `desktopApp/src/jvmMain/kotlin/`, but its resources belong in `desktopApp/src/desktopMain/resources/`. The iOS Swift host is under `iosApp/`; its shared Compose entry point is `shared/src/iosMain/kotlin/com/metrolist/shared/MainViewController.kt`.
 
+The Google Drive OAuth token broker is a standalone JVM service in `driveBroker/`; see its [deployment and configuration guide](../driveBroker/README.md).
+
 | Change | Start here |
 | --- | --- |
 | Screens and components | `androidApp/src/main/kotlin/com/metrolist/android/ui/`, `desktopApp/src/jvmMain/kotlin/com/metrolist/desktop/ui/`, and `shared/src/commonMain/kotlin/com/metrolist/shared/ui/` |
@@ -488,7 +490,7 @@ Music layouts order Previous, Play/Pause, Next and Like. Play/Pause shows a loca
 - If the configuration cache is stale, rerun the failing command with `--no-configuration-cache`.
 - Never commit heap dumps, traces, account tokens or local configuration. They can contain private data.
 
-Automatic backups are opt-in and keep the ten newest local archives. Android uses WorkManager, desktop runs while the app is open, and iOS requests background processing that the system may defer. Backup creation and retention cleanup are serialized. Failed retention cleanup retries without creating another archive.
+Automatic backups are opt-in and keep the ten newest local archives. Android uses WorkManager, desktop runs while the app is open, and iOS requests background processing that the system may defer. Backup creation and retention cleanup are serialized. Failed retention cleanup retries without creating another archive. Drive folders are identified by an app property, so renaming the localized display name in Drive does not split retention. A missing Drive session or broker URL switches the destination to local before a backup runs. A rejected Drive session also makes the worker retry the run, so a monthly schedule still writes a local backup promptly. A Drive upload that outlives Android's execution window or iOS's background allocation is cancelled with its staged archive, so the next run starts a new resumable upload from the beginning. iOS keeps the background task's network requirement for Drive runs, including runs scheduled to finish local cleanup. Carrying an upload across runs needs a platform background-transfer implementation.
 
 MLX preserves primary and inline background word groups inside background-marked rows. Sharing retains distinct foreground and background vocals even when they sing the same phrase.
 

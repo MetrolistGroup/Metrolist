@@ -467,6 +467,13 @@
             android:foregroundServiceType="dataSync"
             android:stopWithTask="false" />
 
+        <!-- WorkManager promotes long-running Drive backups to this foreground service. -->
+        <service
+            android:name="androidx.work.impl.foreground.SystemForegroundService"
+            android:exported="false"
+            android:foregroundServiceType="dataSync"
+            tools:node="merge" />
+
         <service
             android:name="com.metrolist.android.playback.DownloadService"
             android:exported="false"

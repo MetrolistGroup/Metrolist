@@ -48,7 +48,11 @@ splashscreen = "1.2.0"
 multiplatformSettings = "1.3.0"
 okhttp = "5.5.1"
 browser = "1.10.0"
+googleAuth = "21.4.0"
 work = "2.12.0"
+hikari = "7.1.0"
+postgresql = "42.7.14"
+flyway = "11.14.1"
 markdownRenderer = "0.46.0"
 junit4 = "4.13.2"
 jmdns = "3.6.5"
@@ -67,6 +71,7 @@ androidx-navigationevent-compose = { module = "androidx.navigationevent:navigati
 androidx-test-runner = { module = "androidx.test:runner", version.ref = "androidxTest" }
 androidx-navigation3-ui = { module = "androidx.navigation3:navigation3-ui", version.ref = "nav3Core" }
 androidx-work-runtime = { module = "androidx.work:work-runtime", version.ref = "work" }
+google-auth = { module = "com.google.android.gms:play-services-auth", version.ref = "googleAuth" }
 
 components-resources = { module = "org.jetbrains.compose.components:components-resources", version.ref = "componentsResources" }
 composenativetray = { module = "dev.nucleusframework:composenativetray", version.ref = "composenativetray" }
@@ -132,6 +137,14 @@ ktor-client-encoding = { module = "io.ktor:ktor-client-encoding", version.ref = 
 ktor-client-logging = { module = "io.ktor:ktor-client-logging", version.ref = "ktor" }
 ktor-server-cio = { module = "io.ktor:ktor-server-cio", version.ref = "ktor" }
 ktor-server-websockets = { module = "io.ktor:ktor-server-websockets", version.ref = "ktor" }
+ktor-server-core = { module = "io.ktor:ktor-server-core", version.ref = "ktor" }
+ktor-server-content-negotiation = { module = "io.ktor:ktor-server-content-negotiation", version.ref = "ktor" }
+ktor-server-call-logging = { module = "io.ktor:ktor-server-call-logging", version.ref = "ktor" }
+ktor-server-test-host = { module = "io.ktor:ktor-server-test-host", version.ref = "ktor" }
+hikari = { module = "com.zaxxer:HikariCP", version.ref = "hikari" }
+postgresql = { module = "org.postgresql:postgresql", version.ref = "postgresql" }
+flyway-core = { module = "org.flywaydb:flyway-core", version.ref = "flyway" }
+flyway-database-postgresql = { module = "org.flywaydb:flyway-database-postgresql", version.ref = "flyway" }
 ktor-serialization-json = { module = "io.ktor:ktor-serialization-kotlinx-json", version.ref = "ktor" }
 desugaring = { module = "com.android.tools:desugar_jdk_libs_nio", version.ref = "desugaring" }
 timber = { module = "com.jakewharton.timber:timber", version.ref = "timber" }
@@ -155,6 +168,7 @@ multiplatform-settings-test = { module = "com.russhwolf:multiplatform-settings-t
 
 [plugins]
 kotlin-multiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
+kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
 kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 compose-compiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }

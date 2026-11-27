@@ -11,6 +11,20 @@ scheme="iosApp"
 project_path="$root_dir/iosApp/iosApp.xcodeproj"
 bundle_id="com.metrolist.MetrolistApp"
 
+xcodebuild_with_drive_settings() {
+  if [[ -n "${METROLIST_DRIVE_BROKER_URL:-}" && -n "${GOOGLE_IOS_CLIENT_ID_SCHEME:-}" ]]; then
+    xcodebuild "$@" \
+      METROLIST_DRIVE_BROKER_URL="$METROLIST_DRIVE_BROKER_URL" \
+      GOOGLE_IOS_CLIENT_ID_SCHEME="$GOOGLE_IOS_CLIENT_ID_SCHEME"
+  elif [[ -n "${METROLIST_DRIVE_BROKER_URL:-}" ]]; then
+    xcodebuild "$@" METROLIST_DRIVE_BROKER_URL="$METROLIST_DRIVE_BROKER_URL"
+  elif [[ -n "${GOOGLE_IOS_CLIENT_ID_SCHEME:-}" ]]; then
+    xcodebuild "$@" GOOGLE_IOS_CLIENT_ID_SCHEME="$GOOGLE_IOS_CLIENT_ID_SCHEME"
+  else
+    xcodebuild "$@"
+  fi
+}
+
 mode="sim"
 configuration="Debug"
 run_after_build=false
@@ -69,7 +83,7 @@ if [[ "$mode" == "ipa" ]]; then
   archive_path="$build_dir/Metrolist.xcarchive"
   rm -rf "$archive_path"
   
-  xcodebuild archive \
+  xcodebuild_with_drive_settings archive \
     -project "$project_path" \
     -scheme "$scheme" \
     -configuration "$configuration" \
@@ -115,7 +129,7 @@ if [[ "$mode" == "ipa" ]]; then
 
 elif [[ "$mode" == "sim" ]]; then
   echo "Step 1: Building for iOS Simulator..."
-  xcodebuild build \
+  xcodebuild_with_drive_settings build \
     -project "$project_path" \
     -scheme "$scheme" \
     -configuration "$configuration" \
@@ -149,7 +163,7 @@ elif [[ "$mode" == "sim" ]]; then
 
 elif [[ "$mode" == "device" ]]; then
   echo "Step 1: Building for physical device..."
-  xcodebuild build \
+  xcodebuild_with_drive_settings build \
     -project "$project_path" \
     -scheme "$scheme" \
     -configuration "$configuration" \

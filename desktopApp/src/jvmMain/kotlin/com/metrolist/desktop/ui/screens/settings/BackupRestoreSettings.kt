@@ -51,6 +51,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.DialogProperties
 import com.metrolist.desktop.backup.DesktopAutomaticBackupScheduler
 import com.metrolist.desktop.backup.DesktopBackupRestoreManager
+import com.metrolist.desktop.backup.DesktopDriveSignIn
 import com.metrolist.desktop.spotifyimport.DesktopAmazonMusicImportFlow
 import com.metrolist.desktop.spotifyimport.DesktopAppleMusicImportFlow
 import com.metrolist.desktop.spotifyimport.DesktopDeezerImportFlow
@@ -61,7 +62,9 @@ import com.metrolist.desktop.state.content.LibraryContentState
 import com.metrolist.desktop.state.playback.validatedLocalMediaUrl
 import com.metrolist.desktop.utils.pickDesktopFile
 import com.metrolist.desktop.utils.saveDesktopFile
+import com.metrolist.shared.backup.AutoBackupDestination
 import com.metrolist.shared.backup.AutoBackupFrequency
+import com.metrolist.shared.backup.DriveAccountConnectionState
 import com.metrolist.shared.backup.defaultBackupFilename
 import com.metrolist.shared.backup.foreignImportMessage
 import com.metrolist.shared.backup.importForeignBackup
@@ -75,12 +78,16 @@ import com.metrolist.shared.generated.resources.app_data
 import com.metrolist.shared.generated.resources.automatic_backup
 import com.metrolist.shared.generated.resources.automatic_backup_daily
 import com.metrolist.shared.generated.resources.automatic_backup_description
+import com.metrolist.shared.generated.resources.automatic_backup_destination
 import com.metrolist.shared.generated.resources.automatic_backup_frequency
+import com.metrolist.shared.generated.resources.automatic_backup_google_drive
+import com.metrolist.shared.generated.resources.automatic_backup_local
 import com.metrolist.shared.generated.resources.automatic_backup_location
 import com.metrolist.shared.generated.resources.automatic_backup_monthly
 import com.metrolist.shared.generated.resources.automatic_backup_restore
 import com.metrolist.shared.generated.resources.automatic_backup_restore_desc
 import com.metrolist.shared.generated.resources.automatic_backup_restore_empty
+import com.metrolist.shared.generated.resources.automatic_backup_use_google_drive
 import com.metrolist.shared.generated.resources.automatic_backup_weekly
 import com.metrolist.shared.generated.resources.backup_create_failed
 import com.metrolist.shared.generated.resources.backup_create_success
@@ -99,6 +106,12 @@ import com.metrolist.shared.generated.resources.create_backup
 import com.metrolist.shared.generated.resources.create_backup_countdown
 import com.metrolist.shared.generated.resources.create_backup_desc
 import com.metrolist.shared.generated.resources.create_backup_dialog_title
+import com.metrolist.shared.generated.resources.drive_account_connected
+import com.metrolist.shared.generated.resources.drive_account_disconnected
+import com.metrolist.shared.generated.resources.drive_connect
+import com.metrolist.shared.generated.resources.drive_connect_failed
+import com.metrolist.shared.generated.resources.drive_disconnect
+import com.metrolist.shared.generated.resources.drive_reauthorization_required
 import com.metrolist.shared.generated.resources.foreign_import_desc
 import com.metrolist.shared.generated.resources.foreign_import_title
 import com.metrolist.shared.generated.resources.import_action_choose_file
@@ -381,6 +394,10 @@ fun BackupRestoreSettingsScreen(colorScheme: ColorScheme) {
     var showAutomaticBackupPicker by remember { mutableStateOf(false) }
     var isRestoring by remember { mutableStateOf(false) }
     var status by remember { mutableStateOf<String?>(null) }
+    val driveAccountConnected by DriveAccountConnectionState.connected.collectAsState()
+    val driveReauthorizationRequired by DriveAccountConnectionState.reauthorizationRequired.collectAsState()
+    var driveSignInPending by remember { mutableStateOf(false) }
+    var pendingDriveDestination by remember { mutableStateOf<AutoBackupDestination?>(null) }
 
     var showSpotifyAccountFlow by remember { mutableStateOf(false) }
     var showSpotifyProviderDialog by remember { mutableStateOf(false) }
@@ -620,6 +637,8 @@ fun BackupRestoreSettingsScreen(colorScheme: ColorScheme) {
         }
     }
 
+    val driveAvailable = DesktopDriveSignIn.isConfigured()
+    val driveDestinationAvailable = driveAvailable && driveAccountConnected
     Column(Modifier.fillMaxSize()) {
         Column(
             modifier =
@@ -676,6 +695,86 @@ fun BackupRestoreSettingsScreen(colorScheme: ColorScheme) {
                                 DesktopAutomaticBackupScheduler.schedule()
                             },
                         ),
+                        Material3SettingsItem(
+                            title = { Text(stringResource(Res.string.automatic_backup_destination)) },
+                            description = {
+                                Text(
+                                    stringResource(
+                                        if (!driveDestinationAvailable ||
+                                            AutoBackupDestination.fromSetting(appSettings.autoBackupDestination) ==
+                                            AutoBackupDestination.LOCAL
+                                        ) {
+                                            Res.string.automatic_backup_local
+                                        } else {
+                                            Res.string.automatic_backup_google_drive
+                                        },
+                                    ),
+                                )
+                            },
+                            enabled =
+                                appSettings.autoBackupEnabled &&
+                                    (
+                                        driveDestinationAvailable ||
+                                            AutoBackupDestination.fromSetting(appSettings.autoBackupDestination) ==
+                                            AutoBackupDestination.GOOGLE_DRIVE
+                                    ),
+                            onClick = {
+                                val destination = AutoBackupDestination.fromSetting(appSettings.autoBackupDestination)
+                                if (destination == AutoBackupDestination.GOOGLE_DRIVE) {
+                                    appSettings.autoBackupDestination = AutoBackupDestination.LOCAL.name
+                                    DesktopAutomaticBackupScheduler.schedule()
+                                } else {
+                                    pendingDriveDestination = AutoBackupDestination.GOOGLE_DRIVE
+                                    showBackupWarning = true
+                                }
+                            },
+                        ),
+                        if (driveAvailable) {
+                            Material3SettingsItem(
+                                title = {
+                                    Text(
+                                        stringResource(
+                                            if (driveAccountConnected) Res.string.drive_disconnect else Res.string.drive_connect,
+                                        ),
+                                    )
+                                },
+                                description = {
+                                    Text(
+                                        stringResource(
+                                            if (driveAccountConnected) {
+                                                Res.string.drive_account_connected
+                                            } else {
+                                                Res.string.drive_account_disconnected
+                                            },
+                                        ),
+                                    )
+                                },
+                                enabled = !driveSignInPending,
+                                onClick = {
+                                    if (driveSignInPending) return@Material3SettingsItem
+                                    status = null
+                                    scope.launch {
+                                        val result =
+                                            runCatching {
+                                                if (driveAccountConnected) {
+                                                    DesktopDriveSignIn.disconnect()
+                                                } else {
+                                                    driveSignInPending = true
+                                                    try {
+                                                        DesktopDriveSignIn.connect()
+                                                    } finally {
+                                                        driveSignInPending = false
+                                                    }
+                                                }
+                                                DesktopAutomaticBackupScheduler.schedule()
+                                            }
+                                        if (result.isFailure) status = getString(Res.string.drive_connect_failed)
+                                    }
+                                },
+                            )
+                        } else {
+                            null
+                        },
                         Material3SettingsItem(
                             title = { Text(stringResource(Res.string.create_backup)) },
                             description = { Text(stringResource(Res.string.create_backup_desc)) },
@@ -734,7 +833,7 @@ fun BackupRestoreSettingsScreen(colorScheme: ColorScheme) {
                                 }
                             },
                         ),
-                    ),
+                    ).filterNotNull(),
             )
 
             Material3SettingsGroup(
@@ -837,6 +936,13 @@ fun BackupRestoreSettingsScreen(colorScheme: ColorScheme) {
                     ),
             )
 
+            if (driveReauthorizationRequired) {
+                Text(
+                    stringResource(Res.string.drive_reauthorization_required),
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                    color = colorScheme.error,
+                )
+            }
             status?.let {
                 Text(
                     it,
@@ -849,7 +955,10 @@ fun BackupRestoreSettingsScreen(colorScheme: ColorScheme) {
 
     PopupVisibility(visible = showBackupWarning) {
         AlertDialog(
-            onDismissRequest = { showBackupWarning = false },
+            onDismissRequest = {
+                showBackupWarning = false
+                pendingDriveDestination = null
+            },
             title = { Text(stringResource(Res.string.sensitive_backup)) },
             text = {
                 Text(
@@ -862,24 +971,33 @@ fun BackupRestoreSettingsScreen(colorScheme: ColorScheme) {
                     enabled = warningSeconds == 0,
                     onClick = {
                         showBackupWarning = false
-                        scope.launch {
-                            runCatching {
-                                saveDesktopFile(
-                                    title = createBackupDialogTitle,
-                                    suggestedName = defaultBackupFilename(backupFilenamePrefix),
-                                    extension = "zip",
-                                )
-                            }.onSuccess { selected ->
-                                val destination = selected ?: return@onSuccess
-                                val result = withContext(Dispatchers.IO) { DesktopBackupRestoreManager.backup(destination) }
-                                status = result.fold({ backupCreated }, { getString(Res.string.backup_failed, it.message ?: "") })
-                            }.onFailure { status = getString(Res.string.could_not_open_file_picker, it.message ?: "") }
+                        val selectedDestination = pendingDriveDestination
+                        pendingDriveDestination = null
+                        if (selectedDestination != null) {
+                            appSettings.autoBackupDestination = selectedDestination.name
+                            DesktopAutomaticBackupScheduler.schedule()
+                        } else {
+                            scope.launch {
+                                runCatching {
+                                    saveDesktopFile(
+                                        title = createBackupDialogTitle,
+                                        suggestedName = defaultBackupFilename(backupFilenamePrefix),
+                                        extension = "zip",
+                                    )
+                                }.onSuccess { selected ->
+                                    val destination = selected ?: return@onSuccess
+                                    val result = withContext(Dispatchers.IO) { DesktopBackupRestoreManager.backup(destination) }
+                                    status = result.fold({ backupCreated }, { getString(Res.string.backup_failed, it.message ?: "") })
+                                }.onFailure { status = getString(Res.string.could_not_open_file_picker, it.message ?: "") }
+                            }
                         }
                     },
                     shapes = ButtonDefaults.shapes(),
                 ) {
                     Text(
-                        if (warningSeconds == 0) {
+                        if (pendingDriveDestination != null) {
+                            stringResource(Res.string.automatic_backup_use_google_drive)
+                        } else if (warningSeconds == 0) {
                             stringResource(Res.string.create_backup)
                         } else {
                             stringResource(Res.string.create_backup_countdown, warningSeconds)
@@ -889,7 +1007,10 @@ fun BackupRestoreSettingsScreen(colorScheme: ColorScheme) {
             },
             dismissButton = {
                 TextButton(
-                    onClick = { showBackupWarning = false },
+                    onClick = {
+                        showBackupWarning = false
+                        pendingDriveDestination = null
+                    },
                     shapes = ButtonDefaults.shapes(),
                 ) { Text(stringResource(Res.string.cancel)) }
             },

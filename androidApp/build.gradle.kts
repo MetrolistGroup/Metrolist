@@ -273,6 +273,11 @@ android {
         buildConfigField("Long", "DISCORD_APP_ID", "1447278780795064401L")
         buildConfigField("Boolean", "UPDATER_ENABLED", "true")
         buildConfigField("String", "BUNDLED_LANGUAGE_TAGS", "\"${bundledLanguageTags.joinToString(",")}\"")
+        val driveBrokerUrl = providers.gradleProperty("metrolist.driveBrokerUrl").orElse("").get()
+        require(driveBrokerUrl.isBlank() || driveBrokerUrl.startsWith("https://")) {
+            "metrolist.driveBrokerUrl must use HTTPS"
+        }
+        buildConfigField("String", "DRIVE_BROKER_URL", "\"$driveBrokerUrl\"")
     }
 
     val keystorePath = System.getenv("KEYSTORE_PATH") ?: ""
@@ -453,6 +458,7 @@ dependencies {
     implementation(libs.material3)
     implementation(libs.androidx.navigation3.ui)
     implementation(libs.androidx.navigation3.runtime)
+    implementation(libs.google.auth)
 
     implementation(libs.koin.android)
     implementation(libs.koin.androidx.compose)

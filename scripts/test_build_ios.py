@@ -130,6 +130,8 @@ def main():
         xcode.chmod(0o755)
         args_file = root / "arguments"
         env = dict(os.environ, PATH=f'{root / "bin"}:{os.environ["PATH"]}', BUILD_TEST_ARGS=str(args_file))
+        env.pop("METROLIST_DRIVE_BROKER_URL", None)
+        env.pop("GOOGLE_IOS_CLIENT_ID_SCHEME", None)
         for version in ("14.0.0-a16", "14.0.0-rc.test-42", "14.0.0"):
             (root / "gradle.properties").write_text(f"appVersion={version}\n")
             header = root / "version.h"
@@ -159,6 +161,18 @@ def main():
                 if option in ("--ipa", "--release"):
                     assert "ARCHS=arm64" in args, (option, args)
                     assert "COMPILER_INDEX_STORE_ENABLE=NO" in args, (option, args)
+                assert not any(arg.startswith("METROLIST_DRIVE_BROKER_URL=") for arg in args)
+                assert not any(arg.startswith("GOOGLE_IOS_CLIENT_ID_SCHEME=") for arg in args)
+        configured_env = dict(
+            env,
+            METROLIST_DRIVE_BROKER_URL="https://broker.example.com",
+            GOOGLE_IOS_CLIENT_ID_SCHEME="com.googleusercontent.apps.example",
+        )
+        result = subprocess.run(["bash", str(script), "--ipa"], env=configured_env, capture_output=True, text=True)
+        assert result.returncode == 77, (result.stdout, result.stderr)
+        args = args_file.read_text().splitlines()
+        assert "METROLIST_DRIVE_BROKER_URL=https://broker.example.com" in args
+        assert "GOOGLE_IOS_CLIENT_ID_SCHEME=com.googleusercontent.apps.example" in args
         (root / "gradle.properties").write_text("appVersion=invalid\n")
         assert subprocess.run(["bash", str(root / "scripts/ios_version.sh")], capture_output=True).returncode != 0
         xcode.unlink()

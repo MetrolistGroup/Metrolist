@@ -2,6 +2,7 @@
 
 package com.metrolist.android.ui.screens.settings
 
+import android.app.Activity
 import android.content.ClipboardManager
 import android.content.ContentResolver
 import android.content.Context
@@ -59,6 +60,11 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.DialogProperties
 import androidx.sqlite.driver.AndroidSQLiteDriver
+import com.google.android.gms.auth.api.signin.GoogleSignIn
+import com.google.android.gms.auth.api.signin.GoogleSignInOptions
+import com.google.android.gms.common.api.ApiException
+import com.google.android.gms.common.api.Scope
+import com.metrolist.android.BuildConfig
 import com.metrolist.android.R
 import com.metrolist.android.backup.AutomaticBackupWorker
 import com.metrolist.android.backup.BackupRestoreManager
@@ -79,7 +85,11 @@ import com.metrolist.android.spotifyimport.SpotifyPlaylistPreviewSheet
 import com.metrolist.android.spotifyimport.androidSpotifyImportManager
 import com.metrolist.android.ui.component.AdaptiveModalBottomSheet
 import com.metrolist.shared.amazonmusicimport.AmazonMusicImportManager
+import com.metrolist.shared.backup.AutoBackupDestination
 import com.metrolist.shared.backup.AutoBackupFrequency
+import com.metrolist.shared.backup.DriveAccountConnectionState
+import com.metrolist.shared.backup.DriveClientPlatform
+import com.metrolist.shared.backup.DriveTokenBrokerClient
 import com.metrolist.shared.backup.defaultBackupFilename
 import com.metrolist.shared.backup.foreignImportMessage
 import com.metrolist.shared.backup.importForeignBackup
@@ -92,11 +102,15 @@ import com.metrolist.shared.generated.resources.action_restore
 import com.metrolist.shared.generated.resources.automatic_backup
 import com.metrolist.shared.generated.resources.automatic_backup_daily
 import com.metrolist.shared.generated.resources.automatic_backup_description
+import com.metrolist.shared.generated.resources.automatic_backup_destination
 import com.metrolist.shared.generated.resources.automatic_backup_frequency
+import com.metrolist.shared.generated.resources.automatic_backup_google_drive
+import com.metrolist.shared.generated.resources.automatic_backup_local
 import com.metrolist.shared.generated.resources.automatic_backup_location
 import com.metrolist.shared.generated.resources.automatic_backup_monthly
 import com.metrolist.shared.generated.resources.automatic_backup_restore
 import com.metrolist.shared.generated.resources.automatic_backup_restore_empty
+import com.metrolist.shared.generated.resources.automatic_backup_use_google_drive
 import com.metrolist.shared.generated.resources.automatic_backup_weekly
 import com.metrolist.shared.generated.resources.back
 import com.metrolist.shared.generated.resources.backup_create_failed
@@ -109,6 +123,12 @@ import com.metrolist.shared.generated.resources.backup_restore_title
 import com.metrolist.shared.generated.resources.backup_sensitive_message
 import com.metrolist.shared.generated.resources.backup_sensitive_title
 import com.metrolist.shared.generated.resources.close
+import com.metrolist.shared.generated.resources.drive_account_connected
+import com.metrolist.shared.generated.resources.drive_account_disconnected
+import com.metrolist.shared.generated.resources.drive_connect
+import com.metrolist.shared.generated.resources.drive_connect_failed
+import com.metrolist.shared.generated.resources.drive_disconnect
+import com.metrolist.shared.generated.resources.drive_reauthorization_required
 import com.metrolist.shared.generated.resources.foreign_import_desc
 import com.metrolist.shared.generated.resources.foreign_import_title
 import com.metrolist.shared.generated.resources.import_action_start
@@ -307,12 +327,63 @@ fun BackupRestoreScreen(onNavigateBack: () -> Unit) {
     val database: MusicDatabase = koinInject()
     val applicationScope: CoroutineScope = koinInject()
     val scope = rememberCoroutineScope()
+    val driveAccountConnected by DriveAccountConnectionState.connected.collectAsState()
+    val driveReauthorizationRequired by DriveAccountConnectionState.reauthorizationRequired.collectAsState()
+    val driveSignInFailed by DriveAccountConnectionState.signInFailed.collectAsState()
+    var driveSignInPending by remember { mutableStateOf(false) }
+    var pendingDriveDestination by remember { mutableStateOf<AutoBackupDestination?>(null) }
+    val driveSignInLauncher =
+        rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+            val authorizationCode =
+                runCatching {
+                    if (result.resultCode != Activity.RESULT_OK) {
+                        null
+                    } else {
+                        GoogleSignIn
+                            .getSignedInAccountFromIntent(result.data)
+                            .getResult(ApiException::class.java)
+                            .serverAuthCode
+                    }
+                }.getOrNull()
+            if (authorizationCode == null) {
+                DriveAccountConnectionState.reportSignInFailure()
+                driveSignInPending = false
+            } else {
+                scope.launch {
+                    try {
+                        val session =
+                            runCatching {
+                                val broker = DriveTokenBrokerClient(BuildConfig.DRIVE_BROKER_URL)
+                                try {
+                                    broker.exchangeCode(DriveClientPlatform.ANDROID, authorizationCode)
+                                } finally {
+                                    broker.close()
+                                }
+                            }.getOrNull()
+                        if (session == null) {
+                            DriveAccountConnectionState.reportSignInFailure()
+                        } else {
+                            appSettings.driveBrokerSession = session.sessionToken
+                            DriveAccountConnectionState.update(session.sessionToken)
+                            appSettings.flush()
+                        }
+                    } finally {
+                        driveSignInPending = false
+                    }
+                }
+            }
+        }
 
     val manager =
         remember(context, database) {
             BackupRestoreManager(context.applicationContext, database)
         }
-    LaunchedEffect(appSettings.autoBackupEnabled, appSettings.autoBackupFrequency) {
+    LaunchedEffect(
+        appSettings.autoBackupEnabled,
+        appSettings.autoBackupFrequency,
+        appSettings.autoBackupDestination,
+        appSettings.driveBrokerSession,
+    ) {
         AutomaticBackupWorker.schedule(
             context.applicationContext,
             appSettings.autoBackupEnabled,
@@ -840,7 +911,10 @@ fun BackupRestoreScreen(onNavigateBack: () -> Unit) {
 
     PopupVisibility(visible = showBackupWarning) {
         AlertDialog(
-            onDismissRequest = { showBackupWarning = false },
+            onDismissRequest = {
+                showBackupWarning = false
+                pendingDriveDestination = null
+            },
             title = { Text(stringResource(Res.string.backup_sensitive_title)) },
             text = {
                 Text(
@@ -853,22 +927,27 @@ fun BackupRestoreScreen(onNavigateBack: () -> Unit) {
                     enabled = warningSeconds == 0,
                     onClick = {
                         showBackupWarning = false
-                        runCatching { createBackupLauncher.launch("${defaultBackupFilename(backupFilenamePrefix)}.zip") }
+                        val destination = pendingDriveDestination
+                        pendingDriveDestination = null
+                        if (destination != null) {
+                            appSettings.autoBackupDestination = destination.name
+                        } else {
+                            runCatching { createBackupLauncher.launch("${defaultBackupFilename(backupFilenamePrefix)}.zip") }
+                        }
                     },
                     shapes = ButtonDefaults.shapes(),
                 ) {
                     Text(
-                        if (warningSeconds == 0) {
-                            stringResource(Res.string.action_backup)
-                        } else {
-                            "${stringResource(Res.string.action_backup)} ($warningSeconds)"
-                        },
+                        stringResource(
+                            if (pendingDriveDestination != null) Res.string.automatic_backup_use_google_drive else Res.string.action_backup,
+                        ),
                     )
                 }
             },
             dismissButton = {
                 TextButton(onClick = {
                     showBackupWarning = false
+                    pendingDriveDestination = null
                 }, shapes = ButtonDefaults.shapes()) { Text(androidStringResource(android.R.string.cancel)) }
             },
         )
@@ -1914,16 +1993,18 @@ fun BackupRestoreScreen(onNavigateBack: () -> Unit) {
         onNavigateBack = onNavigateBack,
     ) {
         val frequency = AutoBackupFrequency.fromSetting(appSettings.autoBackupFrequency)
+        val driveAvailable = BuildConfig.DRIVE_BROKER_URL.isNotBlank()
+        val driveDestinationAvailable = driveAvailable && driveAccountConnected
         SettingsSubScreenGroup(
             title = stringResource(Res.string.automatic_backup),
             description = stringResource(Res.string.automatic_backup_location),
             items =
                 listOf(
-                    SettingsSubScreenItem(
+                    switchSettingsItem(
                         title = stringResource(Res.string.automatic_backup),
                         description = stringResource(Res.string.automatic_backup_description),
                         checked = appSettings.autoBackupEnabled,
-                        onClick = { appSettings.autoBackupEnabled = !appSettings.autoBackupEnabled },
+                        onCheckedChange = { appSettings.autoBackupEnabled = it },
                     ),
                     listChooserSettingsItem(
                         title = stringResource(Res.string.automatic_backup_frequency),
@@ -1940,8 +2021,130 @@ fun BackupRestoreScreen(onNavigateBack: () -> Unit) {
                         },
                         enabled = appSettings.autoBackupEnabled,
                     ) { selectedFrequency -> appSettings.autoBackupFrequency = selectedFrequency.name },
-                ),
+                    listChooserSettingsItem(
+                        title = stringResource(Res.string.automatic_backup_destination),
+                        options =
+                            if (driveDestinationAvailable) {
+                                AutoBackupDestination.entries
+                            } else {
+                                listOf(AutoBackupDestination.LOCAL)
+                            },
+                        selectedOption =
+                            if (driveDestinationAvailable) {
+                                AutoBackupDestination.fromSetting(appSettings.autoBackupDestination)
+                            } else {
+                                AutoBackupDestination.LOCAL
+                            },
+                        optionToString = { destination ->
+                            stringResource(
+                                if (destination == AutoBackupDestination.LOCAL) {
+                                    Res.string.automatic_backup_local
+                                } else {
+                                    Res.string.automatic_backup_google_drive
+                                },
+                            )
+                        },
+                        enabled = appSettings.autoBackupEnabled,
+                    ) { destination ->
+                        if (destination == AutoBackupDestination.GOOGLE_DRIVE) {
+                            pendingDriveDestination = destination
+                            showBackupWarning = true
+                        } else {
+                            appSettings.autoBackupDestination = destination.name
+                        }
+                    },
+                    if (driveAvailable) {
+                        SettingsSubScreenItem(
+                            title =
+                                stringResource(
+                                    if (driveAccountConnected) Res.string.drive_disconnect else Res.string.drive_connect,
+                                ),
+                            description =
+                                stringResource(
+                                    if (driveAccountConnected) {
+                                        Res.string.drive_account_connected
+                                    } else {
+                                        Res.string.drive_account_disconnected
+                                    },
+                                ),
+                            onClick =
+                                if (driveSignInPending) {
+                                    null
+                                } else {
+                                    {
+                                        DriveAccountConnectionState.clearSignInFailure()
+                                        if (driveAccountConnected) {
+                                            scope.launch {
+                                                runCatching {
+                                                    val session = appSettings.driveBrokerSession
+                                                    val broker = DriveTokenBrokerClient(BuildConfig.DRIVE_BROKER_URL)
+                                                    try {
+                                                        if (session.isNotBlank()) broker.revoke(session)
+                                                    } finally {
+                                                        broker.close()
+                                                    }
+                                                    DriveAccountConnectionState.clearIfCurrent(session)
+                                                }.onFailure {
+                                                    DriveAccountConnectionState.reportSignInFailure()
+                                                }
+                                            }
+                                        } else {
+                                            driveSignInPending = true
+                                            scope.launch {
+                                                val configuration =
+                                                    runCatching {
+                                                        val broker = DriveTokenBrokerClient(BuildConfig.DRIVE_BROKER_URL)
+                                                        try {
+                                                            broker.configuration()
+                                                        } finally {
+                                                            broker.close()
+                                                        }
+                                                    }.getOrNull()
+                                                if (configuration == null) {
+                                                    DriveAccountConnectionState.reportSignInFailure()
+                                                    driveSignInPending = false
+                                                    return@launch
+                                                }
+                                                val signInIntent =
+                                                    runCatching {
+                                                        val signInOptions =
+                                                            GoogleSignInOptions
+                                                                .Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+                                                                .requestEmail()
+                                                                .requestScopes(
+                                                                    Scope("https://www.googleapis.com/auth/drive.file"),
+                                                                ).requestServerAuthCode(configuration.webClientId, true)
+                                                                .build()
+                                                        GoogleSignIn.getClient(context, signInOptions).signInIntent
+                                                    }.getOrNull()
+                                                if (signInIntent == null) {
+                                                    DriveAccountConnectionState.reportSignInFailure()
+                                                    driveSignInPending = false
+                                                    return@launch
+                                                }
+                                                runCatching { driveSignInLauncher.launch(signInIntent) }.onFailure {
+                                                    DriveAccountConnectionState.reportSignInFailure()
+                                                    driveSignInPending = false
+                                                }
+                                            }
+                                        }
+                                    }
+                                },
+                        )
+                    } else {
+                        null
+                    },
+                ).filterNotNull(),
         )
+        when {
+            driveReauthorizationRequired -> {
+                Text(stringResource(Res.string.drive_reauthorization_required), color = MaterialTheme.colorScheme.error)
+            }
+
+            driveSignInFailed -> {
+                Text(stringResource(Res.string.drive_connect_failed), color = MaterialTheme.colorScheme.error)
+            }
+        }
         if (isBusy) LinearWavyProgressIndicator(Modifier.fillMaxWidth())
         SettingsSubScreenGroup(
             title = stringResource(Res.string.backup_restore_title),
