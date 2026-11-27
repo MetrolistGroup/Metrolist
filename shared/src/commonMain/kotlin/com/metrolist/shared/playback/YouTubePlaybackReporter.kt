@@ -139,6 +139,8 @@ class YouTubePlaybackReporter internal constructor(
                 if (delegationChanged) {
                     unscopedTrackingInstanceId = playbackInstanceId
                     current.discarded = true
+                    // Drop it now so the pending drain cannot replay it under the brand session.
+                    current.pendingId()?.let(PendingYouTubePlaybackReportStore::remove)
                 }
                 finishLocked(current, endPositionMs = null)
             }
