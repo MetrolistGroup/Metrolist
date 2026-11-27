@@ -20,6 +20,7 @@ import com.metrolist.shared.db.historyStatisticsTotals
 import com.metrolist.shared.db.historyTimeBuckets
 import com.metrolist.shared.db.parseHistoryDate
 import com.metrolist.shared.db.recentVisibleHistory
+import com.metrolist.shared.db.refreshYouTubeHistory
 import com.metrolist.shared.db.statisticsSongs
 import com.metrolist.shared.db.syncYouTubeHistory
 import com.metrolist.shared.db.updateHistoryEntry
@@ -404,6 +405,8 @@ class PlayHistoryRepository(
     }
 
     suspend fun syncFromYouTubeHistory() = withContext(Dispatchers.IO) { database.syncYouTubeHistory(::parseRemoteDate) }
+
+    suspend fun refreshFromYouTubeHistory() = withContext(Dispatchers.IO) { database.refreshYouTubeHistory(::parseRemoteDate) }
 
     private suspend fun <T> query(
         sql: String,
