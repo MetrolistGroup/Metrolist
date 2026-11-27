@@ -69,8 +69,13 @@ internal class YouTubePlaylistEdits(
         block: suspend (InnerTube, String) -> Unit,
     ) {
         // Right after a brand login the page is installed in the background; an edit sent before it changes the personal account.
+        val original = innerTube.sessionSnapshot()
         if (isDelegatedSessionLookupPending()) AuthManager().resolveDelegatedSession()
         val session = innerTube.sessionSnapshot()
+        // Only the brand page may change during the wait; a different account must not receive this edit.
+        if (session.cookie != original.cookie || session.dataSyncId != original.dataSyncId || session.authUser != original.authUser) {
+            throw CancellationException("InnerTube account changed")
+        }
         val requestTube = innerTube.createIsolatedSession(true)
         requestTube.replaceSession(
             session.cookie,
@@ -437,8 +442,9 @@ internal class YouTubePlaylistEdits(
         allowDuplicate: Boolean = true,
     ): Result<Unit> =
         try {
-            val requestSession = innerTube.sessionSnapshot()
             runSessionPlaylistEdit(playlistId) { requestTube, id ->
+                // Read inside the edit so it matches the session the helper resolved, including a brand page installed meanwhile.
+                val requestSession = innerTube.sessionSnapshot()
                 require(innerTube.hasSapCookieAuth(requestSession))
                 if (innerTube.sessionSnapshot() != requestSession) throw CancellationException("InnerTube session changed")
                 val alreadyPresent = !allowDuplicate && playlistContainsSong(playlistId, videoId)
