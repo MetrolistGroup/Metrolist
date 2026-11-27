@@ -58,6 +58,8 @@ import com.metrolist.android.playback.resolveIncomingPlaybackSong
 import com.metrolist.android.playback.toAndroidContentHints
 import com.metrolist.android.ui.IncomingDestination
 import com.metrolist.android.ui.MetrolistApp
+import com.metrolist.android.ui.menu.LocalCoverArtworkExporter
+import com.metrolist.android.ui.menu.rememberCoverArtworkExporter
 import com.metrolist.android.ui.screens.settings.DiscordLoginFlow
 import com.metrolist.android.ui.theme.MetrolistTheme
 import com.metrolist.android.ui.toIncomingDestination
@@ -300,6 +302,7 @@ class MainActivity : ComponentActivity() {
                     }
                 }
             CompositionLocalProvider(
+                LocalCoverArtworkExporter provides rememberCoverArtworkExporter(),
                 LocalStartupPresentation provides startupPresentation,
                 LocalViewConfiguration provides viewConfiguration,
                 LocalMinimumInteractiveComponentSize provides LocalMinimumInteractiveComponentSize.current * touchTargetScale,
