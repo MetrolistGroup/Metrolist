@@ -198,8 +198,12 @@ class CrashActivity : ComponentActivity() {
                     LocalIsTv provides
                         (resources.configuration.uiMode and Configuration.UI_MODE_TYPE_MASK == Configuration.UI_MODE_TYPE_TELEVISION),
                 ) {
-                    var showLogs by remember { mutableStateOf(intent.action == CrashHandler.ACTION_LOGS) }
-                    var showUpdate by remember { mutableStateOf(incomingUpdateActionState.value) }
+                    var showLogs by remember {
+                        mutableStateOf(intent.action == CrashHandler.ACTION_LOGS && !incomingUpdateActionState.value)
+                    }
+                    var showUpdate by remember {
+                        mutableStateOf(incomingUpdateActionState.value || incomingInstallErrorState.value != null)
+                    }
                     val clipboard = LocalClipboard.current
                     val scope = rememberCoroutineScope()
                     var updatePrompt by remember { mutableStateOf<GitHubRelease?>(null) }
@@ -207,11 +211,13 @@ class CrashActivity : ComponentActivity() {
                     val incomingInstallError = incomingInstallErrorState.value
                     LaunchedEffect(incomingUpdateAction, incomingInstallError) {
                         if (incomingUpdateAction) {
+                            showLogs = false
                             showUpdate = true
                             incomingUpdateActionState.value = false
                         }
                         incomingInstallError?.let { (error, attemptToken) ->
                             AppUpdateManager.restoreInstallFailure(error, attemptToken)
+                            showLogs = false
                             showUpdate = true
                             incomingInstallErrorState.value = null
                         }

@@ -19,7 +19,6 @@ open class UpdateInstallReceiver : BroadcastReceiver() {
             PackageInstaller.STATUS_PENDING_USER_ACTION -> {
                 val confirm = IntentCompat.getParcelableExtra(intent, Intent.EXTRA_INTENT, Intent::class.java)
                 if (confirm == null || !AppUpdateManager.launchConfirmationPrompt(context, confirm, sessionId, crashRecovery)) {
-                    AppUpdateManager.abandonPendingSession(context, sessionId)
                     AppUpdateManager.onInstallFinished(
                         context = context,
                         success = false,
@@ -28,6 +27,7 @@ open class UpdateInstallReceiver : BroadcastReceiver() {
                         sessionId = sessionId,
                         crashRecovery = crashRecovery,
                     )
+                    AppUpdateManager.abandonPendingSession(context, sessionId)
                 }
             }
 

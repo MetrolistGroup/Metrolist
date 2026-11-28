@@ -221,10 +221,20 @@ object AppUpdateManager {
             val pendingSession = pendingConfirmationSessionId
             val currentSession = activeSessionId
             if (pending != null && (currentSession < 0 || pendingSession < 0 || pendingSession == currentSession)) {
-                pendingConfirmationIntent = null
-                pendingConfirmationSessionId = -1
-                cancelInstallPromptNotification(activity)
-                runCatching { activity.startActivity(Intent(pending)) }
+                if (runCatching { activity.startActivity(Intent(pending)) }.isSuccess) {
+                    pendingConfirmationIntent = null
+                    pendingConfirmationSessionId = -1
+                    cancelInstallPromptNotification(activity)
+                } else if (!canPostNotifications(activity)) {
+                    val targetSession = pendingSession.takeIf { it >= 0 } ?: currentSession
+                    onInstallFinished(
+                        context = activity,
+                        success = false,
+                        sessionId = targetSession,
+                        crashRecovery = activity is CrashActivity,
+                    )
+                    abandonPendingSession(activity, targetSession)
+                }
             }
         } else if (!active && foregroundActivityRef?.get() === activity) {
             foregroundActivityRef = null
@@ -767,7 +777,7 @@ object AppUpdateManager {
         pendingConfirmationIntent = null
         pendingConfirmationSessionId = -1
         cancelInstallPromptNotification(context)
-        if (!BuildConfig.UPDATER_ENABLED || !canPostNotifications(context)) return
+        if (!BuildConfig.UPDATER_ENABLED || !Settings.shared.updateNotifications || !canPostNotifications(context)) return
         val intent =
             Intent(context, MainActivity::class.java).apply {
                 action = MainActivity.ACTION_UPDATES
@@ -904,7 +914,7 @@ object AppUpdateManager {
         errorMessage: String?,
         crashRecovery: Boolean,
     ) {
-        if (!canPostNotifications(context)) return
+        if (!Settings.shared.updateNotifications || !canPostNotifications(context)) return
         val detail = errorMessage ?: context.getString(R.string.updates_installer_failed)
         val targetActivity = if (crashRecovery) CrashActivity::class.java else MainActivity::class.java
         val intent =
