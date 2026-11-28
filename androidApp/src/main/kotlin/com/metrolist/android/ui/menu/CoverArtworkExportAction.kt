@@ -24,12 +24,13 @@ import com.metrolist.shared.utils.CoverArtworkFormat
 import com.metrolist.shared.utils.coverArtworkFilename
 import com.metrolist.shared.utils.loadCoverArtwork
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.NonCancellable
-import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.jetbrains.compose.resources.stringResource
+import org.koin.compose.koinInject
 import java.io.File
 
 internal class CoverArtworkExporter(
@@ -46,6 +47,7 @@ internal val LocalCoverArtworkExporter =
 internal fun rememberCoverArtworkExporter(): CoverArtworkExporter {
     val context = LocalContext.current.applicationContext
     val scope = rememberCoroutineScope()
+    val applicationScope: CoroutineScope = koinInject()
     val label = stringResource(Res.string.save_cover_artwork)
     val saved = stringResource(Res.string.cover_artwork_saved)
     val failed = stringResource(Res.string.cover_artwork_save_failed)
@@ -58,7 +60,8 @@ internal fun rememberCoverArtworkExporter(): CoverArtworkExporter {
                 val stagedFile = pendingFilename?.let { File(context.cacheDir, it) }
                 exporting = true
                 pendingFilename = null
-                scope.launch {
+                // The picker has returned. Finish writing even if this activity is recreated.
+                applicationScope.launch(Dispatchers.Main) {
                     try {
                         if (uri == null) return@launch
                         withContext(Dispatchers.IO) {
@@ -69,7 +72,8 @@ internal fun rememberCoverArtworkExporter(): CoverArtworkExporter {
                                         input.copyTo(output)
                                     }
                                 }
-                                ensureActive()
+                            } catch (error: CancellationException) {
+                                throw error
                             } catch (error: Exception) {
                                 runCatching { DocumentsContract.deleteDocument(resolver, uri) }
                                 throw error
