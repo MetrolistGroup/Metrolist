@@ -3,9 +3,11 @@
 package com.metrolist.android.ui
 
 import android.app.SearchManager
+import android.content.ContentResolver
 import android.content.Context
 import android.content.Intent
 import android.content.res.Configuration
+import android.net.Uri
 import android.nfc.NfcAdapter
 import android.os.Build
 import android.provider.MediaStore
@@ -178,6 +180,10 @@ import com.metrolist.android.playback.SongDownloadManager
 import com.metrolist.android.playback.isRunnable
 import com.metrolist.android.playback.resolveIncomingPlaybackSong
 import com.metrolist.android.playback.voiceSearchRequest
+import com.metrolist.android.playlistimport.AndroidPlaylistImportTransfer
+import com.metrolist.android.playlistimport.PlaylistImportPreparationType
+import com.metrolist.android.playlistimport.displayNameOf
+import com.metrolist.android.playlistimport.readPlaylistFile
 import com.metrolist.android.ui.component.BottomSheetMenu
 import com.metrolist.android.ui.component.FloatingTopAppBar
 import com.metrolist.android.ui.component.LocalMenuState
@@ -268,6 +274,8 @@ import com.metrolist.shared.generated.resources.downloads
 import com.metrolist.shared.generated.resources.error
 import com.metrolist.shared.generated.resources.filter_library
 import com.metrolist.shared.generated.resources.home
+import com.metrolist.shared.generated.resources.import_provider_file
+import com.metrolist.shared.generated.resources.imported_playlist
 import com.metrolist.shared.generated.resources.lastfm_session_expired_description
 import com.metrolist.shared.generated.resources.lastfm_session_expired_title
 import com.metrolist.shared.generated.resources.listen_together
@@ -391,6 +399,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.jetbrains.compose.resources.getPluralString
+import org.jetbrains.compose.resources.getString
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
@@ -1215,7 +1224,21 @@ fun MetrolistApp(
                             onIncomingIntentConsumed(intent)
                             return@LaunchedEffect
                         }
-                        val destination = intent.toIncomingDestination()
+                        val uri = intent.data
+                        val resolvedMimeType =
+                            if (intent.action == Intent.ACTION_VIEW &&
+                                intent.type == null &&
+                                uri != null &&
+                                uri.scheme.equals(ContentResolver.SCHEME_CONTENT, ignoreCase = true) &&
+                                uri.lastPathSegment?.endsWith(".csv", ignoreCase = true) != true
+                            ) {
+                                withContext(Dispatchers.IO) {
+                                    runCatching { context.contentResolver.getType(uri) }.getOrNull()
+                                }
+                            } else {
+                                null
+                            }
+                        val destination = intent.toIncomingDestination(resolvedMimeType)
                         if (!Settings.shared.listenTogetherEnabled &&
                             (destination is IncomingDestination.ListenTogether || destination == IncomingDestination.ListenTogetherRoom)
                         ) {
@@ -1335,6 +1358,43 @@ fun MetrolistApp(
 
                             is IncomingDestination.PlaylistImport -> {
                                 navigator.navigate(Screen.PlaylistImport)
+                                destination.fileUri?.let { uri ->
+                                    coroutineScope.launch {
+                                        val importedPlaylistText = getString(Res.string.imported_playlist)
+                                        val fileSource = getString(Res.string.import_provider_file)
+                                        val displayName = context.displayNameOf(uri)
+                                        val baseName =
+                                            displayName
+                                                ?.substringBeforeLast('.')
+                                                ?.takeIf { it.isNotBlank() }
+                                                ?: importedPlaylistText
+                                        val safeFileName =
+                                            if (displayName != null && displayName.endsWith(".csv", ignoreCase = true)) {
+                                                displayName
+                                            } else {
+                                                "$baseName.csv"
+                                            }
+                                        val prepResult =
+                                            AndroidPlaylistImportTransfer.prepareForeground(
+                                                context = context,
+                                                playlistTitle = baseName,
+                                                source = fileSource,
+                                                type = PlaylistImportPreparationType.IMPORT_DATA,
+                                                replaceRetainedResult = true,
+                                            ) {
+                                                readPlaylistFile(
+                                                    context = context,
+                                                    uri = uri,
+                                                    fileName = safeFileName,
+                                                    title = baseName,
+                                                    source = fileSource,
+                                                ).getOrThrow()
+                                            }
+                                        prepResult.exceptionOrNull()?.message?.let { message ->
+                                            snackbarHostState.showSnackbar(message)
+                                        }
+                                    }
+                                }
                                 destination.resultMessage?.let { message ->
                                     coroutineScope.launch { snackbarHostState.showSnackbar(message) }
                                 }
@@ -2284,6 +2344,7 @@ sealed class IncomingDestination {
 
     data class PlaylistImport(
         val resultMessage: String?,
+        val fileUri: Uri? = null,
     ) : IncomingDestination()
 
     object ListenTogetherRoom : IncomingDestination()
@@ -2343,10 +2404,50 @@ sealed class IncomingDestination {
     ) : IncomingDestination()
 }
 
-fun Intent.toIncomingDestination(): IncomingDestination? {
+private val CSV_MIME_TYPES =
+    setOf(
+        "text/csv",
+        "text/comma-separated-values",
+        "application/csv",
+        "application/x-csv",
+    )
+
+private fun resolveCsvOpenIntent(
+    intent: Intent,
+    resolvedMimeType: String? = null,
+): IncomingDestination.PlaylistImport? {
+    if (intent.action != Intent.ACTION_VIEW) return null
+    val uri = intent.data ?: return null
+    if (!uri.scheme.equals(ContentResolver.SCHEME_CONTENT, ignoreCase = true)) return null
+    val rawType = intent.type ?: resolvedMimeType
+    val effectiveMimeType =
+        rawType
+            ?.substringBefore(';')
+            ?.trim()
+            ?.lowercase()
+    val hasCsvExtension = uri.lastPathSegment?.endsWith(".csv", ignoreCase = true) == true
+    val isSupported =
+        effectiveMimeType in CSV_MIME_TYPES ||
+            (
+                hasCsvExtension &&
+                    (
+                        effectiveMimeType == null ||
+                            effectiveMimeType == "text/plain" ||
+                            effectiveMimeType == "application/octet-stream"
+                    )
+            )
+    if (!isSupported) return null
+    return IncomingDestination.PlaylistImport(
+        resultMessage = null,
+        fileUri = uri,
+    )
+}
+
+fun Intent.toIncomingDestination(resolvedMimeType: String? = null): IncomingDestination? {
     if (action == MainActivity.ACTION_OPEN_WIDGET_TARGET) {
         return widgetTargetDestination()
     }
+    resolveCsvOpenIntent(this, resolvedMimeType)?.let { return it }
 
     val urls =
         when (action) {

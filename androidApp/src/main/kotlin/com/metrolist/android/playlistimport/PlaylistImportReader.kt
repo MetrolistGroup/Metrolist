@@ -1,7 +1,9 @@
 package com.metrolist.android.playlistimport
 
+import android.content.ContentResolver
 import android.content.Context
 import android.net.Uri
+import android.provider.OpenableColumns
 import com.metrolist.shared.playlistimport.ImportErrorKey
 import com.metrolist.shared.playlistimport.ImportException
 import com.metrolist.shared.playlistimport.ImportedPlaylistData
@@ -43,3 +45,24 @@ suspend fun readPlaylistFile(
             Result.failure(ImportException(ImportErrorKey.FileReadFailed))
         }
     }
+
+internal suspend fun Context.displayNameOf(uri: Uri): String? =
+    withContext(Dispatchers.IO) {
+        getDisplayName(uri) ?: uri.lastPathSegment?.substringAfterLast('/')
+    }
+
+internal fun Context.getDisplayName(uri: Uri): String? {
+    if (uri.scheme == ContentResolver.SCHEME_CONTENT) {
+        runCatching {
+            contentResolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use { cursor ->
+                if (cursor.moveToFirst()) {
+                    val index = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+                    if (index != -1) cursor.getString(index) else cursor.getString(0)
+                } else {
+                    null
+                }
+            }
+        }.getOrNull()?.let { return it }
+    }
+    return uri.lastPathSegment?.substringAfterLast('/')
+}
