@@ -203,6 +203,7 @@ import com.metrolist.shared.ui.utils.DragScrollableColumn
 import com.metrolist.shared.ui.utils.verticalScrollWithDrag
 import com.metrolist.shared.utils.XdgUtils
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -440,13 +441,14 @@ fun BackupRestoreSettingsScreen(colorScheme: ColorScheme) {
         destination: PlaylistImportManager.Destination,
         ignoreDuplicate: Boolean = false,
     ) {
+        if (isBusy) return
+        isBusy = true
         val targetTitle = customPlaylistTitle.ifBlank { data.title }
         val statusId = PlaylistImportStatusManager.startImport(targetTitle, data.source)
         val job =
-            AppState.scope.launch(Dispatchers.Default) {
+            AppState.scope.launch(Dispatchers.Default, start = CoroutineStart.ATOMIC) {
                 try {
                     if (PlaylistImportStatusManager.activeImport.value?.id != statusId) return@launch
-                    isBusy = true
                     if (!ignoreDuplicate) {
                         val dup = UnifiedPlaylistImporter.checkForDuplicate(database, targetTitle, destination)
                         if (dup != null) {
@@ -516,8 +518,9 @@ fun BackupRestoreSettingsScreen(colorScheme: ColorScheme) {
             return
         }
 
+        if (isBusy) return
+        isBusy = true
         AppState.scope.launch(Dispatchers.Default) {
-            isBusy = true
             val initialSource =
                 getString(
                     when (UnifiedPlaylistImporter.detectSource(trimmed)) {
@@ -710,27 +713,32 @@ fun BackupRestoreSettingsScreen(colorScheme: ColorScheme) {
                             },
                             enabled = !isBusy,
                             onClick = {
+                                if (isBusy) return@Material3SettingsItem
+                                isBusy = true
                                 scope.launch {
-                                    val file =
-                                        runCatching {
-                                            pickDesktopFile(restorePickerTitle)
-                                        }.onFailure { status = getString(Res.string.could_not_open_file_picker, it.message ?: "") }
-                                            .getOrNull() ?: return@launch
-                                    isBusy = true
-                                    val result =
-                                        withContext(Dispatchers.IO) {
+                                    try {
+                                        val file =
                                             runCatching {
-                                                file.inputStream().use { input ->
-                                                    database.importForeignBackup(
-                                                        input,
-                                                        File(XdgUtils.getXdgCacheHome(), "metrolist/foreign-import"),
-                                                        JdbcSQLiteDriver(),
-                                                    )
+                                                pickDesktopFile(restorePickerTitle)
+                                            }.onFailure {
+                                                status = getString(Res.string.could_not_open_file_picker, it.message ?: "")
+                                            }.getOrNull() ?: return@launch
+                                        val result =
+                                            withContext(Dispatchers.IO) {
+                                                runCatching {
+                                                    file.inputStream().use { input ->
+                                                        database.importForeignBackup(
+                                                            input,
+                                                            File(XdgUtils.getXdgCacheHome(), "metrolist/foreign-import"),
+                                                            JdbcSQLiteDriver(),
+                                                        )
+                                                    }
                                                 }
                                             }
-                                        }
-                                    isBusy = false
-                                    status = result.foreignImportMessage()
+                                        status = result.foreignImportMessage()
+                                    } finally {
+                                        isBusy = false
+                                    }
                                 }
                             },
                         ),
@@ -1300,6 +1308,7 @@ fun BackupRestoreSettingsScreen(colorScheme: ColorScheme) {
             },
             confirmButton = {
                 Button(
+                    enabled = !isBusy,
                     onClick = {
                         val destination =
                             selectedDestinationPlaylist?.let(PlaylistImportManager.Destination::EXISTING)
@@ -1380,6 +1389,7 @@ fun BackupRestoreSettingsScreen(colorScheme: ColorScheme) {
             },
             confirmButton = {
                 TextButton(
+                    enabled = !isBusy,
                     onClick = {
                         val dest = pendingDuplicateDestination ?: return@TextButton
                         val data = pendingImportData ?: return@TextButton

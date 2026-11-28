@@ -7,11 +7,17 @@ import com.metrolist.shared.db.entities.SongEntity
 import com.metrolist.shared.db.getDatabaseBuilder
 import com.metrolist.shared.settings.Settings
 import com.russhwolf.settings.MapSettings
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.datetime.LocalDateTime
+import java.io.ByteArrayInputStream
 import java.io.File
+import java.io.InputStream
 import java.nio.file.Files
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
 import kotlin.test.AfterTest
@@ -208,7 +214,7 @@ class PrismBackupImportTest {
                 assertEquals(3, summary.playlists)
                 assertEquals(3, summary.plays)
                 assertEquals(3, summary.skippedSongs)
-                assertFalse(staging().exists())
+                assertTrue(staging().listFiles().orEmpty().isEmpty())
                 val liked = assertNotNull(dao.getSongById("aaaaaaaaaaa")).song
                 assertEquals("Existing title", liked.title)
                 assertEquals(150000, liked.totalPlayTime)
@@ -287,13 +293,61 @@ class PrismBackupImportTest {
         }
 
     @Test
+    fun concurrentImportsDoNotDeleteEachOthersStagingFiles() =
+        runBlocking {
+            val bytes = archive(sourceDatabase(), emptyMap()).readBytes()
+            val inputStarted = CountDownLatch(1)
+            val continueInput = CountDownLatch(1)
+            val firstDatabaseDir = directory.resolve("first-destination").apply { mkdirs() }
+            val secondDatabaseDir = directory.resolve("second-destination").apply { mkdirs() }
+            val stagingDirectory = staging().apply { mkdirs() }
+            val staleImport = stagingDirectory.resolve("import-stale.tmp").apply { mkdirs() }
+            staleImport.resolve("source.db").writeBytes(byteArrayOf(1))
+            staleImport.setLastModified(0L)
+            val staleLegacyImport = stagingDirectory.resolveSibling("staging-stale.tmp").apply { mkdirs() }
+            staleLegacyImport.resolve("source.db").writeBytes(byteArrayOf(1))
+            staleLegacyImport.setLastModified(0L)
+            val firstDatabase = getDatabaseBuilder(firstDatabaseDir.resolve("metrolist.db")).build()
+            val secondDatabase = getDatabaseBuilder(secondDatabaseDir.resolve("metrolist.db")).build()
+
+            try {
+                val firstImport =
+                    async(Dispatchers.IO) {
+                        firstDatabase.importForeignBackup(
+                            BlockingInputStream(bytes, 16, inputStarted, continueInput),
+                            staging(),
+                            driver,
+                        )
+                    }
+                assertTrue(inputStarted.await(10, TimeUnit.SECONDS))
+                assertFalse(staleImport.exists())
+                assertFalse(staleLegacyImport.exists())
+                val activeImport = stagingDirectory.listFiles()!!.single { it.name.startsWith("import-") }
+                activeImport.setLastModified(0L)
+                val secondImport =
+                    async(Dispatchers.IO) {
+                        secondDatabase.importForeignBackup(ByteArrayInputStream(bytes), staging(), driver)
+                    }
+
+                assertEquals(2, secondImport.await().songs)
+                assertTrue(activeImport.exists())
+                continueInput.countDown()
+                assertEquals(2, firstImport.await().songs)
+            } finally {
+                continueInput.countDown()
+                firstDatabase.close()
+                secondDatabase.close()
+            }
+        }
+
+    @Test
     fun corruptCompanionFailsBeforeMergingAndCleansStaging() =
         runBlocking {
             val archive = archive(sourceDatabase(), mapOf("files/library/prism.json" to "{broken"))
             withDestination { database ->
                 assertFails { archive.inputStream().use { database.importForeignBackup(it, staging(), driver) } }
                 assertNull(database.dao().getSongById("aaaaaaaaaaa"))
-                assertFalse(staging().exists())
+                assertTrue(staging().listFiles().orEmpty().isEmpty())
             }
         }
 
@@ -311,7 +365,7 @@ class PrismBackupImportTest {
             withDestination { database ->
                 assertFails { archive.inputStream().use { database.importForeignBackup(it, staging(), driver) } }
                 assertNull(database.dao().getSongById("aaaaaaaaaaa"))
-                assertFalse(staging().exists())
+                assertTrue(staging().listFiles().orEmpty().isEmpty())
             }
         }
 
@@ -374,7 +428,7 @@ class PrismBackupImportTest {
             withDestination { database ->
                 assertFails { archive.inputStream().use { database.importForeignBackup(it, staging(), driver) } }
                 assertNull(database.dao().getSongById("aaaaaaaaaaa"))
-                assertFalse(staging().exists())
+                assertTrue(staging().listFiles().orEmpty().isEmpty())
             }
         }
 
@@ -457,4 +511,21 @@ class PrismBackupImportTest {
         .playlistSongs(playlistId)
         .first()
         .map { it.song.id }
+
+    private class BlockingInputStream(
+        private val bytes: ByteArray,
+        private val blockAfterBytes: Int,
+        private val started: CountDownLatch,
+        private val proceed: CountDownLatch,
+    ) : InputStream() {
+        private var position = 0
+
+        override fun read(): Int {
+            if (position == blockAfterBytes) {
+                started.countDown()
+                check(proceed.await(10, TimeUnit.SECONDS))
+            }
+            return if (position == bytes.size) -1 else bytes[position++].toInt() and 0xff
+        }
+    }
 }
