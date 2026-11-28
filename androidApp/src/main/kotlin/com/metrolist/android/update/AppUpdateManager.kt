@@ -725,7 +725,7 @@ object AppUpdateManager {
             cancelInstallPromptNotification(it)
             unregisterSessionCallback(it.packageManager.packageInstaller)
         }
-        val resolvedMessage = if (success) null else resolveInstallErrorMessage(context, status, message)
+        val resolvedMessage = if (success) null else resolveInstallErrorMessage(context, status, message, crashRecovery)
         val current = mutableState.value as? AppUpdateState.Downloaded
         if (current != null) {
             if (!success) stopAutoInstallAfterFailure(current.release)
@@ -847,15 +847,37 @@ object AppUpdateManager {
         context: Context?,
         status: Int,
         rawMessage: String?,
+        crashRecovery: Boolean,
     ): String? {
         val statusRes =
             when (status) {
-                PackageInstaller.STATUS_FAILURE_BLOCKED -> R.string.updates_install_status_blocked
-                PackageInstaller.STATUS_FAILURE_CONFLICT -> R.string.updates_install_status_conflict
-                PackageInstaller.STATUS_FAILURE_INCOMPATIBLE -> R.string.updates_install_status_incompatible
-                PackageInstaller.STATUS_FAILURE_INVALID -> R.string.updates_install_status_invalid
-                PackageInstaller.STATUS_FAILURE_STORAGE -> R.string.updates_install_status_storage
-                else -> null
+                PackageInstaller.STATUS_FAILURE_BLOCKED -> {
+                    if (crashRecovery) R.string.crash_updates_install_status_blocked else R.string.updates_install_status_blocked
+                }
+
+                PackageInstaller.STATUS_FAILURE_CONFLICT -> {
+                    if (crashRecovery) R.string.crash_updates_install_status_conflict else R.string.updates_install_status_conflict
+                }
+
+                PackageInstaller.STATUS_FAILURE_INCOMPATIBLE -> {
+                    if (crashRecovery) {
+                        R.string.crash_updates_install_status_incompatible
+                    } else {
+                        R.string.updates_install_status_incompatible
+                    }
+                }
+
+                PackageInstaller.STATUS_FAILURE_INVALID -> {
+                    if (crashRecovery) R.string.crash_updates_install_status_invalid else R.string.updates_install_status_invalid
+                }
+
+                PackageInstaller.STATUS_FAILURE_STORAGE -> {
+                    if (crashRecovery) R.string.crash_updates_install_status_storage else R.string.updates_install_status_storage
+                }
+
+                else -> {
+                    null
+                }
             }
         val statusText = statusRes?.let { res -> context?.getString(res) }
         val detail = rawMessage?.trim()?.takeIf { it.isNotEmpty() }
@@ -887,15 +909,26 @@ object AppUpdateManager {
                 },
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
             )
+        val titleRes =
+            if (crashRecovery) {
+                R.string.crash_updates_install_prompt_notification_title
+            } else {
+                R.string.updates_install_prompt_notification_title
+            }
+        val textRes =
+            if (crashRecovery) {
+                R.string.crash_updates_install_prompt_notification_text
+            } else {
+                R.string.updates_install_prompt_notification_text
+            }
         val notification =
             NotificationCompat
                 .Builder(context, CHANNEL_ID)
                 .setSmallIcon(R.drawable.ic_notification)
-                .setContentTitle(context.getString(R.string.updates_install_prompt_notification_title))
-                .setContentText(context.getString(R.string.updates_install_prompt_notification_text))
+                .setContentTitle(context.getString(titleRes))
+                .setContentText(context.getString(textRes))
                 .setContentIntent(pendingIntent)
                 .setDeleteIntent(dismissIntent)
-                .setAutoCancel(true)
                 .build()
         context.getSystemService(NotificationManager::class.java).notify(INSTALL_PROMPT_NOTIFICATION_ID, notification)
         return true
@@ -915,7 +948,11 @@ object AppUpdateManager {
         crashRecovery: Boolean,
     ) {
         if (!Settings.shared.updateNotifications || !canPostNotifications(context)) return
-        val detail = errorMessage ?: context.getString(R.string.updates_installer_failed)
+        val fallbackDetail =
+            context.getString(
+                if (crashRecovery) R.string.crash_updates_installer_failed else R.string.updates_installer_failed,
+            )
+        val detail = errorMessage ?: fallbackDetail
         val targetActivity = if (crashRecovery) CrashActivity::class.java else MainActivity::class.java
         val intent =
             Intent(context, targetActivity).apply {
@@ -931,17 +968,27 @@ object AppUpdateManager {
                 intent,
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
             )
+        val titleRes =
+            if (crashRecovery) {
+                R.string.crash_updates_install_failed_notification_title
+            } else {
+                R.string.updates_install_failed_notification_title
+            }
+        val textRes =
+            if (crashRecovery) {
+                R.string.crash_updates_install_failed_notification_text
+            } else {
+                R.string.updates_install_failed_notification_text
+            }
+        val bodyText = errorMessage ?: context.getString(textRes)
         val notification =
             NotificationCompat
                 .Builder(context, CHANNEL_ID)
                 .setSmallIcon(R.drawable.ic_notification)
-                .setContentTitle(context.getString(R.string.updates_install_failed_notification_title))
-                .setContentText(errorMessage ?: context.getString(R.string.updates_install_failed_notification_text))
-                .setStyle(
-                    NotificationCompat
-                        .BigTextStyle()
-                        .bigText(errorMessage ?: context.getString(R.string.updates_install_failed_notification_text)),
-                ).setContentIntent(pendingIntent)
+                .setContentTitle(context.getString(titleRes))
+                .setContentText(bodyText)
+                .setStyle(NotificationCompat.BigTextStyle().bigText(bodyText))
+                .setContentIntent(pendingIntent)
                 .setAutoCancel(true)
                 .build()
         context.getSystemService(NotificationManager::class.java).notify(INSTALL_RESULT_NOTIFICATION_ID, notification)
