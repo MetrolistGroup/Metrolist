@@ -2585,4 +2585,5 @@
     <string name="listen_together_host_action">Oda sahibi</string>
     <string name="cast_stream_port_unavailable">Yayın aktarımı için 57643 TCP bağlantı noktası açılamadı. Bu ağın kullanılabilir olduğunu ve başka bir uygulamanın aynı bağlantı noktasını kullanmadığını kontrol edin.</string>
     <string name="cast_stream_unreachable">Hoparlör ses akışını talep etmedi. Güvenlik duvarınızın hoparlörden gelen 57643 TCP bağlantı noktasına izin verdiğini ve her iki cihazın da aynı ağda bulunduğunu kontrol edin.</string>
+    <string name="classic_recommendations_desc">Kendi dinleme geçmişinden Hızlı Seçimler oluştur ve Metrolist 13 gibi, kişisel YouTube sıradaki oynatma listenizi sırayla oynatın.</string>
 </resources>

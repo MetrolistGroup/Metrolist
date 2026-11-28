@@ -62,7 +62,7 @@
         <item quantity="few">Descărcate %1$d din %2$d melodii, %3$d eșuate</item>
         <item quantity="other">Descărcate %1$d din %2$d de melodii, %3$d eșuate</item>
     </plurals>
-    <string name="download_pause_all">Pune totul pe pauză</string>
+    <string name="download_pause_all">Întrerupe-le pe toate</string>
     <string name="download_resume_all">Reia-le pe toate</string>
     <string name="download_cancel_all">Anulează-le pe toate</string>
     <string name="remove_download">Elimină descărcarea</string>
@@ -79,12 +79,12 @@
     <string name="sort_by_name">Nume</string>
     <string name="sort_by_year">An</string>
     <string name="media_id">ID media</string>
-    <string name="mime_type">MIME type</string>
+    <string name="mime_type">Tip MIME</string>
     <string name="codecs">Codecuri</string>
     <string name="bitrate">Rată de biți</string>
     <string name="sample_rate">Rată de eșantionare</string>
     <string name="loudness">Intensitate sonoră</string>
-    <string name="loudness_value">%1$s dB</string>
+    <string name="loudness_value">%1$s dB</string>
     <string name="volume">Volum</string>
     <string name="file_size">Dimensiune fișier</string>
     <string name="unknown">Necunoscut</string>
@@ -112,19 +112,19 @@
         <item quantity="other">%1$d de albume</item>
     </plurals>
     <plurals name="n_week">
-        <item quantity="one">%1$d săptămână</item>
-        <item quantity="few">%1$d săptămâni</item>
-        <item quantity="other">%1$d de săptămâni</item>
+        <item quantity="one">%1$d săptămână</item>
+        <item quantity="few">%1$d săptămâni</item>
+        <item quantity="other">%1$d de săptămâni</item>
     </plurals>
     <plurals name="n_month">
-        <item quantity="one">%1$d lună</item>
-        <item quantity="few">%1$d luni</item>
-        <item quantity="other">%1$d de luni</item>
+        <item quantity="one">%1$d lună</item>
+        <item quantity="few">%1$d luni</item>
+        <item quantity="other">%1$d de luni</item>
     </plurals>
     <plurals name="n_year">
-        <item quantity="one">%1$d an</item>
-        <item quantity="few">%1$d ani</item>
-        <item quantity="other">%1$d de ani</item>
+        <item quantity="one">%1$d an</item>
+        <item quantity="few">%1$d ani</item>
+        <item quantity="other">%1$d de ani</item>
     </plurals>
     <string name="undo">Anulează</string>
     <string name="lyrics_not_found">Nu s-au găsit versuri</string>
@@ -143,9 +143,9 @@
     <string name="queue_loading">Se încarcă coada…</string>
     <string name="calculating">Se calculează…</string>
     <plurals name="queue_track_count_duration">
-        <item quantity="one">O piesă · %2$s</item>
-        <item quantity="few">%1$d piese · %2$s</item>
-        <item quantity="other">%1$d de piese · %2$s</item>
+        <item quantity="one">O piesă · %2$s</item>
+        <item quantity="few">%1$d piese · %2$s</item>
+        <item quantity="other">%1$d de piese · %2$s</item>
     </plurals>
     <string name="suggested_tracks">Sugerate</string>
     <string name="playback_notification_channel_name">Redare</string>
@@ -170,7 +170,7 @@
     <string name="persistent_queue_desc">Restaurează ultima ta coadă atunci când aplicația pornește</string>
     <string name="auto_load_more">Adaugă automat melodii similare</string>
     <string name="auto_load_more_desc">Adaugă automat melodii similare în cozile radioului și mixurilor când acestea se apropie de final</string>
-    <string name="skip_silence">Sari peste momentele fără sunet</string>
+    <string name="skip_silence">Omite liniștea</string>
     <string name="audio_normalization">Normalizare audio</string>
     <string name="auto_skip_next_on_error">Sari la următoarea melodie atunci când sunt întâmpinate erori</string>
     <string name="auto_skip_next_on_error_desc">Treci la melodia următoare în cazul în care redarea eșuează</string>
@@ -190,7 +190,7 @@
     <string name="song_cache">Cache melodii</string>
     <string name="unlimited">Nelimitată</string>
     <string name="clear_all_downloads">Elimină toate descărcările</string>
-    <string name="clear_all_downloads_dialog">Ștergi toate fișierele audio descărcate?</string>
+    <string name="clear_all_downloads_dialog">Elimini toate fișierele audio descărcate?</string>
     <string name="max_image_cache_size">Dimensiunea maximă a cache-ului imaginilor</string>
     <string name="clear_image_cache">Șterge cache-ul imaginilor</string>
     <string name="max_song_cache_size">Dimensiunea maximă pentru cache-ul melodiilor</string>
@@ -222,7 +222,7 @@
     <string name="search_history">Istoric căutări</string>
     <string name="pause_search_history">Întrerupe istoricul căutărilor</string>
     <string name="clear_search_history">Șterge istoricul căutărilor</string>
-    <string name="settings_clear_search_history_description">Șterge căutările salvate de pe acest dispozitiv și din YouTube</string>
+    <string name="settings_clear_search_history_description">Elimină căutările salvate de pe acest dispozitiv și din YouTube</string>
     <string name="settings_clear_search_history_confirm_message">Această acțiune va elimina toate interogările de căutare salvate. Aceasta nu poate fi anulată.</string>
     <string name="settings_show_secret">Afișează secretul</string>
     <string name="settings_hide_secret">Ascunde secretul</string>
@@ -338,14 +338,14 @@
     <string name="app_font_picker_desc">Selectează un fișier TTF sau OTF. Metrolist îl va copia în stocarea privată a aplicației.</string>
     <string name="app_font_system">Prestabilit de sistem</string>
     <string name="app_font_applied">Se folosește %1$s</string>
-    <string name="app_font_invalid">Nu s-a putut folosi acel font. Alege un fișier TTF sau OTF mai mic de 20 MB.</string>
+    <string name="app_font_invalid">Nu s-a putut folosi acel font. Alege un fișier TTF sau OTF mai mic de 20 MB.</string>
     <string name="app_font_downloads">Descărcare rapidă fonturi</string>
     <string name="app_font_checking">Se verifică fontul instalat…</string>
     <string name="app_font_reset">Resetează fontul</string>
     <string name="app_font_reset_description">Folosește fontul sistemului și elimină fontul importat</string>
     <string name="app_font_downloading">Se descarcă %1$s…</string>
     <string name="app_font_active">Activ</string>
-    <string name="app_font_installed">Instalat · Atinge pentru a-l utiliza</string>
+    <string name="app_font_installed">Instalat · Atinge pentru a-l utiliza</string>
     <string name="app_font_download_and_use">Atinge pentru a-l descărca și utiliza</string>
     <string name="app_font_download_error">Nu s-a putut descărca %1$s. Verifică-ți conexiunea și încearcă din nou.</string>
     <string name="app_font_import_custom">Importă un fișier TTF sau OTF</string>
@@ -363,7 +363,7 @@
     <string name="song_gestures">Gesturi pentru melodii</string>
     <string name="appearance_enable_swipe_to_change_track">Glisează coperta de album pentru a schimba piesele</string>
     <string name="appearance_play_videos_in_mini_player" tools:ignore="MissingTranslation">Redă videoclipuri în mini-player</string>
-    <string name="appearance_play_videos_in_mini_player_desc" tools:ignore="MissingTranslation">Afișează videoclipuri muzicale atunci când mini-playerul este restrâns</string>
+    <string name="appearance_play_videos_in_mini_player_desc" tools:ignore="MissingTranslation">Afișează videoclipurile muzicale atunci când mini-playerul este restrâns</string>
     <string name="appearance_mini_player_swipe_sensitivity">Sensibilitatea glisării</string>
     <string name="appearance_misc">Diverse</string>
     <string name="appearance_default_open_tab">Fila prestabilită deschisă</string>
@@ -535,7 +535,7 @@
     <string name="minimum_song_duration">Durata minimă a melodiilor</string>
     <string name="minimum_song_duration_desc">Ascunde melodiile mai scurte de %1$d (de) secunde</string>
     <string name="block_ai_slop_artists">Blochează artiștii generați de AI cunoscuți</string>
-    <string name="block_ai_slop_artists_desc">Ascunde canalele incluse în lista Override92/AiSList. Lista, publicată sub licența CC BY-NC 4.0, se actualizează zilnic și este disponibilă și offline.</string>
+    <string name="block_ai_slop_artists_desc">Ascunde canalele incluse în lista Override92/AiSList. Lista, publicată sub licența CC BY-NC 4.0, se actualizează zilnic și rămâne disponibilă și offline.</string>
     <string name="listen_together_entry_subtitle">Ascultă muzică cu prietenii în timp real.</string>
     <string name="listen_together_create_room_title">Creează o cameră</string>
     <string name="listen_together_username_required">Numele de utilizator este necesar</string>
@@ -573,7 +573,7 @@
     <string name="lyrics_timing_line_synced">Sincronizate</string>
     <string name="lyrics_timing_word_synced">Silabă</string>
     <string name="lyrics_providers_loading">Se caută furnizori de versuri…</string>
-    <string name="use_rounded_rect_play_button">Button de redare cu colțuri rotunjite</string>
+    <string name="use_rounded_rect_play_button">Buton de redare cu colțuri rotunjite</string>
     <string name="artwork">Coperte de album</string>
     <string name="updates_title">Actualizare aplicație</string>
     <string name="updates_check">Verifică pentru actualizări</string>
@@ -619,7 +619,7 @@
     <string name="device_connect_account_mismatch">Cont diferit</string>
     <string name="device_connect_permission_needed">Permisiunea pentru rețeaua locală este necesară pentru a găsi și a te conecta la dispozitive.</string>
     <string name="device_connect_grant_permission">Acordă permisiunea</string>
-    <string name="side_menu_welcome">Bun venit în Metrolist</string>
+    <string name="side_menu_welcome">Bun venit la Metrolist</string>
     <string name="action_cannot_be_undone">Această acțiune nu poate fi anulată.</string>
     <string name="add">Adaugă</string>
     <string name="add_a_song">Adaugă o melodie</string>
@@ -636,7 +636,7 @@
     <string name="ai_system_prompt_label">Prompt de sistem</string>
     <string name="ai_translation_enable">Tradu versurile</string>
     <string name="ai_translation_enable_description">Afișează versurile în limba ta sub cuvintele originale</string>
-    <string name="ai_translation_for_track">Traduceri cu AI pentru această piesă</string>
+    <string name="ai_translation_for_track">Traducere cu AI pentru această piesă</string>
     <string name="ai_translation_new_title">Traducere nouă a versurilor cu AI</string>
     <string name="ai_translation_new_desc">Creează o traducere nouă</string>
     <string name="ai_translation_mode_literal">Traducere</string>
@@ -667,7 +667,7 @@
     <string name="clear_recent_from_searches_question">Ștergi melodiile din căutările recente?</string>
     <string name="clear_recent_searches_question">Elimini căutările recente?</string>
     <string name="clear_recognition_history_description">Toate melodiile recunoscute vor fi eliminate de pe acest dispozitiv.</string>
-    <string name="clear_recognition_history_question">Șterge istoricul recunoașterii?</string>
+    <string name="clear_recognition_history_question">Șterge istoricul recunoașterilor?</string>
     <string name="clear_section">Șterge %1$s</string>
     <string name="clear_selection">Anulează selecția</string>
     <string name="client">Client</string>
@@ -681,7 +681,7 @@
     <string name="could_not_queue_download">Nu s-a putut adăuga descărcarea în coadă</string>
     <string name="deepl_api_key">Cheie API DeepL</string>
     <string name="delete_all_recent_from_searches_question">Ștergi toate melodiile din căutările recente?</string>
-    <string name="delete_all_recent_searches_question">Ștergeți toate căutările recente?</string>
+    <string name="delete_all_recent_searches_question">Ștergi toate căutările recente?</string>
     <string name="delete_downloaded_audio">Șterge audio descărcat</string>
     <string name="delete_downloaded_episodes">Șterge episoadele descărcate</string>
     <string name="delete_failed">Ștergere eșuată</string>
@@ -696,7 +696,7 @@
     <string name="dislike_song">Nu îmi place melodia</string>
     <string name="done">Gata</string>
     <string name="download_not_found">Descărcarea nu a fost găsită</string>
-    <string name="drag_to_reorder">Trageți pentru a reordona</string>
+    <string name="drag_to_reorder">Trage pentru a reordona</string>
     <string name="duplicate_song">Melodie duplicată</string>
     <string name="duration">Durată</string>
     <string name="edit_song_description">Editează titlul și artistul melodiei</string>
@@ -1800,7 +1800,7 @@
     <string name="device_connect_sync_conflict">Oprește redarea la distanță înainte de difuzare.</string>
     <string name="device_connect_pairing">Se asociază…</string>
     <string name="device_connect_device_type_unknown">Dispozitiv necunoscut</string>
-    <string name="device_connect_device_type_and_model">%1$s · %2$s</string>
+    <string name="device_connect_device_type_and_model">%1$s · %2$s</string>
     <string name="device_connect_picker_title">Conectează-te la un dispozitiv</string>
     <string name="device_connect_available">Disponibil</string>
     <string name="lyrics_show_translations">Traduceri</string>
@@ -1854,8 +1854,8 @@
     <string name="widget_recognizer_notification_text">Se înregistrează audio pentru identificarea melodiei…</string>
     <string name="history_playlist_weekly">Melodii săptămânale de top</string>
     <string name="history_playlist_monthly">Melodii lunare de top</string>
-    <string name="settings_history_playlists">Playlist-uri din istoricul de ascultare</string>
-    <string name="settings_history_playlists_desc">Creează playlist-uri săptămânale și lunare din istoricul tău de ascultare. Se actualizează automat și apar în biblioteca ta.</string>
+    <string name="settings_history_playlists">Playlisturi din istoricul de ascultare</string>
+    <string name="settings_history_playlists_desc">Creează playlisturi săptămânale și lunare din istoricul tău de ascultare. Se actualizează automat și apar în biblioteca ta.</string>
     <string name="connected_devices">Dispozitive conectate</string>
     <string name="available_devices">Dispozitive disponibile</string>
     <string name="no_device_connected">Niciun dispozitiv conectat</string>
@@ -1959,7 +1959,7 @@
     <string name="ai_model_custom_id">Folosește ID personalizat al modelului</string>
     <string name="ai_model_price">%1$s intrați %2$s ieșiți per 1M tokeni</string>
     <string name="ai_model_free">Gratuit</string>
-    <string name="ai_model_speed">~%1$s tokeni/s</string>
+    <string name="ai_model_speed">~%1$s tokeni/s</string>
     <string name="ai_model_load_failed">Nu s-au putut încărca modelele</string>
     <string name="ai_model_api_key_needed">Adaugă o cheie API pentru a încărca lista cu modele</string>
     <string name="ai_model_none_found">Niciun model nu corespunde căutării tale</string>
@@ -2188,9 +2188,9 @@
     <string name="episode_played">Redat</string>
     <string name="lastfm_service_error">Autentificarea la Last.fm nu este disponibilă. Te rugăm să încerci din nou mai târziu.</string>
     <string name="settings_reset_to_default">Resetează la valorile prestabilite</string>
-    <string name="remove_all_downloads">Șterge toate descărcările</string>
+    <string name="remove_all_downloads">Elimină toate descărcările</string>
     <string name="disable_animated_artwork_on_mobile_data">Dezactivează copertele animate atunci când ești pe date mobile</string>
-    <string name="disable_animated_artwork_on_mobile_data_desc">Afișează coperți statice pe date mobile chiar și când acestea sunt în cache</string>
+    <string name="disable_animated_artwork_on_mobile_data_desc">Afișează coperte statice pe date mobile chiar și când acestea sunt în cache</string>
     <string name="hide_recent_searches">Ascunde „Din căutări recente”</string>
     <string name="credits_multiplatform_developer">Dezvoltator multiplatformă</string>
     <string name="credits_collaborators_section">Colaboratori</string>
@@ -2218,7 +2218,7 @@
     <string name="playback_unable_to_play_queued_track">Nu s-a putut reda această piesă din coadă.</string>
     <string name="token_login_sensitive_warning_generic">NU partaja tokenul.</string>
     <string name="legacy_shuffle">Amestecare moștenită</string>
-    <string name="legacy_shuffle_desc">Amestecă toate melodiile, inclusiv pe cele deja redate, păstrând melodia curentă pe prima poziție. Dezactivează această setare pentru a folosi amestecarea KMP, care păstrează melodiile deja redate pe pozițiile lor și amestecă doar melodiile următoare.</string>
+    <string name="legacy_shuffle_desc">Amestecarea moștenită pune melodia curentă pe prima poziție și amestecă, de asemenea, și melodiile deja redate. Deazactiveaz-o pentru a amesteca doar melodiile care urmează. Intrările marcate ca auto-mix sau recomandări își păstrează ordinea în ambele moduri.</string>
     <string name="artist_subscriber_count">%1$s (de) abonați</string>
     <string name="lyrics_text_color">Culoarea textului versurilor</string>
     <string name="lyrics_color_follow_theme">Urmează tema</string>
@@ -2434,7 +2434,7 @@
     <string name="settings_canvas_playback_summary">Redă fragmente scurte sau întregul videoclip muzical în spatele playerului</string>
     <string name="settings_normalization_summary">Echilibrează volumul între melodii pentru a evita diferențele mari</string>
     <string name="settings_loudness_target_summary">Setează nivelul de zgomot țintă atunci când normalizarea audio este activată</string>
-    <string name="settings_stop_on_close_summary">Oprește redarea atunci când aplicația Metrolist este eliminată din aplicațiile recente</string>
+    <string name="settings_stop_on_close_summary">Oprește redarea atunci când aplicația Metrolist este eliminată din aplicațiile recente. Pe Android TV, redarea este, de asemenea, întreruptă atunci când părăsești aplicația.</string>
     <string name="settings_screen_awake_summary">Alege dacă playerul sau versurile mențin ecranul pornit</string>
     <string name="settings_translation_mode_summary">Tradu cuvintele sau transcrie pronunția în sistemul de scriere țintă</string>
     <string name="settings_translation_provider_summary">Alege serviciul care traduce versurile</string>
@@ -2618,4 +2618,87 @@
     <string name="density_massive">Masivă (200%)</string>
     <string name="density_huge">Imensă (175%)</string>
     <string name="density_extra_large">Foarte mare (150%)</string>
+    <string name="add_to_library">Adaugă în bibliotecă</string>
+    <plurals name="days">
+        <item quantity="one">O zi</item>
+        <item quantity="few">%1$d zile</item>
+        <item quantity="other">%1$d de zile</item>
+    </plurals>
+    <string name="widget_expressive_player">Player expresiv</string>
+    <string name="widget_expressive_description">Copertă de album în formă de pastilă cu comenzi de redare cu margini festonate</string>
+    <string name="widget_duration_hours">%1$s:%2$s:%3$s</string>
+    <string name="widget_duration_minutes">%1$s:%2$s</string>
+    <string name="widget_time_pair">%1$s / %2$s</string>
+    <string name="widget_track_description">%1$s, %2$s</string>
+    <string name="widget_play_item">Redă %1$s</string>
+    <string name="classic_recommendations">Recomandări clasice</string>
+    <string name="classic_recommendations_desc">Creează selecții rapide din propriul istoric de ascultare și redă în ordine lista personală YouTube „Urmează”, la fel ca în Metrolist 13</string>
+    <string name="classic_recommendations_desc_desktop">Redă în ordine lista personală YouTube „Urmează”, la fel ca în Metrolist 13</string>
+    <string name="clearing_search_history">Se șterge istoricul căutărilor…</string>
+    <string name="support_prompt_title">Îți place aplicația?</string>
+    <string name="support_prompt_message">Susține dezvoltarea Metrolist prin sprijinirea dezvoltatorilor din spatele acesteia. Atinge pe cineva pentru a deschide pagina sa de susținere.</string>
+    <string name="support_prompt_never_show">Nu mai afișa acest mesaj</string>
+    <string name="recently_played">Redate recent</string>
+    <string name="already_in_playlist">Deja aici</string>
+    <string name="no_new_playlist_suggestions">Nicio sugestie de playlisturi noi</string>
+    <string name="cast_volume_step">Treapta de volum în timpul difuzării</string>
+    <string name="cast_volume_step_description">Controlează cât de mult modifică volumul difuzorului sau al televizorului butoanele de volum ale telefonului în timpul difuzării</string>
+    <string name="wrapped_merge_note">Include istoricul salvat din Metrolist și YouTube, plus cel din Last.fm atunci când serviciul este conectat și încărcat. Perechile unice de artiști și titluri sunt stabilite pe baza celui mai mare număr zilnic de redări. Melodiile de pe Last.fm care nu au o potrivire sunt numărate ca redări; potrivirile ambigue sunt excluse. Acest lucru poate duce la o subestimare a numărului de redări individuale. Timpul de ascultare include doar duratele înregistrate.</string>
+    <string name="matugen_colors_description">Folosește paleta de culori de fundal pe care Matugen o scrie în ~/.config/metrolist/matugen.properties</string>
+    <string name="matugen_colors">Culori Matugen</string>
+    <string name="search_online_short">Online</string>
+    <string name="lyrics_search_online_query">%1$s %2$s versuri</string>
+    <string name="devtools_playback_log_title">Jurnal de evenimente al aplicației</string>
+    <string name="devtools_playback_log_count">%1$d evenimente capturate</string>
+    <string name="devtools_playback_log_cleared">Jurnalul aplicației a fost șters</string>
+    <string name="devtools_playback_log_export_failed">Nu s-a putut exporta jurnalul aplicației</string>
+    <string name="devtools_playback_log_share_title">Exportă jurnalul aplicației</string>
+    <string name="legacy_recovery_export_title">Exportă biblioteca veche</string>
+    <string name="legacy_recovery_export_desc">Salvează biblioteca care nu a putut fi migrată din versiunea 13 ca fișier de backup. Restaurează acel fișier pentru a încerca migrarea din nou.</string>
+    <string name="legacy_recovery_export_success">Biblioteca veche a fost exportată</string>
+    <string name="legacy_recovery_export_failed">Nu s-a putut exporta biblioteca veche</string>
+    <string name="appearance_swipe_song_gesture_queue">Gest de glisare pentru melodii în coadă</string>
+    <string name="appearance_swipe_song_gesture_queue_description">Glisează o melodie spre marginea de început pentru a o elimina din coadă chiar și când este blocată</string>
+    <string name="automatic_backup">Copie de rezervă automată</string>
+    <string name="automatic_backup_description">Salvează automat o copie de rezervă locală și păstrează cele mai recente 10 copii.</string>
+    <string name="automatic_backup_frequency">Frecvență de creare a copiilor de rezervă</string>
+    <string name="automatic_backup_daily">Zilnic</string>
+    <string name="automatic_backup_weekly">Săptămânal</string>
+    <string name="automatic_backup_monthly">Lunar</string>
+    <string name="automatic_backup_location">Copiile de rezervă rămân pe acest dispozitiv. Sistemele de operare mobile le pot amâna. Copiile de rezervă pentru desktop rulează cât timp Metrolist este deschis.</string>
+    <string name="automatic_backup_restore">Restaurează o copie de rezervă automată</string>
+    <string name="automatic_backup_restore_empty">Nu sunt disponibile copii de rezervă automate.</string>
+    <string name="automatic_backup_restore_desc">Alegeți o copie de rezervă automată salvată pentru restaurare.</string>
+    <string name="foreign_import_error_generic">Copia de rezervă nu a putut fi importată</string>
+    <string name="metroeq_preset_commute">Navetă</string>
+    <string name="metroeq_preset_pop">Pop</string>
+    <string name="metroeq_preset_electronic">Electronică</string>
+    <string name="metroeq_preset_acoustic">Acustică</string>
+    <string name="metroeq_preset_loudness">Intensitate sonoră</string>
+    <string name="fetched_lyrics">Versuri preluate</string>
+    <string name="clear_fetched_lyrics">Șterge versurile preluate</string>
+    <string name="clear_fetched_lyrics_description">Preia din nou versurile de la furnizorii actuali. Versurile proprii, versurile pe care le-ai ales pentru o melodie și decalajele versurilor rămân.</string>
+    <string name="clear_fetched_lyrics_confirm">Ștergi toate versurile preluate de la furnizori? Acestea sunt preluate din nou data viitoare când fiecare melodie este redată.</string>
+    <string name="updates_install_method">Instalează actualizări cu</string>
+    <string name="updates_install_method_desc">Root și Shizuku instalează actualizări fără prompt.</string>
+    <string name="updates_install_method_system">Instalatorul de pachete Android</string>
+    <string name="updates_install_method_root">Root</string>
+    <string name="updates_install_method_shizuku">Shizuku</string>
+    <string name="updates_root_unavailable">Accesul root a fost refuzat sau nu este disponibil</string>
+    <string name="updates_shizuku_unavailable">Shizuku nu rulează</string>
+    <string name="updates_shizuku_denied">Permisiunea Shizuku a fost refuzată</string>
+    <string name="updates_auto_install">Instalează automat actualizări</string>
+    <string name="updates_auto_install_desc">Descarcă și instalează actualizări când nu se redă nimic. Necesită root, Shizuku sau Android 12 sau o versiune mai nouă, cu permisiunea de a instala aplicații.</string>
+    <string name="listenbrainz_server_url">URL server</string>
+    <string name="listenbrainz_server_url_description">Lasă gol pentru ListenBrainz. Pentru un server compatibil, precum Koito, introdu adresa sa API.</string>
+    <string name="listenbrainz_invalid_server_url">Introdu o adresă http sau https</string>
+    <string name="cache_whole_song_while_playing">Stochează în cache întreaga melodie în timpul redării</string>
+    <string name="cache_whole_song_while_playing_desc">Preia restul unei melodii redate în flux direct în loc de doar porțiunea imediat următoare în buffer. Utilizează mai multe date.</string>
+    <string name="slider_standard_buffered">Standard cu buffer</string>
+    <string name="hide_playlist_recommendations">Ascunde recomandările pentru playlist</string>
+    <string name="hide_playlist_recommendations_desc">Ascunde melodiile recomandate afișate sub playlisturi</string>
+    <string name="updates_nightly_builds_desc">Obține o versiune nouă după fiecare modificare. Versiunile nightly pot fi instabile.</string>
+    <string name="updates_nightly_builds">Versiuni nightly</string>
+    <string name="updates_force_install">Instalează oricum</string>
+    <string name="ai_api_key_optional">Opțional, modelele gratuite funcționează fără o cheie</string>
 </resources>

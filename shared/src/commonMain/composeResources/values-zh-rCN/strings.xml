@@ -9,14 +9,14 @@
     <plurals name="n_selected">
         <item quantity="other">已选择 %1$d 项</item>
     </plurals>
-    <string name="history">历史</string>
+    <string name="history">收听记录</string>
     <string name="mood_and_genres">曲调和流派</string>
     <string name="account">账号</string>
     <string name="quick_picks">猜你喜欢</string>
     <string name="forgotten_favorites">重温最爱</string>
     <string name="keep_listening">继续听</string>
     <string name="similar_to">类似风格</string>
-    <string name="new_releases">新发布</string>
+    <string name="new_releases">新发行</string>
     <string name="podcasts_for_you">为你推荐播客</string>
     <string name="recap">回顾</string>
     <string name="home_unavailable">首页不可用</string>
@@ -46,7 +46,7 @@
     <string name="play">播放</string>
     <string name="pause">暂停</string>
     <string name="play_next">接下来播放</string>
-    <string name="add_to_queue">添加到待播列表</string>
+    <string name="add_to_queue">添加到队列</string>
     <string name="remove_from_library">从媒体库中移除</string>
     <string name="action_download">下载</string>
     <string name="download_notification_title">正在下载歌曲</string>
@@ -56,7 +56,7 @@
     <string name="completed_downloads">已完成下载</string>
     <string name="download_completion_summary">%1$d 首已下载，%2$d 首失败</string>
     <plurals name="download_notification_progress">
-        <item quantity="other">已下载 %1$d / %2$d 首歌曲，%3$d 首失败</item>
+        <item quantity="other">已下载 %2$d 首歌曲中的 %1$d 首，%3$d 首失败</item>
     </plurals>
     <string name="download_pause_all">全部暂停</string>
     <string name="download_resume_all">全部继续</string>
@@ -69,7 +69,7 @@
     <string name="refetch">刷新</string>
     <string name="share">分享</string>
     <string name="delete">删除</string>
-    <string name="remove_from_queue">从待播列表中移除</string>
+    <string name="remove_from_queue">从队列中移除</string>
     <string name="search_online">在线搜索</string>
     <string name="sort_by_create_date">添加日期</string>
     <string name="sort_by_name">名称</string>
@@ -123,8 +123,8 @@
     <string name="error_unknown">未知错误</string>
     <string name="action_like">喜欢</string>
     <string name="repeat_mode_off">循环播放关闭</string>
-    <string name="repeat_mode_one">循环播放当前歌曲</string>
-    <string name="repeat_mode_all">循环播放待播列表</string>
+    <string name="repeat_mode_one">单曲循环</string>
+    <string name="repeat_mode_all">列表循环</string>
     <string name="up_next">接下来播放</string>
     <string name="queue_loading">正在加载队列…</string>
     <string name="calculating">正在计算…</string>
@@ -140,7 +140,7 @@
     <string name="lyrics_written_by">作者：%1$s</string>
     <string name="lyrics_auto_scroll_btn">自动滚动</string>
     <string name="squiggly">波浪</string>
-    <string name="action_logout">登出</string>
+    <string name="action_logout">退出登录</string>
     <string name="action_login">登录</string>
     <string name="action_not_now">暂时跳过</string>
     <string name="youtube_session_expired_title">您可能已退出登录</string>
@@ -149,16 +149,16 @@
     <string name="audio_quality_auto">自动</string>
     <string name="audio_quality_high">高</string>
     <string name="audio_quality_low">低</string>
-    <string name="queue">待播列表</string>
-    <string name="persistent_queue">保留待播列表</string>
-    <string name="persistent_queue_desc">应用启动时还原上次的待播列表</string>
+    <string name="queue">队列</string>
+    <string name="persistent_queue">启动时恢复队列</string>
+    <string name="persistent_queue_desc">应用启动时恢复您上次的队列</string>
     <string name="auto_load_more">自动加载更多歌曲</string>
     <string name="skip_silence">跳过静音片段</string>
     <string name="audio_normalization">标准化音量</string>
     <string name="auto_skip_next_on_error">发生错误时自动跳到下一首歌曲</string>
     <string name="auto_skip_next_on_error_desc">发生错误后继续播放</string>
     <string name="stop_music_on_task_clear">从最近任务中移除应用时停止播放</string>
-    <string name="storage">储存</string>
+    <string name="storage">存储</string>
     <string name="music_video_quality_desc" tools:ignore="MissingTranslation">音乐视频的默认分辨率</string>
     <string name="music_video_quality_auto" tools:ignore="MissingTranslation">自动</string>
     <string name="music_video_resolution" tools:ignore="MissingTranslation">视频分辨率</string>
@@ -171,21 +171,21 @@
     <string name="song_cache">歌曲缓存</string>
     <string name="unlimited">无限制</string>
     <string name="clear_all_downloads">清除所有下载</string>
-    <string name="clear_all_downloads_dialog">确定要删除所有已下载的音频文件吗？</string>
+    <string name="clear_all_downloads_dialog">要移除所有已下载的音频文件吗？</string>
     <string name="max_image_cache_size">图像缓存大小</string>
     <string name="clear_image_cache">清除图像缓存</string>
     <string name="max_song_cache_size">歌曲缓存大小</string>
     <string name="clear_song_cache">清除歌曲缓存</string>
     <string name="song_cache_location">歌曲缓存位置</string>
     <string name="song_cache_location_internal">应用内部存储</string>
-    <string name="song_cache_location_internal_desc">隐藏在应用内部存储中</string>
+    <string name="song_cache_location_internal_desc">隐藏在应用存储中</string>
     <string name="song_cache_location_shared_media">共享媒体文件夹</string>
     <string name="song_cache_location_shared_media_desc">文件管理器和媒体扫描器可在 Android/media 下找到</string>
     <string name="song_cache_location_custom">自定义文件夹</string>
-    <string name="song_cache_location_custom_desc">通过存储访问框架选择的自定义文件夹</string>
+    <string name="song_cache_location_custom_desc">通过存储访问框架选择的文件夹</string>
     <string name="song_cache_directory">歌曲缓存目录</string>
     <string name="size_used">已使用 %1$s</string>
-    <string name="storage_in_total">总共%1$s</string>
+    <string name="storage_in_total">总计 %1$s</string>
     <string name="downloads">下载</string>
     <string name="youtube_playlists">YouTube 播放列表</string>
     <string name="podcasts">播客</string>
@@ -254,7 +254,7 @@
     <string name="settings_interface">界面</string>
     <string name="settings_playback">播放</string>
     <string name="settings_player_audio_description">音频、过渡、队列</string>
-    <string name="track_transition_fade_desc">在当前歌曲和下一首歌曲之间平滑过渡</string>
+    <string name="track_transition_fade_desc">在当前曲目和下一首曲目之间平滑过渡</string>
     <string name="settings_content_title">内容</string>
     <string name="settings_content_description">语言、动态、发现</string>
     <string name="settings_lyrics_description">歌词获取与翻译</string>
@@ -315,7 +315,7 @@
     <string name="immersive_player">沉浸式播放器</string>
     <string name="immersive_player_description">播放器展开时隐藏系统栏</string>
     <string name="song_gestures">歌曲手势</string>
-    <string name="appearance_enable_swipe_to_change_track">滑动封面切换歌曲</string>
+    <string name="appearance_enable_swipe_to_change_track">滑动封面更改曲目</string>
     <string name="appearance_play_videos_in_mini_player" tools:ignore="MissingTranslation">在迷你播放器中播放视频</string>
     <string name="appearance_play_videos_in_mini_player_desc" tools:ignore="MissingTranslation">迷你播放器收起时显示音乐视频</string>
     <string name="appearance_mini_player_swipe_sensitivity">滑动灵敏度</string>
@@ -323,7 +323,7 @@
     <string name="appearance_default_open_tab">默认打开的标签页</string>
     <string name="appearance_navigation_tabs">导航标签</string>
     <string name="appearance_show_home_tab">显示主页标签</string>
-    <string name="appearance_show_search_tab">显示搜索标签页</string>
+    <string name="appearance_show_search_tab">搜索标签页</string>
     <string name="appearance_show_library_tab">显示库标签</string>
     <string name="mysterious_fourth_tab">神秘的第四个标签页</string>
     <string name="mysterious_fourth_tab_description">其他标签页已隐藏。打开账户菜单进入设置并将它们恢复。</string>
@@ -336,12 +336,12 @@
     <string name="appearance_enable_haptic_feedback">触觉反馈</string>
     <string name="appearance_enable_haptic_feedback_description">按钮按下和交互时振动</string>
     <string name="appearance_auto_playlists">自动播放列表</string>
-    <string name="appearance_show_liked_playlist">显示喜欢的播放列表</string>
-    <string name="appearance_show_downloaded_playlist">显示已下载播放列表</string>
-    <string name="appearance_show_top_playlist">显示热门歌单</string>
-    <string name="appearance_show_uploaded_playlist">显示上传播放列表</string>
-    <string name="appearance_show_cached_playlist">显示缓存播放列表</string>
-    <string name="player_settings_title">播放器与音频</string>
+    <string name="appearance_show_liked_playlist">喜欢播放列表</string>
+    <string name="appearance_show_downloaded_playlist">下载播放列表</string>
+    <string name="appearance_show_top_playlist">热门播放列表</string>
+    <string name="appearance_show_uploaded_playlist">上传播放列表</string>
+    <string name="appearance_show_cached_playlist">缓存播放列表</string>
+    <string name="player_settings_title">播放器和音频</string>
     <string name="lyrics_settings_title">歌词</string>
     <string name="sources">来源</string>
     <string name="lyrics_provider_better_lyrics_description">逐字同步 TTML，包含歌手角色、和声及转写（如可用）</string>
@@ -379,16 +379,16 @@
     <plurals name="blocked_artists_count">
         <item quantity="other">%1$d 位艺人已屏蔽</item>
     </plurals>
-    <string name="android_auto_pinned_playlists">已置顶驾驶播放列表</string>
-    <string name="android_auto_pinned_playlists_desc">选择最多六个播放列表，在车载主页优先显示，以便一键播放。选择顺序将保留。</string>
-    <string name="android_auto_pinned_playlists_count">已固定：%1$d / %2$d</string>
+    <string name="android_auto_pinned_playlists">置顶驾驶播放列表</string>
+    <string name="android_auto_pinned_playlists_desc">最多选择六个播放列表，在车载主页优先显示，以便一键播放。选择顺序将保留。</string>
+    <string name="android_auto_pinned_playlists_count">已置顶：%1$d / %2$d</string>
     <string name="android_auto_choose_pinned_playlists">选择驾驶播放列表</string>
     <string name="android_auto_pinned_playlist_mode">播放列表播放</string>
     <string name="android_auto_pinned_playlist_mode_desc">选择置顶驾驶播放列表的启动方式</string>
     <string name="android_auto_play_in_order">按顺序播放</string>
     <string name="android_auto_no_playlists">没有可用的播放列表。</string>
     <string name="android_auto_local_playlist">已保存的播放列表</string>
-    <string name="backup_restore_title">备份与还原</string>
+    <string name="backup_restore_title">备份和导入</string>
     <string name="import_playlist">导入播放列表</string>
     <string name="playlist_name">播放列表名称</string>
     <string name="equalizer">均衡器</string>
@@ -398,7 +398,7 @@
     <string name="artist">艺人</string>
     <string name="no_playable_items">未找到可播放的项目</string>
     <string name="player_not_ready">播放器尚未就绪</string>
-    <string name="no_recognized_songs_yet">未识别到歌曲</string>
+    <string name="no_recognized_songs_yet">尚未识别出歌曲</string>
     <string name="liked">喜欢</string>
     <string name="widget_music_player">音乐播放器</string>
     <string name="ai_deepl_formality_default">默认</string>
@@ -406,8 +406,8 @@
     <string name="remove_from_playlist">从播放列表中移除</string>
     <string name="radio">电台</string>
     <string name="imported_playlist">已导入的播放列表</string>
-    <string name="bitrate_value">%1$d 千比特/秒</string>
-    <string name="sample_rate_value">%1$d 赫兹</string>
+    <string name="bitrate_value">%1$d kbps</string>
+    <string name="sample_rate_value">%1$d Hz</string>
     <string name="import_error_unsupported_playlist_entries">此播放列表包含 Android 无法访问的本地文件或直接链接。请导入包含 YouTube 链接的播放列表，或在桌面端选择本地文件。</string>
     <string name="import_error_local_files_require_local_playlist">本地音频文件只能导入本地播放列表。</string>
     <string name="import_error_file_read_failed">无法读取播放列表文件。请重新选择并授予文件访问权限。</string>
@@ -416,12 +416,12 @@
     <string name="music_video_quality" tools:ignore="MissingTranslation">音乐视频画质</string>
     <string name="animated_cover_resolution">动态封面质量</string>
     <string name="animated_cover_resolution_low">低 (360p)</string>
-    <string name="animated_cover_resolution_medium">中等 (720p)</string>
+    <string name="animated_cover_resolution_medium">中 (720p)</string>
     <string name="animated_cover_resolution_high">高 (1080p)</string>
     <string name="animated_cover_resolution_original">原始</string>
-    <string name="enable_animated_covers">启用动态封面</string>
+    <string name="enable_animated_covers">动态封面</string>
     <string name="startup_error_title">Metrolist 启动错误</string>
-    <string name="lyrics_show_translations">显示翻译</string>
+    <string name="lyrics_show_translations">翻译</string>
     <string name="artist_latest_release">最新发行</string>
     <string name="top_tracks">热门曲目</string>
     <string name="subscribers">订阅者</string>
@@ -440,7 +440,7 @@
     <string name="app_icon_zenith_black">至臻黑</string>
     <string name="app_icon_zenith_white">天顶白</string>
     <string name="android_auto_youtube_playlist">YouTube 播放列表</string>
-    <string name="android_auto_driving_playlists">驾驶歌单</string>
+    <string name="android_auto_driving_playlists">驾驶播放列表</string>
     <string name="my_top_100">我的前 100 名</string>
     <string name="uploaded_playlist_name">已上传</string>
     <string name="prompt_continue_playback">继续播放前询问</string>
@@ -461,7 +461,7 @@
     <string name="youtube_canvas_quality">YouTube Canvas 画质</string>
     <string name="youtube_canvas_quality_desc">用作 Canvas 背景的 YouTube 音乐视频分辨率</string>
     <string name="youtube_canvas_mode">YouTube Canvas 播放方式</string>
-    <string name="youtube_video_canvas">YouTube 视频画布</string>
+    <string name="youtube_video_canvas">YouTube 视频 Canvas</string>
     <string name="play_music_videos">播放音乐视频</string>
     <string name="video">视频</string>
     <string name="youtube_canvas_mode_short_clips">短片段</string>
@@ -488,8 +488,8 @@
     <string name="no_device_connected">未连接任何设备</string>
     <string name="no_device_found">未找到设备</string>
     <string name="no_compatible_devices">未找到兼容 Google Cast、FCast、DLNA 或 Metrolist 的设备。</string>
-    <string name="show_player_cast_button">显示投放按钮</string>
-    <string name="show_player_video_button">显示音频/视频切换器</string>
+    <string name="show_player_cast_button">投放按钮</string>
+    <string name="show_player_video_button">音频/视频选择器</string>
     <string name="onboarding_language_lyrics_description">选择应用语言和歌词的显示方式。</string>
     <string name="onboarding_playback_description">选择是否在电视和音箱上播放音乐。</string>
     <string name="ai_translation_enable">翻译歌词</string>
@@ -541,7 +541,7 @@
     <string name="upload_empty_file">所选文件为空或无法获取其大小。</string>
     <string name="upload_too_large">上传到 YouTube Music 的文件必须小于 300 MB。</string>
     <string name="upload_http_error">上传失败（%1$d）。</string>
-    <string name="upload_already_exists">这首歌曲已在你的 YouTube Music 上传内容中。</string>
+    <string name="upload_already_exists">这首歌曲已在您的 YouTube Music 上传内容中。</string>
     <string name="delete_upload">删除上传内容</string>
     <string name="delete_upload_question">要从 YouTube Music 删除此上传内容吗？</string>
     <string name="like_all">全部点赞</string>
@@ -621,7 +621,7 @@
     <string name="listen_together_suggestion_approved">您的歌曲建议已获批准</string>
     <string name="listen_together_suggestion_rejected">您的歌曲建议已被拒绝</string>
     <string name="listen_together_queue_too_large">房间的待播列表过大。请移除部分歌曲后重试。</string>
-    <string name="listen_together_track_load_failed">无法加载房间歌曲</string>
+    <string name="listen_together_track_load_failed">无法加载房间曲目</string>
     <string name="listen_together_became_host">您现在是房主，可以控制房间播放</string>
     <string name="listen_together_participants">参与者</string>
     <string name="listen_together_submitting_join">正在发送您的加入申请…</string>
@@ -650,8 +650,8 @@
     <string name="backup_too_large">备份超出了支持的大小或条目数量限制。</string>
     <string name="backup_invalid_data">无法读取或验证备份。备份可能已损坏或包含不支持的数据。</string>
     <string name="search_history_removal_failed">无法清除账号的搜索历史记录。请联网后重试。</string>
-    <string name="top_period_all_time">全部时间</string>
-    <string name="top_period_past_24_hours">过去24小时</string>
+    <string name="top_period_all_time">所有时间</string>
+    <string name="top_period_past_24_hours">过去 24 小时</string>
     <string name="top_period_past_week">过去一周</string>
     <string name="top_period_past_month">过去一个月</string>
     <string name="top_period_past_year">过去一年</string>
@@ -663,7 +663,7 @@
     <string name="onboarding_crash_reports_title">帮助改进 Metrolist</string>
     <string name="onboarding_crash_reports_description">您可以选择通过 Sentry 分享诊断信息，帮助我们发现并修复问题。您随时都可以在设置中更改此选项。</string>
     <string name="onboarding_notifications_title">允许通知</string>
-    <string name="onboarding_notifications_description">启用播放和下载通知。</string>
+    <string name="onboarding_notifications_description">启用播放和下载提醒。</string>
     <string name="onboarding_begin_setup">开始设置</string>
     <string name="onboarding_migrate_library">迁移我的媒体库</string>
     <string name="onboarding_sentry_opt_in">Sentry 报告是可选的，仅在您选择“是”时才会开启。</string>
@@ -686,7 +686,7 @@
     <string name="start_typing_to_search_music">开始输入以搜索 YouTube Music</string>
     <string name="filter_episodes">单集</string>
     <string name="metroeq_q_value">Q: %1$s</string>
-    <string name="metroeq_frequency_value">%1$s 赫兹</string>
+    <string name="metroeq_frequency_value">%1$s Hz</string>
     <string name="sponsorblock_podcasts">SponsorBlock（播客）</string>
     <string name="sponsorblock_podcasts_description">仅在播客单集中跳过赞助、自我推广和互动请求片段。 (https://sponsor.ajay.app)</string>
     <string name="sponsorblock_skipped">已跳过推广片段</string>
@@ -837,4 +837,91 @@
     <string name="listen_together_auto_approval_suggestions">自动批准歌曲推荐</string>
     <string name="continue_action">继续</string>
     <string name="listen_together_disconnected">已断开连接</string>
+    <string name="widget_playlists_description">带有迷你播放器控制的播放列表快捷方式</string>
+    <string name="listen_together_description">与好友实时一起听音乐。创建房间成为房主，或使用邀请码加入现有房间</string>
+    <string name="choose_something_below">请在下方选择</string>
+    <string name="foreign_import_title">从其他应用导入</string>
+    <string name="restore_error_unknown">没有其他详细信息。</string>
+    <string name="spotify_sign_in_again">重新登录</string>
+    <plurals name="spotify_playlist_track_count">
+        <item quantity="other">%1$d 首</item>
+    </plurals>
+    <string name="backup_restore_busy">正在进行中…</string>
+    <string name="restore_stage_restarting_app">正在重启应用</string>
+    <string name="restore_stage_applying_settings">正在应用已恢复的设置</string>
+    <string name="spotify_login_page_failed">无法加载 Spotify 登录：%1$s</string>
+    <string name="or_choose_existing_playlist">或选择现有播放列表</string>
+    <string name="hide_podcasts">隐藏播客</string>
+    <string name="restore_failed_detail">%1$s 时无法恢复备份。\n\n原因：%2$s</string>
+    <string name="minimum_song_duration_desc">隐藏短于 %1$d 秒的歌曲</string>
+    <string name="playlist_url">播放列表 URL 或 ID</string>
+    <string name="could_not_queue_download">无法将下载加入队列</string>
+    <string name="restore_stage_validating_database">正在检查备份数据库</string>
+    <string name="restore_stage_verifying_database">正在打开已恢复的数据库</string>
+    <string name="hide_podcasts_desc">隐藏浏览、搜索和播放中的播客和分集</string>
+    <plurals name="playlist_import_success">
+        <item quantity="other">已导入 %1$d 首曲目</item>
+    </plurals>
+    <string name="queue_current_playing">当前曲目、正在播放</string>
+    <string name="hide_non_musical_videos_desc">保留官方音乐视频并隐藏其他视频内容，如视频博客和预告片</string>
+    <string name="restore_stage_stopping_app">正在准备应用以进行恢复</string>
+    <plurals name="statistics_tracks">
+        <item quantity="other">%1$d 首</item>
+    </plurals>
+    <string name="load_playlist">加载播放列表</string>
+    <plurals name="spotify_playlist_count">
+        <item quantity="other">%1$d 个播放列表</item>
+    </plurals>
+    <string name="channel_switch_sign_in_again">重新登录</string>
+    <string name="spotify_login_title">登录 Spotify</string>
+    <string name="restore_stage_reading_backup">正在读取备份文件</string>
+    <string name="local_playlist">本地</string>
+    <string name="hide_short_songs_desc">隐藏预览、短视频音频和其他短于设定时长的曲目</string>
+    <string name="integration_on_signed_out">已开启 · 未登录</string>
+    <string name="integration_on_account">已开启 · %1$s</string>
+    <string name="listen_together_entry_subtitle">与好友实时一起听音乐。</string>
+    <string name="spotify_sign_in">登录 Spotify</string>
+    <plurals name="spotify_selected_playlist_count">
+        <item quantity="other">已选择 %1$d 个播放列表</item>
+    </plurals>
+    <string name="hide_non_musical_videos">隐藏非音乐类视频</string>
+    <string name="listen_together_server_label">%1$s · %2$s</string>
+    <string name="integration_off">已关闭</string>
+    <string name="ai_setup_create_account">创建账号</string>
+    <string name="restore_stage_installing_database">正在安装已恢复的数据库</string>
+    <string name="account_logout_confirm">要退出登录吗？</string>
+    <string name="scrobble_create_account">创建账号</string>
+    <string name="ai_setup_sign_in_again">重新登录</string>
+    <string name="restore_stage_reading_settings">正在读取旧设置</string>
+    <string name="logout">退出登录</string>
+    <plurals name="n_track">
+        <item quantity="other">%1$d 首</item>
+    </plurals>
+    <string name="listen_together_guest_queue">添加到房间队列</string>
+    <string name="device_connect_peer_details">%1$s\n%2$s</string>
+    <string name="lyrics_youtube_captions">YouTube 字幕</string>
+    <string name="spotify_track_limit_warning">Spotify 导入仅限于每个播放列表中的前 5000 首曲目。</string>
+    <string name="queue_current_paused">当前曲目、已暂停</string>
+    <string name="menu_add_to_queue">添加到队列</string>
+    <string name="spotify_choose_playlists_supporting">选择要导入到 Metrolist 中的播放列表。</string>
+    <string name="restore_stage_converting_database">正在转换旧数据库</string>
+    <string name="hide_video_songs_desc">在搜索和播放列表中隐藏歌曲的视频版本</string>
+    <string name="discord_integration_description">在 Discord 个人资料中显示您播放的音乐</string>
+    <string name="minimum_song_duration">最短歌曲时长</string>
+    <string name="integration_on">已开启</string>
+    <string name="discord_logout">退出登录</string>
+    <string name="hide_short_songs">隐藏短歌曲</string>
+    <string name="recently_played">最近播放</string>
+    <string name="classic_recommendations">经典推荐</string>
+    <string name="clearing_search_history">正在清除搜索记录…</string>
+    <string name="automatic_backup">自动备份</string>
+    <string name="automatic_backup_description">自动保存本地备份并保留 10 个最新副本。</string>
+    <string name="automatic_backup_frequency">备份频率</string>
+    <string name="automatic_backup_daily">每日</string>
+    <string name="automatic_backup_weekly">每周</string>
+    <string name="automatic_backup_monthly">每月</string>
+    <string name="automatic_backup_location">备份保留在此设备上。移动操作系统可能会推迟备份。桌面备份会在 Metrolist 打开时运行。</string>
+    <string name="automatic_backup_restore">恢复自动备份</string>
+    <string name="automatic_backup_restore_empty">没有可用的自动备份。</string>
+    <string name="automatic_backup_restore_desc">选择一个已保存的自动备份进行恢复。</string>
 </resources>
