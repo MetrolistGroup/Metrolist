@@ -56,21 +56,28 @@ fun rememberMetrolistSettingsRegistry(
                                     Res.string.image_cache,
                                     Res.string.max_image_cache_size,
                                     Res.string.clear_image_cache,
-                                    Res.string.music_video_quality,
-                                    Res.string.clear_music_video_cache,
                                 ),
                             )
+                            if (host.platform != SettingsPlatform.ANDROID) {
+                                add(Res.string.enable_song_cache)
+                            }
                             if (host.platform == SettingsPlatform.ANDROID) {
                                 addAll(
                                     listOf(
                                         Res.string.song_cache_location,
                                         Res.string.song_cache_directory,
+                                        Res.string.music_video_quality,
                                     ),
                                 )
+                            }
+                            if (host.platform == SettingsPlatform.DESKTOP) {
+                                add(Res.string.music_video_cache)
                             }
                             if (host.platform == SettingsPlatform.ANDROID || host.platform == SettingsPlatform.DESKTOP) {
                                 addAll(
                                     listOf(
+                                        Res.string.change_folder,
+                                        Res.string.clear_music_video_cache,
                                         Res.string.animated_artwork_cache,
                                         Res.string.max_animated_artwork_cache_size,
                                         Res.string.clear_animated_artwork_cache,
@@ -124,13 +131,19 @@ fun rememberMetrolistSettingsRegistry(
 
                     SettingsPageId.DEVTOOLS -> {
                         buildList {
-                            if (host.platform != SettingsPlatform.IOS) add(Res.string.crash_logs)
+                            if (host.platform != SettingsPlatform.IOS) {
+                                addAll(
+                                    listOf(
+                                        Res.string.crash_logs,
+                                        Res.string.device_connect_title,
+                                    ),
+                                )
+                            }
                             addAll(
                                 listOf(
                                     Res.string.devtools_playback_client,
                                     Res.string.devtools_playback_client_automatic,
                                     Res.string.devtools_playback_client_sabr_first,
-                                    Res.string.device_connect_title,
                                 ),
                             )
                             if (host.platform == SettingsPlatform.ANDROID) {
