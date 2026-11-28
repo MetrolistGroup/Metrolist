@@ -228,6 +228,7 @@ internal fun TabletPlayerContent(
     usesFullscreenThumbnail: Boolean = false,
     usesCanvasThumbnail: Boolean = false,
 ) {
+    val lyricsVisible = uiState.isLyricsVisible && !isVideoModeActive
     val repeatMode = uiState.repeatMode
     val isShuffleOn = uiState.isShuffleOn
     val isTv = LocalIsTv.current
@@ -265,7 +266,7 @@ internal fun TabletPlayerContent(
             )
         val topButtonSize = 48.dp
         val lyricsFraction by animateFloatAsState(
-            targetValue = if (uiState.isLyricsVisible && !compactWidth) 1f else 0f,
+            targetValue = if (lyricsVisible && !compactWidth) 1f else 0f,
             animationSpec =
                 tween(
                     durationMillis = 300,
@@ -278,7 +279,7 @@ internal fun TabletPlayerContent(
         val drawerWidthPx = with(LocalDensity.current) { drawerWidth.toPx() }
         val drawerDirection = if (LocalLayoutDirection.current == LayoutDirection.Rtl) -1f else 1f
         val contentHorizontalPadding = if (compactWidth) 0.dp else 32.dp
-        val contentMaxWidth = if (uiState.isLyricsVisible && !compactWidth) drawerWidth else 760.dp
+        val contentMaxWidth = if (lyricsVisible && !compactWidth) drawerWidth else 760.dp
 
         Box(
             modifier =
@@ -375,7 +376,7 @@ internal fun TabletPlayerContent(
                                 }
                             }
 
-                            if (compactWidth && uiState.isLyricsVisible) {
+                            if (compactWidth && lyricsVisible) {
                                 LyricsViewWithPosition(
                                     viewModel = viewModel,
                                     lyrics = uiState.lyrics,
@@ -611,7 +612,8 @@ internal fun TabletPlayerContent(
                         navigationBarBottomPadding = 0.dp,
                         onOpenQueue = onOpenQueue,
                         onShowPlayerMenu = onShowPlayerMenu,
-                        isLyricsVisible = uiState.isLyricsVisible,
+                        isLyricsVisible = lyricsVisible,
+                        showLyrics = !isVideoModeActive,
                         onIsLyricsVisibleChange = onIsLyricsVisibleChange,
                         isVideoAvailable = uiState.isVideoAvailable,
                         modifier = Modifier.widthIn(max = 360.dp).fillMaxWidth(),
@@ -639,7 +641,7 @@ internal fun TabletPlayerContent(
                             .fillMaxSize()
                             .padding(top = 72.dp, bottom = 24.dp, end = 32.dp, start = 8.dp),
                 ) {
-                    if ((!compactWidth && uiState.isLyricsVisible) || lyricsFraction > 0f) {
+                    if ((!compactWidth && lyricsVisible) || lyricsFraction > 0f) {
                         LyricsViewWithPosition(
                             viewModel = viewModel,
                             lyrics = uiState.lyrics,
@@ -872,6 +874,8 @@ internal fun LandscapePlayerContent(
     usesFullscreenThumbnail: Boolean = false,
     usesCanvasThumbnail: Boolean = false,
 ) {
+    val lyricsVisible = uiState.isLyricsVisible && !isVideoModeActive
+    val lyricsExpanded = lyricsVisible && uiState.isLyricsExpanded
     val repeatMode = uiState.repeatMode
     val isShuffleOn = uiState.isShuffleOn
     val isTv = LocalIsTv.current
@@ -897,7 +901,7 @@ internal fun LandscapePlayerContent(
     )
     val hapticManager = rememberMetrolistHaptics()
     val platform = LocalPlayerPlatform.current
-    val controlsVisible = !uiState.isLyricsExpanded || !Settings.shared.lyricsHideStatusBarInFullscreen
+    val controlsVisible = !lyricsExpanded || !Settings.shared.lyricsHideStatusBarInFullscreen
     val playerConnection = LocalPlayerSession.current
     val artworkSeekStepMs = Settings.shared.seekDurationSeconds * 1000L
     val isPlaybackLoading by viewModel.isPlaybackLoading.collectWhilePlayerActive()
@@ -985,10 +989,11 @@ internal fun LandscapePlayerContent(
                             hapticManager.perform(HapticEvent.PRESS)
                             onOpenQueue()
                         },
-                        onLyricsClick = {
-                            hapticManager.perform(HapticEvent.PRESS)
-                            onIsLyricsVisibleChange(!uiState.isLyricsVisible)
-                        },
+                        onLyricsClick =
+                            {
+                                hapticManager.perform(HapticEvent.PRESS)
+                                onIsLyricsVisibleChange(!lyricsVisible)
+                            }.takeIf { !isVideoModeActive },
                         contentColor = controlsColor,
                         horizontalPadding = 0.dp,
                         verticalPadding = if (compactHeight) 0.dp else 12.dp,
@@ -1005,11 +1010,12 @@ internal fun LandscapePlayerContent(
                     ) {
                         PlayerConnectedButtonGroup(
                             onQueueClick = onOpenQueue,
-                            onLyricsClick = {
-                                hapticManager.perform(HapticEvent.PRESS)
-                                onIsLyricsVisibleChange(!uiState.isLyricsVisible)
-                            },
-                            isLyricsActive = uiState.isLyricsVisible,
+                            onLyricsClick =
+                                {
+                                    hapticManager.perform(HapticEvent.PRESS)
+                                    onIsLyricsVisibleChange(!lyricsVisible)
+                                }.takeIf { !isVideoModeActive },
+                            isLyricsActive = lyricsVisible,
                             isQueueActive = false,
                             modifier = Modifier.weight(1f, fill = false),
                             compact = compactHeight,
@@ -1189,7 +1195,7 @@ internal fun LandscapePlayerContent(
                     BoxWithConstraints(Modifier.fillMaxWidth().weight(1f)) {
                         val artworkSize = if (isTv) tvArtworkSize else minOf(maxHeight, maxWidth)
                         AnimatedContent(
-                            targetState = uiState.isLyricsVisible,
+                            targetState = lyricsVisible,
                             transitionSpec = { fadeIn() togetherWith fadeOut() },
                             label = "landscapeLyricsToggle",
                             modifier = Modifier.fillMaxSize(),
@@ -1282,7 +1288,7 @@ internal fun LandscapePlayerContent(
                             }
                         }
                     }
-                    AnimatedVisibility(visible = uiState.isLyricsVisible && showLyricsOffsetEditor) {
+                    AnimatedVisibility(visible = lyricsVisible && showLyricsOffsetEditor) {
                         LyricsOffsetEditor(
                             offsetMs = uiState.lyricsOffsetMs,
                             onOffsetChange = onLyricsOffsetChange,
@@ -1324,7 +1330,7 @@ internal fun LandscapePlayerContent(
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
                                 AnimatedVisibility(
-                                    visible = uiState.isLyricsVisible && currentSong?.displayThumbnail != null,
+                                    visible = lyricsVisible && currentSong?.displayThumbnail != null,
                                     enter = expandHorizontally(clip = false) + fadeIn(),
                                     exit = shrinkHorizontally(clip = false) + fadeOut(),
                                 ) {
@@ -1396,7 +1402,7 @@ internal fun LandscapePlayerContent(
                                 Spacer(modifier = Modifier.width(12.dp))
                                 if (isClassic) {
                                     VintageClassicActionButtons(
-                                        isLyricsVisible = uiState.isLyricsVisible,
+                                        isLyricsVisible = lyricsVisible,
                                         isLyricsExpanded = false,
                                         shareDescription = stringResource(Res.string.share),
                                         expandDescription = stringResource(Res.string.expand),
@@ -1422,7 +1428,7 @@ internal fun LandscapePlayerContent(
                                     )
                                 } else {
                                     PlayerActionButtons(
-                                        uiState = uiState,
+                                        uiState = uiState.copy(isLyricsVisible = lyricsVisible),
                                         isLiked = isLiked,
                                         onShareSong = onShareSong,
                                         onAltShareSong = onAltShareSong,
