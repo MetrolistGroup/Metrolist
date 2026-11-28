@@ -110,6 +110,7 @@ class MainActivity : ComponentActivity() {
         const val ACTION_LIBRARY = "com.metrolist.music.action.LIBRARY"
         const val ACTION_UPDATES = "com.metrolist.music.action.UPDATES"
         const val EXTRA_UPDATE_INSTALL_ERROR = "update_install_error"
+        const val EXTRA_UPDATE_INSTALL_ATTEMPT = "update_install_attempt"
         const val ACTION_LOGIN = "com.metrolist.music.action.LOGIN"
         const val ACTION_BACKUP_RESTORE = "com.metrolist.music.action.BACKUP_RESTORE"
         const val ACTION_RECOGNITION = "com.metrolist.music.action.RECOGNITION"

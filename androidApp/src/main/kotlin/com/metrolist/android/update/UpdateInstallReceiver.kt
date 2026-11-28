@@ -11,19 +11,22 @@ open class UpdateInstallReceiver : BroadcastReceiver() {
         context: Context,
         intent: Intent,
     ) {
+        val crashRecovery = this is CrashUpdateInstallReceiver
         val status = intent.getIntExtra(PackageInstaller.EXTRA_STATUS, PackageInstaller.STATUS_FAILURE)
         val message = intent.getStringExtra(PackageInstaller.EXTRA_STATUS_MESSAGE)
         val sessionId = intent.getIntExtra(PackageInstaller.EXTRA_SESSION_ID, -1)
         when (status) {
             PackageInstaller.STATUS_PENDING_USER_ACTION -> {
                 val confirm = IntentCompat.getParcelableExtra(intent, Intent.EXTRA_INTENT, Intent::class.java)
-                if (confirm == null || !AppUpdateManager.launchConfirmationPrompt(context, confirm, sessionId)) {
+                if (confirm == null || !AppUpdateManager.launchConfirmationPrompt(context, confirm, sessionId, crashRecovery)) {
+                    AppUpdateManager.abandonPendingSession(context, sessionId)
                     AppUpdateManager.onInstallFinished(
                         context = context,
                         success = false,
                         status = status,
                         message = message,
                         sessionId = sessionId,
+                        crashRecovery = crashRecovery,
                     )
                 }
             }
@@ -35,6 +38,7 @@ open class UpdateInstallReceiver : BroadcastReceiver() {
                     status = status,
                     message = message,
                     sessionId = sessionId,
+                    crashRecovery = crashRecovery,
                 )
             }
 
@@ -49,6 +53,7 @@ open class UpdateInstallReceiver : BroadcastReceiver() {
                     status = status,
                     message = message,
                     sessionId = sessionId,
+                    crashRecovery = crashRecovery,
                 )
             }
         }

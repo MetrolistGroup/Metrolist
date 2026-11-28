@@ -140,6 +140,13 @@ import java.util.Date
 import java.util.Locale
 
 class CrashActivity : ComponentActivity() {
+    companion object {
+        const val ACTION_UPDATES = "com.metrolist.music.crash.UPDATES"
+    }
+
+    private val incomingUpdateActionState = mutableStateOf(false)
+    private val incomingInstallErrorState = mutableStateOf<Pair<String, String?>?>(null)
+
     private val crashLog by lazy {
         CrashHandler
             .store(this)
@@ -154,6 +161,7 @@ class CrashActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        handleIncomingUpdateIntent(intent)
         intent.getStringExtra(CrashHandler.EXTRA_CRASH_ID)?.let { CrashHandler.store(this).acknowledge(it) }
         val failedProcess = intent.getIntExtra(CrashHandler.EXTRA_FAILED_PROCESS, 0)
         intent.removeExtra(CrashHandler.EXTRA_FAILED_PROCESS)
@@ -191,12 +199,33 @@ class CrashActivity : ComponentActivity() {
                         (resources.configuration.uiMode and Configuration.UI_MODE_TYPE_MASK == Configuration.UI_MODE_TYPE_TELEVISION),
                 ) {
                     var showLogs by remember { mutableStateOf(intent.action == CrashHandler.ACTION_LOGS) }
-                    var showUpdate by remember { mutableStateOf(false) }
+                    var showUpdate by remember { mutableStateOf(incomingUpdateActionState.value) }
                     val clipboard = LocalClipboard.current
                     val scope = rememberCoroutineScope()
                     var updatePrompt by remember { mutableStateOf<GitHubRelease?>(null) }
+                    val incomingUpdateAction = incomingUpdateActionState.value
+                    val incomingInstallError = incomingInstallErrorState.value
+                    LaunchedEffect(incomingUpdateAction, incomingInstallError) {
+                        if (incomingUpdateAction) {
+                            showUpdate = true
+                            incomingUpdateActionState.value = false
+                        }
+                        incomingInstallError?.let { (error, attemptToken) ->
+                            AppUpdateManager.restoreInstallFailure(error, attemptToken)
+                            showUpdate = true
+                            incomingInstallErrorState.value = null
+                        }
+                    }
                     LaunchedEffect(Unit) {
-                        updatePrompt = AppUpdateManager.check(this@CrashActivity, crashRecovery = true)
+                        val available =
+                            AppUpdateManager.check(
+                                this@CrashActivity,
+                                crashRecovery = true,
+                                preserveInstallError = true,
+                            )
+                        if (AppUpdateManager.state.value !is AppUpdateState.Error && !showUpdate) {
+                            updatePrompt = available
+                        }
                     }
                     updatePrompt?.let { release ->
                         AlertDialog(
@@ -255,6 +284,26 @@ class CrashActivity : ComponentActivity() {
                     }
                 }
             }
+        }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        handleIncomingUpdateIntent(intent)
+    }
+
+    private fun handleIncomingUpdateIntent(intent: Intent?) {
+        if (intent == null) return
+        if (intent.action == ACTION_UPDATES) {
+            incomingUpdateActionState.value = true
+        }
+        val error = intent.getStringExtra(MainActivity.EXTRA_UPDATE_INSTALL_ERROR)
+        if (!error.isNullOrBlank()) {
+            val attempt = intent.getStringExtra(MainActivity.EXTRA_UPDATE_INSTALL_ATTEMPT)
+            incomingInstallErrorState.value = error to attempt
+            intent.removeExtra(MainActivity.EXTRA_UPDATE_INSTALL_ERROR)
+            intent.removeExtra(MainActivity.EXTRA_UPDATE_INSTALL_ATTEMPT)
         }
     }
 
