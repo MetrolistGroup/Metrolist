@@ -1,10 +1,12 @@
 package com.metrolist.shared.ui
 
 import com.metrolist.innertubex.models.AccountInfo
+import com.metrolist.shared.auth.delegatedSessionIdFromDataSyncId
 import com.metrolist.shared.auth.supportedYouTubeAuthCredential
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class TokenLoginParsingTest {
@@ -77,6 +79,14 @@ class TokenLoginParsingTest {
         assertEquals("account-id", sanitizeDataSyncId("||account-id"))
         assertEquals("channel-id", sanitizeDataSyncId("channel-id||account-id"))
         assertEquals("account-id", sanitizeDataSyncId("account-id"))
+
+        assertEquals("channel-id", delegatedSessionIdFromDataSyncId(" channel-id||account-id "))
+        assertNull(delegatedSessionIdFromDataSyncId("account-id||"))
+        assertNull(delegatedSessionIdFromDataSyncId("||account-id"))
+        assertNull(delegatedSessionIdFromDataSyncId("account-id"))
+        assertNull(delegatedSessionIdFromDataSyncId(""))
+        assertNull(delegatedSessionIdFromDataSyncId("   "))
+        assertNull(delegatedSessionIdFromDataSyncId("channel-id||  "))
     }
 
     @Test

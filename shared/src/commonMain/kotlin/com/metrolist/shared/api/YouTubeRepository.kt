@@ -1437,7 +1437,7 @@ class YouTubeRepository(
         try {
             val videoId = episodeId.removePrefix("MPED")
             var addedToken: String? = null
-            playlistEdits.runSessionPlaylistEdit("SE", requireEditableId = false) { requestTube, id ->
+            playlistEdits.runSessionPlaylistEdit("SE", requireEditableId = false) { requestTube, id, _ ->
                 val response =
                     if (saved) {
                         requestTube.addToPlaylist(YouTubeClient.WEB_REMIX, id, videoId)
@@ -1720,7 +1720,14 @@ class YouTubeRepository(
     ): T {
         requireCurrentSession(session)
         val requestTube = innerTube.createIsolatedSession(true)
-        requestTube.replaceSession(session.cookie, session.visitorData, session.dataSyncId, session.authUser, session.useLoginForBrowse)
+        requestTube.replaceSession(
+            session.cookie,
+            session.visitorData,
+            session.dataSyncId,
+            session.authUser,
+            session.useLoginForBrowse,
+            session.delegatedSessionId,
+        )
         try {
             return block(YouTubeSearchOperations(requestTube)).also { requireCurrentSession(session) }
         } finally {

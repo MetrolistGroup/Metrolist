@@ -64,6 +64,8 @@ private val secretKeys =
         "innerTubeCookie",
         "visitorData",
         "dataSyncId",
+        "delegatedSessionId",
+        "delegatedSessionDataSyncId",
         "innerTubeAuthUser",
         "lastFmSession",
         "spotifySession",

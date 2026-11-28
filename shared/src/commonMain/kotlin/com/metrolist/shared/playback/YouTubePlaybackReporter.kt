@@ -6,6 +6,8 @@ import com.metrolist.innertubex.extraction.generateClientPlaybackNonce
 import com.metrolist.innertubex.models.YouTubeClient
 import com.metrolist.shared.api.YouTubeRepository
 import com.metrolist.shared.api.YouTubeRepository.PlaybackTrackingSession
+import com.metrolist.shared.auth.isDelegatedSessionLookupPending
+import com.metrolist.shared.auth.requestDelegatedSessionResolution
 import com.metrolist.shared.settings.Settings
 import com.metrolist.shared.utils.Logger
 import com.metrolist.shared.youtube.playback.PlaybackNetworkStateStore
@@ -25,6 +27,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.selects.select
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.math.abs
 import kotlin.time.Clock
 import kotlin.time.TimeSource
@@ -74,6 +77,9 @@ class YouTubePlaybackReporter internal constructor(
         var accumulating = false
         var wasRendering = false
         var finished = false
+
+        // Set when a brand page resolves mid-song; the replacement session reports this listen instead.
+        var discarded = false
         var lastRenderingPositionMs: Long? = null
         var lastRenderingSampleAtMs: Long? = null
 
@@ -84,6 +90,7 @@ class YouTubePlaybackReporter internal constructor(
     private var session: Session? = null
     private var reportingEnabled = true
     private var reportingGeneration = 0L
+    private var unscopedTrackingInstanceId = 0L
     private val consumerJobs = mutableSetOf<Job>()
 
     init {
@@ -118,17 +125,35 @@ class YouTubePlaybackReporter internal constructor(
                 return
             }
             val current = session
+            // A brand page resolved mid-song makes the session's snapshot stale, so its pings would be rejected.
+            val delegationChanged =
+                current != null &&
+                    current.playbackInstanceId == playbackInstanceId &&
+                    current.playbackSession.snapshot.delegatedSessionId !=
+                    repository.playbackTrackingSession().snapshot.delegatedSessionId
             if (current != null &&
-                (current.playbackInstanceId != playbackInstanceId || current.accountKey != repository.playbackReportingAccountKey())
+                (
+                    current.playbackInstanceId != playbackInstanceId ||
+                        current.accountKey != repository.playbackReportingAccountKey() ||
+                        delegationChanged
+                )
             ) {
+                if (delegationChanged) unscopedTrackingInstanceId = playbackInstanceId
+                // Only the same account gets a replacement report; another account's queued report stays for replay.
+                if (delegationChanged && current.accountKey == repository.playbackReportingAccountKey()) {
+                    current.discarded = true
+                    // Drop it now so the pending drain cannot replay it under the brand session.
+                    current.pendingId()?.let(PendingYouTubePlaybackReportStore::remove)
+                }
                 finishLocked(current, endPositionMs = null)
             }
 
             var active = session
             if (active == null) {
                 val resource = resource ?: return
-                val tracking = resource.playbackTracking
-                if (tracking == null && !resource.allowPlaybackTrackingFallback) return
+                if (resource.playbackTracking == null && !resource.allowPlaybackTrackingFallback) return
+                // Tracking fetched before the brand page was known belongs to the unscoped session.
+                val tracking = resource.playbackTracking.takeUnless { unscopedTrackingInstanceId == playbackInstanceId }
                 if (!isRendering || playbackInstanceId <= 0L) return
                 val newSession =
                     Session(
@@ -146,7 +171,10 @@ class YouTubePlaybackReporter internal constructor(
                 newSession.lastRenderingPositionMs = positionMs
                 newSession.lastRenderingSampleAtMs = monotonicTimeMs()
                 session = newSession
-                newSession.pendingId()?.let { pendingDrainLock.withLock { activePendingIds += it } }
+                requestDelegatedSessionResolution()
+                newSession.pendingId()?.let {
+                    pendingDrainLock.withLock { activePendingIds[it] = newSession.playbackSession.snapshot.delegatedSessionId }
+                }
                 newSession.pings.trySend(Ping.Start(positionMs.coerceAtLeast(0L)))
                 val consumer = scope.launch { consume(newSession) }
                 consumerJobs += consumer
@@ -355,20 +383,24 @@ class YouTubePlaybackReporter internal constructor(
         if (!Settings.shared.queueYouTubeHistoryWhenOffline || !isReportingEnabled(active)) return
         val accountKey = active.accountKey ?: return
         val pending = ping.toPending()
+        // Held with the append so a concurrent delegation discard cannot be undone by a late write.
         val appended =
-            PendingYouTubePlaybackReportStore.append(
-                PendingYouTubePlaybackReport(
-                    id = accountKey + ":" + active.clientPlaybackNonce,
-                    accountKey = accountKey,
-                    videoId = active.videoId,
-                    clientPlaybackNonce = active.clientPlaybackNonce,
-                    format = lock.withLock { active.format },
-                    pings = emptyList(),
-                    lastAcknowledgedOffsetMs = active.lastAcknowledgedOffsetMs,
-                ),
-                pending,
-                expectedGeneration = active.pendingGeneration,
-            )
+            lock.withLock {
+                if (active.discarded) return
+                PendingYouTubePlaybackReportStore.append(
+                    PendingYouTubePlaybackReport(
+                        id = accountKey + ":" + active.clientPlaybackNonce,
+                        accountKey = accountKey,
+                        videoId = active.videoId,
+                        clientPlaybackNonce = active.clientPlaybackNonce,
+                        format = active.format,
+                        pings = emptyList(),
+                        lastAcknowledgedOffsetMs = active.lastAcknowledgedOffsetMs,
+                    ),
+                    pending,
+                    expectedGeneration = active.pendingGeneration,
+                )
+            }
         if (!appended) {
             Logger.i(
                 REPORTING_TAG,
@@ -379,9 +411,21 @@ class YouTubePlaybackReporter internal constructor(
 
     private suspend fun consume(active: Session) {
         try {
+            // A Start sent before the brand page is known lands on the personal account and cannot be retracted.
+            // With offline queuing the pings go to disk and the drain replays them once the lookup settles.
+            val queueForLookup = isDelegatedSessionLookupPending() && Settings.shared.queueYouTubeHistoryWhenOffline
+            if (!queueForLookup) {
+                // shortcut: polls the lookup state, bounded by DELEGATION_WAIT_MS; switch to a lookup completion signal if one is added.
+                withTimeoutOrNull(DELEGATION_WAIT_MS) {
+                    while (isDelegatedSessionLookupPending()) delay(DELEGATION_POLL_MS)
+                }
+            }
             val initial = active.initialTracking?.takeIf { active.clientName == YouTubeClient.WEB_REMIX.clientName && isFresh(it) }
             val tracking =
-                if (!isReportingEnabled(active)) {
+                if (queueForLookup) {
+                    // Queued pings are replayed with tracking fetched by the drain, so skip this request.
+                    null
+                } else if (!isReportingEnabled(active)) {
                     Logger.i(REPORTING_TAG, "suppressed phase=tracking generation=${active.reportingGeneration}")
                     null
                 } else {
@@ -474,7 +518,7 @@ class YouTubePlaybackReporter internal constructor(
     }
 
     private fun isReportingEnabled(active: Session): Boolean =
-        lock.withLock { reportingEnabled && active.reportingGeneration == reportingGeneration } &&
+        lock.withLock { reportingEnabled && !active.discarded && active.reportingGeneration == reportingGeneration } &&
             repository.isPlaybackReportingEnabled() &&
             active.pendingGeneration == PendingYouTubePlaybackReportStore.generation &&
             if (active.accountKey != null) {
@@ -538,6 +582,8 @@ class YouTubePlaybackReporter internal constructor(
                                             innerTubeCookie,
                                             dataSyncId,
                                             innerTubeAuthUser,
+                                            delegatedSessionId,
+                                            delegatedSessionDataSyncId,
                                         )
                                     }
                                 },
@@ -579,6 +625,10 @@ class YouTubePlaybackReporter internal constructor(
         if (!PlaybackNetworkStateStore.current.connected) return null
         val accountKey = repository.playbackReportingAccountKey() ?: return null
         if (!Settings.shared.queueYouTubeHistoryWhenOffline || !repository.isPlaybackReportingEnabled()) return null
+        if (isDelegatedSessionLookupPending()) {
+            requestDelegatedSessionResolution()
+            return BASE_RETRY_MS
+        }
         for (report in PendingYouTubePlaybackReportStore.all()) {
             if (report.accountKey != accountKey) continue
             if (report.pings.isEmpty()) {
@@ -590,6 +640,12 @@ class YouTubePlaybackReporter internal constructor(
             if (report.nextAttemptAtMs > epochTimeMs()) continue
             val playbackSession = repository.playbackTrackingSession()
             if (!isReplayCurrent(accountKey, playbackSession)) return null
+            // A live session started before the brand page resolved discards its own report on its next sample.
+            val ownedByOtherDelegation =
+                pendingDrainLock.withLock {
+                    report.id in activePendingIds && activePendingIds[report.id] != playbackSession.snapshot.delegatedSessionId
+                }
+            if (ownedByOtherDelegation) continue
             val tracking =
                 try {
                     repository.getPlaybackTracking(
@@ -703,10 +759,12 @@ class YouTubePlaybackReporter internal constructor(
         private const val TRACKING_MAX_AGE_MS = 60L * 60L * 1000L
         private const val BASE_RETRY_MS = 30_000L
         private const val OFFLINE_CHECKPOINT_MS = 30_000L
+        private const val DELEGATION_WAIT_MS = 15_000L
+        private const val DELEGATION_POLL_MS = 500L
         private val pendingDrainLock = ReentrantLock()
         private var pendingDrainJob: Job? = null
         private var pendingDrainAttempt: CompletableDeferred<Unit>? = null
-        private val activePendingIds = mutableSetOf<String>()
+        private val activePendingIds = mutableMapOf<String, String?>()
     }
 }
 

@@ -6,6 +6,7 @@ import com.metrolist.innertubex.extraction.TokenProvider
 import com.metrolist.innertubex.models.YouTubeLocale
 import com.metrolist.shared.BuildConfig
 import com.metrolist.shared.api.YouTubeRepository
+import com.metrolist.shared.auth.storedDelegatedSessionId
 import com.metrolist.shared.db.MusicDatabase
 import com.metrolist.shared.db.OfflineSongAvailability
 import com.metrolist.shared.network.createHttpClient
@@ -90,7 +91,7 @@ object GlobalYouTube {
         authUser: String,
         useLoginForBrowse: Boolean,
     ) {
-        innerTube.replaceSession(cookie, visitorData, dataSyncId, authUser, useLoginForBrowse)
+        innerTube.replaceSession(cookie, visitorData, dataSyncId, authUser, useLoginForBrowse, storedDelegatedSessionId(dataSyncId))
         playbackSessionGenerationCounter.incrementAndGet()
     }
 

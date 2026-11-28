@@ -11,6 +11,8 @@ val TokenLoginWarningDismissedKey = "tokenLoginWarningDismissed"
 val SupportPromptDismissedKey = "supportPromptDismissed"
 val SupportPromptLaunchesKey = "supportPromptLaunches"
 val SupportPromptLaunchThresholdKey = "supportPromptLaunchThreshold"
+val DelegatedSessionIdKey = "delegatedSessionId"
+val DelegatedSessionDataSyncIdKey = "delegatedSessionDataSyncId"
 
 val DiscordPendingAuthSessionKey = "discordPendingAuthSession"
 val DiscordAlbumTemplateKey = "discordAlbumTemplate"

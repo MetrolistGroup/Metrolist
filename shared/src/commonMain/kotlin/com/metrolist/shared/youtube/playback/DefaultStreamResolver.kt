@@ -1066,6 +1066,7 @@ class DefaultStreamResolver(
                 session.cookie.orEmpty(),
                 session.visitorData.orEmpty(),
                 session.dataSyncId.orEmpty(),
+                session.delegatedSessionId.orEmpty(),
                 session.authUser,
                 session.locale.hl,
                 session.locale.gl,
@@ -1079,6 +1080,7 @@ class DefaultStreamResolver(
             listOf(
                 session.cookie.orEmpty(),
                 session.dataSyncId.orEmpty(),
+                session.delegatedSessionId.orEmpty(),
                 session.authUser,
                 session.locale.hl,
                 session.locale.gl,

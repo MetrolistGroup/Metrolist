@@ -6,6 +6,8 @@ import com.metrolist.innertubex.models.response.AccountsListResponse
 import com.metrolist.innertubex.utils.parseCookieString
 import com.metrolist.innertubex.utils.sanitizeCookieString
 import com.metrolist.shared.api.YouTubeRepository
+import com.metrolist.shared.constants.DelegatedSessionDataSyncIdKey
+import com.metrolist.shared.constants.DelegatedSessionIdKey
 import com.metrolist.shared.playlist.LibraryDeletionTracker
 import com.metrolist.shared.settings.Settings
 import com.metrolist.shared.state.GlobalInnerTube
@@ -13,12 +15,22 @@ import com.metrolist.shared.state.GlobalYouTubeRepository
 import com.metrolist.shared.state.SongLikeState
 import com.metrolist.shared.utils.clearWebCookies
 import com.metrolist.shared.youtube.logging.YtLogger
+import kotlinx.atomicfu.locks.ReentrantLock
+import kotlinx.atomicfu.locks.withLock
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import kotlin.time.Duration.Companion.minutes
+import kotlin.time.TimeMark
+import kotlin.time.TimeSource
 
 private val supportedAuthCookieNames =
     listOf(
@@ -33,6 +45,114 @@ internal fun supportedYouTubeAuthCredential(cookie: String): String? {
 }
 
 fun hasSupportedYouTubeAuthCookie(cookie: String): Boolean = supportedYouTubeAuthCredential(cookie) != null
+
+// Detached so the optional account-list lookup cannot delay or fail a login whose credentials are already saved.
+private val delegatedSessionScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+private val delegatedSessionMutex = Mutex()
+
+// Readers take this with the resolver's write so one account's page id is never paired with another account's dataSyncId.
+private val delegatedSessionLock = ReentrantLock()
+private var lastDelegatedSessionAttempt: Pair<String, TimeMark>? = null
+private var settledDelegatedSessionLookup: DelegatedLookupKey? = null
+
+// The whole credential set, so a lookup for an earlier cookie or account index never releases a new sign-in.
+private data class DelegatedLookupKey(
+    val dataSyncId: String,
+    val authUser: String,
+    val cookie: String,
+)
+
+private fun currentDelegatedLookupKey() =
+    DelegatedLookupKey(Settings.shared.dataSyncId, Settings.shared.innerTubeAuthUser, Settings.shared.innerTubeCookie)
+
+internal fun resetDelegatedSessionLookup() {
+    delegatedSessionLock.withLock {
+        settledDelegatedSessionLookup = null
+        lastDelegatedSessionAttempt = null
+    }
+}
+
+private val delegatedSessionRetryInterval = 5.minutes
+
+internal fun storedDelegatedSessionId(dataSyncId: String?): String? =
+    delegatedSessionLock.withLock {
+        Settings.shared.delegatedSessionId.takeIf {
+            it.isNotBlank() && !dataSyncId.isNullOrBlank() && Settings.shared.delegatedSessionDataSyncId == dataSyncId
+        }
+    }
+
+/**
+ * Retries the brand page lookup when the signed-in account has none stored, which happens after an offline start,
+ * a service-only start or a failed lookup. Runs in the background, skips while a lookup is running and waits
+ * [delegatedSessionRetryInterval] between attempts for the same account.
+ */
+internal fun requestDelegatedSessionResolution() {
+    val dataSyncId = Settings.shared.dataSyncId
+    if (dataSyncId.isBlank() ||
+        Settings.shared.delegatedSessionDataSyncId == dataSyncId ||
+        !hasSupportedYouTubeAuthCookie(Settings.shared.innerTubeCookie)
+    ) {
+        return
+    }
+    val due =
+        delegatedSessionLock.withLock {
+            val last = lastDelegatedSessionAttempt
+            (last == null || last.first != dataSyncId || last.second.elapsedNow() >= delegatedSessionRetryInterval).also { due ->
+                if (due) lastDelegatedSessionAttempt = dataSyncId to TimeSource.Monotonic.markNow()
+            }
+        }
+    if (due) launchDelegatedSessionResolution(waitIfRunning = false)
+}
+
+private fun launchDelegatedSessionResolution(waitIfRunning: Boolean) {
+    delegatedSessionScope.launch {
+        if (waitIfRunning) {
+            delegatedSessionMutex.lock()
+        } else if (!delegatedSessionMutex.tryLock()) {
+            return@launch
+        }
+        val installed =
+            try {
+                resolveDelegatedSessionSafely()
+            } finally {
+                delegatedSessionMutex.unlock()
+            }
+        // Likes refreshed by login or playback before the page id existed used the personal account.
+        if (installed) SongLikeState.refreshLikesFromRemoteAsync()
+    }
+}
+
+// The lookup is optional, so a failed request or secure-settings write must not fail login, startup or an account refresh.
+private suspend fun resolveDelegatedSessionSafely(): Boolean {
+    val lookupKey = currentDelegatedLookupKey()
+    var listedAccounts = false
+    val installed =
+        try {
+            AuthManager().resolveDelegatedSession { fetchDelegatedSessionAccounts().also { listedAccounts = it.isNotEmpty() } }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (error: Exception) {
+            YtLogger.e("YouTubeAuth", "Delegated session lookup failed type=${error::class.simpleName}")
+            return false
+        }
+    // Failed account-list requests come back empty, so only a non-empty list proves the account has no brand page to wait for.
+    if (listedAccounts) delegatedSessionLock.withLock { settledDelegatedSessionLookup = lookupKey }
+    return installed
+}
+
+/**
+ * True until the signed-in account's brand page is known or a successful account list has been read for it, so plays
+ * are not reported to the personal account while a brand page may still be found.
+ */
+internal fun isDelegatedSessionLookupPending(): Boolean {
+    val dataSyncId = Settings.shared.dataSyncId
+    if (dataSyncId.isBlank() || !hasSupportedYouTubeAuthCookie(Settings.shared.innerTubeCookie)) return false
+    return delegatedSessionLock.withLock {
+        Settings.shared.delegatedSessionDataSyncId != dataSyncId && settledDelegatedSessionLookup != currentDelegatedLookupKey()
+    }
+}
+
+private suspend fun fetchDelegatedSessionAccounts() = GlobalYouTubeRepository.instance.getAccountsList(publishExpiredSessionNotice = false)
 
 class AuthManager {
     val cookieMap: Map<String, String>
@@ -103,7 +223,7 @@ class AuthManager {
         validateAndSaveCredentials(cookie, visitorData, dataSyncId, authUser) {
             candidateRepository(cookie, visitorData, dataSyncId, authUser)
                 .getAccountInfo(publishExpiredSessionNotice = false)
-        }
+        }.also { saved -> if (saved) launchDelegatedSessionResolution(waitIfRunning = true) }
 
     internal suspend fun validateAndSaveCredentials(
         cookie: String,
@@ -181,6 +301,54 @@ class AuthManager {
         }
     }
 
+    /** Returns true when a brand page was installed on the live session. */
+    suspend fun resolveDelegatedSession(): Boolean =
+        delegatedSessionMutex.withLock {
+            resolveDelegatedSessionSafely()
+        }
+
+    // The stored dataSyncId alone cannot tell a brand page from a personal account, so the account list decides once per identity.
+    internal suspend fun resolveDelegatedSession(fetchAccounts: suspend () -> List<AccountsListResponse.Account>): Boolean {
+        val cookie = Settings.shared.innerTubeCookie
+        val dataSyncId = Settings.shared.dataSyncId
+        val authUser = Settings.shared.innerTubeAuthUser
+        if (!hasSupportedYouTubeAuthCookie(cookie) || dataSyncId.isBlank() || Settings.shared.delegatedSessionDataSyncId == dataSyncId) {
+            return false
+        }
+        val delegatedSessionId = delegatedSessionIdFor(dataSyncId, fetchAccounts()) ?: return false
+        currentCoroutineContext().ensureActive()
+
+        fun credentialsUnchanged() =
+            !Settings.shared.credentialsPending &&
+                cookie == Settings.shared.innerTubeCookie &&
+                dataSyncId == Settings.shared.dataSyncId &&
+                authUser == Settings.shared.innerTubeAuthUser
+        if (!credentialsUnchanged()) return false
+        delegatedSessionLock.withLock {
+            Settings.shared.applyStringBatch(
+                mapOf(
+                    DelegatedSessionIdKey to delegatedSessionId,
+                    DelegatedSessionDataSyncIdKey to dataSyncId,
+                ),
+            )
+            // Installed under the same lock so isDelegatedSessionLookupPending never clears before the brand session is live.
+            if (delegatedSessionId.isNotEmpty()) {
+                syncToInnerTube(cookie, Settings.shared.visitorData, dataSyncId, authUser, useLoginForBrowse = true)
+            }
+        }
+        YtLogger.w("YouTubeAuth", "Delegated session resolved brand=${delegatedSessionId.isNotEmpty()}")
+        if (delegatedSessionId.isEmpty()) return false
+        // Logout or an account switch can run between the check above and this sync; undo the stale values if it did.
+        if (credentialsUnchanged()) return true
+        delegatedSessionLock.withLock {
+            if (Settings.shared.delegatedSessionDataSyncId == dataSyncId && Settings.shared.dataSyncId != dataSyncId) {
+                Settings.shared.applyStringBatch(mapOf(DelegatedSessionIdKey to "", DelegatedSessionDataSyncIdKey to ""))
+            }
+        }
+        restorePersistedSession()
+        return false
+    }
+
     fun restorePersistedSession() {
         syncToInnerTube(
             cookie = Settings.shared.innerTubeCookie,
@@ -236,6 +404,7 @@ class AuthManager {
 
             if (cookie.isNotBlank()) {
                 fetchAndSaveAccountInfo()
+                resolveDelegatedSession()
                 SongLikeState.refreshLikesFromRemoteAsync()
             }
         }
@@ -279,6 +448,7 @@ class AuthManager {
             dataSyncId = dataSyncId.takeIf { it.isNotEmpty() },
             authUser = authUser,
             useLoginForBrowse = useLoginForBrowse,
+            delegatedSessionId = storedDelegatedSessionId(dataSyncId),
         )
     }
 

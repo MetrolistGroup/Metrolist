@@ -452,7 +452,14 @@ internal class YouTubeSearchOperations(
         val session = innerTube.sessionSnapshot()
         if (!innerTube.hasSapCookieAuth(session)) return
         val requestTube = innerTube.createIsolatedSession(true)
-        requestTube.replaceSession(session.cookie, session.visitorData, session.dataSyncId, session.authUser, session.useLoginForBrowse)
+        requestTube.replaceSession(
+            session.cookie,
+            session.visitorData,
+            session.dataSyncId,
+            session.authUser,
+            session.useLoginForBrowse,
+            session.delegatedSessionId,
+        )
 
         fun ensureSession() {
             if (innerTube.sessionSnapshot() != session) throw CancellationException("InnerTube session changed")

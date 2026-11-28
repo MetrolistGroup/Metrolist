@@ -6,6 +6,8 @@ import com.metrolist.innertubex.bodyAsTextLimited
 import com.metrolist.innertubex.models.YouTubeClient
 import com.metrolist.innertubex.models.response.BrowseResponse
 import com.metrolist.innertubex.models.response.CreatePlaylistResponse
+import com.metrolist.shared.auth.AuthManager
+import com.metrolist.shared.auth.isDelegatedSessionLookupPending
 import com.metrolist.shared.auth.isExpiredYouTubeSessionResponse
 import com.metrolist.shared.model.isEditablePlaylistId
 import com.metrolist.shared.utils.Logger
@@ -64,11 +66,25 @@ internal class YouTubePlaylistEdits(
         playlistId: String,
         requireEditableId: Boolean = true,
         reconcileNotFound: Boolean = true,
-        block: suspend (InnerTube, String) -> Unit,
+        block: suspend (InnerTube, String, InnerTube.SessionSnapshot) -> Unit,
     ) {
+        // Right after a brand login the page is installed in the background; an edit sent before it changes the personal account.
+        val original = innerTube.sessionSnapshot()
+        if (isDelegatedSessionLookupPending()) AuthManager().resolveDelegatedSession()
         val session = innerTube.sessionSnapshot()
+        // Only the brand page may change during the wait; a different account must not receive this edit.
+        if (session.cookie != original.cookie || session.dataSyncId != original.dataSyncId || session.authUser != original.authUser) {
+            throw CancellationException("InnerTube account changed")
+        }
         val requestTube = innerTube.createIsolatedSession(true)
-        requestTube.replaceSession(session.cookie, session.visitorData, session.dataSyncId, session.authUser, session.useLoginForBrowse)
+        requestTube.replaceSession(
+            session.cookie,
+            session.visitorData,
+            session.dataSyncId,
+            session.authUser,
+            session.useLoginForBrowse,
+            session.delegatedSessionId,
+        )
         try {
             require(innerTube.hasSapCookieAuth(session))
             val id = playlistId.removePrefix("VL")
@@ -76,7 +92,7 @@ internal class YouTubePlaylistEdits(
             runQueuedPlaylistEdit {
                 if (innerTube.sessionSnapshot() != session) throw CancellationException("InnerTube session changed")
                 try {
-                    block(requestTube, id)
+                    block(requestTube, id, session)
                 } catch (error: Exception) {
                     if (innerTube.sessionSnapshot() != session) throw CancellationException("InnerTube session changed")
                     if (reconcileNotFound && id.isEditablePlaylistId() &&
@@ -101,7 +117,7 @@ internal class YouTubePlaylistEdits(
         saved: Boolean,
     ): Result<Unit> =
         try {
-            runSessionPlaylistEdit(playlistId, requireEditableId = false) { requestTube, id ->
+            runSessionPlaylistEdit(playlistId, requireEditableId = false) { requestTube, id, _ ->
                 val response =
                     if (saved) {
                         requestTube.likePlaylist(YouTubeClient.WEB_REMIX, id)
@@ -139,7 +155,7 @@ internal class YouTubePlaylistEdits(
             require(canManagePlaylists()) { "YouTube Music sign-in is required" }
             val normalizedTitle = title.trim()
             require(normalizedTitle.isNotEmpty()) { "Playlist name cannot be empty" }
-            runSessionPlaylistEdit(playlistId) { requestTube, id ->
+            runSessionPlaylistEdit(playlistId) { requestTube, id, _ ->
                 val response = requestTube.renamePlaylist(YouTubeClient.WEB_REMIX, id, normalizedTitle)
                 if (response.status.value == 404) throw PlaylistNotFoundException(id)
                 check(response.status.isSuccess()) { "Rename playlist failed with HTTP ${response.status.value}" }
@@ -159,7 +175,7 @@ internal class YouTubePlaylistEdits(
         try {
             require(canManagePlaylists()) { "YouTube Music sign-in is required" }
             val normalizedDescription = description.trim()
-            runSessionPlaylistEdit(playlistId) { requestTube, id ->
+            runSessionPlaylistEdit(playlistId) { requestTube, id, _ ->
                 val response = requestTube.setPlaylistDescription(YouTubeClient.WEB_REMIX, id, normalizedDescription)
                 if (response.status.value == 404) throw PlaylistNotFoundException(id)
                 check(response.status.isSuccess()) { "Set playlist description failed with HTTP ${response.status.value}" }
@@ -179,7 +195,7 @@ internal class YouTubePlaylistEdits(
             require(canManagePlaylists()) { "YouTube Music sign-in is required" }
             require(image.isNotEmpty()) { "Playlist cover image must not be empty" }
             var thumbnail: String? = null
-            runSessionPlaylistEdit(playlistId, reconcileNotFound = false) { requestTube, id ->
+            runSessionPlaylistEdit(playlistId, reconcileNotFound = false) { requestTube, id, _ ->
                 val response = requestTube.setPlaylistThumbnail(YouTubeClient.WEB_REMIX, id, image)
                 check(response.status.isSuccess()) { "Set playlist cover failed with HTTP ${response.status.value}" }
                 thumbnail = parseEditPlaylistThumbnail(response.bodyAsTextLimited(FEED_RESPONSE_LIMIT))
@@ -195,7 +211,7 @@ internal class YouTubePlaylistEdits(
         try {
             require(canManagePlaylists()) { "YouTube Music sign-in is required" }
             var thumbnail: String? = null
-            runSessionPlaylistEdit(playlistId, reconcileNotFound = false) { requestTube, id ->
+            runSessionPlaylistEdit(playlistId, reconcileNotFound = false) { requestTube, id, _ ->
                 val response = requestTube.removePlaylistThumbnail(YouTubeClient.WEB_REMIX, id)
                 check(response.status.isSuccess()) { "Remove playlist cover failed with HTTP ${response.status.value}" }
                 thumbnail =
@@ -408,7 +424,7 @@ internal class YouTubePlaylistEdits(
             val destination = playlistId.removePrefix("VL")
             val source = sourcePlaylistId.removePrefix("VL")
             require(source.isNotBlank() && destination.isNotBlank() && source != destination)
-            runSessionPlaylistEdit(destination, reconcileNotFound = false) { requestTube, id ->
+            runSessionPlaylistEdit(destination, reconcileNotFound = false) { requestTube, id, _ ->
                 val response = requestTube.addPlaylistToPlaylist(YouTubeClient.WEB_REMIX, id, source)
                 check(response.status.isSuccess()) { "Copy playlist failed with HTTP ${response.status.value}" }
                 check(response.bodyLimited<JsonObject>(SMALL_RESPONSE_LIMIT)["status"]?.jsonPrimitive?.contentOrNull == "STATUS_SUCCEEDED")
@@ -426,8 +442,7 @@ internal class YouTubePlaylistEdits(
         allowDuplicate: Boolean = true,
     ): Result<Unit> =
         try {
-            val requestSession = innerTube.sessionSnapshot()
-            runSessionPlaylistEdit(playlistId) { requestTube, id ->
+            runSessionPlaylistEdit(playlistId) { requestTube, id, requestSession ->
                 require(innerTube.hasSapCookieAuth(requestSession))
                 if (innerTube.sessionSnapshot() != requestSession) throw CancellationException("InnerTube session changed")
                 val alreadyPresent = !allowDuplicate && playlistContainsSong(playlistId, videoId)
@@ -454,7 +469,7 @@ internal class YouTubePlaylistEdits(
         successorSetVideoId: String?,
     ): Result<Unit> =
         try {
-            runSessionPlaylistEdit(playlistId) { requestTube, id ->
+            runSessionPlaylistEdit(playlistId) { requestTube, id, _ ->
                 val response = requestTube.movePlaylistSong(YouTubeClient.WEB_REMIX, id, setVideoId, successorSetVideoId)
                 if (response.status.value == 404) throw PlaylistNotFoundException(id)
                 if (!response.status.isSuccess()) {
@@ -481,7 +496,7 @@ internal class YouTubePlaylistEdits(
         videoId: String,
     ): Result<Unit> =
         try {
-            runSessionPlaylistEdit(playlistId) { requestTube, id ->
+            runSessionPlaylistEdit(playlistId) { requestTube, id, _ ->
                 val response = requestTube.removePlaylistSong(YouTubeClient.WEB_REMIX, id, setVideoId, videoId)
                 if (response.status.value == 404) throw PlaylistNotFoundException(id)
                 check(response.status.isSuccess()) { "Remove song failed with HTTP ${response.status.value}" }
@@ -500,7 +515,7 @@ internal class YouTubePlaylistEdits(
     ): Result<Unit> =
         try {
             if (songs.isEmpty()) return Result.success(Unit)
-            runSessionPlaylistEdit(playlistId) { requestTube, id ->
+            runSessionPlaylistEdit(playlistId) { requestTube, id, _ ->
                 val response = requestTube.removePlaylistSongs(YouTubeClient.WEB_REMIX, id, songs)
                 if (response.status.value == 404) throw PlaylistNotFoundException(id)
                 check(response.status.isSuccess()) { "Remove songs failed with HTTP ${response.status.value}" }

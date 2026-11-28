@@ -124,6 +124,11 @@ object AuthState {
                         Settings.shared.accountChannelHandle = info.channelHandle.orEmpty()
                         Settings.shared.accountThumbnail = info.thumbnailUrl ?: ""
                     }
+                    // History and library loaded before the brand page was installed were cancelled or used the unscoped session.
+                    if (generation == accountInfoGeneration && isSignedIn && AuthManager().resolveDelegatedSession()) {
+                        PlayerState.refreshHistory()
+                        LibraryContentState.fetchLibraryData(force = true)
+                    }
                 } catch (error: CancellationException) {
                     throw error
                 } catch (error: Exception) {

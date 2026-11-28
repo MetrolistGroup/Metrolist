@@ -1,5 +1,7 @@
 package com.metrolist.shared.settings
 
+import com.metrolist.shared.constants.DelegatedSessionDataSyncIdKey
+import com.metrolist.shared.constants.DelegatedSessionIdKey
 import com.metrolist.shared.constants.DiscordPendingAuthSessionKey
 import com.metrolist.shared.constants.LyricsOpenRouterOAuthKey
 import com.metrolist.shared.constants.LyricsOpenRouterOAuthSessionKey
@@ -10,6 +12,8 @@ internal val secureSettingsKeys =
         "innerTubeCookie",
         "visitorData",
         "dataSyncId",
+        DelegatedSessionIdKey,
+        DelegatedSessionDataSyncIdKey,
         "innerTubeAuthUser",
         "lastFmSession",
         "listenBrainzToken",
