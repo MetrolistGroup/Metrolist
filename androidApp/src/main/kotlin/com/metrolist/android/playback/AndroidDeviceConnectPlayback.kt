@@ -105,6 +105,7 @@ internal class AndroidDeviceConnectPlayback(
                                     ?.id,
                         finite = queue.isFiniteQueue,
                         explicitRadioQueue = queue.explicitRadioQueue,
+                        recommendationsLocked = queue.recommendationsLocked,
                         scrobbleSession = scrobbleManager.session(),
                     )
                 }
@@ -152,6 +153,7 @@ internal class AndroidDeviceConnectPlayback(
                 }
                 queue.setExplicitRadioQueue(desired.explicitRadioQueue)
                 queue.setTitle(desired.title)
+                queue.applyRemoteRecommendationLock(desired.recommendationsLocked)
                 repeatMode.value = desired.repeatMode.toPlayerRepeatMode()
                 if (trackChanged || previousQueue != desiredQueue) player.restoreQueue(desiredQueue, currentTrackChanged = trackChanged)
                 shuffleModeEnabled.value = player.isShuffleEnabled
@@ -253,6 +255,7 @@ internal class AndroidDeviceConnectPlayback(
                 provisional: Boolean,
             ) = withContext(Dispatchers.Main.immediate) {
                 if (playbackReleased) return@withContext
+                val wasController = controllerPlayback != null
                 val clearsQueue =
                     shouldClearPersistedPlaybackForControllerState(
                         previous = controllerPlayback,
@@ -274,20 +277,34 @@ internal class AndroidDeviceConnectPlayback(
                         playback.title,
                         playback.finite,
                     )
-                    queue.setExplicitRadioQueue(playback.explicitRadioQueue)
-                    queue.setTitle(playback.title)
-                    repeatMode.value = playback.repeatMode.toPlayerRepeatMode()
                     if (player.queueSnapshots.value != playback.queue) player.restoreQueue(playback.queue)
                     shuffleModeEnabled.value = playback.queue.isShuffled
                     syncTargetLoaded = false
                 }
-                if (playback != null) queue.setExplicitRadioQueue(playback.explicitRadioQueue)
+                if (playback != null) {
+                    queue.setFiniteQueue(playback.finite)
+                    queue.setExplicitRadioQueue(playback.explicitRadioQueue)
+                    queue.applyRemoteRecommendationLock(playback.recommendationsLocked)
+                    val seed =
+                        playback.queue.displayedItems
+                            .singleOrNull()
+                            ?.id
+                    if (seed != null && playback.explicitRadioQueue && !playback.finite && !playback.recommendationsLocked) {
+                        queue.bootstrapRecommendations(seed, allowRepeatMode = true)
+                    } else {
+                        queue.clearPendingRadioBootstrapSeed()
+                    }
+                    queue.setTitle(playback.title)
+                    repeatMode.value = playback.repeatMode.toPlayerRepeatMode()
+                }
                 controllerPlayback = playback
                 player.setControllerPlayback(playback)
                 if (clearsQueue) onQueueCleared()
+                if (playback == null && wasController) queue.rearmAutoLoadMore()
                 if (playback !=
                     null
                 ) {
+                    if (!provisional) onSave()
                     scrobbleManager.setReportingEnabled(false, player.currentSong.value, playback.playing, playback.scrobbleSession)
                 }
             }

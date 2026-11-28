@@ -516,7 +516,16 @@ object PlayerState {
     private val playbackStatePersistence = PlaybackStatePersistence()
     private val playbackStateWrites =
         PlaybackStateWriteQueue(scope, persist = { write ->
-            playbackStatePersistence.persist(write.snapshot, write.positionMs, write.repeatMode, write.force)
+            playbackStatePersistence.persist(
+                snapshot = write.snapshot,
+                positionMs = write.positionMs,
+                repeatMode = write.repeatMode,
+                finite = write.finite,
+                explicitRadioQueue = write.explicitRadioQueue,
+                recommendationsLocked = write.recommendationsLocked,
+                title = write.title,
+                force = write.force,
+            )
         })
     private val podcastProgress =
         PodcastPlaybackProgress(
@@ -538,7 +547,12 @@ object PlayerState {
 
     @Volatile private var deviceRadioBootstrapJob: Job? = null
     private var deviceRadioBootstrapPending = false
+    private var deviceRadioBootstrapGeneration = -1L
+    private var deviceRadioBootstrapSessionId: String? = null
+
+    @Volatile private var deviceRadioBootstrapRetryJob: Job? = null
     private var controllerPlayback: DcLocalPlaybackState? = null
+    private var controllerPlaybackProvisional = false
     private val deviceConnectPlayback =
         object : DeviceConnectPlaybackPort {
             override fun onExplicitRadioRequest() {
@@ -567,6 +581,7 @@ object PlayerState {
                                 (!deviceConnect.isActive || syncSession.ready),
                         finite = syncSession.finite,
                         explicitRadioQueue = syncSession.explicitRadioQueue,
+                        recommendationsLocked = syncSession.recommendationsLocked,
                         scrobbleSession = scrobbleManager.session(),
                     )
                 }
@@ -583,6 +598,8 @@ object PlayerState {
                 playback: DcLocalPlaybackState?,
                 provisional: Boolean,
             ) = withContext(Dispatchers.Main) {
+                val previousControllerPlayback = controllerPlayback.takeUnless { controllerPlaybackProvisional }
+                controllerPlaybackProvisional = provisional && playback != null
                 if (playback != null) {
                     if (externalReportingEnabled) return@withContext
                     if (controllerPlayback == null) {
@@ -593,7 +610,7 @@ object PlayerState {
                     if (controllerPlayback?.queue != playback.queue) {
                         queue.restore(playback.queue)
                         shuffleEnabled = playback.queue.isShuffled
-                        queueChanged()
+                        queueChanged(persist = false)
                     }
                     localRepeatMode = RepeatMode.valueOf(playback.repeatMode.name)
                     syncSession.applyPlayback(playback)
@@ -610,13 +627,27 @@ object PlayerState {
                     isPlaybackResolving = false
                     desiredPlayback.value = false
                 }
+                if (playback != null) {
+                    deviceRadioBootstrapPending =
+                        playback.explicitRadioQueue &&
+                        !playback.finite &&
+                        !playback.recommendationsLocked &&
+                        playback.queue.displayedItems.size == 1
+                    if (!deviceRadioBootstrapPending) deviceRadioBootstrapJob?.cancel()
+                }
                 controllerPlayback = playback
                 remoteVolume = playback?.volume
                 volumeState.value = volume
                 player.setControllerPlayback(playback)
-                if (playback !=
-                    null
-                ) {
+                if (playback != null) {
+                    if (!provisional &&
+                        (
+                            (!playback.playing && previousControllerPlayback?.positionMs != playback.positionMs) ||
+                                previousControllerPlayback?.copy(positionMs = playback.positionMs) != playback
+                        )
+                    ) {
+                        persistPlaybackState()
+                    }
                     scrobbleManager.setReportingEnabled(false, player.currentSong.value, playback.playing, playback.scrobbleSession)
                 }
             }
@@ -685,7 +716,7 @@ object PlayerState {
                 Logger.e("PlayerState", "Failed to record final listening session", it)
             }
             val preserveStoredSession = restoration.stop()
-            runCatching { if (!preserveStoredSession) flushPlaybackState() }.exceptionOrNull()?.let {
+            runCatching { if (!preserveStoredSession && !controllerPlaybackProvisional) flushPlaybackState() }.exceptionOrNull()?.let {
                 Logger.e("PlayerState", "Failed to persist final playback state", it)
             }
         }
@@ -1893,7 +1924,16 @@ object PlayerState {
                 if (it) video.resume() else video.pause()
                 DiscordRpcState.updateDiscordRpc()
                 persistPlaybackState()
+                if (it) rearmPendingExplicitRadioBootstrap()
             }
+        }
+        scope.launch {
+            PlaybackNetworkStateStore.state
+                .map { it.connected }
+                .distinctUntilChanged()
+                .collect { connected ->
+                    if (connected && !castManager.state.value.isConnected) rearmPendingExplicitRadioBootstrap()
+                }
         }
 
         scope.launch {
@@ -2213,13 +2253,17 @@ object PlayerState {
     }
 
     private fun persistPlaybackState(flushPodcast: Boolean = true) {
-        if (restoration.pending) return
+        if (restoration.pending || controllerPlaybackProvisional) return
         if (flushPodcast) flushPodcastProgress()
         playbackStateWrites.submit(
             PlaybackStateWrite(
                 queue.snapshots.value,
                 persistedPlaybackPositionMs(),
                 repeatMode,
+                finite = syncSession.finite,
+                explicitRadioQueue = syncSession.explicitRadioQueue,
+                recommendationsLocked = syncSession.recommendationsLocked,
+                title = syncSession.title,
             ),
         )
     }
@@ -2239,11 +2283,16 @@ object PlayerState {
 
     private suspend fun flushPlaybackState() {
         flushPodcastProgress()?.join()
+        if (controllerPlaybackProvisional) return
         playbackStateWrites.flush(
             PlaybackStateWrite(
                 queue.snapshots.value,
                 persistedPlaybackPositionMs(),
                 repeatMode,
+                finite = syncSession.finite,
+                explicitRadioQueue = syncSession.explicitRadioQueue,
+                recommendationsLocked = syncSession.recommendationsLocked,
+                title = syncSession.title,
                 force = true,
             ),
         )
@@ -2257,6 +2306,7 @@ object PlayerState {
         queue.restore(restoreQueue)
         shuffleEnabled = restoreQueue.isShuffled
         localRepeatMode = state.repeatMode
+        syncSession.setPersistedQueueFlags(state.finite, state.explicitRadioQueue, state.recommendationsLocked, state.title)
         radio.syncQueue()
         updateCurrentTrack(queue.currentItem(), startArtworkFetch = true)
 
@@ -2264,13 +2314,18 @@ object PlayerState {
         playbackPosition.value = state.positionMs.coerceAtLeast(0L)
         playbackDuration.value = (queue.currentItem()?.duration ?: 0L) * 1000L
         progress = if (playbackDuration.value > 0) playbackPosition.value.toFloat() / playbackDuration.value else 0f
+        val restoredSeed = queue.items.value.singleOrNull()
+        if (state.explicitRadioQueue && restoredSeed != null) {
+            deviceRadioBootstrapPending = true
+            startPendingExplicitRadioBootstrap(restoredSeed, syncSession.sessionId)
+        }
     }
 
-    private fun queueChanged() {
+    private fun queueChanged(persist: Boolean = true) {
         transitions.queueChanged()
         invalidatePersistedRestore()
         radio.syncQueue()
-        persistPlaybackState()
+        if (persist) persistPlaybackState()
     }
 
     private fun invalidatePersistedRestore() {
@@ -2285,7 +2340,7 @@ object PlayerState {
 
     private fun canLoadRecommendations(song: SongItem): Boolean =
         Settings.shared.autoLoadMore && repeatMode == RepeatMode.OFF && !isListenTogetherGuest() && !deviceConnect.isFollowing &&
-            !syncSession.finite && queue.currentItem()?.id == song.id
+            !syncSession.finite && !syncSession.recommendationsLocked && queue.currentItem()?.id == song.id
 
     private fun maybePrefetchRecommendationsForCurrentQueue(song: SongItem) {
         if (repeatMode != RepeatMode.OFF || !canLoadRecommendations(song) ||
@@ -2427,28 +2482,7 @@ object PlayerState {
         )
         if (!deviceConnect.isFollowing) {
             if (deviceRadioBootstrapPending) {
-                if (deviceRadioBootstrapJob?.isActive == true) return@withContext
-                val generation = playbackTransitionGeneration
-                val requestGeneration = explicitRadioRequestGeneration
-                deviceRadioBootstrapJob =
-                    scope.launch {
-                        try {
-                            val songs = freshRadioRecommendations(track.id, generation)
-                            if (requestGeneration == explicitRadioRequestGeneration && deviceRadioBootstrapPending &&
-                                syncSession.sessionId == snapshot.sessionId && queue.items.value
-                                    .singleOrNull()
-                                    ?.id == track.id &&
-                                syncSession.explicitRadioQueue && !deviceConnect.isFollowing
-                            ) {
-                                deviceRadioBootstrapPending = false
-                                appendRadioRecommendations(songs, generation)
-                            }
-                        } catch (error: CancellationException) {
-                            throw error
-                        } catch (error: Exception) {
-                            Logger.w("PlayerState", "Failed to start remote radio (${error::class.simpleName})")
-                        }
-                    }
+                startPendingExplicitRadioBootstrap(track, snapshot.sessionId)
             } else {
                 maybePrefetchRecommendationsForCurrentQueue(track)
             }
@@ -4096,18 +4130,97 @@ object PlayerState {
     private fun appendRadioRecommendations(
         bootstrap: DesktopRadioBootstrap?,
         generation: Long,
-    ) {
-        if (!isCurrentPlaybackTransition(generation)) return
+    ): Boolean {
+        if (!isCurrentPlaybackTransition(generation)) return false
         initialRecommendationsGeneration = null
-        if (bootstrap == null) return
+        if (bootstrap == null) return false
         radio.acceptBootstrap(bootstrap)
         val blocked = BlockedContent.snapshot()
         val existing = queue.items.value.mapTo(mutableSetOf()) { it.id }
         val additions = bootstrap.page.songs.filter { !it.isUnavailable && !blocked.isBlocked(it) && existing.add(it.id) }
-        if (additions.isNotEmpty()) {
-            queue.addToQueue(additions)
-            recommendationHistory.remember(additions)
-            queueChanged()
+        if (additions.isEmpty()) return false
+        queue.addToQueue(additions)
+        recommendationHistory.remember(additions)
+        queueChanged()
+        return true
+    }
+
+    private fun startPendingExplicitRadioBootstrap(
+        seed: SongItem,
+        expectedSessionId: String?,
+        armRetry: Boolean = true,
+    ) {
+        val generation = playbackTransitionGeneration
+        if (
+            deviceRadioBootstrapJob?.isActive == true &&
+            deviceRadioBootstrapGeneration == generation &&
+            deviceRadioBootstrapSessionId == expectedSessionId
+        ) {
+            return
+        }
+        deviceRadioBootstrapRetryJob = null
+        deviceRadioBootstrapJob?.cancel()
+        deviceRadioBootstrapGeneration = generation
+        deviceRadioBootstrapSessionId = expectedSessionId
+        val requestGeneration = explicitRadioRequestGeneration
+        val job =
+            scope.launch {
+                try {
+                    val songs = freshRadioRecommendations(seed.id, generation)
+                    if (requestGeneration == explicitRadioRequestGeneration &&
+                        deviceRadioBootstrapPending &&
+                        isCurrentPlaybackTransition(generation) &&
+                        syncSession.sessionId == expectedSessionId &&
+                        queue.items.value
+                            .singleOrNull()
+                            ?.id == seed.id &&
+                        syncSession.explicitRadioQueue &&
+                        !syncSession.recommendationsLocked &&
+                        !deviceConnect.isFollowing
+                    ) {
+                        val appended = appendRadioRecommendations(songs, generation)
+                        if (appended) deviceRadioBootstrapPending = false
+                    }
+                } catch (error: CancellationException) {
+                    throw error
+                } catch (error: Exception) {
+                    Logger.w("PlayerState", "Failed to start remote radio (${error::class.simpleName})")
+                }
+            }
+        deviceRadioBootstrapJob = job
+        if (armRetry) armDeviceRadioBootstrapRetry(job)
+    }
+
+    private fun rearmPendingExplicitRadioBootstrap(armRetry: Boolean = true) {
+        if (!deviceRadioBootstrapPending || !syncSession.explicitRadioQueue || deviceConnect.isFollowing) return
+        val seed =
+            queue.items.value
+                .singleOrNull()
+                ?.takeIf { it.id == currentTrack?.id } ?: return
+        val activeJob = deviceRadioBootstrapJob
+        if (
+            activeJob?.isActive == true &&
+            deviceRadioBootstrapGeneration == playbackTransitionGeneration &&
+            deviceRadioBootstrapSessionId == syncSession.sessionId
+        ) {
+            if (armRetry) armDeviceRadioBootstrapRetry(activeJob)
+            return
+        }
+        startPendingExplicitRadioBootstrap(seed, syncSession.sessionId, armRetry)
+    }
+
+    private fun armDeviceRadioBootstrapRetry(job: Job) {
+        if (deviceRadioBootstrapRetryJob === job) return
+        deviceRadioBootstrapRetryJob = job
+        job.invokeOnCompletion { cause ->
+            if (deviceRadioBootstrapRetryJob !== job) return@invokeOnCompletion
+            deviceRadioBootstrapRetryJob = null
+            if (cause is CancellationException) return@invokeOnCompletion
+            scope.launch {
+                if (PlaybackNetworkStateStore.current.connected && !castManager.state.value.isConnected) {
+                    rearmPendingExplicitRadioBootstrap(armRetry = false)
+                }
+            }
         }
     }
 

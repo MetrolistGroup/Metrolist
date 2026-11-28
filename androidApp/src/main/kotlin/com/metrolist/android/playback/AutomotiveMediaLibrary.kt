@@ -34,6 +34,7 @@ import com.metrolist.shared.settings.AutomotiveAutoPlaylist
 import com.metrolist.shared.settings.AutomotivePinnedPlaylist
 import com.metrolist.shared.settings.AutomotivePinnedPlaylistPlaybackMode
 import com.metrolist.shared.settings.AutomotivePlaylistSource
+import com.metrolist.shared.settings.AutomotiveSongPlaybackMode
 import com.metrolist.shared.settings.BlockedContent
 import com.metrolist.shared.settings.Settings
 import com.metrolist.shared.settings.SongBlockSnapshot
@@ -240,6 +241,7 @@ internal data class AutomotiveSongQueue(
     val startIndex: Int,
     val playlistPage: PlaylistPage? = null,
     val shuffle: Boolean = false,
+    val songPlaybackMode: AutomotiveSongPlaybackMode? = null,
 )
 
 internal suspend fun automotiveLikedSongs(

@@ -50,6 +50,8 @@ internal class DesktopDeviceConnectSession(
         private set
     var explicitRadioQueue = false
         private set
+    var recommendationsLocked = false
+        private set
 
     private data class QueueUndo(
         val removal: QueueRemoval,
@@ -90,6 +92,7 @@ internal class DesktopDeviceConnectSession(
         title = playback.title
         finite = playback.finite
         explicitRadioQueue = playback.explicitRadioQueue
+        recommendationsLocked = playback.recommendationsLocked
         baseSpeed = playback.speed
     }
 
@@ -97,6 +100,7 @@ internal class DesktopDeviceConnectSession(
         title = null
         finite = false
         explicitRadioQueue = false
+        recommendationsLocked = false
         targetCurrentIndex = -1
         undo = null
     }
@@ -128,6 +132,18 @@ internal class DesktopDeviceConnectSession(
 
     fun setAudioOutputEnabled(value: Boolean) {
         audioOutputEnabled = value
+    }
+
+    fun setPersistedQueueFlags(
+        finite: Boolean,
+        explicitRadioQueue: Boolean,
+        recommendationsLocked: Boolean,
+        title: String?,
+    ) {
+        this.finite = finite
+        this.explicitRadioQueue = explicitRadioQueue
+        this.recommendationsLocked = recommendationsLocked
+        this.title = title
     }
 
     fun remove(

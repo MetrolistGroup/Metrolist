@@ -55,6 +55,7 @@ data class DcPlaybackCommand(
     val startPlaying: Boolean? = null,
     val advanceCurrentToSuccessor: Boolean = false,
     val successorIndex: Int? = null,
+    val recommendationsLocked: Boolean = false,
 )
 
 @Serializable
@@ -81,6 +82,7 @@ data class DcLocalPlaybackState(
     val scrobbleSession: DcScrobbleSession? = null,
     val volume: Float = 1f,
     val explicitRadioQueue: Boolean = false,
+    val recommendationsLocked: Boolean = false,
 )
 
 /** The target device's playback at one instant; [playback] position is valid at [anchorTimeMs] on the target's clock. */

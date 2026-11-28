@@ -91,6 +91,7 @@ import com.metrolist.shared.playback.isRecommendationGeneratedQueueSource
 import com.metrolist.shared.playback.isRecommendedQueueSource
 import com.metrolist.shared.scrobble.ScrobbleManager
 import com.metrolist.shared.scrobble.ScrobbleSessions
+import com.metrolist.shared.settings.AutomotiveSongPlaybackMode
 import com.metrolist.shared.settings.BlockedContent
 import com.metrolist.shared.settings.MusicVideoQuality
 import com.metrolist.shared.settings.Settings
@@ -531,6 +532,7 @@ internal sealed interface AutomotiveMediaItemsApplication {
         val replacesQueue: Boolean,
         val shuffleModeEnabled: Boolean?,
         val playlistPage: PlaylistPage?,
+        val songPlaybackMode: AutomotiveSongPlaybackMode? = null,
     ) : AutomotiveMediaItemsApplication
 }
 
@@ -541,9 +543,10 @@ class AutomotivePlaybackRequestGate internal constructor(
         queueTitle: String?,
         shuffleModeEnabled: Boolean?,
         playlistPage: PlaylistPage?,
+        songPlaybackMode: AutomotiveSongPlaybackMode?,
         replacement: () -> Unit,
     ) -> Unit =
-        { _, _, _, _, _, replacement -> replacement() },
+        { _, _, _, _, _, _, replacement -> replacement() },
 ) {
     private data class PendingApplication(
         val generation: Long,
@@ -555,6 +558,7 @@ class AutomotivePlaybackRequestGate internal constructor(
         val replacesQueue: Boolean,
         val shuffleModeEnabled: Boolean?,
         val playlistPage: PlaylistPage?,
+        val songPlaybackMode: AutomotiveSongPlaybackMode? = null,
     )
 
     private var generation = 0L
@@ -584,6 +588,7 @@ class AutomotivePlaybackRequestGate internal constructor(
         replacesQueue: Boolean = true,
         shuffleModeEnabled: Boolean? = null,
         playlistPage: PlaylistPage? = null,
+        songPlaybackMode: AutomotiveSongPlaybackMode? = null,
         canApply: Boolean = true,
     ): MediaSession.MediaItemsWithStartPosition {
         if (!canApply || requestGeneration != generation || mediaItems.isEmpty()) throw CancellationException()
@@ -600,6 +605,7 @@ class AutomotivePlaybackRequestGate internal constructor(
                 replacesQueue = replacesQueue,
                 shuffleModeEnabled = shuffleModeEnabled,
                 playlistPage = playlistPage,
+                songPlaybackMode = songPlaybackMode,
             )
         return MediaSession.MediaItemsWithStartPosition(resolvedItems, startIndex, startPositionMs)
     }
@@ -636,6 +642,7 @@ class AutomotivePlaybackRequestGate internal constructor(
             pending.replacesQueue,
             pending.shuffleModeEnabled,
             pending.playlistPage,
+            pending.songPlaybackMode,
         )
     }
 
@@ -645,7 +652,15 @@ class AutomotivePlaybackRequestGate internal constructor(
         startIndex: Int,
         replacement: () -> Unit,
     ) {
-        queueReplacement(songs, startIndex, application.queueTitle, application.shuffleModeEnabled, application.playlistPage, replacement)
+        queueReplacement(
+            songs,
+            startIndex,
+            application.queueTitle,
+            application.shuffleModeEnabled,
+            application.playlistPage,
+            application.songPlaybackMode,
+            replacement,
+        )
     }
 }
 
