@@ -152,9 +152,9 @@ fun LoginDialog(
     var cleanupAttempt by remember { mutableStateOf(0) }
     val defaultCleanupError = stringResource(Res.string.webview_cleanup_failed)
     val requestDismiss: () -> Unit = {
-        if (loginCompleted || isSwitchingChannel) {
+        if (loginCompleted || isSwitchingChannel || OsUtil.isWindows) {
             onDismissRequest()
-        } else {
+        } else if (!cleanupRequested || cleanupError != null) {
             cleanupRequested = true
             cleanupError = null
             cleanupAttempt += 1
