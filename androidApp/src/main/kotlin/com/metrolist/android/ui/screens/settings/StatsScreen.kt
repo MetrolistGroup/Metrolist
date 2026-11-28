@@ -293,6 +293,7 @@ private fun rememberStatisticsItemMenu(
                     song = item,
                     isLiked = SongLikeState.isLiked(item.id),
                     onDismiss = { menuItem = null },
+                    onStartRadio = player?.let { connection -> { connection.startRadio(item) } },
                     onPlayNext = { player?.addToQueue(item, playNext = true) },
                     onAddToQueue = { player?.addToQueue(item) },
                     onLike = { SongLikeState.toggleLike(item) },

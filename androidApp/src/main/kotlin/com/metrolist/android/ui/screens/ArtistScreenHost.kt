@@ -380,6 +380,7 @@ fun ArtistScreenHost(
                     song = song,
                     isLiked = SongLikeState.isLiked(song.id),
                     onDismiss = { selectedMenuSong = null },
+                    onStartRadio = playerConnection?.let { connection -> { connection.startRadio(song) } },
                     onPlayNext = { playerConnection?.addToQueue(song, true) },
                     onAddToQueue = { playerConnection?.addToQueue(song) },
                     onLike = { SongLikeState.toggleLike(song) },
