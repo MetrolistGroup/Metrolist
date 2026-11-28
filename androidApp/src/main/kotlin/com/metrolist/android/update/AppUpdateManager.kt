@@ -417,6 +417,7 @@ object AppUpdateManager {
                 else -> Unit
             }
             nextAttemptToken()
+            cancelInstallPromptNotification(context)
             cancelInstallResultNotification(context)
             val asset = release.apk
             if (asset == null) {
@@ -593,6 +594,7 @@ object AppUpdateManager {
     ): Boolean =
         withContext(Dispatchers.IO) {
             nextAttemptToken()
+            cancelInstallPromptNotification(context)
             cancelInstallResultNotification(context)
             mutableState.value = downloaded.copy(installing = true)
             if (!downloaded.file.isFile || (downloaded.verified && !verifyApkIdentity(context, downloaded.file))) {
