@@ -23,6 +23,7 @@ import io.ktor.http.HttpHeaders
 import io.ktor.http.contentType
 import io.ktor.http.isSuccess
 import io.ktor.utils.io.cancel
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.serialization.Serializable
@@ -182,9 +183,13 @@ private suspend fun awaitJavaScriptResult(
     withTimeoutOrNull(JAVASCRIPT_TIMEOUT_MS.milliseconds) {
         while (true) {
             val result =
-                runCatching {
+                try {
                     Json.decodeFromString<JavaScriptResult>(runtime.evaluate("JSON.stringify(globalThis.$globalName || null)"))
-                }.getOrNull()
+                } catch (error: CancellationException) {
+                    throw error
+                } catch (_: Exception) {
+                    null
+                }
             when (result?.state) {
                 "ready" -> return@withTimeoutOrNull result.value.orEmpty()
                 "error" -> throw PoTokenException(result.value ?: "BotGuard JavaScript failed")
