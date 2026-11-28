@@ -962,7 +962,9 @@ class LyricsRepository(
         val sourceHash = translationLines.joinToString("\n").hashCode().toString()
         val skipLanguageDetection = forceAiTranslation || Settings.shared.lyricsAiActivationMode != "Automatic"
         val remoteTranslationAllowed = allowRemoteTranslation && (isOnline() || isLoopbackAiEndpoint())
-        if (Settings.shared.lyricsAiTranslationEnabled && remoteTranslationAllowed && targetLanguage.isNotBlank() &&
+        val aiTranslationEnabled = Settings.shared.lyricsAiTranslationEnabled
+        val aiTranslationAvailable = aiTranslationEnabled && (hasAiTranslationCredentials() || forceAiTranslation)
+        if (aiTranslationAvailable && remoteTranslationAllowed && targetLanguage.isNotBlank() &&
             (forceAiTranslation || Settings.shared.lyricsAiActivationMode != "Manual")
         ) {
             validateSavedAiModels()
@@ -985,7 +987,7 @@ class LyricsRepository(
             val aiResult =
                 if (cachedTranslation != null) {
                     cachedTranslation.result
-                } else if (!remoteTranslationAllowed || (activationMode == "Manual" && !forceAiTranslation)) {
+                } else if (!remoteTranslationAllowed || !aiTranslationAvailable || (activationMode == "Manual" && !forceAiTranslation)) {
                     null
                 } else {
                     val lockKey = "$videoId|$targetLanguage|$translationStyle|$sourceHash|$configKey"
@@ -1270,6 +1272,18 @@ class LyricsRepository(
         val result = decodeCachedTranslation(entity.translatedLyrics) ?: return null
         if (sourceLines != null && !isAlignedCachedResult(result, translationStyle, sourceLines, sourceWordsPerLine)) return null
         return CachedLyricsTranslation(result)
+    }
+
+    // The toggle can stay on after the key is cleared, or arrive enabled from migrated settings. Attempting anyway
+    // sends a request for every song and reports the same failure each time, so require a usable provider first. A
+    // manual request bypasses this check so the setup error stays visible.
+    private fun hasAiTranslationCredentials(): Boolean {
+        val settings = Settings.shared
+        val provider = settings.lyricsAiProvider
+        if (provider == "DeepL") return settings.lyricsDeepLApiKey.isNotBlank()
+        if (provider == "DeepL (keyless)" || provider == "Google Translate") return true
+        val (apiKey, _) = settings.lyricsAiCredentials(provider)
+        return apiKey.isNotBlank() || AiProviderPresets.find(provider)?.keyless == true
     }
 
     // A model served on this machine stays reachable without a network.
