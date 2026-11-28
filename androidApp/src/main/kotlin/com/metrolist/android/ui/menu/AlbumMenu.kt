@@ -47,6 +47,7 @@ fun AlbumMenu(
     val context = LocalContext.current
     val download = rememberMediaDownloadAction(album, onDismiss, onDownload, loadSongs)
     val pin = rememberSpeedDialToggle(album)
+    val saveCover = rememberCoverArtworkExportAction(album.thumbnail, album.title, onDismiss)
     val model =
         albumMediaMenuModel(
             album = album,
@@ -95,6 +96,7 @@ fun AlbumMenu(
             onHideFromLibrary = onHideFromLibrary,
             onExport = onExport,
             onGoToArtist = onGoToArtist,
+            additionalActions = listOfNotNull(saveCover),
         )
     MediaMenuBottomSheet(model = model, onDismissRequest = onDismiss, canDismiss = { !loadingPlaylistSongs && !download.isConfirming() }) {
         MediaMenuSheetContent(model)

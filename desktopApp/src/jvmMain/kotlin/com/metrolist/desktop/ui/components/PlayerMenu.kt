@@ -504,6 +504,10 @@ fun PlayerMenuPanel(
     isFullscreen: Boolean = false,
 ) {
     val currentTrack = PlayerState.currentTrack
+    val saveCover =
+        currentTrack?.let {
+            coverArtworkExportAction(PlayerState.currentArtworkUrl, it.album?.name ?: it.title, onDismiss)
+        }
     val playback = LocalPlaybackController.current
     var editingSong by remember { mutableStateOf<SongItem?>(null) }
     editingSong?.let { song ->
@@ -605,6 +609,7 @@ fun PlayerMenuPanel(
                     ),
                 ),
                 listOfNotNull(
+                    saveCover,
                     deleteUploadAction,
                     currentTrack?.let { track ->
                         PlayerMenuAction(

@@ -400,6 +400,7 @@ fun AlbumContextMenu(
     MediaContextMenu(expanded = expanded, offset = offset, onDismiss = onDismiss) {
         val playback = LocalPlaybackController.current
         val isPinned = album.id in HomeState.uiState.speedDialPinnedIds
+        val saveCover = coverArtworkExportAction(album.thumbnail, album.title, onDismiss)
         val playbackActions =
             MediaMenuPlaybackActions(
                 album,
@@ -424,7 +425,7 @@ fun AlbumContextMenu(
             onDownload = { withMediaSongs(album, songs) { loaded -> loaded.forEach(DownloadManager::download) } },
             onHideFromLibrary = onHideFromLibrary,
             onGoToArtist = ArtistState::fetchArtistData,
-            additionalActions = additionalActions,
+            additionalActions = listOfNotNull(saveCover) + additionalActions,
         )
     }
 }

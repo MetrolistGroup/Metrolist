@@ -158,6 +158,7 @@ fun PlayerMenu(
     val songTitle = currentSong?.title ?: stringResource(Res.string.unknown)
     val artistName = currentSong?.artists?.joinToString(", ") { it.displayName } ?: stringResource(Res.string.unknown_artist)
     val thumbnail = currentSong?.displayThumbnail
+    val saveCover = rememberCoverArtworkExportAction(thumbnail, currentSong?.album ?: songTitle, onDismiss)
     val firstArtistId = currentSong?.artists?.firstOrNull()?.id
     val blockedArtistText = pluralStringResource(Res.plurals.blocked_artists_count, 1, 1)
     val dislikedText = stringResource(Res.string.disliked_song)
@@ -403,8 +404,9 @@ fun PlayerMenu(
                                 }
                             }
 
-                            deleteUploadAction?.let { action ->
-                                item { PlayerMenuActionGroup(actions = listOf(action)) }
+                            val artworkActions = listOfNotNull(saveCover, deleteUploadAction)
+                            if (artworkActions.isNotEmpty()) {
+                                item { PlayerMenuActionGroup(actions = artworkActions) }
                             }
 
                             item {

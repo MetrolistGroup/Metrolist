@@ -2209,6 +2209,9 @@
     <string name="exporting_collection">Exporting %1$s</string>
     <!-- Translators: Confirmation message about export saved in the collection export dialog. -->
     <string name="export_saved">Export saved</string>
+    <string name="save_cover_artwork">Save cover artwork</string>
+    <string name="cover_artwork_saved">Cover artwork saved</string>
+    <string name="cover_artwork_save_failed">Could not save cover artwork</string>
     <!-- Translators: Option or section label for full screen in the settings and desktop player. -->
     <string name="full_screen">Full screen</string>
     <!-- Translators: Imperative action label for enter pip in the music video player and desktop player. -->
