@@ -338,14 +338,8 @@ class App :
             BlockedContent.refreshAiSlopBlocklist()
         }
 
+        AppUpdateManager.ensureNotificationChannel(this)
         val nm = NotificationManagerCompat.from(this)
-        nm.createNotificationChannel(
-            NotificationChannelCompat
-                .Builder(AppUpdateManager.CHANNEL_ID, NotificationManagerCompat.IMPORTANCE_DEFAULT)
-                .setName(getString(R.string.updates_channel_name))
-                .setDescription(getString(R.string.updates_channel_description))
-                .build(),
-        )
         nm.createNotificationChannel(
             NotificationChannelCompat
                 .Builder(SongDownloadManager.CHANNEL_ID, NotificationManagerCompat.IMPORTANCE_LOW)

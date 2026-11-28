@@ -2,6 +2,7 @@ package com.metrolist.android.update
 
 import android.Manifest
 import android.annotation.SuppressLint
+import android.app.Activity
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
@@ -10,12 +11,17 @@ import android.content.pm.PackageInfo
 import android.content.pm.PackageInstaller
 import android.content.pm.PackageManager
 import android.os.Build
+import android.os.Handler
+import android.os.Looper
 import androidx.annotation.RequiresApi
+import androidx.core.app.NotificationChannelCompat
 import androidx.core.app.NotificationCompat
+import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import com.metrolist.android.BuildConfig
 import com.metrolist.android.MainActivity
 import com.metrolist.android.R
+import com.metrolist.android.ui.screens.CrashActivity
 import com.metrolist.shared.generated.resources.Res
 import com.metrolist.shared.generated.resources.updates_notification_text
 import com.metrolist.shared.generated.resources.updates_notification_title
@@ -41,8 +47,11 @@ import okhttp3.Call
 import okhttp3.Request
 import org.jetbrains.compose.resources.getString
 import java.io.File
+import java.lang.ref.WeakReference
 import java.security.MessageDigest
+import java.util.UUID
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicLong
 
 @Serializable
 data class GitHubRelease(
@@ -116,6 +125,7 @@ sealed interface AppUpdateState {
     data class Error(
         val failure: UpdateFailure,
         val release: GitHubRelease? = null,
+        val errorMessage: String? = null,
     ) : AppUpdateState
 }
 
@@ -126,6 +136,8 @@ object AppUpdateManager {
     private const val RELEASES_URL = "https://api.github.com/repos/MetrolistGroup/Metrolist/releases?per_page=50"
     private const val NIGHTLY_RELEASE_URL = "https://api.github.com/repos/MetrolistGroup/Metrolist/releases/tags/$NIGHTLY_TAG"
     private const val NOTIFICATION_ID = 1400
+    private const val INSTALL_RESULT_NOTIFICATION_ID = 1401
+    private const val INSTALL_PROMPT_NOTIFICATION_ID = 1402
     private const val MAX_APK_BYTES = 512L * 1024 * 1024
     private const val MIN_FREE_SPACE_BYTES = 16L * 1024 * 1024
 
@@ -146,6 +158,88 @@ object AppUpdateManager {
     @Volatile private var autoInstallFailed = false
 
     @Volatile private var backgroundUpdateKey: String? = null
+
+    @Volatile private var foregroundActivityRef: WeakReference<Activity>? = null
+
+    @Volatile private var activeSessionCallback: PackageInstaller.SessionCallback? = null
+
+    @Volatile private var activeSessionId: Int = -1
+
+    @Volatile private var ignoredSessionIds: Set<Int> = emptySet()
+
+    @Volatile private var pendingConfirmationIntent: Intent? = null
+
+    @Volatile private var pendingConfirmationSessionId: Int = -1
+
+    private val processToken = UUID.randomUUID().toString()
+    private val attemptCounter = AtomicLong(0L)
+    private val installErrorVersion = AtomicLong(0L)
+
+    @Volatile private var currentAttemptToken: String? = null
+
+    private val mainHandler by lazy { Handler(Looper.getMainLooper()) }
+
+    private fun nextAttemptToken(): String = "$processToken:${attemptCounter.incrementAndGet()}".also { currentAttemptToken = it }
+
+    fun ensureNotificationChannel(context: Context) {
+        NotificationManagerCompat.from(context).createNotificationChannel(
+            NotificationChannelCompat
+                .Builder(CHANNEL_ID, NotificationManagerCompat.IMPORTANCE_DEFAULT)
+                .setName(context.getString(R.string.updates_channel_name))
+                .setDescription(context.getString(R.string.updates_channel_description))
+                .build(),
+        )
+    }
+
+    fun restoreInstallFailure(
+        errorMessage: String,
+        attemptToken: String? = null,
+    ) {
+        val detail = errorMessage.trim().takeIf { it.isNotEmpty() } ?: return
+        if (autoInstallRunning.get()) return
+        val current = mutableState.value
+        if (current is AppUpdateState.Downloading || current is AppUpdateState.Downloaded) return
+        val activeToken = currentAttemptToken
+        if (attemptToken != null && activeToken != null && attemptToken != activeToken) return
+        installErrorVersion.incrementAndGet()
+        val release =
+            when (current) {
+                is AppUpdateState.Available -> current.release
+                is AppUpdateState.Error -> current.release ?: cachedAvailableRelease()
+                else -> cachedAvailableRelease()
+            }
+        mutableState.value = AppUpdateState.Error(UpdateFailure.INSTALL, release, detail)
+    }
+
+    fun setForegroundActivity(
+        activity: Activity?,
+        active: Boolean,
+    ) {
+        if (active && activity != null && !activity.isFinishing && !activity.isDestroyed) {
+            foregroundActivityRef = WeakReference(activity)
+            val pending = pendingConfirmationIntent
+            val pendingSession = pendingConfirmationSessionId
+            val currentSession = activeSessionId
+            if (pending != null && (currentSession < 0 || pendingSession < 0 || pendingSession == currentSession)) {
+                if (runCatching { activity.startActivity(Intent(pending)) }.isSuccess) {
+                    pendingConfirmationIntent = null
+                    pendingConfirmationSessionId = -1
+                    cancelInstallPromptNotification(activity)
+                } else if (!canPostNotifications(activity)) {
+                    val targetSession = pendingSession.takeIf { it >= 0 } ?: currentSession
+                    onInstallFinished(
+                        context = activity,
+                        success = false,
+                        sessionId = targetSession,
+                        crashRecovery = activity is CrashActivity,
+                    )
+                    abandonPendingSession(activity, targetSession)
+                }
+            }
+        } else if (!active && foregroundActivityRef?.get() === activity) {
+            foregroundActivityRef = null
+        }
+    }
 
     /** True for a release an automatic update downloaded. Screens must not install it on their own; only the Install button may. */
     fun isBackgroundUpdate(release: GitHubRelease): Boolean = autoInstallRunning.get() || release.updateKey == backgroundUpdateKey
@@ -170,14 +264,15 @@ object AppUpdateManager {
         val lastAttempt = Settings.shared.lastUpdateCheckAttemptTimestamp
         val checkIsDue = lastAttempt !in 1..now || now - lastAttempt >= CHECK_INTERVAL_MILLIS
         if (networkEnabled && checkIsDue) {
-            return check(context, notify = Settings.shared.updateNotifications)
+            return check(context, notify = Settings.shared.updateNotifications, preserveInstallError = true)
         }
 
         val cached = withContext(Dispatchers.IO) { cachedAvailableRelease() }
-        // A background download or one waiting for playback to stop must survive a check that is not due.
+        // A background download, playback-paused update, or notification-restored install failure must survive a startup check.
         when (val active = mutableState.value) {
             is AppUpdateState.Downloading -> if (active.release.updateKey == cached?.updateKey) return cached
             is AppUpdateState.Downloaded -> if (active.release.updateKey == cached?.updateKey && active.file.isFile) return cached
+            is AppUpdateState.Error -> if (active.failure == UpdateFailure.INSTALL) return cached
             else -> Unit
         }
         mutableState.value =
@@ -200,6 +295,7 @@ object AppUpdateManager {
         context: Context,
         notify: Boolean = false,
         crashRecovery: Boolean = false,
+        preserveInstallError: Boolean = false,
     ): GitHubRelease? =
         withContext(Dispatchers.IO) {
             operationMutex.withLock {
@@ -214,9 +310,17 @@ object AppUpdateManager {
                         return@withLock active.release
                     }
 
+                    is AppUpdateState.Error -> {
+                        if (preserveInstallError && active.failure == UpdateFailure.INSTALL) {
+                            return@withLock active.release
+                        }
+                    }
+
                     else -> {
                     }
                 }
+                if (!preserveInstallError) installErrorVersion.incrementAndGet()
+                val errorVersionAtStart = installErrorVersion.get()
                 mutableState.value = AppUpdateState.Checking
                 if (!crashRecovery) Settings.shared.lastUpdateCheckAttemptTimestamp = System.currentTimeMillis()
                 runCatching {
@@ -251,11 +355,13 @@ object AppUpdateManager {
                                 isNewNightly(nightly, confirm = !crashRecovery)
                         }
                     if (!crashRecovery) Settings.shared.cachedAvailableUpdateJson = update?.let { json.encodeToString(it) }.orEmpty()
+                    if (preserveInstallError && installErrorVersion.get() != errorVersionAtStart) return@withLock update
                     mutableState.value = if (update == null) AppUpdateState.UpToDate(now) else AppUpdateState.Available(update)
                     if (update != null && notify && !crashRecovery) notifyAvailable(context, update)
                     update
                 }.getOrElse {
                     val cached = if (crashRecovery) null else cachedAvailableRelease()
+                    if (preserveInstallError && installErrorVersion.get() != errorVersionAtStart) return@withLock cached
                     mutableState.value = cached?.let(AppUpdateState::Available) ?: AppUpdateState.Error(UpdateFailure.CHECK)
                     cached
                 }
@@ -310,6 +416,9 @@ object AppUpdateManager {
                 is AppUpdateState.Downloaded -> if (active.release.updateKey == release.updateKey && active.file.isFile) return@withLock
                 else -> Unit
             }
+            nextAttemptToken()
+            cancelInstallPromptNotification(context)
+            cancelInstallResultNotification(context)
             val asset = release.apk
             if (asset == null) {
                 mutableState.value = AppUpdateState.Error(UpdateFailure.NO_APK, release)
@@ -484,6 +593,9 @@ object AppUpdateManager {
         crashRecovery: Boolean = false,
     ): Boolean =
         withContext(Dispatchers.IO) {
+            nextAttemptToken()
+            cancelInstallPromptNotification(context)
+            cancelInstallResultNotification(context)
             mutableState.value = downloaded.copy(installing = true)
             if (!downloaded.file.isFile || (downloaded.verified && !verifyApkIdentity(context, downloaded.file))) {
                 downloaded.file.delete()
@@ -494,12 +606,20 @@ object AppUpdateManager {
             if (method != UpdateInstallMethod.SYSTEM) {
                 // pm usually replaces this process on success before returning.
                 val installed = PrivilegedInstaller.install(method, context.packageName, downloaded.file)
-                onInstallFinished(installed)
+                onInstallFinished(context = context, success = installed, crashRecovery = crashRecovery)
                 return@withContext installed
             }
             val installer = context.packageManager.packageInstaller
             var sessionId = -1
             runCatching {
+                val staleIds = installer.mySessions.mapTo(mutableSetOf()) { it.sessionId }
+                ignoredSessionIds = staleIds
+                activeSessionId = -1
+                pendingConfirmationIntent = null
+                pendingConfirmationSessionId = -1
+                staleIds.forEach { staleId ->
+                    runCatching { installer.abandonSession(staleId) }
+                }
                 val params =
                     PackageInstaller.SessionParams(PackageInstaller.SessionParams.MODE_FULL_INSTALL).apply {
                         setAppPackageName(context.packageName)
@@ -509,6 +629,8 @@ object AppUpdateManager {
                         }
                     }
                 sessionId = installer.createSession(params)
+                activeSessionId = sessionId
+                registerSessionCallback(installer, sessionId)
                 installer.openSession(sessionId).use { session ->
                     downloaded.file.inputStream().use { input ->
                         session.openWrite("base.apk", 0, downloaded.file.length()).use { output ->
@@ -527,26 +649,364 @@ object AppUpdateManager {
                         )
                     session.commit(callback.intentSender)
                 }
-            }.onFailure {
+            }.onFailure { error ->
+                activeSessionId = -1
+                pendingConfirmationIntent = null
+                pendingConfirmationSessionId = -1
+                unregisterSessionCallback(installer)
                 if (sessionId >= 0) {
                     runCatching { installer.abandonSession(sessionId) }
                 }
                 mutableState.value =
-                    if (downloaded.file.isFile) downloaded.copy(installing = false) else AppUpdateState.Available(downloaded.release)
+                    if (downloaded.file.isFile) {
+                        downloaded.copy(installing = false)
+                    } else {
+                        AppUpdateState.Error(UpdateFailure.INSTALL, downloaded.release, error.localizedMessage)
+                    }
             }.isSuccess
         }
 
-    internal fun onInstallFinished(success: Boolean) {
-        val current = mutableState.value as? AppUpdateState.Downloaded ?: return
-        if (!success) stopAutoInstallAfterFailure(current.release)
-        mutableState.value =
-            if (success) current.copy(installing = false) else AppUpdateState.Error(UpdateFailure.INSTALL, current.release)
+    internal fun launchConfirmationPrompt(
+        context: Context,
+        confirm: Intent,
+        sessionId: Int = -1,
+        crashRecovery: Boolean = false,
+    ): Boolean {
+        if (isStaleSession(sessionId)) return true
+        val foreground = foregroundActivityRef?.get()?.takeIf { !it.isFinishing && !it.isDestroyed }
+        if (foreground != null && runCatching { foreground.startActivity(confirm) }.isSuccess) {
+            pendingConfirmationIntent = null
+            pendingConfirmationSessionId = -1
+            return true
+        }
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
+            val started =
+                runCatching {
+                    context.startActivity(Intent(confirm).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                }.isSuccess
+            if (started) {
+                pendingConfirmationIntent = null
+                pendingConfirmationSessionId = -1
+                return true
+            }
+        }
+        val notified = notifyInstallPrompt(context, confirm, sessionId, crashRecovery)
+        if (notified) {
+            // Replay the confirmation automatically if the user returns to the update screen instead of tapping the notification.
+            pendingConfirmationIntent = Intent(confirm)
+            pendingConfirmationSessionId = sessionId
+        } else {
+            pendingConfirmationIntent = null
+            pendingConfirmationSessionId = -1
+        }
+        return notified
     }
 
-    internal fun onInstallAborted() {
+    internal fun abandonPendingSession(
+        context: Context,
+        sessionId: Int,
+    ) {
+        if (sessionId < 0) return
+        ignoredSessionIds = ignoredSessionIds + sessionId
+        runCatching { context.packageManager.packageInstaller.abandonSession(sessionId) }
+    }
+
+    internal fun onInstallFinished(
+        context: Context? = null,
+        success: Boolean,
+        status: Int = PackageInstaller.STATUS_SUCCESS,
+        message: String? = null,
+        sessionId: Int = -1,
+        crashRecovery: Boolean = false,
+    ) {
+        if (isStaleSession(sessionId)) return
+        activeSessionId = -1
+        pendingConfirmationIntent = null
+        pendingConfirmationSessionId = -1
+        context?.let {
+            cancelInstallPromptNotification(it)
+            unregisterSessionCallback(it.packageManager.packageInstaller)
+        }
+        val resolvedMessage = if (success) null else resolveInstallErrorMessage(context, status, message, crashRecovery)
+        val current = mutableState.value as? AppUpdateState.Downloaded
+        if (current != null) {
+            if (!success) stopAutoInstallAfterFailure(current.release)
+            mutableState.value =
+                if (success) {
+                    current.copy(installing = false)
+                } else {
+                    AppUpdateState.Error(
+                        UpdateFailure.INSTALL,
+                        current.release,
+                        resolvedMessage,
+                    )
+                }
+        }
+        if (!success && context != null) {
+            val foreground = foregroundActivityRef?.get()?.takeIf { !it.isFinishing && !it.isDestroyed }
+            if (current == null || foreground == null) {
+                notifyInstallFailure(context, resolvedMessage, crashRecovery)
+            }
+        }
+    }
+
+    internal fun onInstallAborted(
+        context: Context? = null,
+        sessionId: Int = -1,
+    ) {
+        if (isStaleSession(sessionId)) return
+        activeSessionId = -1
+        pendingConfirmationIntent = null
+        pendingConfirmationSessionId = -1
+        context?.let {
+            cancelInstallPromptNotification(it)
+            val installer = it.packageManager.packageInstaller
+            unregisterSessionCallback(installer)
+            if (sessionId >= 0) runCatching { installer.abandonSession(sessionId) }
+        }
         val current = mutableState.value as? AppUpdateState.Downloaded ?: return
         stopAutoInstallAfterFailure(current.release)
         mutableState.value = current.copy(installing = false)
+    }
+
+    private fun isStaleSession(sessionId: Int): Boolean {
+        if (sessionId < 0) return false
+        if (sessionId in ignoredSessionIds) return true
+        return activeSessionId >= 0 && sessionId != activeSessionId
+    }
+
+    internal fun notifyPackageReplaced(context: Context) {
+        pendingConfirmationIntent = null
+        pendingConfirmationSessionId = -1
+        cancelInstallPromptNotification(context)
+        if (!BuildConfig.UPDATER_ENABLED || !Settings.shared.updateNotifications || !canPostNotifications(context)) return
+        val intent =
+            Intent(context, MainActivity::class.java).apply {
+                action = MainActivity.ACTION_UPDATES
+                flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+            }
+        val pendingIntent =
+            PendingIntent.getActivity(
+                context,
+                INSTALL_RESULT_NOTIFICATION_ID,
+                intent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+            )
+        val notification =
+            NotificationCompat
+                .Builder(context, CHANNEL_ID)
+                .setSmallIcon(R.drawable.ic_notification)
+                .setContentTitle(context.getString(R.string.updates_installed_notification_title, BuildConfig.VERSION_NAME))
+                .setContentText(context.getString(R.string.updates_installed_notification_text))
+                .setContentIntent(pendingIntent)
+                .setAutoCancel(true)
+                .build()
+        context.getSystemService(NotificationManager::class.java).notify(INSTALL_RESULT_NOTIFICATION_ID, notification)
+    }
+
+    private fun registerSessionCallback(
+        installer: PackageInstaller,
+        targetSessionId: Int,
+    ) {
+        unregisterSessionCallback(installer)
+        val callback =
+            object : PackageInstaller.SessionCallback() {
+                override fun onCreated(sessionId: Int) = Unit
+
+                override fun onBadgingChanged(sessionId: Int) = Unit
+
+                override fun onActiveChanged(
+                    sessionId: Int,
+                    active: Boolean,
+                ) = Unit
+
+                override fun onProgressChanged(
+                    sessionId: Int,
+                    progress: Float,
+                ) = Unit
+
+                override fun onFinished(
+                    sessionId: Int,
+                    success: Boolean,
+                ) {
+                    if (sessionId == targetSessionId) {
+                        unregisterSessionCallback(installer)
+                    }
+                }
+            }
+        activeSessionCallback = callback
+        installer.registerSessionCallback(callback, mainHandler)
+    }
+
+    private fun unregisterSessionCallback(installer: PackageInstaller) {
+        activeSessionCallback?.let { callback ->
+            runCatching { installer.unregisterSessionCallback(callback) }
+            activeSessionCallback = null
+        }
+    }
+
+    private fun resolveInstallErrorMessage(
+        context: Context?,
+        status: Int,
+        rawMessage: String?,
+        crashRecovery: Boolean,
+    ): String? {
+        val statusRes =
+            when (status) {
+                PackageInstaller.STATUS_FAILURE_BLOCKED -> {
+                    if (crashRecovery) R.string.crash_updates_install_status_blocked else R.string.updates_install_status_blocked
+                }
+
+                PackageInstaller.STATUS_FAILURE_CONFLICT -> {
+                    if (crashRecovery) R.string.crash_updates_install_status_conflict else R.string.updates_install_status_conflict
+                }
+
+                PackageInstaller.STATUS_FAILURE_INCOMPATIBLE -> {
+                    if (crashRecovery) {
+                        R.string.crash_updates_install_status_incompatible
+                    } else {
+                        R.string.updates_install_status_incompatible
+                    }
+                }
+
+                PackageInstaller.STATUS_FAILURE_INVALID -> {
+                    if (crashRecovery) R.string.crash_updates_install_status_invalid else R.string.updates_install_status_invalid
+                }
+
+                PackageInstaller.STATUS_FAILURE_STORAGE -> {
+                    if (crashRecovery) R.string.crash_updates_install_status_storage else R.string.updates_install_status_storage
+                }
+
+                else -> {
+                    null
+                }
+            }
+        val statusText = statusRes?.let { res -> context?.getString(res) }
+        val detail = rawMessage?.trim()?.takeIf { it.isNotEmpty() }
+        return listOfNotNull(statusText, detail).distinct().joinToString("\n").ifBlank { null }
+    }
+
+    private fun notifyInstallPrompt(
+        context: Context,
+        confirm: Intent,
+        sessionId: Int,
+        crashRecovery: Boolean,
+    ): Boolean {
+        if (!canPostNotifications(context)) return false
+        val pendingIntent =
+            PendingIntent.getActivity(
+                context,
+                INSTALL_PROMPT_NOTIFICATION_ID,
+                Intent(confirm).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+            )
+        val receiver = if (crashRecovery) CrashUpdateInstallReceiver::class.java else UpdateInstallReceiver::class.java
+        val dismissIntent =
+            PendingIntent.getBroadcast(
+                context,
+                INSTALL_PROMPT_NOTIFICATION_ID,
+                Intent(context, receiver).apply {
+                    putExtra(PackageInstaller.EXTRA_STATUS, PackageInstaller.STATUS_FAILURE_ABORTED)
+                    if (sessionId >= 0) putExtra(PackageInstaller.EXTRA_SESSION_ID, sessionId)
+                },
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+            )
+        val titleRes =
+            if (crashRecovery) {
+                R.string.crash_updates_install_prompt_notification_title
+            } else {
+                R.string.updates_install_prompt_notification_title
+            }
+        val textRes =
+            if (crashRecovery) {
+                R.string.crash_updates_install_prompt_notification_text
+            } else {
+                R.string.updates_install_prompt_notification_text
+            }
+        val notification =
+            NotificationCompat
+                .Builder(context, CHANNEL_ID)
+                .setSmallIcon(R.drawable.ic_notification)
+                .setContentTitle(context.getString(titleRes))
+                .setContentText(context.getString(textRes))
+                .setContentIntent(pendingIntent)
+                .setDeleteIntent(dismissIntent)
+                .build()
+        context.getSystemService(NotificationManager::class.java).notify(INSTALL_PROMPT_NOTIFICATION_ID, notification)
+        return true
+    }
+
+    private fun cancelInstallPromptNotification(context: Context) {
+        context.getSystemService(NotificationManager::class.java).cancel(INSTALL_PROMPT_NOTIFICATION_ID)
+    }
+
+    private fun cancelInstallResultNotification(context: Context) {
+        context.getSystemService(NotificationManager::class.java).cancel(INSTALL_RESULT_NOTIFICATION_ID)
+    }
+
+    private fun notifyInstallFailure(
+        context: Context,
+        errorMessage: String?,
+        crashRecovery: Boolean,
+    ) {
+        if (!Settings.shared.updateNotifications || !canPostNotifications(context)) return
+        val fallbackDetail =
+            context.getString(
+                if (crashRecovery) R.string.crash_updates_installer_failed else R.string.updates_installer_failed,
+            )
+        val detail = errorMessage ?: fallbackDetail
+        val targetActivity = if (crashRecovery) CrashActivity::class.java else MainActivity::class.java
+        val intent =
+            Intent(context, targetActivity).apply {
+                action = if (crashRecovery) CrashActivity.ACTION_UPDATES else MainActivity.ACTION_UPDATES
+                flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+                putExtra(MainActivity.EXTRA_UPDATE_INSTALL_ERROR, detail)
+                currentAttemptToken?.let { putExtra(MainActivity.EXTRA_UPDATE_INSTALL_ATTEMPT, it) }
+            }
+        val pendingIntent =
+            PendingIntent.getActivity(
+                context,
+                INSTALL_RESULT_NOTIFICATION_ID,
+                intent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+            )
+        val titleRes =
+            if (crashRecovery) {
+                R.string.crash_updates_install_failed_notification_title
+            } else {
+                R.string.updates_install_failed_notification_title
+            }
+        val textRes =
+            if (crashRecovery) {
+                R.string.crash_updates_install_failed_notification_text
+            } else {
+                R.string.updates_install_failed_notification_text
+            }
+        val bodyText = errorMessage ?: context.getString(textRes)
+        val notification =
+            NotificationCompat
+                .Builder(context, CHANNEL_ID)
+                .setSmallIcon(R.drawable.ic_notification)
+                .setContentTitle(context.getString(titleRes))
+                .setContentText(bodyText)
+                .setStyle(NotificationCompat.BigTextStyle().bigText(bodyText))
+                .setContentIntent(pendingIntent)
+                .setAutoCancel(true)
+                .build()
+        context.getSystemService(NotificationManager::class.java).notify(INSTALL_RESULT_NOTIFICATION_ID, notification)
+    }
+
+    private fun canPostNotifications(context: Context): Boolean {
+        val hasPermission =
+            Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
+                ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
+        if (!hasPermission || !NotificationManagerCompat.from(context).areNotificationsEnabled()) return false
+        ensureNotificationChannel(context)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val channel = context.getSystemService(NotificationManager::class.java).getNotificationChannel(CHANNEL_ID)
+            if (channel == null || channel.importance == NotificationManager.IMPORTANCE_NONE) return false
+        }
+        return true
     }
 
     // The package installer reports its result after install() returns, so a later rejection or a declined prompt lands here.
