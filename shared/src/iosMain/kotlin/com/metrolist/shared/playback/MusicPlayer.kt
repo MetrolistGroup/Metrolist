@@ -1296,7 +1296,10 @@ class MusicPlayer internal constructor(
         ) {
             return
         }
-        preparedPlayback?.takeIf { it.song.id == song.id && it.resource.url == resource.url && it.queueIndex == queueIndex }?.let { return }
+        preparedPlayback?.takeIf { it.song.id == song.id && it.queueIndex == queueIndex }?.let { prepared ->
+            // A re-resolved stream gets a fresh URL; replacing the incoming player mid-crossfade cuts the transition.
+            if (prepared.resource.url == resource.url || crossfadeStartMs != null || crossfadeAwaitingIncoming) return
+        }
         cancelPreparedPlayback()
         preparedPlayback = createPreparedPlayback(song, resource, queueIndex)
     }
