@@ -170,4 +170,91 @@ class LrcLibLyricsProviderTest {
                 client.close()
             }
         }
+
+    @Test
+    fun selectsWordSyncedLyricsfileWhenLegacyLyricsAreAbsent() =
+        runTest {
+            val lyricsfile =
+                """
+                version: '1.0'
+                metadata:
+                  title: Track
+                  artist: Artist
+                  duration_ms: 180000
+                  instrumental: false
+                lines:
+                - text: Word line
+                  start_ms: 1000
+                  end_ms: 2000
+                  words:
+                  - text: 'Word '
+                    start_ms: 1000
+                    end_ms: 1500
+                  - text: line
+                    start_ms: 1500
+                    end_ms: 2000
+                """.trimIndent()
+            val body =
+                buildJsonArray {
+                    addJsonObject {
+                        put("id", 42)
+                        put("name", "Track")
+                        put("artistName", "Artist")
+                        put("duration", 180)
+                        put("instrumental", false)
+                        put("hasWordSync", true)
+                        put("lyricsfile", lyricsfile)
+                    }
+                }.toString()
+            val client = HttpClient(MockEngine { respond(body) })
+            try {
+                val lyrics = assertNotNull(LrcLibLyricsProvider(client).getLyrics("Track", "Artist", 180_000))
+                val document = MlxParser.parse(lyrics)
+                assertEquals("42", document.meta.sourceId)
+                assertEquals("Word line", document.lines.single().text)
+            } finally {
+                client.close()
+            }
+        }
+
+    @Test
+    fun fallsBackWhenWordSyncedLyricsfileIsUnsupported() =
+        runTest {
+            val unsupportedLyricsfile =
+                """
+                version: '2.0'
+                lines:
+                - text: Unsupported
+                  start_ms: 1000
+                """.trimIndent()
+            val body =
+                buildJsonArray {
+                    addJsonObject {
+                        put("id", 43)
+                        put("name", "Track")
+                        put("artistName", "Artist")
+                        put("duration", 180)
+                        put("instrumental", false)
+                        put("hasWordSync", true)
+                        put("lyricsfile", unsupportedLyricsfile)
+                    }
+                    addJsonObject {
+                        put("id", 44)
+                        put("name", "Track")
+                        put("artistName", "Artist")
+                        put("duration", 180)
+                        put("instrumental", false)
+                        put("plainLyrics", "Fallback plain line")
+                    }
+                }.toString()
+            val client = HttpClient(MockEngine { respond(body) })
+            try {
+                val lyrics = assertNotNull(LrcLibLyricsProvider(client).getLyrics("Track", "Artist", 180_000))
+                val document = MlxParser.parse(lyrics)
+                assertEquals("44", document.meta.sourceId)
+                assertEquals("Fallback plain line", document.lines.single().text)
+            } finally {
+                client.close()
+            }
+        }
 }

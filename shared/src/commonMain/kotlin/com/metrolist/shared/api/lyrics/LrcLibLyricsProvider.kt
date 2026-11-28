@@ -44,44 +44,45 @@ class LrcLibLyricsProvider(
     ): String? {
         val knownDuration = duration?.takeIf { it > 0 }
         val trimmedAlbum = album?.trim()?.takeIf { it.isNotEmpty() }
-        val primary = searchBestCandidate(title, artist, knownDuration, trimmedAlbum)
-        val best =
-            primary
-                ?: run {
-                    val fallbackTitle = stripFeatAndDecorators(title)
-                    if (trimmedAlbum != null || fallbackTitle != title) {
-                        searchBestCandidate(fallbackTitle, artist, knownDuration, album = null)
-                    } else {
-                        null
-                    }
-                }
-                ?: return null
+        searchCandidates(title, artist, knownDuration, trimmedAlbum)
+            .firstNotNullOfOrNull { candidateToMlx(it, title, artist) }
+            ?.let { return it }
 
-        if (best.hasWordSync) {
-            best.lyricsfile
-                ?.let { runCatching { lyricsfileToMlx(it, title, artist, sourceId = best.id.toString()) }.getOrNull() }
+        val fallbackTitle = stripFeatAndDecorators(title)
+        if (trimmedAlbum == null && fallbackTitle == title) return null
+        return searchCandidates(fallbackTitle, artist, knownDuration, album = null)
+            .firstNotNullOfOrNull { candidateToMlx(it, title, artist) }
+    }
+
+    private fun candidateToMlx(
+        candidate: LrcLibResponse,
+        title: String,
+        artist: String,
+    ): String? {
+        if (candidate.hasWordSync) {
+            candidate.lyricsfile
+                ?.let { runCatching { lyricsfileToMlx(it, title, artist, sourceId = candidate.id.toString()) }.getOrNull() }
                 ?.takeIf(MlxParser::isMlxFormat)
                 ?.let { return it }
         }
-        val synced = best.syncedLyrics?.takeIf { it.isNotBlank() }
-        return if (synced != null) {
-            lrcToMlx(synced, title, artist, source = "LrcLib", sourceId = best.id.toString())
-        } else {
-            val plain = best.plainLyrics?.takeIf { it.isNotBlank() } ?: return null
-            MlxBuilder()
-                .meta("LrcLib", sourceId = best.id.toString())
-                .song(title = title, artist = artist)
-                .apply { plain.lines().forEach { line -> if (line.isNotBlank()) unsyncedLine(line.trim()) } }
-                .build()
-        }
+        candidate.syncedLyrics
+            ?.takeIf { it.isNotBlank() }
+            ?.let { lrcToMlx(it, title, artist, source = "LrcLib", sourceId = candidate.id.toString()) }
+            ?.let { return it }
+        val plain = candidate.plainLyrics?.takeIf { it.isNotBlank() } ?: return null
+        return MlxBuilder()
+            .meta("LrcLib", sourceId = candidate.id.toString())
+            .song(title = title, artist = artist)
+            .apply { plain.lines().forEach { line -> if (line.isNotBlank()) unsyncedLine(line.trim()) } }
+            .build()
     }
 
-    private suspend fun searchBestCandidate(
+    private suspend fun searchCandidates(
         queryTitle: String,
         artist: String,
         knownDuration: Long?,
         album: String?,
-    ): LrcLibResponse? {
+    ): List<LrcLibResponse> {
         val responseText =
             httpClient
                 .prepareGet("$baseUrl/search") {
@@ -90,7 +91,7 @@ class LrcLibLyricsProvider(
                     if (artist.isNotBlank()) parameter("artist_name", artist)
                     if (album != null) parameter("album_name", album)
                     if (knownDuration != null) parameter("duration", knownDuration / 1000)
-                }.readLyricsText() ?: return null
+                }.readLyricsText() ?: return emptyList()
 
         val response = json.decodeFromString<List<LrcLibResponse>>(responseText)
         val normTitle = MusicVideoMatcher.normalizeTitle(queryTitle)
@@ -105,7 +106,11 @@ class LrcLibLyricsProvider(
                     titleMatchesCandidate(queryTitle, normTitle, coreTitle, candidate.name) &&
                     artistMatchesCandidate(normArtist, artistTokens, candidate.artistName) &&
                     (knownDuration == null || abs(candidate.duration * 1000 - knownDuration) <= 10_000) &&
-                    (!candidate.syncedLyrics.isNullOrBlank() || !candidate.plainLyrics.isNullOrBlank())
+                    (
+                        (candidate.hasWordSync && !candidate.lyricsfile.isNullOrBlank()) ||
+                            !candidate.syncedLyrics.isNullOrBlank() ||
+                            !candidate.plainLyrics.isNullOrBlank()
+                    )
             }.sortedWith(
                 compareByDescending<LrcLibResponse> { candidate ->
                     MusicVideoMatcher.normalizeTitle(candidate.name) == normTitle
@@ -117,7 +122,7 @@ class LrcLibLyricsProvider(
                 }.thenBy { candidate -> knownDuration?.let { abs(candidate.duration * 1000 - it) } ?: 0f }
                     .thenByDescending { it.hasWordSync }
                     .thenByDescending { !it.syncedLyrics.isNullOrBlank() },
-            ).firstOrNull()
+            )
     }
 
     private fun titleMatchesCandidate(
