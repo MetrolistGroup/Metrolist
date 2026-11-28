@@ -9,6 +9,7 @@ import com.metrolist.shared.db.HistoryAlbumStatistic
 import com.metrolist.shared.db.HistoryArtistStatistic
 import com.metrolist.shared.db.HistoryStatGroup
 import com.metrolist.shared.db.HistoryStatisticsSnapshot
+import com.metrolist.shared.db.HistorySyncOutcome
 import com.metrolist.shared.model.SongItem
 import com.metrolist.shared.ui.screens.StatisticsPeriod
 import com.metrolist.shared.ui.statistics.StatisticsDateRange
@@ -16,6 +17,7 @@ import com.metrolist.shared.ui.statistics.StatisticsPeriodMode
 import com.metrolist.shared.ui.statistics.epochRange
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -23,6 +25,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlin.time.Clock
 import com.metrolist.android.data.HistoryEntry as PlayHistoryEntry
 
@@ -52,12 +56,18 @@ class StatsViewModel internal constructor(
     private val loadSnapshot: suspend (Long, Long, List<LastFmListen>) -> HistoryStatisticsSnapshot,
     private val loadRecent: suspend () -> List<PlayHistoryEntry>,
     private val loadSongs: suspend (List<HistoryStatGroup>) -> List<SongItem>,
+    private val syncHistory: suspend () -> HistorySyncOutcome = { HistorySyncOutcome.UNCHANGED },
     private val loadLastFm: suspend (Long, Long) -> List<LastFmListen> = LastFmHistoryCache::listens,
     private val clock: Clock = Clock.System,
 ) : ViewModel() {
     constructor(
         repository: PlayHistoryRepository,
-    ) : this(repository::getStatisticsSnapshot, { repository.getRecentHistory(20) }, repository::getStatisticsSongs)
+    ) : this(
+        repository::getStatisticsSnapshot,
+        { repository.getRecentHistory(20) },
+        repository::getStatisticsSongs,
+        repository::refreshFromYouTubeHistory,
+    )
 
     private val _uiState = MutableStateFlow(StatsUiState())
     val uiState: StateFlow<StatsUiState> = _uiState.asStateFlow()
@@ -103,11 +113,40 @@ class StatsViewModel internal constructor(
                 try {
                     val (sinceMs, untilMs) = period.epochRange(dateRange, clock, mode = mode)
 
-                    val recent = loadRecent()
+                    var recent = loadRecent()
                     showSnapshot(loadSnapshot(sinceMs, untilMs, emptyList()), period, mode, dateRange, recent)
-                    // Last.fm can take a while for long periods, so local numbers show first.
-                    val lastFm = loadLastFm(sinceMs, untilMs)
-                    if (lastFm.isNotEmpty()) showSnapshot(loadSnapshot(sinceMs, untilMs, lastFm), period, mode, dateRange, recent)
+                    // Run Last.fm and YouTube history sync concurrently so local numbers show first
+                    // and neither source blocks the other.
+                    var lastFm = emptyList<LastFmListen>()
+                    val publishMutex = Mutex()
+                    coroutineScope {
+                        launch {
+                            val loaded = loadLastFm(sinceMs, untilMs)
+                            if (loaded.isNotEmpty()) {
+                                publishMutex.withLock {
+                                    lastFm = loaded
+                                    showSnapshot(loadSnapshot(sinceMs, untilMs, lastFm), period, mode, dateRange, recent)
+                                }
+                            }
+                        }
+                        launch {
+                            val outcome =
+                                try {
+                                    syncHistory()
+                                } catch (error: CancellationException) {
+                                    throw error
+                                } catch (_: Exception) {
+                                    HistorySyncOutcome.FAILED
+                                }
+                            if (outcome == HistorySyncOutcome.UPDATED || outcome == HistorySyncOutcome.SKIPPED) {
+                                val refreshedRecent = loadRecent()
+                                publishMutex.withLock {
+                                    recent = refreshedRecent
+                                    showSnapshot(loadSnapshot(sinceMs, untilMs, lastFm), period, mode, dateRange, recent)
+                                }
+                            }
+                        }
+                    }
                 } catch (error: CancellationException) {
                     throw error
                 } catch (error: Exception) {
