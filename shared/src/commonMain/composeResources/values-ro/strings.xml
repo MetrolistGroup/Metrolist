@@ -713,7 +713,7 @@
     <string name="export_format_csv" translatable="false">CSV</string>
     <string name="export_format_csv_description">Listă de melodii pentru foi de calcul</string>
     <string name="export_format_m3u" translatable="false">M3U</string>
-    <string name="export_format_m3u_description">Fișier playlist cu link-uri YouTube Music</string>
+    <string name="export_format_m3u_description">Fișier playlist cu linkuri YouTube Music</string>
     <string name="export_saved">Export salvat</string>
     <string name="full_screen">Ecran complet</string>
     <string name="enter_pip" tools:ignore="MissingTranslation">Intră în modul Picture-in-Picture</string>
@@ -730,7 +730,7 @@
     <string name="history_no_search_results">Niciun rezultat în istoric pentru căutarea ta</string>
     <string name="history_refresh">Reîmprospătează istoricul</string>
     <string name="history_remote_delete_unavailable">Ștergerea de la distanță nu este disponibilă până când acest element nu s-a sincronizat de pe YouTube cât timp ești autentificat.</string>
-    <string name="history_remove_item_message">Șterge %1$s din istoricul tău de ascultare.</string>
+    <string name="history_remove_item_message">Elimină %1$s din istoricul tău de ascultare.</string>
     <string name="history_sort_listening_time">Timp de ascultare</string>
     <string name="home_load_item_failed">Nu s-a putut încărca %1$s</string>
     <string name="hours_and_minutes" translatable="false">%1$s %2$s</string>
@@ -742,7 +742,7 @@
     <string name="language_hindi">Hindi</string>
     <string name="language_japanese">Japoneză</string>
     <string name="language_korean">Coreeană</string>
-    <string name="language_kyrgyz">Kyrgyz</string>
+    <string name="language_kyrgyz">Kirghiză</string>
     <string name="language_macedonian">Macedoneană</string>
     <string name="language_punjabi">Punjabi</string>
     <string name="language_russian">Rusă</string>
@@ -897,7 +897,7 @@
     <string name="statistics_listening_habits">Obiceiuri de ascultare</string>
     <string name="statistics_overview">Prezentare generală</string>
     <string name="statistics_period_summary">În %1$s: %2$s, %3$s de ascultare.</string>
-    <string name="statistics_play_count_duration">%1$s · %2$s</string>
+    <string name="statistics_play_count_duration">%1$s · %2$s</string>
     <string name="statistics_time">Timp</string>
     <string name="statistics_top_albums">Albume de top</string>
     <string name="statistics_top_artists">Artiști de top</string>
@@ -2701,4 +2701,12 @@
     <string name="updates_nightly_builds">Versiuni nightly</string>
     <string name="updates_force_install">Instalează oricum</string>
     <string name="ai_api_key_optional">Opțional, modelele gratuite funcționează fără o cheie</string>
+    <string name="lyrics_romanization_show_romanization">Afișează romanizarea</string>
+    <string name="lyrics_romanization_larger_text">Text mai mare: romanizare sau versuri</string>
+    <string name="lyrics_romanization_larger_text_description">Alege dacă versurile sau romanizarea apare mai mare când amândouă sunt afișate.</string>
+    <string name="lyrics_romanization_show_original_description">Afișează versul original dedesubt</string>
+    <string name="lyrics_romanization_show_original">Afișează originalul</string>
+    <string name="lyrics_romanization_show_romanization_description">Afișează romanizarea sub versuri</string>
+    <string name="search_episodes">Caută episoade</string>
+    <string name="share_song_to_story">Distribuie în poveste</string>
 </resources>
