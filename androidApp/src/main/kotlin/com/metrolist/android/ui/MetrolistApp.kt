@@ -172,7 +172,6 @@ import com.metrolist.android.locale.AppLocale
 import com.metrolist.android.playback.AndroidPlaybackController
 import com.metrolist.android.playback.ListenTogetherPlaybackRequest
 import com.metrolist.android.playback.LocalPlayerConnection
-import com.metrolist.android.playback.PlaybackSnackbarEvents
 import com.metrolist.android.playback.PlayerConnection
 import com.metrolist.android.playback.SongDownloadManager
 import com.metrolist.android.playback.isRunnable
@@ -298,6 +297,7 @@ import com.metrolist.shared.model.BuiltinPlaylist
 import com.metrolist.shared.model.SearchFilter
 import com.metrolist.shared.model.SongItem
 import com.metrolist.shared.playback.LocalPlayerSession
+import com.metrolist.shared.playback.PlaybackSnackbarEvents
 import com.metrolist.shared.playlistimport.PlaylistImportProgressCard
 import com.metrolist.shared.playlistimport.PlaylistImportStatusManager
 import com.metrolist.shared.scrobble.ScrobbleSessions

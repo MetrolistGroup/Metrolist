@@ -301,6 +301,10 @@ class MusicPlayer internal constructor(
     private var didEmitEof = false
     private var pendingEofPlaybackInstanceId: Long? = null
     private var isQueueTransitionPending = false
+    internal val queueTransitionPending: Boolean
+        get() = isQueueTransitionPending
+    internal val crossfadeTransitionPending: Boolean
+        get() = crossfadeStartMs != null || crossfadeAwaitingIncoming
     private var resourceReloadGeneration = 0L
     private var isResourceReloadSeekPending = false
     private var audioProcessingReady = true
@@ -1189,8 +1193,11 @@ class MusicPlayer internal constructor(
         MPNowPlayingInfoCenter.defaultCenter().nowPlayingInfo = null
     }
 
-    fun seekTo(position: Long) {
-        playbackCommandEvents.update { it + 1 }
+    fun seekTo(
+        position: Long,
+        publishCommand: Boolean = true,
+    ) {
+        if (publishCommand) playbackCommandEvents.update { it + 1 }
         _currentPosition.value = currentPositionMs()
         sampleChanges.trySend(Unit)
         cancelActiveCrossfade()

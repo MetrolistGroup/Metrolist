@@ -12,6 +12,8 @@ import com.metrolist.shared.db.entities.RelatedSongMap
 import com.metrolist.shared.db.upsertHistorySong
 import com.metrolist.shared.db.withDatabaseTransaction
 import com.metrolist.shared.deviceconnect.DcScrobbleSession
+import com.metrolist.shared.generated.resources.Res
+import com.metrolist.shared.generated.resources.sponsorblock_skipped
 import com.metrolist.shared.listentogether.ListenTogetherManager
 import com.metrolist.shared.listentogether.listenTogetherControls
 import com.metrolist.shared.model.RadioQueueChip
@@ -26,6 +28,7 @@ import com.metrolist.shared.model.isPodcast
 import com.metrolist.shared.model.isVideoSong
 import com.metrolist.shared.model.selectRadioQueueChip
 import com.metrolist.shared.playback.QUEUE_SOURCE_AUTO_MIX
+import com.metrolist.shared.playback.sponsorblock.observeSponsorBlockSkipping
 import com.metrolist.shared.scrobble.ScrobbleManager
 import com.metrolist.shared.settings.Settings
 import com.metrolist.shared.state.GlobalYouTubeRepository
@@ -496,6 +499,22 @@ internal class IosPlaybackController(
                 center.removeObserver(observer)
                 center.removeObserver(terminationObserver)
             }
+        }
+        scope.launch {
+            observeSponsorBlockSkipping(
+                currentSong = player.currentSong,
+                currentPosition = player.currentPosition,
+                duration = player.duration,
+                isPlaying = player.isPlaying,
+                enabled = snapshotFlow { Settings.shared.sponsorBlockEnabled },
+                canSeek = {
+                    Settings.shared.sponsorBlockEnabled && !guestLocked &&
+                        !player.queueTransitionPending && !player.crossfadeTransitionPending &&
+                        pendingPlayback.value == null
+                },
+                seekTo = { position -> seekToAutomatic(position) },
+                onSkipped = { PlaybackSnackbarEvents.emit(Res.string.sponsorblock_skipped) },
+            )
         }
         scope.launch {
             TokenlessStreamRenewal.observe(
@@ -1194,7 +1213,16 @@ internal class IosPlaybackController(
         listenTogether?.sendSeek(pendingPlayback.value?.startPositionMs ?: player.currentPositionMs())
     }
 
-    internal fun seekFromListenTogether(positionMs: Long) {
+    internal fun seekToAutomatic(positionMs: Long) {
+        if (guestLocked) return
+        seekFromListenTogether(positionMs, publishCommand = false)
+        listenTogether?.sendSeek(pendingPlayback.value?.startPositionMs ?: player.currentPositionMs())
+    }
+
+    internal fun seekFromListenTogether(
+        positionMs: Long,
+        publishCommand: Boolean = true,
+    ) {
         if (!canApplyListenTogetherPlayback) return
         val pending = pendingPlayback.value
         val duration = if (pending != null) pending.song.duration?.times(1000L) else player.duration.value
@@ -1202,7 +1230,7 @@ internal class IosPlaybackController(
         if (pending != null) {
             pendingPlayback.value = pending.copy(startPositionMs = target)
         } else {
-            player.seekTo(target)
+            player.seekTo(target, publishCommand = publishCommand)
         }
         savePlaybackState()
     }

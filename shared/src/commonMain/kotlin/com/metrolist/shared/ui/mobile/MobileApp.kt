@@ -175,6 +175,7 @@ import com.metrolist.shared.model.YTItem
 import com.metrolist.shared.model.isAvailableOffline
 import com.metrolist.shared.model.toSongItem
 import com.metrolist.shared.playback.LocalPlayerSession
+import com.metrolist.shared.playback.PlaybackSnackbarEvents
 import com.metrolist.shared.playlist.PlaylistPartiallyUpdatedException
 import com.metrolist.shared.playlist.deleteStoredPlaylist
 import com.metrolist.shared.playlist.renameStoredPlaylist
@@ -298,6 +299,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.jetbrains.compose.resources.PluralStringResource
+import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.getPluralString
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
@@ -349,6 +351,22 @@ fun MobileApp(
     HiddenHomeItemsSnackbar(snackbarHostState)
     UnavailableSongSnackbar(snackbarHostState)
     ListenTogetherGlobalEvents(listenTogetherManager) { snackbarHostState.showSnackbar(it) }
+    LaunchedEffect(snackbarHostState) {
+        PlaybackSnackbarEvents.messages.collect { snackbarHostState.showSnackbar(it) }
+    }
+    var resourceSnackbar by remember { mutableStateOf<Pair<Long, StringResource>?>(null) }
+    LaunchedEffect(snackbarHostState) {
+        var sequence = 0L
+        PlaybackSnackbarEvents.resourceMessages.collect { resource ->
+            resourceSnackbar = ++sequence to resource
+        }
+    }
+    resourceSnackbar?.let { (sequence, resource) ->
+        val message = stringResource(resource)
+        LaunchedEffect(snackbarHostState, sequence, message) {
+            snackbarHostState.showSnackbar(message)
+        }
+    }
     val onSwipeFeedback: (String) -> Unit = { message ->
         snackbarHostState.currentSnackbarData?.dismiss()
         scope.launch { snackbarHostState.showSnackbar(message, duration = SnackbarDuration.Short) }
