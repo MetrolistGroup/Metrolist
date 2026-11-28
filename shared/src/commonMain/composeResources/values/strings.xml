@@ -3178,6 +3178,10 @@
     <string name="lyrics_line_spacing">Lyrics line spacing</string>
     <!-- Translators: Option or section label for subtitle text size in the settings. -->
     <string name="subtitle_text_size">Video subtitle text size</string>
+    <!-- Translators: Toggle to keep background vocals visible on inactive lines. -->
+    <string name="lyrics_always_show_background_lines">Always show background vocals</string>
+    <!-- Translators: Supporting text beneath the always show background lines option. -->
+    <string name="lyrics_always_show_background_lines_description">Keep background vocals visible when their main line is inactive</string>
 
     <!-- Translators: Generic error-dialog title used outside playback errors. -->
     <string name="error_title">Error</string>

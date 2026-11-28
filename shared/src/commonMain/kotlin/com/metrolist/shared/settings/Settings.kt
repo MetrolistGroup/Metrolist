@@ -140,6 +140,7 @@ import com.metrolist.shared.constants.ListenTogetherEnabledKey
 import com.metrolist.shared.constants.ListenTogetherServerMetadataKey
 import com.metrolist.shared.constants.LoudnessLevelKey
 import com.metrolist.shared.constants.LyricsActiveByRealTimingKey
+import com.metrolist.shared.constants.LyricsAlwaysShowBackgroundLinesKey
 import com.metrolist.shared.constants.LyricsNeutralColorKey
 import com.metrolist.shared.constants.LyricsOpenRouterOAuthKey
 import com.metrolist.shared.constants.LyricsOpenRouterOAuthSessionKey
@@ -509,6 +510,7 @@ class Settings(
     var lyricsLineSpacing by preference(1.3f)
     var lyricsPlusLighter by preference(LyricsPlusLighterKey, true)
     var lyricsNeutralColor by preference(LyricsNeutralColorKey, false)
+    var lyricsAlwaysShowBackgroundLines by preference(LyricsAlwaysShowBackgroundLinesKey, false)
     var subtitleTextSize by preference(16f)
     var lyricsClickToSeek by preference(true)
     var showLyricsOnPlayer by preference(ShowLyricsOnPlayerKey, false)

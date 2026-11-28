@@ -809,6 +809,7 @@ internal fun InlineLyricsLine(
     val isWordAnimEnabled = isLrcSynced && animStyle != LyricsAnimationStyle.NONE && hasRealWords
 
     val colorScheme = MaterialTheme.colorScheme
+    val alwaysShowBackgroundLines = Settings.shared.lyricsAlwaysShowBackgroundLines
     val lyricsTextSize = Settings.shared.lyricsTextSize * textSizeMultiplier
     val lyricsLineSpacing = Settings.shared.lyricsLineSpacing
 
@@ -838,7 +839,7 @@ internal fun InlineLyricsLine(
             alpha = targetAlpha,
             translationAlpha = targetTranslationAlpha,
             focusedAlpha = targetFocusedAlpha,
-            visibility = if (isActive || isSelectionMode) 1f else 0f,
+            visibility = if (alwaysShowBackgroundLines || isActive || isSelectionMode) 1f else 0f,
             scale = targetScale,
         )
     val lineLook = remember(entry) { LineLookState(lineLookTarget) }
@@ -1139,7 +1140,7 @@ internal fun InlineLyricsLine(
             val bgContent: @Composable () -> Unit = {
                 if ((hasBg && bgText.isNotBlank()) || showRomanBg) {
                     LyricsBgReveal(
-                        visible = isActive || isSelectionMode,
+                        visible = alwaysShowBackgroundLines || isActive || isSelectionMode,
                         bgBeforeMain = bgBeforeMain,
                         alignment = visualAlignment,
                         onBgMeasured = { measuredH, reportedH ->
