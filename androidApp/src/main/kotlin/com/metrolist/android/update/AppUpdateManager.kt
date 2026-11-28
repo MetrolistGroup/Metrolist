@@ -14,6 +14,7 @@ import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import androidx.annotation.RequiresApi
+import androidx.core.app.NotificationChannelCompat
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
@@ -161,14 +162,45 @@ object AppUpdateManager {
 
     @Volatile private var activeSessionId: Int = -1
 
+    @Volatile private var ignoredSessionIds: Set<Int> = emptySet()
+
+    @Volatile private var pendingConfirmationIntent: Intent? = null
+
+    @Volatile private var pendingConfirmationSessionId: Int = -1
+
     private val mainHandler by lazy { Handler(Looper.getMainLooper()) }
+
+    fun ensureNotificationChannel(context: Context) {
+        NotificationManagerCompat.from(context).createNotificationChannel(
+            NotificationChannelCompat
+                .Builder(CHANNEL_ID, NotificationManagerCompat.IMPORTANCE_DEFAULT)
+                .setName(context.getString(R.string.updates_channel_name))
+                .setDescription(context.getString(R.string.updates_channel_description))
+                .build(),
+        )
+    }
+
+    fun restoreInstallFailure(errorMessage: String) {
+        val detail = errorMessage.trim().takeIf { it.isNotEmpty() } ?: return
+        val release = (mutableState.value as? AppUpdateState.Available)?.release ?: cachedAvailableRelease()
+        mutableState.value = AppUpdateState.Error(UpdateFailure.INSTALL, release, detail)
+    }
 
     fun setForegroundActivity(
         activity: Activity?,
         active: Boolean,
     ) {
-        if (active && activity != null) {
+        if (active && activity != null && !activity.isFinishing && !activity.isDestroyed) {
             foregroundActivityRef = WeakReference(activity)
+            val pending = pendingConfirmationIntent
+            val pendingSession = pendingConfirmationSessionId
+            val currentSession = activeSessionId
+            if (pending != null && (currentSession < 0 || pendingSession < 0 || pendingSession == currentSession)) {
+                pendingConfirmationIntent = null
+                pendingConfirmationSessionId = -1
+                cancelInstallPromptNotification(activity)
+                runCatching { activity.startActivity(Intent(pending)) }
+            }
         } else if (!active && foregroundActivityRef?.get() === activity) {
             foregroundActivityRef = null
         }
@@ -197,14 +229,15 @@ object AppUpdateManager {
         val lastAttempt = Settings.shared.lastUpdateCheckAttemptTimestamp
         val checkIsDue = lastAttempt !in 1..now || now - lastAttempt >= CHECK_INTERVAL_MILLIS
         if (networkEnabled && checkIsDue) {
-            return check(context, notify = Settings.shared.updateNotifications)
+            return check(context, notify = Settings.shared.updateNotifications, preserveInstallError = true)
         }
 
         val cached = withContext(Dispatchers.IO) { cachedAvailableRelease() }
-        // A background download or one waiting for playback to stop must survive a check that is not due.
+        // A background download, playback-paused update, or notification-restored install failure must survive a startup check.
         when (val active = mutableState.value) {
             is AppUpdateState.Downloading -> if (active.release.updateKey == cached?.updateKey) return cached
             is AppUpdateState.Downloaded -> if (active.release.updateKey == cached?.updateKey && active.file.isFile) return cached
+            is AppUpdateState.Error -> if (active.failure == UpdateFailure.INSTALL) return cached
             else -> Unit
         }
         mutableState.value =
@@ -227,6 +260,7 @@ object AppUpdateManager {
         context: Context,
         notify: Boolean = false,
         crashRecovery: Boolean = false,
+        preserveInstallError: Boolean = false,
     ): GitHubRelease? =
         withContext(Dispatchers.IO) {
             operationMutex.withLock {
@@ -239,6 +273,12 @@ object AppUpdateManager {
                     is AppUpdateState.Downloaded -> {
                         if (!active.file.isFile) mutableState.value = AppUpdateState.Available(active.release)
                         return@withLock active.release
+                    }
+
+                    is AppUpdateState.Error -> {
+                        if (preserveInstallError && active.failure == UpdateFailure.INSTALL) {
+                            return@withLock active.release
+                        }
                     }
 
                     else -> {
@@ -527,9 +567,13 @@ object AppUpdateManager {
             val installer = context.packageManager.packageInstaller
             var sessionId = -1
             runCatching {
+                val staleIds = installer.mySessions.mapTo(mutableSetOf()) { it.sessionId }
+                ignoredSessionIds = staleIds
                 activeSessionId = -1
-                installer.mySessions.forEach { info ->
-                    runCatching { installer.abandonSession(info.sessionId) }
+                pendingConfirmationIntent = null
+                pendingConfirmationSessionId = -1
+                staleIds.forEach { staleId ->
+                    runCatching { installer.abandonSession(staleId) }
                 }
                 val params =
                     PackageInstaller.SessionParams(PackageInstaller.SessionParams.MODE_FULL_INSTALL).apply {
@@ -562,6 +606,8 @@ object AppUpdateManager {
                 }
             }.onFailure { error ->
                 activeSessionId = -1
+                pendingConfirmationIntent = null
+                pendingConfirmationSessionId = -1
                 unregisterSessionCallback(installer)
                 if (sessionId >= 0) {
                     runCatching { installer.abandonSession(sessionId) }
@@ -580,17 +626,29 @@ object AppUpdateManager {
         confirm: Intent,
         sessionId: Int = -1,
     ): Boolean {
-        if (sessionId >= 0 && activeSessionId >= 0 && sessionId != activeSessionId) return true
+        if (isStaleSession(sessionId)) return true
         val foreground = foregroundActivityRef?.get()?.takeIf { !it.isFinishing && !it.isDestroyed }
         if (foreground != null && runCatching { foreground.startActivity(confirm) }.isSuccess) {
+            pendingConfirmationIntent = null
+            pendingConfirmationSessionId = -1
             return true
         }
-        val startedFromContext =
-            runCatching {
-                context.startActivity(Intent(confirm).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-            }.isSuccess
+        // Keep the confirmation intent so returning to UpdateDetailsScreen can present it even if notifications are disabled.
+        pendingConfirmationIntent = Intent(confirm)
+        pendingConfirmationSessionId = sessionId
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
+            val started =
+                runCatching {
+                    context.startActivity(Intent(confirm).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                }.isSuccess
+            if (started) return true
+        }
         val notified = notifyInstallPrompt(context, confirm, sessionId)
-        return startedFromContext || notified
+        if (!notified) {
+            pendingConfirmationIntent = null
+            pendingConfirmationSessionId = -1
+        }
+        return notified
     }
 
     internal fun onInstallFinished(
@@ -600,8 +658,10 @@ object AppUpdateManager {
         message: String? = null,
         sessionId: Int = -1,
     ) {
-        if (sessionId >= 0 && activeSessionId >= 0 && sessionId != activeSessionId) return
+        if (isStaleSession(sessionId)) return
         activeSessionId = -1
+        pendingConfirmationIntent = null
+        pendingConfirmationSessionId = -1
         context?.let {
             cancelInstallPromptNotification(it)
             unregisterSessionCallback(it.packageManager.packageInstaller)
@@ -633,8 +693,10 @@ object AppUpdateManager {
         context: Context? = null,
         sessionId: Int = -1,
     ) {
-        if (sessionId >= 0 && activeSessionId >= 0 && sessionId != activeSessionId) return
+        if (isStaleSession(sessionId)) return
         activeSessionId = -1
+        pendingConfirmationIntent = null
+        pendingConfirmationSessionId = -1
         context?.let {
             cancelInstallPromptNotification(it)
             val installer = it.packageManager.packageInstaller
@@ -646,7 +708,15 @@ object AppUpdateManager {
         mutableState.value = current.copy(installing = false)
     }
 
+    private fun isStaleSession(sessionId: Int): Boolean {
+        if (sessionId < 0) return false
+        if (sessionId in ignoredSessionIds) return true
+        return activeSessionId >= 0 && sessionId != activeSessionId
+    }
+
     internal fun notifyPackageReplaced(context: Context) {
+        pendingConfirmationIntent = null
+        pendingConfirmationSessionId = -1
         cancelInstallPromptNotification(context)
         if (!BuildConfig.UPDATER_ENABLED || !canPostNotifications(context)) return
         val intent =
@@ -783,6 +853,7 @@ object AppUpdateManager {
             Intent(context, MainActivity::class.java).apply {
                 action = MainActivity.ACTION_UPDATES
                 flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+                errorMessage?.let { putExtra(MainActivity.EXTRA_UPDATE_INSTALL_ERROR, it) }
             }
         val pendingIntent =
             PendingIntent.getActivity(
@@ -812,9 +883,10 @@ object AppUpdateManager {
             Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
                 ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
         if (!hasPermission || !NotificationManagerCompat.from(context).areNotificationsEnabled()) return false
+        ensureNotificationChannel(context)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = context.getSystemService(NotificationManager::class.java).getNotificationChannel(CHANNEL_ID)
-            if (channel?.importance == NotificationManager.IMPORTANCE_NONE) return false
+            if (channel == null || channel.importance == NotificationManager.IMPORTANCE_NONE) return false
         }
         return true
     }

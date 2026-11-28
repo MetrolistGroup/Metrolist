@@ -1251,7 +1251,10 @@ fun MetrolistApp(
                                 navigator.navigate(Screen.ListenTogether)
                             }
 
-                            IncomingDestination.Updates -> {
+                            is IncomingDestination.Updates -> {
+                                destination.installError?.let { error ->
+                                    AppUpdateManager.restoreInstallFailure(error)
+                                }
                                 navigator.navigate(Screen.UpdateDetails)
                             }
 
@@ -2288,7 +2291,9 @@ sealed class IncomingDestination {
 
     object ListenTogetherRoom : IncomingDestination()
 
-    object Updates : IncomingDestination()
+    data class Updates(
+        val installError: String? = null,
+    ) : IncomingDestination()
 
     object Settings : IncomingDestination()
 
@@ -2378,7 +2383,7 @@ fun Intent.toIncomingDestination(): IncomingDestination? {
         MainActivity.ACTION_PLAYLIST_IMPORT -> IncomingDestination.PlaylistImport(getStringExtra(MainActivity.EXTRA_IMPORT_RESULT_MESSAGE))
         MainActivity.ACTION_DOWNLOADS -> IncomingDestination.Downloads
         MainActivity.ACTION_LISTEN_TOGETHER -> IncomingDestination.ListenTogetherRoom
-        MainActivity.ACTION_UPDATES -> IncomingDestination.Updates
+        MainActivity.ACTION_UPDATES -> IncomingDestination.Updates(getStringExtra(MainActivity.EXTRA_UPDATE_INSTALL_ERROR))
         MainActivity.ACTION_LOGIN -> IncomingDestination.Login
         Intent.ACTION_APPLICATION_PREFERENCES -> IncomingDestination.Settings
         MainActivity.ACTION_BACKUP_RESTORE -> IncomingDestination.BackupRestore
