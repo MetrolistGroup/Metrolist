@@ -1,0 +1,273 @@
+package com.metrolist.shared.playback
+
+import kotlinx.cinterop.ExperimentalForeignApi
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
+import platform.AVFoundation.AVPlayer
+import platform.AVFoundation.AVPlayerLayer
+import platform.AVFoundation.addPeriodicTimeObserverForInterval
+import platform.AVFoundation.currentTime
+import platform.AVFoundation.rate
+import platform.AVFoundation.removeTimeObserver
+import platform.AVKit.AVPictureInPictureController
+import platform.AVKit.AVPictureInPictureControllerDelegateProtocol
+import platform.CoreMedia.CMTimeGetSeconds
+import platform.CoreMedia.CMTimeMakeWithSeconds
+import platform.Foundation.NSError
+import platform.darwin.NSObject
+import kotlin.math.abs
+
+@OptIn(ExperimentalForeignApi::class)
+internal fun iosPictureInPictureSupported(): Boolean = AVPictureInPictureController.isPictureInPictureSupported()
+
+@OptIn(ExperimentalForeignApi::class)
+internal fun requestIosPictureInPicture(
+    controller: IosPlaybackController,
+    isPlaying: Boolean,
+    hasVideo: Boolean,
+) {
+    if (!isPlaying || !hasVideo || !iosPictureInPictureSupported()) return
+    val surface = controller.pictureInPictureSurface() ?: return
+    IosPictureInPictureBridge.request(controller, surface)
+}
+
+@OptIn(ExperimentalForeignApi::class)
+private object IosPictureInPictureBridge : NSObject(), AVPictureInPictureControllerDelegateProtocol {
+    private const val SEEK_TOLERANCE_MS = 5_000L
+    private const val SEEK_JUMP_TOLERANCE_MS = 5_000L
+
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+    private var controller: IosPlaybackController? = null
+    private var surface: IosMusicVideoSurfacePlayer? = null
+    private var pictureInPictureController: AVPictureInPictureController? = null
+    private var readinessObservation: IosKeyValueObservation? = null
+    private var transportObservation: IosKeyValueObservation? = null
+    private var observedPlayer: AVPlayer? = null
+    private var timeObserver: Any? = null
+    private var syncJob: Job? = null
+    private var pendingRequest = false
+    private var forwardingPlayPause = false
+    private var forwardingSeek = false
+    private var ignoredTransportRate: Float? = null
+    private var lastSurfacePositionMs: Long? = null
+
+    fun request(
+        playbackController: IosPlaybackController,
+        nextSurface: IosMusicVideoSurfacePlayer,
+    ) {
+        controller = playbackController
+        surface?.takeIf { it !== nextSurface }?.let { previousSurface ->
+            previousSurface.onApplicationTransportChange = null
+            previousSurface.setPictureInPictureActive(false)
+        }
+        surface = nextSurface
+        nextSurface.onApplicationTransportChange = { ignoredTransportRate = it }
+        playbackController.pictureInPictureSurfaceChanged = { retryPendingRequest() }
+        val layer = nextSurface.layer
+        if (pictureInPictureController?.playerLayer !== layer) {
+            pictureInPictureController?.stopPictureInPicture()
+            readinessObservation?.close()
+            readinessObservation = null
+            pictureInPictureController =
+                AVPictureInPictureController(playerLayer = layer).also { pip ->
+                    pip.delegate = this
+                    readinessObservation =
+                        IosKeyValueObservation(pip, listOf("pictureInPicturePossible"), scope) { retryPendingRequest() }
+                }
+        }
+        pendingRequest = true
+        retryPendingRequest()
+    }
+
+    internal fun retryPendingRequest() {
+        if (!pendingRequest) return
+        val playbackController = controller ?: return
+        val surfacePlayer = surface ?: return
+        val pip = pictureInPictureController ?: return
+        // A queued tap predates the current player state; do not start PiP if playback or the
+        // registered video surface changed while the layer was becoming available.
+        val state = playbackController.state.value
+        if (!state.isPlaying || !state.isVideoModeActive || playbackController.pictureInPictureSurface() !== surfacePlayer) {
+            pendingRequest = false
+            return
+        }
+        if (!pip.isPictureInPicturePossible() || pip.isPictureInPictureActive()) return
+        pendingRequest = false
+        surfacePlayer.setPictureInPictureActive(true)
+        startTransportObservation(playbackController, surfacePlayer)
+        pip.startPictureInPicture()
+    }
+
+    override fun pictureInPictureControllerDidStartPictureInPicture(pictureInPictureController: AVPictureInPictureController) {
+        if (pictureInPictureController !== this.pictureInPictureController) return
+        surface?.setPictureInPictureActive(true)
+    }
+
+    override fun pictureInPictureController(
+        pictureInPictureController: AVPictureInPictureController,
+        restoreUserInterfaceForPictureInPictureStopWithCompletionHandler: (Boolean) -> Unit,
+    ) {
+        if (pictureInPictureController !== this.pictureInPictureController) {
+            restoreUserInterfaceForPictureInPictureStopWithCompletionHandler(false)
+            return
+        }
+        controller?.onPictureInPictureRestoreUi?.invoke()
+        restoreUserInterfaceForPictureInPictureStopWithCompletionHandler(true)
+    }
+
+    override fun pictureInPictureController(
+        pictureInPictureController: AVPictureInPictureController,
+        failedToStartPictureInPictureWithError: NSError,
+    ) {
+        if (pictureInPictureController !== this.pictureInPictureController) return
+        pendingRequest = false
+        surface?.setPictureInPictureActive(false)
+        stopTransportObservation()
+    }
+
+    override fun pictureInPictureControllerWillStopPictureInPicture(pictureInPictureController: AVPictureInPictureController) {
+        if (pictureInPictureController !== this.pictureInPictureController) return
+        pendingRequest = false
+        surface?.setPictureInPictureActive(false)
+        stopTransportObservation()
+    }
+
+    override fun pictureInPictureControllerDidStopPictureInPicture(pictureInPictureController: AVPictureInPictureController) {
+        if (pictureInPictureController !== this.pictureInPictureController) return
+        surface?.setPictureInPictureActive(false)
+        stopTransportObservation()
+    }
+
+    private fun startTransportObservation(
+        playbackController: IosPlaybackController,
+        surfacePlayer: IosMusicVideoSurfacePlayer,
+    ) {
+        stopTransportObservation()
+        val player = surfacePlayer.player
+        observedPlayer = player
+        lastSurfacePositionMs = player.positionMs()
+        transportObservation = IosKeyValueObservation(player, listOf("rate"), scope) { onRateChanged(playbackController, surfacePlayer) }
+        timeObserver =
+            player.addPeriodicTimeObserverForInterval(CMTimeMakeWithSeconds(1.0, 600), null) {
+                onTransportTick(playbackController, surfacePlayer)
+            }
+        syncJob =
+            scope.launch {
+                launch {
+                    playbackController.state.collect { state ->
+                        val surfacePositionMs = surfacePlayer.player.positionMs()
+                        val previousSurfacePositionMs = lastSurfacePositionMs
+                        if (forwardingSeek ||
+                            (
+                                previousSurfacePositionMs != null &&
+                                    abs(surfacePositionMs - previousSurfacePositionMs) >= SEEK_JUMP_TOLERANCE_MS
+                            )
+                        ) {
+                            return@collect
+                        }
+                        val positionMap = state.videoPositionMap
+                        val positionMapped = positionMap?.containsSourcePosition(state.positionMs) ?: true
+                        val playing = state.isPlaying && state.isVideoModeActive
+                        if (positionMap?.isPastLastSegment(state.positionMs) == true) {
+                            // The mapped video is at EOF and AVKit would only offer replay. Hold its
+                            // transport just before the end so Pause still reaches the audible outro.
+                            surfacePlayer.synchronizePastVideoEnd(playing, state.playbackSpeed)
+                            lastSurfacePositionMs = surfacePositionMs
+                            return@collect
+                        }
+                        // An unmapped audio-side gap has no video target; let the retained player free-run
+                        // so its transport stays actionable while the audible track keeps playing.
+                        val targetPositionMs =
+                            if (positionMapped) {
+                                positionMap?.mapPosition(state.positionMs) ?: state.positionMs
+                            } else {
+                                surfacePositionMs
+                            }
+                        surfacePlayer.synchronize(
+                            targetPositionMs,
+                            playing,
+                            state.playbackSpeed,
+                            surfaceVisible = true,
+                            shouldExpectProgress = playing && !state.isLoading,
+                        )
+                    }
+                }
+                while (isActive) {
+                    if (surfacePlayer.released || !surfacePlayer.pictureInPictureActive.value) break
+                    if (surfacePlayer.hasFailed() || surfacePlayer.driftRecoveryFailed) {
+                        playbackController.reportVideoPlaybackFailure()
+                        break
+                    }
+                    delay(250)
+                }
+            }
+    }
+
+    private fun stopTransportObservation() {
+        syncJob?.cancel()
+        syncJob = null
+        transportObservation?.close()
+        transportObservation = null
+        timeObserver?.let { observedPlayer?.removeTimeObserver(it) }
+        timeObserver = null
+        observedPlayer = null
+        forwardingPlayPause = false
+        forwardingSeek = false
+        ignoredTransportRate = null
+        lastSurfacePositionMs = null
+    }
+
+    private fun onRateChanged(
+        playbackController: IosPlaybackController,
+        surfacePlayer: IosMusicVideoSurfacePlayer,
+    ) {
+        val ignoredRate = ignoredTransportRate
+        ignoredTransportRate = null
+        if (!surfacePlayer.pictureInPictureActive.value || forwardingPlayPause) return
+        if (ignoredRate == surfacePlayer.player.rate) return
+        val snapshot = playbackController.state.value
+        val surfacePlaying = surfacePlayer.player.rate != 0f
+        if (!surfacePlaying && surfacePlayer.stoppedAutomatically) return
+        if (surfacePlaying) surfacePlayer.clearAutomaticStop()
+        if (surfacePlaying == snapshot.isPlaying) return
+        forwardingPlayPause = true
+        playbackController.togglePlayPause()
+        scope.launch {
+            playbackController.state.first { it.isPlaying == surfacePlaying }
+            forwardingPlayPause = false
+        }
+    }
+
+    private fun onTransportTick(
+        playbackController: IosPlaybackController,
+        surfacePlayer: IosMusicVideoSurfacePlayer,
+    ) {
+        if (!surfacePlayer.pictureInPictureActive.value || forwardingSeek) return
+        val snapshot = playbackController.state.value
+        val surfacePositionMs = surfacePlayer.player.positionMs()
+        val expectedSurfacePositionMs = snapshot.videoPositionMap?.mapPosition(snapshot.positionMs) ?: snapshot.positionMs
+        val previousPositionMs = lastSurfacePositionMs
+        lastSurfacePositionMs = surfacePositionMs
+        if (abs(surfacePositionMs - expectedSurfacePositionMs) <= SEEK_TOLERANCE_MS) return
+        val jumpMs = previousPositionMs?.let { abs(surfacePositionMs - it) } ?: 0L
+        if (jumpMs < SEEK_JUMP_TOLERANCE_MS) return
+        val sourcePositionMs =
+            snapshot.videoPositionMap?.reversed()?.mapPosition(surfacePositionMs) ?: surfacePositionMs
+        val sourceTargetMs = sourcePositionMs.coerceAtLeast(0L)
+        forwardingSeek = true
+        playbackController.seekTo(sourceTargetMs)
+        scope.launch {
+            playbackController.state.first { abs(it.positionMs - sourceTargetMs) <= SEEK_TOLERANCE_MS }
+            forwardingSeek = false
+        }
+    }
+
+    private fun AVPlayer.positionMs(): Long = (CMTimeGetSeconds(currentTime()) * 1000.0).toLong().coerceAtLeast(0L)
+}

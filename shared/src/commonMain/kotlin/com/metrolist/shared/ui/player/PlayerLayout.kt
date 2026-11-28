@@ -426,7 +426,9 @@ internal fun TabletPlayerContent(
                                             showControls = true,
                                             useSurfaceView = false,
                                             onFullscreenClick = onToggleFullscreen,
-                                            onPiPClick = { platform.enterPictureInPicture(isPlaying = isPlaying, hasVideo = true) },
+                                            onPiPClick =
+                                                { platform.enterPictureInPicture(isPlaying = isPlaying, hasVideo = true) }
+                                                    .takeIf { platform.canEnterPictureInPicture(isPlaying, true) },
                                         )
                                     } else {
                                         CrossfadeArtwork(
@@ -1255,7 +1257,9 @@ internal fun LandscapePlayerContent(
                                             showControls = true,
                                             useSurfaceView = false,
                                             onFullscreenClick = onToggleFullscreen,
-                                            onPiPClick = { platform.enterPictureInPicture(isPlaying = isPlaying, hasVideo = true) },
+                                            onPiPClick =
+                                                { platform.enterPictureInPicture(isPlaying = isPlaying, hasVideo = true) }
+                                                    .takeIf { platform.canEnterPictureInPicture(isPlaying, true) },
                                         )
                                     } else if (!usesFullscreenThumbnail && !usesCanvasThumbnail) {
                                         CrossfadeArtwork(

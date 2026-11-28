@@ -12,4 +12,5 @@ internal actual fun MobileMusicVideoSurface(
     fillContainer: Boolean,
     showControls: Boolean,
     onFullscreenClick: (() -> Unit)?,
+    onPiPClick: (() -> Unit)?,
 ) = Box(modifier)

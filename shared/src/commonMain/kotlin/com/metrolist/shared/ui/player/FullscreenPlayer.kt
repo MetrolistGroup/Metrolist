@@ -546,7 +546,7 @@ private fun FullscreenControlsOverlay(
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
                             modifier = Modifier.padding(bottom = 4.dp),
                         ) {
-                            if (platform.supportsPictureInPicture) {
+                            if (platform.supportsPictureInPicture && platform.canEnterPictureInPicture(isPlaying, showVideoSurface)) {
                                 IconButton(
                                     onClick = { platform.enterPictureInPicture(isPlaying = isPlaying, hasVideo = showVideoSurface) },
                                     modifier = Modifier.size(40.dp, 32.dp),

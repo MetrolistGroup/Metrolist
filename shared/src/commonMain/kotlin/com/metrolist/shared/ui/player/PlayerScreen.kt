@@ -587,7 +587,16 @@ fun PlayerScreen(
     var showPlayerMenu by remember { mutableStateOf(false) }
     var showSongDetails by remember { mutableStateOf(false) }
     var showSleepTimerDialog by remember { mutableStateOf(false) }
+    val overlayDismissRequestId = uiState.overlayDismissRequestId
     var showLyricsMenu by remember { mutableStateOf(false) }
+    LaunchedEffect(overlayDismissRequestId) {
+        if (overlayDismissRequestId > 0L) {
+            showPlayerMenu = false
+            showSongDetails = false
+            showSleepTimerDialog = false
+            showLyricsMenu = false
+        }
+    }
     var showLyricsOffsetEditor by rememberSaveable(currentSong?.id) { mutableStateOf(false) }
     val hapticManager = rememberMetrolistHaptics()
     var seekFeedback by remember { mutableStateOf<SeekFeedback?>(null) }
@@ -916,6 +925,12 @@ fun PlayerScreen(
                     viewModel.setLyricsVisible(false)
                 }
                 queueSheetState.expandSoft()
+            }
+
+            // PiP restoration is reported outside this screen, where the local queue sheet is unreachable.
+            val queueCollapseRequestId = uiState.queueCollapseRequestId
+            LaunchedEffect(queueCollapseRequestId) {
+                if (queueCollapseRequestId > 0L) queueSheetState.collapseSoft()
             }
 
             LaunchedEffect(useLandscapeLayout, queueSheetState.isSettledExpanded) {
@@ -1799,12 +1814,13 @@ fun PlayerScreen(
                                                             showControls = true,
                                                             useSurfaceView = false,
                                                             onFullscreenClick = onToggleFullscreen,
-                                                            onPiPClick = {
-                                                                platform.enterPictureInPicture(
-                                                                    isPlaying = isPlaying,
-                                                                    hasVideo = true,
-                                                                )
-                                                            },
+                                                            onPiPClick =
+                                                                {
+                                                                    platform.enterPictureInPicture(
+                                                                        isPlaying = isPlaying,
+                                                                        hasVideo = true,
+                                                                    )
+                                                                }.takeIf { platform.canEnterPictureInPicture(isPlaying, true) },
                                                             modifier =
                                                                 Modifier.requiredWidthIn(max = windowWidth),
                                                         )

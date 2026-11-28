@@ -85,6 +85,7 @@ import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.longOrNull
+import platform.AVFoundation.AVPlayerLayer
 import platform.Foundation.NSNotificationCenter
 import platform.Foundation.NSOperationQueue
 import platform.UIKit.UIApplication
@@ -316,6 +317,8 @@ internal class IosPlaybackController(
     private var videoSurfacePlayer: IosMusicVideoSurfacePlayer? = null
     private var videoSurfaceUrl: String? = null
     private var videoSurfaceHeaders: Map<String, String>? = null
+    private var pipSurfacePlayer: IosMusicVideoSurfacePlayer? = null
+    private var pipSurfaceUrl: String? = null
 
     private val coreState =
         combine(baseState, player.currentMediaItemIndex, pendingPlayback, playbackError) { base, index, pending, error ->
@@ -1180,7 +1183,44 @@ internal class IosPlaybackController(
         releaseMusicVideoSurfacePlayer()
     }
 
+    internal fun registerPictureInPictureSurface(
+        player: IosMusicVideoSurfacePlayer,
+        url: String,
+    ) {
+        if (pipSurfacePlayer === player && pipSurfaceUrl == url) return
+        pipSurfacePlayer = player
+        pipSurfaceUrl = url
+        notifyPictureInPictureSurfaceChanged()
+    }
+
+    internal fun unregisterPictureInPictureSurface(
+        player: IosMusicVideoSurfacePlayer,
+        url: String,
+    ) {
+        if (pipSurfacePlayer !== player || pipSurfaceUrl != url) return
+        pipSurfacePlayer = null
+        pipSurfaceUrl = null
+        notifyPictureInPictureSurfaceChanged()
+    }
+
+    internal fun pictureInPictureSurface(): IosMusicVideoSurfacePlayer? =
+        pipSurfacePlayer?.takeIf { pipSurfaceUrl == videoPlaybackResource.value?.videoUrl }
+
+    internal fun pictureInPicturePlayerLayer(): AVPlayerLayer? = pictureInPictureSurface()?.layer
+
+    private fun notifyPictureInPictureSurfaceChanged() {
+        pictureInPictureSurfaceChanged?.invoke()
+    }
+
+    internal var pictureInPictureSurfaceChanged: (() -> Unit)? = null
+    internal var onPictureInPictureRestoreUi: (() -> Unit)? = null
+
     internal fun releaseMusicVideoSurfacePlayer() {
+        if (pipSurfacePlayer === videoSurfacePlayer) {
+            pipSurfacePlayer = null
+            pipSurfaceUrl = null
+            notifyPictureInPictureSurfaceChanged()
+        }
         videoSurfacePlayer?.close()
         videoSurfacePlayer = null
         videoSurfaceUrl = null

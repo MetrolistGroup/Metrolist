@@ -67,6 +67,8 @@ import com.metrolist.shared.network.createHttpClient
 import com.metrolist.shared.playback.IosPlaybackController
 import com.metrolist.shared.playback.IosPlayerPlatformServices
 import com.metrolist.shared.playback.MusicPlayer
+import com.metrolist.shared.playback.iosPictureInPictureSupported
+import com.metrolist.shared.playback.requestIosPictureInPicture
 import com.metrolist.shared.playlist.IosPlaylistCoverMapper
 import com.metrolist.shared.playlist.migrateIosPlaylistCovers
 import com.metrolist.shared.playlist.removeStoredPlaylistCover
@@ -191,6 +193,7 @@ fun MetrolistIOSApp() {
     var initialSettingsPage by remember { mutableStateOf<SettingsPageId?>(null) }
     var pendingMobileDispose by remember { mutableStateOf<CompletableDeferred<Unit>?>(null) }
     var sessionClosed by remember { mutableStateOf(false) }
+    var pictureInPictureRestore by remember { mutableStateOf<(() -> Unit)?>(null) }
     val latestPendingDispose by rememberUpdatedState(pendingMobileDispose)
     val database = remember(koin, databaseGeneration) { koin.get<MusicDatabase>() }
     LaunchedEffect(database) {
@@ -559,6 +562,13 @@ fun MetrolistIOSApp() {
                                 ids.count { downloadManager.removeDownload(it) }
                             }.await()
                     },
+                    pictureInPictureSupported = iosPictureInPictureSupported(),
+                    pictureInPictureRequiresPlayingVideo = true,
+                    onEnterPictureInPicture = { isPlaying, hasVideo ->
+                        playbackController.onPictureInPictureRestoreUi = { pictureInPictureRestore?.invoke() }
+                        requestIosPictureInPicture(playbackController, isPlaying, hasVideo)
+                    },
+                    onRegisterPictureInPictureRestore = { restore -> pictureInPictureRestore = restore },
                     iosSettingsPageContent = { page, onDownloads ->
                         when (page) {
                             SettingsPageId.STORAGE -> {

@@ -60,6 +60,11 @@ interface PlayerPlatform {
         hasVideo: Boolean,
     )
 
+    fun canEnterPictureInPicture(
+        isPlaying: Boolean,
+        hasVideo: Boolean,
+    ): Boolean = true
+
     @Composable
     fun MusicVideoSurface(
         modifier: Modifier,

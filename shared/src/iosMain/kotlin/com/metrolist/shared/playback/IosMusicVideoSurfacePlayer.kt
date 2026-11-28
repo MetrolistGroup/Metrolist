@@ -2,10 +2,13 @@ package com.metrolist.shared.playback
 
 import com.metrolist.shared.api.artwork.CanvasPlaybackWatchdog
 import kotlinx.cinterop.ExperimentalForeignApi
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import platform.AVFoundation.AVLayerVideoGravityResizeAspect
 import platform.AVFoundation.AVLayerVideoGravityResizeAspectFill
 import platform.AVFoundation.AVPlayer
 import platform.AVFoundation.AVPlayerItem
+import platform.AVFoundation.AVPlayerItemDidPlayToEndTimeNotification
 import platform.AVFoundation.AVPlayerItemFailedToPlayToEndTimeNotification
 import platform.AVFoundation.AVPlayerItemStatusFailed
 import platform.AVFoundation.AVPlayerItemStatusReadyToPlay
@@ -14,6 +17,7 @@ import platform.AVFoundation.AVURLAsset
 import platform.AVFoundation.cancelPendingSeeks
 import platform.AVFoundation.currentItem
 import platform.AVFoundation.currentTime
+import platform.AVFoundation.duration
 import platform.AVFoundation.muted
 import platform.AVFoundation.pause
 import platform.AVFoundation.rate
@@ -34,11 +38,16 @@ internal class IosMusicVideoSurfacePlayer(
     url: String,
     headers: Map<String, String>,
 ) {
-    private val player = AVPlayer()
+    internal val player = AVPlayer()
     val layer = AVPlayerLayer.playerLayerWithPlayer(player)
+    private val _pictureInPictureActive = MutableStateFlow(false)
+    val pictureInPictureActive: StateFlow<Boolean> get() = _pictureInPictureActive
+    internal var onApplicationTransportChange: ((Float) -> Unit)? = null
     private var closed = false
+    private var applicationForeground = false
     private var surfaceGeneration = 0L
     private var attachedSurfaceGeneration: Long? = null
+    private var pendingDetachGeneration: Long? = null
     private val seekLifecycle = MusicVideoSeekLifecycle()
     private val driftRetryPolicy = MusicVideoDriftRetryPolicy(SEEK_POST_SEEK_DRIFT_TOLERANCE_MS, MAX_SLOW_SEEK_CORRECTIONS)
     var driftRecoveryFailed = false
@@ -46,10 +55,11 @@ internal class IosMusicVideoSurfacePlayer(
     private var latestTargetPositionMs = 0L
     private var latestTargetUpdatedAt: TimeMark? = null
     private var userSeekPending = false
+    private var forceSeekPending = false
     val positionSynchronized: Boolean
         get() = seekLifecycle.positionSynchronized
     private val foreground: Boolean
-        get() = seekLifecycle.isForeground
+        get() = applicationForeground || _pictureInPictureActive.value
     private var expectingProgress = false
     private var lastPositionMs: Long? = null
     private var renderedProgress = 0L
@@ -59,7 +69,10 @@ internal class IosMusicVideoSurfacePlayer(
     private val watchdog = CanvasPlaybackWatchdog()
     private val watchdogClock = TimeSource.Monotonic.markNow()
     private var failureObserver: Any? = null
+    private var endObserver: Any? = null
     private var didFail = false
+    private var didEnd = false
+    private var pastEndSeekPending = false
 
     init {
         player.muted = true
@@ -81,11 +94,29 @@ internal class IosMusicVideoSurfacePlayer(
                 ) {
                     didFail = true
                 }
+            endObserver =
+                NSNotificationCenter.defaultCenter.addObserverForName(
+                    AVPlayerItemDidPlayToEndTimeNotification,
+                    item,
+                    NSOperationQueue.mainQueue,
+                ) {
+                    didEnd = true
+                }
         }
     }
 
+    val released: Boolean
+        get() = closed
+
     val failed: Boolean
         get() = closed || didFail || player.currentItem == null || player.currentItem?.status == AVPlayerItemStatusFailed
+
+    internal val stoppedAutomatically: Boolean
+        get() = didFail || didEnd
+
+    internal fun clearAutomaticStop() {
+        didEnd = false
+    }
 
     val ready: Boolean
         get() = !closed && layer.readyForDisplay
@@ -96,25 +127,30 @@ internal class IosMusicVideoSurfacePlayer(
         }
     }
 
-    fun attach(): Long = (++surfaceGeneration).also { attachedSurfaceGeneration = it }
+    fun attach(): Long =
+        (++surfaceGeneration).also {
+            attachedSurfaceGeneration = it
+            seekLifecycle.setForeground(foreground)
+        }
 
     fun synchronize(
         positionMs: Long,
         playing: Boolean,
         playbackSpeed: Float,
         surfaceVisible: Boolean = true,
+        shouldExpectProgress: Boolean = playing,
     ) {
         if (closed) return
-        if (!surfaceVisible) {
+        if (!surfaceVisible && !_pictureInPictureActive.value) {
             expectingProgress = false
             watchdog.reset()
             cancelPendingSeek()
             seekLifecycle.markUnsynchronized()
-            player.pause()
+            pauseForApplication()
             return
         }
-        if (expectingProgress != playing) {
-            expectingProgress = playing
+        if (expectingProgress != shouldExpectProgress) {
+            expectingProgress = shouldExpectProgress
             watchdog.reset()
         }
         val targetPositionMs = positionMs.coerceAtLeast(0L)
@@ -131,17 +167,63 @@ internal class IosMusicVideoSurfacePlayer(
         latestTargetUpdatedAt = TimeSource.Monotonic.markNow()
         applyPendingSeek()
         if (playing && player.rate != playbackSpeed) {
-            player.rate = playbackSpeed
+            setRateForApplication(playbackSpeed)
         } else if (!playing && player.rate != 0f) {
-            player.pause()
+            pauseForApplication()
         }
     }
 
+    internal fun synchronizePastVideoEnd(
+        playing: Boolean,
+        playbackSpeed: Float,
+    ) {
+        if (closed) return
+        expectingProgress = false
+        watchdog.reset()
+        if (!playing) {
+            pauseForApplication()
+            return
+        }
+        val durationSeconds = player.currentItem?.let { CMTimeGetSeconds(it.duration) } ?: return
+        if (!durationSeconds.isFinite() || durationSeconds <= 0.0) return
+        val holdPositionMs = (durationSeconds * 1000.0 - OUTRO_TRANSPORT_MARGIN_MS).toLong().coerceAtLeast(0L)
+        val positionMs = (CMTimeGetSeconds(player.currentTime()) * 1000.0).toLong().coerceAtLeast(0L)
+        if (positionMs >= holdPositionMs && !pastEndSeekPending) {
+            clearAutomaticStop()
+            cancelPendingSeek()
+            latestTargetPositionMs = holdPositionMs
+            latestTargetUpdatedAt = TimeSource.Monotonic.markNow()
+            userSeekPending = false
+            forceSeekPending = true
+            pastEndSeekPending = true
+            seekCooldownStartedAt = null
+            driftRetryPolicy.reset()
+            driftRecoveryFailed = false
+            seekLifecycle.markUnsynchronized()
+            applyPendingSeek()
+        }
+        if (player.rate != playbackSpeed) setRateForApplication(playbackSpeed)
+    }
+
     fun setForeground(isForeground: Boolean) {
-        if (closed || foreground == isForeground) return
-        val wasForeground = foreground
-        seekLifecycle.setForeground(isForeground)
-        if (!isForeground) {
+        if (closed || applicationForeground == isForeground) return
+        applicationForeground = isForeground
+        updateForegroundState()
+    }
+
+    internal fun setPictureInPictureActive(active: Boolean) {
+        if (closed || _pictureInPictureActive.value == active) return
+        _pictureInPictureActive.value = active
+        updateForegroundState()
+        if (!active) detachAfterPictureInPicture()
+    }
+
+    private fun updateForegroundState() {
+        val wasForeground = seekLifecycle.isForeground
+        val nowForeground = foreground
+        seekLifecycle.setForeground(nowForeground)
+        if (closed || wasForeground == nowForeground) return
+        if (!nowForeground) {
             expectingProgress = false
             watchdog.reset()
             cancelPendingSeek()
@@ -149,8 +231,8 @@ internal class IosMusicVideoSurfacePlayer(
             seekCooldownStartedAt = null
             driftRetryPolicy.reset()
             driftRecoveryFailed = false
-            player.pause()
-        } else if (!wasForeground && isForeground) {
+            pauseForApplication()
+        } else {
             userSeekPending = false
             seekCooldownStartedAt = null
             driftRetryPolicy.reset()
@@ -167,22 +249,27 @@ internal class IosMusicVideoSurfacePlayer(
         val currentMs = (CMTimeGetSeconds(player.currentTime()) * 1000.0).toLong()
         val targetPositionMs = latestTargetPositionMs
         val driftToleranceMs = if (sinceLastSeekMs == null) SEEK_DRIFT_TOLERANCE_MS else SEEK_POST_SEEK_DRIFT_TOLERANCE_MS
-        if (abs(currentMs - targetPositionMs) <= driftToleranceMs) {
+        val forceSeek = forceSeekPending
+        if (abs(currentMs - targetPositionMs) <= driftToleranceMs && !forceSeek) {
             userSeekPending = false
             seekLifecycle.markSynchronized()
             return
         }
-        if (!driftRetryPolicy.shouldRetry(userSeekPending)) {
+        if (!driftRetryPolicy.shouldRetry(userSeekPending || forceSeek)) {
+            forceSeekPending = false
             driftRecoveryFailed = true
             return
         }
         userSeekPending = false
+        forceSeekPending = false
         val currentSeekGeneration = seekLifecycle.beginSeek() ?: return
         val target = CMTimeMakeWithSeconds(targetPositionMs / 1000.0, 600)
         val zero = CMTimeMakeWithSeconds(0.0, 600)
         val seekStartedAt = TimeSource.Monotonic.markNow()
+        didEnd = false
         player.seekToTime(target, toleranceBefore = zero, toleranceAfter = zero) { finished ->
             if (!seekLifecycle.isCurrentSeek(currentSeekGeneration)) return@seekToTime
+            pastEndSeekPending = false
             val seekDurationMs = seekStartedAt.elapsedNow().inWholeMilliseconds
             val currentPositionMs = (CMTimeGetSeconds(player.currentTime()) * 1000.0).toLong()
             val stillAligned = abs(currentPositionMs - latestTargetPositionMs) <= SEEK_POST_SEEK_DRIFT_TOLERANCE_MS
@@ -240,6 +327,20 @@ internal class IosMusicVideoSurfacePlayer(
 
     fun detach(surfaceGeneration: Long) {
         if (closed || attachedSurfaceGeneration != surfaceGeneration) return
+        if (_pictureInPictureActive.value) {
+            pendingDetachGeneration = surfaceGeneration
+            return
+        }
+        performDetach(surfaceGeneration)
+    }
+
+    internal fun detachAfterPictureInPicture() {
+        val generation = pendingDetachGeneration ?: return
+        pendingDetachGeneration = null
+        if (!closed && attachedSurfaceGeneration == generation) performDetach(generation)
+    }
+
+    private fun performDetach(surfaceGeneration: Long) {
         attachedSurfaceGeneration = null
         seekLifecycle.setForeground(false)
         expectingProgress = false
@@ -247,23 +348,38 @@ internal class IosMusicVideoSurfacePlayer(
         userSeekPending = false
         seekCooldownStartedAt = null
         watchdog.reset()
-        player.pause()
+        pauseForApplication()
     }
 
     fun close() {
         if (closed) return
         attachedSurfaceGeneration = null
+        pendingDetachGeneration = null
+        pastEndSeekPending = false
         seekLifecycle.setForeground(false)
         expectingProgress = false
         cancelPendingSeek()
         userSeekPending = false
         watchdog.reset()
-        player.pause()
+        pauseForApplication()
         closed = true
         failureObserver?.let { NSNotificationCenter.defaultCenter.removeObserver(it) }
         failureObserver = null
+        endObserver?.let { NSNotificationCenter.defaultCenter.removeObserver(it) }
+        endObserver = null
         layer.player = null
         player.replaceCurrentItemWithPlayerItem(null)
+    }
+
+    private fun pauseForApplication() {
+        player.pause()
+        onApplicationTransportChange?.invoke(0f)
+    }
+
+    private fun setRateForApplication(rate: Float) {
+        if (rate > 0f) didEnd = false
+        player.rate = rate
+        onApplicationTransportChange?.invoke(rate)
     }
 
     private companion object {
@@ -273,10 +389,13 @@ internal class IosMusicVideoSurfacePlayer(
         const val SEEK_USER_TARGET_CHANGE_TOLERANCE_MS = 1_500L
         const val SEEK_RETRY_COOLDOWN_MS = 2_000L
         const val MAX_SLOW_SEEK_CORRECTIONS = 2
+        const val OUTRO_TRANSPORT_MARGIN_MS = 2_000L
     }
 
     private fun cancelPendingSeek() {
         seekLifecycle.cancelSeek()
         player.currentItem?.cancelPendingSeeks()
+        forceSeekPending = false
+        pastEndSeekPending = false
     }
 }

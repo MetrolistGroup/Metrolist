@@ -333,6 +333,10 @@ fun MobileApp(
     formatHistoryMonth: (Long) -> String,
     oauthCallbackUrls: Flow<String> = emptyFlow(),
     initialSettingsPage: SettingsPageId? = null,
+    pictureInPictureSupported: Boolean = false,
+    pictureInPictureRequiresPlayingVideo: Boolean = false,
+    onEnterPictureInPicture: (isPlaying: Boolean, hasVideo: Boolean) -> Unit = { _, _ -> },
+    onRegisterPictureInPictureRestore: ((() -> Unit)?) -> Unit = {},
     loginContent: @Composable (
         isSwitchingChannel: Boolean,
         onBack: () -> Unit,
@@ -463,6 +467,18 @@ fun MobileApp(
     fun setPlayerVisible(visible: Boolean) {
         cancelVideoLookup()
         showPlayer = visible
+    }
+
+    val latestPictureInPictureRestoreRegistration by rememberUpdatedState(onRegisterPictureInPictureRestore)
+    DisposableEffect(playerViewModel) {
+        latestPictureInPictureRestoreRegistration {
+            playerViewModel.setLyricsVisible(false)
+            playerViewModel.requestQueueSheetCollapse()
+            playerViewModel.requestPlayerOverlayDismiss()
+            if (routeStack.lastOrNull()?.route == MobileRoute.Wrapped) routeStack.removeAt(routeStack.lastIndex)
+            setPlayerVisible(true)
+        }
+        onDispose { latestPictureInPictureRestoreRegistration(null) }
     }
 
     fun playVideo(videoId: String) = videoLookup.play(videoId)
@@ -2059,13 +2075,16 @@ fun MobileApp(
                             lyricsShareAction,
                         ) {
                             MobilePlayerPlatform(
-                                database,
-                                downloadSongs,
-                                removeDownloads,
-                                playlistWorkflow::select,
-                                listenTogetherManager,
-                                touchExplorationEnabled,
-                                lyricsShareAction,
+                                database = database,
+                                onDownloadSongs = downloadSongs,
+                                onRemoveDownloads = removeDownloads,
+                                onAddToPlaylist = playlistWorkflow::select,
+                                listenTogether = listenTogetherManager,
+                                touchExplorationEnabled = touchExplorationEnabled,
+                                shareLyrics = lyricsShareAction,
+                                pictureInPictureSupported = pictureInPictureSupported,
+                                pictureInPictureRequiresPlayingVideo = pictureInPictureRequiresPlayingVideo,
+                                onEnterPictureInPicture = onEnterPictureInPicture,
                             )
                         }
                     val playerUiState by playerViewModel.uiState.collectAsState()
