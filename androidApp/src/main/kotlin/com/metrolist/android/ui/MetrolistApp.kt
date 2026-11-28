@@ -1950,6 +1950,7 @@ fun MetrolistApp(
                             val playerLifecycleState by lifecycleOwner.lifecycle.currentStateAsState()
                             PlayerScreen(
                                 isScreenVisible = playerLifecycleState.isAtLeast(Lifecycle.State.STARTED),
+                                supportsLandscapeLyricsExpansion = !usesDirectionalNavigation,
                                 viewModel = playerViewModel,
                                 bottomSheetState = playerBottomSheetState,
                                 requestPlayPauseFocus = focusPlayPauseOnPlayerExpand,

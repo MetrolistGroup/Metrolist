@@ -471,6 +471,7 @@ fun PlayerScreen(
     onPlayPauseFocusRequested: () -> Unit = {},
     onLyricsVisibleChange: (Boolean) -> Unit = {},
     isScreenVisible: Boolean = true,
+    supportsLandscapeLyricsExpansion: Boolean = false,
 ) {
     val isPlayerContentVisible by remember(bottomSheetState) {
         derivedStateOf { bottomSheetState.value > bottomSheetState.collapsedBound && !bottomSheetState.isCollapsed }
@@ -924,8 +925,10 @@ fun PlayerScreen(
                 }
             }
 
-            LaunchedEffect(useLandscapeLayout, uiState.isLyricsExpanded) {
-                if (useLandscapeLayout && uiState.isLyricsExpanded) {
+            val landscapeQueueVisible = useLandscapeLayout && !queueSheetState.isCollapsed
+            val canExpandLandscapeLyrics = supportsLandscapeLyricsExpansion && !landscapeQueueVisible
+            LaunchedEffect(useLandscapeLayout, canExpandLandscapeLyrics, uiState.isLyricsExpanded) {
+                if (useLandscapeLayout && !canExpandLandscapeLyrics && uiState.isLyricsExpanded) {
                     viewModel.setLyricsExpanded(false)
                 }
             }
@@ -952,7 +955,6 @@ fun PlayerScreen(
             val queueHandlesBack by remember(queueSheetState, useLandscapeLayout) {
                 derivedStateOf { !useLandscapeLayout && queueSheetState.progress > 0.2f }
             }
-            val landscapeQueueVisible = useLandscapeLayout && !queueSheetState.isCollapsed
             // Phone landscape has no room above the controls, so cast and the audio/video switch move into the player menu.
             val landscapeMenuActions =
                 if (useLandscapeLayout && !isTv && !landscapeQueueVisible) {
@@ -1334,6 +1336,7 @@ fun PlayerScreen(
                                     viewModel = viewModel,
                                     artworkOverlay = artworkOverlay,
                                     onToggleFullscreen = onToggleFullscreen,
+                                    canExpandLyrics = canExpandLandscapeLyrics,
                                     showLyricsOffsetEditor = showLyricsOffsetEditor,
                                     onLyricsOffsetChange = { offset -> currentSong?.let { viewModel.setLyricsOffset(it.id, offset) } },
                                     onDoneLyricsOffset = { showLyricsOffsetEditor = false },

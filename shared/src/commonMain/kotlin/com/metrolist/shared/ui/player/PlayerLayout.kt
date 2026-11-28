@@ -832,6 +832,7 @@ internal fun LandscapePlayerContent(
     viewModel: PlayerViewModel,
     artworkOverlay: @Composable (Modifier) -> Unit,
     onToggleFullscreen: (() -> Unit)?,
+    canExpandLyrics: Boolean,
     showLyricsOffsetEditor: Boolean,
     onLyricsOffsetChange: (Int) -> Unit,
     onDoneLyricsOffset: () -> Unit,
@@ -897,6 +898,7 @@ internal fun LandscapePlayerContent(
     )
     val hapticManager = rememberMetrolistHaptics()
     val platform = LocalPlayerPlatform.current
+    val lyricsExpanded = canExpandLyrics && uiState.isLyricsVisible && uiState.isLyricsExpanded
     val controlsVisible = !uiState.isLyricsExpanded || !Settings.shared.lyricsHideStatusBarInFullscreen
     val playerConnection = LocalPlayerSession.current
     val artworkSeekStepMs = Settings.shared.seekDurationSeconds * 1000L
@@ -1083,7 +1085,7 @@ internal fun LandscapePlayerContent(
             )
         }
 
-        if (!showTopVideoSwitch && isClassic) {
+        if (!lyricsExpanded && !showTopVideoSwitch && isClassic) {
             Box(
                 modifier =
                     Modifier
@@ -1186,6 +1188,25 @@ internal fun LandscapePlayerContent(
             ) {
                 val tvArtworkSize = minOf(LandscapePlayerArtworkSize, maxHeight, maxWidth)
                 Column(modifier = Modifier.fillMaxSize()) {
+                    if (canExpandLyrics && uiState.isLyricsVisible) {
+                        FilledIconButton(
+                            onClick = {
+                                hapticManager.perform(HapticEvent.PRESS)
+                                viewModel.setLyricsExpanded(!lyricsExpanded)
+                            },
+                            modifier = Modifier.align(Alignment.End).playerControlBlend(),
+                            colors =
+                                IconButtonDefaults.filledIconButtonColors(
+                                    containerColor = Color.Transparent,
+                                    contentColor = textBackgroundColor,
+                                ),
+                        ) {
+                            Icon(
+                                if (lyricsExpanded) MetrolistIcons.Default.FullscreenExit else MetrolistIcons.Default.Fullscreen,
+                                contentDescription = stringResource(if (lyricsExpanded) Res.string.collapse else Res.string.expand),
+                            )
+                        }
+                    }
                     BoxWithConstraints(Modifier.fillMaxWidth().weight(1f)) {
                         val artworkSize = if (isTv) tvArtworkSize else minOf(maxHeight, maxWidth)
                         AnimatedContent(
@@ -1292,6 +1313,8 @@ internal fun LandscapePlayerContent(
                     }
                 }
             }
+
+            if (lyricsExpanded) return@Row
 
             Column(
                 modifier =
