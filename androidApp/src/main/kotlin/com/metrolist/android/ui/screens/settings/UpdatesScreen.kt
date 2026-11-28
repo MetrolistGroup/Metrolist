@@ -3,6 +3,7 @@
 package com.metrolist.android.ui.screens.settings
 
 import android.Manifest
+import android.app.Activity
 import android.content.ClipData
 import android.content.Context
 import android.content.Intent
@@ -38,6 +39,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -88,6 +90,7 @@ import com.metrolist.shared.generated.resources.crash_updates_force_install
 import com.metrolist.shared.generated.resources.crash_updates_install
 import com.metrolist.shared.generated.resources.crash_updates_installer_failed
 import com.metrolist.shared.generated.resources.crash_updates_installing_description
+import com.metrolist.shared.generated.resources.crash_updates_installing_prompt_description
 import com.metrolist.shared.generated.resources.crash_updates_installing_title
 import com.metrolist.shared.generated.resources.crash_updates_last_check
 import com.metrolist.shared.generated.resources.crash_updates_no_updates
@@ -121,6 +124,7 @@ import com.metrolist.shared.generated.resources.updates_install_method_shizuku
 import com.metrolist.shared.generated.resources.updates_install_method_system
 import com.metrolist.shared.generated.resources.updates_installer_failed
 import com.metrolist.shared.generated.resources.updates_installing_description
+import com.metrolist.shared.generated.resources.updates_installing_prompt_description
 import com.metrolist.shared.generated.resources.updates_installing_title
 import com.metrolist.shared.generated.resources.updates_last_check
 import com.metrolist.shared.generated.resources.updates_nightly_builds
@@ -462,6 +466,11 @@ fun UpdateDetailsScreen(
         }
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    DisposableEffect(context) {
+        val activity = context as? Activity
+        AppUpdateManager.setForegroundActivity(activity, active = true)
+        onDispose { AppUpdateManager.setForegroundActivity(activity, active = false) }
+    }
     val state by AppUpdateManager.state.collectAsState()
     var installAfterPermission by remember { mutableStateOf<AppUpdateState.Downloaded?>(null) }
     var autoInstallHandled by rememberSaveable { mutableStateOf(false) }
@@ -701,13 +710,15 @@ fun UpdateDetailsScreen(
                             LinearWavyProgressIndicator(modifier = Modifier.fillMaxWidth())
                         }
                         if (installing) {
+                            val waitingForInstaller = current is AppUpdateState.Downloaded && current.installing
                             Text(
                                 text =
                                     stringResource(
-                                        if (crashRecovery) {
-                                            Res.string.crash_updates_installing_description
-                                        } else {
-                                            Res.string.updates_installing_description
+                                        when {
+                                            waitingForInstaller && crashRecovery -> Res.string.crash_updates_installing_prompt_description
+                                            waitingForInstaller -> Res.string.updates_installing_prompt_description
+                                            crashRecovery -> Res.string.crash_updates_installing_description
+                                            else -> Res.string.updates_installing_description
                                         },
                                     ),
                                 style = MaterialTheme.typography.labelMedium,
@@ -716,6 +727,15 @@ fun UpdateDetailsScreen(
                             )
                         }
                     }
+                }
+
+                val installErrorMessage = (current as? AppUpdateState.Error)?.takeIf { it.failure == UpdateFailure.INSTALL }?.errorMessage
+                if (!installErrorMessage.isNullOrBlank()) {
+                    Text(
+                        text = installErrorMessage,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.error,
+                    )
                 }
 
                 if (installerError) {

@@ -500,6 +500,13 @@
         <receiver
             android:name="com.metrolist.android.update.UpdateInstallReceiver"
             android:exported="false" />
+        <receiver
+            android:name="com.metrolist.android.update.PackageReplacedReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            </intent-filter>
+        </receiver>
         <!-- Shizuku delivers its binder through this provider; the permission limits callers to the system. -->
         <provider
             android:name="rikka.shizuku.ShizukuProvider"

@@ -11,27 +11,40 @@ open class UpdateInstallReceiver : BroadcastReceiver() {
         context: Context,
         intent: Intent,
     ) {
-        when (intent.getIntExtra(PackageInstaller.EXTRA_STATUS, PackageInstaller.STATUS_FAILURE)) {
+        val status = intent.getIntExtra(PackageInstaller.EXTRA_STATUS, PackageInstaller.STATUS_FAILURE)
+        val message = intent.getStringExtra(PackageInstaller.EXTRA_STATUS_MESSAGE)
+        when (status) {
             PackageInstaller.STATUS_PENDING_USER_ACTION -> {
                 val confirm = IntentCompat.getParcelableExtra(intent, Intent.EXTRA_INTENT, Intent::class.java)
-                if (confirm == null || runCatching { context.startActivity(confirm.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }.isFailure) {
-                    AppUpdateManager.onInstallFinished(success = false)
+                if (confirm == null || !AppUpdateManager.launchConfirmationPrompt(context, confirm)) {
+                    AppUpdateManager.onInstallFinished(context = context, success = false, status = status, message = message)
                 }
             }
 
             PackageInstaller.STATUS_SUCCESS -> {
-                AppUpdateManager.onInstallFinished(success = true)
+                AppUpdateManager.onInstallFinished(context = context, success = true, status = status, message = message)
             }
 
             PackageInstaller.STATUS_FAILURE_ABORTED -> {
-                AppUpdateManager.onInstallAborted()
+                AppUpdateManager.onInstallAborted(context)
             }
 
             else -> {
-                AppUpdateManager.onInstallFinished(success = false)
+                AppUpdateManager.onInstallFinished(context = context, success = false, status = status, message = message)
             }
         }
     }
 }
 
 class CrashUpdateInstallReceiver : UpdateInstallReceiver()
+
+class PackageReplacedReceiver : BroadcastReceiver() {
+    override fun onReceive(
+        context: Context,
+        intent: Intent,
+    ) {
+        if (intent.action == Intent.ACTION_MY_PACKAGE_REPLACED) {
+            AppUpdateManager.notifyPackageReplaced(context)
+        }
+    }
+}

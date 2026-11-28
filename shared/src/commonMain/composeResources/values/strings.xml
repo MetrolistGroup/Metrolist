@@ -1775,6 +1775,18 @@
     <string name="updates_pending_title">Pending update</string>
     <string name="updates_installing_title">Installing the update</string>
     <string name="updates_installing_description">Downloading and installing the update</string>
+    <string name="updates_installing_prompt_description">Confirm the system update prompt if shown. Metrolist will close briefly while Android applies the update.</string>
+    <string name="updates_install_prompt_notification_title">Update ready to install</string>
+    <string name="updates_install_prompt_notification_text">Tap to confirm the Android update prompt</string>
+    <string name="updates_install_failed_notification_title">Metrolist update failed</string>
+    <string name="updates_install_failed_notification_text">Tap to view update details and try again</string>
+    <string name="updates_installed_notification_title">Metrolist updated to %1$s</string>
+    <string name="updates_installed_notification_text">Tap to open Metrolist</string>
+    <string name="updates_install_status_blocked">Installation was blocked by the system or device security settings.</string>
+    <string name="updates_install_status_conflict">The downloaded package conflicts with the currently installed app.</string>
+    <string name="updates_install_status_incompatible">This APK is not compatible with your device.</string>
+    <string name="updates_install_status_invalid">The downloaded APK is invalid or corrupted.</string>
+    <string name="updates_install_status_storage">Not enough storage space to install the update.</string>
     <!-- Translators: Progress or status message for download progress in the update settings. %1$d is the percentage; %2$s is the percent symbol. -->
     <!-- Translators: Option or section label for version in the update settings. -->
     <string name="updates_version">Metrolist version</string>
@@ -5503,6 +5515,7 @@
     <string name="crash_updates_install" translatable="false">Install</string>
     <string name="crash_updates_installer_failed" translatable="false">Android\u0027s package installer is unavailable or app installation is restricted on this device.</string>
     <string name="crash_updates_installing_description" translatable="false">Downloading and installing the update</string>
+    <string name="crash_updates_installing_prompt_description" translatable="false">Confirm the system update prompt if shown. Metrolist will close briefly while Android applies the update.</string>
     <string name="crash_updates_installing_title" translatable="false">Installing the update</string>
     <string name="crash_updates_last_check" translatable="false">Last successful update check</string>
     <string name="crash_updates_no_updates" translatable="false">Metrolist is up to date</string>
