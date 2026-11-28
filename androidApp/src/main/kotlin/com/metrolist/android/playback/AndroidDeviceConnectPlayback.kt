@@ -285,6 +285,15 @@ internal class AndroidDeviceConnectPlayback(
                     queue.setFiniteQueue(playback.finite)
                     queue.setExplicitRadioQueue(playback.explicitRadioQueue)
                     queue.applyRemoteRecommendationLock(playback.recommendationsLocked)
+                    val seed =
+                        playback.queue.displayedItems
+                            .singleOrNull()
+                            ?.id
+                    if (seed != null && playback.explicitRadioQueue && !playback.finite && !playback.recommendationsLocked) {
+                        queue.bootstrapRecommendations(seed, allowRepeatMode = true)
+                    } else {
+                        queue.clearPendingRadioBootstrapSeed()
+                    }
                     queue.setTitle(playback.title)
                     repeatMode.value = playback.repeatMode.toPlayerRepeatMode()
                 }

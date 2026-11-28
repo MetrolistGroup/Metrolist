@@ -627,13 +627,24 @@ object PlayerState {
                     isPlaybackResolving = false
                     desiredPlayback.value = false
                 }
+                if (playback != null) {
+                    deviceRadioBootstrapPending =
+                        playback.explicitRadioQueue &&
+                        !playback.finite &&
+                        !playback.recommendationsLocked &&
+                        playback.queue.displayedItems.size == 1
+                    if (!deviceRadioBootstrapPending) deviceRadioBootstrapJob?.cancel()
+                }
                 controllerPlayback = playback
                 remoteVolume = playback?.volume
                 volumeState.value = volume
                 player.setControllerPlayback(playback)
                 if (playback != null) {
                     if (!provisional &&
-                        previousControllerPlayback?.copy(positionMs = playback.positionMs) != playback
+                        (
+                            (!playback.playing && previousControllerPlayback?.positionMs != playback.positionMs) ||
+                                previousControllerPlayback?.copy(positionMs = playback.positionMs) != playback
+                        )
                     ) {
                         persistPlaybackState()
                     }
