@@ -3,6 +3,7 @@ package com.metrolist.shared.playlistimport
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.ByteArrayInputStream
@@ -242,6 +243,104 @@ class UniversalPlaylistParserTest {
 
         assertEquals(null, AppleMusicPlaylistImporter.extractAppleMusicUserToken(null))
         assertEquals(null, AppleMusicPlaylistImporter.extractAppleMusicUserToken(""))
+    }
+
+    @Test
+    fun txtPlaylistWithCommasInTitleOrArtistParsesAsPlainText() {
+        val mixedInput =
+            """
+            The Beatles - Hello, Goodbye
+            The Beatles - Hey Jude
+            Queen - Bohemian Rhapsody
+            """.trimIndent()
+
+        val prepared = UniversalPlaylistParser.prepareFile(mixedInput, "playlist.txt", "My Playlist", "File")
+        assertNull(prepared.csv)
+        assertEquals(3, prepared.tracks.size)
+        assertEquals("The Beatles", prepared.tracks[0].artist)
+        assertEquals("Hello, Goodbye", prepared.tracks[0].title)
+        assertEquals("Hey Jude", prepared.tracks[1].title)
+        assertEquals("Bohemian Rhapsody", prepared.tracks[2].title)
+
+        val parsed = UniversalPlaylistParser.parse(mixedInput)
+        assertEquals(prepared.tracks, parsed)
+
+        val allCommasInput =
+            """
+            The Beatles - Hello, Goodbye
+            Earth, Wind & Fire - September
+            """.trimIndent()
+        val preparedAllCommas = UniversalPlaylistParser.prepareFile(allCommasInput, "playlist.txt", "All Commas", "File")
+        assertNull(preparedAllCommas.csv)
+        assertEquals(listOf("The Beatles", "Earth, Wind & Fire"), preparedAllCommas.tracks.map { it.artist })
+        assertEquals(listOf("Hello, Goodbye", "September"), preparedAllCommas.tracks.map { it.title })
+
+        val quotedAndComma =
+            """
+            1. The Beatles - Hello, Goodbye
+            2. "Hotel California" by Eagles
+            """.trimIndent()
+        val quotedTracks = UniversalPlaylistParser.parse(quotedAndComma)
+        assertEquals(listOf("Hello, Goodbye", "Hotel California"), quotedTracks.map { it.title })
+        assertEquals(listOf("The Beatles", "Eagles"), quotedTracks.map { it.artist })
+    }
+
+    @Test
+    fun explicitCsvAndTsvStillRequireMappingAndReportErrors() {
+        val artistTitleRows =
+            """
+            The Beatles - Hello, Goodbye
+            Earth, Wind & Fire - September
+            """.trimIndent()
+        val preparedCsv = UniversalPlaylistParser.prepareFile(artistTitleRows, "playlist.csv", "CSV", "File")
+        assertNotNull(preparedCsv.csv)
+        assertTrue(preparedCsv.tracks.isEmpty())
+
+        val titleOnlyWithCommas =
+            """
+            Hello, Goodbye
+            Paint It, Black
+            """.trimIndent()
+        val preparedTitleOnly = UniversalPlaylistParser.prepareFile(titleOnlyWithCommas, "titles.txt", "Titles", "File")
+        assertNull(preparedTitleOnly.csv)
+        assertEquals(listOf("Hello, Goodbye", "Paint It, Black"), preparedTitleOnly.tracks.map { it.title })
+        assertEquals(listOf("", ""), preparedTitleOnly.tracks.map { it.artist })
+
+        val headerKeywordArtistWithDash =
+            """
+            Title, Artist - First
+            Other, Artist - Second
+            """.trimIndent()
+        assertEquals(listOf("First", "Second"), UniversalPlaylistParser.parse(headerKeywordArtistWithDash).map { it.title })
+        assertEquals(
+            listOf("Title, Artist", "Other, Artist"),
+            UniversalPlaylistParser.parse(headerKeywordArtistWithDash).map { it.artist },
+        )
+        val preparedHeaderKeyword =
+            UniversalPlaylistParser.prepareFile(headerKeywordArtistWithDash, "playlist.list", "List", "File")
+        assertNull(preparedHeaderKeyword.csv)
+        assertEquals(listOf("First", "Second"), preparedHeaderKeyword.tracks.map { it.title })
+
+        val error =
+            assertThrows(ImportException::class.java) {
+                UniversalPlaylistParser.prepareFile("\"The Beatles - Hello, Goodbye", "broken.csv", "Broken", "File")
+            }
+        assertEquals(ImportErrorKey.FileReadFailed, error.errorKey)
+    }
+
+    @Test
+    fun tsvAndSemicolonListsWithDashesInTitlesKeepDelimitedMapping() {
+        val tsv = "Song A - Live\tArtist A\nSong B - Live\tArtist B"
+        val tsvTracks = UniversalPlaylistParser.parse(tsv)
+        assertEquals(listOf("Song A - Live", "Song B - Live"), tsvTracks.map { it.title })
+        assertEquals(listOf("Artist A", "Artist B"), tsvTracks.map { it.artist })
+        assertNotNull(UniversalPlaylistParser.prepareFile(tsv, "pasted.list", "TSV", "File").csv)
+
+        val semicolon = "Intro - Live;Band A\nOutro - Live;Band B"
+        val semicolonTracks = UniversalPlaylistParser.parse(semicolon)
+        assertEquals(listOf("Intro - Live", "Outro - Live"), semicolonTracks.map { it.title })
+        assertEquals(listOf("Band A", "Band B"), semicolonTracks.map { it.artist })
+        assertNotNull(UniversalPlaylistParser.prepareFile(semicolon, "pasted.list", "Semicolon", "File").csv)
     }
 
     @Test

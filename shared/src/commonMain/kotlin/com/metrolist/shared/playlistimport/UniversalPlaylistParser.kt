@@ -21,6 +21,7 @@ object UniversalPlaylistParser {
 
     // A separator between two digits is part of titles like 4:44, not a list marker.
     private val numberingRegex = Regex("""^\s*(?:\[\d+]|\d+(?![.\-:]\d)[\.\-\):\s]+)\s*""")
+    private val csvSeparatorDirective = Regex("""^sep=([,;\t])(?:\r\n|\r|\n)""", RegexOption.IGNORE_CASE)
     private val pathFileExtensionRegex = Regex("""\.[A-Za-z0-9]+$""")
     private val bareYoutubeIdRegex = Regex("[A-Za-z0-9_-]{11}")
     private val youtubeHosts = setOf("youtube.com", "www.youtube.com", "m.youtube.com", "music.youtube.com", "youtu.be")
@@ -42,6 +43,12 @@ object UniversalPlaylistParser {
     fun parse(
         text: String,
         resolveLocalReference: (String) -> String? = { null },
+    ): List<PlaylistImportManager.CsvTrack> = parseInternal(text, allowDelimited = true, resolveLocalReference)
+
+    private fun parseInternal(
+        text: String,
+        allowDelimited: Boolean,
+        resolveLocalReference: (String) -> String?,
     ): List<PlaylistImportManager.CsvTrack> {
         if (text.length > PlaylistImportManager.MAX_CSV_CHARACTERS) throw ImportException(ImportErrorKey.FileReadFailed)
         val trimmed = text.removePrefix("\uFEFF").trim()
@@ -57,9 +64,12 @@ object UniversalPlaylistParser {
             if (fromM3u.isNotEmpty()) return fromM3u
         }
 
-        if (trimmed.contains('\t') || trimmed.contains(",") || trimmed.contains(";")) {
-            val fromDelimited = parseDelimited(text.removePrefix("\uFEFF"), resolveLocalReference)
-            if (fromDelimited.isNotEmpty()) return fromDelimited
+        if (allowDelimited) {
+            val raw = text.removePrefix("\uFEFF")
+            detectDelimitedPlaylist(raw)?.let { csv ->
+                val fromDelimited = csv.tracks(csv.guessMapping(), resolveLocalReference)
+                if (fromDelimited.isNotEmpty()) return fromDelimited
+            }
         }
 
         return parsePlainTextLines(trimmed, resolveLocalReference)
@@ -72,7 +82,7 @@ object UniversalPlaylistParser {
         source: String,
         resolveLocalReference: (String) -> String? = { null },
     ): ImportedPlaylistData {
-        val extension = fileName.substringAfterLast('.').lowercase()
+        val extension = fileName.substringAfterLast('.', "").lowercase()
         val trimmed = text.removePrefix("\uFEFF").trimStart()
         if (extension == "m3u" || extension == "m3u8") {
             if (text.length > PlaylistImportManager.MAX_CSV_CHARACTERS) throw ImportException(ImportErrorKey.FileReadFailed)
@@ -83,19 +93,19 @@ object UniversalPlaylistParser {
             trimmed.startsWith("{") || trimmed.startsWith("[") || trimmed.startsWith("#EXTM3U", true) ||
                 trimmed.contains("#EXTINF:", true)
         val csv =
-            if (explicitCsv || (!structured && text.any { it in ",;\t" })) {
-                CsvPlaylist.parse(text, preferTabs = extension == "tsv")
-            } else {
-                null
+            when {
+                explicitCsv -> CsvPlaylist.parse(text, preferTabs = extension == "tsv")
+                extension == "txt" || structured -> null
+                else -> detectDelimitedPlaylist(text)
             }
-        val needsMapping = explicitCsv || (csv?.columnCount ?: 0) > 1
+        val needsMapping = explicitCsv || csv != null
         if (needsMapping && csv?.rows.orEmpty().none { row -> row.any(String::isNotBlank) }) {
             throw ImportException(ImportErrorKey.NoTracksRecognized)
         }
         return ImportedPlaylistData(
             title = title,
             source = source,
-            tracks = if (needsMapping) emptyList() else parse(text, resolveLocalReference),
+            tracks = if (needsMapping) emptyList() else parseInternal(text, allowDelimited = extension != "txt", resolveLocalReference),
             csv = csv.takeIf { needsMapping },
         )
     }
@@ -248,10 +258,38 @@ object UniversalPlaylistParser {
         return results
     }
 
-    private fun parseDelimited(
-        text: String,
-        resolveLocalReference: (String) -> String?,
-    ): List<PlaylistImportManager.CsvTrack> = PlaylistImportManager.parseCsv(text, resolveLocalReference)
+    private fun detectDelimitedPlaylist(text: String): CsvPlaylist? {
+        val input = text.removePrefix("\uFEFF")
+        if (!input.any { it in ",;\t" }) return null
+        val csv = runCatching { CsvPlaylist.parse(input) }.getOrNull() ?: return null
+        val nonBlankRows = csv.rows.filter { row -> row.any(String::isNotBlank) }
+        if (nonBlankRows.isEmpty() || csv.columnCount <= 1) return null
+
+        if (csvSeparatorDirective.containsMatchIn(input)) return csv
+
+        val hasHeader = csv.guessMapping().hasHeader
+        if (nonBlankRows.size == 1 && !hasHeader) return null
+        if (!nonBlankRows.all { it.size == csv.columnCount }) return null
+
+        if (csv.delimiter == ',' && looksLikePlainTextTrackLines(input)) return null
+        return csv
+    }
+
+    private fun looksLikePlainTextTrackLines(text: String): Boolean {
+        val lines =
+            text
+                .lineSequence()
+                .map(String::trim)
+                .filter { it.isNotBlank() && !it.startsWith("#") && !it.startsWith("//") }
+                .map { numberingRegex.replace(it, "").trim() }
+                .filter(String::isNotBlank)
+                .toList()
+        return lines.isNotEmpty() &&
+            lines.all { line ->
+                val (artist, title) = splitArtistAndTitle(line)
+                artist.isNotBlank() && title.isNotBlank()
+            }
+    }
 
     private fun parsePlainTextLines(
         text: String,
