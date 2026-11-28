@@ -2762,6 +2762,8 @@
     <string name="library_sort_updated">Updated</string>
     <!-- Translators: Empty-state message for empty in the Library. -->
     <string name="library_empty">Your library is empty</string>
+    <!-- Translators: Empty-state message on the Library Albums page when the Liked filter has no albums. "Library" is the filter chip name. -->
+    <string name="library_albums_liked_empty">No liked albums. Select Library to see albums from your library songs.</string>
     <!-- Translators: Label for new playlist in the Library. -->
     <string name="new_playlist">New playlist</string>
     <!-- Translators: Field or option label for new in the Home and browse screens. -->

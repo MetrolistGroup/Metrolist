@@ -198,6 +198,7 @@ fun LibraryScreen(
                 presentation = LibraryContentState.presentation,
                 text = libraryContentText(),
                 items = items,
+                albumItems = LibraryContentState.libraryAlbums,
                 autoPlaylists = autoPlaylists,
                 hiddenItemKeys = hiddenItemKeys,
                 isLoading = LibraryContentState.isLibraryLoading,

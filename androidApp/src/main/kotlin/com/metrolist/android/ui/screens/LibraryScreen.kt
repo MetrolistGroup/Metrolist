@@ -485,6 +485,7 @@ fun LibraryScreen(
                 presentation = viewModel.presentation,
                 text = libraryContentText(),
                 items = uiState.items,
+                albumItems = uiState.albums,
                 autoPlaylists = autoPlaylists,
                 hiddenItemKeys = hiddenItemKeys,
                 isLoading = uiState.isLoading,

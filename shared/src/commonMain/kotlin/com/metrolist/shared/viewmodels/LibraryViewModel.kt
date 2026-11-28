@@ -3,7 +3,9 @@ package com.metrolist.shared.viewmodels
 import androidx.compose.runtime.snapshotFlow
 import com.metrolist.shared.api.YouTubeRepository
 import com.metrolist.shared.auth.YouTubeSyncState
+import com.metrolist.shared.constants.AlbumFilter
 import com.metrolist.shared.db.MusicDatabase
+import com.metrolist.shared.db.entities.Album
 import com.metrolist.shared.db.entities.PlaylistEntity
 import com.metrolist.shared.db.entities.toSongItem
 import com.metrolist.shared.db.preserveKnownPlaylistEditability
@@ -260,7 +262,10 @@ class LibraryViewModel(
         val key = libraryItemKey(item)
         cachedRemoteItems = cachedRemoteItems.filterNot { libraryItemKey(it) == key }
         _uiState.update { current ->
-            current.copy(items = current.items.filterNot { libraryItemKey(it) == key })
+            current.copy(
+                items = current.items.filterNot { libraryItemKey(it) == key },
+                albums = current.albums.filterNot { libraryItemKey(it) == key },
+            )
         }
     }
 
@@ -344,6 +349,11 @@ class LibraryViewModel(
             }
             launch {
                 snapshotFlow { Settings.shared.historyPlaylistsEnabled }
+                    .drop(1)
+                    .collect { localReloads.trySend(Unit) }
+            }
+            launch {
+                snapshotFlow { Settings.shared.albumFilter }
                     .drop(1)
                     .collect { localReloads.trySend(Unit) }
             }
@@ -636,9 +646,16 @@ class LibraryViewModel(
     internal fun publishRefreshedItems(
         items: List<YTItem>,
         deletionVersion: Long,
+        albums: List<AlbumItem>? = null,
     ): Boolean {
         if (deletionVersion != playlistDeletionVersion) return false
-        _uiState.update { it.copy(items = LibraryDeletionTracker.filterDeleted(items), isLoading = false) }
+        _uiState.update {
+            it.copy(
+                items = LibraryDeletionTracker.filterDeleted(items),
+                albums = albums?.let(LibraryDeletionTracker::filterDeleted)?.filterIsInstance<AlbumItem>() ?: it.albums,
+                isLoading = false,
+            )
+        }
         return true
     }
 
@@ -668,8 +685,34 @@ class LibraryViewModel(
             } else {
                 local
             }
-        publishRefreshedItems(items, deletionVersion)
+        val albums = database?.let { loadAlbumPageItems(it, items) }.orEmpty()
+        if (deletionVersion != playlistDeletionVersion || currentLibraryAccountKey() != accountKey) return
+        publishRefreshedItems(items, deletionVersion, albums)
     }
+
+    // The unfiltered Library keeps signed-out saved albums, so the Albums page selects its own list.
+    private suspend fun loadAlbumPageItems(
+        database: MusicDatabase,
+        items: List<YTItem>,
+    ): List<AlbumItem> =
+        withContext(Dispatchers.Default) {
+            val dao = database.dao()
+            when (Settings.shared.albumFilter) {
+                AlbumFilter.LIKED -> {
+                    val albums = items.filterIsInstance<AlbumItem>()
+                    if (repository.canManagePlaylists()) {
+                        albums
+                    } else {
+                        val likedIds = dao.albumsLikedByCreateDateAsc().first().mapTo(mutableSetOf()) { it.album.id }
+                        albums.filter { it.id in likedIds }
+                    }
+                }
+
+                AlbumFilter.LIBRARY -> {
+                    dao.albumsByCreateDateAsc().first().map { it.toLibraryAlbumItem() }
+                }
+            }
+        }
 
     private suspend fun loadLocalItemsWithHistory(database: MusicDatabase): List<YTItem> =
         withContext(Dispatchers.Default) {
@@ -786,29 +829,7 @@ class LibraryViewModel(
                 )
             }
         val albums =
-            dao.albumsLikedByCreateDateAsc(includeSaved = !repository.canManagePlaylists()).first().map {
-                AlbumItem(
-                    id = it.album.id,
-                    isDownloaded = "album:${it.album.id}" in downloadedKeys,
-                    title = it.album.title,
-                    thumbnail = it.album.thumbnailUrl,
-                    artists =
-                        it.artists.map { artist ->
-                            ArtistTiny(artist.id.takeUnless { artist.isLocal }, artist.name, artist.thumbnailUrl)
-                        },
-                    year = it.album.year?.toString(),
-                    playlistId = it.album.playlistId,
-                    isExplicit = it.album.explicit,
-                    songCount = it.album.songCount.takeIf { count -> count > 0 },
-                    duration =
-                        it.album.duration
-                            .takeIf { duration -> duration > 0 }
-                            ?.toLong(),
-                    playtime = it.timeListened,
-                    libraryAddedAt = it.libraryAddedAt.toEpochMilliseconds(),
-                    libraryUpdatedAt = it.album.lastUpdateTime.toEpochMilliseconds(),
-                )
-            }
+            dao.albumsLikedByCreateDateAsc(includeSaved = !repository.canManagePlaylists()).first().map { it.toLibraryAlbumItem() }
         val podcasts =
             dao.subscribedPodcasts().first().map {
                 PodcastItem(
@@ -823,6 +844,29 @@ class LibraryViewModel(
             }
         return (playlists + songs + episodes + artists + albums + podcasts).distinctBy(::libraryItemKey)
     }
+
+    private fun Album.toLibraryAlbumItem() =
+        AlbumItem(
+            id = album.id,
+            isDownloaded = "album:${album.id}" in downloadedKeys,
+            title = album.title,
+            thumbnail = album.thumbnailUrl,
+            artists =
+                artists.map { artist ->
+                    ArtistTiny(artist.id.takeUnless { artist.isLocal }, artist.name, artist.thumbnailUrl)
+                },
+            year = album.year?.toString(),
+            playlistId = album.playlistId,
+            isExplicit = album.explicit,
+            songCount = album.songCount.takeIf { count -> count > 0 },
+            duration =
+                album.duration
+                    .takeIf { duration -> duration > 0 }
+                    ?.toLong(),
+            playtime = timeListened,
+            libraryAddedAt = libraryAddedAt.toEpochMilliseconds(),
+            libraryUpdatedAt = album.lastUpdateTime.toEpochMilliseconds(),
+        )
 
     internal suspend fun synchronizeRemote(
         database: MusicDatabase,
@@ -911,6 +955,7 @@ class LibraryViewModel(
 
     data class LibraryUiState(
         val items: List<YTItem> = emptyList(),
+        val albums: List<AlbumItem> = emptyList(),
         val isLoading: Boolean = false,
         val isRefreshing: Boolean = false,
         val error: Boolean = false,

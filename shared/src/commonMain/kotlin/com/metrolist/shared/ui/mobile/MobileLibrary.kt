@@ -283,6 +283,7 @@ internal fun MobileLibrary(
                 presentation = viewModel.presentation,
                 text = libraryContentText(),
                 items = uiState.items,
+                albumItems = uiState.albums,
                 searchQuery = searchQuery,
                 isSearchOpen = isSearchOpen,
                 onSearchQueryChange = { searchQuery = it },
