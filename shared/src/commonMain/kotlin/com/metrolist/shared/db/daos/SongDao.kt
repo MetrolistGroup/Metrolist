@@ -418,7 +418,24 @@ interface SongDao {
 
     @Transaction
     @Query(
-        "SELECT * FROM album WHERE EXISTS(SELECT * FROM song WHERE song.albumId = album.id AND song.inLibrary IS NOT NULL) ORDER BY rowId",
+        """
+        SELECT album.*,
+               (SELECT MIN(song.inLibrary)
+                FROM song
+                WHERE song.id IN (
+                    SELECT direct.id FROM song AS direct WHERE direct.albumId = album.id
+                    UNION
+                    SELECT songId FROM song_album_map WHERE albumId = album.id
+                )) AS firstSongAddedAt,
+               (SELECT SUM(song.totalPlayTime)
+                FROM song
+                WHERE song.albumId = album.id) AS timeListened
+        FROM album
+        WHERE album.inLibrary IS NOT NULL OR EXISTS (
+            SELECT 1 FROM song WHERE song.albumId = album.id AND song.inLibrary IS NOT NULL
+        )
+        ORDER BY rowId
+        """,
     )
     fun albumsByCreateDateAsc(): Flow<List<Album>>
 

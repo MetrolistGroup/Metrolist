@@ -1,5 +1,6 @@
 package com.metrolist.shared.settings
 
+import com.metrolist.shared.constants.AlbumFilter
 import com.metrolist.shared.constants.DownloadedCollectionSortDirectionKey
 import com.metrolist.shared.constants.DownloadedCollectionSortKey
 import com.metrolist.shared.model.CollectionSort
@@ -168,6 +169,19 @@ class LegacySettingsMigrationTest {
         val settings = Settings(MapSettings())
         settings.importBackupSettings(settings.portableSettingsFromLegacy(mapOf("libraryFilter" to 4)))
         assertEquals(LibraryFilterType.PLAYLISTS, settings.libraryFilter)
+    }
+
+    @Test
+    fun legacyAlbumFilterNamesRestoreFromBackups() {
+        val settings = Settings(MapSettings())
+        settings.importBackupSettings(settings.portableSettingsFromLegacy(mapOf("albumFilter" to "LIBRARY")))
+        assertEquals(AlbumFilter.LIBRARY, settings.albumFilter)
+        settings.importBackupSettings(settings.portableSettingsFromLegacy(mapOf("albumFilter" to "UPLOADED", "hideExplicit" to true)))
+        assertEquals(AlbumFilter.LIBRARY, settings.albumFilter)
+        assertTrue(settings.hideExplicit)
+
+        val backing = MapSettings("albumFilter" to "LIBRARY")
+        assertEquals(AlbumFilter.LIBRARY, Settings(StrictTypedSettings(backing)).albumFilter)
     }
 
     @Test

@@ -79,6 +79,7 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.round
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.metrolist.shared.constants.AlbumFilter
 import com.metrolist.shared.constants.GridRowSpacing
 import com.metrolist.shared.constants.GridScreenPadding
 import com.metrolist.shared.constants.GridTileSpacing
@@ -87,7 +88,10 @@ import com.metrolist.shared.constants.gridTileColumns
 import com.metrolist.shared.generated.resources.Res
 import com.metrolist.shared.generated.resources.display_density
 import com.metrolist.shared.generated.resources.filter_downloaded
+import com.metrolist.shared.generated.resources.filter_library
+import com.metrolist.shared.generated.resources.library_albums_liked_empty
 import com.metrolist.shared.generated.resources.library_load_failed
+import com.metrolist.shared.generated.resources.liked
 import com.metrolist.shared.generated.resources.playlist_direction_ascending
 import com.metrolist.shared.generated.resources.playlist_direction_descending
 import com.metrolist.shared.generated.resources.song_count
@@ -260,6 +264,7 @@ fun LibraryContent(
     onSearchDescendingChange: (Boolean) -> Unit = {},
     onPlayAlbum: ((AlbumItem) -> Unit)? = null,
     presentation: LibraryPresentation = remember { LibraryPresentation() },
+    albumItems: List<AlbumItem>? = null,
 ) {
     val currentSongIdState = rememberUpdatedState(currentSongId)
     val isPlayingState = rememberUpdatedState(isPlaying)
@@ -275,10 +280,12 @@ fun LibraryContent(
     val contentFilterVersion by BlockedContent.version.collectAsStateWithLifecycle()
     val effectiveFilter = selectedFilter.takeUnless { it == LibraryFilter.PODCASTS && Settings.shared.hidePodcasts }
     val effectiveSortType = sortType.takeIf { it.isAvailableFor(effectiveFilter) } ?: LibrarySortType.RECENTLY_ADDED
+    val contentItems = albumItems?.takeIf { effectiveFilter == LibraryFilter.ALBUMS } ?: items
+    val showsLikedAlbums = effectiveFilter == LibraryFilter.ALBUMS && Settings.shared.albumFilter == AlbumFilter.LIKED
     val orderableItems =
-        remember(items, effectiveSortType) {
+        remember(contentItems, effectiveSortType) {
             if (effectiveSortType == LibrarySortType.MANUAL) {
-                items.filterNot { it is EpisodeItem || (it is SongItem && it.isPodcast) }
+                contentItems.filterNot { it is EpisodeItem || (it is SongItem && it.isPodcast) }
             } else {
                 emptyList()
             }
@@ -293,7 +300,7 @@ fun LibraryContent(
         }
     val presentationInput =
         remember(
-            items,
+            contentItems,
             effectiveFilter,
             hiddenItemKeys,
             effectiveSortType,
@@ -305,7 +312,7 @@ fun LibraryContent(
             artistAliases,
         ) {
             LibraryPresentationInput(
-                items,
+                contentItems,
                 effectiveFilter,
                 hiddenItemKeys,
                 effectiveSortType,
@@ -548,7 +555,19 @@ fun LibraryContent(
                                         }
                                     } else {
                                         Text(
-                                            if (searchQuery.isNotBlank()) text.searchNoResults else text.empty,
+                                            when {
+                                                searchQuery.isNotBlank() -> {
+                                                    text.searchNoResults
+                                                }
+
+                                                showsLikedAlbums -> {
+                                                    stringResource(Res.string.library_albums_liked_empty)
+                                                }
+
+                                                else -> {
+                                                    text.empty
+                                                }
+                                            },
                                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                                             modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
                                         )
@@ -687,6 +706,23 @@ private fun LibraryHeader(
             modifier = Modifier.padding(top = 1.dp),
             contentPadding = PaddingValues(horizontal = 2.dp),
         )
+        if (selectedFilter == LibraryFilter.ALBUMS) {
+            ChipShelf(
+                options = AlbumFilter.entries,
+                selectedOption = Settings.shared.albumFilter,
+                onSelectionChange = { filter -> filter?.let { Settings.shared.albumFilter = it } },
+                label = {
+                    stringResource(
+                        when (it) {
+                            AlbumFilter.LIKED -> Res.string.liked
+                            AlbumFilter.LIBRARY -> Res.string.filter_library
+                        },
+                    )
+                },
+                selectionRequired = true,
+                contentPadding = PaddingValues(horizontal = 2.dp),
+            )
+        }
         Row(
             // LazyVerticalGrid supplies unbounded height, which can inflate expressive buttons under release optimizations.
             Modifier.fillMaxWidth().height(SplitButtonDefaults.MediumContainerHeight),

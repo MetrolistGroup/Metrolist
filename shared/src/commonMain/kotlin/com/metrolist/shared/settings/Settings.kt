@@ -16,6 +16,8 @@ import com.metrolist.shared.backup.AutoBackupFrequency
 import com.metrolist.shared.constants.ActiveLyricsTextPositionKey
 import com.metrolist.shared.constants.AiSlopBlocklistCacheKey
 import com.metrolist.shared.constants.AiSlopBlocklistUpdatedAtKey
+import com.metrolist.shared.constants.AlbumFilter
+import com.metrolist.shared.constants.AlbumFilterKey
 import com.metrolist.shared.constants.AndroidActiveFontIdKey
 import com.metrolist.shared.constants.AndroidAutoPinnedPlaylistPlaybackModeKey
 import com.metrolist.shared.constants.AndroidAutoPinnedPlaylistsJsonKey
@@ -798,6 +800,7 @@ class Settings(
         { name, value -> settings.putInt(name, value.storedValue) },
     )
     var libraryContentSort by preference(LibraryContentSort.RECENTLY_ADDED)
+    var albumFilter by preference(AlbumFilterKey, AlbumFilter.LIKED)
     var libraryManualOrder by preference(LibraryManualOrderKey, "")
     var playlistPickerSort by preference(PlaylistPickerSortKey, PlaylistPickerSort.LIBRARY)
     var playlistPickerSortDirection by preference(PlaylistPickerSortDirectionKey, SortDirection.ASCENDING)

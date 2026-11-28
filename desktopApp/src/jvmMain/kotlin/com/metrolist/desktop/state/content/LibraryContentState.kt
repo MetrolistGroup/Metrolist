@@ -10,6 +10,7 @@ import com.metrolist.shared.auth.YouTubeSyncState
 import com.metrolist.shared.db.MusicDatabase
 import com.metrolist.shared.db.entities.PlaylistEntity
 import com.metrolist.shared.db.preserveKnownPlaylistEditability
+import com.metrolist.shared.model.AlbumItem
 import com.metrolist.shared.model.PlaylistItem
 import com.metrolist.shared.model.SongItem
 import com.metrolist.shared.model.UserPlaylist
@@ -75,6 +76,8 @@ object LibraryContentState {
         )
     var librarySections by mutableStateOf<Map<String, List<YTItem>>>(emptyMap())
         private set
+    var libraryAlbums by mutableStateOf<List<AlbumItem>>(emptyList())
+        private set
     var userPlaylists by mutableStateOf<List<UserPlaylist>>(emptyList())
         private set
     var libraryError by mutableStateOf(false)
@@ -84,6 +87,7 @@ object LibraryContentState {
     var contentMatchedSongs by mutableStateOf<List<SongItem>>(emptyList())
         private set
     private var unfilteredLibraryItems: List<YTItem> = emptyList()
+    private var unfilteredLibraryAlbums: List<AlbumItem> = emptyList()
     private val playlistSources = UserPlaylistSourceCache()
     private val playlistRenameRequests = PlaylistRenameRequests()
     private var playlistObservationJob: Job? = null
@@ -95,7 +99,8 @@ object LibraryContentState {
         AppState.scope.launch {
             libraryViewModel.uiState.collect { state ->
                 unfilteredLibraryItems = state.items
-                librarySections = mapOf("Library" to BlockedContent.filterItems(unfilteredLibraryItems))
+                unfilteredLibraryAlbums = state.albums
+                applyBlockedContentFilter()
                 isLibraryLoading = state.isLoading || state.isRefreshing
                 libraryError = state.error
             }
@@ -211,6 +216,7 @@ object LibraryContentState {
 
     private fun applyBlockedContentFilter() {
         librarySections = mapOf("Library" to BlockedContent.filterItems(unfilteredLibraryItems))
+        libraryAlbums = BlockedContent.filterItems(unfilteredLibraryAlbums).filterIsInstance<AlbumItem>()
     }
 
     private fun refreshUserPlaylists() {

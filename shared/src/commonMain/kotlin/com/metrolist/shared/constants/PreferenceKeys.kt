@@ -212,6 +212,11 @@ enum class ArtistSortType {
     PLAY_TIME,
 }
 
+enum class AlbumFilter {
+    LIKED,
+    LIBRARY,
+}
+
 enum class AlbumSortType {
     CREATE_DATE,
     NAME,
@@ -248,6 +253,7 @@ val PlaylistCollectionSortingsKey = "playlistCollectionSortingsJson"
 
 val LibraryViewsByFilterKey = "library_views_by_filter"
 val LibrarySortingByFilterKey = "library_sorting_by_filter"
+val AlbumFilterKey = "albumFilter"
 val LibrarySortDirectionKey = "library_sort_direction"
 val GridItemSizeKey = "grid_item_size"
 

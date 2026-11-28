@@ -1,5 +1,7 @@
 package com.metrolist.shared.settings
 
+import com.metrolist.shared.constants.AlbumFilter
+import com.metrolist.shared.constants.AlbumFilterKey
 import com.metrolist.shared.constants.AnimatedArtworkCacheSizeKey
 import com.metrolist.shared.constants.AnimatedCoverCacheSizeKey
 import com.metrolist.shared.constants.AnimatedCoverResolutionKey
@@ -163,6 +165,7 @@ private val enumTypes =
         "libraryViewType" to LibraryViewType.entries.map { it.name },
         "libraryFilter" to LibraryFilterType.entries.map { it.name },
         "libraryContentSort" to LibraryContentSort.entries.map { it.name },
+        AlbumFilterKey to AlbumFilter.entries.map { it.name },
         "playlistSongSort" to PlaylistSongSort.entries.map { it.name },
         "playlistSongSortDirection" to SortDirection.entries.map { it.name },
         DownloadedCollectionSortKey to CollectionSort.entries.map { it.name },
