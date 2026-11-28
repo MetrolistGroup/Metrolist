@@ -211,12 +211,14 @@ class CrashActivity : ComponentActivity() {
                     val incomingInstallError = incomingInstallErrorState.value
                     LaunchedEffect(incomingUpdateAction, incomingInstallError) {
                         if (incomingUpdateAction) {
+                            updatePrompt = null
                             showLogs = false
                             showUpdate = true
                             incomingUpdateActionState.value = false
                         }
                         incomingInstallError?.let { (error, attemptToken) ->
                             AppUpdateManager.restoreInstallFailure(error, attemptToken)
+                            updatePrompt = null
                             showLogs = false
                             showUpdate = true
                             incomingInstallErrorState.value = null
