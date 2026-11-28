@@ -4,7 +4,7 @@
 
 Device Connect uses authenticated encrypted JSON under `shared/src/commonMain/kotlin/com/metrolist/shared/deviceconnect/`. It does not use Listen Together protobufs. The audible target owns playback; controllers send commands and display state.
 
-Android and desktop expose it in Integrations and the player device picker. It defaults off. Disabling stops discovery, listeners, sessions and retries without deleting paired devices. iOS does not expose it because its cryptography is unimplemented.
+Android and desktop expose it in Integrations and the player device picker. It defaults off. Disabling stops discovery, listeners, sessions and retries without deleting paired devices. iOS implements the shared cryptography, local server, Bonjour browsing and local-address enumeration, but Device Connect remains unavailable there because Bonjour service registration and application wiring are incomplete.
 
 Connection and pairing changes update the open settings page. Activate a paired device's row to forget it, including with a TV remote. Choose the playback target in the player device picker; pairing alone does not move audio.
 

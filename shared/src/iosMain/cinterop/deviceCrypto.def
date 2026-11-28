@@ -1,0 +1,30 @@
+package = com.metrolist.shared.deviceconnect.crypto
+language = C
+---
+#include <stddef.h>
+#include <stdint.h>
+
+typedef int32_t CCCryptorStatus;
+
+enum {
+    kCCSuccess = 0,
+    kCCAlgorithmAES = 0,
+};
+
+CCCryptorStatus CCCryptorGCMOneshotEncrypt(
+    uint32_t alg,
+    const void *key, size_t keyLength,
+    const void *iv, size_t ivLen,
+    const void *aData, size_t aDataLen,
+    const void *dataIn, size_t dataInLength,
+    void *dataOut,
+    void *tag, size_t tagLength);
+
+CCCryptorStatus CCCryptorGCMOneshotDecrypt(
+    uint32_t alg,
+    const void *key, size_t keyLength,
+    const void *iv, size_t ivLen,
+    const void *aData, size_t aDataLen,
+    const void *dataIn, size_t dataInLength,
+    void *dataOut,
+    const void *tag, size_t tagLength);

@@ -305,6 +305,9 @@ kotlin {
         iosTarget.compilations.getByName("main").cinterops.create("playbackObservation") {
             definitionFile.set(project.file("src/iosMain/cinterop/playbackObservation.def"))
         }
+        iosTarget.compilations.getByName("main").cinterops.create("deviceCrypto") {
+            definitionFile.set(project.file("src/iosMain/cinterop/deviceCrypto.def"))
+        }
         iosTarget.binaries.framework {
             baseName = "Shared"
             isStatic = true
